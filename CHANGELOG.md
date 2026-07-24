@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.9 — CLI, governance, docs, G0 end-to-end.** `ah` CLI (typer):
+  `world build --preset|--scenario [--live]`, `world validate|show`, `run
+  [--seed --paths]`, `replay` (recompute+compare digest), `verify`, `battery`,
+  `chronicle`; SQLite state at `data/ah.db` (`--db` to override). Four preset worlds
+  (`src/ah/presets/`, via `scripts/gen_presets.py`). Governance: `model-inventory.yaml`,
+  `decision-register.md` (D1-D10, OPEN), `genai-track.md`. README loop + G0 checklist.
+  `tests/test_g0_end_to_end.py` executes the seven G0 criteria programmatically.
 - **WP0.8 — Validation battery skeleton.** `battery/stylized.py`: excess kurtosis,
   skew, Hill tail index (5% tail), ACF of returns (lags 1-5) and |returns| (lags
   1-12), max-drawdown distribution, cross-correlation matrix + Frobenius distance.

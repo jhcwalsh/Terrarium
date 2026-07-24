@@ -1,0 +1,94 @@
+{
+  "engine_defaults": {
+    "base_seed": 771204,
+    "generator_id": "toy-v0",
+    "n_paths": 1000
+  },
+  "extensions": {},
+  "factor_conditions": {
+    "commodities": {
+      "drift_annual_pct": 11.0
+    },
+    "correlation": {
+      "equity_bond_regime": "inflation_conditional"
+    },
+    "credit": {
+      "hy_spread_peak_bps": 2200.0,
+      "hy_spread_start_bps": 400.0,
+      "peak_quarter": 12
+    },
+    "crisis_windows": [
+      {
+        "length_quarters": 6,
+        "severity": 0.55,
+        "start_quarter": 8
+      }
+    ],
+    "equity": {
+      "drift_annual_pct": 3.0,
+      "vol_annual_pct": 22.0
+    },
+    "inflation": {
+      "average_pct": 6.5,
+      "peak_pct": 8.5,
+      "peak_quarter": 6
+    },
+    "policy_rate": {
+      "end_pct": 7.5,
+      "start_pct": 5.5
+    }
+  },
+  "horizon": {
+    "quarters": 40,
+    "start": "2027-Q1"
+  },
+  "narrative": {
+    "dispatches": [
+      {
+        "date": "2027",
+        "headline": "The Long Stagflation \u2014 year one"
+      },
+      {
+        "date": "2030",
+        "headline": "The Long Stagflation \u2014 mid-horizon"
+      },
+      {
+        "date": "2034",
+        "headline": "The Long Stagflation \u2014 late cycle"
+      }
+    ],
+    "language": "en",
+    "lesson": "Presets exercise the compile->validate->run->replay rails.",
+    "summary": "The Long Stagflation: a preset world for the Step-0 loop.",
+    "tagline": "A decade prices refused to behave.",
+    "title": "The Long Stagflation"
+  },
+  "provenance": {
+    "author": "sso:preset",
+    "created_at": "2026-07-24T00:00:00Z",
+    "source": {
+      "kind": "preset"
+    }
+  },
+  "regimes": {
+    "mode": "sequence",
+    "sequence": [
+      {
+        "from_quarter": 0,
+        "regime": "stagflation",
+        "to_quarter": 39
+      }
+    ]
+  },
+  "spec_version": "1.0.0",
+  "status": "draft",
+  "structural": {
+    "parameter_vintage": "custom",
+    "private_equity": {
+      "entry_multiple_drift_annual_pct": -2.0,
+      "illiquidity_premium_annual_pct": 2.0,
+      "leverage_turns": 5.5
+    }
+  },
+  "world_id": "00000000-0000-4000-9000-000000000001"
+}
