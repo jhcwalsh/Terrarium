@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.2 — WorldSpec models + loader.** pydantic v2 models mirroring
+  `worldspec-v1.0.schema.json` exactly (required⇔required, `extra="forbid"`⇔
+  `additionalProperties:false`, bounds/patterns/lengths). `load_worldspec(path|dict)`
+  validates against the JSON Schema (Draft 2020-12) first, then constructs the model.
+  Property test (hypothesis, 400 examples) asserts pydantic accepts ⇔ jsonschema
+  accepts on fuzzed near-valid documents; canonical example round-trips identically.
+  Narrative-blindness enforced structurally via a `NumericWorld` projection that
+  omits `narrative`/`provenance`, plus a source-scan guard over engine/institution.
 - **WP0.1 — Scaffold, tooling, CI.** Single-package `src/ah` layout; `pyproject.toml`
   pinned to Python 3.12 with the STEP0-PLAN §1 dependency set; uv workflow; ruff
   (lint+format), pyright (basic), pytest with `--disable-socket` (pytest-socket),

@@ -21,9 +21,7 @@ app = typer.Typer(
 
 @app.callback(invoke_without_command=True)
 def main(
-    version: bool = typer.Option(
-        False, "--version", help="Show the platform version and exit."
-    ),
+    version: bool = typer.Option(False, "--version", help="Show the platform version and exit."),
 ) -> None:
     """Root command group. Global options live here; subcommands arrive in WP0.9."""
     if version:
