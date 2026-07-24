@@ -127,6 +127,20 @@ def test_bis_credit_gap() -> None:
     assert out["value"].tolist() == [2.5, 2.7, 2.6]
 
 
+def test_bis_flat_format_selects_us_gap() -> None:
+    # Real BIS Data Portal flat shape: only US + gap-type (CG_DTYPE 'C') rows are kept.
+    csv = (
+        "FREQ:Frequency,BORROWERS_CTY:Borrowers' country,CG_DTYPE:Credit gap data type,"
+        "TIME_PERIOD:Time,OBS_VALUE:Val\n"
+        "Q: Quarterly,US: United States,C: Credit-to-GDP gaps (actual-trend),1961-Q1,2.5\n"
+        "Q: Quarterly,US: United States,A: Credit-to-GDP ratios (actual data),1961-Q1,99.0\n"
+        "Q: Quarterly,GB: United Kingdom,C: Credit-to-GDP gaps (actual-trend),1961-Q1,-1.0\n"
+    )
+    out = BisConnector().parse(RawArtifact("bis", "x", csv.encode()), REQ["bis.credit_gap_us"])
+    assert out["value"].tolist() == [2.5]  # US gap only; ratio + GB excluded
+    assert out["date"].iloc[0] == pd.Timestamp("1961-01-01")
+
+
 def test_treasury_hqm_10y() -> None:
     out = TreasuryHqmConnector().parse(
         _raw("treasury_hqm", "hqm.xlsx", "treasury.hqm_curve"), REQ["treasury.hqm_curve"]
