@@ -4,7 +4,10 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
-## [Unreleased]
+## [v0.1.0-g0] — 2026-07-24
+
+Gate G0 ("lay the rails") complete. All seven G0 criteria pass — see `G0-EVIDENCE.md`.
+The toy world round-trips `compile → validate → run → record → replay` bit-identically.
 
 ### Added
 - **WP0.9 — CLI, governance, docs, G0 end-to-end.** `ah` CLI (typer):
