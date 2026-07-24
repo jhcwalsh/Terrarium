@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.4 — QC framework.** `qc.py`: per-series checks (schema/dtype, monotonic
+  non-duplicate dates, frequency conformance, unit-class bounds — rates [-5,30],
+  spreads ≥0, index >0, returns [-80%,+200%], staleness vs SLA, jump detection using
+  the prior window's σ, revision diff vs prior vintage with source-based severity:
+  public revisions warn, licensed rewrites enforce) + cross-series identities
+  (Baa ≥ Aaa). Severity inherits the manifest `enforce` flag. `run_qc` persists
+  `qc_results` and quarantines the vintage on any enforce failure — the pointer then
+  cannot advance. `Requirement` is now frozen/hashable.
 - **WP1.3 — Manual-intake framework + licensed schemas.** `schemas/base.py`
   (declarative `IntakeSchema`: required columns, dtype/bounds, duplicate-period and
   silent-gap detection, human-readable rejection report) + concrete schemas:
