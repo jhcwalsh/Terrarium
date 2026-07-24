@@ -1,0 +1,30 @@
+# Data (never committed — see CLAUDE.md / STEP1 licensing discipline)
+data/
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.hypothesis/
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+
+# Environments
+.venv/
+venv/
+env/
+
+# uv
+# (uv.lock IS committed; the venv is not)
+
+# IDE / OS
+.idea/
+.vscode/
+*.swp
+.DS_Store
+Thumbs.db

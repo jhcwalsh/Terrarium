@@ -1,0 +1,165 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal/worldbible/v1.0.0/worldbible.schema.json",
+  "title": "WorldBible",
+  "description": "The persistent fictional cast and editorial register of a world. Created by the compiler at world birth, referenced by every Tier-2 (LLM-authored) artifact, and enforced by the consistency gate: no entity may appear in any generated artifact unless it is in this document or on the generic-institution allowlist. The bible is what makes serialized world fiction continuous (the fund that stretches in 2028 is the same fund that gates in 2030) and what makes it safe (no real firms or persons can enter the cast).",
+  "type": "object",
+  "required": ["bible_version", "world_id", "safety", "institution", "cast", "research_houses", "media"],
+  "additionalProperties": false,
+  "properties": {
+
+    "bible_version": { "type": "string", "pattern": "^1\\.0\\.[0-9]+$" },
+    "world_id": { "type": "string", "format": "uuid", "description": "The WorldSpec this bible belongs to. One bible per world; edits create a new bible version recorded in the chronicle." },
+
+    "safety": {
+      "type": "object",
+      "required": ["fictional_attestation", "screened_against", "generic_allowlist"],
+      "additionalProperties": false,
+      "properties": {
+        "fictional_attestation": { "type": "boolean", "const": true, "description": "Must be true: every named entity in cast/research_houses/media is fictional. The gate refuses to publish artifacts from a bible without this attestation." },
+        "screened_against": { "type": "string", "description": "Identifier/version of the real-entity name screen the cast names were checked against (e.g. 'gleif-lei+sec-adv snapshot 2026-06'). Names colliding with real regulated firms are rejected at bible creation." },
+        "generic_allowlist": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "The only non-cast entities artifacts may reference, by role not name: e.g. 'the central bank', 'the finance ministry', 'the statistics office', 'the regulator'. Real institutions may appear ONLY at this generic policy level.",
+          "default": ["the central bank", "the statistics office", "the finance ministry", "the regulator"]
+        }
+      }
+    },
+
+    "institution": {
+      "type": "object",
+      "description": "The user's institution — the addressee of personalized artifacts (statements, consultant memos, board packs).",
+      "required": ["name", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "maxLength": 60, "description": "Fictional, e.g. 'The Harborlight Pension Trust'." },
+        "kind": { "type": "string", "enum": ["db_pension", "dc_pension", "endowment", "insurer", "sovereign_fund", "family_office"] },
+        "short_name": { "type": "string", "maxLength": 20 },
+        "consultant_ref": { "type": "string", "description": "cast id of the consulting firm that writes to this institution." },
+        "peer_universe_label": { "type": "string", "default": "simulated peer universe", "description": "How ensemble percentiles are described in statements." }
+      }
+    },
+
+    "cast": {
+      "type": "array",
+      "minItems": 4,
+      "maxItems": 24,
+      "description": "The named fictional entities of the world. Keep the cast small enough to sustain arcs — 8-14 is the sweet spot.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "kind", "profile", "voice"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_]{2,32}$" },
+          "name": { "type": "string", "maxLength": 60 },
+          "kind": {
+            "type": "string",
+            "enum": ["gp_buyout", "gp_venture", "direct_lender", "bank", "asset_manager", "hedge_fund", "consultant", "reit", "insurer_peer", "pension_peer", "cio_persona", "economist_persona"]
+          },
+          "profile": {
+            "type": "object",
+            "required": ["one_liner"],
+            "additionalProperties": false,
+            "properties": {
+              "one_liner": { "type": "string", "maxLength": 200, "description": "E.g. 'Mid-market buyout firm, 2019 vintage flagship, entered the decade at peak leverage.'" },
+              "aum_band": { "type": "string", "enum": ["<1bn", "1-10bn", "10-50bn", "50-200bn", ">200bn"] },
+              "founded_year": { "type": "integer", "minimum": 1900, "maximum": 2026 },
+              "signature_traits": { "type": "array", "items": { "type": "string", "maxLength": 80 }, "maxItems": 5, "description": "Recurring characteristics authors must honor, e.g. 'never admits marks are stale', 'quotes Graham in every letter'." }
+            }
+          },
+          "voice": {
+            "type": "object",
+            "description": "House style the LLM author must write this entity's documents in.",
+            "required": ["register"],
+            "additionalProperties": false,
+            "properties": {
+              "register": { "type": "string", "enum": ["measured_institutional", "confident_promotional", "dry_academic", "combative_contrarian", "folksy_reassuring"] },
+              "tics": { "type": "array", "items": { "type": "string", "maxLength": 60 }, "maxItems": 4, "description": "E.g. 'opens with a macro paragraph', 'signs off \"Onward.\"'." }
+            }
+          },
+          "arc": {
+            "type": "array",
+            "maxItems": 8,
+            "description": "The entity's storyline, expressed as beats pinned to world time. Authors must not contradict past beats and must not reveal future beats. Beats should be economically consistent with the WorldSpec parameters (checked at bible creation, rule B3).",
+            "items": {
+              "type": "object",
+              "required": ["from_quarter", "beat"],
+              "additionalProperties": false,
+              "properties": {
+                "from_quarter": { "type": "integer", "minimum": 0, "maximum": 39 },
+                "beat": { "type": "string", "maxLength": 200, "description": "E.g. Q6: 'first covenant breaches surface in portfolio'; Q10: 'gates redemptions'; Q20: 'raises workout-focused fund'." }
+              }
+            }
+          },
+          "relationships": {
+            "type": "array",
+            "maxItems": 6,
+            "items": {
+              "type": "object",
+              "required": ["with", "nature"],
+              "additionalProperties": false,
+              "properties": {
+                "with": { "type": "string", "description": "cast id" },
+                "nature": { "type": "string", "maxLength": 100, "description": "E.g. 'lender to', 'fierce rival of', 'the institution holds its 2027 fund'." }
+              }
+            }
+          },
+          "held_by_institution": { "type": "boolean", "default": false, "description": "If true, this entity's letters are addressed to the user's institution and its arc interacts with portfolio artifacts (marks, gates, secondaries)." }
+        }
+      }
+    },
+
+    "research_houses": {
+      "type": "array",
+      "minItems": 2,
+      "maxItems": 4,
+      "description": "The disagreement engine. Same tape, different priors: houses must differ in interpretation while agreeing on gate-checked facts. Exactly one 'structurally_constructive' and one 'structurally_cautious' house are required; others optional.",
+      "items": {
+        "type": "object",
+        "required": ["id", "name", "prior", "voice"],
+        "additionalProperties": false,
+        "properties": {
+          "id": { "type": "string", "pattern": "^[a-z0-9_]{2,32}$" },
+          "name": { "type": "string", "maxLength": 60 },
+          "prior": {
+            "type": "string",
+            "enum": ["structurally_constructive", "structurally_cautious", "valuation_disciplined", "flow_and_momentum"],
+            "description": "The lens through which this house reads any data. Constructive: growth resolves problems. Cautious: fragility compounds. Valuation: everything mean-reverts to fair value. Flow: price action leads fundamentals."
+          },
+          "voice": { "type": "object", "required": ["register"], "additionalProperties": false, "properties": {
+            "register": { "type": "string", "enum": ["measured_institutional", "confident_promotional", "dry_academic", "combative_contrarian"] },
+            "tics": { "type": "array", "items": { "type": "string", "maxLength": 60 }, "maxItems": 4 }
+          }},
+          "coverage": { "type": "array", "items": { "type": "string" }, "description": "cast ids and asset classes this house writes about." }
+        }
+      }
+    },
+
+    "media": {
+      "type": "object",
+      "required": ["wire_name", "paper_name"],
+      "additionalProperties": false,
+      "properties": {
+        "wire_name": { "type": "string", "maxLength": 40, "default": "The Simulated Wire", "description": "Masthead for Tier-1 wire items." },
+        "paper_name": { "type": "string", "maxLength": 40, "description": "Masthead for Tier-2 feature pieces, e.g. 'The Ledger'. Must not imitate a real outlet's name or trade dress." },
+        "columnists": { "type": "array", "maxItems": 3, "items": { "type": "object", "required": ["name", "beat"], "additionalProperties": false, "properties": {
+          "name": { "type": "string", "maxLength": 40 }, "beat": { "type": "string", "maxLength": 60 }
+        }}}
+      }
+    },
+
+    "creation_checks": {
+      "type": "object",
+      "description": "Written by the bible validator at creation. Rules: B1 all names pass real-entity screen; B2 arcs respect world horizon and do not overlap contradictorily; B3 arcs are economically consistent with WorldSpec parameters (a lender cannot gate in a world with no credit stress unless flagged idiosyncratic); B4 required research-house priors present; B5 masthead names pass trade-dress screen.",
+      "additionalProperties": false,
+      "properties": {
+        "validator_version": { "type": "string" },
+        "passed": { "type": "array", "items": { "type": "string", "pattern": "^B[0-9]+$" } },
+        "warnings": { "type": "array", "items": { "type": "object", "required": ["rule", "message"], "additionalProperties": false, "properties": {
+          "rule": { "type": "string" }, "message": { "type": "string" }
+        }}}
+      }
+    }
+  }
+}

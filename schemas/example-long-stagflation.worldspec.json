@@ -1,0 +1,111 @@
+{
+  "spec_version": "1.0.0",
+  "world_id": "7f3e2a10-9c4b-4d8e-b2a1-5e6f7a8b9c0d",
+  "status": "validated",
+
+  "provenance": {
+    "created_at": "2026-07-22T18:22:03Z",
+    "author": "sso:jwalsh",
+    "source": {
+      "kind": "compiler",
+      "user_scenario_text": "A second energy shock pushes inflation back above 7% and it stays sticky for a decade. Central banks tolerate 4% rather than force a deep recession.",
+      "compiler_model": "claude-sonnet-4-6",
+      "compiler_prompt_version": "compile-world-v1.3.2"
+    },
+    "validation": {
+      "validator_version": "1.4.0",
+      "validated_at": "2026-07-22T18:22:05Z",
+      "clamps": [
+        {
+          "path": "/factor_conditions/credit/hy_spread_peak_bps",
+          "submitted": 2400,
+          "applied": 2200
+        }
+      ],
+      "warnings": [
+        {
+          "rule": "V1",
+          "message": "Average inflation 6.5% with policy rate ending at 7.5% keeps real rates near +1% — coherent, no repression flag. No action needed.",
+          "acknowledged_by_author": true
+        }
+      ]
+    }
+  },
+
+  "narrative": {
+    "language": "en",
+    "title": "The Long Stagflation",
+    "tagline": "2027–2036: the decade prices refused to behave",
+    "summary": "A second energy shock and fractured supply chains push inflation back above 7% in 2027, and this time it does not come quietly. Central banks hike into a stagnating economy, discover the political ceiling on unemployment, and settle for containment over victory. For ten years, cash has a real job, duration is a liability, and the stock-bond correlation that defined a generation of portfolios quietly flips sign.",
+    "lesson": "In this world the classic 60/40 loses its diversifier: bonds fall with stocks when inflation drives both. Real assets and floating-rate private credit carry the portfolio, while private equity, built on cheap leverage and multiple expansion, gives back a decade of its advantages.",
+    "dispatches": [
+      { "date": "2027", "headline": "CPI prints 7.4% as shipping lanes fracture", "detail": "A second wave of supply shocks meets fiscal spending that never normalized." },
+      { "date": "2028", "headline": "The 10-year touches 8.1%; housing seizes", "detail": "Term premium returns with a vengeance. Duration is repriced everywhere at once." },
+      { "date": "2029-Q2", "headline": "Buyout firm hands back a portfolio company to lenders", "detail": "The first large surrender of the cycle. Entry multiples from 2021 meet 9% financing." },
+      { "date": "2031", "headline": "Commodities complete third straight year of double-digit gains", "detail": "The only asset class where allocators are raising targets." },
+      { "date": "2033", "headline": "Central banks declare 4% 'the new price stability'", "detail": "The target moves because the economy would not." },
+      { "date": "2036", "headline": "A decade of 'real return' investing ends with cash king", "detail": "T-bills beat the median endowment over the trailing ten years." }
+    ]
+  },
+
+  "horizon": { "start": "2027-Q1", "quarters": 40 },
+
+  "regimes": {
+    "mode": "sequence",
+    "sequence": [
+      { "regime": "stagflation", "from_quarter": 0, "to_quarter": 7 },
+      { "regime": "crisis", "from_quarter": 8, "to_quarter": 13 },
+      { "regime": "stagflation", "from_quarter": 14, "to_quarter": 31 },
+      { "regime": "slowdown", "from_quarter": 32, "to_quarter": 39 }
+    ]
+  },
+
+  "factor_conditions": {
+    "policy_rate": { "start_pct": 5.5, "end_pct": 7.5, "path_shape": "front_loaded" },
+    "inflation": { "average_pct": 6.5, "peak_pct": 9.0, "peak_quarter": 6 },
+    "equity": { "drift_annual_pct": 3.0, "vol_annual_pct": 22 },
+    "credit": { "hy_spread_start_bps": 400, "hy_spread_peak_bps": 2200, "peak_quarter": 12 },
+    "commodities": { "drift_annual_pct": 11.0 },
+    "correlation": { "equity_bond_regime": "inflation_conditional", "crisis_correlation_boost": 0.4 },
+    "crisis_windows": [
+      { "start_quarter": 8, "length_quarters": 6, "severity": 0.55 }
+    ]
+  },
+
+  "structural": {
+    "parameter_vintage": "custom",
+    "private_equity": {
+      "entry_multiple_drift_annual_pct": -3.5,
+      "leverage_turns": 5.5,
+      "illiquidity_premium_annual_pct": 2.0
+    },
+    "private_credit": {
+      "annual_loss_rate_pct": 2.5,
+      "recovery_rate_pct": 55,
+      "spread_over_base_bps": 450
+    },
+    "real_estate": {
+      "cap_rate_shift_bps": 250,
+      "income_yield_pct": 4.5
+    },
+    "smoothing": {
+      "emit_reported_marks": true,
+      "weights_on_truth": {
+        "private_equity": 0.35,
+        "private_credit": 0.30,
+        "real_estate": 0.35
+      }
+    }
+  },
+
+  "engine_defaults": {
+    "generator_id": "conditional-diffusion",
+    "min_generator_version": "2.0.0",
+    "mapping_version": "map-2026.2",
+    "desmoothing_method": "glm_ma",
+    "n_paths": 10000,
+    "base_seed": 771204
+  },
+
+  "extensions": {}
+}
