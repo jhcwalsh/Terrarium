@@ -79,6 +79,10 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]
 
+[tool.ruff.lint.flake8-bugbear]
+# Typer's function-call-in-default is the intended idiom, not a B008 mutable default.
+extend-immutable-calls = ["typer.Option", "typer.Argument"]
+
 [tool.pyright]
 include = ["src", "tests"]
 pythonVersion = "3.12"

@@ -15,8 +15,25 @@ that proves the loop `compile → validate → run → record → replay`.
 ```bash
 uv sync                 # create the environment from the lockfile
 uv run pytest           # run the test suite (no network; pytest-socket enforces)
-uv run ah version       # smoke-test the CLI entry point
+uv run ah --version     # smoke-test the CLI entry point
 ```
+
+## The loop (CLI)
+
+```bash
+uv run ah world build --preset stagflation   # compile/preset -> validate -> stamp -> store
+uv run ah world validate                     # re-report clamps/warnings/blocking
+uv run ah run --paths 1000                   # run the engine, record a RunRecord
+uv run ah replay                             # recompute the digest -> MATCH (bit-identical)
+uv run ah verify                             # True/False reproducibility check
+uv run ah battery                            # stylized-fact panel on the run's ensemble
+uv run ah chronicle                          # the append-only event log for the world
+```
+
+Presets: `stagflation`, `goldilocks`, `deflation_bust`, `reflation_boom`
+(`src/ah/presets/`). A live compile is `ah world build --scenario "..." --live`
+(needs `ANTHROPIC_API_KEY`; never exercised in tests). State lives in a SQLite DB at
+`data/ah.db` (override with `--db`).
 
 ## Architecture (Step 0)
 

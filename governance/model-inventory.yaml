@@ -1,0 +1,44 @@
+# Model inventory (STEP0-PLAN §WP0.9).
+#
+# Every component that produces or gates numbers, or that is generative, is listed
+# here with its version, tier, validation evidence, and last review. `numeric` tier
+# = deterministic, auditable, in the numeric path. `genai` tier = LLM-backed, never
+# in the numeric path (WORLDSPEC.md §1, CLAUDE.md).
+
+components:
+  - name: toy-engine
+    version: "toy-v0"
+    tier: numeric
+    owner: platform
+    validation_evidence: >
+      tests/test_engine.py — frozen golden digest (seed 42 stagflation),
+      determinism, and hypothesis invariants (finite, rate>=0.1, spread>=150,
+      reported flat off quarter-ends).
+    last_review: "2026-07-24"
+
+  - name: validator
+    version: "1.0.0"
+    tier: numeric
+    owner: platform
+    validation_evidence: >
+      tests/test_validator.py — one case per V-rule (V1-V12), edge cases, and a
+      table-driven sweep; canonical example is the clean baseline.
+    last_review: "2026-07-24"
+
+  - name: validation-battery
+    version: "battery-0.1"
+    tier: numeric
+    owner: platform
+    validation_evidence: >
+      tests/test_battery.py — stylized-fact functions and enforce/todo plumbing;
+      thresholds are all `todo` pending the D6 pre-registration workshop.
+    last_review: "2026-07-24"
+
+  - name: compiler-prompt
+    version: "compile-world-v1.0"
+    tier: genai
+    owner: platform
+    validation_evidence: >
+      tests/test_compiler.py — 50-fixture offline regression harness
+      (40 valid, 5 clamp, 5 reject). The live model is never exercised in tests.
+    last_review: "2026-07-24"
