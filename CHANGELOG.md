@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.2 — Public connectors.** `connectors/base.py` (Connector protocol,
+  RawArtifact, D->M aggregation: monthly mean for rates/spreads, month-end for VIX;
+  retrying fetch helper) plus FRED (observations JSON), Ken French (zip/CSV,
+  monthly-block/annual-block quirk), Shiller (xlsx, content-located header, fractional
+  dates), JST (.dta, USA filter), BIS (credit-gap CSV), Treasury HQM (xlsx, 10y spot).
+  `fetch()` is network-only (never tested); `parse()` covered by golden tests over
+  format-faithful offline fixtures (`scripts/gen_data_fixtures.py`). `docs/data/<source>.md`
+  per source (URL, license, quirks). Added `openpyxl`.
 - **WP1.1 — Manifest, catalog, vintage store.** `requirements.yaml` (normalized seed
   of STEP1-DATA-PLAN §3) + `ah/data/manifest.py` (typed `Requirement`/`Requirements`,
   redistributable = FREE only). `ah/data/catalog.py`: DuckDB catalog

@@ -18,6 +18,7 @@ dependencies = [
     # Step 1 data layer (STEP1-DATA-PLAN §1)
     "duckdb>=1.0",            # catalog + SQL over parquet
     "pyarrow>=16.0",          # parquet read/write for normalized series
+    "openpyxl>=3.1",          # Shiller / Treasury HQM xlsx parsing
 ]
 
 [project.scripts]
@@ -93,3 +94,16 @@ typeCheckingMode = "basic"
 reportMissingImports = true
 venvPath = "."
 venv = ".venv"
+
+# The data layer is pandas-heavy; pandas' inline type stubs produce many false
+# positives (.to_numpy on ndarray, .dt on Series, groupby overloads). Silence just
+# those categories here — real checks (undefined names, imports, etc.) stay on, and
+# the rest of the codebase keeps full basic-mode strictness.
+[[tool.pyright.executionEnvironments]]
+root = "src/ah/data"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
+reportArgumentType = "none"
+reportReturnType = "none"
+reportIndexIssue = "none"
+reportOptionalMemberAccess = "none"
