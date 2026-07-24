@@ -1,0 +1,52 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# No secrets are needed or exposed. Step 0 makes no network calls; the test
+# suite runs with pytest-socket's --disable-socket. Do not add secrets here.
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Pin Python 3.12
+        run: uv python install 3.12
+
+      - name: Sync (locked)
+        run: uv sync --frozen --dev
+
+      - name: Lint (ruff)
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+
+      - name: Type-check (pyright)
+        run: uv run pyright
+
+      - name: Tests + coverage gate on core/
+        run: uv run pytest --cov=ah.core --cov-report=term-missing --cov-fail-under=90
+
+      - name: G0 end-to-end
+        # Present from WP0.9; skips cleanly until then.
+        run: |
+          if [ -f tests/test_g0_end_to_end.py ]; then
+            uv run pytest tests/test_g0_end_to_end.py -v
+          else
+            echo "G0 end-to-end test not present yet (arrives in WP0.9)."
+          fi
