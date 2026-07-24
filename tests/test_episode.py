@@ -88,7 +88,7 @@ def test_build_episode_resolves_through_catalog(cat: Catalog) -> None:
 def test_build_episode_brief_renders(cat: Catalog) -> None:
     _populate_2022(cat)
     pack = build_episode(cat, 2022, ["fred.HY_OAS", "albourne.pm_buyout_ret_q"])
-    assert "Episode brief — 2022" in pack.brief
+    assert "Episode brief - 2022" in pack.brief
     assert "Secondary-market pricing" in pack.brief
     assert "0.81" in pack.brief
     assert "secondaries.md" in pack.brief

@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.10 — Refresh orchestration, scheduling, CLI.** `refresh.py`: `plan`
+  (manifest ∩ due-by-SLA ∩ source, auto-intake only) → provider fetch/parse → QC →
+  vintage commit or quarantine → reports; idempotent (re-running a vintage id is a
+  detected no-op). `ah data` CLI: `refresh [--fixtures --vintage --source --asof
+  --dry-run]`, `status`, `asof DATE`, `episode YEAR`, `intake validate <file>`.
+  GitHub Actions `data-monthly.yml` (cron public refresh, status artifact, issue on
+  QC failure) and `data-reminders.yml` (calendar issues for manual intakes); local/dev
+  works without cloud.
 - **WP1.9 — Gap register & reports.** `reports.py`: `gap_register` computes per
   required series coverage %, missing head/tail, staleness, and license blockers from
   the manifest vs the catalog; `generate_gaps_md` emits GAPS.md with an "anticipated
