@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.8 — Episode packs.** `episode.py`: builders for 2008-10, 2020, 2022-23 that
+  resolve inputs **through the catalog** (no ad-hoc reads), slice to the episode
+  window, add reported-vs-de-smoothed private-markets sleeves, attach the cited
+  secondary-pricing table (`docs/data/secondaries.md`, incl. the ~81% NAV 2022 anchor),
+  and render a markdown brief. These are the fixtures Gate G1's reproduction test will
+  consume.
 - **WP1.7 — De-smoothing module.** `desmooth.py`: Geltner AR(1) reversal
   (r_true = (r_obs − (1−a)·r_obs,lag)/a, a = 1−phi); GLM MA(k) — θ≥0, Σθ=1 estimated
   on the simplex by whitening the recovered truth, k∈{1,2,3} by AIC (default 2), with
