@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.3 — Validator (V-rules).** `validate(world) -> ValidationResult`
+  {clamped_world, clamps, warnings, blocking}, implementing V1-V12 (WORLDSPEC.md §3).
+  Bounds clamps (V9) are driven from the JSON Schema itself (one home for bounds),
+  recorded as {path, submitted, applied}; >3 clamps warns. V2 clamps windows/peaks
+  into the horizon; V3 swaps inverted spreads; V1/V4/V5/V6/V7/V8 warn on coherence;
+  V10/V11 and custom-vintage-without-sleeves (V12) block. `validate` is pure (no wall
+  clock); `stamp_validation` writes `provenance.validation` and flips draft→validated
+  with a caller-supplied `validated_at`. 51 tests: one per rule, edge cases, and a
+  table-driven sweep; canonical example is the clean baseline.
 - **WP0.2 — WorldSpec models + loader.** pydantic v2 models mirroring
   `worldspec-v1.0.schema.json` exactly (required⇔required, `extra="forbid"`⇔
   `additionalProperties:false`, bounds/patterns/lengths). `load_worldspec(path|dict)`
