@@ -37,7 +37,7 @@ _EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 # Frozen golden digest for seed 42 on the stagflation world (toy-v0). Regenerate
 # deliberately only when an intended engine change alters output.
 GOLDEN_SEED = 42
-GOLDEN_DIGEST = "896503489a2a210d80a3063c42a55dfe577295996d8a9c9654b1aa9377067fda"
+GOLDEN_DIGEST = "aea5b731c90d379a5d219e5b08291425666c821cfd240e5adc568027bc575ae7"
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

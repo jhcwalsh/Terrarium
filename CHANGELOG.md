@@ -7,6 +7,24 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.5 — Institution simulator + decisions.** `simulate_institution(paths,
+  decisions)` runs the start mix through an engine path with annual decision points
+  (month `12*year-1`, years 1-9) and actions `hold|derisk|leanin|secondary`
+  (10pt growth↔defensive shifts preserving proportions; secondary sells ≤8pts PE at
+  0.82 with a total haircut and a pe→bonds target move). Returns are read as percent
+  with per-sleeve limited liability, so weights sum to 1 and no sleeve goes negative
+  by construction. `hold_course_twin` (passive benchmark) and `decision_alpha`
+  (active − twin). Golden hold-course value + hypothesis invariants.
+
+### Changed
+- **Engine (WP0.4) HY spread-shock scaling.** WP0.5 surfaced that the HY
+  `3.5·Δspread` term used Δspread in bps, producing ±300%/month returns; the spread
+  path is bps but that coefficient only yields sane monthly returns with Δspread in
+  percentage points. Δspread is now converted bps→pp; HY is now ±6-9%/month, in line
+  with its own vol term and every other asset. The WP0.4 golden digest was
+  regenerated accordingly.
+
+### Added (earlier)
 - **WP0.4 — Deterministic toy engine (`toy-v0`).** Monthly, pure-function engine
   (`run_path`, `run_ensemble`) over a `NumericWorld`: policy-rate AR path, HY-spread
   rise/decay, inflation AR, binary crisis mask, common-factor asset returns, and

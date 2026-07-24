@@ -207,9 +207,14 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     spread = _spread_path(world, nm, z_spread)
     inflation = _inflation_path(world, nm, crisis, z_infl)
 
-    # First-difference of the paths; no change on the first month.
+    # First-difference of the paths; no change on the first month. d_rate is in
+    # percentage points (rate is already in percent). d_spread is converted from
+    # bps to percentage points so the HY spread-shock term is on the same scale as
+    # its own vol term and every other asset's monthly return (resolving a spec
+    # inconsistency: the spread PATH is defined in bps, but the "3.5*Δspread"
+    # coefficient only yields sane monthly returns when Δspread is in pp).
     d_rate = np.diff(rate, prepend=rate[0])
-    d_spread = np.diff(spread, prepend=spread[0])
+    d_spread = np.diff(spread, prepend=spread[0]) / 100.0
 
     fc = world.factor_conditions
     st = world.structural
