@@ -7,6 +7,19 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.6 — Derived metrics & factor panel.** `derive.py` primitives (spreads/excess
+  returns via `difference`, `yoy`, `realized_vol`, `drawdown_state`,
+  `demeaned_log_cape` = DN-1 v_t, `credit_to_gdp_gap` = L_t with JST pre-1961
+  extension, `funding_stress` with TED→SOFR cutover). Regime labels v1: a single pure
+  `label_regime` + `regime_thresholds.yaml` stamped `regime_ruleset_v1`, `label_series`,
+  and an NBER confusion report. Panel assembly (`assemble_panel`) asserts no monthly
+  gaps after each column's start, carries a `UNITS_REGISTRY`, and `generate_panel_md`
+  produces the data dictionary.
+- **WP1.5 — Splice & proxy framework.** `splice.py`: `ProxyRule` + fitted transforms
+  (regression/level_map/ratio/scale), backward extension to `<target>__extended` with
+  per-obs `is_proxy` + rule id (actuals never overwritten), `overlap_error`. Register
+  rules: HY OAS pre-1996, long-Treasury TR pre-1973, private credit pre-2004, Nareit
+  de-levered RE.
 - **WP1.4 — QC framework.** `qc.py`: per-series checks (schema/dtype, monotonic
   non-duplicate dates, frequency conformance, unit-class bounds — rates [-5,30],
   spreads ≥0, index >0, returns [-80%,+200%], staleness vs SLA, jump detection using
