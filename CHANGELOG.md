@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.6 — Stores + digest.** `core/digest.py`: canonical JSON (sorted keys,
+  compact, shortest-round-trip floats) and SHA-256 over float64 path tensors rounded
+  to 12 decimals (`digest_paths`, `digest_ensemble`). `store/db.py`: SQLite (WAL,
+  foreign keys) with `worlds`, `run_records`, `chronicle` tables and append-only
+  chronicle triggers. `store/worlds.py`: engine-field immutability (edits under an
+  existing world_id are rejected; narrative/provenance edits allowed in place).
+  `store/runrecords.py`: save/get + `verify_run` (recompute digest from stored
+  world+seed and compare) — tamper of stored digest or world is detected.
+  `store/chronicle.py`: append/read only (no mutators), trigger-enforced at the DB.
 - **WP0.5 — Institution simulator + decisions.** `simulate_institution(paths,
   decisions)` runs the start mix through an engine path with annual decision points
   (month `12*year-1`, years 1-9) and actions `hold|derisk|leanin|secondary`
