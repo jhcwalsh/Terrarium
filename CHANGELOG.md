@@ -4,6 +4,19 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## [Unreleased] — Step 1 (data layer)
+
+### Added
+- **WP1.1 — Manifest, catalog, vintage store.** `requirements.yaml` (normalized seed
+  of STEP1-DATA-PLAN §3) + `ah/data/manifest.py` (typed `Requirement`/`Requirements`,
+  redistributable = FREE only). `ah/data/catalog.py`: DuckDB catalog
+  (`series`, `vintages`, `observations_index`, `current_pointer`, `intake_log`,
+  `qc_results`) with an immutable Parquet vintage store — canonical schema
+  `(date, value, series_id, vintage)`, re-writing a (vintage, series) raises,
+  the `current` pointer is append-only and advances only when a vintage is not
+  quarantined (QC gate), and `as_of` reads resolve through the pointer history.
+  Added `duckdb` + `pyarrow` deps.
+
 ## [v0.1.0-g0] — 2026-07-24
 
 Gate G0 ("lay the rails") complete. All seven G0 criteria pass — see `G0-EVIDENCE.md`.

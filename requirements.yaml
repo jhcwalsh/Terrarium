@@ -1,0 +1,86 @@
+# requirements.yaml — the machine-readable requirements manifest (STEP1-DATA-PLAN §3).
+#
+# The single source of truth for what series the platform requires. Any workstream
+# that needs an unregistered series adds it here in the same PR (§WP1.9 emergent-
+# requirements rule). Each entry:
+#   source        connector/source id
+#   code          upstream code (source-specific); null for derived/manual groups
+#   frequency     native->emit, e.g. "D->M", "M", "Q", "A", "per-spec"
+#   units         units class hint (pct | index | idx | lvl | 0/1 | ret | rate | curve | cf)
+#   min_start     earliest expected observation (YYYY-MM), or null
+#   sla_days      freshness SLA in days
+#   license_tier  FREE | REG | COMM
+#   priority      P0 | P1 | P2
+#   intake        auto | manual
+#   enforce       QC severity default (true=enforce, false=warn)
+#   notes         free text
+
+series:
+  # --- rates & inflation (FRED) ---
+  fred.DGS10:    {source: fred, code: DGS10,  frequency: "D->M", units: pct,   min_start: 1962-01, sla_days: 7,   license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.DGS2:     {source: fred, code: DGS2,   frequency: "D->M", units: pct,   min_start: 1976-06, sla_days: 7,   license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.TB3MS:    {source: fred, code: TB3MS,  frequency: "M",    units: pct,   min_start: 1934-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.GS10:     {source: fred, code: GS10,   frequency: "M",    units: pct,   min_start: 1953-04, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.BAA:      {source: fred, code: BAA,    frequency: "M",    units: pct,   min_start: 1919-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.AAA:      {source: fred, code: AAA,    frequency: "M",    units: pct,   min_start: 1919-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.HY_OAS:   {source: fred, code: BAMLH0A0HYM2, frequency: "D->M", units: pct, min_start: 1996-12, sla_days: 7, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.CPI:      {source: fred, code: CPIAUCNS, frequency: "M",  units: index, min_start: 1913-01, sla_days: 40,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.CPI_CORE: {source: fred, code: CPILFENS, frequency: "M",  units: index, min_start: 1957-01, sla_days: 40,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.T5YIE:    {source: fred, code: T5YIE,  frequency: "D->M", units: pct,   min_start: 2003-01, sla_days: 7,   license_tier: FREE, priority: P1, intake: auto, enforce: true}
+  fred.T10YIE:   {source: fred, code: T10YIE, frequency: "D->M", units: pct,   min_start: 2003-01, sla_days: 7,   license_tier: FREE, priority: P1, intake: auto, enforce: true}
+  fred.VIX:      {source: fred, code: VIXCLS, frequency: "D->M", units: idx,   min_start: 1990-01, sla_days: 7,   license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.UNRATE:   {source: fred, code: UNRATE, frequency: "M",    units: pct,   min_start: 1948-01, sla_days: 40,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.GDPC1:    {source: fred, code: GDPC1,  frequency: "Q",    units: lvl,   min_start: 1947-01, sla_days: 100, license_tier: FREE, priority: P1, intake: auto, enforce: true}
+  fred.INDPRO:   {source: fred, code: INDPRO, frequency: "M",    units: idx,   min_start: 1919-01, sla_days: 40,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.USREC:    {source: fred, code: USREC,  frequency: "M",    units: "0/1", min_start: 1854-12, sla_days: 40,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.TEDRATE:  {source: fred, code: TEDRATE, frequency: "D->M", units: pct,  min_start: 1986-01, sla_days: 9999, license_tier: FREE, priority: P1, intake: auto, enforce: false, notes: "RETIRED 2022-01; funding-stress uses documented SOFR-based replacement in derive.py"}
+
+  # --- equity & factors ---
+  french.mkt_rf: {source: french, code: Mkt-RF, frequency: "M", units: ret, min_start: 1926-07, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  french.smb:    {source: french, code: SMB,    frequency: "M", units: ret, min_start: 1926-07, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  french.hml:    {source: french, code: HML,    frequency: "M", units: ret, min_start: 1926-07, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  french.mom:    {source: french, code: Mom,    frequency: "M", units: ret, min_start: 1926-11, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  french.rf:     {source: french, code: RF,     frequency: "M", units: ret, min_start: 1926-07, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  shiller.price:    {source: shiller, code: P,   frequency: "M", units: index, min_start: 1871-01, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  shiller.dividend: {source: shiller, code: D,   frequency: "M", units: index, min_start: 1871-01, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  shiller.earnings: {source: shiller, code: E,   frequency: "M", units: index, min_start: 1871-01, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  shiller.cape:     {source: shiller, code: CAPE, frequency: "M", units: idx,  min_start: 1881-01, sla_days: 60, license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  nareit.all_equity_tr: {source: nareit, code: null, frequency: "M", units: ret, min_start: 1972-01, sla_days: 45, license_tier: REG, priority: P0, intake: manual, enforce: true}
+
+  # --- deep history & credit cycle ---
+  jst.usa_ltrate:     {source: jst, code: ltrate,     frequency: "A", units: pct, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_stir:       {source: jst, code: stir,       frequency: "A", units: pct, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_cpi:        {source: jst, code: cpi,        frequency: "A", units: index, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_gdp:        {source: jst, code: gdp,        frequency: "A", units: lvl, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_tloans:     {source: jst, code: tloans,     frequency: "A", units: lvl, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_eq_tr:      {source: jst, code: eq_tr,      frequency: "A", units: ret, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_housing_tr: {source: jst, code: housing_tr, frequency: "A", units: ret, min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  jst.usa_crisis:     {source: jst, code: crisisJST,  frequency: "A", units: "0/1", min_start: 1870-01, sla_days: 400, license_tier: FREE, priority: P1, intake: auto, enforce: false}
+  bis.credit_gap_us:  {source: bis, code: US, frequency: "Q", units: pct, min_start: 1961-03, sla_days: 120, license_tier: FREE, priority: P1, intake: auto, enforce: true}
+  treasury.hqm_curve: {source: treasury_hqm, code: HQM, frequency: "M", units: curve, min_start: 1984-01, sla_days: 45, license_tier: FREE, priority: P1, intake: auto, enforce: true}
+
+  # --- alternatives (manual intake; schemas in src/ah/data/schemas) ---
+  albourne.pm_buyout_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_growth_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_vc_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_secondaries_ret_q: {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_dl_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_mezz_ret_q:        {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_distressed_ret_q:  {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_re_va_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_infra_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P1, intake: manual, enforce: true}
+  albourne.hf_els_ret_m:    {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_macro_ret_m:  {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_rv_ret_m:     {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_event_ret_m:  {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_credit_ret_m: {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_cta_ret_m:    {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_multi_ret_m:  {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.cf_A_lifecycle:     {source: albourne, code: null, frequency: "per-spec", units: cf, min_start: null, sla_days: 200, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.cf_B_calendar_rates: {source: albourne, code: null, frequency: "Q", units: rate, min_start: null, sla_days: 200, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.cf_C_age_calendar:  {source: albourne, code: null, frequency: "per-spec", units: rate, min_start: null, sla_days: 200, license_tier: COMM, priority: P1, intake: manual, enforce: true}
+  albourne.cf_D_vintage:       {source: albourne, code: null, frequency: "per-spec", units: cf, min_start: null, sla_days: 200, license_tier: COMM, priority: P1, intake: manual, enforce: true}
+  albourne.cf_E_episodes:      {source: albourne, code: null, frequency: "Q", units: rate, min_start: null, sla_days: 200, license_tier: COMM, priority: P1, intake: manual, enforce: true}
+  cliffwater.cdli_ret_q: {source: cliffwater, code: CDLI, frequency: "Q", units: ret, min_start: 2004-09, sla_days: 130, license_tier: REG, priority: P0, intake: manual, enforce: true}
+  ncreif.npi_ret_q:  {source: ncreif, code: NPI,  frequency: "Q", units: ret, min_start: 1978-03, sla_days: 130, license_tier: COMM, priority: P1, intake: manual, enforce: true, notes: "status: pending-license"}
+  ncreif.odce_ret_q: {source: ncreif, code: ODCE, frequency: "Q", units: ret, min_start: 1978-03, sla_days: 130, license_tier: COMM, priority: P1, intake: manual, enforce: true, notes: "status: pending-license"}
