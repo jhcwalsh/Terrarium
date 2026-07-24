@@ -1,0 +1,45 @@
+name: data-monthly
+
+# Monthly auto-refresh of public sources. Runs against a data volume/bucket (not the
+# repo — data/ is gitignored), posts a status artifact, and opens an issue on QC
+# failure. No secrets beyond FRED_API_KEY; licensed/manual intakes are not fetched here.
+on:
+  schedule:
+    - cron: "0 6 2 * *"   # 06:00 UTC on the 2nd of each month
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  refresh:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - run: uv python install 3.12
+      - run: uv sync --frozen --dev
+      - name: Refresh public sources
+        env:
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+        run: |
+          uv run ah data refresh --data-root "${{ runner.temp }}/ah-data" || echo "refresh exited non-zero"
+          uv run ah data status --data-root "${{ runner.temp }}/ah-data" | tee "${{ runner.temp }}/DATA-STATUS.md"
+      - name: Upload status artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: data-status
+          path: ${{ runner.temp }}/DATA-STATUS.md
+      - name: Open issue on QC failure
+        if: failure()
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.create({
+              owner: context.repo.owner, repo: context.repo.repo,
+              title: `Data refresh QC failure (${new Date().toISOString().slice(0,10)})`,
+              body: "The monthly data refresh failed QC (vintage quarantined). See the run logs and the DATA-STATUS artifact."
+            })

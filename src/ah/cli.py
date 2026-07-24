@@ -43,6 +43,11 @@ app = typer.Typer(
 world_app = typer.Typer(help="World lifecycle: build, validate, show.", no_args_is_help=True)
 app.add_typer(world_app, name="world")
 
+# Step 1 data-layer commands (ah data ...)
+from ah.data.cli import data_app  # noqa: E402
+
+app.add_typer(data_app, name="data")
+
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()
