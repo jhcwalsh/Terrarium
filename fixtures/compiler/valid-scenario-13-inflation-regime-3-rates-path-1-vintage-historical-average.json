@@ -1,0 +1,85 @@
+{
+  "engine_defaults": {
+    "base_seed": 1013,
+    "generator_id": "toy-v0",
+    "n_paths": 200
+  },
+  "extensions": {},
+  "factor_conditions": {
+    "commodities": {
+      "drift_annual_pct": 3.0
+    },
+    "correlation": {
+      "equity_bond_regime": "inflation_conditional"
+    },
+    "credit": {
+      "hy_spread_peak_bps": 700.0,
+      "hy_spread_start_bps": 400.0,
+      "peak_quarter": 8
+    },
+    "equity": {
+      "drift_annual_pct": 3.0,
+      "vol_annual_pct": 18.0
+    },
+    "inflation": {
+      "average_pct": 6.5,
+      "peak_pct": 8.5,
+      "peak_quarter": 6
+    },
+    "policy_rate": {
+      "end_pct": 2.0,
+      "start_pct": 5.0
+    }
+  },
+  "horizon": {
+    "quarters": 24,
+    "start": "2027-Q1"
+  },
+  "narrative": {
+    "dispatches": [
+      {
+        "date": "2027",
+        "headline": "Fixture 13 dispatch one"
+      },
+      {
+        "date": "2028",
+        "headline": "Fixture 13 dispatch two"
+      },
+      {
+        "date": "2029",
+        "headline": "Fixture 13 dispatch three"
+      }
+    ],
+    "language": "en",
+    "lesson": "Fixtures keep the compile->validate->run loop honest.",
+    "summary": "A generated scenario for the compiler regression harness.",
+    "tagline": "A regression fixture world.",
+    "title": "Fixture 13"
+  },
+  "provenance": {
+    "author": "sso:fixture",
+    "created_at": "2026-07-24T00:00:00Z",
+    "source": {
+      "compiler_model": "claude-sonnet-4-6",
+      "compiler_prompt_version": "compile-world-v1.0",
+      "kind": "compiler",
+      "user_scenario_text": "Valid scenario 13: inflation regime 3, rates path 1, vintage historical_average."
+    }
+  },
+  "regimes": {
+    "mode": "sequence",
+    "sequence": [
+      {
+        "from_quarter": 0,
+        "regime": "stagflation",
+        "to_quarter": 23
+      }
+    ]
+  },
+  "spec_version": "1.0.0",
+  "status": "draft",
+  "structural": {
+    "parameter_vintage": "historical_average"
+  },
+  "world_id": "00000000-0000-4000-8000-000000000013"
+}

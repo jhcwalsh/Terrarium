@@ -1,0 +1,252 @@
+[
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 00: inflation regime 0, rates path 0, vintage current.",
+    "slug": "valid-scenario-00-inflation-regime-0-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 01: inflation regime 1, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-01-inflation-regime-1-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 02: inflation regime 2, rates path 2, vintage custom.",
+    "slug": "valid-scenario-02-inflation-regime-2-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 03: inflation regime 3, rates path 0, vintage current.",
+    "slug": "valid-scenario-03-inflation-regime-3-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 04: inflation regime 4, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-04-inflation-regime-4-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 05: inflation regime 0, rates path 2, vintage custom.",
+    "slug": "valid-scenario-05-inflation-regime-0-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 06: inflation regime 1, rates path 0, vintage current.",
+    "slug": "valid-scenario-06-inflation-regime-1-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 07: inflation regime 2, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-07-inflation-regime-2-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 08: inflation regime 3, rates path 2, vintage custom.",
+    "slug": "valid-scenario-08-inflation-regime-3-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 09: inflation regime 4, rates path 0, vintage current.",
+    "slug": "valid-scenario-09-inflation-regime-4-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 10: inflation regime 0, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-10-inflation-regime-0-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 11: inflation regime 1, rates path 2, vintage custom.",
+    "slug": "valid-scenario-11-inflation-regime-1-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 12: inflation regime 2, rates path 0, vintage current.",
+    "slug": "valid-scenario-12-inflation-regime-2-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 13: inflation regime 3, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-13-inflation-regime-3-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 14: inflation regime 4, rates path 2, vintage custom.",
+    "slug": "valid-scenario-14-inflation-regime-4-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 15: inflation regime 0, rates path 0, vintage current.",
+    "slug": "valid-scenario-15-inflation-regime-0-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 16: inflation regime 1, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-16-inflation-regime-1-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 17: inflation regime 2, rates path 2, vintage custom.",
+    "slug": "valid-scenario-17-inflation-regime-2-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 18: inflation regime 3, rates path 0, vintage current.",
+    "slug": "valid-scenario-18-inflation-regime-3-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 19: inflation regime 4, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-19-inflation-regime-4-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 20: inflation regime 0, rates path 2, vintage custom.",
+    "slug": "valid-scenario-20-inflation-regime-0-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 21: inflation regime 1, rates path 0, vintage current.",
+    "slug": "valid-scenario-21-inflation-regime-1-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 22: inflation regime 2, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-22-inflation-regime-2-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 23: inflation regime 3, rates path 2, vintage custom.",
+    "slug": "valid-scenario-23-inflation-regime-3-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 24: inflation regime 4, rates path 0, vintage current.",
+    "slug": "valid-scenario-24-inflation-regime-4-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 25: inflation regime 0, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-25-inflation-regime-0-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 26: inflation regime 1, rates path 2, vintage custom.",
+    "slug": "valid-scenario-26-inflation-regime-1-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 27: inflation regime 2, rates path 0, vintage current.",
+    "slug": "valid-scenario-27-inflation-regime-2-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 28: inflation regime 3, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-28-inflation-regime-3-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 29: inflation regime 4, rates path 2, vintage custom.",
+    "slug": "valid-scenario-29-inflation-regime-4-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 30: inflation regime 0, rates path 0, vintage current.",
+    "slug": "valid-scenario-30-inflation-regime-0-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 31: inflation regime 1, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-31-inflation-regime-1-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 32: inflation regime 2, rates path 2, vintage custom.",
+    "slug": "valid-scenario-32-inflation-regime-2-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 33: inflation regime 3, rates path 0, vintage current.",
+    "slug": "valid-scenario-33-inflation-regime-3-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 34: inflation regime 4, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-34-inflation-regime-4-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 35: inflation regime 0, rates path 2, vintage custom.",
+    "slug": "valid-scenario-35-inflation-regime-0-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 36: inflation regime 1, rates path 0, vintage current.",
+    "slug": "valid-scenario-36-inflation-regime-1-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 37: inflation regime 2, rates path 1, vintage historical_average.",
+    "slug": "valid-scenario-37-inflation-regime-2-rates-path-1-vintage-historical-average"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 38: inflation regime 3, rates path 2, vintage custom.",
+    "slug": "valid-scenario-38-inflation-regime-3-rates-path-2-vintage-custom"
+  },
+  {
+    "kind": "valid",
+    "scenario": "Valid scenario 39: inflation regime 4, rates path 0, vintage current.",
+    "slug": "valid-scenario-39-inflation-regime-4-rates-path-0-vintage-current"
+  },
+  {
+    "kind": "clamp",
+    "scenario": "Adversarial clamp 0: policy_rate.end_pct out of bounds.",
+    "slug": "adversarial-clamp-0-policy-rate-end-pct-out-of-bounds"
+  },
+  {
+    "kind": "clamp",
+    "scenario": "Adversarial clamp 1: equity.vol_annual_pct out of bounds.",
+    "slug": "adversarial-clamp-1-equity-vol-annual-pct-out-of-bounds"
+  },
+  {
+    "kind": "clamp",
+    "scenario": "Adversarial clamp 2: credit.hy_spread_peak_bps out of bounds.",
+    "slug": "adversarial-clamp-2-credit-hy-spread-peak-bps-out-of-bounds"
+  },
+  {
+    "kind": "clamp",
+    "scenario": "Adversarial clamp 3: inflation.average_pct out of bounds.",
+    "slug": "adversarial-clamp-3-inflation-average-pct-out-of-bounds"
+  },
+  {
+    "kind": "clamp",
+    "scenario": "Adversarial clamp 4: commodities.drift_annual_pct out of bounds.",
+    "slug": "adversarial-clamp-4-commodities-drift-annual-pct-out-of-bounds"
+  },
+  {
+    "kind": "reject",
+    "scenario": "Adversarial reject 0: missing horizon.",
+    "slug": "adversarial-reject-0-missing-horizon"
+  },
+  {
+    "kind": "reject",
+    "scenario": "Adversarial reject 1: missing generator_id.",
+    "slug": "adversarial-reject-1-missing-generator-id"
+  },
+  {
+    "kind": "reject",
+    "scenario": "Adversarial reject 2: untiled regime sequence.",
+    "slug": "adversarial-reject-2-untiled-regime-sequence"
+  },
+  {
+    "kind": "reject",
+    "scenario": "Adversarial reject 3: custom vintage without sleeves.",
+    "slug": "adversarial-reject-3-custom-vintage-without-sleeves"
+  },
+  {
+    "kind": "reject",
+    "scenario": "Adversarial reject 4: non-stochastic transition matrix.",
+    "slug": "adversarial-reject-4-non-stochastic-transition-matrix"
+  }
+]

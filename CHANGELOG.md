@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.7 — Compiler interface + offline regression harness.** `CompilerProtocol`
+  with `FixtureCompiler` (offline, slug→`fixtures/compiler/{slug}.json`) and
+  `AnthropicCompiler` (live, CLI `--live` only; lazy `anthropic` import; never
+  imported by tests). `postprocess.extract_json` (fence-strip + outermost-`{}` +
+  parse); `prompt_v1` (`compile-world-v1.0`, JSON-only + fictional-entities rule);
+  `pipeline.process` (validate→clamp→construct). 50 checked-in fixtures
+  (`scripts/gen_fixtures.py`): 40 valid, 5 clamp, 5 reject — harness asserts valid+
+  clamp build and run 12+ months, clamp records clamps, reject is rejected.
 - **WP0.6 — Stores + digest.** `core/digest.py`: canonical JSON (sorted keys,
   compact, shortest-round-trip floats) and SHA-256 over float64 path tensors rounded
   to 12 decimals (`digest_paths`, `digest_ensemble`). `store/db.py`: SQLite (WAL,
