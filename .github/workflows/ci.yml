@@ -42,6 +42,9 @@ jobs:
       - name: Tests + coverage gate on core/
         run: uv run pytest --cov=ah.core --cov-report=term-missing --cov-fail-under=90
 
+      - name: Validation battery (stagflation preset)
+        run: uv run python -m ah.battery.report
+
       - name: G0 end-to-end
         # Present from WP0.9; skips cleanly until then.
         run: |

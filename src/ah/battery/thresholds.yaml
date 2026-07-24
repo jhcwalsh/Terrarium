@@ -1,0 +1,36 @@
+# Validation-battery thresholds (STEP0-PLAN §WP0.8).
+#
+# Per metric: optional `min` / `max` and a `status`:
+#   - todo    : recorded but never blocking (pre-registration pending, D6 workshop)
+#   - enforce : a min/max breach fails the battery (non-zero exit / CI red)
+#
+# Step 0 ships plumbing only, so every gate is `todo`. The values below are
+# placeholders documenting intent, not ratified thresholds.
+
+excess_kurtosis:
+  min: 0.0        # fat tails: leptokurtic vs normal
+  status: todo
+
+skewness:
+  status: todo
+
+hill_tail_index:
+  min: 2.0        # finite variance-ish tail
+  max: 6.0
+  status: todo
+
+acf_r_lag1:
+  min: -0.2       # returns roughly uncorrelated
+  max: 0.2
+  status: todo
+
+acf_abs_lag1:
+  min: 0.0        # volatility clustering: |r| positively autocorrelated
+  status: todo
+
+max_drawdown_median:
+  max: 0.0        # drawdowns are non-positive by construction
+  status: todo
+
+corr_distance:
+  status: todo

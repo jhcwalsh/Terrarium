@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.8 — Validation battery skeleton.** `battery/stylized.py`: excess kurtosis,
+  skew, Hill tail index (5% tail), ACF of returns (lags 1-5) and |returns| (lags
+  1-12), max-drawdown distribution, cross-correlation matrix + Frobenius distance.
+  `battery/thresholds.yaml`: per-metric {min?,max?,status} (all `todo` in Step 0).
+  `battery/report.py`: `run_battery` → markdown + JSON, exits non-zero only on
+  `enforce` failures; `BATTERY_VERSION = "battery-0.1"`. CI runs
+  `python -m ah.battery.report` on the stagflation preset.
 - **WP0.7 — Compiler interface + offline regression harness.** `CompilerProtocol`
   with `FixtureCompiler` (offline, slug→`fixtures/compiler/{slug}.json`) and
   `AnthropicCompiler` (live, CLI `--live` only; lazy `anthropic` import; never
