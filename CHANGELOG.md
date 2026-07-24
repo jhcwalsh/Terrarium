@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.3 — Manual-intake framework + licensed schemas.** `schemas/base.py`
+  (declarative `IntakeSchema`: required columns, dtype/bounds, duplicate-period and
+  silent-gap detection, human-readable rejection report) + concrete schemas:
+  Albourne PM returns, Albourne HF returns, Albourne derived cashflow groups A-E
+  (lifecycle p25/p75, calendar rates, age×calendar with fund counts, vintage
+  quartiles, episode cuts), Cliffwater CDLI, Nareit, NCREIF. `intake.py`:
+  `<series-group>_<asof>` filename convention, checksum, validate (never partially
+  ingested), `to_series_frames` (strategy→canonical series), `ingest_file` records
+  provenance to `intake_log`. Corrupted fixtures (dup/out-of-bounds/missing/gap)
+  rejected with a report; clean fixtures round-trip to parquet.
 - **WP1.2 — Public connectors.** `connectors/base.py` (Connector protocol,
   RawArtifact, D->M aggregation: monthly mean for rates/spreads, month-end for VIX;
   retrying fetch helper) plus FRED (observations JSON), Ken French (zip/CSV,
