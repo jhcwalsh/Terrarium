@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.7 — De-smoothing module.** `desmooth.py`: Geltner AR(1) reversal
+  (r_true = (r_obs − (1−a)·r_obs,lag)/a, a = 1−phi); GLM MA(k) — θ≥0, Σθ=1 estimated
+  on the simplex by whitening the recovered truth, k∈{1,2,3} by AIC (default 2), with
+  a boundary-solution fallback to Geltner (+warning) when θ₀≥0.9; experimental
+  regime-split `regime_glm`. Diagnostics (σ ratio, β to equity before/after, mean
+  difference, Ljung-Box) rendered to `DESMOOTHING.md`. Hypothesis property:
+  smooth-then-de-smooth recovers volatility within tolerance. numpy-only, deterministic.
 - **WP1.6 — Derived metrics & factor panel.** `derive.py` primitives (spreads/excess
   returns via `difference`, `yoy`, `realized_vol`, `drawdown_state`,
   `demeaned_log_cape` = DN-1 v_t, `credit_to_gdp_gap` = L_t with JST pre-1961
