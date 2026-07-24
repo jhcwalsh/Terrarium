@@ -7,6 +7,13 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP1.9 — Gap register & reports.** `reports.py`: `gap_register` computes per
+  required series coverage %, missing head/tail, staleness, and license blockers from
+  the manifest vs the catalog; `generate_gaps_md` emits GAPS.md with an "anticipated
+  additions" section (MSCI World, commodities, HFRI, EDHECinfra, PitchBook/LCD,
+  dry-powder, Green Street, SOA mortality, daily equity) and the emergent-requirements
+  rule. `generate_data_status_md` emits DATA-STATUS.md (vintage, per-source freshness,
+  QC summary, revision-diff highlights).
 - **WP1.8 — Episode packs.** `episode.py`: builders for 2008-10, 2020, 2022-23 that
   resolve inputs **through the catalog** (no ad-hoc reads), slice to the episode
   window, add reported-vs-de-smoothed private-markets sleeves, attach the cited
