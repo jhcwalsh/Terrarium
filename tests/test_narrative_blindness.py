@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import dataclasses
 import json
+import re
 from pathlib import Path
 
 from ah.core.loader import load_worldspec
@@ -38,15 +39,22 @@ def test_projection_omits_narrative_at_runtime() -> None:
     assert nw.horizon == ws.horizon
 
 
-def test_engine_modules_never_reference_narrative() -> None:
-    """If/when engine.py or institution.py exist, they must not mention narrative."""
+# Attribute/subscript access to a `narrative` field. The bare word (in a docstring
+# explaining blindness) is fine; *reading the field* is not.
+_NARRATIVE_ACCESS = re.compile(
+    r"""\.narrative\b|\[\s*['"]narrative['"]\s*\]|\.get\(\s*['"]narrative['"]"""
+)
+
+
+def test_engine_modules_never_access_narrative() -> None:
+    """engine.py / institution.py must not read a narrative field (only mention it)."""
     for name in ENGINE_MODULES:
         path = CORE / name
         if not path.exists():
             continue  # arrives in WP0.4 / WP0.5; guard activates automatically
         source = path.read_text(encoding="utf-8")
-        assert "narrative" not in source, (
-            f"{name} references 'narrative' — the engine must be narrative-blind "
+        assert not _NARRATIVE_ACCESS.search(source), (
+            f"{name} accesses a 'narrative' field — the engine must be narrative-blind "
             "(consume NumericWorld, never WorldSpec.narrative)."
         )
 
