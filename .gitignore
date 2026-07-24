@@ -32,3 +32,6 @@ Thumbs.db
 # Secrets — never commit
 .env
 .env.*
+
+# Step 2 experiments (local-first; manifests may be kept manually)
+experiments/
