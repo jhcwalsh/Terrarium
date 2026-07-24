@@ -48,6 +48,11 @@ from ah.data.cli import data_app  # noqa: E402
 
 app.add_typer(data_app, name="data")
 
+# Step 2 experiment tracking (ah exp ...)
+from ah.exp_cli import exp_app  # noqa: E402
+
+app.add_typer(exp_app, name="exp")
+
 
 def _now() -> str:
     return datetime.now(UTC).isoformat()

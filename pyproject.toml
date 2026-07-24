@@ -83,6 +83,8 @@ ignore = [
 
 [tool.ruff.lint.per-file-ignores]
 "tests/*" = ["B011"]
+# The artifact builder embeds display typography (en-dashes, ×) in chart titles.
+"scripts/build_artifact.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Typer's function-call-in-default is the intended idiom, not a B008 mutable default.
@@ -102,6 +104,27 @@ venv = ".venv"
 # the rest of the codebase keeps full basic-mode strictness.
 [[tool.pyright.executionEnvironments]]
 root = "src/ah/data"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
+reportArgumentType = "none"
+reportReturnType = "none"
+reportIndexIssue = "none"
+reportOperatorIssue = "none"
+reportOptionalMemberAccess = "none"
+
+# The Step-2 generator/eval layers are numpy/pandas/torch-heavy — same stub noise.
+[[tool.pyright.executionEnvironments]]
+root = "src/ah/gen"
+reportAttributeAccessIssue = "none"
+reportCallIssue = "none"
+reportArgumentType = "none"
+reportReturnType = "none"
+reportIndexIssue = "none"
+reportOperatorIssue = "none"
+reportOptionalMemberAccess = "none"
+
+[[tool.pyright.executionEnvironments]]
+root = "src/ah/eval"
 reportAttributeAccessIssue = "none"
 reportCallIssue = "none"
 reportArgumentType = "none"

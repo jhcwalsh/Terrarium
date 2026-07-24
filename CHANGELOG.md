@@ -84,6 +84,18 @@ All notable changes to this project are documented here. The project follows
   quarantined (QC gate), and `as_of` reads resolve through the pointer history.
   Added `duckdb` + `pyarrow` deps.
 
+## [Unreleased] — Step 2 (generator layer)
+
+### Added
+- **WP2.1 — Experiment infra, splits, leakage guards, registry.** `splits.py`:
+  train/validation/holdout spans with a `DataAccess` guard — the holdout is reachable
+  only via a `FinalEvaluationToken` minted solely in `ah.eval.g2`, proven by an
+  import-graph test that no `ah.gen` module imports that mint; `train_val()` is the
+  reference/normalization surface (holdout excluded). `experiment.py` + `ah exp`
+  (list/show/diff): deterministic config hashing, git SHA, seed, `experiments/<id>/`.
+  `gen/base.py` (`Generator` protocol + `Ensemble` with full lineage metadata),
+  `gen/registry.py` (resolve WorldSpec `generator_id`; unknown ids error).
+
 ## [v0.1.0-g0] — 2026-07-24
 
 Gate G0 ("lay the rails") complete. All seven G0 criteria pass — see `G0-EVIDENCE.md`.
