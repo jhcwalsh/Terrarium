@@ -1,0 +1,10 @@
+# Normalize line endings to LF in the repo for cross-platform determinism.
+* text=auto eol=lf
+
+# Binary / generated artifacts that must not be normalized
+*.parquet binary
+*.duckdb binary
+*.db binary
+*.xls binary
+*.xlsx binary
+*.dta binary
