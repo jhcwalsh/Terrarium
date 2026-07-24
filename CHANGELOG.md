@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased]
 
 ### Added
+- **WP0.4 — Deterministic toy engine (`toy-v0`).** Monthly, pure-function engine
+  (`run_path`, `run_ensemble`) over a `NumericWorld`: policy-rate AR path, HY-spread
+  rise/decay, inflation AR, binary crisis mask, common-factor asset returns, and
+  quarterly appraisal-smoothed reported marks for pe/pc/re. All randomness from one
+  `Generator(PCG64(seed))`, drawn up front in fixed order; ensemble seeds
+  `base_seed + 7919*k`; errors clearly on non-`toy-v0` generators. Tests: frozen
+  golden digest (seed 42 stagflation), determinism, hypothesis invariants
+  (finite / rate>=0.1 / spread>=150 / reported flat off quarter-ends), ensemble
+  seeding, and the narrative-blindness guard (now access-pattern based).
 - **WP0.3 — Validator (V-rules).** `validate(world) -> ValidationResult`
   {clamped_world, clamps, warnings, blocking}, implementing V1-V12 (WORLDSPEC.md §3).
   Bounds clamps (V9) are driven from the JSON Schema itself (one home for bounds),
