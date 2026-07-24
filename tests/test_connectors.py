@@ -86,17 +86,18 @@ def test_french_factor_monthly_block_ignores_annual() -> None:
         _raw("french", "factors.csv", "french.mkt_rf"), REQ["french.mkt_rf"]
     )
     assert out["date"].dt.strftime("%Y-%m").tolist() == ["2020-01", "2020-02"]
-    assert out["value"].tolist() == [2.0, -3.0]  # annual 2020 row excluded
+    # percent -> decimal: 2.00% -> 0.02, -3.00% -> -0.03; annual 2020 row excluded
+    assert out["value"].tolist() == pytest.approx([0.02, -0.03])
 
 
 def test_french_selects_requested_column() -> None:
     out = FrenchConnector().parse(_raw("french", "factors.csv", "french.hml"), REQ["french.hml"])
-    assert out["value"].tolist() == [0.5, -0.25]
+    assert out["value"].tolist() == pytest.approx([0.005, -0.0025])
 
 
 def test_french_momentum() -> None:
     out = FrenchConnector().parse(_raw("french", "momentum.csv", "french.mom"), REQ["french.mom"])
-    assert out["value"].tolist() == [1.0, -2.0]
+    assert out["value"].tolist() == pytest.approx([0.01, -0.02])
 
 
 # --------------------------------------------------------------------------- #

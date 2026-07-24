@@ -10,7 +10,7 @@ import pytest
 
 from ah.data.catalog import Catalog
 from ah.data.manifest import Requirement, requirements
-from ah.data.refresh import csv_dir_provider, plan, refresh
+from ah.data.refresh import connector_provider, csv_dir_provider, plan, refresh
 
 REQ = requirements()
 NOW = "2026-06-05T00:00:00"
@@ -121,3 +121,32 @@ def test_csv_dir_provider(tmp_path: Path) -> None:
     provider = csv_dir_provider(tmp_path)
     assert provider(REQ["fred.DGS10"]) is not None
     assert provider(REQ["fred.GS10"]) is None  # absent
+
+
+class _FakeConn:
+    def __init__(self, source: str) -> None:
+        self.source = source
+        self.fetches = 0
+
+    def fetch(self, req: Requirement) -> str:
+        self.fetches += 1
+        return f"raw:{req.series_id}"
+
+    def parse(self, raw: str, req: Requirement) -> pd.DataFrame:
+        return _monthly([1.0])
+
+
+def test_connector_provider_maps_and_caches_shared_files() -> None:
+    fred, french = _FakeConn("fred"), _FakeConn("french")
+    provider = connector_provider({"fred": fred, "french": french})
+
+    assert provider(REQ["fred.DGS10"]) is not None
+    assert provider(REQ["shiller.price"]) is None  # no connector for that source
+
+    # French (shared file) is fetched once even across multiple series
+    provider(REQ["french.mkt_rf"])
+    provider(REQ["french.smb"])
+    assert french.fetches == 1
+    # FRED fetches per series
+    provider(REQ["fred.GS10"])
+    assert fred.fetches == 2
