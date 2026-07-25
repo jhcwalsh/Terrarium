@@ -104,6 +104,18 @@ def compute_panel(ensemble: EnsembleResult) -> tuple[dict[str, float], dict[str,
 
 
 def evaluate(scalars: dict[str, float], thresholds: dict[str, dict[str, Any]]) -> list[Check]:
+    """Check each scalar against its threshold. **A NaN value FAILS.**
+
+    THE ONE NaN RULE, stated identically here and in
+    :func:`ah.eval.battery._passed`, and in ``pre-registration.yaml``'s
+    ``conventions.nan_metric_rule``: an uncomputable metric has not demonstrated
+    compliance, so it does not pass. This module previously took the opposite view --
+    it skipped the bound comparison entirely for NaN and marked the check ``ok`` -- so
+    the same generator could be judged PASS here and FAIL by ``ah.eval.battery``, with
+    both modules inside the pre-registration seal. Changed deliberately (WP2.2 Task 1
+    fix pass, review finding I2); the divergence, not this module's behaviour alone,
+    was the defect.
+    """
     checks: list[Check] = []
     for metric, value in scalars.items():
         spec = thresholds.get(metric)
@@ -112,8 +124,8 @@ def evaluate(scalars: dict[str, float], thresholds: dict[str, dict[str, Any]]) -
         lo = spec.get("min")
         hi = spec.get("max")
         status = spec.get("status", "todo")
-        ok = True
-        if not np.isnan(value):
+        ok = not bool(np.isnan(value))
+        if ok:
             if lo is not None and value < lo:
                 ok = False
             if hi is not None and value > hi:

@@ -12,6 +12,8 @@ one's.
 from __future__ import annotations
 
 import json
+from collections.abc import Iterator
+from dataclasses import FrozenInstanceError
 from pathlib import Path
 from typing import Any
 
@@ -32,7 +34,7 @@ from ah.eval.battery import (
     register_suite,
     run_battery,
 )
-from ah.eval.reference import BlockReference, ReferenceStats, StatBand
+from ah.eval.reference import BlockReference, FactorCoverage, ReferenceStats, StatBand
 from ah.factors import load_manifest
 from ah.gen.base import Ensemble, EnsembleMeta
 
@@ -80,11 +82,29 @@ def _real_prereg() -> prereg_mod.PreRegistration:
 # --------------------------------------------------------------------------- #
 
 
+@pytest.fixture(autouse=True)
+def _restore_suites() -> Iterator[None]:
+    """Snapshot and restore ``battery.SUITES`` around every test in this module.
+
+    ``SUITES`` is process-global module state and ``register_suite`` refuses to
+    re-register a name, so a test that registers a throwaway suite and does not undo it
+    poisons every later test -- and, worse, leaks a metric into any *other* module's
+    ``run_battery`` call. The previous ``monkeypatch.setitem`` then ``del`` dance
+    registered the key only so monkeypatch would learn to delete it again, which is
+    both obscure and wrong for any test that registers more than one suite. A snapshot
+    of the whole dict is exact and needs no cooperation from the test body.
+    """
+    snapshot = dict(battery.SUITES)
+    try:
+        yield
+    finally:
+        battery.SUITES.clear()
+        battery.SUITES.update(snapshot)
+
+
 def _clean_suite_name(monkeypatch: pytest.MonkeyPatch, name: str) -> None:
-    """Ensure ``name`` is absent from SUITES before and after the test."""
+    """Assert ``name`` is not already registered; teardown is ``_restore_suites``'."""
     assert name not in battery.SUITES
-    monkeypatch.setitem(battery.SUITES, name, ())
-    del battery.SUITES[name]
 
 
 def test_register_suite_adds_specs(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -236,10 +256,14 @@ def _write_synthetic_prereg(tmp_path: Path, *, min_v: float, max_v: float, sever
     return prereg_mod.load(prereg_path), load_manifest(factors_path)
 
 
-def _band_reference(point: float) -> ReferenceStats:
-    band = StatBand(
+def _a_band(point: float = 0.0) -> StatBand:
+    return StatBand(
         point=point, lo=point - 1.0, hi=point + 1.0, n_resamples=5, level=0.9, tier="monthly"
     )
+
+
+def _band_reference(point: float) -> ReferenceStats:
+    band = _a_band(point)
     return ReferenceStats(
         blocks={"global": BlockReference(block="global", stats={"g1.mean": band})},
         cross_blocks={},
@@ -523,11 +547,279 @@ def test_metric_result_is_frozen() -> None:
         severity="report",
         passed=None,
     )
-    with pytest.raises(Exception):  # noqa: B017 - FrozenInstanceError
+    with pytest.raises(FrozenInstanceError):
         r.value = 2.0  # type: ignore[misc]
 
 
 def test_metric_spec_is_frozen() -> None:
     spec = MetricSpec(name="x.mean", tier="monthly", fn=lambda e: 0.0, suite="s")
-    with pytest.raises(Exception):  # noqa: B017 - FrozenInstanceError
+    with pytest.raises(FrozenInstanceError):
         spec.name = "y.mean"  # type: ignore[misc]
+
+
+# --------------------------------------------------------------------------- #
+# 6. WP2.2 Task 1 fix pass: MC-error meta, the one NaN rule, report accounting,
+#    the aggregate verdict, and verify()-at-invocation.
+# --------------------------------------------------------------------------- #
+
+
+def test_mc_error_sub_ensemble_meta_n_paths_matches_its_paths() -> None:
+    """I1: `mc_error` sliced `paths[idx]` but passed `meta=ensemble.meta` unchanged.
+
+    `Ensemble.n_paths` reads `paths.shape[0]`; `EnsembleMeta.n_paths` is an independent
+    field. Passing the parent's meta onto a subsample deliberately manufactures
+    instances where the two disagree -- and a Tasks 2-6 metric reading `e.meta.n_paths`
+    (entirely natural: it is the documented lineage record) would get a silently wrong
+    MC error on every subsample.
+    """
+    rng = np.random.Generator(np.random.PCG64(11))
+    n_paths = 100
+    values = rng.normal(0.0, 1.0, size=(n_paths, 3))
+    ensemble = Ensemble(paths=values[:, :, None], factor_names=["g1"], meta=_uniform_meta(n_paths))
+
+    seen: list[tuple[int, int]] = []
+
+    def metric(e: Ensemble) -> float:
+        seen.append((e.n_paths, e.meta.n_paths))
+        return float(np.mean(e.factor("g1")))
+
+    mc_error(metric, ensemble, seed=5, n_subsamples=10)
+
+    assert seen, "expected mc_error to evaluate the metric on sub-ensembles"
+    for actual, declared in seen:
+        assert actual == declared, (
+            f"sub-ensemble carries {actual} paths but its meta declares {declared}"
+        )
+    assert sum(actual for actual, _ in seen) == n_paths  # disjoint and exhaustive
+
+
+def test_nan_metric_fails_a_threshold_rather_than_passing_it(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """I2: an uncomputable metric has not demonstrated compliance.
+
+    `ah/battery/report.py::evaluate` treated NaN as PASS while
+    `ah/eval/battery.py::_passed` treated it as FAIL -- two divergent rules, both
+    inside the seal. One rule now: NaN = FAIL, on both sides.
+    """
+    name = "_test_nan_fails"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [MetricSpec(name="g1.mean", tier="monthly", fn=lambda e: float("nan"), suite=name)],
+    )
+    prereg_obj, manifest = _write_synthetic_prereg(
+        tmp_path, min_v=-1.0, max_v=1.0, severity="enforce"
+    )
+
+    report = run_battery(
+        _constant_ensemble(0.5),
+        reference=_band_reference(point=0.0),
+        prereg=prereg_obj,
+        manifest=manifest,
+        seed=0,
+    )
+
+    result = next(r for r in report.results if r.name == "g1.mean")
+    assert np.isnan(result.value)
+    assert result.passed is False
+
+
+def test_battery_report_carries_missing_factor_accounting_and_a_verdict(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """I5 (+ I3, I4): the report must say what was missing, why, and whether it passed."""
+    name = "_test_report_accounting"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean",
+                tier="monthly",
+                fn=lambda e: float(np.mean(e.factor("g1"))),
+                suite=name,
+            )
+        ],
+    )
+    prereg_obj, manifest = _write_synthetic_prereg(
+        tmp_path, min_v=-1.0, max_v=1.0, severity="enforce"
+    )
+    reference = ReferenceStats(
+        blocks={"global": BlockReference(block="global", stats={"g1.mean": _a_band()})},
+        cross_blocks={},
+        active_blocks=("global",),
+        vintage_id="v",
+        n_resamples=5,
+        seed=1,
+        missing_factors=("commodities", "hy_spread"),
+        missing_declared=("commodities",),
+        missing_no_data=("hy_spread",),
+        coverage={
+            "g1": FactorCoverage(first_date="1926-07-01", last_date="2020-12-01", n_obs=1134)
+        },
+    )
+
+    report = run_battery(
+        _constant_ensemble(0.5),
+        reference=reference,
+        prereg=prereg_obj,
+        manifest=manifest,
+        seed=0,
+    )
+
+    assert report.missing_declared == ("commodities",)
+    assert report.missing_no_data == ("hy_spread",)
+    assert report.passed is True  # the only enforce metric is inside its band
+
+    payload = json.loads(report.to_json())
+    assert payload["missing_factors"]["no_data"] == ["hy_spread"]
+    assert payload["missing_factors"]["declared_unavailable"] == ["commodities"]
+    assert payload["passed"] is True
+    assert payload["coverage"]["g1"]["n_obs"] == 1134
+
+    md = report.to_markdown()
+    assert "hy_spread" in md
+    assert "1926-07-01" in md  # I4: per-factor coverage is visible, not just recorded
+
+
+def test_battery_report_aggregate_verdict_is_false_on_an_enforce_failure(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    name = "_test_report_verdict_fail"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean",
+                tier="monthly",
+                fn=lambda e: float(np.mean(e.factor("g1"))),
+                suite=name,
+            )
+        ],
+    )
+    prereg_obj, manifest = _write_synthetic_prereg(
+        tmp_path, min_v=-1.0, max_v=1.0, severity="enforce"
+    )
+
+    report = run_battery(
+        _constant_ensemble(5.0),  # outside [-1, 1]
+        reference=_band_reference(point=0.0),
+        prereg=prereg_obj,
+        manifest=manifest,
+        seed=0,
+    )
+
+    assert report.passed is False
+    assert [r.name for r in report.enforce_failures] == ["g1.mean"]
+
+
+def test_report_severity_metric_failure_does_not_fail_the_verdict(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    name = "_test_report_verdict_report_tier"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean",
+                tier="monthly",
+                fn=lambda e: float(np.mean(e.factor("g1"))),
+                suite=name,
+            )
+        ],
+    )
+    prereg_obj, manifest = _write_synthetic_prereg(
+        tmp_path, min_v=-1.0, max_v=1.0, severity="report"
+    )
+
+    report = run_battery(
+        _constant_ensemble(5.0),
+        reference=_band_reference(point=0.0),
+        prereg=prereg_obj,
+        manifest=manifest,
+        seed=0,
+    )
+
+    assert report.results[0].passed is False
+    assert report.enforce_failures == ()
+    assert report.passed is True
+
+
+def test_run_battery_verifies_a_sealed_preregistration(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """I6: plan Sec.WP2.3 requires verify() at every battery/G2 invocation.
+
+    It cannot run unconditionally while the pre-registration is unsealed (the
+    provisional document does not satisfy every check yet), so the call is guarded on
+    `prereg.sealed` -- present, not silently absent. Proved by loading a *sealed*
+    synthetic pre-registration that verify() must reject and asserting run_battery
+    refuses to produce a report from it.
+    """
+    name = "_test_verify_called"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean",
+                tier="monthly",
+                fn=lambda e: float(np.mean(e.factor("g1"))),
+                suite=name,
+            )
+        ],
+    )
+    factors_path = tmp_path / "factors.yaml"
+    factors_path.write_text(
+        "factor_blocks:\n  global: [g1]\nactive_blocks: [global]\n"
+        "factor_sources:\n  g1: {kind: series, series_id: s.g1, units: ret}\n",
+        encoding="utf-8",
+    )
+    prereg_path = tmp_path / "pre-registration.yaml"
+    prereg_path.write_text(
+        'schema_version: "1.0"\n'
+        "sealed: true\n"  # sealed, so verify() must run
+        "factor_manifest: factors.yaml\n"
+        "active_blocks: [global]\n"
+        "thresholds:\n"
+        "  blocks:\n"
+        "    global:\n"
+        "      g1.mean: {min: -1.0, max: 1.0, severity: enforce}\n"
+        "  cross_blocks: {}\n",  # no conventions block at all -> verify() fails
+        encoding="utf-8",
+    )
+    sealed_prereg = prereg_mod.load(prereg_path)
+    manifest = load_manifest(factors_path)
+
+    with pytest.raises(prereg_mod.PreRegError):
+        run_battery(
+            _constant_ensemble(0.5),
+            reference=_band_reference(point=0.0),
+            prereg=sealed_prereg,
+            manifest=manifest,
+            seed=0,
+        )
+
+
+def test_every_registered_reference_stat_tier_is_a_battery_tier() -> None:
+    """Minor: `battery.TIERS` and `reference.py`'s per-stat tiers were two independent
+    statements of one vocabulary. A stat registered with a tier the battery does not
+    know would be reported under a tier heading that never renders.
+    """
+    from ah.eval.reference import CROSS_BLOCK_STATS, SINGLE_FACTOR_STATS
+
+    for stat_name, registered in SINGLE_FACTOR_STATS.items():
+        assert registered.tier in battery.TIERS, stat_name
+    for stat_name, cross in CROSS_BLOCK_STATS.items():
+        assert cross.tier in battery.TIERS, stat_name
+
+
+def test_dry_run_seal_needs_no_out_path() -> None:
+    """Minor: `run_battery` passed `out_path=Path("unused-dry-run.lock")`, a dead
+    required argument for a call that writes nothing.
+    """
+    digest = prereg_mod.seal(prereg_mod.load().source_path, sealed_at="n/a", dry_run=True)
+    assert digest.startswith("sha256:")

@@ -72,22 +72,45 @@ statistic, so no such alignment is implemented here; if WP2.2 registers one, it 
 align only that statistic's own block-scoped factors, not reintroduce a single
 all-active-factors join.
 
-The ``commodities`` gap
--------------------------
-No Step-1 series sources ``commodities`` yet (see ``factors.yaml``'s header note). A
-factor the reader has no data for is *not* an error and does not silently produce
-``NaN``: it is skipped and its name recorded in ``ReferenceStats.missing_factors``.
-Concretely, a factor is "missing" when ``access.train_val`` either raises ``KeyError``
-(no such series) or returns an empty frame (no rows in train+validation). A frame that
-*is* returned but is malformed (missing the ``date``/``value`` columns the rest of this
-module assumes) is a different failure mode -- a bug, not a data gap -- and raises a
-named :class:`ReferenceComputationError` identifying the offending factor and series id
-rather than propagating an anonymous ``KeyError`` from deep inside pandas.
+Where the data comes from
+---------------------------
+The factor-id -> catalog-series-id mapping is ``factors.yaml``'s ``factor_sources``
+section (WP2.2 Task 1), read through :func:`ah.eval.panel.read_factor_frames` -- the
+single resolution surface this module and :func:`ah.eval.panel.build_panel` share, so
+the statistics WP2.3 seals bands over and the panel a generator is fitted against can
+never resolve a factor differently. ``compute_reference`` therefore takes the manifest
+itself (it always did) and a ``split_reader`` hook defaulting to
+:meth:`ah.splits.DataAccess.train_val`; it no longer takes a bare ``series_id_for``
+callable. That callable defaulted to *identity*, and nothing in production ever passed
+it anything else, so every factor id was handed to the catalog verbatim, every factor
+landed in ``missing_factors``, and the reference came back empty with no error --
+closed here, with ``tests/test_reference.py``'s
+``test_compute_reference_resolves_real_manifest_series_ids`` as the guard.
 
-The factor-id -> catalog-series-id mapping does not exist anywhere in the repo yet
-(that mapping is WP2.2/Step-2R scope). ``compute_reference`` therefore takes a
-``series_id_for`` callable, defaulting to identity, so tests can inject a mapping and
-WP2.2 can supply the real one later without changing this module's signature.
+Missing factors: two kinds, never conflated
+---------------------------------------------
+A factor with no data is *not* an error and does not silently produce ``NaN``: it is
+skipped and recorded. ``missing_declared`` names factors the manifest itself declares
+``kind: unavailable`` (``commodities`` -- expected, governed by a retrofit-register
+row); ``missing_no_data`` names factors that declare a real source but whose series
+had no train+validation rows (unknown series id, or a known one with zero rows). The
+second is the dangerous one and is reported separately -- see
+:mod:`ah.eval.panel`'s module docstring. ``missing_factors`` is their union, kept for
+callers that only need "which factors are absent".
+
+A frame that *is* returned but is malformed (missing the ``date``/``value`` columns
+this module assumes) is a different failure mode -- a bug, not a data gap -- and raises
+a named :class:`ReferenceComputationError` identifying the offending factor and its
+source rather than propagating an anonymous ``KeyError`` from deep inside pandas.
+
+Per-factor coverage is recorded, not assumed
+----------------------------------------------
+``min_start`` across the mapped series runs from 1913 (CPI) to 1996 (HY OAS): a sealed
+``equity_vol`` band rests on ~30 years of history and a sealed ``equity_mkt`` band on
+~95. :class:`ReferenceStats` therefore records, per factor, the first and last
+train+validation observation date and the observation count
+(:class:`FactorCoverage`), and the battery report prints it. "What is the band a band
+*of*" is the whole point of the mapping this module now reads.
 """
 
 from __future__ import annotations
@@ -100,6 +123,8 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from ah.eval.panel import FactorFrames, PanelError, SplitReader, default_split_reader
+from ah.eval.panel import read_factor_frames as _read_factor_frames
 from ah.factors import FactorManifest
 from ah.splits import DataAccess
 
@@ -177,12 +202,31 @@ class CrossBlockReference:
 
 
 @dataclass(frozen=True)
+class FactorCoverage:
+    """What one factor's train+validation sample actually was.
+
+    ``first_date``/``last_date`` are ISO ``YYYY-MM-DD`` strings (JSON-friendly and
+    stable across pandas versions); ``n_obs`` is the observation count the statistics
+    for that factor were computed over. Recorded because per-factor effective sample
+    varies roughly fourfold across the mapped series and a sealed band that does not
+    say how much history it rests on is not auditable.
+    """
+
+    first_date: str
+    last_date: str
+    n_obs: int
+
+
+@dataclass(frozen=True)
 class ReferenceStats:
     """The complete train+validation reference: every block, plus every cross-block pair.
 
-    ``missing_factors`` lists active factors for which no data was available (see the
-    module docstring's ``commodities`` note); they contribute no entries to ``blocks``
-    or ``cross_blocks``.
+    ``missing_factors`` lists every active factor for which no data was available; they
+    contribute no entries to ``blocks`` or ``cross_blocks``. ``missing_declared`` and
+    ``missing_no_data`` split that list into its two very different halves -- see the
+    module docstring's "Missing factors: two kinds". ``coverage`` records, per factor
+    that *did* produce statistics, the span and observation count those statistics rest
+    on.
     """
 
     blocks: Mapping[str, BlockReference]
@@ -192,6 +236,9 @@ class ReferenceStats:
     n_resamples: int
     seed: int
     missing_factors: tuple[str, ...]
+    missing_declared: tuple[str, ...] = ()
+    missing_no_data: tuple[str, ...] = ()
+    coverage: Mapping[str, FactorCoverage] = MappingProxyType({})
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-serializable rendering (for the battery report and Task 4's threshold authoring).
@@ -227,6 +274,16 @@ class ReferenceStats:
             "n_resamples": self.n_resamples,
             "active_blocks": list(self.active_blocks),
             "missing_factors": list(self.missing_factors),
+            "missing_declared": list(self.missing_declared),
+            "missing_no_data": list(self.missing_no_data),
+            "coverage": {
+                factor: {
+                    "first_date": cov.first_date,
+                    "last_date": cov.last_date,
+                    "n_obs": cov.n_obs,
+                }
+                for factor, cov in self.coverage.items()
+            },
             "blocks": {block: _stats_dict(ref.stats) for block, ref in self.blocks.items()},
             "cross_blocks": {
                 "|".join(pair): _stats_dict(ref.stats) for pair, ref in self.cross_blocks.items()
@@ -532,59 +589,32 @@ def block_bootstrap_band(
 # --------------------------------------------------------------------------- #
 
 
-def _identity(factor_id: str) -> str:
-    return factor_id
+def _series_by_factor(read: FactorFrames) -> dict[str, pd.Series]:
+    """Turn :attr:`FactorFrames.frames` into date-indexed value series, one per factor.
 
-
-def _read_train_val(
-    access: DataAccess, factor: str, series_id_for: Callable[[str], str]
-) -> pd.Series | None:
-    """``access.train_val`` for one factor, as a date-indexed value series, or ``None``.
-
-    ``None`` covers both an unknown series id (``KeyError`` from the underlying
-    reader, propagated through :meth:`~ah.splits.DataAccess.train_val`) and a known
-    series id with zero rows in train+validation -- both are the ``commodities``-style
-    gap this module must not raise or NaN on. A frame that *is* non-empty but is
-    missing the ``date``/``value`` columns is a different failure mode entirely (a bug,
-    not a gap) and raises :class:`ReferenceComputationError` naming the factor and
-    series id, rather than letting a bare ``KeyError`` propagate anonymously from
-    ``df.set_index("date")["value"]``.
+    No cross-factor alignment happens here -- each statistic aligns only what it needs
+    (see the module docstring's "Data alignment" section). Resolution and the
+    "missing, not an error" contract already happened in
+    :func:`ah.eval.panel.read_factor_frames`; this is only the frame -> series shaping
+    the statistics below want.
     """
-    series_id = series_id_for(factor)
-    try:
-        df = access.train_val(series_id)
-    except KeyError:
-        return None
-    if df.empty:
-        return None
-    missing_cols = {"date", "value"} - set(df.columns)
-    if missing_cols:
-        raise ReferenceComputationError(
-            f"factor '{factor}' (series_id '{series_id}'): train_val frame is missing "
-            f"required column(s) {sorted(missing_cols)}"
+    return {
+        factor: frame.set_index("date")["value"].sort_index()
+        for factor, frame in read.frames.items()
+    }
+
+
+def _coverage(series_by_factor: Mapping[str, pd.Series]) -> dict[str, FactorCoverage]:
+    """Per-factor first/last observation date and count, in ``series_by_factor`` order."""
+    coverage: dict[str, FactorCoverage] = {}
+    for factor, series in series_by_factor.items():
+        index = pd.to_datetime(pd.Index(series.index))
+        coverage[factor] = FactorCoverage(
+            first_date=str(index.min().date()),
+            last_date=str(index.max().date()),
+            n_obs=int(series.shape[0]),
         )
-    return df.set_index("date")["value"].sort_index()
-
-
-def _read_all_factors(
-    access: DataAccess, factors: tuple[str, ...], series_id_for: Callable[[str], str]
-) -> tuple[dict[str, pd.Series], tuple[str, ...]]:
-    """Read every factor's own train+validation series independently.
-
-    No cross-factor alignment happens here -- each statistic aligns only what it
-    needs (see the module docstring's "Data alignment" section). Returns
-    ``(factor -> date-indexed value series, missing factor names)``, missing names in
-    ``factors`` order.
-    """
-    series_by_factor: dict[str, pd.Series] = {}
-    missing: list[str] = []
-    for factor in factors:
-        series = _read_train_val(access, factor, series_id_for)
-        if series is None:
-            missing.append(factor)
-        else:
-            series_by_factor[factor] = series
-    return series_by_factor, tuple(missing)
+    return coverage
 
 
 def _aligned_pair(series_by_factor: Mapping[str, pd.Series], fa: str, fb: str) -> np.ndarray | None:
@@ -721,16 +751,29 @@ def compute_reference(
     n_resamples: int = 1000,
     level: float = 0.9,
     block_length: int = 24,
-    series_id_for: Callable[[str], str] = _identity,
+    split_reader: SplitReader = default_split_reader,
+    factor_frames: FactorFrames | None = None,
 ) -> ReferenceStats:
     """Compute train+validation reference statistics and bootstrap bands, per block.
 
-    Reads every :meth:`FactorManifest.active_factors` factor through
-    ``access.train_val(series_id_for(factor))`` (never ``access.frame(..., "holdout",
-    ...)``, and this module holds no :class:`~ah.splits.FinalEvaluationToken` with
-    which it even could), each independently -- see the module docstring's "Data
-    alignment" section for why this function does not inner-join every active factor
-    onto one shared date axis before computing anything. Then computes:
+    Resolves every :meth:`FactorManifest.active_factors` factor through
+    :func:`ah.eval.panel.read_factor_frames` -- the manifest's own ``factor_sources``
+    mapping, so ``kind: series`` and ``kind: derived`` factors both resolve and no
+    factor id is ever handed to the catalog verbatim. Reading goes through
+    ``split_reader``, which defaults to :meth:`~ah.splits.DataAccess.train_val` (never
+    ``access.frame(..., "holdout", ...)``, and this module holds no
+    :class:`~ah.splits.FinalEvaluationToken` with which it even could). Each factor is
+    read independently -- see the module docstring's "Data alignment" section for why
+    this function does not inner-join every active factor onto one shared date axis
+    before computing anything.
+
+    ``factor_frames`` is the injection point: pass an already-resolved
+    :class:`~ah.eval.panel.FactorFrames` to compute statistics over frames a caller
+    built itself (a test fixture, or a caller that also wants
+    :func:`ah.eval.panel.build_panel`'s assembled view of the *same* read, without
+    paying for the read twice). When given, ``access``/``split_reader`` are not used.
+
+    Then computes:
 
     - Every :data:`SINGLE_FACTOR_STATS` entry for every present factor, per active
       block (:class:`BlockReference`, one per ``manifest.active_blocks`` entry -- every
@@ -756,8 +799,17 @@ def compute_reference(
     resample" property is explicit, not an emergent side effect of separate calls
     happening to share the same ``(seed, T, block_length, n_resamples)``.
     """
-    active_factors = manifest.active_factors()
-    series_by_factor, missing = _read_all_factors(access, active_factors, series_id_for)
+    if factor_frames is None:
+        try:
+            factor_frames = _read_factor_frames(access, manifest, split_reader=split_reader)
+        except PanelError as exc:
+            # A malformed frame (or a malformed factor_sources entry) is a bug, not a
+            # data gap. Re-raised under this module's own named error so a caller of
+            # compute_reference sees one error type -- the message already names the
+            # offending factor and series id.
+            raise ReferenceComputationError(str(exc)) from exc
+    series_by_factor = _series_by_factor(factor_frames)
+    missing = factor_frames.missing
 
     blocks: dict[str, BlockReference] = {}
     for block in manifest.active_blocks:
@@ -796,4 +848,7 @@ def compute_reference(
         n_resamples=n_resamples,
         seed=seed,
         missing_factors=missing,
+        missing_declared=factor_frames.missing_declared,
+        missing_no_data=factor_frames.missing_no_data,
+        coverage=MappingProxyType(_coverage(series_by_factor)),
     )

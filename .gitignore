@@ -1,5 +1,10 @@
-# Data (never committed — see CLAUDE.md / STEP1 licensing discipline)
-data/
+# The licensed vintage store at the repository root (never committed — see CLAUDE.md /
+# STEP1 licensing discipline). ANCHORED with a leading slash: the unanchored `data/`
+# this line used to read matched ANY directory named `data` at any depth, which silently
+# excluded the entire `src/ah/data/` package (all of Step 1's data layer), every
+# synthetic connector fixture under `tests/fixtures/data/`, and `docs/data/`. Those are
+# source, tests and documentation, not licensed data, and they must be committed.
+/data/
 
 # Python
 __pycache__/

@@ -17,7 +17,11 @@
 # It stays in the `global` block below because it is the declared factor namespace the
 # generator is expected to fill; its reference statistics are unavailable until a
 # commodities series is registered under the requirements.yaml §WP1.9
-# emergent-requirements rule.
+# emergent-requirements rule. That registration is deferred to WP2.3 as an explicit
+# pre-seal decision with a stated reason (no free, already-connectored commodities
+# total-return series exists -- the honest candidates are licensed), recorded in
+# governance/retrofit-register.md RFR-8. RFR-1 originally assigned it to WP2.2; RFR-8
+# supersedes that assignment, since WP2.2 Task 1 was citing RFR-1 as its own reason.
 
 factor_blocks:
   global:  [equity_mkt, smb, hml, mom, equity_vol, commodities, ig_spread, hy_spread]
@@ -52,6 +56,22 @@ active_blocks: [global, us]
 #                   a deferred connector work package, or a J3/R5 decision) rather
 #                   than inventing a proxy.
 #
+# Three optional fields cut across all three kinds (WP2.2 Task 1 fix pass):
+#   numeraire   -- `total_return`, `zero_cost` or `excess_return`, for a return-bearing
+#                   factor; absent for a level (a level has no numeraire). This is the
+#                   machine-checked half of pre-registration.yaml's
+#                   conventions.numeraire: ah.strategies refuses to load a D4 strategy
+#                   whose legs do not all resolve to the sealed numeraire or to a
+#                   declared zero-cost overlay, which is what stops an excess-return
+#                   equity leg being weighted beside a total-return bond leg. On an
+#                   `unavailable` entry it records the numeraire D4 ASSUMES the factor
+#                   will carry once sourced.
+#   proxy /     -- set together, never separately. `proxy: true` means a substitution
+#   proxy_for       or splice-backed backfill is in play and `proxy_for` names it
+#                   (donor series plus the governing ah.data.splice rule). Machine-
+#                   visible on purpose: a backfill used to be free text inside `notes`,
+#                   invisible to any check.
+#
 # UNITS CONSISTENCY (machine-checked, tests/test_factors.py): a `series`/`derived`
 # entry's `units` must agree with pre-registration.yaml's
 # conventions.return_bearing_factors / conventions.level_factors classification for
@@ -63,29 +83,51 @@ active_blocks: [global, us]
 factor_sources:
   # --- global block ---
   equity_mkt:
-    kind: series
-    series_id: french.mkt_rf
+    kind: derived
+    expr: add
+    inputs: [french.mkt_rf, french.rf]
     units: ret
+    numeraire: total_return
     notes: >-
-      Mkt-RF (Fama-French), an EXCESS return over the one-month risk-free rate, NOT a
-      total return. pre-registration.yaml's D4 conventions inherit this excess-return
-      interpretation now that the mapping is a fact, not an assumption -- its prose
-      is corrected to say so (see conventions.units_of_return_bearing_factors there).
+      Equity market TOTAL RETURN = Mkt-RF + RF (ah.data.derive.add). Fama-French's
+      Mkt-RF is an EXCESS return over the one-month bill; french.rf is that same bill
+      rate, already registered in requirements.yaml with the same `units: ret`, so
+      adding them restores the total return. This is deliberate and is the sealed
+      numeraire decision (pre-registration.yaml conventions.numeraire): sixty_forty
+      and endowment_proxy weight this factor beside govt_tr_10y, which is a long-
+      government TOTAL return, and a fully-invested portfolio may not mix an excess
+      leg with a total-return leg. Mapping equity_mkt to french.mkt_rf alone would do
+      exactly that, and ah.strategies now refuses to load such a portfolio.
   smb:
     kind: series
     series_id: french.smb
     units: ret
-    notes: "Fama-French SMB, a long-short spread return; used directly, no transform."
+    numeraire: zero_cost
+    notes: >-
+      Fama-French SMB, a long-short spread return. ZERO-COST: a self-financing
+      overlay commits no capital, so it is numeraire-neutral and may be combined with
+      total-return legs (its weight in eqw_factors is a notional/risk budget, not a
+      capital share). Used directly, no transform.
   hml:
     kind: series
     series_id: french.hml
     units: ret
-    notes: "Fama-French HML, a long-short spread return; used directly, no transform."
+    numeraire: zero_cost
+    notes: >-
+      Fama-French HML, a long-short spread return. ZERO-COST: a self-financing
+      overlay commits no capital, so it is numeraire-neutral and may be combined with
+      total-return legs (its weight in eqw_factors is a notional/risk budget, not a
+      capital share). Used directly, no transform.
   mom:
     kind: series
     series_id: french.mom
     units: ret
-    notes: "Fama-French Mom (UMD), a long-short spread return; used directly, no transform."
+    numeraire: zero_cost
+    notes: >-
+      Fama-French Mom (UMD), a long-short spread return. ZERO-COST: a self-financing
+      overlay commits no capital, so it is numeraire-neutral and may be combined with
+      total-return legs (its weight in eqw_factors is a notional/risk budget, not a
+      capital share). Used directly, no transform.
   equity_vol:
     kind: series
     series_id: fred.VIX
@@ -95,6 +137,7 @@ factor_sources:
       matching pre-registration.yaml's level_factors classification.
   commodities:
     kind: unavailable
+    numeraire: total_return
     reason: >-
       no Step-1 series registered; see governance/retrofit-register.md RFR-1. Carries
       weight in two D4 strategies (eqw_factors, endowment_proxy) whose reference
@@ -112,6 +155,11 @@ factor_sources:
     kind: series
     series_id: fred.HY_OAS
     units: pct
+    proxy: true
+    proxy_for: >-
+      derived.baa_aaa_spread before 1996-12, via ah.data.splice PROXY_RULES
+      ['hy_oas_pre1996'] (regression on the 1996-2005 overlap), every spliced
+      observation flagged is_proxy.
     notes: >-
       ICE BofA US High Yield OAS via FRED (BAMLH0A0HYM2). requirements.yaml notes FRED
       serves only ~3 years of history for this series under ICE licensing terms, so it
@@ -121,13 +169,26 @@ factor_sources:
   # --- us block ---
   policy_rate:
     kind: series
-    series_id: fred.TB3MS
+    series_id: fred.FEDFUNDS
     units: pct
+    proxy: true
+    proxy_for: >-
+      fred.TB3MS before 1954-07 (FRED's first FEDFUNDS observation), via
+      ah.data.splice PROXY_RULES['fedfunds_pre1954'] (regression on the 1954-1990
+      overlap), every spliced observation flagged is_proxy.
     notes: >-
-      3-month Treasury bill secondary-market rate stands in for the policy rate: no
-      FEDFUNDS/effective-funds-rate series is registered in requirements.yaml. TB3MS is
-      a real, directly registered short-rate series (not a fabricated proxy) and is the
-      closest honest source for a short-term, policy-linked rate at monthly frequency.
+      Effective federal funds rate -- the ADMINISTERED US policy rate. Registered in
+      requirements.yaml by WP2.2 Task 1 under the WP1.9 emergent-requirements rule
+      (governance/retrofit-register.md RFR-7). It replaces an earlier mapping to
+      fred.TB3MS, which was wrong twice over: a 3-month bill is a market yield carrying
+      term premium, three months of policy expectations and flight-to-quality effects,
+      and it decouples from the funds rate in exactly the episodes the tail and severe
+      tiers judge (Dec-2008 bills near 0.01% against a 0-0.25% target; March-2020 bills
+      negative); and `funding_spread` is TED = 3m LIBOR minus that same 3m bill, so the
+      policy-rate factor and the funding-stress factor would have shared a
+      construction-driven stress component and the sealed cross-block correlation and
+      crisis-correlation-lift bands would have been sealed over an artifact of the
+      mapping. tests/test_factors.py asserts the two factors share no input series.
   ust_2y:
     kind: series
     series_id: fred.DGS2

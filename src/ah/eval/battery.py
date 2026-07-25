@@ -44,16 +44,16 @@ reported side by side rather than the filtered view silently replacing the raw o
 from __future__ import annotations
 
 import json
-from collections.abc import Callable, Iterable
-from dataclasses import dataclass
-from pathlib import Path
+from collections.abc import Callable, Iterable, Mapping
+from dataclasses import dataclass, replace
+from types import MappingProxyType
 from typing import Any
 
 import numpy as np
 
 from ah.eval import prereg as prereg_mod
 from ah.eval.prereg import PreRegistration, Threshold
-from ah.eval.reference import ReferenceStats, StatBand
+from ah.eval.reference import FactorCoverage, ReferenceStats, StatBand
 from ah.factors import FactorManifest
 from ah.gen.base import Ensemble
 
@@ -162,9 +162,10 @@ def mc_error(fn: MetricFn, ensemble: Ensemble, *, seed: int, n_subsamples: int) 
     ``ensemble.n_paths`` paths are shuffled (a fresh ``numpy.random.Generator(PCG64(
     seed))``, never a global RNG -- the same draw for the same ``seed`` every time) and
     split into ``n_subsamples`` groups of nearly-equal size; ``fn`` is recomputed on
-    each group's own :class:`~ah.gen.base.Ensemble` (same ``factor_names``/``meta``, a
-    ``paths`` slice), and the result is ``std(per-subsample estimates, ddof=1) /
-    sqrt(n_subsamples)``.
+    each group's own :class:`~ah.gen.base.Ensemble` (the same ``factor_names``, a
+    ``paths`` slice, and a ``meta`` copied from the parent with ``n_paths`` corrected to
+    the subsample's own size -- see the loop below), and the result is
+    ``std(per-subsample estimates, ddof=1) / sqrt(n_subsamples)``.
 
     Why that formula: when ``fn`` is (or behaves asymptotically like) a sample mean
     over paths of an iid quantity with variance ``sigma**2``, a subsample of size
@@ -191,8 +192,16 @@ def mc_error(fn: MetricFn, ensemble: Ensemble, *, seed: int, n_subsamples: int) 
 
     estimates = np.empty(n_subsamples, dtype=np.float64)
     for i, idx in enumerate(chunks):
+        # The sub-ensemble's meta must describe the sub-ensemble. `Ensemble.n_paths`
+        # reads `paths.shape[0]` but `EnsembleMeta.n_paths` is an independent field, so
+        # reusing the parent's meta verbatim would hand every metric an object whose
+        # two path counts disagree -- and a metric that reads `e.meta.n_paths` (the
+        # documented lineage record) would silently compute the wrong MC error on every
+        # subsample. Everything else about the lineage (generator, vintage, seed,
+        # checkpoint) is genuinely inherited and is carried over untouched.
+        sub_meta = replace(ensemble.meta, n_paths=len(idx))
         sub_ensemble = Ensemble(
-            paths=ensemble.paths[idx], factor_names=ensemble.factor_names, meta=ensemble.meta
+            paths=ensemble.paths[idx], factor_names=ensemble.factor_names, meta=sub_meta
         )
         estimates[i] = fn(sub_ensemble)
 
@@ -210,6 +219,19 @@ def _n_subsamples_for(ensemble: Ensemble) -> int:
 
 
 def _lookup_band(name: str, reference: ReferenceStats) -> StatBand | None:
+    """First match across sorted blocks, then sorted cross-block pairs.
+
+    **Coupling, stated rather than assumed:** this is a flat lookup by metric name over
+    a block-nested structure, and it is correct only because factor ids are globally
+    unique -- ``ah.factors._validate`` rejects a ``factors.yaml`` in which one factor
+    appears in two blocks, so a ``"<factor>.<stat>"`` key can belong to at most one
+    block and a ``"<factorA>~<factorB>.<stat>"`` key to at most one pair. If that
+    manifest-level uniqueness rule is ever relaxed, this lookup (and
+    :func:`_lookup_threshold` below) must be keyed by ``(block, key)`` instead, and
+    :class:`MetricSpec` must carry the block. Blocks and pairs are iterated in sorted
+    order so the (currently unreachable) ambiguous case would at least be deterministic
+    rather than dependent on mapping insertion order.
+    """
     for block in sorted(reference.blocks):
         stats = reference.blocks[block].stats
         if name in stats:
@@ -222,6 +244,8 @@ def _lookup_band(name: str, reference: ReferenceStats) -> StatBand | None:
 
 
 def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
+    """First match across sorted blocks, then sorted pairs -- see :func:`_lookup_band`
+    for the globally-unique-factor-id coupling this relies on."""
     for block in sorted(prereg.block_thresholds):
         entries = prereg.block_thresholds[block]
         if name in entries:
@@ -234,6 +258,21 @@ def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
 
 
 def _passed(value: float, threshold: Threshold) -> bool:
+    """``value in [threshold.min, threshold.max]``. **A NaN value FAILS.**
+
+    THE ONE NaN RULE, stated identically here and in
+    :func:`ah.battery.report.evaluate`, and in ``pre-registration.yaml``'s
+    ``conventions.nan_metric_rule``: an uncomputable metric has not demonstrated
+    compliance, so it does not pass. NaN fails here for free (every comparison with NaN
+    is ``False``, so the ``>=``/``<=`` guards return ``False`` whenever a bound is
+    given) -- but it is asserted by a test rather than left to that accident, because
+    a threshold with *no* bounds at all would otherwise pass a NaN vacuously. Step 0's
+    ``ah.battery.report.evaluate`` used to take the opposite view and skip the
+    comparison entirely for NaN, marking it OK; both modules are inside the seal, so
+    the two rules could have judged the same generator differently.
+    """
+    if np.isnan(value):
+        return False
     return (threshold.min is None or value >= threshold.min) and (
         threshold.max is None or value <= threshold.max
     )
@@ -313,6 +352,16 @@ class BatteryReport:
     ``filtered`` ensemble was passed to :func:`run_battery`, in which case it is that
     ensemble's own results -- both are always kept, side by side, never one replacing
     the other (see the module docstring's "Filtered vs. unfiltered").
+
+    Missing-factor accounting and coverage are carried from the
+    :class:`~ah.eval.reference.ReferenceStats` the run was judged against.
+    ``missing_declared`` is the routine case (the manifest says no source exists);
+    ``missing_no_data`` is the dangerous one (a real source that returned nothing).
+    ``governance/retrofit-register.md`` RFR-5 records that an ``enforce`` threshold can
+    be sealed for a factor with no computed reference statistic, and this report is
+    where that has to be visible rather than inferred. ``coverage`` says how much
+    history each computed band actually rests on -- roughly a fourfold spread across
+    the mapped series.
     """
 
     battery_version: str
@@ -323,6 +372,30 @@ class BatteryReport:
     seed: int
     results: tuple[MetricResult, ...]
     results_filtered: tuple[MetricResult, ...] | None = None
+    missing_declared: tuple[str, ...] = ()
+    missing_no_data: tuple[str, ...] = ()
+    coverage: Mapping[str, FactorCoverage] = MappingProxyType({})
+    prereg_verified: bool = False
+
+    @property
+    def enforce_failures(self) -> tuple[MetricResult, ...]:
+        """Every ``severity: enforce`` metric that did not pass, unfiltered run only.
+
+        The filtered run is diagnostic (the acceptance filter may not teach to the
+        exam), so it never contributes to the verdict -- only to the report.
+        """
+        return tuple(r for r in self.results if r.severity == "enforce" and r.passed is False)
+
+    @property
+    def passed(self) -> bool:
+        """The aggregate verdict: no ``enforce``-severity metric failed.
+
+        Same shape as Step 0's :attr:`ah.battery.report.BatteryReport.passed`, so a
+        caller (and the eventual CLI exit code) reads one property regardless of which
+        battery produced the report. A ``report``-severity failure is recorded and does
+        not block, by definition of the severity.
+        """
+        return not self.enforce_failures
 
     def to_dict(self) -> dict[str, Any]:
         def _tiers(results: tuple[MetricResult, ...]) -> dict[str, list[dict[str, Any]]]:
@@ -338,6 +411,21 @@ class BatteryReport:
             "vintage_id": self.vintage_id,
             "active_blocks": list(self.active_blocks),
             "seed": self.seed,
+            "passed": self.passed,
+            "enforce_failures": [r.name for r in self.enforce_failures],
+            "prereg_verified": self.prereg_verified,
+            "missing_factors": {
+                "declared_unavailable": list(self.missing_declared),
+                "no_data": list(self.missing_no_data),
+            },
+            "coverage": {
+                factor: {
+                    "first_date": cov.first_date,
+                    "last_date": cov.last_date,
+                    "n_obs": cov.n_obs,
+                }
+                for factor, cov in self.coverage.items()
+            },
             "unfiltered": {"tiers": _tiers(self.results)},
         }
         if self.results_filtered is not None:
@@ -356,6 +444,30 @@ class BatteryReport:
             f"- active blocks: {', '.join(self.active_blocks)}",
             f"- seed: {self.seed}",
             f"- prereg digest: {self.prereg_digest}",
+            f"- prereg verified: {'yes' if self.prereg_verified else 'no (unsealed)'}",
+            f"- **verdict: {'PASS' if self.passed else 'FAIL'}** "
+            f"({len(self.enforce_failures)} enforce failure(s))",
+            "",
+            "## Factor availability",
+            "",
+            "| factor | status |",
+            "| --- | --- |",
+            *[f"| {f} | declared unavailable |" for f in self.missing_declared],
+            *[f"| {f} | **DECLARED AVAILABLE, NO DATA** |" for f in self.missing_no_data],
+            *(
+                []
+                if (self.missing_declared or self.missing_no_data)
+                else ["| - | every active factor produced data |"]
+            ),
+            "",
+            "## Reference coverage (train+validation)",
+            "",
+            "| factor | first | last | n obs |",
+            "| --- | --- | --- | --- |",
+            *[
+                f"| {factor} | {cov.first_date} | {cov.last_date} | {cov.n_obs} |"
+                for factor, cov in sorted(self.coverage.items())
+            ],
             "",
         ]
 
@@ -407,8 +519,24 @@ def run_battery(
     ``severity``/``passed`` for a metric whose name matches one, and its ``source_path``
     is dry-run sealed (:func:`ah.eval.prereg.seal`) to compute ``prereg_digest`` -- the
     exact code+thresholds that judged this run, recorded on the report itself.
-    ``manifest`` supplies ``active_blocks`` for the report header.
+    ``manifest`` supplies ``active_blocks`` for the report header, and is the manifest
+    the pre-registration is verified against.
+
+    **Verification.** STEP2-GENERATOR-PLAN Sec.WP2.3 requires
+    :func:`ah.eval.prereg.verify` to run "at every battery/G2 invocation". It is called
+    here whenever ``prereg.sealed`` is true, and skipped (with ``prereg_verified:
+    false`` recorded on the report, so the skip is visible rather than assumed) while
+    the pre-registration is still provisional -- today's ``pre-registration.yaml``
+    carries placeholder thresholds and ``sealed: false``, and cannot satisfy every
+    check yet.
+    TODO(WP2.3): once ``sealed: true`` lands, this guard becomes dead weight -- drop it
+    and verify unconditionally, and pass the ``lock_path`` so the digest check runs too.
     """
+    prereg_verified = False
+    if prereg.sealed:
+        prereg_mod.verify(prereg, manifest)
+        prereg_verified = True
+
     results = _run_suites(ensemble, reference=reference, prereg=prereg, seed=seed)
     results_filtered = None
     if filtered is not None:
@@ -416,7 +544,6 @@ def run_battery(
 
     digest = prereg_mod.seal(
         prereg.source_path,
-        out_path=Path("unused-dry-run.lock"),
         sealed_at="n/a (dry-run digest does not depend on sealed_at)",
         dry_run=True,
     )
@@ -430,4 +557,8 @@ def run_battery(
         seed=seed,
         results=results,
         results_filtered=results_filtered,
+        missing_declared=reference.missing_declared,
+        missing_no_data=reference.missing_no_data,
+        coverage=reference.coverage,
+        prereg_verified=prereg_verified,
     )

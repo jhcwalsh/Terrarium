@@ -72,6 +72,18 @@ def test_fred_monthly_passthrough() -> None:
     assert out["value"].tolist() == [1.5, 1.6]
 
 
+def test_fred_fedfunds_monthly_passthrough() -> None:
+    """WP2.2 Task 1 fix pass, Critical 2: `policy_rate` maps to fred.FEDFUNDS, so the
+    series needs an offline fixture and a golden parse test like every other FRED
+    series -- the suite stays network-free.
+    """
+    out = FredConnector().parse(
+        _raw("fred", "fedfunds.json", "fred.FEDFUNDS"), REQ["fred.FEDFUNDS"]
+    )
+    assert out["date"].dt.strftime("%Y-%m").tolist() == ["1954-07", "1954-08", "1954-09"]
+    assert out["value"].tolist() == [0.8, 1.22, 1.07]
+
+
 def test_fred_satisfies_protocol() -> None:
     assert isinstance(FredConnector(), Connector)
 

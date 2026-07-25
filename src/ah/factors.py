@@ -36,6 +36,13 @@ _DEFAULT_PATH = Path(__file__).resolve().parents[2] / "factors.yaml"
 
 _SOURCE_KINDS = frozenset({"series", "derived", "unavailable"})
 
+# The numeraire a return-bearing factor is quoted on (see FactorSource). `zero_cost` is
+# a self-financing / long-short overlay: it commits no capital, so it is numeraire-
+# neutral and may be combined with total-return legs. `excess_return` is a
+# capital-committing leg quoted net of a rate -- the actual error this vocabulary
+# exists to make visible, and `ah.strategies` refuses to weight one in a D4 portfolio.
+_NUMERAIRES = frozenset({"total_return", "excess_return", "zero_cost"})
+
 
 class ManifestError(ValueError):
     """Raised when ``factors.yaml`` fails validation."""
@@ -55,6 +62,22 @@ class FactorSource:
       ``units`` are set; ``series_id``/``reason`` are ``None``.
     - ``unavailable``: ``reason`` is set (non-empty, names the governing record); every
       other field is ``None``/``()`` -- there is no series, derived or otherwise.
+
+    Three fields cut across all three kinds:
+
+    - ``numeraire`` -- ``total_return``, ``excess_return`` or ``zero_cost``, declared
+      for a return-bearing factor and absent for a level (a level has no numeraire).
+      This is the machine-checked half of ``pre-registration.yaml``'s
+      ``conventions.numeraire``: ``ah.strategies`` refuses to load a D4 strategy whose
+      legs do not all resolve to the sealed numeraire (or to a declared zero-cost
+      overlay), which is what stops an excess-return equity leg being weighted beside a
+      total-return bond leg. On a ``kind: unavailable`` entry it records the numeraire
+      D4 *assumes* the factor will carry once a source is registered.
+    - ``proxy`` / ``proxy_for`` -- set together, and only together. ``proxy: true``
+      means a substitution or splice-backed backfill is in play for this factor and
+      ``proxy_for`` names it (donor series plus the governing ``ah.data.splice`` rule).
+      Machine-visible on purpose: before this, a splice-backed backfill was free text
+      inside ``notes``, invisible to any check.
     """
 
     kind: str
@@ -64,6 +87,9 @@ class FactorSource:
     inputs: tuple[str, ...] = ()
     reason: str | None = None
     notes: str | None = None
+    numeraire: str | None = None
+    proxy: bool = False
+    proxy_for: str | None = None
 
 
 @dataclass(frozen=True)
@@ -181,9 +207,31 @@ def _validate_sources(
         raw_inputs = entry.get("inputs")
         reason = entry.get("reason")
         notes = entry.get("notes")
+        numeraire = entry.get("numeraire")
+        proxy = entry.get("proxy", False)
+        proxy_for = entry.get("proxy_for")
         if notes is not None and (not isinstance(notes, str) or not notes):
             raise ManifestError(
                 f"{source}: factor_sources.{factor}.notes must be a non-empty string when given"
+            )
+        if numeraire is not None and numeraire not in _NUMERAIRES:
+            raise ManifestError(
+                f"{source}: factor_sources.{factor}.numeraire must be one of "
+                f"{sorted(_NUMERAIRES)} when given, got {numeraire!r}"
+            )
+        if not isinstance(proxy, bool):
+            raise ManifestError(
+                f"{source}: factor_sources.{factor}.proxy must be a boolean, got {proxy!r}"
+            )
+        if proxy and (not isinstance(proxy_for, str) or not proxy_for):
+            raise ManifestError(
+                f"{source}: factor_sources.{factor} sets proxy: true but no non-empty "
+                f"'proxy_for' naming what is being substituted"
+            )
+        if proxy_for is not None and not proxy:
+            raise ManifestError(
+                f"{source}: factor_sources.{factor} sets 'proxy_for' without 'proxy: true'; "
+                f"a substitution must be flagged, not merely described"
             )
 
         if kind == "series":
@@ -251,6 +299,9 @@ def _validate_sources(
             inputs=inputs,
             reason=reason if isinstance(reason, str) else None,
             notes=notes if isinstance(notes, str) else None,
+            numeraire=numeraire if isinstance(numeraire, str) else None,
+            proxy=proxy,
+            proxy_for=proxy_for if isinstance(proxy_for, str) else None,
         )
     return sources
 

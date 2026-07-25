@@ -94,6 +94,17 @@ rediscovered:
   WP2.3 must either seal it explicitly, or state that ``pre-registration.yaml``'s
   thresholds supersede it and it is inert. Left as an open obligation, not a silent
   omission -- see ``governance/retrofit-register.md``.
+- ``ah/data/derive.py`` and ``ah/data/splice.py`` -- **not excluded on principle, just
+  not yet decided.** ``derive.py`` supplies every ``kind: derived`` factor's transform
+  (``add`` for ``equity_mkt``, ``difference`` for ``ig_spread``, ``funding_stress`` for
+  ``funding_spread``) and ``assemble_panel``; ``splice.py`` supplies the ``PROXY_RULES``
+  that backfill ``policy_rate`` (pre-1954) and ``hy_spread`` (pre-1996). Both move
+  sealed band values. :data:`ah.eval.panel._DERIVED_EXPRS` -- which *is* sealed, via
+  ``panel.py`` -- pins which helper each factor uses and what its units algebra is, so
+  the binding is inside the hash even though the helper bodies are not. Sealing the
+  modules themselves would turn every future Step-1 change into a dated amendment.
+  WP2.3 decides; recorded as ``governance/retrofit-register.md`` RFR-10 rather than
+  left to be rediscovered.
 
 Independent verifiability (why paths in the lock are relative)
 ---------------------------------------------------------------
@@ -287,6 +298,13 @@ _REQUIRED_CONVENTIONS_KEYS = (
     "level_factors",
     "rebalance_cadences",
     "static_weights_composition",
+    # WP2.2 Task 1 fix pass, Critical 3: the sealed numeraire. Optional to
+    # ah.strategies (fixtures predating it load with a permissive default) but
+    # REQUIRED here, so the real sealed pre-registration can never silently drop the
+    # one statement that stops an excess-return leg being weighted beside a
+    # total-return leg.
+    "numeraire",
+    "numeraire_zero_cost_legs",
 )
 
 
@@ -858,12 +876,16 @@ def _default_judged_sources() -> tuple[Path, ...]:
 def seal(
     prereg_path: Path,
     *,
-    out_path: Path,
+    out_path: Path | None = None,
     judged_sources: Iterable[Path] | None = None,
     sealed_at: str,
     dry_run: bool = False,
 ) -> str:
     """Compute the pre-registration digest and, unless ``dry_run``, write ``out_path``.
+
+    ``out_path`` is required for a real seal and must be omitted (or ``None``) for a
+    ``dry_run``, which writes nothing: a caller computing a digest for a report header
+    should not have to invent a filename that is never created.
 
     Hashes, canonically (:func:`_hash_files`): the ``prereg_path`` YAML bytes, the
     ``factors.yaml`` bytes it references (its ``factor_manifest`` field, resolved
@@ -911,6 +933,8 @@ def seal(
     digest, hashed_files = _hash_files(all_paths, doc_root=doc_root)
 
     if not dry_run:
+        if out_path is None:
+            raise PreRegError("seal(): out_path is required unless dry_run=True")
         lock_doc = {
             "digest": digest,
             "hashed_files": hashed_files,

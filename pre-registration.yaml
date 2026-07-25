@@ -80,6 +80,15 @@
 #     not itself sealed. Its fate is a WP2.3 decision: seal it explicitly, or state
 #     that this file's thresholds supersede it and it is inert. See
 #     governance/retrofit-register.md.
+#   - src/ah/data/derive.py and src/ah/data/splice.py -- NOT excluded on principle, just
+#     not yet decided. derive.py supplies every `kind: derived` factor's transform (add,
+#     difference, funding_stress) and assemble_panel; splice.py supplies the PROXY_RULES
+#     that backfill policy_rate and hy_spread. Both therefore move sealed band values.
+#     ah/eval/panel.py's _DERIVED_EXPRS table -- which IS sealed -- pins which helper
+#     each factor uses and its units algebra, so the *binding* is inside the hash even
+#     though the helper bodies are not. Sealing the modules themselves would make every
+#     future Step-1 change a dated amendment. WP2.3 must decide explicitly; see
+#     governance/retrofit-register.md RFR-10.
 
 schema_version: "1.0"
 
@@ -134,18 +143,48 @@ rationale:
 # Conventions -- one set of rules, applied to every definition in this file.
 # --------------------------------------------------------------------------- #
 conventions:
+  # THE ONE NUMERAIRE. Every capital-committing leg of every D4 strategy is a monthly
+  # TOTAL return in decimal units. Machine-enforced by ah.strategies at load time
+  # against factors.yaml's `factor_sources.<factor>.numeraire` and each derived
+  # series' own `numeraire:` field -- not prose.
+  numeraire: total_return
+  # The self-financing, long-short overlay legs. A zero-cost leg commits no capital, so
+  # it is numeraire-neutral and may be combined with total-return legs; its weight is a
+  # notional/risk budget rather than a capital share. This list must name exactly the
+  # legs that declare `numeraire: zero_cost` -- the loader rejects an undeclared
+  # zero-cost leg AND a dead entry here, so the exception can never grow silently.
+  numeraire_zero_cost_legs: [smb, hml, mom, credit_xs_hy]
+  numeraire_statement: >-
+    ONE NUMERAIRE, TOTAL RETURN, applied to every capital-committing leg of every D4
+    strategy. WP2.2 Task 1 originally mapped equity_mkt to french.mkt_rf -- Fama-
+    French Mkt-RF, an EXCESS return over the one-month bill -- while govt_tr_10y is a
+    long-government TOTAL return; sixty_forty (0.6 equity_mkt + 0.4 govt_tr_10y) and
+    endowment_proxy therefore summed an excess-return leg with a total-return leg
+    inside a fully-invested portfolio, understating the equity leg by the risk-free
+    rate, and were about to be sealed that way. equity_mkt is now `kind: derived`,
+    `add(french.mkt_rf, french.rf)` -- Mkt-RF plus the one-month bill that Mkt-RF is
+    quoted net of -- a genuine total return, consistent with govt_tr_10y. The
+    remaining legs are either total returns (govt_tr_10y, cash_tr_1m, and commodities
+    once sourced) or DECLARED ZERO-COST overlays (smb, hml, mom -- long-short factor
+    spreads; credit_xs_hy -- high yield excess of the duration-matched government leg,
+    i.e. a duration-hedged long-HY/short-govt position). A zero-cost overlay commits no
+    capital and so does not change the portfolio's numeraire; an `excess_return` leg
+    would -- it is capital-committing yet quoted net of a rate -- and the loader rejects
+    one outright. That distinction, not a general tolerance for mixing, is why this
+    file can carry one numeraire and still hold long-short legs.
   units_of_return_bearing_factors: >-
     equity_mkt, smb, hml, mom and commodities are treated by D4 as monthly returns in
     DECIMAL units (0.01 = +1% for the month). They are used directly, with no
     transform. As of WP2.2 Task 1, factors.yaml's `factor_sources` section is the
-    factor-to-series mapping, and it is now a fact, not an assumption: equity_mkt maps
-    to french.mkt_rf, smb to french.smb, hml to french.hml, mom to french.mom (all
-    `units: ret` in requirements.yaml). french.mkt_rf is Mkt-RF, an EXCESS return over
-    the risk-free rate, not a total return -- every D4 strategy holding equity_mkt
-    (all five) therefore inherits that excess-return interpretation, stated here
-    plainly rather than left as a downstream inference. commodities has no Step-1
-    series (`factor_sources.commodities.kind: unavailable`, governance/retrofit-
-    register.md RFR-1); D4 assumes it will be return-bearing once sourced, and that
+    factor-to-series mapping, and it is a fact, not an assumption: equity_mkt is
+    `kind: derived`, add(french.mkt_rf, french.rf) -- Mkt-RF put back onto a TOTAL
+    return by adding the one-month risk-free rate it is quoted net of, per
+    conventions.numeraire above; smb maps to french.smb, hml to french.hml, mom to
+    french.mom (all `units: ret` in requirements.yaml), each a long-short spread return
+    declared `numeraire: zero_cost`. commodities has no Step-1 series
+    (`factor_sources.commodities.kind: unavailable`, governance/retrofit-register.md
+    RFR-1); D4 assumes it will be a return-bearing TOTAL return once sourced (recorded
+    machine-visibly as `factor_sources.commodities.numeraire: total_return`), and that
     assumption is recorded here rather than presented as a property of the manifest.
 
   # Machine-checked version of the prose above: EVERY active factor in factors.yaml
@@ -169,7 +208,11 @@ conventions:
     spreads QUOTED IN PERCENT PER ANNUM (a generated value of 4.25 means 4.25 percent,
     not 0.0425). As of WP2.2 Task 1, factors.yaml's `factor_sources` section is the
     definitive factor-to-series mapping (this paragraph previously named "candidate"
-    series before that mapping existed): policy_rate -> fred.TB3MS, ust_2y ->
+    series before that mapping existed): policy_rate -> fred.FEDFUNDS (the ADMINISTERED
+    effective federal funds rate, registered by WP2.2 Task 1 under the requirements.yaml
+    WP1.9 rule and backfilled before 1954-07 from fred.TB3MS via ah.data.splice, flagged
+    is_proxy -- NOT fred.TB3MS itself, which is a market bill yield and shares its
+    construction with funding_spread's TED leg), ust_2y ->
     fred.DGS2, ust_10y -> fred.DGS10, hqm_curve -> treasury.hqm_curve, ig_spread ->
     derived from fred.BAA - fred.AAA, hy_spread -> fred.HY_OAS, funding_spread ->
     derived from fred.TEDRATE -- all `units: pct` there or in requirements.yaml. cpi
@@ -217,6 +260,18 @@ conventions:
     (position 0.0, hence realized return 0.0) and the warm-up length is `lookback`
     months. Warm-up months are NOT dropped, masked, or treated as missing: they are
     zeros, and they are included in the pooled sample when VaR/ES is computed.
+
+  nan_metric_rule: >-
+    A METRIC THAT EVALUATES TO NaN FAILS. One rule for the whole platform: an
+    uncomputable metric has not demonstrated compliance, so it does not pass -- and it
+    fails even against a threshold that declares no bounds at all, which a
+    comparison-only implementation gets wrong (every comparison with NaN is false, so
+    an unbounded threshold would vacuously "pass"). Both judging modules implement this
+    identically and are tested on it: ah.eval.battery._passed and
+    ah.battery.report.evaluate. Before WP2.2 Task 1's fix pass the two disagreed -- the
+    Step-0 module treated NaN as a pass, the Step-2 module as a failure -- and both are
+    inside this seal, so the same generator could have been judged either way depending
+    on which battery ran.
 
   loss_sign: >-
     VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of
@@ -275,6 +330,7 @@ derived_series:
   govt_tr_10y:
     from: ust_10y
     transform: bond_total_return
+    numeraire: total_return
     params: {duration_years: 8.5}
     formula: "r_t = 0.01 * ( y_{t-1}/12 - D*(y_t - y_{t-1}) ), D = duration_years = 8.5; r_0 = 0.0"
     notes: >-
@@ -299,6 +355,7 @@ derived_series:
   credit_xs_hy:
     from: hy_spread
     transform: spread_excess_return
+    numeraire: zero_cost
     params: {spread_duration_years: 4.0}
     formula: "r_t = 0.01 * ( s_{t-1}/12 - SD*(s_t - s_{t-1}) ), SD = spread_duration_years = 4.0; r_0 = 0.0"
     notes: >-
@@ -321,13 +378,25 @@ derived_series:
   cash_tr_1m:
     from: policy_rate
     transform: bond_total_return
+    numeraire: total_return
     params: {duration_years: 0.0}
     formula: "r_t = 0.01 * ( y_{t-1}/12 - 0.0*(y_t - y_{t-1}) ) = 0.01 * y_{t-1}/12; r_0 = 0.0"
     notes: >-
-      One-month cash return, used as the funding leg of `carry`. policy_rate is a
-      level in percent, so like every other level it may enter a strategy only through
-      a declared transform -- this entry is that declaration, and it is why `carry`
-      contains no bare percent-to-decimal arithmetic of its own. It reuses
+      One-month cash return, used as the funding leg of `carry`, earned at the
+      OVERNIGHT POLICY RATE compounded simply over the month (y_{t-1}/12), not at a
+      literal one-month term rate. Since WP2.2 Task 1's fix pass, `policy_rate` maps to
+      fred.FEDFUNDS -- the effective federal funds rate, an actual overnight funding
+      rate -- which is what makes that reading defensible; under the earlier
+      fred.TB3MS mapping this entry would have been funding cash at a 3-month bill
+      yield while calling it a one-month rate. french.rf (the Fama-French one-month
+      bill return) is the literal one-month rate and is registered, but it is
+      deliberately NOT used here: `carry`'s funding leg must be the same rate the
+      generator emits as a factor, and the generator emits policy_rate, not french.rf.
+      The residual difference (overnight vs one-month, a few basis points of term
+      premium) is a stated, sealed simplification. policy_rate is a level in percent,
+      so like every other level it may enter a strategy only through a declared
+      transform -- this entry is that declaration, and it is why `carry` contains no
+      bare percent-to-decimal arithmetic of its own. It reuses
       bond_total_return with duration_years = 0.0 rather than introducing a third
       transform: cash IS a zero-duration instrument, so the general bond formula
       collapses exactly to the carry term, as the formula above shows term by term.

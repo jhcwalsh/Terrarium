@@ -19,7 +19,9 @@ series:
   # --- rates & inflation (FRED) ---
   fred.DGS10:    {source: fred, code: DGS10,  frequency: "D->M", units: pct,   min_start: 1962-01, sla_days: 7,   license_tier: FREE, priority: P0, intake: auto, enforce: true}
   fred.DGS2:     {source: fred, code: DGS2,   frequency: "D->M", units: pct,   min_start: 1976-06, sla_days: 7,   license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.FEDFUNDS: {source: fred, code: FEDFUNDS, frequency: "M",  units: pct,   min_start: 1954-07, sla_days: 40,  license_tier: FREE, priority: P0, intake: auto, enforce: true, notes: "Effective federal funds rate -- the administered US policy rate the `policy_rate` factor maps to (factors.yaml factor_sources). Registered under the WP1.9 emergent-requirements rule by WP2.2 Task 1; see governance/retrofit-register.md RFR-7. FRED serves it from 1954-07; earlier campaign pre-history is spliced from fred.TB3MS via ah.data.splice PROXY_RULES[fedfunds_pre1954], flagged is_proxy."}
   fred.TB3MS:    {source: fred, code: TB3MS,  frequency: "M",    units: pct,   min_start: 1934-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  # fred.TB3MS also serves as the pre-1954 splice donor for fred.FEDFUNDS (above).
   fred.GS10:     {source: fred, code: GS10,   frequency: "M",    units: pct,   min_start: 1953-04, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
   fred.BAA:      {source: fred, code: BAA,    frequency: "M",    units: pct,   min_start: 1919-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
   fred.AAA:      {source: fred, code: AAA,    frequency: "M",    units: pct,   min_start: 1919-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}

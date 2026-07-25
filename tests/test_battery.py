@@ -136,6 +136,32 @@ def test_enforce_failure_is_detected() -> None:
     assert report.enforce_failures
 
 
+def test_nan_metric_fails_rather_than_passing() -> None:
+    """WP2.2 Task 1 fix pass, I2: ONE NaN rule across both batteries.
+
+    This module used to skip the bound comparison entirely for a NaN value and mark the
+    check ``ok``; ``ah.eval.battery._passed`` treated NaN as a failure. Both modules are
+    inside the pre-registration seal, so the same generator could have been judged
+    differently depending on which battery ran. The rule is now: an uncomputable metric
+    has not demonstrated compliance, so it FAILS -- and it fails even against a
+    threshold that declares no bounds at all, which is the case a comparison-based
+    implementation gets wrong.
+    """
+    checks = evaluate(
+        {"excess_kurtosis": float("nan")},
+        {"excess_kurtosis": {"min": -100.0, "max": 100.0, "status": "enforce"}},
+    )
+    assert checks[0].ok is False
+
+    unbounded = evaluate({"excess_kurtosis": float("nan")}, {"excess_kurtosis": {"status": "todo"}})
+    assert unbounded[0].ok is False
+
+    report = run_battery(
+        _ensemble(), {"excess_kurtosis": {"min": -100.0, "max": 100.0, "status": "enforce"}}
+    )
+    assert report.passed  # sanity: a real (non-NaN) value inside the band still passes
+
+
 def test_todo_failure_is_non_blocking() -> None:
     report = run_battery(_ensemble(), {"excess_kurtosis": {"max": -100.0, "status": "todo"}})
     # the check fails but status is todo -> still passes
@@ -209,6 +235,9 @@ def test_run_battery_accepts_injected_synthetic_manifest(tmp_path: Path) -> None
             "level_factors": ["beta_factor"],
             "rebalance_cadences": ["monthly"],
             "static_weights_composition": "test fixture",
+            # Required by verify() since the WP2.2 Task 1 fix pass (Critical 3).
+            "numeraire": "total_return",
+            "numeraire_zero_cost_legs": [],
         },
         "thresholds": {
             "blocks": {

@@ -10,6 +10,8 @@ reader pattern, recording at ``frame()``, not ``train_val()``.
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -285,6 +287,15 @@ def test_custom_split_reader_is_used() -> None:
 
 
 def test_build_panel_over_real_manifest_end_to_end() -> None:
+    """End to end over the committed ``factors.yaml``, with DELIBERATELY STAGGERED starts.
+
+    Fix pass 1 (minor): every series used to be given the identical start and end date,
+    so the test could not exercise ``assemble_panel``'s leading-gap behaviour at all --
+    which is the behaviour real Step-1 data always has (``fred.CPI`` starts 1913,
+    ``fred.HY_OAS`` 1996). Starts are now spread across four decades. End dates stay
+    common, because ``assemble_panel`` rejects a *trailing* gap by design (see its
+    docstring); that constraint is asserted separately below.
+    """
     manifest = load_manifest()
     needed_series: set[str] = set()
     for factor in manifest.active_factors():
@@ -295,12 +306,154 @@ def test_build_panel_over_real_manifest_end_to_end() -> None:
         elif source.kind == "derived":
             needed_series.update(source.inputs)
 
-    frames = {sid: _synthetic_frame(i, _START, _END) for i, sid in enumerate(sorted(needed_series))}
+    starts = ["1960-01-01", "1975-01-01", "1990-01-01", "2000-01-01"]
+    frames = {
+        sid: _synthetic_frame(i, starts[i % len(starts)], _END)
+        for i, sid in enumerate(sorted(needed_series))
+    }
     access = DataAccess(_reader_from(frames))
 
     panel = build_panel(access, manifest)
 
     assert panel.missing == ("commodities",)  # the one known gap (RFR-1)
+    assert panel.missing_declared == ("commodities",)
+    assert panel.missing_no_data == ()
     expected_columns = {f for f in manifest.active_factors() if f != "commodities"}
     assert set(panel.frame.columns) - {"date"} == expected_columns
     assert not panel.frame.empty
+
+    # The staggered starts really are staggered: the panel spans the earliest series
+    # and later-starting columns carry leading NaNs rather than truncating the panel.
+    assert panel.frame["date"].min() == pd.Timestamp(starts[0])
+    first_valid = {
+        col: panel.frame[col].first_valid_index() for col in panel.frame.columns if col != "date"
+    }
+    assert len(set(first_valid.values())) > 1, "expected columns to start at different dates"
+
+
+def test_assemble_panel_rejects_a_trailing_gap() -> None:
+    """The constraint Tasks 2-6 will hit, asserted rather than left in a scratchpad.
+
+    ``derive.assemble_panel`` tolerates a column starting late but not one *ending*
+    early: once a column has started it must have an observation in every month of the
+    shared index, including the last. Real Step-1 series all extend to "now", so this
+    only bites synthetic panels -- loudly, which is the point.
+    """
+    from ah.data.derive import assemble_panel
+
+    with pytest.raises(ValueError, match="gap"):
+        assemble_panel(
+            {
+                "long": _synthetic_frame(1, "1980-01-01", "2020-12-01"),
+                "stops_early": _synthetic_frame(2, "1980-01-01", "2010-12-01"),
+            }
+        )
+
+
+# --------------------------------------------------------------------------- #
+# 6. fix pass 1: the two kinds of "missing", the malformed-frame error, and the
+#    shared read surface compute_reference goes through.
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_declared_and_missing_no_data_are_not_conflated() -> None:
+    """I3: `Panel.missing` merged "declared unavailable" with "declared available, no
+    data". The second is the dangerous one -- FRED serves only ~3 years of
+    BAMLH0A0HYM2, so a non-splice-aware read leaves `hy_spread` silently joining
+    `commodities` in one flat list and WP2.3 seals bands over a panel quietly lacking a
+    factor.
+    """
+    manifest = _small_manifest()
+    frames = _full_frames()
+    del frames["s.a_lvl"]  # declared available, but the reader has nothing for it
+    access = DataAccess(_reader_from(frames))
+
+    panel = build_panel(access, manifest)
+
+    assert panel.missing_declared == ("a_gap",)  # kind: unavailable
+    assert panel.missing_no_data == ("a_lvl",)  # a real series id with no rows
+    # union, in active_factors() order -- a_lvl is declared before a_gap in the block
+    assert panel.missing == ("a_lvl", "a_gap")
+
+
+def test_derived_factor_with_a_missing_input_is_no_data_not_declared() -> None:
+    manifest = _small_manifest()
+    frames = _full_frames()
+    del frames["s.y"]
+    access = DataAccess(_reader_from(frames))
+
+    panel = build_panel(access, manifest)
+
+    assert panel.missing_no_data == ("u_derived",)
+    assert panel.missing_declared == ("a_gap",)
+
+
+def test_malformed_frame_raises_panel_error_naming_factor_and_series() -> None:
+    manifest = _small_manifest()
+    frames = _full_frames()
+    frames["s.a_ret"] = frames["s.a_ret"].rename(columns={"value": "not_value"})
+    access = DataAccess(_reader_from(frames))
+
+    with pytest.raises(PanelError, match="a_ret"):
+        build_panel(access, manifest)
+
+
+def test_read_factor_frames_is_the_surface_compute_reference_uses() -> None:
+    """Critical 1, from the panel side: one resolution surface, not two.
+
+    ``build_panel`` and ``compute_reference`` must agree about which factors resolved
+    and which did not, because one produces the panel a generator is fitted against and
+    the other produces the bands WP2.3 seals. Proved by running both over the same
+    manifest and reader and comparing their missing accounting exactly.
+    """
+    from ah.eval.reference import compute_reference
+
+    manifest = load_manifest()
+    needed_series: set[str] = set()
+    for factor in manifest.active_factors():
+        source = manifest.sources[factor]
+        if source.kind == "series":
+            assert source.series_id is not None
+            needed_series.add(source.series_id)
+        elif source.kind == "derived":
+            needed_series.update(source.inputs)
+    frames = {sid: _synthetic_frame(i, _START, _END) for i, sid in enumerate(sorted(needed_series))}
+    access = DataAccess(_reader_from(frames))
+
+    panel = build_panel(access, manifest)
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert panel.missing == ref.missing_factors
+    assert panel.missing_declared == ref.missing_declared
+    assert panel.missing_no_data == ref.missing_no_data
+
+
+def test_panel_module_never_imports_g2_or_names_the_token() -> None:
+    """The same import-graph proof ``tests/test_reference.py`` applies to reference.py.
+
+    ``panel.py`` is now the module that actually performs every read, so the guard has
+    to cover it: it must never import the holdout-token mint, and must never reference
+    ``FinalEvaluationToken`` in code (a docstring mention is fine, and this module has
+    one explaining why it holds none).
+    """
+    import ast
+
+    path = Path(__file__).resolve().parents[1] / "src" / "ah" / "eval" / "panel.py"
+    text = path.read_text(encoding="utf-8")
+    assert "import ah.eval.g2" not in text
+    assert "from ah.eval.g2" not in text
+
+    tree = ast.parse(text, filename=str(path))
+    offenders = [
+        node
+        for node in ast.walk(tree)
+        if (isinstance(node, ast.Name) and node.id == "FinalEvaluationToken")
+        or (isinstance(node, ast.Attribute) and node.attr == "FinalEvaluationToken")
+        or (
+            isinstance(node, ast.ImportFrom)
+            and any(a.name == "FinalEvaluationToken" for a in node.names)
+        )
+    ]
+    assert not offenders, "panel.py must never reference FinalEvaluationToken in code"

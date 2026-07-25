@@ -906,6 +906,11 @@ def test_block_addition_round_trip(tmp_path: Path) -> None:
             "level_factors": ["a1_lvl"],
             "rebalance_cadences": ["monthly"],
             "static_weights_composition": "test fixture",
+            # Required by verify() since the WP2.2 Task 1 fix pass (Critical 3): the
+            # sealed numeraire must be declared, so a block addition cannot land a
+            # pre-registration that has quietly dropped it.
+            "numeraire": "total_return",
+            "numeraire_zero_cost_legs": [],
         },
         "thresholds": {
             "blocks": {
@@ -1017,6 +1022,11 @@ def test_apply_block_addition_rejects_missing_new_pair(tmp_path: Path) -> None:
             "level_factors": ["a1_lvl"],
             "rebalance_cadences": ["monthly"],
             "static_weights_composition": "test fixture",
+            # Required by verify() since the WP2.2 Task 1 fix pass (Critical 3): the
+            # sealed numeraire must be declared, so a block addition cannot land a
+            # pre-registration that has quietly dropped it.
+            "numeraire": "total_return",
+            "numeraire_zero_cost_legs": [],
         },
         "thresholds": {
             "blocks": {

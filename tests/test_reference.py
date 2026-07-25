@@ -29,6 +29,7 @@ import pandas as pd
 import pytest
 
 import ah.splits
+from ah.eval import panel as panel_mod
 from ah.eval import reference as reference_mod
 from ah.eval.reference import (
     CROSS_BLOCK_STATS,
@@ -131,12 +132,21 @@ class _RecordingAccess(DataAccess):
 
 
 def _small_manifest() -> FactorManifest:
-    """A fast two-block, four-factor manifest for tests that don't need the real one."""
+    """A fast two-block, four-factor manifest for tests that don't need the real one.
+
+    Fix pass 1 (Critical 1): every factor now declares a real ``kind: series`` source
+    whose ``series_id`` happens to equal the factor name, because ``compute_reference``
+    resolves factor ids through ``factor_sources`` rather than through an identity
+    ``series_id_for`` default. The fixture's readers are keyed by those same names, so
+    the data these tests see is unchanged -- what changed is that the mapping is now
+    declared rather than assumed. ``kind: unavailable`` (the previous value) would now
+    correctly mean "no data for this factor at all".
+    """
     return FactorManifest(
         blocks={"global": ("g1", "g2"), "us": ("u1", "u2")},
         active_blocks=("global", "us"),
         sources={
-            name: FactorSource(kind="unavailable", reason="fixture")
+            name: FactorSource(kind="series", series_id=name, units="ret")
             for name in ("g1", "g2", "u1", "u2")
         },
     )
@@ -178,17 +188,22 @@ def test_leakage_guard_catches_the_review_mutation(monkeypatch: pytest.MonkeyPat
     reader = _make_reader({"g1": 1, "g2": 2, "u1": 3, "u2": 4})
     access = _RecordingAccess(reader)
 
-    real_read_train_val = reference_mod._read_train_val
+    real_read_series = panel_mod._read_series
 
-    def leaky_read_train_val(
-        access_arg: DataAccess, factor: str, series_id_for
-    ) -> pd.Series | None:
+    def leaky_read_series(
+        access_arg: DataAccess, series_id: str, split_reader, *, factor: str
+    ) -> pd.DataFrame | None:
         # The exact mutation quoted in the review, applied alongside the real read.
         token = ah.splits.FinalEvaluationToken(purpose="x")
-        access_arg.frame(series_id_for(factor), "holdout", token=token)
-        return real_read_train_val(access_arg, factor, series_id_for)
+        access_arg.frame(series_id, "holdout", token=token)
+        return real_read_series(access_arg, series_id, split_reader, factor=factor)
 
-    monkeypatch.setattr(reference_mod, "_read_train_val", leaky_read_train_val)
+    # Fix pass 1 (Critical 1): compute_reference no longer owns the per-factor read --
+    # ah.eval.panel.read_factor_frames does, for compute_reference and build_panel
+    # alike. The mutation therefore targets that shared read path, which is the code
+    # a real leak would have to live in; the guard being exercised (recording at
+    # frame(), not train_val()) is unchanged.
+    monkeypatch.setattr(panel_mod, "_read_series", leaky_read_series)
 
     compute_reference(
         access, manifest, vintage_id="v-leak-mut", seed=0, n_resamples=5, block_length=6
@@ -880,3 +895,132 @@ def test_draw_moving_block_indices_rejects_nonpositive_block_length() -> None:
     for bad_block_length in (0, -3):
         with pytest.raises(ValueError, match="block_length"):
             _draw_moving_block_indices(10, seed=1, n_resamples=5, block_length=bad_block_length)
+
+
+# --------------------------------------------------------------------------- #
+# 18. WP2.2 Task 1 fix pass, Critical 1: compute_reference resolves factor ids
+#     through the manifest's factor_sources mapping.
+#
+# Before this fix compute_reference took a `series_id_for` callable defaulting to
+# identity and nothing ever passed it the manifest, so it asked the catalog for
+# "equity_mkt"/"policy_rate"/... -- not series ids -- and EVERY factor landed in
+# missing_factors with an empty reference and no error. This is the test that would
+# have caught it: a reader keyed by the manifest's own declared series ids must
+# produce a populated reference, and a factor that is genuinely available must NOT
+# appear in missing_factors.
+# --------------------------------------------------------------------------- #
+
+
+def _series_ids_of(manifest: FactorManifest) -> set[str]:
+    needed: set[str] = set()
+    for factor in manifest.active_factors():
+        source = manifest.sources[factor]
+        if source.kind == "series":
+            assert source.series_id is not None
+            needed.add(source.series_id)
+        elif source.kind == "derived":
+            needed.update(source.inputs)
+    return needed
+
+
+def test_compute_reference_resolves_real_manifest_series_ids() -> None:
+    manifest = load_manifest()
+    needed = _series_ids_of(manifest)
+    reader = _make_reader(
+        {sid: i for i, sid in enumerate(sorted(needed))}, start="1980-01-01", end="2026-06-01"
+    )
+    access = DataAccess(reader)
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v-map", seed=1, n_resamples=5, block_length=12
+    )
+
+    # commodities is the one declared-unavailable active factor; everything else has a
+    # declared source and real data, so nothing else may be missing.
+    assert ref.missing_factors == ("commodities",)
+    for factor in manifest.active_factors():
+        if factor == "commodities":
+            continue
+        block = manifest.block_of(factor)
+        assert f"{factor}.mean" in ref.blocks[block].stats, (
+            f"factor '{factor}' has a declared factor_sources entry and real data, but "
+            f"compute_reference produced no statistic for it"
+        )
+
+
+def test_compute_reference_computes_derived_factors_not_only_series_factors() -> None:
+    """A `kind: derived` factor (ig_spread = fred.BAA - fred.AAA) must resolve too.
+
+    ``FactorManifest.series_id_for`` *raises* for a derived factor, so a wiring that
+    passed that method straight through as ``series_id_for=`` would crash here rather
+    than compute anything -- the structural incompatibility the review flagged.
+    """
+    manifest = load_manifest()
+    needed = _series_ids_of(manifest)
+    reader = _make_reader(
+        {sid: i for i, sid in enumerate(sorted(needed))}, start="1980-01-01", end="2026-06-01"
+    )
+    access = DataAccess(reader)
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v-derived", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert "ig_spread.mean" in ref.blocks["global"].stats
+    assert "funding_spread.mean" in ref.blocks["us"].stats
+
+
+def test_reference_records_per_factor_coverage() -> None:
+    """I4: per-factor effective sample varies roughly fourfold and was recorded nowhere.
+
+    `min_start` across the mapped series runs 1913 (fred.CPI) to 1996 (fred.HY_OAS), so
+    a sealed `equity_vol` band rests on ~30 years of history and a sealed `equity_mkt`
+    band on ~95. A band that does not say how much history it rests on is not
+    auditable, which is the whole point of the mapping this module now reads.
+    """
+    manifest = _small_manifest()
+    specs = {
+        "g1": (1, "1950-01-01", "2020-01-01"),
+        "g2": (2, "1950-01-01", "2020-01-01"),
+        "u1": (3, "1950-01-01", "2020-01-01"),
+        "u2": (4, "2000-01-01", "2020-01-01"),  # deliberately much shorter
+    }
+    access = DataAccess(_make_reader_with_ranges(specs))
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v-cov", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert set(ref.coverage) == {"g1", "g2", "u1", "u2"}
+    assert ref.coverage["g1"].first_date == "1950-01-01"
+    assert ref.coverage["u2"].first_date == "2000-01-01"
+    # train+validation ends before the holdout, so no factor's last date reaches it
+    assert ref.coverage["g1"].last_date < HOLDOUT.start
+    # the short factor really is short -- the fourfold-spread case, made visible
+    assert ref.coverage["u2"].n_obs * 3 < ref.coverage["g1"].n_obs
+    assert json.loads(json.dumps(ref.to_dict()))["coverage"]["u2"]["n_obs"] == (
+        ref.coverage["u2"].n_obs
+    )
+
+
+def test_reference_splits_missing_declared_from_missing_no_data() -> None:
+    """I3, from the reference side."""
+    manifest = load_manifest()
+    needed = _series_ids_of(manifest)
+    # drop one real series id: hy_spread becomes "declared available, no data"
+    hy_series = manifest.sources["hy_spread"].series_id
+    assert hy_series is not None
+    reader = _make_reader(
+        {sid: i for i, sid in enumerate(sorted(needed - {hy_series}))},
+        start="1980-01-01",
+        end="2026-06-01",
+    )
+    access = DataAccess(reader)
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert ref.missing_declared == ("commodities",)
+    assert ref.missing_no_data == ("hy_spread",)
+    assert set(ref.missing_factors) == {"commodities", "hy_spread"}

@@ -86,6 +86,58 @@ All notable changes to this project are documented here. The project follows
 
 ## [Unreleased] — Step 2 (generator layer)
 
+### Fixed
+- **WP2.2 Task 1 review fix pass — the mapping is now actually read, the policy rate is
+  a policy rate, and there is one numeraire.**
+  - *The mapping was not wired in.* `compute_reference` took a `series_id_for` callable
+    defaulting to identity and nothing ever passed it the manifest, so every factor id
+    went to the catalog verbatim, every factor landed in `missing_factors`, and the
+    reference came back **empty with no error** — while `build_panel`, which did read
+    the mapping, had zero production callers. The two surfaces were also structurally
+    incompatible (`FactorManifest.series_id_for` *raises* for `kind: derived`). Fixed by
+    extracting `ah.eval.panel.read_factor_frames` as the single factor-id → series
+    resolution surface; `build_panel` assembles on top of it and `compute_reference`
+    computes statistics on top of it, so the panel a generator is fitted against and the
+    bands WP2.3 seals can never resolve a factor differently.
+  - *`policy_rate` → `fred.TB3MS` (a 3-month bill) replaced by `fred.FEDFUNDS`*, the
+    administered rate, registered in `requirements.yaml` under the §WP1.9
+    emergent-requirements rule with a `fedfunds_pre1954` splice rule backfilling
+    pre-1954-07 history from `fred.TB3MS` (`is_proxy`) and an offline connector fixture.
+    The bill was wrong twice over: it is a market yield that decouples from the funds
+    rate in exactly the crisis months the tail/severe tiers judge, and it is also the
+    short leg of `funding_spread`'s TED — so the two factors would have shared a
+    construction-driven stress component and the cross-block correlation and
+    crisis-correlation-lift bands would have been sealed over an artifact of the mapping.
+  - *One numeraire.* `equity_mkt` mapped to Fama-French `Mkt-RF` (an **excess** return)
+    while `govt_tr_10y` is a **total** return, and `sixty_forty`/`endowment_proxy`
+    weighted them together. `equity_mkt` is now `kind: derived`,
+    `add(french.mkt_rf, french.rf)` — a genuine total return. `conventions.numeraire:
+    total_return` is sealed data, and `ah.strategies` now rejects a D4 strategy whose
+    legs do not all resolve to it (or to an explicitly declared, self-financing
+    `zero_cost` overlay: `smb`/`hml`/`mom`/`credit_xs_hy`). `FactorSource` gains
+    `numeraire`, and `proxy`/`proxy_for` so a splice-backed backfill is machine-visible
+    rather than free text in `notes`.
+  - *One NaN rule.* `ah/battery/report.py::evaluate` treated a NaN metric as PASS while
+    `ah/eval/battery.py::_passed` treated it as FAIL — two rules, both inside the seal.
+    Now **NaN = FAIL** in both, stated in both modules and in
+    `conventions.nan_metric_rule`. This is a deliberate behaviour change to Step 0's
+    battery: an uncomputable metric has not demonstrated compliance.
+  - *`mc_error` sub-ensembles no longer lie about their size* (`dataclasses.replace(
+    meta, n_paths=len(idx))`); `Panel`/`ReferenceStats` split `missing_declared` from
+    `missing_no_data`; `ReferenceStats.coverage` records each factor's train+validation
+    span and observation count; `BatteryReport` gains missing-factor accounting,
+    per-factor coverage, `enforce_failures` and an aggregate `.passed`; `run_battery`
+    calls `prereg.verify()` whenever the pre-registration is sealed (TODO(WP2.3): drop
+    the guard); derived factors' declared `units` are checked against their inputs'
+    registered units; `seal()`'s `out_path` is optional for a dry run.
+- **`.gitignore`: `data/` → `/data/`.** The unanchored pattern matched any directory
+  named `data` at any depth, so the **entire `src/ah/data/` package** (all of Step 1's
+  data layer), every synthetic connector fixture under `tests/fixtures/data/`, and
+  `docs/data/` were untracked — a fresh clone could not run the test suite. 54 files
+  added. `ruff` respects `.gitignore` by default, so those sources had never been
+  linted; 13 pre-existing lint findings surfaced and are fixed here. See
+  `governance/retrofit-register.md` RFR-11.
+
 ### Added
 - **WP2.1 — Experiment infra, splits, leakage guards, registry.** `splits.py`:
   train/validation/holdout spans with a `DataAccess` guard — the holdout is reachable
