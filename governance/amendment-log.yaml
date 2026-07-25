@@ -40,7 +40,13 @@
 #                        ah.eval.prereg.apply_block_addition, which enforces this
 #                        shape: the payload must name exactly one newly-active block
 #                        and cover exactly the cross-block pairs it forms with the
-#                        blocks that were already active.
+#                        blocks that were already active. It carries THRESHOLDS ONLY:
+#                        pre-registration.yaml's `conventions` block must also be
+#                        edited, by hand and as part of the same amendment, to classify
+#                        the new block's factors as return-bearing or level.
+#                        ah.eval.prereg.verify() refuses the merged result until that
+#                        edit lands, so a block addition cannot silently seal
+#                        thresholds over series whose units nothing states.
 #
 #   correction         - a fix to a drafting error in the sealed file (a typo, a
 #                        mis-transcribed number) that was never the intended sealed

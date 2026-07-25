@@ -380,6 +380,47 @@ All notable changes to this project are documented here. The project follows
   block pre-classifying a not-yet-active block's factors) and threshold sanity
   (invalid severity, `min > max`). `tests/test_battery.py` gained the synthetic-
   manifest acceptance test. Full suite (516 tests), ruff, and pyright clean.
+- **WP2.1b Task 4 review fixes (fix pass 1).** Addresses one Critical, four
+  Important and five Minor findings, plus a project-owner scope ruling on what the
+  seal covers. **Scope ruling (Decision 0):** `CLAUDE.md`'s invariant ("thresholds
+  *and the code that judges them*") governs over STEP2-GENERATOR-PLAN §WP2.3's
+  narrower wording, so `_default_judged_sources()` now covers every module that can
+  move a pass/fail verdict — the enforce-tier metric suites that exist, plus
+  `eval/g2.py`, `eval/reference.py`, `eval/prereg.py` itself (non-circular: the
+  digest lands in the lock, never back in the module), `strategies.py`, `factors.py`,
+  `battery/report.py` and `battery/stylized.py`. Those seven are *required* to exist:
+  a missing one raises rather than silently shrinking the seal. Documented at the top
+  of `prereg.py` and in `pre-registration.yaml`, including the consequence that after
+  WP2.3 seals, an edit to any of them is a dated amendment. **Critical:** the seal
+  digest keyed on absolute filesystem paths, so a committed lock verified only on the
+  machine that produced it — it would have failed in CI, in a reviewer's clone, and
+  under WSL2. The digest is now keyed on relative, forward-slashed paths resolved
+  against two roots (the repository root for judged code; the pre-registration's own
+  directory at seal time / the lock's at verify time for the sealed documents), the
+  lock stores them in that form, and a path under neither root is rejected at seal
+  time. **Important:** `verify()` now validates threshold *keys*, not just their
+  values — a per-block key must be `"<factor>.<stat>"` with the factor in that block
+  and the stat registered in `reference.SINGLE_FACTOR_STATS`, a cross-block key
+  `"<factorA>~<factorB>.<stat>"` with the factors drawn in the pair key's sorted order
+  and the stat in `CROSS_BLOCK_STATS`, so a sealed `enforce` threshold can no longer
+  name a statistic nothing computes. `append_amendment()` validates at *write* time
+  (unknown type, empty `amendment_id`/`date`/`rationale`, non-boolean `post_hoc`,
+  duplicate id) and writes nothing on failure — on an append-only artifact a bad entry
+  is permanent, and a duplicate id previously produced a log `load_amendments()`
+  refused forever. The lock now records `prereg_path` and `verify()` requires it to
+  name the pre-registration being verified (`PreRegistration` gained `source_path`),
+  so a lock sealed for a different document is rejected even when contents match.
+  **Minor:** `verify()`'s conventions check adopts `ah.strategies`' full rule
+  (classification must cover *exactly* the active factor set, nothing outside it), so
+  it can no longer green-light a file `load_conventions()` raises on — a real
+  `block_addition` therefore requires a hand edit to `conventions:` alongside the
+  amendment's thresholds, now stated in the amendment log's header and exercised by
+  the round-trip fixture; `verify()` requires `schema_version == "1.0"` and a present
+  `decisions` block (a misspelled `decisons:` previously dropped R5/J3 silently);
+  `read_text` failures in `seal()`/`verify()` are wrapped in `PreRegError` naming the
+  file; two weak test matchers tightened (`FrozenInstanceError`, the full
+  missing-pair message) and the report-all-failures test now draws its two faults from
+  different `verify()` sections. Full suite 541 tests, ruff + pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

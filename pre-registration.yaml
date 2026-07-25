@@ -30,6 +30,33 @@
 #
 # The factor ids referenced below are the active factor namespace declared in
 # factors.yaml (`global` + `us` blocks; the manifest loader is ah.factors.load_manifest).
+#
+# WHAT THE SEAL COVERS -- deliberately wider than STEP2-GENERATOR-PLAN Sec.WP2.3.
+# CLAUDE.md states the invariant as "thresholds AND THE CODE THAT JUDGES THEM are hashed
+# together before any training run." STEP2-GENERATOR-PLAN Sec.WP2.3 words the same
+# requirement more narrowly (this file, the source of every enforce-tier metric, and
+# eval/g2.py), which would leave outside the seal several modules that can move a
+# pass/fail verdict on their own. The project owner has ruled that the invariant governs,
+# so ah.eval.prereg.seal() hashes, by category:
+#   - the acceptance thresholds and the factor namespace they are keyed to: this file and
+#     the factors.yaml it names above, plus src/ah/factors.py (which decides which blocks
+#     and factors are active at all);
+#   - the metrics being judged: every enforce-tier metric suite under src/ah/eval/metrics/
+#     that exists yet (WP2.2 adds the rest; a suite that does not exist yet is skipped);
+#   - the statistics the bands are derived from: src/ah/eval/reference.py;
+#   - the code that compares values to thresholds and decides: src/ah/eval/prereg.py and
+#     src/ah/eval/g2.py;
+#   - the code that interprets the sealed D4 definitions above: src/ah/strategies.py;
+#   - the code that renders the verdict: src/ah/battery/report.py and
+#     src/ah/battery/stylized.py.
+# prereg.py hashing its own source is intentional and non-circular: the digest lands in
+# pre-registration.lock, never back inside prereg.py.
+# CONSEQUENCE, stated plainly so it is not a surprise during WP2.2: WP2.3 inherits this
+# set, and once it seals, an edit to ANY of those files -- including a refactor of
+# prereg.py or a new statistic registered in reference.py -- is a dated, post-hoc-flagged
+# amendment in governance/amendment-log.yaml, exactly like an edit to this file.
+# The lock records every hashed file as a repository-relative, forward-slashed path, so a
+# lock sealed on one machine verifies in CI, in a reviewer's clone, and under WSL2.
 
 schema_version: "1.0"
 
@@ -473,6 +500,15 @@ d4_strategies:
 # active cross-block pair (ah.factors.FactorManifest.cross_block_pairs(), currently
 # just global|us) has a thresholds.cross_blocks entry; no entry names an inactive
 # block; every severity is enforce/report; min <= max where both are given.
+#
+# The KEY NAMING RULE above is itself machine-checked, not merely stated: verify()
+# rejects a per-block key that is not exactly "<factor>.<stat>" with the factor in that
+# same block and the stat registered in SINGLE_FACTOR_STATS, and a cross-block key that
+# is not exactly "<factorA>~<factorB>.<stat>" with factorA drawn from the pair key's
+# first block, factorB from its second (the pair key is sorted, and reference.py keys
+# the statistic in that order), and the stat registered in CROSS_BLOCK_STATS. Without
+# that check a sealed `enforce` threshold could name a statistic nothing computes -- a
+# threshold that judges nothing, silently, forever.
 # --------------------------------------------------------------------------- #
 thresholds:
   blocks:
