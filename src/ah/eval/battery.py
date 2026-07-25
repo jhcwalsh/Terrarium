@@ -381,6 +381,13 @@ def _result_dict(r: MetricResult) -> dict[str, Any]:
             "n_resamples": r.band.n_resamples,
             "level": r.band.level,
             "tier": r.band.tier,
+            # WP2.2 Task 2 fix pass 2, Important 2. Load-bearing per
+            # pre-registration.yaml's conventions.estimator_length_matching: a band
+            # drawn with resample_length set is NOT expected to bracket its own point
+            # estimate, and the battery JSON is the G2 evidence artifact -- without
+            # this field a length-matched band's point-outside-[lo,hi] outcome is
+            # indistinguishable from an unexplained failure.
+            "resample_length": r.band.resample_length,
         },
         "severity": r.severity,
         "passed": r.passed,
@@ -524,17 +531,30 @@ class BatteryReport:
                 lines.append(f"### {tier}")
                 lines.append("")
                 lines.append(
-                    "| metric | suite | value | mc_error | band lo | band hi | severity | passed |"
+                    "| metric | suite | value | mc_error | band lo | band hi | "
+                    "resample_length | severity | passed |"
                 )
-                lines.append("| --- | --- | --- | --- | --- | --- | --- | --- |")
+                lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
                 for r in grouped[tier]:
                     lo = "" if r.band is None else f"{r.band.lo:.6g}"
                     hi = "" if r.band is None else f"{r.band.hi:.6g}"
                     mc = "" if r.mc_error is None else f"{r.mc_error:.6g}"
+                    # None means "full historical sample, never length-matched" (see
+                    # StatBand.resample_length): rendered as an explicit "full", not an
+                    # empty cell indistinguishable from "no band at all".
+                    resample_length = (
+                        ""
+                        if r.band is None
+                        else (
+                            "full"
+                            if r.band.resample_length is None
+                            else str(r.band.resample_length)
+                        )
+                    )
                     passed_str = "-" if r.passed is None else ("PASS" if r.passed else "FAIL")
                     lines.append(
                         f"| {r.name} | {r.suite} | {r.value:.6g} | {mc} | {lo} | {hi} | "
-                        f"{r.severity} | {passed_str} |"
+                        f"{resample_length} | {r.severity} | {passed_str} |"
                     )
                 lines.append("")
 

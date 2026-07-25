@@ -633,6 +633,16 @@ def acf_abs_decay(x: np.ndarray, max_lag: int = ACF_ABS_DECAY_MAX_LAG) -> float:
 
     A rate is comparable only against another rate fitted over the same lag window
     with the same estimator; it is not comparable across different ``max_lag`` values.
+
+    **Censored at the search bounds** (Minor 8, WP2.2 Task 2 fix pass 2). A curve
+    decaying genuinely faster than ``exp(-_DECAY_RATE_MAX * lag)`` cannot be
+    represented within the sealed ``[-1.0, 5.0]`` search domain: the profiled SSE keeps
+    improving all the way to the boundary, and :func:`fit_exp_decay_rate` returns
+    approximately the bound itself (``~5.0``), **not NaN**. This is not a correctness
+    bug -- the generated ensemble's rate and the reference's are censored by the exact
+    same estimator, so a comparison between the two is still apples to apples -- but it
+    is a fact about the estimator that belongs in its definition, not something a
+    reader should have to discover by noticing a suspicious cluster of values at 5.0.
     """
     lags = np.arange(1, max_lag + 1, dtype=np.float64)
     dev = _abs_deviation(x)
@@ -760,6 +770,20 @@ MAX_REGISTERED_LAG = ACF_ABS_MAX_LAG
 # further (240+) leaves too few blocks and the band degenerates.
 # `tests/test_reference.py::test_default_block_length_exceeds_the_longest_registered_lag`
 # is the machine-checked half of this paragraph.
+#
+# SCOPE OF THIS ARGUMENT (Minor 8, WP2.2 Task 2 fix pass 2). The seam-shrinkage
+# argument above governs the number of BLOCKS a resample is built from, which only
+# matters when a replicate is stitched together from more than one block. At
+# production defaults (block_length=120, resample_length=ensemble.months <= 120 --
+# see run_full_battery), ceil(resample_length / block_length) == 1: every replicate IS
+# a single contiguous block, so there is no seam at all and the resample distribution
+# is an ordinary subsampling distribution, not a moving-block one. That is statistically
+# fine (a percentile band over single-block draws is still a valid band), but it means
+# the (b-k)/b seam-shrinkage rule this constant is chosen to satisfy does not bind on
+# the length-matched production path at all -- it governs only the UNMATCHED path
+# (resample_length=None, replicates built from the full ~1100-month history, where
+# multiple blocks per replicate is the normal case). A rule stated in this sealed file
+# that the production path never exercises would otherwise look stronger than it is.
 DEFAULT_BLOCK_LENGTH = 120
 
 SINGLE_FACTOR_STATS: dict[str, RegisteredStat] = {
@@ -943,6 +967,24 @@ def _draw_moving_block_indices(
             f"got {resample_length}"
         )
 
+    if block_length >= t:
+        # Minor 5 (WP2.2 Task 2 fix pass 2). eff_block_length = min(block_length, t)
+        # would be t, so max_start = t - t = 0: every block-start draw is FORCED to 0,
+        # there is no randomness left, and every replicate is the identical
+        # whole-sample block -- a zero-width band (lo == hi) that fails nearly any
+        # threshold with no warning at all. Not reachable at today's 120-month paths
+        # and 1996+ shortest series (t comfortably exceeds block_length everywhere in
+        # production), but reachable the moment a judged path length exceeds a
+        # short-history factor's own history. Raised here rather than silently sealing
+        # a degenerate band.
+        raise ValueError(
+            f"_draw_moving_block_indices{_ctx(context)}: block_length ({block_length}) "
+            f">= panel length ({t}) leaves no block-start freedom -- every replicate "
+            f"would be the identical whole-sample block, producing a zero-width band "
+            f"with no warning. Use a block_length < panel length, or treat this "
+            f"factor's short history as a named limitation rather than silently "
+            f"sealing a degenerate band."
+        )
     eff_block_length = min(block_length, t)
     max_start = t - eff_block_length
     n_blocks_needed = -(-length // eff_block_length)  # ceil division

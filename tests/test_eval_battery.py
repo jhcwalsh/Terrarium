@@ -429,6 +429,80 @@ def test_run_battery_on_toy_engine_emits_both_formats(monkeypatch: pytest.Monkey
     assert "monthly" in as_markdown
 
 
+def test_battery_report_json_and_markdown_carry_resample_length(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Important 2 (WP2.2 Task 2 fix pass 2). `StatBand.resample_length` says whether a
+    band was drawn length-matched to the judged ensemble's own path length or at the
+    full historical sample -- load-bearing per `pre-registration.yaml`'s
+    `conventions.estimator_length_matching` (a length-matched band's `point` is NOT
+    expected to lie inside `[lo, hi]`, which reads as an unexplained failure without
+    this field). `_result_dict` and `to_markdown` used to drop it on the floor, so the
+    battery JSON -- the G2 evidence artifact -- could not distinguish a length-matched
+    band from an unmatched one.
+    """
+    name = "_test_resample_length_visible"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean",
+                tier="monthly",
+                fn=lambda e: float(np.mean(e.factor("g1"))),
+                suite=name,
+            )
+        ],
+    )
+    band = StatBand(
+        point=0.0, lo=-1.0, hi=1.0, n_resamples=5, level=0.9, tier="monthly", resample_length=48
+    )
+    reference = ReferenceStats(
+        blocks={"global": BlockReference(block="global", stats={"g1.mean": band})},
+        cross_blocks={},
+        active_blocks=("global",),
+        vintage_id="v",
+        n_resamples=5,
+        seed=1,
+        missing_factors=(),
+    )
+    ensemble = _constant_ensemble(0.5)
+
+    report = run_battery(
+        ensemble, reference=reference, prereg=_real_prereg(), manifest=load_manifest(), seed=0
+    )
+
+    payload = json.loads(report.to_json())
+    result = next(r for r in payload["unfiltered"]["tiers"]["monthly"] if r["name"] == "g1.mean")
+    assert result["band"]["resample_length"] == 48
+
+    md = report.to_markdown()
+    assert "resample_length" in md, "the markdown table must name the column"
+    assert "48" in md, "the markdown table must show the actual value"
+
+
+def test_battery_report_markdown_shows_unmatched_resample_length_plainly() -> None:
+    """The other half of the same property: a band with no `resample_length` (drawn at
+    the full historical sample, never length-matched) must render as an explicit
+    absence, not merely an empty cell indistinguishable from a missing band."""
+    band_no_length = StatBand(point=0.0, lo=-1.0, hi=1.0, n_resamples=5, level=0.9, tier="monthly")
+    assert band_no_length.resample_length is None
+    from ah.eval.battery import MetricResult, _result_dict
+
+    result = MetricResult(
+        name="g1.mean",
+        suite="s",
+        tier="monthly",
+        value=0.5,
+        mc_error=None,
+        band=band_no_length,
+        severity="report",
+        passed=None,
+    )
+    encoded = _result_dict(result)
+    assert encoded["band"]["resample_length"] is None
+
+
 def test_run_battery_reports_filtered_and_unfiltered_side_by_side(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -853,9 +927,9 @@ def _orchestration_manifest() -> FactorManifest:
     )
 
 
-def _orchestration_access(months: int = 900) -> DataAccess:
+def _orchestration_access(months: int = 900, seed: int = 77) -> DataAccess:
     dates = pd.date_range("1940-01-01", periods=months, freq="MS")
-    rng = np.random.Generator(np.random.PCG64(77))
+    rng = np.random.Generator(np.random.PCG64(seed))
     frames = {
         "s.g1": pd.DataFrame({"date": dates, "value": rng.normal(0.0, 0.04, size=months)}),
         "s.u1": pd.DataFrame({"date": dates, "value": rng.normal(0.0, 0.02, size=months)}),
@@ -952,6 +1026,54 @@ def test_run_full_battery_is_repeatable_without_a_duplicate_registration_error()
     second = battery.run_full_battery(ensemble, **kwargs)
     assert [r.name for r in first.results] == [r.name for r in second.results]
     assert [r.value for r in first.results] == [r.value for r in second.results]
+
+
+def test_run_full_battery_judges_against_the_reference_the_second_call_actually_built() -> None:
+    """Minor 4 (WP2.2 Task 2 fix pass 2). The existing repeatability test above runs the
+    SAME reference twice, so it only proves no `BatteryError` is raised on a second
+    call -- it would pass just as well under a regression to `SUITES.setdefault` (i.e.
+    "register once, keep serving the first run's specs forever"). The property that
+    actually matters is that a second call against a DIFFERENT reference is judged
+    against THAT reference: `cross_block_corr_matrix_distance` closes over the
+    reference's own correlation points, so two calls fed different underlying data must
+    produce two different values. A `setdefault`-style regression would make both calls
+    return the FIRST call's value, unchanged.
+    """
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report_a = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(seed=77),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+    report_b = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(seed=4242),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    value_a = next(
+        r.value for r in report_a.results if r.name == "cross_block_corr_matrix_distance"
+    )
+    value_b = next(
+        r.value for r in report_b.results if r.name == "cross_block_corr_matrix_distance"
+    )
+    assert value_a != value_b, (
+        "two different references must judge cross_block_corr_matrix_distance "
+        "differently -- identical values here would mean the second call is still "
+        "judged against the first call's reference"
+    )
 
 
 def test_panel_threshold_is_found_by_the_metric_name_lookup() -> None:

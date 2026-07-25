@@ -918,6 +918,35 @@ def test_draw_moving_block_indices_rejects_nonpositive_block_length() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# 17b. Minor 5 (WP2.2 Task 2 fix pass 2): a block_length covering the whole panel
+#      leaves no block-start freedom -- every replicate is the identical whole-sample
+#      block, a zero-width band that would fail nearly any threshold with no warning.
+#      Not reachable at today's 120-month paths and 1996+ shortest series, but reachable
+#      as soon as a judged path length exceeds a short-history factor's own history.
+# --------------------------------------------------------------------------- #
+
+
+def test_draw_moving_block_indices_rejects_block_length_covering_the_whole_panel() -> None:
+    with pytest.raises(ValueError, match="no block-start freedom"):
+        _draw_moving_block_indices(10, seed=1, n_resamples=5, block_length=10)
+    with pytest.raises(ValueError, match="no block-start freedom"):
+        _draw_moving_block_indices(10, seed=1, n_resamples=5, block_length=20)
+
+
+def test_block_bootstrap_band_rejects_block_length_covering_the_whole_panel() -> None:
+    panel = np.arange(10, dtype=np.float64).reshape(-1, 1)
+    with pytest.raises(ValueError, match="no block-start freedom"):
+        block_bootstrap_band(
+            lambda arr: float(np.mean(arr[:, 0])),
+            panel,
+            seed=1,
+            n_resamples=5,
+            level=0.9,
+            block_length=10,
+        )
+
+
+# --------------------------------------------------------------------------- #
 # 18. WP2.2 Task 1 fix pass, Critical 1: compute_reference resolves factor ids
 #     through the manifest's factor_sources mapping.
 #
@@ -1173,6 +1202,43 @@ def test_default_block_length_exceeds_the_longest_registered_lag() -> None:
     ``reference.MAX_REGISTERED_LAG``."""
     assert reference_mod.MAX_REGISTERED_LAG == 24
     assert reference_mod.DEFAULT_BLOCK_LENGTH >= 4 * reference_mod.MAX_REGISTERED_LAG
+
+
+# --------------------------------------------------------------------------- #
+# Minor 6 (WP2.2 Task 2 fix pass 2): sealed numeric constants pinned exactly.
+#
+# pre-registration.yaml's conventions.acf_abs_decay_estimator, conventions.
+# agg_gaussianity_estimator and conventions.estimator_length_matching all describe
+# these module constants BY VALUE (241 grid points, rate range [-1.0, 5.0], tolerance
+# 1e-10, at most 200 iterations, the 30-sum floor, DEFAULT_BLOCK_LENGTH=120). Nothing
+# previously asserted the exact values against the code -- only bracket-style
+# properties (e.g. the block-length-vs-lag test above). Pre-seal, a divergence between
+# the sealed prose and the code is a silent drift with a green suite; post-seal it
+# trips the lock. Pinned here so a divergence trips a test instead, on either side.
+# --------------------------------------------------------------------------- #
+
+
+def test_sealed_decay_estimator_constants_match_the_pre_registration() -> None:
+    """pre-registration.yaml's conventions.acf_abs_decay_estimator: '241 equally spaced
+    grid points across rate in [-1.0, 5.0], then golden-section search ... to an
+    interval width of 1e-10 (at most 200 iterations)'."""
+    assert reference_mod._DECAY_RATE_MIN == -1.0
+    assert reference_mod._DECAY_RATE_MAX == 5.0
+    assert reference_mod._DECAY_GRID_POINTS == 241
+    assert reference_mod._DECAY_GOLDEN_TOL == 1e-10
+    assert reference_mod._DECAY_MAX_ITERATIONS == 200
+
+
+def test_sealed_agg_gaussianity_floor_matches_the_pre_registration() -> None:
+    """pre-registration.yaml's conventions.agg_gaussianity_estimator: 'NaN below 30
+    pooled sums'."""
+    assert reference_mod.AGG_GAUSSIANITY_MIN_SUMS == 30
+
+
+def test_sealed_default_block_length_matches_the_pre_registration() -> None:
+    """pre-registration.yaml's conventions.estimator_length_matching: 'The sealed
+    default is 120 months (ah.eval.reference.DEFAULT_BLOCK_LENGTH)'."""
+    assert reference_mod.DEFAULT_BLOCK_LENGTH == 120
 
 
 def test_short_blocks_shrink_a_long_lag_band_toward_zero() -> None:

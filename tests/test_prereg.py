@@ -1160,6 +1160,56 @@ def test_every_monthly_metric_name_can_carry_a_sealed_threshold(tmp_path: Path) 
     prereg.verify(loaded, load_manifest(factors_path))  # must not raise
 
 
+def test_every_real_threshold_key_is_produced_by_a_registered_metric() -> None:
+    """Minor 3 (WP2.2 Task 2 fix pass 2). The mirror of the test above: `verify()`
+    validates a threshold key's `<stat>` against the *reference* registries
+    (`SINGLE_FACTOR_STATS`/`CROSS_BLOCK_STATS`/`PANEL_STATS`), not against what any
+    metric suite actually *emits* -- so a threshold can be well-formed and registered,
+    and still be judged by nothing: no `MetricResult` is ever produced under that name,
+    so an `enforce` bound on it can never fail (or ever run) at all. `mean`/`std`
+    (`SINGLE_FACTOR_STATS`) and `correlation` (`CROSS_BLOCK_STATS`) are registered
+    reference statistics -- a historical band gets computed for them -- but no monthly
+    metric computes an ensemble-side value under those names, since `build_monthly_suite`
+    never emits a bare `.mean`/`.std` spec or a bare `.correlation` cross-block spec
+    (only `.crisis_corr_lift`). This is exactly the "judges nothing, silently" failure
+    `_check_block_threshold_key` exists to prevent, one level up: a key can be
+    well-formed and still be inert.
+    """
+    from ah.eval.metrics.monthly import build_monthly_suite
+    from ah.eval.reference import ReferenceStats
+
+    manifest = load_manifest()
+    specs = build_monthly_suite(
+        manifest,
+        ReferenceStats(
+            blocks={},
+            cross_blocks={},
+            active_blocks=manifest.active_blocks,
+            vintage_id="v",
+            n_resamples=1,
+            seed=0,
+            missing_factors=(),
+        ),
+    )
+    produced = {s.name for s in specs}
+
+    loaded = prereg.load()
+    inert: list[str] = []
+    for block, entries in loaded.block_thresholds.items():
+        for key in entries:
+            if key not in produced:
+                inert.append(f"thresholds.blocks.{block}.{key}")
+    for pair, entries in loaded.cross_block_thresholds.items():
+        for key in entries:
+            if key not in produced:
+                inert.append(f"thresholds.cross_blocks.{pair[0]}|{pair[1]}.{key}")
+    for key in loaded.panel_thresholds:
+        if key not in produced:
+            inert.append(f"thresholds.panel.{key}")
+
+    assert not inert, f"threshold key(s) with no producing metric (judge nothing): {inert}"
+
+
 def test_verify_rejects_an_unregistered_panel_threshold_key(tmp_path: Path) -> None:
     doc = _load_real_doc()
     doc["thresholds"]["panel"] = {

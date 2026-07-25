@@ -341,6 +341,15 @@ conventions:
     (ah.eval.reference.DEFAULT_BLOCK_LENGTH); at the previous default of 24 every
     long-lag band was an artifact of the resampling rather than a statement about
     history.
+    SCOPE OF THE (b-k)/b RULE (Minor 8, WP2.2 Task 2 fix pass 2): it governs the number
+    of BLOCKS a replicate is stitched from, which only matters when a replicate spans
+    more than one block. At production defaults (block_length=120,
+    resample_length=ensemble.months <= 120), ceil(resample_length/block_length) = 1:
+    every replicate IS a single contiguous block, so there is no seam at all and the
+    band is an ordinary subsampling distribution, not a moving-block one -- statistically
+    fine, but the seam-shrinkage argument above does not bind on this, the length-matched
+    PRODUCTION path. It governs only the UNMATCHED path (resample_length unset, replicates
+    built from the full ~1100-month history, where spanning multiple blocks is normal).
   acf_abs_decay_estimator: >-
     `acf_abs_decay` is the rate of the exponential value ~= A * exp(-rate * lag) fitted
     to the 24-point curve (acf_abs_lag1 .. acf_abs_lag24) BY ORDINARY LEAST SQUARES ON
@@ -373,6 +382,14 @@ conventions:
     Ensemble-side, the rate is fitted PER PATH and averaged (never fitted to a
     path-averaged curve, which is a materially less biased and therefore NON-comparable
     functional than the single-series estimator the reference band is built from).
+    CENSORED AT THE SEARCH BOUNDS (Minor 8, WP2.2 Task 2 fix pass 2): a curve decaying
+    genuinely faster than exp(-5.0 * lag) cannot be represented within the sealed
+    [-1.0, 5.0] domain -- the profiled SSE keeps improving to the boundary and the fit
+    returns approximately the bound itself (~5.0), NOT NaN. Not a correctness bug (both
+    the ensemble side and the reference side censor identically, under the same
+    estimator, so the comparison stays apples to apples), but a fact about the estimator
+    that belongs in this definition rather than being discovered as a surprise cluster
+    of values at 5.0.
   hill_tail_index_estimator: >-
     LEFT tail (losses), Hill (1975) ratio form. Losses are -x, sorted descending
     L_(1) >= ... >= L_(n); with k = max(1, round(tail_fraction * n)) and the (k+1)-th
@@ -415,7 +432,13 @@ conventions:
     correlation entries NaN and so NaNs this whole panel-level metric. That is correct
     under nan_metric_rule below; it is deliberately not softened by dropping the
     offending row, because silently shrinking the matrix would change WHICH pairs the
-    sealed distance is a distance over, run to run.
+    sealed distance is a distance over, run to run. THE SAME RULE APPLIES TO A COVERED
+    FACTOR A GENERATOR SIMPLY OMITS (WP2.2 Task 2 fix pass 2, Important 1): the matrix
+    axis is fixed by the reference's covered factor set, never re-intersected with
+    whatever the ensemble happens to emit, so an omitted factor NaNs the metric
+    identically to a degenerate one rather than shrinking the matrix to a smaller,
+    easier-to-satisfy distance. Without this, generating less was a way to pass an
+    absolute-bound threshold more easily, not a way to fail it.
 
   loss_sign: >-
     VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of
@@ -768,7 +791,13 @@ thresholds:
       "equity_mkt.excess_kurtosis": {min: -2.0, max: 30.0, severity: report}
     us:
       # PROVISIONAL placeholder -- not derived from history (see file header).
-      "policy_rate.std": {min: 0.0, max: 50.0, severity: enforce}
+      # (Was "policy_rate.std": WP2.2 Task 2 fix pass 2, Minor 3 -- `std` is a
+      # registered SINGLE_FACTOR_STATS reference statistic (a historical band gets
+      # computed for it) but `build_monthly_suite` emits no metric under that name, so
+      # the threshold judged nothing, silently, forever: no enforce-severity threshold
+      # may name a statistic no metric actually produces. `excess_kurtosis` IS produced
+      # for every active factor including policy_rate.)
+      "policy_rate.excess_kurtosis": {min: -2.0, max: 50.0, severity: enforce}
       # PROVISIONAL placeholder -- not derived from history (see file header).
       # (Named acf_r_lag1, not acf_1: WP2.2 Task 2's fix pass folded the two lag-1 ACF
       # statistics into the lag-indexed scheme so that no two registered names compute
@@ -777,7 +806,13 @@ thresholds:
   cross_blocks:
     "global|us":
       # PROVISIONAL placeholder -- not derived from history (see file header).
-      "equity_mkt~ust_10y.correlation": {min: -1.0, max: 1.0, severity: report}
+      # (Was "equity_mkt~ust_10y.correlation": WP2.2 Task 2 fix pass 2, Minor 3 --
+      # `correlation` is a registered CROSS_BLOCK_STATS reference statistic (the
+      # reference band is computed for it, and it feeds cross_block_corr_matrix_distance
+      # internally) but `build_monthly_suite` emits no metric under a bare `.correlation`
+      # cross-block name -- only `.crisis_corr_lift` -- so the threshold judged nothing.
+      # `crisis_corr_lift` for the same pair IS produced.)
+      "equity_mkt~ust_10y.crisis_corr_lift": {min: -2.0, max: 2.0, severity: report}
   panel:
     # PROVISIONAL placeholder -- not derived from history (see file header).
     # cross_block_corr_matrix_distance is a DISTANCE between the generated ensemble's

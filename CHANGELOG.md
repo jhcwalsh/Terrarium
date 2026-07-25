@@ -649,6 +649,68 @@ All notable changes to this project are documented here. The project follows
   required); no assertion in any of them was weakened. Full suite green (599 tests, up
   from 544 at branch start), ruff/pyright clean, coverage gate unaffected;
   `pre-registration.yaml` stays `sealed: false`.
+- **WP2.2 Task 2 review fix pass 2 — closing the last findings before WP2.3 seals.**
+  Everything here lands in files WP2.3 hashes, so it is cheap now and a dated
+  post-hoc amendment afterwards.
+  *Important 1, the panel metric could be gamed by omission.*
+  `_paired_corr_matrices` intersected the reference's covered factor axis with
+  `ensemble.factor_names`, so a generator that simply omitted a covered factor got a
+  *smaller* matrix and a *smaller* (easier-to-pass) `cross_block_corr_matrix_distance`
+  — generating less made an absolute-bound threshold easier to pass, exactly the
+  instability the docstring already refused to tolerate for a degenerate factor
+  (correctly NaN'd). An omitted covered factor now NaNs the metric identically to a
+  degenerate one, never shrinks it. Tested: an ensemble that omits a covered factor
+  from otherwise-identical draws must NaN, not merely differ.
+  *Important 2, `resample_length` was dropped from the report.* `StatBand.
+  resample_length` is load-bearing per `conventions.estimator_length_matching` (a
+  length-matched band's `point` is not expected to lie inside `[lo, hi]`), but
+  `_result_dict` and the markdown table emitted `point/lo/hi/n_resamples/level/tier`
+  only — the battery JSON, the G2 evidence artifact, could not distinguish a
+  length-matched band from an unmatched one. Now emitted in both, with an unmatched
+  band rendering as `full` rather than an empty cell.
+  *Minor 3, a threshold key with no producing metric was still uncaught.* `verify()`
+  validates a threshold's `<stat>` against the *reference* registries, not against
+  what any metric suite actually emits: `policy_rate.std` (enforce) and
+  `equity_mkt~ust_10y.correlation` (report) were registered reference statistics with
+  no producing monthly metric, so each would judge nothing, silently, at `enforce`
+  or not. New converse test (every real threshold key must be produced by a
+  registered metric) plus the mirror already in place (every metric name must be
+  sealable). Repointed at metrics that exist: `policy_rate.excess_kurtosis`,
+  `equity_mkt~ust_10y.crisis_corr_lift`.
+  *Minor 4, the idempotent-replacement property was under-tested.* The existing
+  repeatability test ran the same reference twice, proving only that no
+  `BatteryError` is raised — it would pass under a regression to
+  `SUITES.setdefault`. New test runs `run_full_battery` against two genuinely
+  different references and asserts `cross_block_corr_matrix_distance` differs.
+  The related `run_battery(reference=X)`-vs-what-the-specs-closed-over identity gap
+  is recorded as `governance/retrofit-register.md` RFR-16 (WP2.3 to decide) rather
+  than fixed here — it needs a `MetricSpec`/`register_suite` signature change.
+  *Minor 5, a short-history factor could produce a silent zero-width band.*
+  `_draw_moving_block_indices` now raises when `block_length >= t`: `max_start` would
+  be forced to `0`, so every replicate is the identical whole-sample block (`lo ==
+  hi`). Not reachable at today's 120-month paths and 1996+ shortest series, but
+  reachable once a judged path length exceeds a factor's own history.
+  *Minor 6, sealed numeric constants were unpinned.* New equality tests pin
+  `_DECAY_RATE_MIN/_MAX`, `_DECAY_GRID_POINTS`, `_DECAY_GOLDEN_TOL`,
+  `_DECAY_MAX_ITERATIONS`, `AGG_GAUSSIANITY_MIN_SUMS` and `DEFAULT_BLOCK_LENGTH`
+  against the values `pre-registration.yaml`'s prose states, so pre-seal drift trips
+  a test instead of a green suite hiding it.
+  *Minor 7, a corrected false claim survived in an earlier report section.*
+  Annotated in place in the WP2.2 Task 2 scratchpad report rather than only at the
+  fix-pass section further down.
+  *Minor 8, the block-length rule's actual scope was unstated.* At production
+  defaults (`block_length=120`, `resample_length=ensemble.months <= 120`),
+  `ceil(L/b) = 1`: every replicate is a single contiguous window, so the `(b-k)/b`
+  seam-shrinkage argument that justifies `DEFAULT_BLOCK_LENGTH=120` does not bind on
+  the length-matched production path at all — it governs only the unmatched
+  (full-history) path. Also documented: `acf_abs_decay` is censored at the search
+  bounds (a true rate above 5.0 returns `~5.0`, not NaN); both sides censor
+  identically so it is not a correctness bug, but it belongs in the sealed
+  definition. Both stated in `reference.py`'s docstrings and
+  `pre-registration.yaml`'s sealed conventions, with a new test pinning the
+  censoring behaviour.
+  Full suite green (716 tests, up from 705), ruff/pyright clean, `ah.core` coverage
+  96.54%; `pre-registration.yaml` stays `sealed: false`.
 - **WP2.2 Task 2 review fix pass — the monthly panel becomes runnable and sealable.**
   The review returned Spec: FAIL with two Criticals, both blocking WP2.3.
   *Critical 1, the battery never ran.* No production code path called any

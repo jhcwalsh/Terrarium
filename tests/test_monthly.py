@@ -297,6 +297,23 @@ def test_fit_exp_decay_rate_nan_with_a_non_finite_value() -> None:
     assert np.isnan(_fit_exp_decay_rate(lags, np.array([0.5, np.nan, 0.2, 0.1])))
 
 
+def test_fit_exp_decay_rate_censors_at_the_upper_search_bound() -> None:
+    """Minor 8 (WP2.2 Task 2 fix pass 2). The rate search is a 241-point grid plus
+    golden-section refinement over ``rate in [-1.0, 5.0]`` -- a genuinely faster-decaying
+    curve (true rate above 5.0) cannot be represented exactly, so the profiled SSE keeps
+    improving all the way to the upper edge of the search domain and the fit returns
+    approximately the bound itself, NOT NaN. Not a correctness bug (both the ensemble
+    side and the reference side censor identically, under the same estimator), but a
+    fact about the estimator that belongs in its sealed definition rather than being
+    discovered by surprise."""
+    lags = np.arange(1, 25, dtype=np.float64)
+    true_rate = 8.0  # comfortably above _DECAY_RATE_MAX = 5.0
+    values = np.exp(-true_rate * lags)
+    rate = _fit_exp_decay_rate(lags, values)
+    assert not np.isnan(rate)
+    assert rate == pytest.approx(5.0, abs=1e-6)
+
+
 def _garch11_path(n: int, beta: float, seed: int) -> np.ndarray:
     """A GARCH(1,1)-style volatility-clustering path with persistence `beta` (higher
     beta -> slower ACF(|r|) decay). omega/alpha kept modest so the process stays
@@ -487,6 +504,63 @@ def test_corr_matrix_distance_metric_nan_when_no_reference_pairs_exist() -> None
     specs = build_monthly_suite(manifest, reference)
     value = _find_spec(specs, "cross_block_corr_matrix_distance").fn(ensemble)
     assert np.isnan(value)
+
+
+def test_corr_matrix_distance_metric_nans_rather_than_shrinks_when_a_covered_factor_is_omitted() -> (
+    None
+):
+    """WP2.2 Task 2 fix pass 2, Important 1. `covered = tuple(f for f in covered_all if
+    f in ensemble.factor_names)` used to silently drop an omitted covered factor and
+    compute the Frobenius distance over the smaller remaining matrix -- a generator
+    that simply omits a covered factor got an easier (smaller) absolute-bound metric
+    to pass, purely by generating less. A degenerate (zero-variance) factor already
+    NaNs the whole metric (the module docstring's own stated rule); an ABSENT factor
+    must NaN it identically, not shrink it, or the metric can be gamed by omission."""
+    manifest = FactorManifest(
+        blocks={"global": ("g1", "g2"), "us": ("u1",)},
+        active_blocks=("global", "us"),
+        sources={
+            name: FactorSource(
+                kind="series", units="ret", series_id=f"s.{name}", numeraire="total_return"
+            )
+            for name in ("g1", "g2", "u1")
+        },
+    )
+    band = StatBand(point=0.4, lo=0.2, hi=0.6, n_resamples=5, level=0.9, tier="monthly")
+    reference = ReferenceStats(
+        blocks={},
+        cross_blocks={
+            ("global", "us"): CrossBlockReference(
+                pair=("global", "us"),
+                stats={"g1~u1.correlation": band, "g2~u1.correlation": band},
+            )
+        },
+        active_blocks=("global", "us"),
+        vintage_id="v",
+        n_resamples=5,
+        seed=1,
+        missing_factors=(),
+    )
+    specs = build_monthly_suite(manifest, reference)
+    metric = _find_spec(specs, "cross_block_corr_matrix_distance")
+
+    rng = Generator(PCG64(211))
+    paths = rng.normal(size=(20, 40, 3))
+    full_ensemble = Ensemble(paths=paths, factor_names=["g1", "g2", "u1"], meta=_meta(20, 40))
+    # Same underlying draws, but the ensemble simply never emits g2 -- exactly what a
+    # generator gaming the metric by omission would look like.
+    omitting_ensemble = Ensemble(
+        paths=paths[:, :, [0, 2]], factor_names=["g1", "u1"], meta=_meta(20, 40)
+    )
+
+    full_value = metric.fn(full_ensemble)
+    omitting_value = metric.fn(omitting_ensemble)
+
+    assert not np.isnan(full_value)
+    assert np.isnan(omitting_value), (
+        "omitting a covered factor must NaN the metric, not silently shrink it to a "
+        "smaller (easier-to-pass) distance"
+    )
 
 
 # --------------------------------------------------------------------------- #

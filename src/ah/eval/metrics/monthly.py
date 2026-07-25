@@ -134,6 +134,14 @@ Two consequences of it being a single whole-panel aggregate, both deliberate:
   uncomputable metric has not demonstrated compliance) and it is deliberately not
   softened by dropping the offending row: silently shrinking the matrix would change
   *which* pairs the sealed distance is a distance over, run to run.
+- **One ABSENT factor NaNs the whole metric too** (WP2.2 Task 2 fix pass 2, Important
+  1). The matrix axis is fixed by the reference's covered factor set, never
+  re-intersected with whatever the ensemble happens to emit: a generator that simply
+  omits a covered factor does not get a smaller, easier-to-satisfy matrix -- it gets
+  NaN, the same outcome as a degenerate factor. Without this, the metric could be
+  gamed by generating less: a smaller matrix over fewer pairs produces a smaller
+  Frobenius distance, so omitting a factor made an absolute-bound threshold easier to
+  pass, not harder. See :func:`_paired_corr_matrices`.
 
 Registration is deferred, and now has a caller
 -------------------------------------------------
@@ -342,14 +350,27 @@ def _paired_corr_matrices(
 ) -> PairedCorrMatrices | None:
     """The ensemble's and the reference's correlations over one shared factor axis.
 
-    The axis is exactly the factors that (a) are declared active, (b) have at least one
-    cross-block reference correlation entry, and (c) are present in this ensemble --
-    see the module docstring's "cross_block_corr_matrix_distance". Returns ``None``
-    (metric reports NaN) if fewer than 2 such factors exist.
+    The axis is exactly the factors that (a) are declared active and (b) have at least
+    one cross-block reference correlation entry -- see the module docstring's
+    "cross_block_corr_matrix_distance". Returns ``None`` (metric reports NaN) if fewer
+    than 2 such factors exist, **or if any of them is absent from this ensemble**
+    (WP2.2 Task 2 fix pass 2, Important 1).
+
+    That last clause is deliberate, not an oversight: the metric's axis is fixed by the
+    reference (which factors it has a covered pair for), not by whatever the ensemble
+    happens to emit. The previous version intersected the covered axis with
+    ``ensemble.factor_names``, so a generator that simply omitted a covered factor got
+    a *smaller* matrix and therefore a *smaller* (easier-to-pass) Frobenius distance --
+    it is easier to pass an absolute bound by generating less. A degenerate
+    (zero-variance) factor already NaNs the whole metric under THE ONE NaN RULE; an
+    *absent* factor is a strictly worse case (no data at all, not merely bad data) and
+    must NaN it identically, never shrink it.
     """
     ref_pairs = _reference_pairwise_correlations(dict(reference.cross_blocks))
     covered_all = sorted({f for pair in ref_pairs for f in pair} & set(active_factors))
-    covered = tuple(f for f in covered_all if f in ensemble.factor_names)
+    if any(f not in ensemble.factor_names for f in covered_all):
+        return None
+    covered = tuple(covered_all)
     m = len(covered)
     if m < 2:
         return None
