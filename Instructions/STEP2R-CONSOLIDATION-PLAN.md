@@ -19,9 +19,20 @@ Extend Step 1's `desmooth.py` coverage to every `albourne.hf_*` series (GLM MA(k
 Author `schemas/sleeve-vehicle-state-v1.0.schema.json` + pydantic mirror, implementing `sleeve-vehicle-state-spec.md` §3 with the **three vehicle types** (closed-end drawdown, open-ended NAV, evergreen/semi-liquid) as first-class (R3), and explicit fields for **recycling/recallable balance** (R14), fee/carry state, and the granularity discriminator (`n_funds`, `dispersion_draw`). Dual validation (jsonschema + pydantic) with the agreement test, exactly as WorldSpec.
 *Acceptance:* round-trip test on a hand-authored example of each vehicle type; schema/pydantic agreement property test green.
 
-## WP2R.4 — Generator output schema + the factor-set decision (R4, R5)
-Author `schemas/generator-output-v1.0.schema.json`: the factor namespace with units, the **primitive vs derived** split declared explicitly (derived variables carry their defining identity as metadata), slow states, regime path, waypoint/diagnostic block, and the provenance quartet. Refactor Step 2's `Ensemble` to emit and validate against it. **Resolve R5 (FX / non-US factors) here**: either add them to the factor set — which requires re-running the reference statistics and re-sealing the battery, with the amendment logged — or record the decision to defer with its rationale and its consequence for institutions with unhedged exposure. Do not leave it open.
-*Acceptance:* all registered systems emit schema-valid ensembles; the identity metadata lets a consumer recompute every derived variable; the FX decision is written into the decision register with a status.
+## WP2R.4 — Generator output schema (R4)
+**2026-07-25 note (WP2.1b):** R5 is no longer resolved here. It was closed earlier than
+this plan anticipated, in WP2.1b, because the FX decision sits inside the
+pre-registration seal's blast radius and had to be settled before WP2.3 sealed, not
+after Step 3 planning begins. See `governance/decision-register.md`'s Step 2 section,
+row `R5`, for the closed decision (CLOSED-deferred, `active_blocks: [global, us]`) and
+its consequence. WP2R.4's remaining scope is the generator-output schema below, plus
+executing the FX/UK block addition if that decision is revisited — which is now a
+**retrain**, not a re-threshold: adding a block after the generator is trained requires
+new cross-block correlation the trained weights don't have, so re-opening R5 or J3 costs
+a full retrain, not merely re-sealing new thresholds.
+
+Author `schemas/generator-output-v1.0.schema.json`: the factor namespace with units, the **primitive vs derived** split declared explicitly (derived variables carry their defining identity as metadata), slow states, regime path, waypoint/diagnostic block, and the provenance quartet. Refactor Step 2's `Ensemble` to emit and validate against it.
+*Acceptance:* all registered systems emit schema-valid ensembles; the identity metadata lets a consumer recompute every derived variable.
 
 ## WP2R.5 — Data layer additions and vintage handoff
 Absorb whatever `GAPS.md` accumulated during Step 2 (new series discovered as needed, retired sources, SLA changes). Transition the campaign from Step 2's **frozen vintage** back to rolling refresh: document the last campaign vintage in the model inventory, verify that re-running the G2 battery on the frozen vintage still reproduces `G2-EVIDENCE.md`, then re-enable the monthly cron.
@@ -47,5 +58,11 @@ Re-run: Step 0's G0 checklist, Step 1's refresh + de-smoothing + episode packs, 
 
 ## Notes
 - **Duration:** roughly a week of focused sessions. Resist scope growth — every "while we're in here" idea goes to the retrofit register for 3R.
-- **The one judgment call:** R5 (FX). Adding factors after the battery seal costs a re-seal and re-run; deferring costs modeling fidelity for non-US-exposed institutions. Make it explicitly, record it, move on.
+- **The one judgment call — resolved in WP2.1b, not here.** R5 (FX). The judgment was
+  made earlier than this plan anticipated: WP2.1b closed it CLOSED-deferred (FX stays
+  out of scope for v1; `active_blocks: [global, us]`), because the decision sits inside
+  the pre-registration seal's blast radius. See `governance/decision-register.md`'s Step
+  2 section, row `R5`. Re-opening it is now a `block_addition` amendment plus a full
+  generator retrain, not a re-seal of thresholds alone — the trained weights carry no
+  cross-block correlation for a block that didn't exist at training time.
 - **If G2 shipped the benchmark:** nothing in this plan changes except that `generator_id` defaults to `bootstrap-v1` and the model inventory records the honest negative result alongside the ablation evidence. Step 3 proceeds identically.

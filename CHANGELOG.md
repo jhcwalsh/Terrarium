@@ -421,6 +421,39 @@ All notable changes to this project are documented here. The project follows
   file; two weak test matchers tightened (`FrozenInstanceError`, the full
   missing-pair message) and the report-all-failures test now draws its two faults from
   different `verify()` sections. Full suite 541 tests, ruff + pyright clean.
+- **WP2.1b Task 5 — Governance: decision register, retrofit register, plan
+  reconciliation (pre-seal patch, documentation only).** Records the decisions taken
+  across WP2.1b Tasks 1-4 and reconciles two plan documents that now disagree with them.
+  No production code changed. `governance/decision-register.md` gains a
+  `## Step 2 decisions` section (D1-D10 in the existing platform table untouched): `S2-D4`
+  (the D4 benchmark-strategy set, redefined over generated factors and their declared
+  derived series — `govt_tr_10y`, `credit_xs_hy`, `cash_tr_1m`), `R5` and `J3` (FX and UK
+  factor blocks, both CLOSED-deferred with their `pre-registration.yaml` consequence
+  strings copied verbatim — a test (`test_decision_consequence_text_is_verbatim`) pins
+  those strings, so the register and the YAML can never silently drift), and `S2-SEAL`
+  (the seal-scope decision: CLAUDE.md's invariant — thresholds *and the code that judges
+  them* — governs over STEP2-GENERATOR-PLAN §WP2.3's narrower wording, so the seal covers
+  every module that can move a pass/fail verdict; consequence: post-seal, an edit to any
+  judging module, including a no-op refactor, is an amendment). A footnote names the `D4`
+  id collision with the platform table's D4 (correlation regime model) so a later reader
+  isn't confused by two decisions sharing a number. `governance/retrofit-register.md` is
+  new: a dated, append-only table for scope items surfaced but deferred during this work
+  — seeded with `commodities`' missing Step-1 data source (declared in `factors.yaml`,
+  weighted in two D4 strategies, reference statistics pending a connector under the
+  requirements.yaml §WP1.9 rule; deferred to WP2.2) and the R5/J3 block-addition re-entry
+  paths. Two plan reconciliations, each a dated note pointing at WP2.1b, minimal edits
+  only: `Instructions/STEP2R-CONSOLIDATION-PLAN.md` §WP2R.4 no longer claims to resolve
+  R5 (closed earlier, in WP2.1b) and its "one judgment call" note now records the answer;
+  `Instructions/STEP2-GENERATOR-PLAN.md` §WP2.3's seal-scope sentence now matches
+  `S2-SEAL` instead of disagreeing with it. Also commits six previously-untracked vendored
+  design notes from `Instructions/` (separate preceding commit, project-owner approved):
+  `DN1.1-multiyear-generator-design-note.md`/`.pdf` (discharges STEP2's halt condition),
+  `DN2-hybrid-deployment-note.md`, `DN3-web-experience-architecture.md`,
+  `DN4-jurisdiction-and-institution-plugin.md` (defines the `InstitutionProfile` interface
+  the J3 consequence cites), `WP1.12-UK-CONNECTORS.md`. Decision register's acceptance
+  check: no row in either the platform table or the new Step 2 section names WP2.3 or the
+  pre-registration seal in its "Blocks" column. Full suite unchanged at 541 tests, ruff
+  clean — this is a docs-only change and verified not to move either.
 
 ## [v0.1.0-g0] — 2026-07-24
 
