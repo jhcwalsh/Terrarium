@@ -18,6 +18,13 @@ from ah.core.numericworld import NumericWorld
 
 @dataclass(frozen=True)
 class EnsembleMeta:
+    """Metadata pinning exactly what produced an :class:`Ensemble`.
+
+    ``active_blocks`` records which factor blocks (:class:`ah.factors.FactorManifest`)
+    the ensemble was generated over, e.g. ``("global", "us")`` — so any ensemble is
+    reconstructible against the block layer that produced it (WP2.1b Item 2).
+    """
+
     generator_id: str
     vintage_id: str
     seed: int
@@ -26,6 +33,7 @@ class EnsembleMeta:
     checkpoint_hash: str | None = None
     config_hash: str | None = None
     conditioning: dict[str, Any] = field(default_factory=dict)
+    active_blocks: tuple[str, ...] = ()
 
 
 @dataclass

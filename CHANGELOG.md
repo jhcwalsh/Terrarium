@@ -95,6 +95,17 @@ All notable changes to this project are documented here. The project follows
   (list/show/diff): deterministic config hashing, git SHA, seed, `experiments/<id>/`.
   `gen/base.py` (`Generator` protocol + `Ensemble` with full lineage metadata),
   `gen/registry.py` (resolve WorldSpec `generator_id`; unknown ids error).
+- **WP2.1b Task 1 — Factor manifest with a block layer (pre-seal patch).**
+  `factors.yaml` (repo root): `factor_blocks` (`global`, `us`, `uk`) +
+  `active_blocks: [global, us]`; a jurisdiction addition later is an additive
+  `block_addition` amendment, never a re-seal of existing blocks. `factors.py`
+  (top-level, peer of `splits.py` — not under `gen/` or `eval/`, so `ah.gen` keeps
+  no dependency on `ah.eval`): `FactorManifest` (`active_factors()`, `block_of()`,
+  `cross_block_pairs()`, `is_active()`) + `load_manifest()`, `lru_cache`'d by resolved
+  path so repeated calls return the same object; validates active-block references,
+  no factor in two blocks, no empty block. `EnsembleMeta` gains `active_blocks:
+  tuple[str, ...] = ()`; `battery/report.py`'s `BatteryReport` gains the same field,
+  populated from `load_manifest()`.
 
 ## [v0.1.0-g0] — 2026-07-24
 

@@ -1,0 +1,26 @@
+# factors.yaml — the factor manifest with a block layer (WP2.1b Item 2).
+#
+# A "block" is a named, self-contained group of generator factors that share a
+# jurisdiction or scope (a global market-factor block, a US rates/inflation block,
+# a UK block, and so on). `active_blocks` selects which blocks the current campaign
+# runs, trains, and reports over; any block declared in `factor_blocks` but omitted
+# from `active_blocks` is inert — its factors are not generated and no thresholds are
+# expected for it.
+#
+# Block membership is sealed by `pre-registration.yaml` (WP2.3): once sealed, existing
+# block contents do not change. Adding a jurisdiction later (e.g. activating `uk`, or
+# adding an `fx` block) is a `block_addition` amendment — additive by construction, it
+# adds new per-block and new cross-block thresholds without invalidating or reopening
+# any existing block's sealed thresholds. It is never a re-seal of existing blocks.
+#
+# Known data gap: no Step-1 series in requirements.yaml currently sources `commodities`.
+# It stays in the `global` block below because it is the declared factor namespace the
+# generator is expected to fill; its reference statistics are unavailable until a
+# commodities series is registered under the requirements.yaml §WP1.9
+# emergent-requirements rule.
+
+factor_blocks:
+  global:  [equity_mkt, smb, hml, mom, equity_vol, commodities, ig_spread, hy_spread]
+  us:      [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, funding_spread]
+  uk:      [bank_rate, gilt_nominal_10y, gilt_real_10y, rpi, cpi_uk]
+active_blocks: [global, us]

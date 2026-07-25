@@ -149,5 +149,14 @@ def test_render_markdown_and_json() -> None:
     assert "excess_kurtosis" in payload["scalars"]
 
 
+def test_report_records_active_blocks_from_factor_manifest() -> None:
+    # WP2.1b Item 2: every battery report records active_blocks, read from factors.yaml.
+    report = run_battery(_ensemble())
+    assert report.active_blocks == ("global", "us")
+    assert "active_blocks: global, us" in render_markdown(report)
+    payload = json.loads(render_json(report))
+    assert payload["active_blocks"] == ["global", "us"]
+
+
 def test_main_returns_zero() -> None:
     assert main([]) == 0

@@ -29,6 +29,7 @@ from ah.battery.stylized import (
 from ah.core.engine import ASSETS, EnsembleResult, run_ensemble
 from ah.core.loader import load_worldspec
 from ah.core.numericworld import project_numeric
+from ah.factors import load_manifest
 
 BATTERY_VERSION = "battery-0.1"
 _THRESHOLDS_PATH = Path(__file__).parent / "thresholds.yaml"
@@ -52,6 +53,7 @@ class BatteryReport:
     scalars: dict[str, float]
     details: dict[str, Any]
     checks: list[Check]
+    active_blocks: tuple[str, ...] = ()
 
     @property
     def enforce_failures(self) -> list[Check]:
@@ -127,7 +129,8 @@ def run_battery(
         thresholds = load_thresholds()
     scalars, details = compute_panel(ensemble)
     checks = evaluate(scalars, thresholds)
-    return BatteryReport(BATTERY_VERSION, scalars, details, checks)
+    active_blocks = load_manifest().active_blocks
+    return BatteryReport(BATTERY_VERSION, scalars, details, checks, active_blocks)
 
 
 def render_markdown(report: BatteryReport) -> str:
@@ -135,6 +138,7 @@ def render_markdown(report: BatteryReport) -> str:
         f"# Validation battery report ({report.version})",
         "",
         f"- paths: {report.details['n_paths']} x {report.details['months']} months",
+        f"- active_blocks: {', '.join(report.active_blocks)}",
         "",
         "| metric | value | min | max | status | ok |",
         "| --- | --- | --- | --- | --- | --- |",
@@ -157,6 +161,7 @@ def render_json(report: BatteryReport) -> str:
         "details": report.details,
         "checks": [asdict(c) for c in report.checks],
         "passed": report.passed,
+        "active_blocks": list(report.active_blocks),
     }
     return json.dumps(payload, indent=2, sort_keys=True)
 
