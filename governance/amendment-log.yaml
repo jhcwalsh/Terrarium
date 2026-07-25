@@ -1,0 +1,66 @@
+# governance/amendment-log.yaml
+#
+# The pre-registration amendment log (WP2.3 onward). Once pre-registration.yaml is
+# sealed, every change to it is recorded here as a dated, post-hoc-flagged amendment
+# -- this file, not pre-registration.yaml's own edit history, is what makes a
+# post-seal change auditable. Entries are appended by ah.eval.prereg.append_amendment,
+# never edited or reordered: appends use file-append mode, so every byte already on
+# disk when an append happens is provably untouched by it (see
+# tests/test_prereg.py's byte-identity proof). load_amendments reads this file back,
+# in the same order, via ah.eval.prereg.load_amendments.
+#
+# WP2.1b does not seal anything (that's WP2.3) and this file starts empty; it exists
+# now, ahead of the seal, so the append-only mechanics and the block_addition shape
+# are exercised end to end before anything real depends on them.
+#
+# Amendment types (ah.eval.prereg.AMENDMENT_TYPES):
+#
+#   threshold_change  - a sealed min/max/severity value changes for an existing
+#                        metric. Requires a rationale and is post-hoc-flagged in every
+#                        evaluation report from the amendment's date forward.
+#
+#   protocol_change    - a change to how a metric is computed or judged (not just its
+#                        threshold) -- e.g. a bootstrap parameter, a rule definition.
+#                        Same post-hoc flagging as threshold_change; typically also
+#                        implies a code change to the judged source that was hashed at
+#                        seal time, so ah.eval.prereg.verify()'s lock check will (by
+#                        design) fail against the stale lock until the pre-registration
+#                        is re-sealed.
+#
+#   block_addition     - additive by construction. It requires new per-block
+#                        thresholds plus new cross-block joint thresholds for every
+#                        pair the new block forms with an existing active block. It
+#                        does NOT invalidate existing single-block thresholds, which
+#                        remain byte-identical -- which is why a block addition is
+#                        not a re-seal. (See ah.factors.FactorManifest -- a block
+#                        declared in factor_blocks but absent from active_blocks,
+#                        e.g. `uk` in the real factors.yaml today, is exactly the
+#                        shape this amendment type activates.) Applied
+#                        programmatically via
+#                        ah.eval.prereg.apply_block_addition, which enforces this
+#                        shape: the payload must name exactly one newly-active block
+#                        and cover exactly the cross-block pairs it forms with the
+#                        blocks that were already active. It carries THRESHOLDS ONLY:
+#                        pre-registration.yaml's `conventions` block must also be
+#                        edited, by hand and as part of the same amendment, to classify
+#                        the new block's factors as return-bearing or level.
+#                        ah.eval.prereg.verify() refuses the merged result until that
+#                        edit lands, so a block addition cannot silently seal
+#                        thresholds over series whose units nothing states.
+#
+#   correction         - a fix to a drafting error in the sealed file (a typo, a
+#                        mis-transcribed number) that was never the intended sealed
+#                        value. Distinguished from threshold_change by intent: a
+#                        correction restores what was meant to be sealed, a
+#                        threshold_change is a deliberate revision to what was
+#                        actually sealed. Still dated and post-hoc-flagged like every
+#                        other amendment -- "it was a typo" does not exempt a change
+#                        from the log.
+#
+# Structure: `amendments` is an append-only YAML block sequence; each entry has
+# `amendment_id`, `type` (one of the four above), `date` (caller-supplied, never
+# date.today() -- the repo's no-clock-reads invariant), `rationale`, `post_hoc`
+# (boolean), and an optional `payload` carrying type-specific data (e.g.
+# block_addition's `block` / `block_thresholds` / `cross_block_thresholds`).
+
+amendments:

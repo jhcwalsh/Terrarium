@@ -35,3 +35,4 @@ Thumbs.db
 
 # Step 2 experiments (local-first; manifests may be kept manually)
 experiments/
+.superpowers/

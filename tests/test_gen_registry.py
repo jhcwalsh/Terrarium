@@ -65,3 +65,12 @@ def test_resolve_for_world_uses_generator_id() -> None:
     world = project_numeric(WorldSpec.model_validate(doc))
     g = registry.resolve_for_world(world)
     assert g.generator_id == "fake-v0"  # the registered factory
+
+
+def test_ensemble_meta_active_blocks_defaults_empty_and_round_trips() -> None:
+    # default: existing positional call sites (e.g. _FakeGen.sample above) keep working.
+    meta = EnsembleMeta("fake-v0", "v1", 0, 5, 12)
+    assert meta.active_blocks == ()
+
+    meta_with_blocks = EnsembleMeta("fake-v0", "v1", 0, 5, 12, active_blocks=("global", "us"))
+    assert meta_with_blocks.active_blocks == ("global", "us")

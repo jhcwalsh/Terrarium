@@ -1,0 +1,560 @@
+# pre-registration.yaml
+#
+# STATUS: UNSEALED. sealed: false below; WP2.3 is the only PR allowed to flip it.
+#
+# This file is the eventual target of the WP2.3 pre-registration seal: once sealed,
+# every change to it becomes a dated, post-hoc-flagged amendment recorded in
+# governance/amendment-log.yaml and visible in every evaluation report thereafter
+# (Instructions/WP2.1b-PRE-SEAL-PATCH.md). It was created by WP2.1b Task 2 to hold the
+# D4 benchmark-strategy set -- the portfolios whose VaR/ES define tail fidelity, and
+# what the WP2.8 tail auxiliary loss optimizes -- and is extended here by WP2.1b Task 4
+# with block-nested acceptance thresholds, the two Item-3 decisions (R5, J3), and the
+# seal/amendment-log machinery (`ah.eval.prereg.seal()` / `ah.eval.prereg.verify()`).
+#
+# *** THRESHOLDS BELOW ARE PROVISIONAL PLACEHOLDERS. *** Every `min`/`max` in the
+# `thresholds:` block is a stand-in so `ah.eval.prereg.verify()` has a real,
+# non-trivial file to check end to end (WP2.1b Task 4's dry-run seal + verify,
+# Instructions/WP2.1b-PRE-SEAL-PATCH.md Definition of done item 4) -- none of them is
+# derived from a historical reference statistic. WP2.2's `ah.eval.reference` computes
+# the real train+validation bands (per block, and per cross-block pair); WP2.3
+# replaces every threshold below with one of those bands (or a stated, justified
+# deviation) before sealing for real. Do not treat a `min`/`max` below as meaningful,
+# and do not flip `sealed: true` from WP2.1b -- that act belongs to WP2.3 alone.
+#
+# SELF-CONTAINMENT RULE (WP2.1b Item 1 acceptance, line 25). Every value below must be
+# sufficient, on its own, to reconstruct the D4 strategy set with no reference to code
+# outside the sealed hash. Nothing in this file may *define* behaviour by pointing at a
+# source file. Where a module is named, it is named only as the place the sealed
+# definition happens to be implemented -- the definition itself is here, in full, and
+# the code is checked against it by tests. If the two ever disagree, this file wins.
+#
+# The factor ids referenced below are the active factor namespace declared in
+# factors.yaml (`global` + `us` blocks; the manifest loader is ah.factors.load_manifest).
+#
+# WHAT THE SEAL COVERS -- deliberately wider than STEP2-GENERATOR-PLAN Sec.WP2.3.
+# CLAUDE.md states the invariant as "thresholds AND THE CODE THAT JUDGES THEM are hashed
+# together before any training run." STEP2-GENERATOR-PLAN Sec.WP2.3 words the same
+# requirement more narrowly (this file, the source of every enforce-tier metric, and
+# eval/g2.py), which would leave outside the seal several modules that can move a
+# pass/fail verdict on their own. The project owner has ruled that the invariant governs,
+# so ah.eval.prereg.seal() hashes, by category:
+#   - the acceptance thresholds and the factor namespace they are keyed to: this file and
+#     the factors.yaml it names above, plus src/ah/factors.py (which decides which blocks
+#     and factors are active at all);
+#   - the metrics being judged: the enforce-tier metric suites under src/ah/eval/metrics/
+#     that exist yet (WP2.2 adds the rest; a suite that does not exist yet is skipped).
+#     NOTE: this is a fixed name list in prereg.py (_METRIC_SUITE_NAMES), not a directory
+#     scan -- a helper module beside the suites, or a judging module anywhere else, joins
+#     the seal only by being added to that list in the same PR that adds the module;
+#   - the statistics the bands are derived from: src/ah/eval/reference.py;
+#   - the split boundaries that define the reference data: src/ah/splits.py, which
+#     hardcodes where train, validation and holdout begin and end -- moving
+#     VALIDATION.end by a year silently changes every band in every block with no lock
+#     violation unless this module is itself hashed;
+#   - the code that compares values to thresholds and decides: src/ah/eval/prereg.py and
+#     src/ah/eval/g2.py;
+#   - the code that interprets the sealed D4 definitions above: src/ah/strategies.py;
+#   - the code that renders the verdict: src/ah/battery/report.py and
+#     src/ah/battery/stylized.py.
+# prereg.py hashing its own source is intentional and non-circular: the digest lands in
+# pre-registration.lock, never back inside prereg.py.
+# CONSEQUENCE, stated plainly so it is not a surprise during WP2.2: WP2.3 inherits this
+# set, and once it seals, an edit to ANY of those files -- including a refactor of
+# prereg.py or a new statistic registered in reference.py -- is a dated, post-hoc-flagged
+# amendment in governance/amendment-log.yaml, exactly like an edit to this file.
+# The lock records every hashed file as a repository-relative, forward-slashed path, so a
+# lock sealed on one machine verifies in CI, in a reviewer's clone, and under WSL2.
+#
+# CONSIDERED AND EXCLUDED, deliberately, not by omission:
+#   - src/ah/gen/base.py (Ensemble.factor()) -- the generator layer's container, the
+#     defendant whose output is judged, not the judge itself. Hashing it would turn
+#     every WP2.5-2.9 generator change into a dated amendment, inverting the seal's
+#     purpose: it exists to freeze the judge, not the thing being judged.
+#   - src/ah/battery/thresholds.yaml -- Step-0 legacy threshold data, every entry
+#     status: todo (never blocking today), judged by the sealed battery/report.py but
+#     not itself sealed. Its fate is a WP2.3 decision: seal it explicitly, or state
+#     that this file's thresholds supersede it and it is inert. See
+#     governance/retrofit-register.md.
+
+schema_version: "1.0"
+
+# WP2.3 flips this to true at the moment of sealing. Nothing in WP2.1b sets it.
+sealed: false
+
+# Placeholder pending WP2.3: there is no real campaign yet, so this string names no
+# real vintage. WP2.3 replaces it with the actual campaign_vintage_id being sealed
+# against.
+campaign_vintage_id: "provisional-unset"
+
+# The sealed factor namespace (WP2.1b Task 1, ah.factors.load_manifest). Path is
+# relative to this file; ah.eval.prereg.seal() reads it to know which factors.yaml to
+# include in the sealed digest.
+factor_manifest: factors.yaml
+
+# Must equal factors.yaml's active_blocks at seal time -- ah.eval.prereg.verify()
+# checks this exactly against the live FactorManifest, so the pre-registration can
+# never silently drift from the manifest it was authored against.
+active_blocks: [global, us]
+
+rationale:
+  d4_factor_level: >-
+    the generator's outputs are factors; tail fidelity is therefore assessed on
+    factor-level portfolios. The endowment proxy stands in for the institutional mix
+    at the factor level. Sleeve-level tail behaviour is a Step-3 property, evaluated
+    separately once mappings exist, and is not a G2 criterion.
+
+  d4_derived_series: >-
+    the generator emits some factors as period returns and others as levels (rates and
+    spreads). A level is not a return and must never be summed with one. Every D4
+    strategy is therefore defined over return-bearing factors directly, or over a
+    *declared derived series* -- a named, fully-specified transform of exactly one
+    level factor into a monthly decimal return. The `derived_series` block below is
+    that declaration; it is sealed with the strategies and is the only route by which
+    a level enters a D4 portfolio.
+
+  d4_commodities_consequence: >-
+    CONSEQUENCE AT SEAL TIME, stated for the D4 criterion as a whole and not only
+    per-strategy: `commodities` has no Step-1 data source registered (see factors.yaml),
+    and it carries weight in two of the five sealed D4 strategies -- 0.20 of
+    `eqw_factors` and 0.10 of `endowment_proxy`. Two of the five D4 strategies
+    therefore have NO COMPUTABLE REFERENCE STATISTICS at seal time. Any threshold
+    sealed for `eqw_factors` or `endowment_proxy` is being sealed against a strategy
+    that cannot yet be evaluated on historical data; those two thresholds are
+    provisional in that specific sense and must be revisited (as a dated amendment)
+    once a commodities series is registered under the requirements.yaml WP1.9
+    emergent-requirements rule. The other three strategies (`sixty_forty`, `momentum`,
+    `carry`) are unaffected.
+
+# --------------------------------------------------------------------------- #
+# Conventions -- one set of rules, applied to every definition in this file.
+# --------------------------------------------------------------------------- #
+conventions:
+  units_of_return_bearing_factors: >-
+    equity_mkt, smb, hml, mom and commodities are treated by D4 as monthly returns in
+    DECIMAL units (0.01 = +1% for the month). They are used directly, with no
+    transform. What is actually known about their provenance, stated without
+    inference: requirements.yaml registers french.mkt_rf / french.smb / french.hml /
+    french.mom with `units: ret`, and factors.yaml declares equity_mkt / smb / hml /
+    mom in the `global` block -- but NO factor-to-series mapping is declared anywhere
+    in this repository, so which series backs which factor is not yet a fact and is
+    not asserted here. Note in particular that french.mkt_rf is Mkt-RF, an EXCESS
+    return over the risk-free rate, not a total return; if it is later mapped to
+    equity_mkt, every D4 strategy holding equity_mkt inherits that excess-return
+    interpretation. commodities has no registered series at all, so its units are
+    undetermined; D4 assumes it will be return-bearing, and that assumption is
+    recorded here rather than presented as a property of the manifest.
+
+  # Machine-checked version of the prose above: EVERY active factor in factors.yaml
+  # (global + us blocks) must appear in exactly one of return_bearing_factors /
+  # level_factors below. The loader (ah.strategies) enforces both exhaustiveness and
+  # disjointness at load time, and rejects a `d4_strategies.*.weights` entry that
+  # names a level_factors member directly -- the only route by which a level enters a
+  # D4 portfolio is a declared `derived_series` (see rationale.d4_derived_series). This
+  # is the sealed source for that rule; there is no separate hand-maintained list
+  # anywhere else, in code or in tests.
+  return_bearing_factors:
+    - equity_mkt
+    - smb
+    - hml
+    - mom
+    - commodities
+
+  units_of_level_factors: >-
+    policy_rate, ust_2y, ust_10y, hqm_curve, ig_spread, hy_spread, funding_spread, cpi
+    and equity_vol are LEVELS, never period returns: seven of the nine are rates or
+    spreads QUOTED IN PERCENT PER ANNUM (a generated value of 4.25 means 4.25 percent,
+    not 0.0425) -- this follows requirements.yaml, which registers the corresponding
+    candidate series (fred.DGS10, fred.DGS2, fred.HY_OAS, fred.TB3MS,
+    treasury.hqm_curve, ...) with `units: pct`. cpi is an index level and equity_vol is
+    a volatility level; neither is a percent-per-annum rate, but both are still a level
+    rather than a return and are excluded from D4 on the same "not a return" basis --
+    no `derived_series` transform is declared for either, so neither currently has a
+    route into a D4 portfolio at all. Levels are never summed with returns and never
+    appear in a strategy's `weights` directly; they enter only through a
+    `derived_series` entry. level_factors below is the sealed, exhaustive, machine-
+    checked version of this list.
+  level_factors:
+    - policy_rate
+    - ust_2y
+    - ust_10y
+    - hqm_curve
+    - ig_spread
+    - hy_spread
+    - funding_spread
+    - cpi
+    - equity_vol
+
+  percent_to_decimal: 0.01
+  months_per_year: 12.0
+  percent_to_decimal_statement: >-
+    THE ONE CONVERSION, used by every transform below with no exception: a percent
+    level is converted to decimal by multiplying by percent_to_decimal (0.01 above),
+    and the conversion is applied ONCE, to the whole transform expression. Both terms
+    of every transform below (the carry term and the duration term) are linear in the
+    percent level, so a single leading factor of percent_to_decimal converts the entire
+    result to a decimal monthly return. An annual percent rate is converted to a
+    monthly carry by dividing by months_per_year (12.0 above; simple, not compounded:
+    y/12, not (1+y)^(1/12)-1). Both percent_to_decimal and months_per_year are sealed
+    values, read directly by ah.eval.metrics.tails at import time -- not independent
+    constants duplicated in that module -- so an amendment to either value here changes
+    every transform's output, and a test asserts the module's constants equal these.
+
+  warm_up: >-
+    ONE WARM-UP RULE for the whole file, applied identically by every definition: any
+    month t whose complete input window is not available within the path takes the
+    value 0.0. There is no other warm-up convention in this file. For the lagged
+    transforms in `derived_series` the input window is {t-1, t}, so month 0 of every
+    path is 0.0 and the warm-up length is 1 month. For `momentum` the input window is
+    months [t - lookback, t - skip_months), so months 0..lookback-1 are flat
+    (position 0.0, hence realized return 0.0) and the warm-up length is `lookback`
+    months. Warm-up months are NOT dropped, masked, or treated as missing: they are
+    zeros, and they are included in the pooled sample when VaR/ES is computed.
+
+  loss_sign: >-
+    VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of
+    return; VaR at level p is the p-quantile of the pooled loss distribution; ES at
+    level p is the mean loss at or beyond VaR_p. A D4 strategy whose definition made
+    VaR negative would be mis-specified, not merely unusual -- this is the property
+    that catches a level being mistaken for a return.
+
+  series_parameters: >-
+    Inside a strategy's `params`, ANY KEY ENDING IN `_series` names a series the rule
+    reads: its value must be either an active factor id or a `derived_series` id
+    declared above. Rule target series are sealed data here, not constants in code, so
+    a rule can never silently read a different factor than the one sealed. Every other
+    `params` key is numeric.
+
+  rebalance_cadences:
+    - monthly
+  rebalance_convention: >-
+    ONE REBALANCE CADENCE is implemented in this version: `monthly`, listed in
+    rebalance_cadences above. Every D4 strategy's `rebalance` field is checked at load
+    time against that list, and the loader rejects any value not in it -- `rebalance`
+    is stored data that the loader reads, not decorative metadata. `monthly` means
+    portfolio weights are reset to their sealed target at the start of every month, with
+    no drift carried between rebalances and no compounding within a month: each
+    strategy's return for month t is computed directly from month t's resolved series
+    values at the sealed weights (see static_weights_composition below for the
+    static-weight case; the two rule strategies state their own per-month arithmetic
+    directly in their `notes`). There is no other cadence implemented; declaring one
+    (e.g. `quarterly`) without also adding the code that computes a quarterly return
+    would be a self-contradictory amendment, so rebalance_cadences is exactly the set
+    of cadences ah.eval.metrics.tails can compute today.
+
+  static_weights_composition: >-
+    For every `kind: static_weights` strategy (eqw_factors, sixty_forty,
+    endowment_proxy), the realized return at month t is the ARITHMETIC WEIGHTED SUM of
+    that month's resolved series values: sum_i weight_i * series_i_t, where series_i_t
+    is either a return-bearing active factor's value directly or a `derived_series`
+    value (already a monthly decimal return, per the transforms declared below). There
+    is NO COMPOUNDING across the weighted legs and no cross-term between them -- each
+    leg is linear and independent for the month, consistent with rebalance_convention's
+    monthly reset. This is the same arithmetic the two `kind: rule` strategies state
+    explicitly for their own legs in their `notes` (momentum's realized return =
+    position_t * target_series_t; carry's = long_weight * long_series_t +
+    funding_weight * funding_series_t); static_weights strategies use identical
+    arithmetic, they simply have no per-leg formula field of their own to state it in.
+
+# --------------------------------------------------------------------------- #
+# Derived series -- declared BEFORE d4_strategies, because strategies reference them.
+#
+# Each entry names its source factor, its transform, every parameter, and the
+# closed-form formula in full, so the series is reconstructible from this file alone.
+# Notation: y_t is the source factor's generated value at month t, IN PERCENT
+# (conventions.units_of_level_factors); r_t is the derived monthly return, in DECIMAL.
+# --------------------------------------------------------------------------- #
+derived_series:
+  govt_tr_10y:
+    from: ust_10y
+    transform: bond_total_return
+    params: {duration_years: 8.5}
+    formula: "r_t = 0.01 * ( y_{t-1}/12 - D*(y_t - y_{t-1}) ), D = duration_years = 8.5; r_0 = 0.0"
+    notes: >-
+      Long-government TOTAL RETURN from the 10y yield level. Two terms: carry, the
+      previous month-end yield earned over one month (y_{t-1}/12, an annual percent
+      rate divided by 12); and price, minus modified duration times the yield change
+      over the month (-D*(y_t - y_{t-1})). The leading 0.01 is the single
+      percent-to-decimal conversion (conventions.percent_to_decimal_statement); it is
+      applied to the whole bracket, and both terms inside the bracket are in percent.
+      SIGN: a RISING yield produces a NEGATIVE r_t, because the price term dominates
+      for any realistic monthly yield change -- this is the whole point of the
+      transform: a rising 10y yield must book a monthly loss on the total-return leg,
+      not a gain, for any month 0..lookback where the yield change is not implausibly
+      large relative to 1/D.
+      LAG: r_t uses y_{t-1} for the carry term and the t-1 -> t change for the price
+      term, so month 0 has no defined value and is 0.0 by the single warm-up rule
+      (conventions.warm_up). duration_years = 8.5 is the sealed parameter: the
+      approximate modified duration of a par 10-year Treasury at mid-single-digit
+      yields. Convexity is deliberately omitted -- this is a first-order
+      approximation, and stating it here means the omission is sealed, not accidental.
+
+  credit_xs_hy:
+    from: hy_spread
+    transform: spread_excess_return
+    params: {spread_duration_years: 4.0}
+    formula: "r_t = 0.01 * ( s_{t-1}/12 - SD*(s_t - s_{t-1}) ), SD = spread_duration_years = 4.0; r_0 = 0.0"
+    notes: >-
+      High-yield credit EXCESS RETURN (excess of the duration-matched government
+      leg) from the HY option-adjusted spread level. Same two-term shape as
+      bond_total_return with spread duration in place of duration: carry, the previous
+      month-end spread earned over one month (s_{t-1}/12); and price, minus spread
+      duration times the spread change (-SD*(s_t - s_{t-1})). Same single leading 0.01
+      percent-to-decimal conversion, same lag, same warm-up (r_0 = 0.0).
+      SIGN: a WIDENING spread produces a NEGATIVE r_t, for the same reason as
+      govt_tr_10y above -- the price term dominates any realistic monthly spread
+      change, so credit excess return must book a loss when spreads widen, not a gain.
+      spread_duration_years = 4.0 is the sealed parameter, the approximate spread
+      duration of the broad US high-yield index. Default losses are deliberately NOT
+      modelled: this is a spread-carry and
+      spread-change decomposition only, so realized credit losses from defaults are
+      absent and the series overstates high-yield excess return in a default wave.
+      Sealed as a stated simplification.
+
+  cash_tr_1m:
+    from: policy_rate
+    transform: bond_total_return
+    params: {duration_years: 0.0}
+    formula: "r_t = 0.01 * ( y_{t-1}/12 - 0.0*(y_t - y_{t-1}) ) = 0.01 * y_{t-1}/12; r_0 = 0.0"
+    notes: >-
+      One-month cash return, used as the funding leg of `carry`. policy_rate is a
+      level in percent, so like every other level it may enter a strategy only through
+      a declared transform -- this entry is that declaration, and it is why `carry`
+      contains no bare percent-to-decimal arithmetic of its own. It reuses
+      bond_total_return with duration_years = 0.0 rather than introducing a third
+      transform: cash IS a zero-duration instrument, so the general bond formula
+      collapses exactly to the carry term, as the formula above shows term by term.
+      LAG: r_t uses y_{t-1}, i.e. funding is at the rate prevailing at the START of
+      the month -- which is both the economically correct convention and the same lag
+      as the long leg, so the two legs of `carry` are consistent. Month 0 is 0.0 by
+      the single warm-up rule.
+
+# --------------------------------------------------------------------------- #
+# The D4 benchmark-strategy set.
+#
+# A `weights` key names EITHER an active factor id (return-bearing, used directly) OR
+# a `derived_series` id declared above. Level factors never appear here.
+# --------------------------------------------------------------------------- #
+d4_strategies:
+  eqw_factors:
+    kind: static_weights
+    rebalance: monthly
+    lookback: null
+    rule: null
+    weights:
+      equity_mkt: 0.2
+      smb: 0.2
+      hml: 0.2
+      mom: 0.2
+      commodities: 0.2
+    params: {}
+    notes: >-
+      Equal weight across the active factor set's return-bearing series, used
+      directly with no transform (see conventions.units_of_return_bearing_factors for
+      exactly what is known -- and not known -- about their units). The remaining
+      active factors (equity_vol, ig_spread, hy_spread, policy_rate, ust_2y, ust_10y,
+      cpi, hqm_curve, funding_spread) are level/rate/spread series, not return-bearing,
+      and are excluded from this strategy by construction: an equal-weight sleeve over
+      "the return-bearing series" is defined on returns, and a level has no place in
+      it. Two of them (ust_10y, hy_spread) do reach other D4 strategies, but only
+      through the declared derived series above, never here. commodities has no Step-1
+      data source yet; its weight is declared but its reference statistics are pending
+      -- see rationale.d4_commodities_consequence for what that means for D4 overall.
+
+  sixty_forty:
+    kind: static_weights
+    rebalance: monthly
+    lookback: null
+    rule: null
+    weights:
+      equity_mkt: 0.6
+      govt_tr_10y: 0.4
+    params: {}
+    notes: >-
+      60% equity (equity_mkt, used directly as a return), 40% long-government TOTAL
+      RETURN via the govt_tr_10y derived series -- NOT the ust_10y level. This is the
+      distinction that makes the strategy correct: a 60/40 bond leg must FALL when
+      yields rise, which is exactly what govt_tr_10y does and what weighting the raw
+      ust_10y level would have got backwards. ust_2y (short/intermediate) is not used.
+      The bond leg's month 0 is 0.0 (conventions.warm_up), so the strategy's first
+      month is 0.6 * equity_mkt_0.
+
+  endowment_proxy:
+    kind: static_weights
+    rebalance: monthly
+    lookback: null
+    rule: null
+    weights:
+      # This is the flat, series-keyed table the loader reads. `proxy_mapping` below
+      # is the sleeve-level breakdown; sleeves that share a series are summed here
+      # (equity 0.45 + reits 0.20 = equity_mkt 0.65). The loader CHECKS that roll-up
+      # against this table to within 1e-9 and fails the load if it disagrees, so the
+      # two can never drift apart after the seal.
+      equity_mkt: 0.65
+      govt_tr_10y: 0.10
+      credit_xs_hy: 0.15
+      commodities: 0.10
+    proxy_mapping:
+      equity:
+        weight: 0.45
+        factor: equity_mkt
+        reason: >-
+          Public equity, plus the private-equity sleeve (buyout, growth, venture
+          capital). De-smoothed private-equity returns are dominated by public-
+          equity beta over the multi-year/tail horizons D4 targets (the same
+          desmoothing logic ah.data.desmooth is built on); nearest factor proxy is
+          equity_mkt. No separate private-equity factor exists in the manifest.
+      reits:
+        weight: 0.20
+        factor: equity_mkt
+        reason: >-
+          Public and private real estate (REITs + direct real estate). No REITs or
+          real-estate factor is declared in factors.yaml; over tail horizons listed
+          REIT total returns carry a dominant equity beta, so equity_mkt is the
+          nearest factor proxy. This is a stated simplification -- it drops REITs'
+          secondary rate sensitivity.
+      govt:
+        weight: 0.10
+        factor: govt_tr_10y
+        reason: >-
+          Fixed-income ballast, held as the long-government TOTAL RETURN derived
+          series, not as the ust_10y level. Ballast is a return stream that gains when
+          yields fall; the level would have booked the opposite sign.
+      credit:
+        weight: 0.15
+        factor: credit_xs_hy
+        reason: >-
+          Public credit, plus the private-credit sleeve (direct lending, mezzanine,
+          distressed). Private/direct-lending credit risk is economically closest to
+          leveraged/high-yield corporate credit; nearest proxy is the credit_xs_hy
+          derived series -- the high-yield EXCESS RETURN, not the hy_spread level. The
+          level would have booked spread widening as a gain, i.e. exactly inverted the
+          sleeve's crisis behaviour. No separate private-credit factor exists in the
+          manifest.
+      commodities:
+        weight: 0.10
+        factor: commodities
+        reason: >-
+          Real assets / infrastructure sleeve, proxied by the commodities factor --
+          the nearest available real-asset exposure in the active manifest.
+          Pending data: commodities has no Step-1 series yet (see factors.yaml and
+          rationale.d4_commodities_consequence); this weight is declared but its
+          reference statistics are pending until a source is registered.
+    notes: >-
+      Factor-level stand-in for a typical institutional endowment mix: equity /
+      govt / credit / commodities / REITs, with private sleeves represented by
+      their nearest proxy (proxy_mapping above states each sleeve's own weight, its
+      proxy series, and the reason -- required so private-sleeve representation is
+      explicit and auditable, WP2.1b Item 1). The govt and credit sleeves are held
+      through derived series so that both carry the correct sign in a crisis. Sleeve-
+      level tail behaviour is a Step-3 property once real mappings exist and is not a
+      G2 criterion -- see the `rationale` block above.
+
+  momentum:
+    kind: rule
+    rebalance: monthly
+    lookback: 12
+    rule: momentum_12_1
+    weights: {}
+    params:
+      target_series: equity_mkt
+      skip_months: 1
+    notes: >-
+      12-1 momentum on the equity factor, monthly rebalanced. The target series is
+      sealed HERE, as params.target_series, not fixed in code. LOOKBACK IS DECLARED
+      EXACTLY ONCE, in the `lookback` field above; `params` must NOT also carry a
+      `lookback_months` key and the loader rejects it if present, so an amendment
+      editing `lookback` alone can never be silently ignored. Signal at month t = sum
+      of target_series' monthly values over months [t - lookback, t - skip_months) --
+      i.e. t-12 .. t-2 inclusive (11 months); the most recent skip_months=1 month is
+      excluded, the standard 12-1 convention that avoids short-term reversal
+      contamination. Position is long-only and binary: fully invested (weight 1.0) if
+      the signal is strictly positive (> 0.0), flat (weight 0.0) otherwise -- a signal
+      of exactly 0.0 is flat. Realized return at month t = position_t *
+      target_series_t. Warm-up: months 0..lookback-1 (the first 12) have no complete
+      signal window and are flat, position 0.0 and realized return 0.0, per the single
+      warm-up rule in conventions.warm_up.
+
+  carry:
+    kind: rule
+    rebalance: monthly
+    lookback: null
+    rule: term_structure_carry
+    weights: {}
+    params:
+      long_series: govt_tr_10y
+      funding_series: cash_tr_1m
+      long_weight: 1.0
+      funding_weight: -1.0
+    notes: >-
+      Term-structure carry: a static, always-on long position in the long-government
+      total return, funded at the one-month cash rate. Both legs are sealed here as
+      params.long_series / params.funding_series, and BOTH ARE DERIVED SERIES, so
+      neither leg contains a raw percent level and this definition needs no unit
+      arithmetic of its own -- the percent-to-decimal conversion and the lag live in
+      the derived_series declarations above, where they are stated once. Realized
+      return at month t = long_weight * govt_tr_10y_t + funding_weight * cash_tr_1m_t
+      = 1.0 * govt_tr_10y_t - 1.0 * cash_tr_1m_t. No timing signal, unlike momentum:
+      the position is contemporaneous every month and `lookback` is null. This is why
+      carry is `kind: rule` and not `static_weights`: a funded long-short position's
+      exposures sum to 0.0, not 1.0, so it cannot satisfy the static_weights
+      validation rule (weights must sum to 1.0 within 1e-9). Warm-up: both legs are
+      0.0 in month 0 (conventions.warm_up), so carry's month 0 is 0.0.
+
+# --------------------------------------------------------------------------- #
+# Acceptance thresholds -- block-nested (WP2.1b Item 2 / Task 4).
+#
+# *** PROVISIONAL PLACEHOLDERS -- see the file header. *** None of the min/max values
+# below comes from a historical reference statistic; they exist only so
+# ah.eval.prereg.verify() has real block/cross-block coverage to check. WP2.2's
+# ah.eval.reference computes the real train+validation bands and WP2.3 replaces every
+# entry below with one before sealing.
+#
+# A per-block key is "<factor>.<stat>", matching ah.eval.reference.SINGLE_FACTOR_STATS'
+# naming (mean, std, skew, excess_kurtosis, acf_1, acf_abs_1). A cross-block key is
+# "<factorA>~<factorB>.<stat>", matching ah.eval.reference.CROSS_BLOCK_STATS' naming
+# (correlation, crisis_corr_lift). `severity` is `enforce` (an out-of-band value blocks
+# the gate) or `report` (recorded, non-blocking). ah.eval.prereg.verify() checks: every
+# active block has a thresholds.blocks entry; no entry names an inactive block; every
+# active cross-block pair (ah.factors.FactorManifest.cross_block_pairs(), currently
+# just global|us) has a thresholds.cross_blocks entry; no entry names an inactive
+# block; every severity is enforce/report; min <= max where both are given.
+#
+# The KEY NAMING RULE above is itself machine-checked, not merely stated: verify()
+# rejects a per-block key that is not exactly "<factor>.<stat>" with the factor in that
+# same block and the stat registered in SINGLE_FACTOR_STATS, and a cross-block key that
+# is not exactly "<factorA>~<factorB>.<stat>" with factorA drawn from the pair key's
+# first block, factorB from its second (the pair key is sorted, and reference.py keys
+# the statistic in that order), and the stat registered in CROSS_BLOCK_STATS. Without
+# that check a sealed `enforce` threshold could name a statistic nothing computes -- a
+# threshold that judges nothing, silently, forever.
+# --------------------------------------------------------------------------- #
+thresholds:
+  blocks:
+    global:
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "equity_mkt.skew": {min: -3.0, max: 3.0, severity: enforce}
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "equity_mkt.excess_kurtosis": {min: -2.0, max: 30.0, severity: report}
+    us:
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "policy_rate.std": {min: 0.0, max: 50.0, severity: enforce}
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "ust_10y.acf_1": {min: -1.0, max: 1.0, severity: report}
+  cross_blocks:
+    "global|us":
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "equity_mkt~ust_10y.correlation": {min: -1.0, max: 1.0, severity: report}
+
+# --------------------------------------------------------------------------- #
+# Item 3 decisions -- R5 (FX) and J3 (UK block), both CLOSED-deferred (WP2.1b Task 5
+# records the same two `consequence` strings, verbatim, in
+# governance/decision-register.md; the strings must match exactly between the two
+# files).
+# --------------------------------------------------------------------------- #
+decisions:
+  R5:  # FX / unhedged foreign-currency exposure -- out-of-scope-for-v1 deferral.
+    status: CLOSED-deferred
+    consequence: "Institutions with material unhedged foreign-currency exposure are out of scope for v1. Adding FX later requires a block_addition amendment and retraining the generator, since cross-block correlation cannot be added to trained weights."
+  J3:  # UK block activation -- deferred until a block_addition amendment.
+    status: CLOSED-deferred
+    consequence: "UK-domiciled institution twins are blocked until a block_addition amendment; the InstitutionProfile interface accommodates them without rework. Same retraining consequence applies."

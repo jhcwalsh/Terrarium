@@ -29,6 +29,7 @@ from ah.battery.stylized import (
 from ah.core.engine import ASSETS, EnsembleResult, run_ensemble
 from ah.core.loader import load_worldspec
 from ah.core.numericworld import project_numeric
+from ah.factors import FactorManifest, load_manifest
 
 BATTERY_VERSION = "battery-0.1"
 _THRESHOLDS_PATH = Path(__file__).parent / "thresholds.yaml"
@@ -52,6 +53,7 @@ class BatteryReport:
     scalars: dict[str, float]
     details: dict[str, Any]
     checks: list[Check]
+    active_blocks: tuple[str, ...] = ()
 
     @property
     def enforce_failures(self) -> list[Check]:
@@ -121,13 +123,22 @@ def evaluate(scalars: dict[str, float], thresholds: dict[str, dict[str, Any]]) -
 
 
 def run_battery(
-    ensemble: EnsembleResult, thresholds: dict[str, dict[str, Any]] | None = None
+    ensemble: EnsembleResult,
+    thresholds: dict[str, dict[str, Any]] | None = None,
+    manifest: FactorManifest | None = None,
 ) -> BatteryReport:
+    """Run the battery. ``manifest`` defaults to the repo-root ``factors.yaml``
+    (``ah.factors.load_manifest()``); inject a synthetic one (e.g. built from a
+    ``tmp_path`` fixture) to exercise the battery against a block configuration other
+    than the real campaign's (WP2.1b Item 2 acceptance: "a synthetic two-block
+    configuration passes the battery")."""
     if thresholds is None:
         thresholds = load_thresholds()
+    if manifest is None:
+        manifest = load_manifest()
     scalars, details = compute_panel(ensemble)
     checks = evaluate(scalars, thresholds)
-    return BatteryReport(BATTERY_VERSION, scalars, details, checks)
+    return BatteryReport(BATTERY_VERSION, scalars, details, checks, manifest.active_blocks)
 
 
 def render_markdown(report: BatteryReport) -> str:
@@ -135,6 +146,7 @@ def render_markdown(report: BatteryReport) -> str:
         f"# Validation battery report ({report.version})",
         "",
         f"- paths: {report.details['n_paths']} x {report.details['months']} months",
+        f"- active_blocks: {', '.join(report.active_blocks)}",
         "",
         "| metric | value | min | max | status | ok |",
         "| --- | --- | --- | --- | --- | --- |",
@@ -157,6 +169,7 @@ def render_json(report: BatteryReport) -> str:
         "details": report.details,
         "checks": [asdict(c) for c in report.checks],
         "passed": report.passed,
+        "active_blocks": list(report.active_blocks),
     }
     return json.dumps(payload, indent=2, sort_keys=True)
 
