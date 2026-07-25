@@ -222,6 +222,53 @@ All notable changes to this project are documented here. The project follows
   (previously only `out` was float64 — under NumPy's NEP 50 promotion rules a float32
   input's carry/duration terms would have stayed float32) and raises a named
   `StrategyError` for non-2-D input instead of an `IndexError` from `level.shape[1]`.
+- **WP2.1b Task 3 — Block-aware reference statistics and bootstrap bands (pre-seal
+  patch).** `eval/reference.py` (new): the skeleton `reference.py` computes every
+  reference statistic **on train+validation only** (`ah.splits.DataAccess.train_val`
+  is the only surface it touches; it imports neither `ah.eval.g2` nor
+  `FinalEvaluationToken` in code — an AST-based test proves it, matching
+  `tests/test_leakage_guard.py`'s style), per active `FactorManifest` block and
+  separately for cross-block joint metrics, with the block pair recorded on
+  `CrossBlockReference.pair`. Public surface: `StatBand` (point + block-bootstrap
+  band + `n_resamples`/`level`/`tier`), `BlockReference`, `CrossBlockReference`,
+  `ReferenceStats` (`blocks`, `cross_blocks`, `active_blocks`, `vintage_id`,
+  `n_resamples`, `seed`, `missing_factors`, `to_dict()` for JSON — cross-block pair
+  keys render `"global|us"`), `compute_reference()`. `SINGLE_FACTOR_STATS` registers
+  `mean`/`std`/`skew`/`excess_kurtosis`/`acf_1`/`acf_abs_1` (plain numpy, closed-form
+  definitions documented in each docstring — `acf_1` uses the overall-mean,
+  n-denominator Box-Jenkins estimator, not `numpy.corrcoef`), each paired with its
+  DN-1.1 Sec.II.6 horizon tier (all `monthly` for this task — `1_5yr`/`10yr`/
+  `economic`/`severe` are WP2.2 scope, named not stubbed, alongside the eight full
+  metric suites `monthly.py`...`calibration.py`). `CROSS_BLOCK_STATS` registers
+  `correlation` and `crisis_corr_lift` (correlation on a block-A factor's worst decile
+  minus the unconditional correlation, precisely defined in its docstring).
+  `block_bootstrap_band()`: a moving-block bootstrap over the time axis of an aligned
+  ``(T, k)`` panel — row-blocks are drawn jointly across every column (never
+  per-factor resampling), so calling it with the same `seed` and the same whole-block
+  panel for every statistic in a block gives every one of that block's stats the same
+  resampled time positions, the "joint" property the patch requires. All randomness
+  from `numpy.random.Generator(PCG64(seed))`, constructed fresh per call — same seed,
+  bit-identical band. `compute_reference()` reads each active factor via
+  `access.train_val(series_id_for(factor))` (`series_id_for` defaults to identity —
+  the factor-id -> catalog-series-id mapping doesn't exist yet; that's WP2.2/Step-2R
+  scope) and inner-joins them on date before computing anything; a factor with no data
+  (`commodities` — no Step-1 series sources it yet, per `factors.yaml`'s header note)
+  is recorded in `missing_factors` rather than raising or producing `NaN`. Every
+  active block gets a `BlockReference` entry even if all its factors are missing, so
+  callers can always find a block by key.
+  `tests/test_reference.py` (12 tests): the leakage proof reads dates from a
+  `DataAccess` subclass that records every date/series id actually reaching
+  `compute_reference` through `train_val` (not from the return value, and not by
+  trusting `train_val`'s own exclusion — this closes the leak channel a caller could
+  open by reading the raw `Reader` directly); the inactive-block proof does the same
+  for `uk` (declared in the real `factors.yaml`, inactive) using a reader that *has*
+  uk data available, so a bug iterating `manifest.blocks` instead of
+  `manifest.active_blocks` would be caught rather than masked by a missing-data path.
+  Also: same-seed/different-seed band (non-)identity; `blocks`/`cross_blocks` shape
+  matches `manifest.active_blocks`/`cross_block_pairs()`; `mean`/`std` against
+  closed-form values; `acf_1` recovers a known AR(1) phi; `excess_kurtosis` near zero
+  for a normal sample and clearly positive for a Student-t sample; every band brackets
+  its point estimate; `to_dict()` round-trips through `json.dumps`.
 
 ## [v0.1.0-g0] — 2026-07-24
 
