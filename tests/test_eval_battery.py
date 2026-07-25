@@ -231,6 +231,41 @@ def test_mc_error_rejects_more_subsamples_than_paths() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# 2b. WP2.2 Task 3: "bands or it didn't happen" made structural for the 10yr tier
+# --------------------------------------------------------------------------- #
+
+
+def test_require_mc_error_reported_rejects_a_10yr_metric_with_no_error_at_all() -> None:
+    """The battery must reject a 10yr-tier metric registered without a Monte-Carlo
+    error estimate, rather than relying on anyone remembering (STEP2-GENERATOR-PLAN
+    Sec.6: "small-n decade metrics -- bands or it didn't happen"). ``_run_suites``
+    already computes ``mc_error`` unconditionally for every spec today, so this is a
+    structural, tested guarantee rather than an accident of the current code shape."""
+    from ah.eval.battery import _require_mc_error_reported
+
+    with pytest.raises(BatteryError, match="10yr"):
+        _require_mc_error_reported("10yr", "some.metric", None)
+
+
+def test_require_mc_error_reported_allows_a_honestly_nan_10yr_error() -> None:
+    """NaN is not rejected: a 10yr metric whose value (and therefore Monte-Carlo
+    error) is honestly uncomputable today -- e.g. ah.eval.metrics.horizon's
+    structural-gap metrics -- has reported its error faithfully. Rejecting NaN here
+    would make the battery raise on every real run touching those metrics, which is
+    the opposite of "honestly reported"."""
+    from ah.eval.battery import _require_mc_error_reported
+
+    _require_mc_error_reported("10yr", "some.metric", float("nan"))  # must not raise
+
+
+def test_require_mc_error_reported_does_not_apply_outside_10yr() -> None:
+    from ah.eval.battery import _require_mc_error_reported
+
+    _require_mc_error_reported("1_5yr", "some.metric", None)  # must not raise
+    _require_mc_error_reported("monthly", "some.metric", None)  # must not raise
+
+
+# --------------------------------------------------------------------------- #
 # 3. band / threshold lookup drives severity + passed, over a fully synthetic fixture
 # --------------------------------------------------------------------------- #
 
@@ -984,6 +1019,24 @@ def test_run_full_battery_returns_a_non_empty_metric_set() -> None:
     assert "g1.acf_abs_lag24" in monthly
     assert "cross_block_corr_matrix_distance" in monthly
 
+    # WP2.2 Task 3: the horizon suite must be wired into run_full_battery too --
+    # mirrors the lesson RFR-13 records for a suite that is written and tested but
+    # never registered in _REFERENCE_DEPENDENT_SUITE_BUILDERS.
+    horizon = {r.name for r in report.results if r.suite == "horizon"}
+    assert horizon, "run_full_battery must register and run the horizon suite"
+    assert "g1.variance_ratio_12m" in horizon
+    assert "g1.mean_reversion_halflife" in horizon
+    assert "g1.ergodicity_gap" in horizon
+    assert "regime_duration_mean" in horizon
+    assert "ten_year_return_vs_valuation_slope" in horizon
+    horizon_results = {r.name: r for r in report.results if r.suite == "horizon"}
+    assert horizon_results["g1.variance_ratio_12m"].tier == "1_5yr"
+    assert horizon_results["g1.ergodicity_gap"].tier == "10yr"
+    # Structural-gap metrics are honestly NaN, and every 10yr one still carries a
+    # (NaN) Monte-Carlo error rather than none at all.
+    assert np.isnan(horizon_results["regime_duration_mean"].value)
+    assert horizon_results["ten_year_return_vs_valuation_slope"].mc_error is not None
+
 
 def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
     manifest = _orchestration_manifest()
@@ -1025,7 +1078,12 @@ def test_run_full_battery_is_repeatable_without_a_duplicate_registration_error()
     first = battery.run_full_battery(ensemble, **kwargs)
     second = battery.run_full_battery(ensemble, **kwargs)
     assert [r.name for r in first.results] == [r.name for r in second.results]
-    assert [r.value for r in first.results] == [r.value for r in second.results]
+    # WP2.2 Task 3: some horizon metrics are honestly, deterministically NaN (the
+    # structural-gap metrics -- see ah.eval.metrics.horizon's module docstring), and
+    # `nan != nan`, so a plain list `==` would fail even on a bit-identical rerun.
+    # np.testing.assert_equal treats matching NaNs as equal, which is what
+    # "repeatable" actually means here.
+    np.testing.assert_equal([r.value for r in first.results], [r.value for r in second.results])
 
 
 def test_run_full_battery_judges_against_the_reference_the_second_call_actually_built() -> None:

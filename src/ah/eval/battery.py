@@ -141,13 +141,16 @@ class MetricResult:
 # this via register_suite(); run_battery() iterates it generically (sorted by suite
 # name, for a deterministic report independent of import order).
 #
-# TODO(WP2.2 Tasks 3-6): only `monthly` exists, so a real battery run today covers the
-# monthly tier and nothing else -- `run_full_battery` registers exactly what
-# _REFERENCE_DEPENDENT_SUITE_BUILDERS names. Every remaining suite (horizon, tails,
-# utility, memorization, economics, conditional, calibration) must be added to that
-# table (or register itself) as it lands, or it will be written, tested, and then never
-# run. Tracked as governance/retrofit-register.md RFR-13; the verdict a partial battery
-# produces is a partial verdict and WP2.3 must not read it as a full one.
+# TODO(WP2.2 Tasks 4-6): only `monthly` and `horizon` are WIRED here (registered in
+# _REFERENCE_DEPENDENT_SUITE_BUILDERS), so a real battery run today covers those two
+# tiers' suites and nothing else. `tails.py` (WP2.1b) already exists as a file but is
+# NOT wired -- its `d4_tail_table` does not share this table's `build_<suite>(manifest,
+# reference) -> tuple[MetricSpec, ...]` shape, which is itself unresolved scope, not an
+# oversight of this task. Every remaining suite (tails, utility, memorization,
+# economics, conditional, calibration) must be added to this table (or register itself)
+# as it lands, or it will be written, tested, and then never run. Tracked as
+# governance/retrofit-register.md RFR-13; the verdict a partial battery produces is a
+# partial verdict and WP2.3 must not read it as a full one.
 SUITES: dict[str, tuple[MetricSpec, ...]] = {}
 
 
@@ -326,6 +329,37 @@ def _passed(value: float, threshold: Threshold) -> bool:
 # --------------------------------------------------------------------------- #
 
 
+def _require_mc_error_reported(tier: str, name: str, error: float | None) -> None:
+    """WP2.2 Task 3 -- DN-1.1 Sec.II.6's 10yr tier honesty requirement, made
+    structural rather than a convention someone can forget to follow.
+
+    STEP2-GENERATOR-PLAN Sec.6: "small-n decade metrics -- bands or it didn't happen."
+    :func:`_run_suites` already computes :func:`mc_error` for every registered metric
+    unconditionally, regardless of tier or suite, so there is today no code path by
+    which a ``10yr``-tier :class:`MetricSpec` could be evaluated WITHOUT one -- this
+    function exists so that guarantee is an explicit, tested assertion rather than an
+    accident of ``_run_suites``'s current shape that a future refactor (a fast path, a
+    per-tier special case) could silently break.
+
+    Rejects only ``error is None`` -- a genuine "no error was even computed" defect.
+    **Deliberately does NOT reject ``NaN``**: a ``10yr``-tier metric whose value (and
+    therefore whose Monte-Carlo error) is honestly uncomputable -- see
+    ``ah.eval.metrics.horizon``'s structural-gap metrics, always NaN today because
+    ``factors.yaml`` has no valuation/growth/recession-indicator factor -- has REPORTED
+    its error faithfully as "cannot be estimated", which is the correct, honest outcome
+    THE ONE NaN RULE already fails on its own. Rejecting NaN here would make the
+    battery raise on every real run touching those metrics, which is exactly the
+    opposite of "honestly reported".
+    """
+    if tier == "10yr" and error is None:
+        raise BatteryError(
+            f"metric '{name}' is tier=10yr but was evaluated with no Monte-Carlo error "
+            f"estimate at all (mc_error=None). DN-1.1 Sec.II.6 / STEP2-GENERATOR-PLAN "
+            f"Sec.6 require every small-n decade metric to carry a reported error band "
+            f"-- 'bands or it didn't happen' -- not a bare point value."
+        )
+
+
 def _run_suites(
     ensemble: Ensemble, *, reference: ReferenceStats, prereg: PreRegistration, seed: int
 ) -> tuple[MetricResult, ...]:
@@ -335,6 +369,7 @@ def _run_suites(
         for spec in SUITES[suite]:
             value = float(spec.fn(ensemble))
             error = mc_error(spec.fn, ensemble, seed=seed, n_subsamples=n_subsamples)
+            _require_mc_error_reported(spec.tier, spec.name, error)
             band = _lookup_band(spec.name, reference)
             threshold = _lookup_threshold(spec.name, prereg)
             if threshold is not None:
@@ -638,6 +673,7 @@ def run_battery(
 # `MetricSpec`/`register_suite`; a module-level import here would be a cycle.
 _REFERENCE_DEPENDENT_SUITE_BUILDERS: dict[str, tuple[str, str]] = {
     "monthly": ("ah.eval.metrics.monthly", "build_monthly_suite"),
+    "horizon": ("ah.eval.metrics.horizon", "build_horizon_suite"),
 }
 
 

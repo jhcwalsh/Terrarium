@@ -834,6 +834,42 @@ All notable changes to this project are documented here. The project follows
   task's job); `ah.eval.prereg._METRIC_SUITE_NAMES` already listed `"monthly"` (Task 1
   landed it defensively), so no seal-list edit was needed. Full suite green (669
   tests, up from 637 at task start — 32 new), ruff/pyright clean.
+- **WP2.2 Task 3 — `eval/metrics/horizon.py`, the 1-5yr and 10yr tiers.** Eight DN-1.1
+  §II.6-normative statistics, tier-tagged exactly as the design note's table states
+  (`1_5yr`: `variance_ratio_{12,36,60,120}m`, `mean_reversion_halflife`,
+  `drawdown_median_depth`/`_median_duration`/`_depth_duration_rank_corr`,
+  `regime_duration_{mean,p50,p90}`; `10yr`: `lost_decade_frequency`,
+  `long_inflation_era_frequency`, `ten_year_return_vs_valuation_{slope,r2}`,
+  `ergodicity_gap`), each registered by name+tier into `ah.eval.reference`'s
+  `SINGLE_FACTOR_STATS`/`PANEL_STATS` from the start (Task 2's structural lesson
+  applied up front, not fixed in afterward) and wired into
+  `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` in the same commit, with a passing
+  `run_full_battery` acceptance test that fails without the wiring. Per-metric
+  per-path/pooled convention stated in the module docstring (RFR-15's residual bites
+  every pooled one, recorded rather than left to be discovered).
+  Two structural gaps made honestly NaN rather than faked: `regime_duration_*` (the
+  Step-1 regime ruleset needs `usrec`/`growth_yoy`, neither a `factors.yaml` factor —
+  RFR-17) and `ten_year_return_vs_valuation_*` (no CAPE/valuation factor exists —
+  RFR-18); both recorded in `governance/retrofit-register.md` with an owner and a
+  consequence, exactly as the `commodities` gap (RFR-8) already is. `variance_ratio`
+  reuses `nonoverlapping_sums` (no second windowing scheme); `mean_reversion_halflife`
+  reuses the registered lag-1 ACF estimator directly (the population lag-1
+  autocorrelation of an AR(1) process IS phi); `drawdown_episodes` and
+  `long_inflation_era_frequency`/`lost_decade_frequency` reuse
+  `ah.data.derive.drawdown_state`/`yoy`/`regime_thresholds` verbatim rather than
+  reimplementing them. `battery._require_mc_error_reported` makes "10yr metrics carry
+  a Monte-Carlo error, or the battery rejects them" structural (rejects `error is
+  None`, not `NaN` — an honestly-uncomputable 10yr metric must not crash every real
+  battery run). Discovered and fixed in the same commit: `drawdown_state`/`lost_decade
+  _frequency`'s compounding step can overflow on adversarial/extreme-magnitude input
+  (this repo's `filterwarnings = ["error"]` would otherwise turn that into a hard
+  crash) — now settles at `+/-inf` under `np.errstate` instead of raising, since the
+  WP2.2b negative-control suite's entire purpose is running the battery against
+  broken generators. `block_bootstrap_band`'s `np.percentile` step is not NaN-robust
+  for a statistic that can be undefined on a short resample (`drawdown_depth_duration
+  _rank_corr`) — recorded as RFR-19, not fixed here (shared, sealed infrastructure).
+  Full suite green (758 tests, up from 716 at task start — 42 new), ruff/pyright
+  clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

@@ -43,8 +43,8 @@ STEP2-GENERATOR-PLAN Sec.WP2.2 owns the eight metric suites these registries ser
 ``monthly``, ``horizon``, ``tails``, ``utility``, ``memorization``, ``economics``,
 ``conditional``, ``calibration``
 (``src/ah/eval/metrics/{monthly,horizon,tails,utility,memorization,economics,
-conditional,calibration}.py``). Only ``monthly`` and ``tails`` exist yet; the rest are
-intentionally not stubbed here.
+conditional,calibration}.py``). Only ``monthly``, ``horizon`` and ``tails`` exist yet;
+the rest are intentionally not stubbed here.
 
 Horizon tiers (DN-1.1 Sec.II.6)
 --------------------------------
@@ -142,6 +142,7 @@ from typing import Any
 import numpy as np
 import pandas as pd
 
+from ah.data import derive
 from ah.eval.panel import FactorFrames, PanelError, SplitReader, default_split_reader
 from ah.eval.panel import read_factor_frames as _read_factor_frames
 from ah.factors import FactorManifest
@@ -727,6 +728,500 @@ def corr_matrix_distance(a: np.ndarray, b: np.ndarray) -> float:
     return float(np.linalg.norm(a - b, ord="fro"))
 
 
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 3: the 1_5yr and 10yr horizon statistics (DN-1.1 Sec.II.6 rows 2-3)
+#
+# Live here for the identical structural reason WP2.2 Task 2's monthly statistics do
+# (see this module's docstring, "WP2.2 Task 2: the monthly stylized-fact statistics"):
+# a statistic defined only in ``ah.eval.metrics.horizon`` could never carry a sealed
+# threshold, because ``ah.eval.prereg`` validates a threshold key's ``<stat>`` against
+# these very registries. ``ah.eval.metrics.horizon`` imports these definitions; it
+# supplies only the ensemble-level pooling convention on top (per-path average, or a
+# true pool across paths -- stated per metric in that module's docstring, since
+# ``governance/retrofit-register.md`` RFR-15 makes the distinction load-bearing for
+# length matching).
+# --------------------------------------------------------------------------- #
+
+# ---- variance ratio (registered tier "1_5yr") ---------------------------------
+#
+# Lo-MacKinlay-style: Var(non-overlapping k-month sums) / (k * Var(the raw monthly
+# values)), exactly 1.0 in expectation for iid returns (Var(sum of k iid) = k*Var(one)),
+# > 1 under positive serial correlation (autocovariances add constructively to the
+# k-sum's variance), < 1 under mean reversion (they subtract). NON-OVERLAPPING sums are
+# used (via :func:`nonoverlapping_sums`, already registered for ``agg_gaussianity`` --
+# not a second windowing scheme): overlapping k-month sums are the classical
+# Lo-MacKinlay estimator and have smaller sampling variance, but induce (k-1)/k of the
+# observations to share up to k-1 months of overlap, which is itself a manufactured
+# serial dependence -- exactly the artifact this statistic exists to detect, not to
+# manufacture. NO small-sample / heteroskedasticity-robust correction (the classical
+# test statistic's variance formula under a maintained iid null) is applied: this
+# module reports the ratio itself, a description, not a signed test statistic, so no
+# asymptotic-variance correction is needed to interpret it, consistent with every other
+# estimator in this file reporting a plain point value for banding rather than a
+# corrected test statistic.
+VARIANCE_RATIO_HORIZONS: tuple[tuple[int, str], ...] = (
+    (12, "12m"),
+    (36, "36m"),
+    (60, "60m"),
+    (120, "120m"),
+)
+
+# Variance's relative standard error is ~sqrt(2/n) for a roughly-Gaussian quantity: at
+# n=10 that is ~45%, noisy but not meaningless -- unlike a fourth-moment statistic
+# (AGG_GAUSSIANITY_MIN_SUMS's much higher floor of 30, below which excess kurtosis
+# carries no information about the effect it targets at all). 10 rules out a variance
+# computed from a literal handful of non-overlapping k-month sums while staying low
+# enough that a k=120 ratio -- which yields exactly ONE non-overlapping sum per
+# 120-month path -- remains computable once pooled across a production ensemble's many
+# paths (see ``ah.eval.metrics.horizon``'s pooling wrapper).
+VARIANCE_RATIO_MIN_SUMS = 10
+
+
+def variance_ratio_from_arrays(sums: np.ndarray, raw_values: np.ndarray, k: int) -> float:
+    """The variance-ratio computation, taking already-assembled arrays.
+
+    Split from :func:`variance_ratio` so ``ah.eval.metrics.horizon`` can POOL
+    non-overlapping sums (and raw values) ACROSS an ensemble's paths -- computed
+    independently within each path via :func:`nonoverlapping_sums`, then concatenated,
+    exactly as :func:`agg_gaussianity`'s own ensemble-level wrapper already does for a
+    marginal-distribution statistic -- before taking the ratio once over the pooled
+    arrays, rather than computing a ratio per path and averaging ratios (which is a
+    different, more per-path-noisy estimator DN-1.1's "naturally pooled" framing does
+    not ask for; see ``ah.eval.metrics.horizon``'s module docstring).
+    """
+    sums = np.asarray(sums, dtype=np.float64).reshape(-1)
+    raw_values = np.asarray(raw_values, dtype=np.float64).reshape(-1)
+    if k < 1:
+        raise ValueError(f"variance_ratio_from_arrays: k must be >= 1, got {k}")
+    if sums.size < VARIANCE_RATIO_MIN_SUMS or raw_values.size < 2:
+        return float("nan")
+    var_k = float(np.var(sums, ddof=1))
+    var_1 = float(np.var(raw_values, ddof=1))
+    if var_1 == 0.0:
+        return float("nan")
+    return var_k / (k * var_1)
+
+
+def variance_ratio(x: np.ndarray, k: int) -> float:
+    """Single-array convenience form of :func:`variance_ratio_from_arrays`.
+
+    Used directly for the train+validation reference (one flat historical series --
+    no ensemble/path structure to pool over) and, per-path, as the historical-analog
+    convention the ensemble wrapper composes on top of.
+    """
+    if k < 1:
+        raise ValueError(f"variance_ratio: k must be >= 1, got {k}")
+    x = np.asarray(x, dtype=np.float64).reshape(-1)
+    return variance_ratio_from_arrays(nonoverlapping_sums(x, k), x, k)
+
+
+def _variance_ratio_stat(k: int) -> Callable[[np.ndarray], float]:
+    def stat(x: np.ndarray) -> float:
+        return variance_ratio(x, k)
+
+    return stat
+
+
+# ---- mean-reversion half-life (registered tier "1_5yr") -----------------------
+
+
+def mean_reversion_halflife(x: np.ndarray) -> float:
+    """Half-life (in months) of an AR(1) fit's mean reversion: ``ln(0.5) / ln(phi)``.
+
+    ``phi`` is the lag-1 sample autocorrelation, :func:`_acf_at_lag`\\ (x, 1) -- the
+    same n-denominator Box-Jenkins estimator every other lag-dependent statistic in
+    this file uses (not a second, independently fitted OLS AR(1) coefficient): for an
+    AR(1) process the population lag-1 autocorrelation IS phi, so reusing the already-
+    registered estimator is a correct fit, not an approximation.
+
+    **Decided and tested behaviour at phi's extremes** (the brief's explicit
+    requirement): the *magnitude* ``abs(phi)`` drives the decay, not signed ``phi``
+    directly, so that a genuinely oscillating-but-decaying process (``-1 < phi < 0``)
+    still gets a finite, meaningful half-life rather than an undefined ``ln`` of a
+    negative number:
+
+    - ``abs(phi) >= 1.0`` (no mean reversion, or an explosive/unit-root process):
+      returns ``+inf``, not ``NaN`` -- "never reverts" is meaningfully different from
+      "uncomputable", and a reader scanning a report table for a persistence problem
+      should see an explicit infinity, not a blank uncomputable cell.
+    - ``phi == 0.0`` (no lag-1 dependence at all): returns ``0.0`` -- the limit of
+      ``ln(0.5)/ln(m)`` as ``m -> 0`` is exactly the "reverts within the same step"
+      answer, not a special case bolted on.
+    - ``phi`` is ``NaN`` (degenerate/too-short series, see :func:`_acf_at_lag`):
+      returns ``NaN``, unchanged.
+    """
+    phi = _acf_at_lag(x, 1)
+    if np.isnan(phi):
+        return float("nan")
+    magnitude = abs(phi)
+    if magnitude >= 1.0:
+        return float("inf")
+    if magnitude == 0.0:
+        return 0.0
+    return float(np.log(0.5) / np.log(magnitude))
+
+
+# ---- drawdown depth/duration joint distribution (registered tier "1_5yr") -----
+#
+# DN-1.1 asks for "drawdown depth/duration joint dist"; reported as three separately
+# registered scalar summaries (median depth, median duration, their rank correlation)
+# rather than an unusable distribution object -- WP2.3 can then band each individually.
+
+
+def _drawdown_series(returns: np.ndarray) -> np.ndarray:
+    """The running drawdown of ``returns`` via :func:`ah.data.derive.drawdown_state`.
+
+    Reused, not reimplemented: ``drawdown_state`` takes a ``(date, value)`` frame, and
+    its calculation (``(1+r).cumprod()`` then running max) does not read the dates
+    arithmetically, only the row order -- so ``returns`` is wrapped in a synthetic
+    monthly-dated frame purely to satisfy that signature.
+
+    :data:`SINGLE_FACTOR_STATS` entries are evaluated uniformly over EVERY registered
+    factor by :func:`compute_reference` (the same "computed regardless of relevance"
+    precedent ``hill_tail_index`` already sets for a level factor), so this may be
+    called on data with no economically real bound on magnitude -- and a battery run
+    over an adversarial/broken generator (the WP2.2b negative-control suite's entire
+    purpose) is exactly the case where it must not crash. ``np.errstate`` makes an
+    overflowing cumulative product settle at ``+/-inf`` (a valid IEEE754 outcome, not
+    an error) instead of raising under this repo's ``filterwarnings = ["error"]``
+    pytest config; the resulting ``inf``/``nan`` drawdown values are then handled by
+    ordinary float comparison (``inf < 0.0`` is ``False``, same as ``NaN < 0.0``) --
+    still an honest "cannot really say" outcome, never a hard crash.
+    """
+    returns = np.asarray(returns, dtype=np.float64).reshape(-1)
+    if returns.shape[0] == 0:
+        return returns
+    dates = pd.date_range("2000-01-01", periods=returns.shape[0], freq="MS")
+    with np.errstate(over="ignore", invalid="ignore"):
+        dd_frame = derive.drawdown_state(pd.DataFrame({"date": dates, "value": returns}))
+    return dd_frame["value"].to_numpy(dtype=np.float64)
+
+
+def drawdown_episodes(returns: np.ndarray) -> tuple[np.ndarray, np.ndarray]:
+    """Depth (positive magnitude) and duration (months) of every drawdown episode.
+
+    An episode is a maximal run of consecutive months with running drawdown ``< 0``
+    (``== 0.0`` exactly at a new high ends it). ``depth`` is the magnitude of the
+    episode's trough (its most negative point); ``duration`` is the episode's length
+    in months. An episode still open at the series' final observation is counted as
+    ending there -- its trough may not be the eventual trough a longer series would
+    reveal, a real, stated property of a finite window rather than a bug.
+
+    Returns two equal-length 1-D arrays, empty (not raising) if ``returns`` produced
+    no drawdown at all (e.g. an all-non-negative return series).
+    """
+    dd = _drawdown_series(returns)
+    depths: list[float] = []
+    durations: list[int] = []
+    in_episode = False
+    trough = 0.0
+    length = 0
+    for v in dd:
+        if v < 0.0:
+            if not in_episode:
+                in_episode = True
+                trough = float(v)
+                length = 1
+            else:
+                trough = min(trough, float(v))
+                length += 1
+        else:
+            if in_episode:
+                depths.append(-trough)
+                durations.append(length)
+                in_episode = False
+    if in_episode:
+        depths.append(-trough)
+        durations.append(length)
+    return np.array(depths, dtype=np.float64), np.array(durations, dtype=np.float64)
+
+
+def _rank(x: np.ndarray) -> np.ndarray:
+    """Average ("fractional") 1-based ranks of ``x``, ties averaged."""
+    x = np.asarray(x, dtype=np.float64)
+    n = x.shape[0]
+    order = np.argsort(x, kind="mergesort")
+    sorted_x = x[order]
+    ranks = np.empty(n, dtype=np.float64)
+    i = 0
+    while i < n:
+        j = i
+        while j + 1 < n and sorted_x[j + 1] == sorted_x[i]:
+            j += 1
+        avg_rank = (i + j) / 2.0 + 1.0
+        ranks[order[i : j + 1]] = avg_rank
+        i = j + 1
+    return ranks
+
+
+def spearman_rank_correlation(a: np.ndarray, b: np.ndarray) -> float:
+    """Spearman's rank correlation: Pearson correlation of average ranks (ties
+    averaged) -- the standard equivalent formulation, chosen to avoid a scipy
+    dependency (``CLAUDE.md``: no new dependencies; numpy plus ``statistics`` covers
+    this file). ``NaN`` if fewer than 2 paired observations.
+    """
+    a = np.asarray(a, dtype=np.float64).reshape(-1)
+    b = np.asarray(b, dtype=np.float64).reshape(-1)
+    if a.shape[0] != b.shape[0]:
+        raise ValueError(f"spearman_rank_correlation: shape mismatch {a.shape} vs {b.shape}")
+    if a.shape[0] < 2:
+        return float("nan")
+    return _correlation(_rank(a), _rank(b))
+
+
+def _drawdown_summary_depth(x: np.ndarray) -> float:
+    depths, _ = drawdown_episodes(x)
+    if depths.size == 0:
+        return float("nan")
+    return float(np.median(depths))
+
+
+def _drawdown_summary_duration(x: np.ndarray) -> float:
+    _, durations = drawdown_episodes(x)
+    if durations.size == 0:
+        return float("nan")
+    return float(np.median(durations))
+
+
+def _drawdown_summary_rank_corr(x: np.ndarray) -> float:
+    depths, durations = drawdown_episodes(x)
+    if depths.size < 2:
+        return float("nan")
+    return spearman_rank_correlation(depths, durations)
+
+
+# ---- lost-decade frequency (registered tier "10yr") ----------------------------
+#
+# NOMINAL, not real (CPI-deflated) total return -- a deliberate, stated scope
+# limitation, not an oversight. "Lost decade" is classically a REAL-return concept,
+# but this statistic is registered in SINGLE_FACTOR_STATS, whose reference-side
+# ``fn: Callable[[np.ndarray], float]`` is applied by ``_block_reference`` to exactly
+# ONE factor's own column (see this module's "Data alignment" section) -- there is no
+# second (CPI) series available to a SINGLE_FACTOR_STATS function at all. A real
+# (deflated) version needs a genuinely joint equity+CPI reference computation, which
+# this module's own docstring flags as future work needing its own alignment ("if
+# WP2.2 registers [a joint within-block statistic], it should align only that
+# statistic's own block-scoped factors, not reintroduce a single all-active-factors
+# join") -- out of this task's registered-not-edited scope. Recorded as a retrofit-
+# register row (see ``ah.eval.metrics.horizon``'s module docstring) for WP2.3 to
+# decide: seal the nominal version as-is, or build the joint deflated one first.
+#
+# NO INTERNAL WINDOWING: this function is a single 0.0/1.0 indicator -- "did the WHOLE
+# given series compound to a non-positive total return" -- not an internal loop over
+# non-overlapping sub-windows. The "frequency" the metric name promises comes from
+# calling it many times over many equal-length inputs: once per
+# :func:`block_bootstrap_band` resample (drawn at ``resample_length=ensemble.months``,
+# i.e. one decade at a time) for the reference band, and once per generated path
+# (pooled, via ``ah.eval.metrics.horizon``'s pooling wrapper) for the ensemble side.
+# This reuses the EXISTING general-purpose bootstrap/subsampling machinery for the
+# "many decade-length replicates" structure instead of building a second, parallel
+# windowing scheme inside this function -- and sidesteps a real edge case a fixed
+# internal window would hit: see ``long_inflation_era_frequency`` below for why.
+def lost_decade_frequency(returns: np.ndarray) -> float:
+    """1.0 if ``returns``' compounded (product of ``1+r``) total return is <= 0.0;
+    0.0 otherwise. ``NaN`` if ``returns`` is empty.
+
+    ``np.errstate`` (see :func:`_drawdown_series` for the full argument): evaluated
+    uniformly over every registered factor, this must settle at ``+inf`` rather than
+    raise on an extreme-magnitude input, so an overflowing product is still an honest
+    ("clearly not a lost decade") answer, not a crash.
+    """
+    returns = np.asarray(returns, dtype=np.float64).reshape(-1)
+    if returns.shape[0] == 0:
+        return float("nan")
+    with np.errstate(over="ignore", invalid="ignore"):
+        compounded = float(np.prod(1.0 + returns)) - 1.0
+    if np.isnan(compounded):
+        return float("nan")
+    return 1.0 if compounded <= 0.0 else 0.0
+
+
+# ---- long-inflation-era frequency (registered tier "10yr") ---------------------
+#
+# Sealed definition: a "sustained high-inflation era" is a run of >= LONG_INFLATION_
+# MIN_RUN_MONTHS (24, two years -- long enough to distinguish a genuine multi-year
+# inflationary era from a single hot-CPI-print blip, short enough to still be found
+# inside a single ~120-month generated decade) CONSECUTIVE months with year-on-year
+# CPI inflation (:func:`ah.data.derive.yoy` on the level series) at or above
+# ``ah.data.derive.regime_thresholds()['cpi_high']`` -- the Step-1 regime ruleset's
+# OWN inflation threshold (regime_ruleset_v1: 4.0), reused rather than a second,
+# independently chosen number, and traceable to that ruleset's version (see
+# ``ah.eval.metrics.horizon``'s module docstring for where the version is recorded).
+#
+# Like ``lost_decade_frequency``, this is a single 0.0/1.0 indicator with NO internal
+# sub-windowing -- and here that choice is load-bearing, not merely consistent:
+# ``derive.yoy`` consumes the series' first 12 months to form its own year-on-year
+# figure, so a 120-month generated path yields only ~108 months of cpi_yoy -- an
+# internal 120-month sub-window would never fit even once. Evaluating the indicator
+# once per whole given series (one bootstrap replicate, or one generated path) and
+# letting the EXTERNAL machinery (block_bootstrap_band's resamples; the ensemble
+# pooling wrapper) supply the "many decades" repetition sidesteps that entirely.
+LONG_INFLATION_MIN_RUN_MONTHS = 24
+
+
+def _cpi_yoy_from_level(cpi_level: np.ndarray) -> np.ndarray:
+    """Year-on-year CPI inflation from a raw index-level array, via :func:`ah.data.derive.yoy`.
+
+    Reused, not reimplemented: ``yoy`` is wrapped the same way :func:`_drawdown_series`
+    wraps ``drawdown_state`` -- a synthetic monthly-dated frame, since ``yoy``'s
+    ``pct_change`` does not read the dates arithmetically, only row order.
+    """
+    cpi_level = np.asarray(cpi_level, dtype=np.float64).reshape(-1)
+    if cpi_level.shape[0] == 0:
+        return cpi_level
+    dates = pd.date_range("2000-01-01", periods=cpi_level.shape[0], freq="MS")
+    yoy_frame = derive.yoy(pd.DataFrame({"date": dates, "value": cpi_level}))
+    return yoy_frame["value"].to_numpy(dtype=np.float64)
+
+
+def _sustained_run_flags(values: np.ndarray, *, threshold: float, min_run: int) -> np.ndarray:
+    """``True`` at every index belonging to a run of >= ``min_run`` consecutive
+    ``values >= threshold`` entries."""
+    above = values >= threshold
+    n = above.shape[0]
+    flags = np.zeros(n, dtype=bool)
+    i = 0
+    while i < n:
+        if not above[i]:
+            i += 1
+            continue
+        j = i
+        while j < n and above[j]:
+            j += 1
+        if j - i >= min_run:
+            flags[i:j] = True
+        i = j
+    return flags
+
+
+def long_inflation_era_frequency(cpi_level: np.ndarray) -> float:
+    """1.0 if ``cpi_level``'s cpi_yoy series contains a sustained high-inflation run
+    (see the section header above for the full sealed definition); 0.0 otherwise.
+    ``NaN`` if ``cpi_level`` is too short to compute even one cpi_yoy observation
+    (fewer than 13 months).
+    """
+    cpi_yoy = _cpi_yoy_from_level(cpi_level)
+    if cpi_yoy.shape[0] == 0:
+        return float("nan")
+    threshold = float(derive.regime_thresholds()["cpi_high"])
+    flags = _sustained_run_flags(
+        cpi_yoy, threshold=threshold, min_run=LONG_INFLATION_MIN_RUN_MONTHS
+    )
+    return 1.0 if bool(np.any(flags)) else 0.0
+
+
+# ---- 10y return vs starting valuation: slope & R^2 (registered tier "10yr") ----
+#
+# Structural gap, stated rather than hidden (see ``ah.eval.metrics.horizon``'s module
+# docstring): there is no valuation/CAPE factor anywhere in ``factors.yaml`` today --
+# DN-1.1's Layer-1 "climate" state ``v_t`` (demeaned log CAPE) is not yet a Step-2
+# generator-visible factor, though the raw ``shiller.cape`` series IS registered in
+# ``requirements.yaml``. Consequently this pure regression estimator is exercised only
+# against synthetic ground truth in tests today; the wired ensemble-side metric (see
+# ``ah.eval.metrics.horizon``) returns NaN unconditionally, honestly, until a
+# valuation factor exists. It is registered in :data:`PANEL_STATS` (bare name, no
+# historical band -- the same shape as ``cross_block_corr_matrix_distance``) rather
+# than :data:`SINGLE_FACTOR_STATS`, because it is not "one factor's own series": it is
+# a comparison between an equity return series and a valuation series that today has
+# no factor identity to be keyed under at all.
+
+
+def valuation_regression(cape_v: np.ndarray, forward_return: np.ndarray) -> tuple[float, float]:
+    """OLS slope and R^2 of ``forward_return ~ a + b * cape_v`` (``b`` is the slope).
+
+    Ordinary least squares in closed form (no scipy): ``slope = Sxy / Sxx``,
+    ``intercept = ybar - slope * xbar``, ``R^2 = 1 - SS_res / SS_tot``. ``(NaN, NaN)``
+    if fewer than 3 paired points, if ``cape_v`` is exactly constant (``Sxx == 0``, no
+    variance to regress against), or (for R^2 alone) if ``forward_return`` is exactly
+    constant (``SS_tot == 0``, R^2 undefined -- the slope is still well-defined and
+    returned in that case).
+    """
+    cape_v = np.asarray(cape_v, dtype=np.float64).reshape(-1)
+    forward_return = np.asarray(forward_return, dtype=np.float64).reshape(-1)
+    if cape_v.shape[0] != forward_return.shape[0]:
+        raise ValueError(
+            f"valuation_regression: shape mismatch {cape_v.shape} vs {forward_return.shape}"
+        )
+    n = cape_v.shape[0]
+    if n < 3:
+        return float("nan"), float("nan")
+    xbar, ybar = float(np.mean(cape_v)), float(np.mean(forward_return))
+    sxx = float(np.sum((cape_v - xbar) ** 2))
+    if sxx == 0.0:
+        return float("nan"), float("nan")
+    sxy = float(np.sum((cape_v - xbar) * (forward_return - ybar)))
+    slope = sxy / sxx
+    intercept = ybar - slope * xbar
+    fitted = intercept + slope * cape_v
+    ss_res = float(np.sum((forward_return - fitted) ** 2))
+    ss_tot = float(np.sum((forward_return - ybar) ** 2))
+    if ss_tot == 0.0:
+        return slope, float("nan")
+    r2 = 1.0 - ss_res / ss_tot
+    return slope, r2
+
+
+# ---- ergodicity gap (registered tier "10yr") -----------------------------------
+#
+# "Long-path time-average moments against ensemble cross-sectional moments"
+# (DN-1.1). Precisely: let path_means[i] = mean over months of path i; the CLAIM under
+# ergodicity/stationarity is that the cross-sectional dispersion of those per-path
+# time-averages, Var(path_means), should match the dispersion an ergodic, weakly-
+# dependent process predicts for the mean of a `months`-long run -- to first order
+# under an iid-within-path null, Var(x) / months. ``ergodicity_gap`` is the relative
+# difference between the two: |Var(path_means) - Var(pooled_x)/months| /
+# (Var(pooled_x)/months). Near 0 for a stationary process whose paths are
+# interchangeable draws of the same generator; large and positive when paths disagree
+# systematically about their own long-run level (a persistent regime a path gets
+# "stuck" in for its whole length, or a shared deterministic trend that inflates
+# Var(pooled_x) without a matching inflation of the cross-sectional path-mean spread).
+#
+# This has NO historical analog: history is exactly one realization, not an ensemble
+# of paths, so "long-path vs ensemble cross-sectional" cannot even be posed from a
+# single flat historical series -- see :func:`_ergodicity_gap_reference_stub` below,
+# registered as this stat's reference-side function precisely so the name is sealable
+# (its historical StatBand is honestly NaN, not a fabricated point) while the real
+# computation, which needs the full ``(n_paths, months)`` slab, lives in
+# ``ah.eval.metrics.horizon``.
+def ergodicity_gap(paths: np.ndarray) -> float:
+    """``paths``: a ``(n_paths, months)`` array (one factor's full ensemble slab).
+
+    ``NaN`` if fewer than 2 paths or fewer than 2 months (no cross-section, or no
+    within-path average, to compare), or if either variance in the ratio is exactly
+    zero (a perfectly degenerate, constant ensemble has no dispersion to compare).
+    """
+    paths = np.asarray(paths, dtype=np.float64)
+    if paths.ndim != 2:
+        raise ValueError(
+            f"ergodicity_gap: expected a 2-D (n_paths, months) array, got {paths.shape}"
+        )
+    n_paths, months = paths.shape
+    if n_paths < 2 or months < 2:
+        return float("nan")
+    path_means = paths.mean(axis=1)
+    dispersion = float(np.var(path_means, ddof=1))
+    pooled_var = float(np.var(paths.reshape(-1), ddof=1))
+    if pooled_var == 0.0:
+        return float("nan")
+    expected_dispersion = pooled_var / months
+    if expected_dispersion == 0.0:
+        return float("nan")
+    return abs(dispersion - expected_dispersion) / expected_dispersion
+
+
+def _ergodicity_gap_reference_stub(x: np.ndarray) -> float:
+    """Registered reference-side ``fn`` for ``ergodicity_gap`` -- always ``NaN``.
+
+    A flat historical series has exactly one "path": ergodicity (long-path time-
+    average vs ensemble cross-sectional average) is a property only assessable on a
+    GENERATED ensemble of multiple paths, never on the single observed historical
+    realization. Registering a stub here (rather than leaving the name unregistered)
+    is what makes ``"<factor>.ergodicity_gap"`` sealable at all -- see this section's
+    header note.
+    """
+    return float("nan")
+
+
 def _lagged_stat(fn: Callable[[np.ndarray, int], float], lag: int) -> Callable[[np.ndarray], float]:
     """Bind ``lag`` into a two-argument estimator for registration."""
 
@@ -812,6 +1307,22 @@ SINGLE_FACTOR_STATS: dict[str, RegisteredStat] = {
         for h, suffix in AGG_GAUSSIANITY_HORIZONS
     },
     "leverage_correlation": RegisteredStat(fn=leverage_correlation, tier="monthly"),
+    # WP2.2 Task 3: the 1_5yr and 10yr horizon statistics (see the definitions above,
+    # under "WP2.2 Task 3: the 1_5yr and 10yr horizon statistics").
+    **{
+        f"variance_ratio_{suffix}": RegisteredStat(fn=_variance_ratio_stat(k), tier="1_5yr")
+        for k, suffix in VARIANCE_RATIO_HORIZONS
+    },
+    "mean_reversion_halflife": RegisteredStat(fn=mean_reversion_halflife, tier="1_5yr"),
+    "drawdown_median_depth": RegisteredStat(fn=_drawdown_summary_depth, tier="1_5yr"),
+    "drawdown_median_duration": RegisteredStat(fn=_drawdown_summary_duration, tier="1_5yr"),
+    "drawdown_depth_duration_rank_corr": RegisteredStat(
+        fn=_drawdown_summary_rank_corr, tier="1_5yr"
+    ),
+    "lost_decade_frequency": RegisteredStat(fn=lost_decade_frequency, tier="10yr"),
+    "long_inflation_era_frequency": RegisteredStat(fn=long_inflation_era_frequency, tier="10yr"),
+    # No historical analog -- see _ergodicity_gap_reference_stub's docstring.
+    "ergodicity_gap": RegisteredStat(fn=_ergodicity_gap_reference_stub, tier="10yr"),
 }
 
 
@@ -901,6 +1412,15 @@ class RegisteredPanelStat:
     would need an aligned multi-factor panel, which :func:`compute_reference`
     deliberately does not build (see the module docstring's "Data alignment"); that is
     a change to make explicitly, not by adding an ``fn`` field on a whim.
+
+    WP2.2 Task 3 adds four more no-``fn`` entries for the same reason, but for two
+    DIFFERENT underlying causes, both stated where each is registered below and in
+    ``ah.eval.metrics.horizon``'s module docstring: ``regime_duration_{mean,p50,p90}``
+    (the Step-1 regime ruleset needs ``usrec``/``growth_yoy``, neither of which has a
+    factor mapping in ``factors.yaml`` at all -- not a per-ensemble absent-factor case,
+    a structural one) and ``ten_year_return_vs_valuation_{slope,r2}`` (no valuation/
+    CAPE factor exists in ``factors.yaml`` either). Both are honestly always NaN on any
+    ensemble today; see ``governance/retrofit-register.md``.
     """
 
     tier: str
@@ -908,6 +1428,13 @@ class RegisteredPanelStat:
 
 PANEL_STATS: dict[str, RegisteredPanelStat] = {
     "cross_block_corr_matrix_distance": RegisteredPanelStat(tier="monthly"),
+    # WP2.2 Task 3 -- structural gaps, always NaN on any ensemble today (see this
+    # class's docstring and ah.eval.metrics.horizon's module docstring).
+    "regime_duration_mean": RegisteredPanelStat(tier="1_5yr"),
+    "regime_duration_p50": RegisteredPanelStat(tier="1_5yr"),
+    "regime_duration_p90": RegisteredPanelStat(tier="1_5yr"),
+    "ten_year_return_vs_valuation_slope": RegisteredPanelStat(tier="10yr"),
+    "ten_year_return_vs_valuation_r2": RegisteredPanelStat(tier="10yr"),
 }
 
 

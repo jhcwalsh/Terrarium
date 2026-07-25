@@ -1210,6 +1210,103 @@ def test_every_real_threshold_key_is_produced_by_a_registered_metric() -> None:
     assert not inert, f"threshold key(s) with no producing metric (judge nothing): {inert}"
 
 
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 3 -- the horizon-suite equivalent of the two tests directly above:
+# every horizon metric name must be sealable, and every real threshold key must be
+# produced by a registered metric. Same structural lesson Task 2's fix passes closed
+# for `monthly`, applied to `horizon` from the start.
+# --------------------------------------------------------------------------- #
+
+
+def _thresholds_for_every_horizon_metric(manifest: Any) -> dict[str, Any]:
+    """A ``thresholds:`` document carrying one entry per horizon metric name."""
+    from ah.eval.metrics.horizon import build_horizon_suite
+    from ah.eval.reference import ReferenceStats
+
+    specs = build_horizon_suite(
+        manifest,
+        ReferenceStats(
+            blocks={},
+            cross_blocks={},
+            active_blocks=manifest.active_blocks,
+            vintage_id="v",
+            n_resamples=1,
+            seed=0,
+            missing_factors=(),
+        ),
+    )
+    blocks: dict[str, dict[str, Any]] = {b: {} for b in manifest.active_blocks}
+    cross: dict[str, dict[str, Any]] = {f"{a}|{b}": {} for a, b in manifest.cross_block_pairs()}
+    panel: dict[str, Any] = {}
+    entry = {"min": None, "max": None, "severity": "report"}
+    for spec in specs:
+        if "." not in spec.name:
+            panel[spec.name] = dict(entry)
+        elif "~" in spec.name:
+            factors = spec.name.split(".", 1)[0]
+            fa, fb = factors.split("~")
+            pair = tuple(sorted((_block_of(manifest, fa), _block_of(manifest, fb))))
+            cross[f"{pair[0]}|{pair[1]}"][spec.name] = dict(entry)
+        else:
+            factor = spec.name.split(".", 1)[0]
+            blocks[_block_of(manifest, factor)][spec.name] = dict(entry)
+    assert panel, "the horizon suite must contribute at least one panel-level metric"
+    return {"blocks": blocks, "cross_blocks": cross, "panel": panel}
+
+
+def test_every_horizon_metric_name_can_carry_a_sealed_threshold(tmp_path: Path) -> None:
+    manifest = load_manifest()
+    doc = _load_real_doc()
+    doc["thresholds"] = _thresholds_for_every_horizon_metric(manifest)
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+
+    loaded = prereg.load(prereg_path)
+    prereg.verify(loaded, load_manifest(factors_path))  # must not raise
+
+
+def test_every_real_threshold_key_used_by_horizon_is_produced_by_a_registered_metric() -> None:
+    """Every real ``pre-registration.yaml`` threshold key that happens to name a
+    horizon-suite statistic must actually be produced by ``build_horizon_suite`` --
+    the same "judges nothing, silently" check Task 2 added for `monthly`, extended to
+    cover a metric registered under this task's names too. Real threshold keys today
+    are all monthly-suite ones, so this test is a forward guard (it must not regress
+    the day a horizon threshold is added), not evidence of a bug found now.
+    """
+    from ah.eval.metrics.horizon import build_horizon_suite
+    from ah.eval.reference import PANEL_STATS, SINGLE_FACTOR_STATS, ReferenceStats
+
+    manifest = load_manifest()
+    specs = build_horizon_suite(
+        manifest,
+        ReferenceStats(
+            blocks={},
+            cross_blocks={},
+            active_blocks=manifest.active_blocks,
+            vintage_id="v",
+            n_resamples=1,
+            seed=0,
+            missing_factors=(),
+        ),
+    )
+    produced = {s.name for s in specs}
+    horizon_stat_names = {
+        stat for stat, reg in SINGLE_FACTOR_STATS.items() if reg.tier in ("1_5yr", "10yr")
+    } | {stat for stat, reg in PANEL_STATS.items() if reg.tier in ("1_5yr", "10yr")}
+
+    loaded = prereg.load()
+    inert: list[str] = []
+    for block, entries in loaded.block_thresholds.items():
+        for key in entries:
+            stat = key.split(".", 1)[-1]
+            if stat in horizon_stat_names and key not in produced:
+                inert.append(f"thresholds.blocks.{block}.{key}")
+    for key in loaded.panel_thresholds:
+        if key in horizon_stat_names and key not in produced:
+            inert.append(f"thresholds.panel.{key}")
+
+    assert not inert, f"horizon-tier threshold key(s) with no producing metric: {inert}"
+
+
 def test_verify_rejects_an_unregistered_panel_threshold_key(tmp_path: Path) -> None:
     doc = _load_real_doc()
     doc["thresholds"]["panel"] = {
