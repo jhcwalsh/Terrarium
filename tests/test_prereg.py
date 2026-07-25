@@ -599,6 +599,8 @@ _EXPECTED_JUDGED_SOURCES = frozenset(
         "src/ah/eval/g2.py",
         "src/ah/eval/reference.py",
         "src/ah/eval/prereg.py",
+        "src/ah/eval/battery.py",
+        "src/ah/eval/panel.py",
         "src/ah/strategies.py",
         "src/ah/factors.py",
         "src/ah/splits.py",
@@ -868,7 +870,12 @@ def _write_synthetic_factors(tmp_path: Path, filename: str, active: list[str]) -
         "  alpha: [a1, a1_lvl]\n"
         "  beta: [b1]\n"
         "  gamma: [g1]\n"
-        f"active_blocks: [{', '.join(active)}]\n",
+        f"active_blocks: [{', '.join(active)}]\n"
+        "factor_sources:\n"
+        "  a1: {kind: unavailable, reason: fixture}\n"
+        "  a1_lvl: {kind: unavailable, reason: fixture}\n"
+        "  b1: {kind: unavailable, reason: fixture}\n"
+        "  g1: {kind: unavailable, reason: fixture}\n",
         encoding="utf-8",
     )
     return p

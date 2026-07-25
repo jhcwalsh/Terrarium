@@ -40,7 +40,7 @@ from ah.eval.reference import (
     block_bootstrap_band,
     compute_reference,
 )
-from ah.factors import FactorManifest, load_manifest
+from ah.factors import FactorManifest, FactorSource, load_manifest
 from ah.splits import HOLDOUT, DataAccess, FinalEvaluationToken, Reader
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -135,6 +135,10 @@ def _small_manifest() -> FactorManifest:
     return FactorManifest(
         blocks={"global": ("g1", "g2"), "us": ("u1", "u2")},
         active_blocks=("global", "us"),
+        sources={
+            name: FactorSource(kind="unavailable", reason="fixture")
+            for name in ("g1", "g2", "u1", "u2")
+        },
     )
 
 

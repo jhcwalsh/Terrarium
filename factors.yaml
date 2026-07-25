@@ -24,3 +24,164 @@ factor_blocks:
   us:      [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, funding_spread]
   uk:      [bank_rate, gilt_nominal_10y, gilt_real_10y, rpi, cpi_uk]
 active_blocks: [global, us]
+
+# --------------------------------------------------------------------------- #
+# factor_sources -- the factor -> Step-1 catalog series mapping (WP2.2 Task 1).
+#
+# The one genuinely blocking gap WP2.1b left open: until this section existed, no
+# mapping anywhere in the repository bound a factor id to a catalog series, so no
+# reference statistic (ah.eval.reference) or generator-facing panel (ah.eval.panel)
+# could honestly be computed. Still unsealed (WP2.3 seals it alongside the rest of
+# this file); ah.factors.load_manifest() validates coverage (below) but this section
+# itself carries no acceptance thresholds.
+#
+# One entry per factor in EVERY block declared above, including inactive `uk` (which
+# is declared but never read while inactive -- see ah.eval.reference's inactive-block
+# exclusion test). `load_manifest()` rejects a missing entry for any declared factor
+# and rejects an entry that names a factor no block declares.
+#
+# `kind` is one of:
+#   series      -- read directly from one requirements.yaml series id, in that
+#                   series' own units, no transform.
+#   derived     -- computed by one existing ah.data.derive.py helper (`expr`) over one
+#                   or more requirements.yaml series ids (`inputs`, positional, in the
+#                   order the helper expects them). Reuses derive.py; never a new
+#                   ad-hoc transform defined here or in ah.eval.panel.
+#   unavailable -- no Step-1 series honestly sources this factor. `reason` is
+#                   required and names the governing record (a retrofit-register row,
+#                   a deferred connector work package, or a J3/R5 decision) rather
+#                   than inventing a proxy.
+#
+# UNITS CONSISTENCY (machine-checked, tests/test_factors.py): a `series`/`derived`
+# entry's `units` must agree with pre-registration.yaml's
+# conventions.return_bearing_factors / conventions.level_factors classification for
+# that factor -- a return-bearing factor's units here must be exactly `ret`; a level
+# factor's units here must NOT be `ret`. These two files are sealed together, and a
+# divergence between them (a factor classified return-bearing here sourced from a
+# level series, or vice versa) is exactly the defect class this project keeps finding.
+# --------------------------------------------------------------------------- #
+factor_sources:
+  # --- global block ---
+  equity_mkt:
+    kind: series
+    series_id: french.mkt_rf
+    units: ret
+    notes: >-
+      Mkt-RF (Fama-French), an EXCESS return over the one-month risk-free rate, NOT a
+      total return. pre-registration.yaml's D4 conventions inherit this excess-return
+      interpretation now that the mapping is a fact, not an assumption -- its prose
+      is corrected to say so (see conventions.units_of_return_bearing_factors there).
+  smb:
+    kind: series
+    series_id: french.smb
+    units: ret
+    notes: "Fama-French SMB, a long-short spread return; used directly, no transform."
+  hml:
+    kind: series
+    series_id: french.hml
+    units: ret
+    notes: "Fama-French HML, a long-short spread return; used directly, no transform."
+  mom:
+    kind: series
+    series_id: french.mom
+    units: ret
+    notes: "Fama-French Mom (UMD), a long-short spread return; used directly, no transform."
+  equity_vol:
+    kind: series
+    series_id: fred.VIX
+    units: idx
+    notes: >-
+      CBOE VIX index level (requirements.yaml units: idx) -- a level, never a return,
+      matching pre-registration.yaml's level_factors classification.
+  commodities:
+    kind: unavailable
+    reason: >-
+      no Step-1 series registered; see governance/retrofit-register.md RFR-1. Carries
+      weight in two D4 strategies (eqw_factors, endowment_proxy) whose reference
+      statistics are consequently unavailable at seal time (pre-registration.yaml's
+      rationale.d4_commodities_consequence).
+  ig_spread:
+    kind: derived
+    expr: difference
+    inputs: [fred.BAA, fred.AAA]
+    units: pct
+    notes: >-
+      Baa minus Aaa investment-grade credit spread, in percentage points;
+      ah.data.derive.difference(BAA, AAA).
+  hy_spread:
+    kind: series
+    series_id: fred.HY_OAS
+    units: pct
+    notes: >-
+      ICE BofA US High Yield OAS via FRED (BAMLH0A0HYM2). requirements.yaml notes FRED
+      serves only ~3 years of history for this series under ICE licensing terms, so it
+      alone does not cover the full campaign window -- ah.data.splice extends it
+      backward with the Baa-Aaa proxy, flagged is_proxy, upstream of this mapping.
+
+  # --- us block ---
+  policy_rate:
+    kind: series
+    series_id: fred.TB3MS
+    units: pct
+    notes: >-
+      3-month Treasury bill secondary-market rate stands in for the policy rate: no
+      FEDFUNDS/effective-funds-rate series is registered in requirements.yaml. TB3MS is
+      a real, directly registered short-rate series (not a fabricated proxy) and is the
+      closest honest source for a short-term, policy-linked rate at monthly frequency.
+  ust_2y:
+    kind: series
+    series_id: fred.DGS2
+    units: pct
+  ust_10y:
+    kind: series
+    series_id: fred.DGS10
+    units: pct
+  cpi:
+    kind: series
+    series_id: fred.CPI
+    units: index
+    notes: "CPI-U, NSA index level (requirements.yaml units: index); a level, not a YoY rate."
+  hqm_curve:
+    kind: series
+    series_id: treasury.hqm_curve
+    units: pct
+    notes: "10y HQM corporate spot rate via FRED (HQMCB10YR); see requirements.yaml's note."
+  funding_spread:
+    kind: derived
+    expr: funding_stress
+    inputs: [fred.TEDRATE]
+    units: pct
+    notes: >-
+      ah.data.derive.funding_stress(ted) through TEDRATE's 2022-01 retirement
+      (requirements.yaml's fred.TEDRATE note). No SOFR-basis replacement series is
+      registered in requirements.yaml, so the documented post-2022 extension argument
+      (sofr_basis) is omitted here rather than sourced from an unregistered series --
+      this factor's train+validation history is honestly incomplete after 2022-01
+      until such a series is registered under the requirements.yaml WP1.9 rule.
+
+  # --- uk block (inactive; declared, never read -- see active_blocks above) ---
+  bank_rate:
+    kind: unavailable
+    reason: >-
+      uk block inactive (decision J3, CLOSED-deferred); no Step-1 UK series registered.
+      Instructions/WP1.12-UK-CONNECTORS.md scopes the planned boe.bank_rate connector.
+  gilt_nominal_10y:
+    kind: unavailable
+    reason: >-
+      uk block inactive (decision J3); planned boe.glc_nominal_10y connector, see
+      Instructions/WP1.12-UK-CONNECTORS.md.
+  gilt_real_10y:
+    kind: unavailable
+    reason: >-
+      uk block inactive (decision J3); planned boe.glc_real_10y connector, see
+      Instructions/WP1.12-UK-CONNECTORS.md.
+  rpi:
+    kind: unavailable
+    reason: >-
+      uk block inactive (decision J3); planned ons.rpi connector, see
+      Instructions/WP1.12-UK-CONNECTORS.md.
+  cpi_uk:
+    kind: unavailable
+    reason: >-
+      uk block inactive (decision J3); planned ons.cpi connector, see
+      Instructions/WP1.12-UK-CONNECTORS.md.

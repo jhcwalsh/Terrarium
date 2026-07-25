@@ -60,7 +60,13 @@ pass/fail verdict on their own. **The invariant governs**, so
   (this module) and ``ah/eval/g2.py``;
 - *the code that interprets the sealed D4 definitions*: ``ah/strategies.py``;
 - *the code that renders the verdict*: ``ah/battery/report.py`` and
-  ``ah/battery/stylized.py``.
+  ``ah/battery/stylized.py``;
+- *the code that orchestrates metric suites into that verdict, and the code that reads
+  the historical panel feeding* :mod:`ah.eval.reference` *in the first place* (WP2.2
+  Task 1): ``ah/eval/battery.py`` and ``ah/eval/panel.py``. Both are judging code
+  created outside ``src/ah/eval/metrics/``, so per the rule stated two paragraphs up
+  they join this list in the same commit that adds them, rather than sitting outside
+  the hash until someone notices.
 
 This module hashing its own source is intentional and non-circular: the digest lands in
 the lock file, never back inside ``prereg.py``. **Consequence, stated plainly so it is
@@ -180,6 +186,8 @@ _REQUIRED_JUDGED_SOURCES = (
     ("src", "ah", "eval", "g2.py"),
     ("src", "ah", "eval", "reference.py"),
     ("src", "ah", "eval", "prereg.py"),
+    ("src", "ah", "eval", "battery.py"),
+    ("src", "ah", "eval", "panel.py"),
     ("src", "ah", "strategies.py"),
     ("src", "ah", "factors.py"),
     ("src", "ah", "splits.py"),

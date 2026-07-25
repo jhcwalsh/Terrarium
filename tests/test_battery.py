@@ -177,7 +177,10 @@ def test_run_battery_accepts_injected_synthetic_manifest(tmp_path: Path) -> None
         "factor_blocks:\n"
         "  alpha: [alpha_factor]\n"
         "  beta: [beta_factor]\n"
-        "active_blocks: [alpha, beta]\n",
+        "active_blocks: [alpha, beta]\n"
+        "factor_sources:\n"
+        "  alpha_factor: {kind: unavailable, reason: fixture}\n"
+        "  beta_factor: {kind: unavailable, reason: fixture}\n",
         encoding="utf-8",
     )
     synthetic_manifest = load_manifest(factors_path)

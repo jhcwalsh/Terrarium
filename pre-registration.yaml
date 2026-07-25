@@ -55,7 +55,12 @@
 #     src/ah/eval/g2.py;
 #   - the code that interprets the sealed D4 definitions above: src/ah/strategies.py;
 #   - the code that renders the verdict: src/ah/battery/report.py and
-#     src/ah/battery/stylized.py.
+#     src/ah/battery/stylized.py;
+#   - the code that orchestrates metric suites into that verdict, and the code that
+#     reads the historical panel feeding ah.eval.reference in the first place (WP2.2
+#     Task 1): src/ah/eval/battery.py and src/ah/eval/panel.py -- judging code created
+#     outside src/ah/eval/metrics/, joined to this list in the same commit that added
+#     them.
 # prereg.py hashing its own source is intentional and non-circular: the digest lands in
 # pre-registration.lock, never back inside prereg.py.
 # CONSEQUENCE, stated plainly so it is not a surprise during WP2.2: WP2.3 inherits this
@@ -132,17 +137,16 @@ conventions:
   units_of_return_bearing_factors: >-
     equity_mkt, smb, hml, mom and commodities are treated by D4 as monthly returns in
     DECIMAL units (0.01 = +1% for the month). They are used directly, with no
-    transform. What is actually known about their provenance, stated without
-    inference: requirements.yaml registers french.mkt_rf / french.smb / french.hml /
-    french.mom with `units: ret`, and factors.yaml declares equity_mkt / smb / hml /
-    mom in the `global` block -- but NO factor-to-series mapping is declared anywhere
-    in this repository, so which series backs which factor is not yet a fact and is
-    not asserted here. Note in particular that french.mkt_rf is Mkt-RF, an EXCESS
-    return over the risk-free rate, not a total return; if it is later mapped to
-    equity_mkt, every D4 strategy holding equity_mkt inherits that excess-return
-    interpretation. commodities has no registered series at all, so its units are
-    undetermined; D4 assumes it will be return-bearing, and that assumption is
-    recorded here rather than presented as a property of the manifest.
+    transform. As of WP2.2 Task 1, factors.yaml's `factor_sources` section is the
+    factor-to-series mapping, and it is now a fact, not an assumption: equity_mkt maps
+    to french.mkt_rf, smb to french.smb, hml to french.hml, mom to french.mom (all
+    `units: ret` in requirements.yaml). french.mkt_rf is Mkt-RF, an EXCESS return over
+    the risk-free rate, not a total return -- every D4 strategy holding equity_mkt
+    (all five) therefore inherits that excess-return interpretation, stated here
+    plainly rather than left as a downstream inference. commodities has no Step-1
+    series (`factor_sources.commodities.kind: unavailable`, governance/retrofit-
+    register.md RFR-1); D4 assumes it will be return-bearing once sourced, and that
+    assumption is recorded here rather than presented as a property of the manifest.
 
   # Machine-checked version of the prose above: EVERY active factor in factors.yaml
   # (global + us blocks) must appear in exactly one of return_bearing_factors /
@@ -163,16 +167,20 @@ conventions:
     policy_rate, ust_2y, ust_10y, hqm_curve, ig_spread, hy_spread, funding_spread, cpi
     and equity_vol are LEVELS, never period returns: seven of the nine are rates or
     spreads QUOTED IN PERCENT PER ANNUM (a generated value of 4.25 means 4.25 percent,
-    not 0.0425) -- this follows requirements.yaml, which registers the corresponding
-    candidate series (fred.DGS10, fred.DGS2, fred.HY_OAS, fred.TB3MS,
-    treasury.hqm_curve, ...) with `units: pct`. cpi is an index level and equity_vol is
-    a volatility level; neither is a percent-per-annum rate, but both are still a level
-    rather than a return and are excluded from D4 on the same "not a return" basis --
-    no `derived_series` transform is declared for either, so neither currently has a
-    route into a D4 portfolio at all. Levels are never summed with returns and never
-    appear in a strategy's `weights` directly; they enter only through a
-    `derived_series` entry. level_factors below is the sealed, exhaustive, machine-
-    checked version of this list.
+    not 0.0425). As of WP2.2 Task 1, factors.yaml's `factor_sources` section is the
+    definitive factor-to-series mapping (this paragraph previously named "candidate"
+    series before that mapping existed): policy_rate -> fred.TB3MS, ust_2y ->
+    fred.DGS2, ust_10y -> fred.DGS10, hqm_curve -> treasury.hqm_curve, ig_spread ->
+    derived from fred.BAA - fred.AAA, hy_spread -> fred.HY_OAS, funding_spread ->
+    derived from fred.TEDRATE -- all `units: pct` there or in requirements.yaml. cpi
+    maps to fred.CPI (`units: index`), an index level; equity_vol maps to fred.VIX
+    (`units: idx`), a volatility level. Neither cpi nor equity_vol is a
+    percent-per-annum rate, but both are still a level rather than a return and are
+    excluded from D4 on the same "not a return" basis -- no `derived_series` transform
+    is declared for either, so neither currently has a route into a D4 portfolio at
+    all. Levels are never summed with returns and never appear in a strategy's
+    `weights` directly; they enter only through a `derived_series` entry. level_factors
+    below is the sealed, exhaustive, machine-checked version of this list.
   level_factors:
     - policy_rate
     - ust_2y

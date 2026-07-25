@@ -488,6 +488,71 @@ All notable changes to this project are documented here. The project follows
   stricter validation and the widened judged-source set; `pre-registration.yaml` stays
   `sealed: false`. Full suite green (three new tests, two fixtures strengthened, none
   weakened), ruff/pyright clean.
+- **WP2.2 Task 1 — Factor-source mapping, the reference panel reader, the battery
+  orchestrator.** Closes the one genuinely blocking gap WP2.1b left open: no mapping
+  anywhere in the repository bound a factor id (`equity_mkt`, `ust_10y`, ...) to a
+  Step-1 catalog series, so reference statistics could not honestly be computed and
+  `ah.eval.reference`'s `series_id_for` parameter had nothing real to supply. `factors.
+  yaml` gains a `factor_sources:` section, one entry per factor in every block
+  (including inactive `uk`): `kind: series` (one `requirements.yaml` series id,
+  direct), `kind: derived` (one `ah.data.derive` helper over one or more series ids —
+  `ig_spread` = `difference(fred.BAA, fred.AAA)`, `funding_spread` =
+  `funding_stress(fred.TEDRATE)`, no SOFR-basis extension since no such series is
+  registered), or `kind: unavailable` with a required `reason` (`commodities`, per
+  `governance/retrofit-register.md` RFR-1; every `uk` factor, per decision J3 and
+  `Instructions/WP1.12-UK-CONNECTORS.md`'s not-yet-landed connectors — never a
+  fabricated proxy for either). `policy_rate` maps to `fred.TB3MS` (the 3-month T-bill;
+  no FEDFUNDS/effective-funds-rate series is registered, and TB3MS is a real,
+  registered series, not an invented one). `ah.factors.FactorManifest` gains
+  `sources`, `series_id_for()`, and `is_available()`; `load_manifest()` now validates
+  that every declared factor (every block) has exactly one entry and every entry names
+  a real factor. `pre-registration.yaml`'s `conventions` prose is corrected now that
+  the mapping is a fact rather than an assumption — `equity_mkt` is confirmed Mkt-RF,
+  an *excess* return, not a total return, and every level factor's series is named
+  explicitly instead of listed as "candidate". A new test
+  (`test_factor_sources_units_agree_with_prereg_return_level_classification`) asserts
+  `factor_sources`' units and `pre-registration.yaml`'s `return_bearing_factors`/
+  `level_factors` classification can never disagree — a return-bearing factor's units
+  must be exactly `ret`, a level factor's must never be — because these two files are
+  sealed together and a divergence between them is exactly the defect class this
+  project keeps finding; a second test cross-checks every `kind: series` entry's units
+  against `requirements.yaml` itself.
+  `src/ah/eval/panel.py` (new): `build_panel(access, manifest, *, split_reader=...)`
+  turns a `FactorManifest` into one date-indexed `Panel` (`.frame`, `.missing`) over
+  every available active factor, reusing `ah.data.derive`'s existing helpers (never
+  reimplementing a transform) and `ah.data.derive.assemble_panel` for the join. Never
+  reads the holdout — `split_reader` defaults to `DataAccess.train_val`, and the same
+  recording-reader leakage test `tests/test_reference.py` uses (record at `frame()`,
+  not `train_val()`) proves no holdout-era date reaches it.
+  `src/ah/eval/battery.py` (new): the Step-2 battery orchestrator Tasks 2-6 register
+  metric suites into. `MetricSpec`/`MetricResult` (frozen); `SUITES`, a module-level
+  registry populated only via `register_suite()` — adding a suite never requires
+  editing `run_battery()` (proved by a test that registers a throwaway suite and shows
+  it in the next report). `mc_error(fn, ensemble, *, seed, n_subsamples)`: every
+  ensemble-level metric's Monte-Carlo error bar, via disjoint path-subsampling from a
+  fresh `PCG64(seed)` — the batch-means estimator recovers the standard error of a
+  sample-mean metric to the right order of magnitude (tested against a known-variance
+  synthetic ensemble) and is bit-identical for a fixed seed. `run_battery(ensemble, *,
+  reference, prereg, manifest, seed, filtered=None)` looks up each metric's train+
+  validation band (`ReferenceStats`) and sealed/provisional threshold
+  (`PreRegistration`) by name, decides `severity`/`passed`, and emits a `BatteryReport`
+  in both JSON and markdown carrying battery version, a dry-run prereg digest
+  (`prereg.seal(dry_run=True)`), system/vintage ids, `active_blocks`, and per-tier
+  (`monthly`/`1_5yr`/`10yr`/`economic`/`severe`, DN-1.1 §II.6) tables; a `filtered`
+  ensemble's results are reported alongside the unfiltered ones, never replacing them
+  (the acceptance filter may not teach to the exam). Runs end to end on the Step-0 toy
+  engine's output with a throwaway test suite — the plan's own WP2.2 acceptance
+  criterion; the real eight metric suites are Tasks 2-6's scope.
+  Seal bookkeeping: `eval/battery.py` and `eval/panel.py` are judging code created
+  outside `eval/metrics/`, so both join `ah.eval.prereg._REQUIRED_JUDGED_SOURCES` (and
+  its docstring, and `pre-registration.yaml`'s mirrored header prose) in this same
+  commit, with `tests/test_prereg.py`'s pinned judged-source set updated to match.
+  Existing direct `FactorManifest(...)` constructions and hand-written `factors.yaml`
+  fixtures across `tests/test_reference.py`, `tests/test_prereg.py` and
+  `tests/test_battery.py` gained a `factor_sources`/`sources=` entry each (now
+  required); no assertion in any of them was weakened. Full suite green (599 tests, up
+  from 544 at branch start), ruff/pyright clean, coverage gate unaffected;
+  `pre-registration.yaml` stays `sealed: false`.
 
 ## [v0.1.0-g0] — 2026-07-24
 
