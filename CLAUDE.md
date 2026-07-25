@@ -22,8 +22,12 @@ wins for field definitions and the plan wins for process; flag the conflict rath
 resolving it silently.
 
 Plans have **halt conditions** (missing companion documents). Honor them — halt and request
-the document rather than reconstructing a normative spec from memory. Step 2's WP2.5+ is
-currently blocked pending `DN-1.1` and `tier1-synthesis-and-decisions.md` in `docs/`.
+the document rather than reconstructing a normative spec from memory. Step 2's WP2.5+ halt
+condition on `DN-1.1` is discharged: it is vendored (owner-approved) at
+`Instructions/DN1.1-multiyear-generator-design-note.md`, and `ah/eval/reference.py` already
+cites it as normative. `tier1-synthesis-and-decisions.md`, named by the plan's vendoring
+list, is still missing from `docs/` — it is not itself a halt condition, but its absence
+should be re-checked before it is next needed.
 
 ## Commands
 

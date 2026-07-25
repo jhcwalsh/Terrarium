@@ -47,6 +47,10 @@
 #     scan -- a helper module beside the suites, or a judging module anywhere else, joins
 #     the seal only by being added to that list in the same PR that adds the module;
 #   - the statistics the bands are derived from: src/ah/eval/reference.py;
+#   - the split boundaries that define the reference data: src/ah/splits.py, which
+#     hardcodes where train, validation and holdout begin and end -- moving
+#     VALIDATION.end by a year silently changes every band in every block with no lock
+#     violation unless this module is itself hashed;
 #   - the code that compares values to thresholds and decides: src/ah/eval/prereg.py and
 #     src/ah/eval/g2.py;
 #   - the code that interprets the sealed D4 definitions above: src/ah/strategies.py;
@@ -60,6 +64,17 @@
 # amendment in governance/amendment-log.yaml, exactly like an edit to this file.
 # The lock records every hashed file as a repository-relative, forward-slashed path, so a
 # lock sealed on one machine verifies in CI, in a reviewer's clone, and under WSL2.
+#
+# CONSIDERED AND EXCLUDED, deliberately, not by omission:
+#   - src/ah/gen/base.py (Ensemble.factor()) -- the generator layer's container, the
+#     defendant whose output is judged, not the judge itself. Hashing it would turn
+#     every WP2.5-2.9 generator change into a dated amendment, inverting the seal's
+#     purpose: it exists to freeze the judge, not the thing being judged.
+#   - src/ah/battery/thresholds.yaml -- Step-0 legacy threshold data, every entry
+#     status: todo (never blocking today), judged by the sealed battery/report.py but
+#     not itself sealed. Its fate is a WP2.3 decision: seal it explicitly, or state
+#     that this file's thresholds supersede it and it is inert. See
+#     governance/retrofit-register.md.
 
 schema_version: "1.0"
 

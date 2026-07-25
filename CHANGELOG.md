@@ -454,6 +454,40 @@ All notable changes to this project are documented here. The project follows
   check: no row in either the platform table or the new Step 2 section names WP2.3 or the
   pre-registration seal in its "Blocks" column. Full suite unchanged at 541 tests, ruff
   clean — this is a docs-only change and verified not to move either.
+- **WP2.1b final branch review fixes (pre-seal patch, last commit before merge).**
+  Closes the handful of gaps the whole-branch review found that would otherwise become
+  post-hoc amendments once WP2.3 seals. `ah.eval.prereg._REQUIRED_JUDGED_SOURCES` now
+  includes `src/ah/splits.py`: it hardcodes the train/validation/holdout boundaries, so
+  moving `VALIDATION.end` changes every reference band with no lock violation unless the
+  module defining "the reference data" is itself hashed — under Decision 0 (`governance
+  /decision-register.md` row `S2-SEAL`, "the seal covers every module that can influence
+  a pass/fail verdict") that was a miss. `ah.eval.prereg`'s "What the seal covers"
+  docstring and `pre-registration.yaml`'s header comment both gain that category, plus a
+  new "Considered and excluded" note explaining why `ah/gen/base.py`'s `Ensemble.factor()`
+  (the generator layer's container, not the judge) and `src/ah/battery/thresholds.yaml`
+  (Step-0 legacy `status: todo` data, WP2.3 must decide its fate) stay out of the hash on
+  purpose. `_check_conventions` is brought into line with `ah.strategies._require_string_set`:
+  it now rejects an empty, non-string-entry, or duplicate-entry
+  `return_bearing_factors`/`level_factors` list the same way the loader would, closing an
+  overclaim in `verify()`'s own docstring ("never green-lights a file `load_conventions`
+  would raise on" — previously false in three ways). TDD, red first for each of the three
+  rejection modes (`tests/test_prereg.py`); the two `block_addition` fixtures that
+  previously used `level_factors: []` are reworked to carry a genuinely non-empty, valid
+  classification (a second synthetic factor, `a1_lvl`) rather than relaxing the new check.
+  `governance/retrofit-register.md` gains three rows (`RFR-4`..`RFR-6`, append-only): no
+  producer yet exists for `EnsembleMeta.active_blocks` (lands on WP2.2/WP2.4); `verify()`
+  doesn't yet cross-check threshold keys against `reference.py`'s `missing_factors`, so an
+  `enforce` threshold on a factor with no data (e.g. `commodities.skew`) would seal cleanly
+  (lands on WP2.3); `pre-registration.yaml` has no `splits:` section yet even though
+  `splits.py`'s docstring promises one (lands on WP2.3, and now matters more since
+  `splits.py` is hashed). `CLAUDE.md`'s halt-condition sentence is corrected: `DN-1.1` is
+  vendored at `Instructions/DN1.1-multiyear-generator-design-note.md` and already cited as
+  normative by `reference.py`, so that half of WP2.5+'s halt condition is discharged;
+  `tier1-synthesis-and-decisions.md` remains genuinely missing from `docs/` and is not
+  itself a halt condition. No production behaviour changes outside `_check_conventions`'s
+  stricter validation and the widened judged-source set; `pre-registration.yaml` stays
+  `sealed: false`. Full suite green (three new tests, two fixtures strengthened, none
+  weakened), ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

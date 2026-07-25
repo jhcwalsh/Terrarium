@@ -236,6 +236,43 @@ def test_verify_fails_when_conventions_leaves_active_factor_unclassified(tmp_pat
         prereg.verify(loaded, manifest)
 
 
+def test_verify_rejects_empty_conventions_list(tmp_path: Path) -> None:
+    # ah.strategies._require_string_set rejects an empty return_bearing_factors /
+    # level_factors list; verify() must too, or it green-lights a file
+    # load_conventions() would raise on (final branch review, fix 3).
+    doc = _load_real_doc()
+    doc["conventions"]["level_factors"] = []
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    loaded = prereg.load(prereg_path)
+    manifest = load_manifest(factors_path)
+    with pytest.raises(PreRegError, match=r"conventions\.level_factors.*non-empty"):
+        prereg.verify(loaded, manifest)
+
+
+def test_verify_rejects_non_string_entry_in_conventions_list(tmp_path: Path) -> None:
+    doc = _load_real_doc()
+    doc["conventions"]["return_bearing_factors"] = [
+        *doc["conventions"]["return_bearing_factors"],
+        123,
+    ]
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    loaded = prereg.load(prereg_path)
+    manifest = load_manifest(factors_path)
+    with pytest.raises(PreRegError, match=r"conventions\.return_bearing_factors.*non-string"):
+        prereg.verify(loaded, manifest)
+
+
+def test_verify_rejects_duplicate_entry_in_conventions_list(tmp_path: Path) -> None:
+    doc = _load_real_doc()
+    first = doc["conventions"]["level_factors"][0]
+    doc["conventions"]["level_factors"] = [*doc["conventions"]["level_factors"], first]
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    loaded = prereg.load(prereg_path)
+    manifest = load_manifest(factors_path)
+    with pytest.raises(PreRegError, match=r"conventions\.level_factors.*more than once"):
+        prereg.verify(loaded, manifest)
+
+
 def test_verify_fails_when_conventions_classifies_a_non_active_factor(tmp_path: Path) -> None:
     # `ah.strategies._validate_conventions` rejects a conventions block that classifies
     # a factor outside the active set ("must cover exactly the active factor set, no
@@ -554,7 +591,9 @@ def test_verify_resolves_a_lock_read_from_an_unrelated_directory(tmp_path: Path)
 # the default judged-source set is real, non-empty, and recorded in the lock
 # --------------------------------------------------------------------------- #
 
-# Decision 0: the seal covers *every* module that can influence a pass/fail verdict.
+# Decision 0: the seal covers *every* module that can influence a pass/fail verdict --
+# including ah/splits.py, which hardcodes the train/validation/holdout boundaries that
+# define what "the reference data" means (final branch review, fix 1).
 _EXPECTED_JUDGED_SOURCES = frozenset(
     {
         "src/ah/eval/g2.py",
@@ -562,6 +601,7 @@ _EXPECTED_JUDGED_SOURCES = frozenset(
         "src/ah/eval/prereg.py",
         "src/ah/strategies.py",
         "src/ah/factors.py",
+        "src/ah/splits.py",
         "src/ah/battery/report.py",
         "src/ah/battery/stylized.py",
     }
@@ -815,10 +855,17 @@ def test_amendment_with_unknown_type_rejected(tmp_path: Path) -> None:
 
 
 def _write_synthetic_factors(tmp_path: Path, filename: str, active: list[str]) -> Path:
+    # alpha carries a second factor, a1_lvl, classified `level` below -- so the
+    # conventions fixture has a genuinely non-empty, valid level_factors list rather
+    # than the `[]` a prior version of this fixture used (which ah.strategies would
+    # reject as empty; see the module docstring's "hole this task closes" / final
+    # branch review fix 3). a1_lvl is otherwise unused (no derived_series, no
+    # strategy weight), which is fine -- verify() does not require every factor to
+    # be used in a D4 strategy.
     p = tmp_path / filename
     p.write_text(
         "factor_blocks:\n"
-        "  alpha: [a1]\n"
+        "  alpha: [a1, a1_lvl]\n"
         "  beta: [b1]\n"
         "  gamma: [g1]\n"
         f"active_blocks: [{', '.join(active)}]\n",
@@ -849,7 +896,7 @@ def test_block_addition_round_trip(tmp_path: Path) -> None:
             "percent_to_decimal": 0.01,
             "months_per_year": 12.0,
             "return_bearing_factors": ["a1", "b1"],
-            "level_factors": [],
+            "level_factors": ["a1_lvl"],
             "rebalance_cadences": ["monthly"],
             "static_weights_composition": "test fixture",
         },
@@ -960,7 +1007,7 @@ def test_apply_block_addition_rejects_missing_new_pair(tmp_path: Path) -> None:
             "percent_to_decimal": 0.01,
             "months_per_year": 12.0,
             "return_bearing_factors": ["a1", "b1"],
-            "level_factors": [],
+            "level_factors": ["a1_lvl"],
             "rebalance_cadences": ["monthly"],
             "static_weights_composition": "test fixture",
         },

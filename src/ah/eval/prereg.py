@@ -50,6 +50,12 @@ pass/fail verdict on their own. **The invariant governs**, so
   ``_REQUIRED_JUDGED_SOURCES``. WP2.2 must do that in the same PR that adds the module,
   or the module silently sits outside the hash;
 - *the statistics the bands are derived from*: ``ah/eval/reference.py``;
+- *the split boundaries that define the reference data*: ``ah/splits.py``, which
+  hardcodes where ``train``, ``validation`` and ``holdout`` begin and end. Moving
+  ``VALIDATION.end`` by a year silently changes every band in every block with no lock
+  violation unless this module is itself hashed -- it defines what "train+validation"
+  *means*, which is exactly as load-bearing as the code that computes statistics over
+  it (final branch review finding, closed here);
 - *the code that compares values to thresholds and decides*: ``ah/eval/prereg.py``
   (this module) and ``ah/eval/g2.py``;
 - *the code that interprets the sealed D4 definitions*: ``ah/strategies.py``;
@@ -62,6 +68,26 @@ not a surprise during WP2.2:** WP2.3 inherits this default, and once it seals, a
 to *any* file in that list -- including a refactor of ``prereg.py`` or a new statistic
 in ``reference.py`` -- requires a dated amendment in
 ``governance/amendment-log.yaml``.
+
+Considered and excluded
+~~~~~~~~~~~~~~~~~~~~~~~~
+Two modules can influence a pass/fail verdict and are deliberately **not** in
+:data:`_REQUIRED_JUDGED_SOURCES`; the reasoning is recorded here rather than left to be
+rediscovered:
+
+- ``ah/gen/base.py`` -- ``Ensemble.factor()`` resolves every D4 strategy leg (the
+  lookup a strategy's ``weights``/``params`` series names go through at evaluation
+  time). It is the generator layer's *container*, though -- the defendant whose output
+  is judged, not the judge itself. Hashing it would turn every WP2.5-2.9 generator
+  change (a new block, a new factor, a bugfix inside ``Ensemble``) into a dated
+  amendment, which inverts the seal's purpose: it exists to freeze the judge, not to
+  freeze the thing being judged.
+- ``src/ah/battery/thresholds.yaml`` -- Step-0 legacy threshold data, every entry
+  ``status: todo`` (never blocking today), judged by the sealed ``ah/battery/report.py``
+  but not itself sealed. Its fate is a WP2.3 decision, not one this patch makes for it:
+  WP2.3 must either seal it explicitly, or state that ``pre-registration.yaml``'s
+  thresholds supersede it and it is inert. Left as an open obligation, not a silent
+  omission -- see ``governance/retrofit-register.md``.
 
 Independent verifiability (why paths in the lock are relative)
 ---------------------------------------------------------------
@@ -94,7 +120,14 @@ both, and nothing outside the active set. That last clause is
 :func:`ah.strategies._validate_conventions`'s own rule, verbatim in effect: a check
 whose stated purpose is closing a divergence with :mod:`ah.strategies` must not open a
 new one, so :func:`verify` never green-lights a file
-:func:`ah.strategies.load_conventions` would raise on. (The check reads
+:func:`ah.strategies.load_conventions` would raise on. To make that true rather than
+aspirational, :func:`_check_string_set_field` also mirrors
+:func:`ah.strategies._require_string_set`'s own three rejection modes for each of
+``return_bearing_factors``/``level_factors`` individually, before the cross-list
+checks below run: neither list may be empty, every entry must be a non-empty string,
+and neither list may repeat an entry (a final branch review finding -- the earlier
+version of this check accepted all three, which ``ah.strategies`` would raise on).
+(The check reads
 ``PreRegistration.raw`` directly rather than calling :mod:`ah.strategies`, which would
 re-read the file from a path this module is not guaranteed to have -- e.g. after
 :func:`apply_block_addition` produces an in-memory-only result.) A block addition
@@ -149,6 +182,7 @@ _REQUIRED_JUDGED_SOURCES = (
     ("src", "ah", "eval", "prereg.py"),
     ("src", "ah", "strategies.py"),
     ("src", "ah", "factors.py"),
+    ("src", "ah", "splits.py"),
     ("src", "ah", "battery", "report.py"),
     ("src", "ah", "battery", "stylized.py"),
 )
@@ -392,6 +426,39 @@ def load(path: Path | None = None) -> PreRegistration:
 # --------------------------------------------------------------------------- #
 
 
+def _check_string_set_field(
+    conventions: Mapping[str, Any], key: str, errors: list[str]
+) -> set[str] | None:
+    """Validate ``conventions[key]`` exactly as :func:`ah.strategies._require_string_set`
+    would: a non-empty list of distinct, non-empty strings.
+
+    Mirrors that function's three rejection modes -- empty (or missing/non-list),
+    non-string entries, and duplicate entries -- so :func:`verify` never green-lights a
+    file :func:`ah.strategies.load_conventions` would raise on (see the module
+    docstring's "The hole this task closes"). Returns the field as a ``set[str]`` when
+    valid; returns ``None`` and appends to ``errors`` otherwise, naming the offending
+    key and value(s).
+    """
+    value = conventions.get(key)
+    if not isinstance(value, list) or not value:
+        errors.append(f"conventions.{key} must be a non-empty list of strings, got {value!r}")
+        return None
+    non_strings = sorted({repr(v) for v in value if not isinstance(v, str) or not v})
+    if non_strings:
+        errors.append(f"conventions.{key} has non-string/empty entry(ies) {non_strings}")
+        return None
+    seen: set[str] = set()
+    duplicates: set[str] = set()
+    for entry in value:
+        if entry in seen:
+            duplicates.add(entry)
+        seen.add(entry)
+    if duplicates:
+        errors.append(f"conventions.{key} lists {sorted(duplicates)} more than once")
+        return None
+    return set(value)
+
+
 def _check_conventions(raw: Mapping[str, Any], manifest: FactorManifest, errors: list[str]) -> None:
     """The hole-closing check -- see the module docstring."""
     conventions = raw.get("conventions")
@@ -403,16 +470,11 @@ def _check_conventions(raw: Mapping[str, Any], manifest: FactorManifest, errors:
     if missing_keys:
         errors.append(f"conventions block is missing required key(s) {missing_keys}")
 
-    return_bearing = conventions.get("return_bearing_factors")
-    level = conventions.get("level_factors")
-    if not isinstance(return_bearing, list) or not isinstance(level, list):
-        errors.append(
-            "conventions.return_bearing_factors and conventions.level_factors must both be lists"
-        )
+    rb_set = _check_string_set_field(conventions, "return_bearing_factors", errors)
+    lv_set = _check_string_set_field(conventions, "level_factors", errors)
+    if rb_set is None or lv_set is None:
         return
 
-    rb_set = set(return_bearing)
-    lv_set = set(level)
     overlap = sorted(rb_set & lv_set)
     if overlap:
         errors.append(
