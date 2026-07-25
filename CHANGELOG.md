@@ -649,6 +649,51 @@ All notable changes to this project are documented here. The project follows
   required); no assertion in any of them was weakened. Full suite green (599 tests, up
   from 544 at branch start), ruff/pyright clean, coverage gate unaffected;
   `pre-registration.yaml` stays `sealed: false`.
+- **WP2.2 Task 2 — `eval/metrics/monthly.py`, the monthly-tier stylized-fact panel.**
+  All nine STEP2-GENERATOR-PLAN §WP2.2 statistics (excess kurtosis, skew, Hill tail
+  index at 5%/1%, ACF of returns lags 1-5, ACF of |deviation| lags 1-24 plus a fitted
+  exponential-decay rate, aggregational Gaussianity at 1/3/12-month horizons, leverage
+  correlation, correlation-matrix distance, crisis-conditional correlation lift), each
+  unit-tested against a closed-form or simulated ground truth with a commented,
+  justified tolerance. Reuses `ah.eval.reference`'s existing `_skew`,
+  `_excess_kurtosis`, `_acf1`-generalization, `_correlation` and `_crisis_corr_lift`
+  definitions verbatim rather than restating any of them (this project has already
+  produced one sign-inverted, independently-restated metric defect); every reused
+  definition has a test asserting numeric agreement with `reference.py` on the same
+  input, not just a docstring claim. New statistics (Hill, ACF beyond lag 1,
+  aggregational Gaussianity, leverage correlation, the decay fit, correlation-matrix
+  distance) are each defined exactly once. Two pooling conventions, stated once in the
+  module docstring and never mixed: pooled path×month observations for
+  marginal-distribution statistics (kurtosis, skew, Hill, corr-matrix distance, crisis
+  lift), and per-path-then-averaged for time-order-dependent ones (ACF, leverage,
+  decay) — concatenating paths end to end before an ACF would manufacture a spurious
+  correlation at every path seam. A factor absent from a given ensemble (e.g.
+  `commodities`, `kind: unavailable`) returns NaN rather than raising, so one
+  inapplicable metric cannot crash a whole battery run.
+  Naming deviates from the brief's suggested identifiers in two stated, deliberate
+  ways: `crisis_corr_lift` (not `crisis_conditional_corr_lift`) to match
+  `CROSS_BLOCK_STATS`'s existing key exactly, so the historical band shows up next to
+  the generated value automatically in every report; `acf_r_lag1`/`acf_abs_lag1` are
+  **not** aliased to `reference.py`'s `acf_1`/`acf_abs_1` (uniform lag-1..N naming
+  preferred over an asymmetric special case) — recorded as an open naming question for
+  WP2.3, with numeric agreement still asserted by test regardless of the name.
+  `corr_matrix_distance` (Frobenius norm of the difference, documented against the
+  alternative Herdin et al. similarity measure) is scoped to the cross-block factor
+  pairs `reference.py` actually computes a correlation for — `reference.py` has no
+  within-block pairwise-correlation statistic yet, a gap recorded here, not silently
+  worked around.
+  Registration is a builder, `build_monthly_suite(manifest, reference) ->
+  tuple[MetricSpec, ...]`, plus `register_monthly_suite(manifest, reference)` calling
+  `register_suite("monthly", ...)` — a deliberate deviation from the "register at
+  import" pattern `ah.eval.battery`'s docstring describes, because `corr_matrix_distance`
+  structurally needs a computed `ReferenceStats` (unavailable at plain import, which has
+  no live `DataAccess`) to even construct its specs; splitting the suite across two
+  registration paths was rejected in favour of one uniform builder. No caller wires
+  this into a real battery run yet (no CLI/G2 orchestration step exists to compute a
+  real `ReferenceStats` and call `register_monthly_suite` — that wiring is a later
+  task's job); `ah.eval.prereg._METRIC_SUITE_NAMES` already listed `"monthly"` (Task 1
+  landed it defensively), so no seal-list edit was needed. Full suite green (669
+  tests, up from 637 at task start — 32 new), ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 
