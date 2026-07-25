@@ -370,8 +370,8 @@ def _require_exact_params(
 # as an error: the fields below only gate behaviour -- the level-factor guard in
 # `_validate_weights` and the rebalance-cadence guard in `_validate_strategy` -- when
 # the sealed file actually declares them. The real `pre-registration.yaml` always
-# declares a full block (checked by `test_every_active_factor_is_classified`), so this
-# default is never load-bearing for it.
+# declares a full block, exhaustive over the active factor set, so this default is
+# never load-bearing for it.
 _DEFAULT_CONVENTIONS = Conventions(
     percent_to_decimal=0.01,
     months_per_year=12.0,
