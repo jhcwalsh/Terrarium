@@ -70,24 +70,60 @@ conventions:
     undetermined; D4 assumes it will be return-bearing, and that assumption is
     recorded here rather than presented as a property of the manifest.
 
+  # Machine-checked version of the prose above: EVERY active factor in factors.yaml
+  # (global + us blocks) must appear in exactly one of return_bearing_factors /
+  # level_factors below. The loader (ah.strategies) enforces both exhaustiveness and
+  # disjointness at load time, and rejects a `d4_strategies.*.weights` entry that
+  # names a level_factors member directly -- the only route by which a level enters a
+  # D4 portfolio is a declared `derived_series` (see rationale.d4_derived_series). This
+  # is the sealed source for that rule; there is no separate hand-maintained list
+  # anywhere else, in code or in tests.
+  return_bearing_factors:
+    - equity_mkt
+    - smb
+    - hml
+    - mom
+    - commodities
+
   units_of_level_factors: >-
-    policy_rate, ust_2y, ust_10y, hqm_curve, ig_spread, hy_spread and funding_spread
-    are LEVELS QUOTED IN PERCENT: a generated value of 4.25 means 4.25 percent per
-    annum, not 0.0425. This follows requirements.yaml, which registers the
-    corresponding candidate series (fred.DGS10, fred.DGS2, fred.HY_OAS, fred.TB3MS,
-    treasury.hqm_curve, ...) with `units: pct`. Levels are never summed with returns
-    and never appear in a strategy's `weights`; they enter only through a
-    `derived_series` entry.
+    policy_rate, ust_2y, ust_10y, hqm_curve, ig_spread, hy_spread, funding_spread, cpi
+    and equity_vol are LEVELS, never period returns: seven of the nine are rates or
+    spreads QUOTED IN PERCENT PER ANNUM (a generated value of 4.25 means 4.25 percent,
+    not 0.0425) -- this follows requirements.yaml, which registers the corresponding
+    candidate series (fred.DGS10, fred.DGS2, fred.HY_OAS, fred.TB3MS,
+    treasury.hqm_curve, ...) with `units: pct`. cpi is an index level and equity_vol is
+    a volatility level; neither is a percent-per-annum rate, but both are still a level
+    rather than a return and are excluded from D4 on the same "not a return" basis --
+    no `derived_series` transform is declared for either, so neither currently has a
+    route into a D4 portfolio at all. Levels are never summed with returns and never
+    appear in a strategy's `weights` directly; they enter only through a
+    `derived_series` entry. level_factors below is the sealed, exhaustive, machine-
+    checked version of this list.
+  level_factors:
+    - policy_rate
+    - ust_2y
+    - ust_10y
+    - hqm_curve
+    - ig_spread
+    - hy_spread
+    - funding_spread
+    - cpi
+    - equity_vol
 
   percent_to_decimal: 0.01
+  months_per_year: 12.0
   percent_to_decimal_statement: >-
     THE ONE CONVERSION, used by every transform below with no exception: a percent
-    level is converted to decimal by multiplying by 0.01, and the conversion is
-    applied ONCE, to the whole transform expression. Both terms of every transform
-    below (the carry term and the duration term) are linear in the percent level, so
-    a single leading factor of 0.01 converts the entire result to a decimal monthly
-    return. An annual percent rate is converted to a monthly carry by dividing by 12
-    (simple, not compounded: y/12, not (1+y)^(1/12)-1).
+    level is converted to decimal by multiplying by percent_to_decimal (0.01 above),
+    and the conversion is applied ONCE, to the whole transform expression. Both terms
+    of every transform below (the carry term and the duration term) are linear in the
+    percent level, so a single leading factor of percent_to_decimal converts the entire
+    result to a decimal monthly return. An annual percent rate is converted to a
+    monthly carry by dividing by months_per_year (12.0 above; simple, not compounded:
+    y/12, not (1+y)^(1/12)-1). Both percent_to_decimal and months_per_year are sealed
+    values, read directly by ah.eval.metrics.tails at import time -- not independent
+    constants duplicated in that module -- so an amendment to either value here changes
+    every transform's output, and a test asserts the module's constants equal these.
 
   warm_up: >-
     ONE WARM-UP RULE for the whole file, applied identically by every definition: any
@@ -114,6 +150,37 @@ conventions:
     a rule can never silently read a different factor than the one sealed. Every other
     `params` key is numeric.
 
+  rebalance_cadences:
+    - monthly
+  rebalance_convention: >-
+    ONE REBALANCE CADENCE is implemented in this version: `monthly`, listed in
+    rebalance_cadences above. Every D4 strategy's `rebalance` field is checked at load
+    time against that list, and the loader rejects any value not in it -- `rebalance`
+    is stored data that the loader reads, not decorative metadata. `monthly` means
+    portfolio weights are reset to their sealed target at the start of every month, with
+    no drift carried between rebalances and no compounding within a month: each
+    strategy's return for month t is computed directly from month t's resolved series
+    values at the sealed weights (see static_weights_composition below for the
+    static-weight case; the two rule strategies state their own per-month arithmetic
+    directly in their `notes`). There is no other cadence implemented; declaring one
+    (e.g. `quarterly`) without also adding the code that computes a quarterly return
+    would be a self-contradictory amendment, so rebalance_cadences is exactly the set
+    of cadences ah.eval.metrics.tails can compute today.
+
+  static_weights_composition: >-
+    For every `kind: static_weights` strategy (eqw_factors, sixty_forty,
+    endowment_proxy), the realized return at month t is the ARITHMETIC WEIGHTED SUM of
+    that month's resolved series values: sum_i weight_i * series_i_t, where series_i_t
+    is either a return-bearing active factor's value directly or a `derived_series`
+    value (already a monthly decimal return, per the transforms declared below). There
+    is NO COMPOUNDING across the weighted legs and no cross-term between them -- each
+    leg is linear and independent for the month, consistent with rebalance_convention's
+    monthly reset. This is the same arithmetic the two `kind: rule` strategies state
+    explicitly for their own legs in their `notes` (momentum's realized return =
+    position_t * target_series_t; carry's = long_weight * long_series_t +
+    funding_weight * funding_series_t); static_weights strategies use identical
+    arithmetic, they simply have no per-leg formula field of their own to state it in.
+
 # --------------------------------------------------------------------------- #
 # Derived series -- declared BEFORE d4_strategies, because strategies reference them.
 #
@@ -137,7 +204,9 @@ derived_series:
       applied to the whole bracket, and both terms inside the bracket are in percent.
       SIGN: a RISING yield produces a NEGATIVE r_t, because the price term dominates
       for any realistic monthly yield change -- this is the whole point of the
-      transform and is asserted directly by test_govt_tr_10y_is_negative_when_yields_rise.
+      transform: a rising 10y yield must book a monthly loss on the total-return leg,
+      not a gain, for any month 0..lookback where the yield change is not implausibly
+      large relative to 1/D.
       LAG: r_t uses y_{t-1} for the carry term and the t-1 -> t change for the price
       term, so month 0 has no defined value and is 0.0 by the single warm-up rule
       (conventions.warm_up). duration_years = 8.5 is the sealed parameter: the
@@ -157,10 +226,12 @@ derived_series:
       month-end spread earned over one month (s_{t-1}/12); and price, minus spread
       duration times the spread change (-SD*(s_t - s_{t-1})). Same single leading 0.01
       percent-to-decimal conversion, same lag, same warm-up (r_0 = 0.0).
-      SIGN: a WIDENING spread produces a NEGATIVE r_t -- asserted directly by
-      test_credit_xs_hy_is_negative_when_spreads_widen. spread_duration_years = 4.0 is
-      the sealed parameter, the approximate spread duration of the broad US high-yield
-      index. Default losses are deliberately NOT modelled: this is a spread-carry and
+      SIGN: a WIDENING spread produces a NEGATIVE r_t, for the same reason as
+      govt_tr_10y above -- the price term dominates any realistic monthly spread
+      change, so credit excess return must book a loss when spreads widen, not a gain.
+      spread_duration_years = 4.0 is the sealed parameter, the approximate spread
+      duration of the broad US high-yield index. Default losses are deliberately NOT
+      modelled: this is a spread-carry and
       spread-change decomposition only, so realized credit losses from defaults are
       absent and the series overstates high-yield excess return in a default wave.
       Sealed as a stated simplification.

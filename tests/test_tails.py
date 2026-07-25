@@ -17,6 +17,7 @@ policy_rate must keep using level magnitudes.
 from __future__ import annotations
 
 from collections.abc import Mapping
+from pathlib import Path
 from statistics import NormalDist
 
 import numpy as np
@@ -26,7 +27,13 @@ from numpy.random import PCG64, Generator
 from ah.eval.metrics import tails
 from ah.eval.metrics.tails import d4_tail_table, derived_series_values, strategy_returns, var_es
 from ah.gen.base import Ensemble, EnsembleMeta, UnknownFactorError
-from ah.strategies import DerivedSeries, Strategy, StrategyError, load_d4_strategies
+from ah.strategies import (
+    DerivedSeries,
+    Strategy,
+    StrategyError,
+    load_d4_strategies,
+    load_derived_series,
+)
 
 _FACTOR_NAMES = [
     "equity_mkt",
@@ -386,6 +393,63 @@ def test_d4_tail_table_default_strategies_is_the_loaded_object(monkeypatch) -> N
 
 
 # --------------------------------------------------------------------------- #
+# Fix pass 2, MINOR 6 -- strategies and derived series must come from the same source
+# --------------------------------------------------------------------------- #
+
+
+def test_d4_tail_table_requires_derived_when_strategies_given_explicitly() -> None:
+    """Passing `strategies` from a non-default file without pairing `derived` would
+    silently evaluate it against the DEFAULT file's transforms -- reject it instead."""
+    strategies = load_d4_strategies()
+    with pytest.raises(StrategyError, match="derived"):
+        d4_tail_table(_plausible_ensemble(n_paths=2, months=15), strategies=strategies)
+
+
+def test_d4_tail_table_pairs_explicit_strategies_with_matching_derived(tmp_path: Path) -> None:
+    """A strategy and derived-series pair loaded from the SAME non-default file must
+    be usable together, and must produce different numbers than pairing the same
+    strategy with the DEFAULT file's derived series -- proving the pairing matters
+    rather than being accepted vacuously."""
+    custom = tmp_path / "pre-registration.yaml"
+    custom.write_text(
+        "derived_series:\n"
+        "  govt_tr_10y:\n"
+        "    from: ust_10y\n"
+        "    transform: bond_total_return\n"
+        "    params: {duration_years: 3.0}\n"
+        '    formula: "r_t = 0.01 * ( y_{t-1}/12 - D*(y_t - y_{t-1}) )"\n'
+        "    notes: fixture, deliberately a different duration than the default file\n"
+        "d4_strategies:\n"
+        "  only:\n"
+        "    kind: static_weights\n"
+        "    rebalance: monthly\n"
+        "    lookback: null\n"
+        "    rule: null\n"
+        "    weights: {equity_mkt: 0.6, govt_tr_10y: 0.4}\n"
+        "    params: {}\n"
+        "    notes: fixture\n",
+        encoding="utf-8",
+    )
+    strategies = load_d4_strategies(custom)
+    derived = load_derived_series(custom)
+    ensemble = _plausible_ensemble(n_paths=5, months=24)
+
+    table = d4_tail_table(ensemble, strategies=strategies, derived=derived)
+
+    expected_returns = strategy_returns(ensemble, strategies[0], derived)
+    expected_var95, expected_es95 = var_es(expected_returns, 0.95)
+    assert table["only"]["var_95"] == pytest.approx(expected_var95)
+    assert table["only"]["es_95"] == pytest.approx(expected_es95)
+
+    # Same strategy, but paired (wrongly) with the DEFAULT file's derived series
+    # (duration_years=8.5, not this fixture's 3.0) -- must disagree, or this test
+    # would not be able to catch the mismatched-source defect at all.
+    mismatched_returns = strategy_returns(ensemble, strategies[0], load_derived_series())
+    mismatched_var95, _ = var_es(mismatched_returns, 0.95)
+    assert mismatched_var95 != pytest.approx(expected_var95)
+
+
+# --------------------------------------------------------------------------- #
 # momentum rule
 # --------------------------------------------------------------------------- #
 
@@ -575,3 +639,46 @@ def test_unknown_kind_raises() -> None:
     )
     with pytest.raises(StrategyError, match="unknown kind"):
         strategy_returns(ensemble, strategy, _DERIVED)
+
+
+# --------------------------------------------------------------------------- #
+# Fix pass 2, MINOR 8 -- _lagged_carry_minus_duration dtype/shape robustness
+# --------------------------------------------------------------------------- #
+
+
+def test_lagged_carry_minus_duration_rejects_non_2d_input() -> None:
+    """Previously an IndexError from `level.shape[1]`; now a named StrategyError."""
+    with pytest.raises(StrategyError, match="2-D"):
+        tails._lagged_carry_minus_duration(np.array([4.0, 4.5, 4.2]), 8.5)
+
+
+def test_lagged_carry_minus_duration_output_is_always_float64() -> None:
+    level_int = np.array([[4, 5, 6]], dtype=np.int64)
+    result = tails._lagged_carry_minus_duration(level_int, 8.5)
+    assert result.dtype == np.float64
+
+
+def test_lagged_carry_minus_duration_computes_at_float64_precision_for_float32_input() -> None:
+    """Under NumPy's NEP 50 promotion rules, `float32_array / python_float` stays
+    float32 -- so computing `previous`/`change` from the raw (possibly float32) input,
+    only casting the zeroed `out` array to float64, silently loses precision. The
+    fixed function casts the whole input to float64 before any arithmetic."""
+    raw = [4.123456789, 4.567891234, 4.234567891]
+    level32 = np.array([raw], dtype=np.float32)
+
+    # What the function must match: upcast to float64 first, then compute.
+    upcast_first = tails._lagged_carry_minus_duration(level32.astype(np.float64), 8.5)
+
+    # What the OLD implementation computed: `previous`/`change` sliced straight from
+    # the float32 array, so under NEP 50 the division/multiplication stay float32.
+    previous32 = level32[:, :-1]
+    change32 = level32[:, 1:] - previous32
+    old_out = np.zeros((1, len(raw)), dtype=np.float64)
+    old_out[:, 1:] = 0.01 * (previous32 / 12.0 - 8.5 * change32)
+
+    result = tails._lagged_carry_minus_duration(level32, 8.5)
+
+    assert result.dtype == np.float64
+    np.testing.assert_array_equal(result, upcast_first)
+    # Confirms this test is not vacuous: the old code path really did disagree.
+    assert not np.array_equal(result, old_out)

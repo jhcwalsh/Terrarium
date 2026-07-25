@@ -26,30 +26,17 @@ from ah.factors import load_manifest
 from ah.strategies import (
     KNOWN_RULES,
     KNOWN_TRANSFORMS,
+    Conventions,
     DerivedSeries,
     Strategy,
     StrategyError,
+    load_conventions,
     load_d4_strategies,
     load_derived_series,
 )
 
 _EXPECTED_IDS = {"eqw_factors", "sixty_forty", "endowment_proxy", "momentum", "carry"}
 _EXPECTED_DERIVED = {"govt_tr_10y", "credit_xs_hy", "cash_tr_1m"}
-
-# Level/rate/spread factors: these must never appear in a strategy's weights.
-_LEVEL_FACTORS = frozenset(
-    {
-        "policy_rate",
-        "ust_2y",
-        "ust_10y",
-        "cpi",
-        "hqm_curve",
-        "funding_spread",
-        "ig_spread",
-        "hy_spread",
-        "equity_vol",
-    }
-)
 
 _DERIVED_BLOCK = """derived_series:
   govt_tr_10y:
@@ -58,6 +45,21 @@ _DERIVED_BLOCK = """derived_series:
     params: {duration_years: 8.5}
     formula: "r_t = 0.01 * ( y_{t-1}/12 - D*(y_t - y_{t-1}) )"
     notes: fixture
+"""
+
+# A complete, self-contained `conventions:` block for fixtures that exercise
+# conventions-driven behaviour (level-factor rejection, rebalance cadences, ...). The
+# factor classification must cover exactly the REAL active factor set: `load_manifest()`
+# always reads the real repo-root `factors.yaml`, never a fixture-local one, so this
+# has to match it (global + us blocks, 14 factors) regardless of which
+# `pre-registration.yaml` fixture it is embedded in.
+_CONVENTIONS_BLOCK = """conventions:
+  percent_to_decimal: 0.01
+  months_per_year: 12.0
+  return_bearing_factors: [equity_mkt, smb, hml, mom, commodities]
+  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread, equity_vol]
+  rebalance_cadences: [monthly]
+  static_weights_composition: fixture
 """
 
 
@@ -118,9 +120,14 @@ def test_every_referenced_series_is_an_active_factor_or_a_derived_series() -> No
 
 
 def test_no_level_factor_is_weighted_directly() -> None:
-    """The defect this whole layer exists to prevent: a level summed with returns."""
+    """The defect this whole layer exists to prevent: a level summed with returns.
+
+    IMPORTANT 2 fix: driven from the sealed `conventions.level_factors`, not a
+    hand-maintained frozenset duplicating the YAML prose in this test file.
+    """
+    level_factors = load_conventions().level_factors
     for strategy in load_d4_strategies():
-        leaked = _LEVEL_FACTORS & set(strategy.weights)
+        leaked = level_factors & set(strategy.weights)
         assert not leaked, (
             f"{strategy.strategy_id} weights level factor(s) {sorted(leaked)} directly; "
             f"levels may enter only through a declared derived series"
@@ -649,3 +656,190 @@ def test_known_rules_matches_the_tails_dispatch() -> None:
 
 def test_known_transforms_matches_the_tails_transform_dispatch() -> None:
     assert set(tails._TRANSFORM_DISPATCH) == KNOWN_TRANSFORMS
+
+
+# --------------------------------------------------------------------------- #
+# Fix pass 2, IMPORTANT 1 -- percent_to_decimal and months_per_year are sealed data
+# --------------------------------------------------------------------------- #
+
+
+def test_conventions_declares_percent_to_decimal_and_months_per_year() -> None:
+    conventions = load_conventions()
+    assert conventions.percent_to_decimal == pytest.approx(0.01)
+    assert conventions.months_per_year == pytest.approx(12.0)
+
+
+def test_tails_pct_to_decimal_and_months_per_year_match_sealed_conventions() -> None:
+    """The claim `pre-registration.yaml` makes about itself, machine-checked: the
+    transform module is driven by the sealed conventions, not by independent
+    constants that an amendment could no-op past."""
+    conventions = load_conventions()
+    assert pytest.approx(conventions.percent_to_decimal) == tails._PCT_TO_DECIMAL
+    assert pytest.approx(conventions.months_per_year) == tails._MONTHS_PER_YEAR
+
+
+def test_conventions_missing_months_per_year_raises(tmp_path: Path) -> None:
+    bad = _write(
+        tmp_path,
+        "conventions:\n"
+        "  percent_to_decimal: 0.01\n"
+        "  return_bearing_factors: [equity_mkt]\n"
+        "  level_factors: [ust_10y]\n"
+        "  rebalance_cadences: [monthly]\n"
+        "  static_weights_composition: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="months_per_year"):
+        load_conventions(bad)
+
+
+def test_conventions_missing_percent_to_decimal_raises(tmp_path: Path) -> None:
+    bad = _write(
+        tmp_path,
+        "conventions:\n"
+        "  months_per_year: 12.0\n"
+        "  return_bearing_factors: [equity_mkt]\n"
+        "  level_factors: [ust_10y]\n"
+        "  rebalance_cadences: [monthly]\n"
+        "  static_weights_composition: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="percent_to_decimal"):
+        load_conventions(bad)
+
+
+def test_conventions_absent_block_loads_a_permissive_default(tmp_path: Path) -> None:
+    """A file with no `conventions:` key at all (most hand-written test fixtures in
+    this file) must not error -- only the real `pre-registration.yaml` is required to
+    declare the full block."""
+    bad = _write(tmp_path, "d4_strategies:\n  x:\n    kind: static_weights\n")
+    conventions = load_conventions(bad)
+    assert conventions == Conventions(
+        percent_to_decimal=0.01,
+        months_per_year=12.0,
+        return_bearing_factors=frozenset(),
+        level_factors=frozenset(),
+        rebalance_cadences=frozenset(),
+        static_weights_composition="",
+    )
+
+
+def test_load_conventions_is_cached_by_identity() -> None:
+    assert load_conventions() is load_conventions()
+
+
+# --------------------------------------------------------------------------- #
+# Fix pass 2, IMPORTANT 2 (subsumes MINOR 3) -- level-vs-return classification is
+# sealed data, exhaustive over the active factor set, and enforced at load time
+# --------------------------------------------------------------------------- #
+
+
+def test_conventions_classification_is_exhaustive_and_disjoint_over_active_factors() -> None:
+    conventions = load_conventions()
+    active = frozenset(load_manifest().active_factors())
+    assert conventions.return_bearing_factors | conventions.level_factors == active
+    assert not (conventions.return_bearing_factors & conventions.level_factors)
+
+
+def test_conventions_level_factors_includes_cpi_and_equity_vol() -> None:
+    """MINOR 3: the prose previously omitted these two; the sealed list must not."""
+    assert {"cpi", "equity_vol"} <= load_conventions().level_factors
+
+
+def test_level_factor_in_weights_raises_naming_it(tmp_path: Path) -> None:
+    bad = _write(
+        tmp_path,
+        _CONVENTIONS_BLOCK + "d4_strategies:\n"
+        "  s:\n"
+        "    kind: static_weights\n"
+        "    rebalance: monthly\n"
+        "    lookback: null\n"
+        "    rule: null\n"
+        "    weights: {equity_mkt: 0.6, ust_10y: 0.4}\n"
+        "    params: {}\n"
+        "    notes: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="ust_10y"):
+        load_d4_strategies(bad)
+
+
+def test_conventions_classification_missing_a_factor_raises(tmp_path: Path) -> None:
+    bad = _write(
+        tmp_path,
+        "conventions:\n"
+        "  percent_to_decimal: 0.01\n"
+        "  months_per_year: 12.0\n"
+        "  return_bearing_factors: [equity_mkt, smb, hml, mom, commodities]\n"
+        "  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread]\n"
+        "  rebalance_cadences: [monthly]\n"
+        "  static_weights_composition: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="equity_vol"):
+        load_conventions(bad)
+
+
+def test_conventions_classification_overlap_raises(tmp_path: Path) -> None:
+    bad = _write(
+        tmp_path,
+        "conventions:\n"
+        "  percent_to_decimal: 0.01\n"
+        "  months_per_year: 12.0\n"
+        "  return_bearing_factors: [equity_mkt, smb, hml, mom, commodities, ust_10y]\n"
+        "  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread, equity_vol]\n"
+        "  rebalance_cadences: [monthly]\n"
+        "  static_weights_composition: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="ust_10y"):
+        load_conventions(bad)
+
+
+# --------------------------------------------------------------------------- #
+# Fix pass 2, MINOR 4 -- `rebalance` is sealed data the loader reads
+# --------------------------------------------------------------------------- #
+
+
+def test_conventions_declares_monthly_as_a_rebalance_cadence() -> None:
+    assert "monthly" in load_conventions().rebalance_cadences
+
+
+def test_every_sealed_strategy_uses_a_declared_rebalance_cadence() -> None:
+    cadences = load_conventions().rebalance_cadences
+    for strategy in load_d4_strategies():
+        assert strategy.rebalance in cadences, strategy.strategy_id
+
+
+def test_rebalance_outside_declared_cadences_raises(tmp_path: Path) -> None:
+    bad = _write(
+        tmp_path,
+        _CONVENTIONS_BLOCK + "d4_strategies:\n"
+        "  s:\n"
+        "    kind: static_weights\n"
+        "    rebalance: quarterly\n"
+        "    lookback: null\n"
+        "    rule: null\n"
+        "    weights: {equity_mkt: 1.0}\n"
+        "    params: {}\n"
+        "    notes: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="rebalance"):
+        load_d4_strategies(bad)
+
+
+# --------------------------------------------------------------------------- #
+# Fix pass 2, MINOR 5 -- a static_weights return's composition is sealed prose
+# --------------------------------------------------------------------------- #
+
+
+def test_conventions_states_static_weights_composition() -> None:
+    text = load_conventions().static_weights_composition
+    assert text.strip()
+    assert "weighted sum" in text.lower()
+    assert "compounding" in text.lower()
+
+
+# --------------------------------------------------------------------------- #
+# Fix pass 2, MINOR 7 -- sealed notes describe properties, not test function names
+# --------------------------------------------------------------------------- #
+
+
+def test_derived_series_notes_do_not_name_test_functions() -> None:
+    for series in load_derived_series().values():
+        assert "test_" not in series.notes, series.series_id

@@ -42,7 +42,12 @@ with no reference to code outside the sealed hash. Consequences enforced here:
 * ``lookback`` is declared exactly once -- ``params`` may not also carry
   ``lookback_months``;
 * ``endowment_proxy``'s sleeve-level ``proxy_mapping`` is rolled up and checked
-  against the flat ``weights`` table it documents.
+  against the flat ``weights`` table it documents;
+* the ``conventions`` block is itself sealed data, not prose: :class:`Conventions`
+  (via :func:`load_conventions`) is the return-bearing/level classification that
+  gates a strategy's ``weights`` (a level factor never appears there directly), the
+  ``rebalance`` values the loader accepts, and the ``percent_to_decimal`` /
+  ``months_per_year`` numbers ``ah.eval.metrics.tails`` is driven by at import time.
 """
 
 from __future__ import annotations
@@ -110,6 +115,27 @@ _SERIES_PARAM_SUFFIX = "_series"
 # `lookback` is declared once, in the strategy's own field. Rejected inside `params`.
 _FORBIDDEN_PARAM_KEYS = frozenset({"lookback_months"})
 
+# Allow-list for the top-level `conventions:` block. Some entries are prose-only
+# (read by nobody, kept for human context); the ones below are load-bearing and
+# validated by `_validate_conventions`.
+_CONVENTIONS_KEYS = frozenset(
+    {
+        "units_of_return_bearing_factors",
+        "return_bearing_factors",
+        "units_of_level_factors",
+        "level_factors",
+        "percent_to_decimal",
+        "months_per_year",
+        "percent_to_decimal_statement",
+        "warm_up",
+        "loss_sign",
+        "series_parameters",
+        "rebalance_cadences",
+        "rebalance_convention",
+        "static_weights_composition",
+    }
+)
+
 
 class StrategyError(ValueError):
     """Raised when ``pre-registration.yaml``'s sealed D4 content fails validation."""
@@ -170,6 +196,30 @@ class DerivedSeries:
 
 
 @dataclass(frozen=True)
+class Conventions:
+    """The sealed ``conventions`` block: values transforms and the loader are driven by.
+
+    ``percent_to_decimal`` and ``months_per_year`` are read by
+    ``ah.eval.metrics.tails`` at import time to drive every derived-series transform
+    -- there is no independent copy of either number in that module.
+    ``return_bearing_factors`` and ``level_factors`` partition the active factor set
+    (:func:`ah.factors.load_manifest`'s ``active_factors()``) exactly; every active
+    factor is in exactly one of the two, checked at load time, and ``level_factors``
+    is the sealed source the loader uses to reject a strategy that weights a level
+    factor directly. ``rebalance_cadences`` is every ``rebalance`` value the loader
+    accepts. ``static_weights_composition`` is the sealed prose statement of how a
+    ``static_weights`` strategy's return is computed.
+    """
+
+    percent_to_decimal: float
+    months_per_year: float
+    return_bearing_factors: frozenset[str]
+    level_factors: frozenset[str]
+    rebalance_cadences: frozenset[str]
+    static_weights_composition: str
+
+
+@dataclass(frozen=True)
 class Strategy:
     """One D4 benchmark strategy, fully reconstructible from ``pre-registration.yaml``.
 
@@ -220,6 +270,19 @@ def _require_text(value: object, what: str, source: Path) -> str:
     if not isinstance(value, str) or not value:
         raise StrategyError(f"{source}: {what} must be a non-empty string, got {value!r}")
     return value
+
+
+def _require_string_set(value: object, what: str, source: Path) -> frozenset[str]:
+    """A non-empty YAML list of distinct non-empty strings, as a ``frozenset``."""
+    if not isinstance(value, list) or not value:
+        raise StrategyError(f"{source}: {what} must be a non-empty list, got {value!r}")
+    items: set[str] = set()
+    for entry in value:
+        text = _require_text(entry, f"{what} entry", source)
+        if text in items:
+            raise StrategyError(f"{source}: {what} lists '{text}' more than once")
+        items.add(text)
+    return frozenset(items)
 
 
 # --------------------------------------------------------------------------- #
@@ -299,12 +362,97 @@ def _require_exact_params(
 
 
 # --------------------------------------------------------------------------- #
+# conventions
+# --------------------------------------------------------------------------- #
+
+# A file with no `conventions:` block at all (every hand-written test fixture that
+# predates this block) is treated as declaring no structured conventions rather than
+# as an error: the fields below only gate behaviour -- the level-factor guard in
+# `_validate_weights` and the rebalance-cadence guard in `_validate_strategy` -- when
+# the sealed file actually declares them. The real `pre-registration.yaml` always
+# declares a full block (checked by `test_every_active_factor_is_classified`), so this
+# default is never load-bearing for it.
+_DEFAULT_CONVENTIONS = Conventions(
+    percent_to_decimal=0.01,
+    months_per_year=12.0,
+    return_bearing_factors=frozenset(),
+    level_factors=frozenset(),
+    rebalance_cadences=frozenset(),
+    static_weights_composition="",
+)
+
+
+def _validate_conventions(raw: object, active_factors: frozenset[str], source: Path) -> Conventions:
+    if raw is None:
+        return _DEFAULT_CONVENTIONS
+    entry_map = _require_mapping(raw, "'conventions'", source)
+    _reject_unknown_keys(entry_map, _CONVENTIONS_KEYS, "'conventions'", source)
+
+    percent_to_decimal = _require_number(
+        entry_map.get("percent_to_decimal"), "conventions.percent_to_decimal", source
+    )
+    months_per_year = _require_number(
+        entry_map.get("months_per_year"), "conventions.months_per_year", source
+    )
+
+    return_bearing_factors = _require_string_set(
+        entry_map.get("return_bearing_factors"), "conventions.return_bearing_factors", source
+    )
+    level_factors = _require_string_set(
+        entry_map.get("level_factors"), "conventions.level_factors", source
+    )
+    overlap = sorted(return_bearing_factors & level_factors)
+    if overlap:
+        raise StrategyError(
+            f"{source}: conventions.return_bearing_factors and conventions.level_factors "
+            f"both classify {overlap}; a factor must be exactly one"
+        )
+    classified = return_bearing_factors | level_factors
+    unclassified = sorted(active_factors - classified)
+    if unclassified:
+        raise StrategyError(
+            f"{source}: conventions does not classify active factor(s) {unclassified} as "
+            f"return_bearing_factors or level_factors"
+        )
+    inactive = sorted(classified - active_factors)
+    if inactive:
+        raise StrategyError(
+            f"{source}: conventions classifies non-active factor(s) {inactive} -- "
+            f"return_bearing_factors and level_factors must cover exactly the active "
+            f"factor set, no more"
+        )
+
+    rebalance_cadences = _require_string_set(
+        entry_map.get("rebalance_cadences"), "conventions.rebalance_cadences", source
+    )
+
+    static_weights_composition = _require_text(
+        entry_map.get("static_weights_composition"),
+        "conventions.static_weights_composition",
+        source,
+    )
+
+    return Conventions(
+        percent_to_decimal=percent_to_decimal,
+        months_per_year=months_per_year,
+        return_bearing_factors=return_bearing_factors,
+        level_factors=level_factors,
+        rebalance_cadences=rebalance_cadences,
+        static_weights_composition=static_weights_composition,
+    )
+
+
+# --------------------------------------------------------------------------- #
 # d4_strategies
 # --------------------------------------------------------------------------- #
 
 
 def _validate_weights(
-    raw: object, strategy_id: str, known_series: frozenset[str], source: Path
+    raw: object,
+    strategy_id: str,
+    known_series: frozenset[str],
+    level_factors: frozenset[str],
+    source: Path,
 ) -> dict[str, float]:
     raw_map = _require_mapping(raw or {}, f"d4_strategies.{strategy_id}.weights", source)
     weights: dict[str, float] = {}
@@ -318,6 +466,12 @@ def _validate_weights(
             raise StrategyError(
                 f"{source}: d4_strategies.{strategy_id} references unknown series "
                 f"'{series}' -- must be an active factor or a declared derived series"
+            )
+        if series in level_factors:
+            raise StrategyError(
+                f"{source}: d4_strategies.{strategy_id}.weights names level factor "
+                f"'{series}' directly; a level factor may enter a D4 portfolio only "
+                f"through a declared derived_series (conventions.level_factors)"
             )
         weights[series] = _require_number(
             w, f"d4_strategies.{strategy_id}.weights['{series}']", source
@@ -390,7 +544,11 @@ def _validate_proxy_mapping(
 
 
 def _validate_strategy(
-    entry: object, strategy_id: object, known_series: frozenset[str], source: Path
+    entry: object,
+    strategy_id: object,
+    known_series: frozenset[str],
+    conventions: Conventions,
+    source: Path,
 ) -> Strategy:
     if not isinstance(strategy_id, str) or not strategy_id:
         raise StrategyError(f"{source}: d4_strategies has a non-string/empty id {strategy_id!r}")
@@ -407,6 +565,12 @@ def _validate_strategy(
     rebalance = _require_text(
         entry_map.get("rebalance"), f"d4_strategies.{strategy_id}.rebalance", source
     )
+    if conventions.rebalance_cadences and rebalance not in conventions.rebalance_cadences:
+        raise StrategyError(
+            f"{source}: d4_strategies.{strategy_id}.rebalance '{rebalance}' is not a "
+            f"declared cadence; conventions.rebalance_cadences = "
+            f"{sorted(conventions.rebalance_cadences)}"
+        )
 
     lookback = entry_map.get("lookback")
     if lookback is not None and (isinstance(lookback, bool) or not isinstance(lookback, int)):
@@ -425,7 +589,9 @@ def _validate_strategy(
     if not isinstance(notes, str):
         raise StrategyError(f"{source}: d4_strategies.{strategy_id}.notes must be a string")
 
-    weights = _validate_weights(entry_map.get("weights"), strategy_id, known_series, source)
+    weights = _validate_weights(
+        entry_map.get("weights"), strategy_id, known_series, conventions.level_factors, source
+    )
     params = _validate_params(entry_map.get("params"), strategy_id, known_series, source)
     raw_proxy = entry_map.get("proxy_mapping")
 
@@ -547,6 +713,27 @@ def load_derived_series(path: Path | None = None) -> Mapping[str, DerivedSeries]
 
 
 @lru_cache
+def _load_conventions_cached(resolved_path: Path) -> Conventions:
+    raw = _read_doc(resolved_path).get("conventions")
+    active_factors = frozenset(load_manifest().active_factors())
+    return _validate_conventions(raw, active_factors, resolved_path)
+
+
+def load_conventions(path: Path | None = None) -> Conventions:
+    """Load and validate the ``conventions`` block, defaulting to the repo-root file.
+
+    Cached by resolved path, like :func:`load_d4_strategies`. A file with no
+    top-level ``conventions:`` key at all loads a permissive default (percent_to_decimal
+    0.01, months_per_year 12.0, no declared factor classification, no declared
+    rebalance cadence) rather than raising -- most hand-written test fixtures predate
+    this block and are unaffected by it. ``pre-registration.yaml`` always declares the
+    full block.
+    """
+    resolved = (path if path is not None else _DEFAULT_PATH).resolve()
+    return _load_conventions_cached(resolved)
+
+
+@lru_cache
 def _load_d4_strategies_cached(resolved_path: Path) -> tuple[Strategy, ...]:
     raw = _read_doc(resolved_path).get("d4_strategies")
     if not isinstance(raw, dict) or not raw:
@@ -555,8 +742,9 @@ def _load_d4_strategies_cached(resolved_path: Path) -> tuple[Strategy, ...]:
     active_factors = frozenset(load_manifest().active_factors())
     derived = _load_derived_series_cached(resolved_path)
     known_series = active_factors | frozenset(derived)
+    conventions = _load_conventions_cached(resolved_path)
     return tuple(
-        _validate_strategy(entry, strategy_id, known_series, resolved_path)
+        _validate_strategy(entry, strategy_id, known_series, conventions, resolved_path)
         for strategy_id, entry in raw.items()
     )
 

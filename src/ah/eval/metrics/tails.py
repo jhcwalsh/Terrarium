@@ -58,20 +58,24 @@ from ah.strategies import (
     DerivedSeries,
     Strategy,
     StrategyError,
+    load_conventions,
     load_d4_strategies,
     load_derived_series,
 )
 
-# The single percent-to-decimal conversion, matching
-# `conventions.percent_to_decimal` in pre-registration.yaml: a level quoted in
-# percent (4.25 meaning 4.25%) times 0.01 is the decimal equivalent. Applied once, to
-# the whole transform expression -- every transform below is linear in the percent
-# level, so one leading factor converts the entire result.
-_PCT_TO_DECIMAL = 0.01
-
-# Months per year, for converting an annual percent rate to a monthly carry: y/12,
-# simple, not compounded. Also from the sealed conventions block.
-_MONTHS_PER_YEAR = 12.0
+# The percent-to-decimal conversion and the annual-to-monthly divisor, driven
+# directly from `conventions.percent_to_decimal` / `conventions.months_per_year` in
+# the sealed `pre-registration.yaml` -- not independent constants in this module. A
+# level quoted in percent (4.25 meaning 4.25%) times `_PCT_TO_DECIMAL` is the decimal
+# equivalent, applied once to the whole transform expression; an annual percent rate
+# divided by `_MONTHS_PER_YEAR` is the simple (not compounded) monthly carry. Amending
+# either sealed value changes every transform below, by construction: an amendment to
+# `conventions.percent_to_decimal` or `conventions.months_per_year` is not a silent
+# no-op (see `test_tails_pct_to_decimal_and_months_per_year_match_sealed_conventions`
+# in tests/test_strategies.py).
+_CONVENTIONS = load_conventions()
+_PCT_TO_DECIMAL = _CONVENTIONS.percent_to_decimal
+_MONTHS_PER_YEAR = _CONVENTIONS.months_per_year
 
 
 # --------------------------------------------------------------------------- #
@@ -97,9 +101,21 @@ def _lagged_carry_minus_duration(level: np.ndarray, duration: float) -> np.ndarr
     level change). ``level`` is in percent; the result is a monthly decimal return.
     Month 0 has no ``t-1`` predecessor and is 0.0 -- the single warm-up rule stated in
     ``pre-registration.yaml``'s ``conventions.warm_up``.
+
+    ``level`` is cast to float64 *before* any arithmetic, not only for the zeroed
+    ``out`` array -- an integer or float32 input must not compute ``previous``/
+    ``change`` at reduced precision and only widen at the final assignment. Shape is
+    required to be exactly ``(n_paths, months)``; a caller passing anything else (a
+    1-D series, e.g.) gets a named :class:`~ah.strategies.StrategyError` instead of an
+    ``IndexError`` from ``level.shape[1]``.
     """
-    out = np.zeros_like(np.asarray(level, dtype=np.float64))
-    if out.shape[1] < 2:
+    level = np.asarray(level, dtype=np.float64)
+    if level.ndim != 2:
+        raise StrategyError(
+            f"expected a 2-D (n_paths, months) level array, got shape {level.shape}"
+        )
+    out = np.zeros_like(level)
+    if level.shape[1] < 2:
         return out
     previous = level[:, :-1]
     change = level[:, 1:] - previous
@@ -301,16 +317,34 @@ def var_es(returns: np.ndarray, level: float) -> tuple[float, float]:
 
 
 def d4_tail_table(
-    ensemble: Ensemble, strategies: tuple[Strategy, ...] | None = None
+    ensemble: Ensemble,
+    strategies: tuple[Strategy, ...] | None = None,
+    derived: Mapping[str, DerivedSeries] | None = None,
 ) -> dict[str, dict[str, float]]:
     """VaR/ES at 95% and 99% for every D4 strategy.
 
-    ``strategies`` defaults to :func:`ah.strategies.load_d4_strategies`, the same
-    object the WP2.8 tail auxiliary loss loads.
+    ``strategies`` and ``derived`` default *together* to
+    :func:`ah.strategies.load_d4_strategies` and :func:`ah.strategies.load_derived_series`
+    -- the same objects the WP2.8 tail auxiliary loss loads, both from the repo-root
+    ``pre-registration.yaml``. They must come from the *same* source file: a strategy's
+    weights/params name derived-series ids that only ``derived`` can resolve, so pairing
+    a strategy set loaded from one file with derived-series transforms from another
+    would silently evaluate the strategy against the wrong transform. If you pass an
+    explicit ``strategies`` (e.g. loaded from a non-default path via
+    ``load_d4_strategies(other_path)``), you must also pass the matching ``derived``
+    (``load_derived_series(other_path)``) -- this function will not guess which file
+    ``strategies`` came from.
     """
     if strategies is None:
         strategies = load_d4_strategies()
-    derived = load_derived_series()
+    elif derived is None:
+        raise StrategyError(
+            "d4_tail_table: 'derived' must be supplied explicitly when 'strategies' is "
+            "supplied, so the strategy set and its derived-series transforms are "
+            "guaranteed to come from the same source file"
+        )
+    if derived is None:
+        derived = load_derived_series()
     table: dict[str, dict[str, float]] = {}
     for strategy in strategies:
         returns = strategy_returns(ensemble, strategy, derived)

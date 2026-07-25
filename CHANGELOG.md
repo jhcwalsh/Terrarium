@@ -193,6 +193,35 @@ All notable changes to this project are documented here. The project follows
   reference statistics at seal time**. Tests use plausible *level* magnitudes (a 10y
   yield near 4, a HY OAS near 4.5) for the rate/spread factors — the previous
   zero-mean N(0, 0.02) fixture is precisely why the sign inversion survived review.
+- **WP2.1b Task 2 review fixes (fix pass 2) — sealed conventions the loader actually
+  reads.** A re-review found the file's self-description ("the code is checked against
+  it by tests") was still false in two places, plus six minor gaps. *(1)
+  `conventions.percent_to_decimal` had no code reading it, and `tails.py`'s
+  `_MONTHS_PER_YEAR` had no sealed key at all — an amendment to either would have been
+  a silent no-op. `pre-registration.yaml` gains `conventions.months_per_year`; `tails.py`
+  now sets `_PCT_TO_DECIMAL`/`_MONTHS_PER_YEAR` *from* `ah.strategies.load_conventions()`
+  at import time, not as independent literals. *(2)* "a level factor never appears in
+  `weights`" was enforced only by a hand-maintained frozenset in
+  `tests/test_strategies.py` that had already drifted from the YAML prose (9 factors
+  vs. 7) and covered nothing the loader itself checked. `conventions` gains
+  `return_bearing_factors` / `level_factors` — sealed, exhaustive and disjoint over
+  every active factor in `factors.yaml` (checked at load time) — and
+  `ah.strategies.Conventions` / `load_conventions()` load them; `_validate_weights`
+  now raises `StrategyError` naming any level factor weighted directly; the
+  hand-maintained frozenset is deleted. This also fixes the missing `cpi`/`equity_vol`
+  classification (both are now correctly `level_factors`, matching what the deleted
+  frozenset already had right). Six minor items: `conventions.rebalance_cadences`
+  (`[monthly]`) is now sealed and enforced — an undeclared `rebalance` value raises;
+  `conventions.static_weights_composition` states the arithmetic-weighted-sum, no-
+  compounding rule the three `static_weights` strategies were relying on implicitly;
+  `d4_tail_table` gains an explicit `derived` parameter and raises if `strategies` is
+  passed without it, instead of silently pairing an explicitly-loaded strategy set with
+  the *default* file's derived-series transforms; two `derived_series.*.notes` entries
+  that pointed at test function names by name now describe the sign property directly;
+  `_lagged_carry_minus_duration` casts its whole input to float64 before any arithmetic
+  (previously only `out` was float64 — under NumPy's NEP 50 promotion rules a float32
+  input's carry/duration terms would have stayed float32) and raises a named
+  `StrategyError` for non-2-D input instead of an `IndexError` from `level.shape[1]`.
 
 ## [v0.1.0-g0] — 2026-07-24
 
