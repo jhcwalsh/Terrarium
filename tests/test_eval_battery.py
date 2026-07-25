@@ -18,6 +18,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 import pytest
 
 from ah.core.engine import ASSETS, run_ensemble
@@ -35,8 +36,9 @@ from ah.eval.battery import (
     run_battery,
 )
 from ah.eval.reference import BlockReference, FactorCoverage, ReferenceStats, StatBand
-from ah.factors import load_manifest
+from ah.factors import FactorManifest, FactorSource, load_manifest
 from ah.gen.base import Ensemble, EnsembleMeta
+from ah.splits import DataAccess
 
 ROOT = Path(__file__).resolve().parents[1]
 _EXAMPLE: dict[str, Any] = json.loads(
@@ -823,3 +825,139 @@ def test_dry_run_seal_needs_no_out_path() -> None:
     """
     digest = prereg_mod.seal(prereg_mod.load().source_path, sealed_at="n/a", dry_run=True)
     assert digest.startswith("sha256:")
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass -- Critical 1: an orchestration step that actually runs
+#
+# Before this, no production code path called any `register_*_suite()`, so
+# `battery.SUITES` was empty in every non-test run: `run_battery` computed zero
+# metrics and returned a report whose `passed` was vacuously True. These tests
+# assert a real run returns a NON-EMPTY metric set, computed against a reference
+# this call itself computed from the catalog.
+# --------------------------------------------------------------------------- #
+
+
+def _orchestration_manifest() -> FactorManifest:
+    return FactorManifest(
+        blocks={"global": ("g1",), "us": ("u1",)},
+        active_blocks=("global", "us"),
+        sources={
+            "g1": FactorSource(
+                kind="series", series_id="s.g1", units="ret", numeraire="total_return"
+            ),
+            "u1": FactorSource(
+                kind="series", series_id="s.u1", units="ret", numeraire="total_return"
+            ),
+        },
+    )
+
+
+def _orchestration_access(months: int = 900) -> DataAccess:
+    dates = pd.date_range("1940-01-01", periods=months, freq="MS")
+    rng = np.random.Generator(np.random.PCG64(77))
+    frames = {
+        "s.g1": pd.DataFrame({"date": dates, "value": rng.normal(0.0, 0.04, size=months)}),
+        "s.u1": pd.DataFrame({"date": dates, "value": rng.normal(0.0, 0.02, size=months)}),
+    }
+
+    def reader(series_id: str) -> pd.DataFrame:
+        if series_id not in frames:
+            raise KeyError(series_id)
+        return frames[series_id]
+
+    return DataAccess(reader)
+
+
+def _orchestration_ensemble(n_paths: int = 24, months: int = 120) -> Ensemble:
+    rng = np.random.Generator(np.random.PCG64(78))
+    paths = np.stack(
+        [
+            rng.normal(0.0, 0.04, size=(n_paths, months)),
+            rng.normal(0.0, 0.02, size=(n_paths, months)),
+        ],
+        axis=-1,
+    )
+    meta = EnsembleMeta(
+        generator_id="orchestration-test",
+        vintage_id="v-orchestration",
+        seed=0,
+        n_paths=n_paths,
+        months=months,
+        active_blocks=("global", "us"),
+    )
+    return Ensemble(paths=paths, factor_names=["g1", "u1"], meta=meta)
+
+
+def test_run_full_battery_returns_a_non_empty_metric_set() -> None:
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    assert report.results, "a real battery run must compute at least one metric"
+    monthly = {r.name for r in report.results if r.suite == "monthly"}
+    assert "g1.skew" in monthly
+    assert "g1.acf_abs_lag24" in monthly
+    assert "cross_block_corr_matrix_distance" in monthly
+
+
+def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    assert set(report.coverage) == {"g1", "u1"}, "the reference was actually computed"
+    banded = [r for r in report.results if r.band is not None]
+    assert banded, "no metric matched a computed reference band by name"
+    # Important 3: the reference replicates are drawn at the ENSEMBLE's path length,
+    # so both sides of every per-path statistic carry the same estimator bias.
+    assert all(r.band is not None and r.band.resample_length == ensemble.months for r in banded)
+
+
+def test_run_full_battery_is_repeatable_without_a_duplicate_registration_error() -> None:
+    """`register_suite` refuses to re-register a name, so an orchestration step that
+    registered naively would work exactly once per process."""
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+    kwargs: dict[str, Any] = dict(
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+    first = battery.run_full_battery(ensemble, **kwargs)
+    second = battery.run_full_battery(ensemble, **kwargs)
+    assert [r.name for r in first.results] == [r.name for r in second.results]
+    assert [r.value for r in first.results] == [r.value for r in second.results]
+
+
+def test_panel_threshold_is_found_by_the_metric_name_lookup() -> None:
+    """A panel statistic carries no factor prefix, so it is looked up in its own
+    `thresholds.panel` section rather than under a block or a pair."""
+    loaded = prereg_mod.load()
+    assert loaded.panel_thresholds, "the real pre-registration declares a panel threshold"
+    name = next(iter(loaded.panel_thresholds))
+    assert battery._lookup_threshold(name, loaded) is loaded.panel_thresholds[name]

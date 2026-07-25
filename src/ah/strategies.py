@@ -148,6 +148,20 @@ _CONVENTIONS_KEYS = frozenset(
         "numeraire_zero_cost_legs",
         "numeraire_statement",
         "nan_metric_rule",
+        # WP2.2 Task 2 fix pass: the sealed metric-estimator statements. Prose-only to
+        # this module (D4 strategy loading does not read them), but they must be
+        # ALLOWED here or the whole pre-registration fails to load -- and they belong
+        # in the sealed file rather than only in a docstring, because a band is
+        # meaningless without the estimator that produced it. `ah.eval.reference` is
+        # the implementation they describe and is itself a hashed judged source, so
+        # the two cannot drift without a lock violation.
+        "acf_estimator",
+        "estimator_length_matching",
+        "acf_abs_decay_estimator",
+        "hill_tail_index_estimator",
+        "agg_gaussianity_estimator",
+        "leverage_correlation_estimator",
+        "cross_block_corr_matrix_distance_estimator",
     }
 )
 

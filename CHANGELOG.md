@@ -649,6 +649,84 @@ All notable changes to this project are documented here. The project follows
   required); no assertion in any of them was weakened. Full suite green (599 tests, up
   from 544 at branch start), ruff/pyright clean, coverage gate unaffected;
   `pre-registration.yaml` stays `sealed: false`.
+- **WP2.2 Task 2 review fix pass — the monthly panel becomes runnable and sealable.**
+  The review returned Spec: FAIL with two Criticals, both blocking WP2.3.
+  *Critical 1, the battery never ran.* No production code path called any
+  `register_*_suite()`, so `battery.SUITES` was empty in every non-test run:
+  `run_battery` computed zero metrics and returned a report whose `passed` was
+  vacuously `True`. `ah.eval.battery.run_full_battery` is the orchestration step that
+  was missing — compute the train+validation reference from the catalog, register every
+  reference-dependent suite against it (`register_reference_dependent_suites`,
+  idempotent by replacement so a second run is judged against its own reference), run
+  the battery — with tests asserting a **non-empty** metric set, real bands and real
+  coverage come back from an actual run. `battery.py`'s docstring no longer states an
+  "at import time" registration rule that no code follows, since `battery.py` is a
+  sealed judged source and a rule stated only in the seal is worse than none. The
+  residual (no CLI/G2 caller yet; only `monthly` of the eight suites exists, so a real
+  run's verdict is monthly-tier-only) is `governance/retrofit-register.md` RFR-13 plus
+  a `TODO(WP2.2 Tasks 3-6)` at `SUITES`.
+  *Critical 2, 34 of 37 monthly metric names were structurally un-sealable.*
+  `prereg`'s threshold-key checker validates `<stat>` against `reference.py`'s
+  registries, and once `sealed: true` lands `run_battery` calls `verify()`
+  unconditionally — so a threshold under an unregistered name would not merely fail the
+  seal, it would break every battery run. Every monthly statistic (Hill tail index at
+  5%/1%, ACF of returns to lag 5, ACF of |deviation| to lag 24, the fitted decay,
+  aggregational Gaussianity, leverage correlation) is now **defined in
+  `ah.eval.reference` and registered in `SINGLE_FACTOR_STATS`**; `metrics/monthly.py`
+  imports the estimators and contributes only the ensemble pooling conventions. The
+  whole-panel `cross_block_corr_matrix_distance` belongs to no factor and no pair, so
+  it gets a third registry (`PANEL_STATS`), a `thresholds.panel` section in
+  `pre-registration.yaml`, a `_check_panel_threshold_key` in `verify()` and a
+  `_lookup_threshold` branch — a deliberate extension of the checker, tested, not a
+  key-shape workaround. The prior handoff's claim that WP2.3 could "seal a threshold
+  under these exact names directly (thresholds don't require a `reference.py` band)"
+  was **false** and is corrected here; there was exactly one path and this is it.
+  *Estimator conventions, all now sealed in `pre-registration.yaml`.* The ACF estimator
+  is length-dependent and the reference is a different length: the n-denominator
+  shrinkage alone is ~20% at lag 24 on a 120-month path against ~2% on ~1100 months, so
+  a generator reproducing history exactly would sit outside its own band at long lags.
+  `compute_reference` gained `resample_length` and `run_full_battery` passes the
+  ensemble's own path length, so both sides carry the same bias (the `(n-k)`-denominator
+  alternative was rejected: it would have to change `_acf1` too and corrects only the
+  shrinkage term). A test builds a near-deterministic 24-month volatility cycle and
+  shows a generator reproducing it lands inside its length-matched band at lags 12 and
+  24 while history's own full-sample estimate does not. Consequence stated on
+  `StatBand`: a length-matched band's `point` is not expected to lie inside `[lo, hi]`.
+  The residual for *pooled* statistics (matched in neither sample size nor bias) is
+  RFR-15. Separately discovered and fixed: a moving-block bootstrap keeps only the
+  `(b-k)/b` share of lag-k pairs, so at the old default block length of 24 every
+  long-lag band was a resampling artifact — `DEFAULT_BLOCK_LENGTH` is now 120, with a
+  test pinning both the rule and the artifact.
+  `acf_abs_decay` is refitted **in levels** by profiled least squares (closed-form
+  amplitude, 241-point grid then golden section, deterministic, no scipy) instead of OLS
+  in log space over the positive values only: dropping non-positive ACF values was a
+  one-sided selection that lifted the fitted tail and biased the rate downward. The
+  levels fit consumes every lag whatever its sign, so no selection happens at all. The
+  exponential form is kept over the canonically hyperbolic power law, with the
+  justification now stated rather than assumed (comparative summary at a fixed lag
+  window; a log-log fit is equally misspecified and weights low lags harder; every
+  `acf_abs_lag{k}` is separately banded, so long memory is discriminated lag by lag).
+  It is also now computed per path and averaged, like every other time-ordered
+  statistic — a more biased estimator of the true rate, deliberately, because it is the
+  one the reference band is built from.
+  `agg_gaussianity_1m` is gone: at h=1 the aggregation is the identity, so it was
+  bit-identical to `excess_kurtosis` — two sealed names, one number. `acf_1`/`acf_abs_1`
+  became `acf_r_lag1`/`acf_abs_lag1` for the same reason (free while `sealed: false`;
+  a dated amendment afterwards), resolving the naming question the prior task left open.
+  `corr_matrix_distance` is renamed `cross_block_corr_matrix_distance` (it covers
+  cross-block pairs only; the missing within-block pairwise correlation statistic is
+  RFR-14), and `_paired_corr_matrices` returns an explicit mask so the two matrices —
+  which carry 0.0 wherever the reference has no entry — cannot be misread as correlation
+  matrices. `agg_gaussianity`'s `sums.size < 4` guard became a 30-sum floor (a
+  fourth-moment statistic's standard error is `~sqrt(24/n)`: 2.4 at n=4). A judged-source
+  pinning test now asserts every metric-suite module on disk resolves *into* the sealed
+  set, not merely that its name is in `_METRIC_SUITE_NAMES`; the `acf_abs_lag1`
+  agreement test calls `reference._acf_abs_1` instead of retyping it; `acf_abs_decay`
+  gains an end-to-end numeric pin against `-ln(phi)` on a constructed AR(1)-volatility
+  path; the Hill registration test checks its fixture's known `alpha=2.0`; and the
+  global-`SUITES` mutation in `tests/test_monthly.py` uses a snapshot/restore fixture
+  rather than a `finally`-pop. Full suite green (705 tests, up from 669), ruff/pyright
+  clean, `ah.core` coverage 96.54%.
 - **WP2.2 Task 2 — `eval/metrics/monthly.py`, the monthly-tier stylized-fact panel.**
   All nine STEP2-GENERATOR-PLAN §WP2.2 statistics (excess kurtosis, skew, Hill tail
   index at 5%/1%, ACF of returns lags 1-5, ACF of |deviation| lags 1-24 plus a fitted

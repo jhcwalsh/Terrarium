@@ -305,7 +305,7 @@ def test_acf1_recovers_known_ar1_phi() -> None:
     for t in range(1, n):
         x[t] = phi * x[t - 1] + eps[t]
 
-    estimate = SINGLE_FACTOR_STATS["acf_1"].fn(x)
+    estimate = SINGLE_FACTOR_STATS["acf_r_lag1"].fn(x)
     # SE(phi_hat) ~ sqrt((1-phi^2)/n) ~ 0.0057 at n=20000, phi=0.6; 0.03 is > 5x that.
     assert estimate == pytest.approx(phi, abs=0.03)
 
@@ -358,7 +358,7 @@ def test_acf_abs_1_known_by_construction() -> None:
     band -- this is what "known by construction" means here.
     """
     x = np.array([1.0, 5.0, 2.0, 6.0, 1.0, 7.0])
-    assert SINGLE_FACTOR_STATS["acf_abs_1"].fn(x) == pytest.approx(0.25, abs=1e-9)
+    assert SINGLE_FACTOR_STATS["acf_abs_lag1"].fn(x) == pytest.approx(0.25, abs=1e-9)
 
 
 # --------------------------------------------------------------------------- #
@@ -371,8 +371,20 @@ def test_band_brackets_point_estimate_for_every_stat() -> None:
     seeds = {"g1": 1, "g2": 2, "u1": 3, "u2": 4}
     access = DataAccess(_make_reader(seeds, start="1950-01-01", end="2026-06-01"))
 
+    # block_length must comfortably exceed the longest registered lag: a moving-block
+    # bootstrap keeps only the (b - k) / b share of lag-k pairs that fall inside one
+    # block, so at b = 24 the lag-18..24 resample statistics are shrunk toward zero and
+    # a full-sample point estimate genuinely falls outside its own band. That is a real
+    # property of the estimator, not slack in this assertion -- see
+    # `reference.DEFAULT_BLOCK_LENGTH` and
+    # `test_short_blocks_shrink_a_long_lag_band_toward_zero` below, which pins it.
     ref = compute_reference(
-        access, manifest, vintage_id="v", seed=5, n_resamples=200, block_length=24
+        access,
+        manifest,
+        vintage_id="v",
+        seed=5,
+        n_resamples=200,
+        block_length=reference_mod.DEFAULT_BLOCK_LENGTH,
     )
 
     checked = 0
@@ -467,7 +479,15 @@ def test_to_dict_round_trips_through_json() -> None:
     assert set(decoded["blocks"]) == {"global", "us"}
     assert "global|us" in decoded["cross_blocks"]
     sample_band = decoded["blocks"]["global"]["g1.mean"]
-    assert set(sample_band) == {"point", "lo", "hi", "n_resamples", "level", "tier"}
+    assert set(sample_band) == {
+        "point",
+        "lo",
+        "hi",
+        "n_resamples",
+        "level",
+        "tier",
+        "resample_length",
+    }
     # No zero-overlap pairs in this uniform-range fixture.
     assert decoded["zero_overlap_pairs"] == {}
 
@@ -1024,3 +1044,214 @@ def test_reference_splits_missing_declared_from_missing_no_data() -> None:
     assert ref.missing_declared == ("commodities",)
     assert ref.missing_no_data == ("hy_spread",)
     assert set(ref.missing_factors) == {"commodities", "hy_spread"}
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass -- Critical 2: the monthly statistics are registered here
+#
+# `ah.eval.prereg` validates a threshold key's `<stat>` against these registries, and
+# `ah.eval.battery._lookup_band` matches a metric to its historical band by the same
+# name. A monthly metric whose statistic is not registered here can therefore neither
+# carry a sealed threshold nor be shown against history.
+# --------------------------------------------------------------------------- #
+
+
+_EXPECTED_NEW_SINGLE_FACTOR_STATS = (
+    "hill_tail_index_5pct",
+    "hill_tail_index_1pct",
+    *[f"acf_r_lag{k}" for k in range(1, 6)],
+    *[f"acf_abs_lag{k}" for k in range(1, 25)],
+    "acf_abs_decay",
+    "agg_gaussianity_3m",
+    "agg_gaussianity_12m",
+    "leverage_correlation",
+)
+
+
+def test_monthly_statistics_are_registered_as_single_factor_stats() -> None:
+    for name in _EXPECTED_NEW_SINGLE_FACTOR_STATS:
+        assert name in SINGLE_FACTOR_STATS, name
+        assert SINGLE_FACTOR_STATS[name].tier == "monthly", name
+
+
+def test_panel_statistics_registry_carries_the_corr_matrix_distance() -> None:
+    from ah.eval.reference import PANEL_STATS
+
+    assert "cross_block_corr_matrix_distance" in PANEL_STATS
+    assert PANEL_STATS["cross_block_corr_matrix_distance"].tier == "monthly"
+
+
+def test_no_two_registered_statistics_are_the_same_quantity() -> None:
+    """Two registered names computing one number is a seal hazard: WP2.3 would author
+    two bands and two thresholds on a single quantity. `acf_1`/`acf_abs_1` (lag 1) and
+    `agg_gaussianity_1m` (the identity aggregation, i.e. `excess_kurtosis`) were
+    exactly that; the lag-indexed names replace the former and the latter is not
+    registered at all.
+    """
+    rng = np.random.Generator(np.random.PCG64(4242))
+    x = rng.standard_t(df=5, size=800)
+    values: dict[str, float] = {}
+    for name, registered in SINGLE_FACTOR_STATS.items():
+        value = registered.fn(x)
+        if np.isnan(value):
+            continue
+        for other, other_value in values.items():
+            assert value != pytest.approx(other_value, rel=0, abs=1e-12), (
+                f"'{name}' and '{other}' are the same quantity ({value})"
+            )
+        values[name] = value
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass -- Important 3: length-matched reference resampling
+#
+# Every per-path statistic uses the n-denominator Box-Jenkins ACF estimator, whose
+# finite-sample bias is a function of the series length. History is ~1100 months; a
+# generated path is a fraction of that. Reference replicates are therefore drawn at the
+# ensemble's own path length so both sides carry the same estimator bias.
+# --------------------------------------------------------------------------- #
+
+
+def test_draw_moving_block_indices_honours_resample_length() -> None:
+    idx = _draw_moving_block_indices(
+        100, seed=0, n_resamples=5, block_length=10, resample_length=30
+    )
+    assert idx.shape == (5, 30)
+    assert idx.min() >= 0
+    assert idx.max() < 100
+
+
+def test_block_bootstrap_band_records_the_resample_length() -> None:
+    rng = np.random.Generator(np.random.PCG64(17))
+    panel = rng.normal(size=(400, 1))
+    band = block_bootstrap_band(
+        lambda a: float(np.mean(a[:, 0])),
+        panel,
+        seed=3,
+        n_resamples=50,
+        level=0.9,
+        block_length=24,
+        resample_length=60,
+    )
+    assert band.resample_length == 60
+
+
+def test_resample_length_widens_a_length_sensitive_band() -> None:
+    """A shorter replicate is a noisier estimate, so its percentile band is wider.
+    This is the property that makes the band comparable to a short generated path."""
+    rng = np.random.Generator(np.random.PCG64(18))
+    panel = rng.normal(size=(1200, 1))
+    stat = lambda a: SINGLE_FACTOR_STATS["acf_abs_lag24"].fn(a[:, 0])  # noqa: E731
+    kw = dict(seed=3, n_resamples=200, level=0.9, block_length=120)
+    full = block_bootstrap_band(stat, panel, **kw)  # type: ignore[arg-type]
+    short = block_bootstrap_band(stat, panel, resample_length=120, **kw)  # type: ignore[arg-type]
+    assert (short.hi - short.lo) > 2.0 * (full.hi - full.lo)
+
+
+def test_compute_reference_stamps_the_resample_length_on_every_band() -> None:
+    manifest = _small_manifest()
+    access = DataAccess(_make_reader({"g1": 1, "g2": 2, "u1": 3, "u2": 4}, start="1950-01-01"))
+    ref = compute_reference(
+        access,
+        manifest,
+        vintage_id="v",
+        seed=0,
+        n_resamples=5,
+        block_length=12,
+        resample_length=120,
+    )
+    bands = [b for block in ref.blocks.values() for b in block.stats.values()]
+    assert bands
+    assert all(b.resample_length == 120 for b in bands)
+
+
+def test_default_block_length_exceeds_the_longest_registered_lag() -> None:
+    """A moving-block bootstrap keeps only the ``(b - k) / b`` share of lag-k pairs
+    that fall inside one block, so a block length near the longest judged lag makes
+    every long-lag band an artifact of the resampling rather than a statement about
+    history. The default must leave real headroom over
+    ``reference.MAX_REGISTERED_LAG``."""
+    assert reference_mod.MAX_REGISTERED_LAG == 24
+    assert reference_mod.DEFAULT_BLOCK_LENGTH >= 4 * reference_mod.MAX_REGISTERED_LAG
+
+
+def test_short_blocks_shrink_a_long_lag_band_toward_zero() -> None:
+    """The artifact the default block length exists to avoid, pinned so it cannot be
+    rediscovered as a surprise while authoring sealed bands: with blocks no longer
+    than the lag being measured, the resample distribution of a lag-k autocorrelation
+    collapses toward zero however strong the dependence in the data actually is."""
+    n = 1200
+    t = np.arange(n)
+    # a deterministic period-24 cycle: lag-24 autocorrelation is ~1 by construction
+    panel = np.cos(2.0 * np.pi * t / 24.0).reshape(-1, 1)
+    stat = SINGLE_FACTOR_STATS["acf_abs_lag24"].fn
+    kw: dict[str, object] = dict(seed=1, n_resamples=200, level=0.9)
+    short = block_bootstrap_band(lambda a: stat(a[:, 0]), panel, block_length=24, **kw)  # type: ignore[arg-type]
+    long = block_bootstrap_band(
+        lambda a: stat(a[:, 0]),
+        panel,
+        block_length=reference_mod.DEFAULT_BLOCK_LENGTH,
+        **kw,  # type: ignore[arg-type]
+    )
+    assert short.point == pytest.approx(long.point)  # same full-sample estimate
+    assert abs(short.hi) < 0.5 * abs(long.point), "short blocks must destroy the lag-24 signal"
+    # Blocks five times the lag keep most of it. (Not all: every block seam still
+    # breaks the lag-24 pairs that straddle it, which is why even here the band sits
+    # below the full-sample point -- a second reason a band and its point estimate are
+    # not interchangeable.)
+    assert long.lo > 0.7 * long.point
+
+
+def test_new_statistics_recover_known_ground_truths() -> None:
+    """Each newly registered estimator against a closed-form or constructed target,
+    at the registry surface `ah.eval.prereg` and `ah.eval.battery` actually consume."""
+    rng = np.random.Generator(np.random.PCG64(909))
+
+    # Hill: 1 + Lomax(alpha) is Pareto-I with shape alpha; returns are -losses.
+    losses = 1.0 + rng.pareto(2.5, size=40_000)
+    assert SINGLE_FACTOR_STATS["hill_tail_index_5pct"].fn(-losses) == pytest.approx(2.5, rel=0.1)
+
+    # acf_r_lag2 of an AR(1) is phi**2.
+    phi = 0.6
+    eps = rng.normal(0.0, 1.0, size=40_000)
+    x = np.empty(eps.size)
+    x[0] = eps[0]
+    for i in range(1, eps.size):
+        x[i] = phi * x[i - 1] + eps[i]
+    assert SINGLE_FACTOR_STATS["acf_r_lag2"].fn(x) == pytest.approx(phi**2, abs=0.03)
+
+    # agg_gaussianity: a normal sample's aggregates stay ~mesokurtic.
+    normal_sample = rng.normal(size=40_000)
+    assert SINGLE_FACTOR_STATS["agg_gaussianity_3m"].fn(normal_sample) == pytest.approx(
+        0.0, abs=0.2
+    )
+
+    # leverage_correlation: ~0 for a symmetric iid series.
+    assert SINGLE_FACTOR_STATS["leverage_correlation"].fn(normal_sample) == pytest.approx(
+        0.0, abs=0.05
+    )
+
+    # acf_abs_decay recovers -ln(phi) on a series whose |deviation| is an AR(1).
+    v = np.empty(20_000)
+    v[0] = 5.0
+    noise = rng.normal(0.0, 0.5, size=v.size)
+    for i in range(1, v.size):
+        v[i] = 5.0 + 0.9 * (v[i - 1] - 5.0) + noise[i]
+    signed = v * np.where(np.arange(v.size) % 2 == 0, 1.0, -1.0)
+    assert SINGLE_FACTOR_STATS["acf_abs_decay"].fn(signed) == pytest.approx(
+        -float(np.log(0.9)), abs=0.02
+    )
+
+
+def test_agg_gaussianity_is_nan_below_its_sample_floor() -> None:
+    x = np.arange(60.0)
+    # 60 monthly observations give 5 non-overlapping 12-month sums: far below the
+    # floor at which a fourth-moment statistic carries information.
+    assert np.isnan(reference_mod.agg_gaussianity(x, 12))
+    assert not np.isnan(reference_mod.agg_gaussianity(x, 1))
+
+
+def test_hill_tail_index_is_nan_for_an_all_positive_level_series() -> None:
+    """A rate/spread/index level has no losses, so its Hill tail index is NaN by
+    construction rather than a number computed from the wrong side."""
+    assert np.isnan(SINGLE_FACTOR_STATS["hill_tail_index_5pct"].fn(np.linspace(1.0, 9.0, 500)))

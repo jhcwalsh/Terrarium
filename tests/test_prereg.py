@@ -1093,3 +1093,191 @@ def test_dataclasses_are_frozen() -> None:
 
 def test_preregistration_is_a_dataclass_instance() -> None:
     assert isinstance(prereg.load(), PreRegistration)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass -- Critical 2: every monthly metric name must be sealable
+#
+# `verify()` rejects a threshold key whose `<stat>` is not a registered
+# reference statistic, and `run_battery` calls `verify()` unconditionally once
+# `sealed: true` lands. A monthly metric whose name no registry knows therefore
+# cannot carry a threshold at all -- and an entry authored under such a name
+# would break every battery run, not merely the seal. These tests are the proof
+# that the monthly suite's own names are all sealable.
+# --------------------------------------------------------------------------- #
+
+
+def _block_of(manifest: Any, factor: str) -> str:
+    for block in manifest.active_blocks:
+        if factor in manifest.blocks[block]:
+            return block
+    raise AssertionError(f"factor {factor!r} is in no active block")
+
+
+def _thresholds_for_every_monthly_metric(manifest: Any) -> dict[str, Any]:
+    """A ``thresholds:`` document carrying one entry per monthly metric name."""
+    from ah.eval.metrics.monthly import build_monthly_suite
+    from ah.eval.reference import ReferenceStats
+
+    specs = build_monthly_suite(
+        manifest,
+        ReferenceStats(
+            blocks={},
+            cross_blocks={},
+            active_blocks=manifest.active_blocks,
+            vintage_id="v",
+            n_resamples=1,
+            seed=0,
+            missing_factors=(),
+        ),
+    )
+    blocks: dict[str, dict[str, Any]] = {b: {} for b in manifest.active_blocks}
+    cross: dict[str, dict[str, Any]] = {f"{a}|{b}": {} for a, b in manifest.cross_block_pairs()}
+    panel: dict[str, Any] = {}
+    entry = {"min": None, "max": None, "severity": "report"}
+    for spec in specs:
+        if "." not in spec.name:
+            panel[spec.name] = dict(entry)
+        elif "~" in spec.name:
+            factors = spec.name.split(".", 1)[0]
+            fa, fb = factors.split("~")
+            pair = tuple(sorted((_block_of(manifest, fa), _block_of(manifest, fb))))
+            cross[f"{pair[0]}|{pair[1]}"][spec.name] = dict(entry)
+        else:
+            factor = spec.name.split(".", 1)[0]
+            blocks[_block_of(manifest, factor)][spec.name] = dict(entry)
+    assert panel, "the monthly suite must contribute at least one panel-level metric"
+    return {"blocks": blocks, "cross_blocks": cross, "panel": panel}
+
+
+def test_every_monthly_metric_name_can_carry_a_sealed_threshold(tmp_path: Path) -> None:
+    manifest = load_manifest()
+    doc = _load_real_doc()
+    doc["thresholds"] = _thresholds_for_every_monthly_metric(manifest)
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+
+    loaded = prereg.load(prereg_path)
+    prereg.verify(loaded, load_manifest(factors_path))  # must not raise
+
+
+def test_verify_rejects_an_unregistered_panel_threshold_key(tmp_path: Path) -> None:
+    doc = _load_real_doc()
+    doc["thresholds"]["panel"] = {
+        "not_a_registered_panel_statistic": {"min": 0.0, "max": 1.0, "severity": "enforce"}
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    loaded = prereg.load(prereg_path)
+    with pytest.raises(PreRegError, match="not a registered panel statistic"):
+        prereg.verify(loaded, load_manifest(factors_path))
+
+
+def test_verify_rejects_a_factor_scoped_panel_threshold_key(tmp_path: Path) -> None:
+    """A panel statistic is whole-panel by definition; a factor-scoped key under it
+    would name a statistic nothing computes."""
+    doc = _load_real_doc()
+    doc["thresholds"]["panel"] = {
+        "equity_mkt.cross_block_corr_matrix_distance": {
+            "min": 0.0,
+            "max": 1.0,
+            "severity": "report",
+        }
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    loaded = prereg.load(prereg_path)
+    with pytest.raises(PreRegError, match="panel threshold key"):
+        prereg.verify(loaded, load_manifest(factors_path))
+
+
+def test_block_addition_carries_panel_thresholds_through_unchanged(tmp_path: Path) -> None:
+    """`block_addition` is additive over blocks and pairs; a panel statistic is not
+    block-scoped at all, so it must survive the merge byte-identically -- otherwise
+    activating a block would silently drop the sealed panel threshold."""
+    _write_synthetic_factors(tmp_path, "factors_before.yaml", ["alpha", "beta"])
+    after_path = _write_synthetic_factors(
+        tmp_path, "factors_after.yaml", ["alpha", "beta", "gamma"]
+    )
+    doc = {
+        "schema_version": "1.0",
+        "sealed": False,
+        "campaign_vintage_id": "test",
+        "factor_manifest": "factors_before.yaml",
+        "active_blocks": ["alpha", "beta"],
+        "conventions": {
+            "percent_to_decimal": 0.01,
+            "months_per_year": 12.0,
+            "return_bearing_factors": ["a1", "b1"],
+            "level_factors": ["a1_lvl"],
+            "rebalance_cadences": ["monthly"],
+            "static_weights_composition": "test fixture",
+            "numeraire": "total_return",
+            "numeraire_zero_cost_legs": [],
+        },
+        "thresholds": {
+            "blocks": {
+                "alpha": {"a1.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+                "beta": {"b1.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+            },
+            "cross_blocks": {
+                "alpha|beta": {
+                    "a1~b1.correlation": {"min": -1.0, "max": 1.0, "severity": "report"}
+                },
+            },
+            "panel": {
+                "cross_block_corr_matrix_distance": {
+                    "min": 0.0,
+                    "max": 2.0,
+                    "severity": "report",
+                }
+            },
+        },
+        "decisions": {},
+    }
+    prereg_path = tmp_path / "pre-registration.yaml"
+    prereg_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+
+    before = prereg.load(prereg_path)
+    assert "cross_block_corr_matrix_distance" in before.panel_thresholds
+
+    amendment = Amendment(
+        amendment_id="AMEND-GAMMA-PANEL",
+        type="block_addition",
+        date="2026-02-01",
+        rationale="fixture: activate gamma block",
+        post_hoc=True,
+        payload={
+            "block": "gamma",
+            "block_thresholds": {"g1.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+            "cross_block_thresholds": {
+                "alpha|gamma": {
+                    "a1~g1.correlation": {"min": -1.0, "max": 1.0, "severity": "report"}
+                },
+                "beta|gamma": {
+                    "b1~g1.correlation": {"min": -1.0, "max": 1.0, "severity": "report"}
+                },
+            },
+        },
+    )
+    merged = apply_block_addition(before, load_manifest(after_path), amendment)
+
+    assert merged.panel_thresholds == before.panel_thresholds
+    assert canonical_json(_threshold_dict(merged.panel_thresholds)) == canonical_json(
+        _threshold_dict(before.panel_thresholds)
+    )
+
+
+def test_default_judged_sources_pins_every_existing_metric_suite() -> None:
+    """The seal join is a fixed name list, and `_default_judged_sources()` silently
+    skips a suite path that does not exist -- so a rename or move of a metric suite
+    module would shrink the seal with no test failure. Asserting the *string* is in
+    `_METRIC_SUITE_NAMES` does not catch that; asserting the file resolves into the
+    judged set does.
+    """
+    resolved = {p.resolve() for p in prereg._default_judged_sources()}
+    metrics_dir = ROOT / "src" / "ah" / "eval" / "metrics"
+    on_disk = {p.resolve() for p in metrics_dir.glob("*.py") if p.name != "__init__.py"}
+    assert on_disk, "expected at least one metric suite module on disk"
+    missing = sorted(str(p.relative_to(ROOT)) for p in on_disk - resolved)
+    assert not missing, (
+        f"metric suite module(s) {missing} exist on disk but are outside the sealed "
+        f"judged-source set -- add them to ah.eval.prereg._METRIC_SUITE_NAMES"
+    )

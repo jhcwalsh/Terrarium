@@ -166,7 +166,7 @@ from typing import Any
 import yaml
 
 from ah.core.digest import canonical_json
-from ah.eval.reference import CROSS_BLOCK_STATS, SINGLE_FACTOR_STATS
+from ah.eval.reference import CROSS_BLOCK_STATS, PANEL_STATS, SINGLE_FACTOR_STATS
 from ah.factors import FactorManifest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -238,10 +238,13 @@ class Decision:
 class PreRegistration:
     """The parsed ``pre-registration.yaml``.
 
-    ``block_thresholds`` and ``cross_block_thresholds`` are the structured, validated
-    view of the ``thresholds:`` YAML block; ``raw`` is the full parsed document (used by
-    :func:`verify`'s ``conventions`` check, which this module implements independently
-    of :mod:`ah.strategies` -- see the module docstring).
+    ``block_thresholds``, ``cross_block_thresholds`` and ``panel_thresholds`` are the
+    structured, validated view of the ``thresholds:`` YAML block -- its ``blocks:``,
+    ``cross_blocks:`` and ``panel:`` sections, keyed ``"<factor>.<stat>"``,
+    ``"<factorA>~<factorB>.<stat>"`` and (for a whole-panel statistic that belongs to no
+    factor or pair) a bare ``"<stat>"`` respectively. ``raw`` is the full parsed
+    document (used by :func:`verify`'s ``conventions`` check, which this module
+    implements independently of :mod:`ah.strategies` -- see the module docstring).
 
     ``source_path`` is the resolved path :func:`load` read this document from. It is
     what binds a :class:`PreRegistration` to a lock file: :func:`verify` requires the
@@ -256,6 +259,7 @@ class PreRegistration:
     decisions: Mapping[str, Decision]
     raw: Mapping[str, Any]
     source_path: Path
+    panel_thresholds: Mapping[str, Threshold] = MappingProxyType({})
 
 
 @dataclass(frozen=True)
@@ -428,6 +432,11 @@ def load(path: Path | None = None) -> PreRegistration:
             _parse_threshold_map(entries, f"thresholds.cross_blocks.{pair_key}", resolved)
         )
 
+    panel_doc = thresholds_doc.get("panel") or {}
+    if not isinstance(panel_doc, dict):
+        raise PreRegError(f"{resolved}: 'thresholds.panel' must be a mapping")
+    panel_thresholds = _parse_threshold_map(panel_doc, "thresholds.panel", resolved)
+
     decisions_doc = doc.get("decisions") or {}
     if not isinstance(decisions_doc, dict):
         raise PreRegError(f"{resolved}: 'decisions' must be a mapping")
@@ -444,6 +453,7 @@ def load(path: Path | None = None) -> PreRegistration:
         decisions=MappingProxyType(decisions),
         raw=MappingProxyType(doc),
         source_path=resolved,
+        panel_thresholds=MappingProxyType(panel_thresholds),
     )
 
 
@@ -594,6 +604,29 @@ def _check_cross_block_threshold_key(
         errors.append(
             f"{label}: '{stat}' is not a registered cross-block statistic; known: "
             f"{sorted(CROSS_BLOCK_STATS)}"
+        )
+
+
+def _check_panel_threshold_key(key: str, errors: list[str]) -> None:
+    """A panel threshold key must be a bare registered whole-panel statistic name.
+
+    A whole-panel statistic (:data:`~ah.eval.reference.PANEL_STATS`) is a property of
+    the entire factor panel and belongs to no single factor or pair, so -- unlike the
+    other two sections -- its key carries no ``"<factor>."`` or ``"<factorA>~<factorB>."``
+    prefix. Accepting a prefixed key here would seal a threshold under a name nothing
+    computes, which is the same silent failure ``_check_block_threshold_key`` exists to
+    stop.
+    """
+    label = f"thresholds.panel.{key!r}"
+    if "." in key or "~" in key:
+        errors.append(
+            f"{label}: a panel threshold key must be a bare '<stat>' name (a whole-panel "
+            f"statistic belongs to no factor or pair, so no '.' or '~' prefix is valid)"
+        )
+        return
+    if key not in PANEL_STATS:
+        errors.append(
+            f"{label}: '{key}' is not a registered panel statistic; known: {sorted(PANEL_STATS)}"
         )
 
 
@@ -764,7 +797,9 @@ def verify(
       ``"<factor>.<stat>"`` with the factor in that block and the stat registered in
       :data:`~ah.eval.reference.SINGLE_FACTOR_STATS`, and
       ``"<factorA>~<factorB>.<stat>"`` with the factors drawn in order from the pair's
-      two blocks and the stat in :data:`~ah.eval.reference.CROSS_BLOCK_STATS`;
+      two blocks and the stat in :data:`~ah.eval.reference.CROSS_BLOCK_STATS`, and a
+      bare ``"<stat>"`` under ``thresholds.panel`` registered in
+      :data:`~ah.eval.reference.PANEL_STATS`;
     - every threshold's ``severity`` is ``enforce``/``report``, and ``min <= max``
       when both are given;
     - if ``lock_path`` is given and exists, the lock was sealed for *this*
@@ -828,6 +863,9 @@ def verify(
             )
             if pair_is_active:
                 _check_cross_block_threshold_key(key, pair, manifest, errors)
+    for key, th in prereg.panel_thresholds.items():
+        _check_threshold_sanity(th, f"thresholds.panel.{key}", errors)
+        _check_panel_threshold_key(key, errors)
 
     if lock_path is not None and lock_path.exists():
         _verify_lock(lock_path, prereg, errors)
@@ -1200,4 +1238,7 @@ def apply_block_addition(
         decisions=prereg.decisions,
         raw=MappingProxyType(new_raw),
         source_path=prereg.source_path,
+        # Panel statistics are not block-scoped, so a block addition neither adds to
+        # nor invalidates them: carried over by reference, provably byte-identical.
+        panel_thresholds=prereg.panel_thresholds,
     )

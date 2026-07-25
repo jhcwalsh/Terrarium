@@ -9,14 +9,36 @@ validation :class:`~ah.eval.reference.ReferenceStats` bands and
 :class:`~ah.eval.prereg.PreRegistration` thresholds, and emits a :class:`BatteryReport`
 in both JSON and markdown.
 
-Registration only
-------------------
+Registration, and who performs it
+-----------------------------------
 Tasks 2-6 add metric suites (``monthly``, ``horizon``, ``tails``, ``utility``,
 ``memorization``, ``economics``, ``conditional``, ``calibration``) by calling
-:func:`register_suite` at import time; :func:`run_battery` iterates :data:`SUITES`
-generically. Adding a suite must never require editing this module -- proved by
+:func:`register_suite`; :func:`run_battery` iterates :data:`SUITES` generically. Adding
+a suite must never require editing this module -- proved by
 ``tests/test_eval_battery.py``, which registers a throwaway suite and shows it appears
 in a report without touching :func:`run_battery`.
+
+An earlier version of this docstring said suites register "at import time". They cannot,
+and none does: a suite whose specs depend on a computed
+:class:`~ah.eval.reference.ReferenceStats` (``monthly``'s
+``cross_block_corr_matrix_distance`` is a distance *to* the historical correlation
+matrix) has nothing to register until a reference exists, and computing one needs a live
+:class:`~ah.splits.DataAccess`. Those suites expose a
+``build_<suite>(manifest, reference)`` builder instead, and
+:func:`register_reference_dependent_suites` -- called by :func:`run_full_battery`, the
+production entry point -- performs the registration once the reference has been
+computed. Stating an import-time rule that no code follows, in a file the
+pre-registration seal hashes, is how a seal comes to look stronger than it is; hence
+this paragraph rather than the old sentence.
+
+Two entry points
+-----------------
+:func:`run_full_battery` is the one to call: it computes the train+validation reference
+from the catalog (at the ensemble's own path length -- see
+:func:`ah.eval.reference.block_bootstrap_band`), registers every reference-dependent
+suite against it, and runs the battery. :func:`run_battery` is the lower layer, for a
+caller that already holds a :class:`~ah.eval.reference.ReferenceStats` and has
+registered its own suites (every test in ``tests/test_eval_battery.py`` does).
 
 Monte-Carlo error
 ------------------
@@ -53,9 +75,16 @@ import numpy as np
 
 from ah.eval import prereg as prereg_mod
 from ah.eval.prereg import PreRegistration, Threshold
-from ah.eval.reference import FactorCoverage, ReferenceStats, StatBand
+from ah.eval.reference import (
+    DEFAULT_BLOCK_LENGTH,
+    FactorCoverage,
+    ReferenceStats,
+    StatBand,
+    compute_reference,
+)
 from ah.factors import FactorManifest
 from ah.gen.base import Ensemble
+from ah.splits import DataAccess
 
 BATTERY_VERSION = "eval-battery-0.1"
 
@@ -111,6 +140,14 @@ class MetricResult:
 # suite name -> its registered MetricSpecs, in registration order. Tasks 2-6 populate
 # this via register_suite(); run_battery() iterates it generically (sorted by suite
 # name, for a deterministic report independent of import order).
+#
+# TODO(WP2.2 Tasks 3-6): only `monthly` exists, so a real battery run today covers the
+# monthly tier and nothing else -- `run_full_battery` registers exactly what
+# _REFERENCE_DEPENDENT_SUITE_BUILDERS names. Every remaining suite (horizon, tails,
+# utility, memorization, economics, conditional, calibration) must be added to that
+# table (or register itself) as it lands, or it will be written, tested, and then never
+# run. Tracked as governance/retrofit-register.md RFR-13; the verdict a partial battery
+# produces is a partial verdict and WP2.3 must not read it as a full one.
 SUITES: dict[str, tuple[MetricSpec, ...]] = {}
 
 
@@ -244,8 +281,14 @@ def _lookup_band(name: str, reference: ReferenceStats) -> StatBand | None:
 
 
 def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
-    """First match across sorted blocks, then sorted pairs -- see :func:`_lookup_band`
-    for the globally-unique-factor-id coupling this relies on."""
+    """First match across sorted blocks, then sorted pairs, then the panel section.
+
+    See :func:`_lookup_band` for the globally-unique-factor-id coupling the first two
+    rely on. The panel section is keyed by a bare statistic name (a whole-panel
+    statistic belongs to no factor and no pair -- see
+    :data:`ah.eval.reference.PANEL_STATS`), and those names carry no ``"."``, so they
+    cannot collide with a block or pair key.
+    """
     for block in sorted(prereg.block_thresholds):
         entries = prereg.block_thresholds[block]
         if name in entries:
@@ -254,7 +297,7 @@ def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
         entries = prereg.cross_block_thresholds[pair]
         if name in entries:
             return entries[name]
-    return None
+    return prereg.panel_thresholds.get(name)
 
 
 def _passed(value: float, threshold: Threshold) -> bool:
@@ -561,4 +604,115 @@ def run_battery(
         missing_no_data=reference.missing_no_data,
         coverage=reference.coverage,
         prereg_verified=prereg_verified,
+    )
+
+
+# --------------------------------------------------------------------------- #
+# run_full_battery: compute the reference, register the suites, run
+# --------------------------------------------------------------------------- #
+
+# Suite name -> the module path and builder attribute that constructs its specs from a
+# (manifest, reference) pair. A table rather than a hardcoded call so a later task adds
+# a suite by adding a row, not by editing `run_full_battery`. Imported lazily inside
+# `register_reference_dependent_suites` because a metric suite imports THIS module for
+# `MetricSpec`/`register_suite`; a module-level import here would be a cycle.
+_REFERENCE_DEPENDENT_SUITE_BUILDERS: dict[str, tuple[str, str]] = {
+    "monthly": ("ah.eval.metrics.monthly", "build_monthly_suite"),
+}
+
+
+def register_reference_dependent_suites(
+    manifest: FactorManifest, reference: ReferenceStats
+) -> tuple[str, ...]:
+    """(Re)register every suite whose specs need a computed reference. Returns the names.
+
+    **Idempotent by replacement.** :func:`register_suite` refuses to re-register a name
+    -- correct for the one-shot production path it guards -- so this drops any existing
+    registration for the suites it owns before registering them afresh. Without that, a
+    process that ran the battery twice (two ensembles, two vintages, a CLI loop) would
+    raise on the second call; with it, the second run's specs are built against the
+    second run's reference, which is the only correct behaviour: a spec closes over the
+    reference it was built with (``cross_block_corr_matrix_distance`` closes over the
+    historical correlation matrix it measures distance to), so reusing the first run's
+    registration would silently judge the second ensemble against the first reference.
+
+    Suites *not* in :data:`_REFERENCE_DEPENDENT_SUITE_BUILDERS` are left untouched,
+    including any a test registered by hand.
+    """
+    from importlib import import_module
+
+    registered: list[str] = []
+    for suite, (module_name, builder_name) in sorted(_REFERENCE_DEPENDENT_SUITE_BUILDERS.items()):
+        builder = getattr(import_module(module_name), builder_name)
+        SUITES.pop(suite, None)
+        register_suite(suite, builder(manifest, reference))
+        registered.append(suite)
+    return tuple(registered)
+
+
+def run_full_battery(
+    ensemble: Ensemble,
+    *,
+    access: DataAccess,
+    manifest: FactorManifest,
+    prereg: PreRegistration,
+    seed: int,
+    reference_seed: int | None = None,
+    vintage_id: str | None = None,
+    n_resamples: int = 1000,
+    level: float = 0.9,
+    block_length: int = DEFAULT_BLOCK_LENGTH,
+    filtered: Ensemble | None = None,
+) -> BatteryReport:
+    """Compute the reference, register every reference-dependent suite, run the battery.
+
+    **The entry point a real battery run goes through.** Before WP2.2 Task 2's fix pass
+    nothing in ``src/`` called any ``register_*_suite()``, so :data:`SUITES` was empty in
+    every production code path: :func:`run_battery` computed zero metrics and returned a
+    report whose :attr:`BatteryReport.passed` was vacuously ``True``. This function is
+    what makes the battery a battery.
+
+    Steps, in order:
+
+    1. :func:`ah.eval.reference.compute_reference` over ``manifest``'s active factors,
+       read through ``access`` on **train+validation only** (that function holds no
+       :class:`~ah.splits.FinalEvaluationToken` and cannot reach the holdout), with
+       ``resample_length=ensemble.months`` -- every bootstrap replicate is drawn at the
+       judged ensemble's own path length so both sides of every length-sensitive
+       statistic carry the same estimator bias (see
+       :func:`ah.eval.reference.block_bootstrap_band` for the full argument, and
+       ``ah.eval.metrics.monthly``'s module docstring for the residual this does not
+       cover).
+    2. :func:`register_reference_dependent_suites` against that reference.
+    3. :func:`run_battery`, which verifies the pre-registration (once sealed), evaluates
+       every registered suite, and attaches bands, thresholds and Monte-Carlo errors.
+
+    ``reference_seed`` defaults to ``seed``; it is separated so the reference's bootstrap
+    draw and the battery's Monte-Carlo subsampling draw can be varied independently
+    without either becoming a function of the other. ``vintage_id`` defaults to
+    ``ensemble.meta.vintage_id`` -- the reference is stamped with the vintage the
+    ensemble claims to have been generated against, which is what makes a report's
+    ``vintage_id`` mean one thing rather than two.
+
+    Determinism: every draw flows from ``reference_seed``/``seed`` through
+    ``numpy.random.Generator(PCG64(...))``; the same inputs give a bit-identical report.
+    """
+    reference = compute_reference(
+        access,
+        manifest,
+        vintage_id=ensemble.meta.vintage_id if vintage_id is None else vintage_id,
+        seed=seed if reference_seed is None else reference_seed,
+        n_resamples=n_resamples,
+        level=level,
+        block_length=block_length,
+        resample_length=ensemble.months,
+    )
+    register_reference_dependent_suites(manifest, reference)
+    return run_battery(
+        ensemble,
+        reference=reference,
+        prereg=prereg,
+        manifest=manifest,
+        seed=seed,
+        filtered=filtered,
     )

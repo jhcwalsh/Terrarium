@@ -8,6 +8,8 @@ similar. Tolerances are commented with their justification at the point of use.
 
 from __future__ import annotations
 
+from collections.abc import Iterator
+
 import numpy as np
 import pytest
 from numpy.random import PCG64, Generator
@@ -18,6 +20,7 @@ from ah.eval.metrics.monthly import (
     _acf_at_lag,
     _fit_exp_decay_rate,
     _leverage_one_path,
+    _paired_corr_matrices,
     acf_abs_decay,
     agg_gaussianity,
     build_monthly_suite,
@@ -270,10 +273,28 @@ def test_fit_exp_decay_rate_is_negative_for_a_growing_curve() -> None:
     assert _fit_exp_decay_rate(lags, values) < 0.0
 
 
-def test_fit_exp_decay_rate_nan_with_fewer_than_two_positive_points() -> None:
+def test_fit_exp_decay_rate_fits_a_curve_with_only_one_positive_point() -> None:
+    """BEHAVIOUR CHANGE, fix pass Important 1. The log-space fit needed at least two
+    strictly positive values and returned NaN otherwise; the levels fit has no such
+    requirement, because it does not select on sign at all. What used to be the
+    "fewer than two positive points" NaN case is now an ordinary fit -- and must be,
+    since dropping the non-positive points was itself the bias under repair.
+    """
     lags = np.array([1.0, 2.0, 3.0])
     values = np.array([0.5, -0.1, -0.2])
-    assert np.isnan(_fit_exp_decay_rate(lags, values))
+    rate = _fit_exp_decay_rate(lags, values)
+    assert not np.isnan(rate)
+    assert rate > 0.0  # the curve does decay, steeply
+
+
+def test_fit_exp_decay_rate_nan_with_fewer_than_two_points() -> None:
+    assert np.isnan(_fit_exp_decay_rate(np.array([1.0]), np.array([0.5])))
+
+
+def test_fit_exp_decay_rate_nan_with_a_non_finite_value() -> None:
+    """An uncomputable ACF (a degenerate path) must not be silently fitted around."""
+    lags = np.arange(1.0, 5.0)
+    assert np.isnan(_fit_exp_decay_rate(lags, np.array([0.5, np.nan, 0.2, 0.1])))
 
 
 def _garch11_path(n: int, beta: float, seed: int) -> np.ndarray:
@@ -352,7 +373,15 @@ def test_agg_gaussianity_12m_nearer_zero_than_1m_on_fat_tailed_iid_returns() -> 
 
 
 def test_agg_gaussianity_reuses_reference_excess_kurtosis() -> None:
-    x = np.array([[1.0, -2.0, 3.0, 0.5, -1.5, 2.5, -0.5, 1.0]])
+    """Also documents why `agg_gaussianity_1m` is not a registered metric: at h=1 the
+    aggregation is the identity, so this IS `excess_kurtosis` (fix pass, Important 4).
+
+    The sample is 40 points rather than the 8 it used to be: a fourth-moment statistic
+    below `reference.AGG_GAUSSIANITY_MIN_SUMS` now returns NaN instead of a number that
+    is pure noise (fix pass, Minor). The assertion is unchanged.
+    """
+    rng = Generator(PCG64(313))
+    x = rng.standard_t(df=5, size=(1, 40))
     ensemble = _one_factor_ensemble(x)
     value = agg_gaussianity(ensemble, "g1", 1)
     assert value == pytest.approx(_excess_kurtosis(x[0]), rel=0, abs=1e-12)
@@ -444,7 +473,7 @@ def test_corr_matrix_distance_metric_uses_cross_block_reference_correlations() -
     ensemble = _two_factor_ensemble(a, b, names=("g1", "u1"))
 
     specs = build_monthly_suite(manifest, reference)
-    value = _find_spec(specs, "corr_matrix_distance").fn(ensemble)
+    value = _find_spec(specs, "cross_block_corr_matrix_distance").fn(ensemble)
 
     # ensemble's g1~u1 correlation should be close to ref_corr=0.4 by construction, so
     # the 2x2 off-diagonal distance should be small (well under a mismatched-band scale).
@@ -456,7 +485,7 @@ def test_corr_matrix_distance_metric_nan_when_no_reference_pairs_exist() -> None
     reference = _empty_reference()
     ensemble = _two_factor_ensemble(np.zeros((5, 10)), np.zeros((5, 10)), names=("g1", "u1"))
     specs = build_monthly_suite(manifest, reference)
-    value = _find_spec(specs, "corr_matrix_distance").fn(ensemble)
+    value = _find_spec(specs, "cross_block_corr_matrix_distance").fn(ensemble)
     assert np.isnan(value)
 
 
@@ -521,12 +550,13 @@ def test_build_monthly_suite_names_and_tiers() -> None:
     for lag in range(1, 25):
         assert f"g1.acf_abs_lag{lag}" in names
     assert "g1.acf_abs_decay" in names
-    assert "g1.agg_gaussianity_1m" in names
+    # h=1 is the identity aggregation and is exactly `excess_kurtosis`; only h>1
+    # points of the aggregation curve get their own name (fix pass, Important 4).
     assert "g1.agg_gaussianity_3m" in names
     assert "g1.agg_gaussianity_12m" in names
     assert "g1.leverage_correlation" in names
     assert "g1~u1.crisis_corr_lift" in names
-    assert "corr_matrix_distance" in names
+    assert "cross_block_corr_matrix_distance" in names
     assert all(s.tier == "monthly" for s in specs)
     assert all(s.suite == "monthly" for s in specs)
     # no accidental duplicate names (register_suite would reject this anyway)
@@ -545,34 +575,49 @@ def test_metric_returns_nan_when_factor_absent_from_ensemble() -> None:
     assert np.isnan(lift)
 
 
+@pytest.fixture
+def restore_suites() -> Iterator[None]:
+    """Snapshot and restore ``battery.SUITES`` around a test that registers into it.
+
+    ``SUITES`` is process-global module state and ``register_suite`` refuses to
+    re-register a name, so a test that registers a suite and does not undo it poisons
+    every later test -- and leaks a metric into any other module's ``run_battery``
+    call. The same fixture ``tests/test_eval_battery.py`` uses; a ``try/finally`` pop
+    was the ad-hoc version, and it only removes the one key the test remembers to name.
+    """
+    snapshot = dict(battery.SUITES)
+    try:
+        yield
+    finally:
+        battery.SUITES.clear()
+        battery.SUITES.update(snapshot)
+
+
 def test_register_monthly_suite_appears_in_run_battery_without_editing_it(
-    monkeypatch: pytest.MonkeyPatch,
+    restore_suites: None,
 ) -> None:
     """Integration proof: monthly registers via the ordinary register_suite() path and
     run_battery picks it up with no change to run_battery's own source (Task 1's own
     acceptance bar, applied to this suite)."""
     assert "monthly" not in battery.SUITES
-    try:
-        manifest = _simple_manifest()
-        reference = _empty_reference()
-        register_monthly_suite(manifest, reference)
+    manifest = _simple_manifest()
+    reference = _empty_reference()
+    register_monthly_suite(manifest, reference)
 
-        rng = Generator(PCG64(18))
-        n_paths, months = 40, 30
-        g1 = rng.normal(0.0, 0.03, size=(n_paths, months))
-        u1 = rng.normal(0.0, 0.03, size=(n_paths, months))
-        ensemble = _two_factor_ensemble(g1, u1, names=("g1", "u1"))
+    rng = Generator(PCG64(18))
+    n_paths, months = 40, 30
+    g1 = rng.normal(0.0, 0.03, size=(n_paths, months))
+    u1 = rng.normal(0.0, 0.03, size=(n_paths, months))
+    ensemble = _two_factor_ensemble(g1, u1, names=("g1", "u1"))
 
-        from ah.eval import prereg as prereg_mod
+    from ah.eval import prereg as prereg_mod
 
-        report = run_battery(
-            ensemble, reference=reference, prereg=prereg_mod.load(), manifest=manifest, seed=0
-        )
-        names = {r.name for r in report.results if r.suite == "monthly"}
-        assert "g1.skew" in names
-        assert "corr_matrix_distance" in names
-    finally:
-        battery.SUITES.pop("monthly", None)
+    report = run_battery(
+        ensemble, reference=reference, prereg=prereg_mod.load(), manifest=manifest, seed=0
+    )
+    names = {r.name for r in report.results if r.suite == "monthly"}
+    assert "g1.skew" in names
+    assert "cross_block_corr_matrix_distance" in names
 
 
 def test_monthly_is_registered_in_prereg_metric_suite_names() -> None:
@@ -583,3 +628,312 @@ def test_monthly_is_registered_in_prereg_metric_suite_names() -> None:
     from ah.eval import prereg as prereg_mod
 
     assert "monthly" in prereg_mod._METRIC_SUITE_NAMES
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass
+# --------------------------------------------------------------------------- #
+
+
+def test_every_monthly_metric_name_is_a_registered_reference_statistic() -> None:
+    """Critical 2. ``ah.eval.prereg`` validates a threshold key's ``<stat>`` against
+    these registries, so a metric whose statistic is unregistered cannot carry a sealed
+    threshold at all -- and, once ``sealed: true`` lands, an entry authored under such
+    a name breaks every battery run rather than only the seal."""
+    from ah.eval.reference import CROSS_BLOCK_STATS, PANEL_STATS, SINGLE_FACTOR_STATS
+
+    specs = build_monthly_suite(_simple_manifest(), _empty_reference())
+    for spec in specs:
+        if "." not in spec.name:
+            assert spec.name in PANEL_STATS, spec.name
+        elif "~" in spec.name:
+            assert spec.name.split(".", 1)[1] in CROSS_BLOCK_STATS, spec.name
+        else:
+            assert spec.name.split(".", 1)[1] in SINGLE_FACTOR_STATS, spec.name
+
+
+def test_agg_gaussianity_1m_is_not_registered_as_a_second_metric() -> None:
+    """Important 4. The h=1 aggregation is the identity, so ``agg_gaussianity_1m`` was
+    bit-identical to ``excess_kurtosis``: two sealed names, one number. Only the h>1
+    points of the aggregation curve are registered; the h=1 point IS
+    ``excess_kurtosis`` (numeric identity asserted by
+    ``test_agg_gaussianity_reuses_reference_excess_kurtosis`` above)."""
+    names = {s.name for s in build_monthly_suite(_simple_manifest(), _empty_reference())}
+    assert "g1.agg_gaussianity_1m" not in names
+    assert "g1.agg_gaussianity_3m" in names
+    assert "g1.agg_gaussianity_12m" in names
+    assert "g1.excess_kurtosis" in names
+
+
+def test_corr_matrix_distance_metric_is_named_for_the_pairs_it_actually_covers() -> None:
+    """Minor. The metric covers cross-block pairs only (``reference.py`` registers no
+    within-block pairwise correlation), so the unqualified name overstated coverage in
+    every report table and threshold key."""
+    names = {s.name for s in build_monthly_suite(_simple_manifest(), _empty_reference())}
+    assert "cross_block_corr_matrix_distance" in names
+    assert "corr_matrix_distance" not in names
+
+
+def test_paired_corr_matrices_flag_the_pairs_the_reference_actually_covers() -> None:
+    """Minor. Both returned matrices carry 0.0 off-diagonal wherever the reference has
+    no entry for that pair -- harmless for the difference, but it means the returned
+    ensemble matrix is NOT the ensemble's correlation matrix. The mask says which
+    entries are real."""
+    manifest = FactorManifest(
+        blocks={"global": ("g1", "g2"), "us": ("u1",)},
+        active_blocks=("global", "us"),
+        sources={
+            name: FactorSource(
+                kind="series", units="ret", series_id=f"s.{name}", numeraire="total_return"
+            )
+            for name in ("g1", "g2", "u1")
+        },
+    )
+    band = StatBand(point=0.4, lo=0.2, hi=0.6, n_resamples=5, level=0.9, tier="monthly")
+    reference = ReferenceStats(
+        blocks={},
+        cross_blocks={
+            ("global", "us"): CrossBlockReference(
+                pair=("global", "us"),
+                stats={"g1~u1.correlation": band, "g2~u1.correlation": band},
+            )
+        },
+        active_blocks=("global", "us"),
+        vintage_id="v",
+        n_resamples=5,
+        seed=1,
+        missing_factors=(),
+    )
+    rng = Generator(PCG64(210))
+    paths = rng.normal(size=(20, 40, 3))
+    ensemble = Ensemble(paths=paths, factor_names=["g1", "g2", "u1"], meta=_meta(20, 40))
+
+    paired = _paired_corr_matrices(ensemble, reference, manifest.active_factors())
+    assert paired is not None
+    # g1~g2 is a within-block pair: no reference entry, so it is masked out and both
+    # matrices carry 0.0 there -- NOT the ensemble's real g1~g2 correlation.
+    i, j = paired.factors.index("g1"), paired.factors.index("g2")
+    assert not paired.mask[i, j]
+    assert paired.ensemble[i, j] == 0.0
+    k = paired.factors.index("u1")
+    assert paired.mask[i, k] and paired.mask[j, k]
+    assert paired.ensemble[i, k] != 0.0
+
+
+def test_acf_abs_lag1_metric_agrees_with_the_reference_function_itself() -> None:
+    """Important 5. The previous version retyped ``_acf1(np.abs(x - mean))`` by hand,
+    so a divergence in ``reference._acf_abs_1`` would have left the test green."""
+    from ah.eval.reference import _acf_abs_1
+
+    rng = Generator(PCG64(112))
+    x = rng.normal(size=(1, 300))
+    ensemble = _one_factor_ensemble(x)
+    spec = _find_spec(
+        build_monthly_suite(_simple_manifest(), _empty_reference()), "g1.acf_abs_lag1"
+    )
+    assert spec.fn(ensemble) == pytest.approx(_acf_abs_1(x[0]), rel=0, abs=1e-12)
+
+
+def test_hill_metric_recovers_the_known_alpha_of_its_own_fixture() -> None:
+    """Minor: the registration test asserted only ``> 0`` on data with a known alpha."""
+    rng = Generator(PCG64(6))
+    alpha = 2.0
+    losses = 1.0 + rng.pareto(alpha, size=(20, 2000))
+    ensemble = _one_factor_ensemble(-losses)
+    specs = build_monthly_suite(_simple_manifest(), _empty_reference())
+    # k = 5% of 40000 pooled observations = 2000; Hill's asymptotic SE is
+    # alpha / sqrt(k) ~ 0.045, so rel=0.15 (~0.3 in alpha) is a >6-sigma band.
+    assert _find_spec(specs, "g1.hill_tail_index_5pct").fn(ensemble) == pytest.approx(
+        alpha, rel=0.15
+    )
+    assert _find_spec(specs, "g1.hill_tail_index_1pct").fn(ensemble) == pytest.approx(
+        alpha, rel=0.15
+    )
+
+
+def test_agg_gaussianity_needs_more_than_a_handful_of_sums() -> None:
+    """Minor: ``sums.size < 4`` was a very weak guard for a fourth-moment statistic.
+    Excess kurtosis on 4-10 points is noise, not a measurement."""
+    x = np.arange(40.0).reshape(2, 20)
+    ensemble = _one_factor_ensemble(x)
+    # h=12 over two 20-month paths yields one sum per path: 2 pooled sums.
+    assert np.isnan(agg_gaussianity(ensemble, "g1", 12))
+    # h=1 over the same paths yields 40 pooled sums, comfortably above the floor.
+    assert not np.isnan(agg_gaussianity(ensemble, "g1", 1))
+
+
+# --- Important 1: the decay estimator must not select on the sign of its inputs ---
+
+
+def test_fit_exp_decay_rate_uses_every_lag_including_non_positive_ones() -> None:
+    """Dropping non-positive ACF values is a one-sided selection: at lags where the
+    true ACF is ~0 only upward noise survives, lifting the fitted tail and biasing the
+    rate downward. The levels fit consumes the whole curve, sign and all, so a curve
+    and its sign-symmetric perturbations do not systematically differ."""
+    lags = np.arange(1, 25, dtype=np.float64)
+    clean = 0.5 * np.exp(-0.3 * lags)
+    up = clean.copy()
+    down = clean.copy()
+    # a symmetric perturbation over the noise-dominated tail, where the ACF is ~0
+    up[16:] += 0.01
+    down[16:] -= 0.01
+    r_clean = _fit_exp_decay_rate(lags, clean)
+    r_up = _fit_exp_decay_rate(lags, up)
+    r_down = _fit_exp_decay_rate(lags, down)
+    assert not np.isnan(r_down), "a curve with negative tail values must still fit"
+    # the two perturbations pull the rate in opposite directions by similar amounts;
+    # the log-space fit could not see `down` at all.
+    assert (r_up - r_clean) * (r_down - r_clean) < 0.0
+    assert abs((r_up - r_clean) + (r_down - r_clean)) < 0.5 * abs(r_up - r_clean)
+
+
+def test_fit_exp_decay_rate_is_defined_for_a_curve_that_crosses_zero() -> None:
+    lags = np.arange(1, 13, dtype=np.float64)
+    values = 0.4 * np.exp(-0.25 * lags) - 0.02
+    assert float(values[-1]) < 0.0
+    assert not np.isnan(_fit_exp_decay_rate(lags, values))
+
+
+def test_fit_exp_decay_rate_is_nan_for_an_all_zero_curve() -> None:
+    lags = np.arange(1, 6, dtype=np.float64)
+    assert np.isnan(_fit_exp_decay_rate(lags, np.zeros(5)))
+
+
+def _ar1_vol_path(
+    n: int, phi: float, seed: int, mu: float = 12.0, sigma: float = 0.5
+) -> np.ndarray:
+    """A path whose ACF(|x - mean|) is exactly geometric with ratio ``phi``.
+
+    ``v`` is an AR(1) with mean ``mu`` far enough above zero that it never changes
+    sign, so ``acf(v, k) = phi**k`` exactly in population. The sign of ``x`` alternates,
+    so ``mean(x) ~ 0`` and ``|x - mean(x)| = v``: the volatility-clustering curve this
+    metric fits is a known exponential of rate ``-ln(phi)``.
+    """
+    rng = Generator(PCG64(seed))
+    v = np.empty(n)
+    v[0] = mu
+    for t in range(1, n):
+        v[t] = mu + phi * (v[t - 1] - mu) + sigma * rng.normal()
+    assert v.min() > 0.0
+    return v * np.where(np.arange(n) % 2 == 0, 1.0, -1.0)
+
+
+def test_acf_abs_decay_recovers_a_known_exponential_rate() -> None:
+    """MISSING (from the brief): the composite metric was only ordering-tested.
+    ``_ar1_vol_path``'s ACF(|deviation|) is exactly ``phi**k``, so the metric's target
+    is ``-ln(phi)``, known independently of this implementation."""
+    phi = 0.9
+    paths = np.stack([_ar1_vol_path(2000, phi, 4000 + i) for i in range(30)])
+    ensemble = _one_factor_ensemble(paths)
+
+    rate = acf_abs_decay(ensemble, "g1")
+
+    # Per-path rates have sd ~0.025 across these 30 paths, so their mean has SE ~0.005;
+    # abs=0.02 is a ~4-sigma band around -ln(0.9) = 0.1054 that still excludes
+    # -ln(0.85) = 0.1625 and -ln(0.95) = 0.0513 by a wide margin. The small residual
+    # upward bias (measured ~+0.005) is the finite-sample ACF bias described in the
+    # module docstring, not slack in the estimator.
+    assert rate == pytest.approx(-np.log(phi), abs=0.02)
+
+
+def test_acf_abs_decay_is_computed_per_path_then_averaged() -> None:
+    """The module's stated convention for every time-order-dependent statistic, and
+    the convention the length-matched reference band assumes: a reference replicate is
+    one series of the ensemble's path length, so the ensemble side must average that
+    same single-series estimator rather than fit a path-averaged curve (a materially
+    less biased -- and therefore NON-comparable -- functional)."""
+    from ah.eval.reference import acf_abs_decay as reference_acf_abs_decay
+
+    paths = np.stack([_ar1_vol_path(400, 0.9, 5100 + i) for i in range(6)])
+    ensemble = _one_factor_ensemble(paths)
+    expected = float(np.mean([reference_acf_abs_decay(p) for p in paths]))
+    assert acf_abs_decay(ensemble, "g1") == pytest.approx(expected, rel=0, abs=1e-12)
+
+
+# --- Important 3: a generator reproducing history lands inside its own band ---
+
+
+def _seasonal_vol_series(n: int, seed: int, offset: int = 0) -> np.ndarray:
+    """A path whose |deviation| carries a near-deterministic 24-month volatility cycle.
+
+    Chosen deliberately: with an almost deterministic period-24 signal the sample ACF
+    at lag 24 is dominated by the estimator's own length dependence -- the
+    n-denominator shrinkage factor ``(n - k) / n`` -- and by nothing else, so a test
+    built on it measures the artifact under repair rather than a process's sampling
+    noise.
+    """
+    rng = Generator(PCG64(seed))
+    t = np.arange(offset, offset + n)
+    v = 5.0 + 2.0 * np.cos(2.0 * np.pi * t / 24.0) + 0.2 * rng.normal(size=n)
+    return v * np.where(t % 2 == 0, 1.0, -1.0)
+
+
+def test_length_matched_band_contains_a_generator_reproducing_the_same_process() -> None:
+    """Important 3. The n-denominator ACF estimator shrinks by ``(n - k) / n``: ~20% at
+    lag 24 on a 120-month path and ~2% on the ~1100-month history the reference is
+    computed over. A generator reproducing history EXACTLY would therefore sit outside
+    a band drawn at history's length, purely as an estimator artifact. Reference
+    replicates are drawn at the ensemble's own path length so both sides carry the
+    same bias.
+    """
+    import pandas as pd
+
+    from ah.eval.reference import compute_reference
+    from ah.splits import DataAccess
+
+    months = 120
+    history = _seasonal_vol_series(1200, 42)
+    dates = pd.date_range("1900-01-01", periods=history.size, freq="MS")
+    frames = {"s.g1": pd.DataFrame({"date": dates, "value": history})}
+
+    def reader(series_id: str) -> pd.DataFrame:
+        if series_id not in frames:
+            raise KeyError(series_id)
+        return frames[series_id]
+
+    manifest = FactorManifest(
+        blocks={"global": ("g1",)},
+        active_blocks=("global",),
+        sources={
+            "g1": FactorSource(
+                kind="series", series_id="s.g1", units="ret", numeraire="total_return"
+            )
+        },
+    )
+    access = DataAccess(reader)
+    ensemble = _one_factor_ensemble(
+        np.stack([_seasonal_vol_series(months, 6000 + i, offset=i) for i in range(40)])
+    )
+    specs = build_monthly_suite(manifest, _empty_reference(("global",)))
+
+    matched = compute_reference(
+        access,
+        manifest,
+        vintage_id="v",
+        seed=5,
+        n_resamples=200,
+        block_length=months,
+        resample_length=months,
+    )
+    unmatched = compute_reference(
+        access, manifest, vintage_id="v", seed=5, n_resamples=200, block_length=months
+    )
+
+    for lag in (12, 24):
+        name = f"g1.acf_abs_lag{lag}"
+        value = _find_spec(specs, name).fn(ensemble)
+        band = matched.blocks["global"].stats[name]
+        assert band.lo <= value <= band.hi, f"{name}: {value} outside {band}"
+        # ... while the same statistic on the FULL history -- what an un-length-matched
+        # band is centred on -- is a materially different number. That gap IS the
+        # artifact: history reproduced exactly would fail its own band.
+        full_sample = unmatched.blocks["global"].stats[name].point
+        # The gap is the (n - k) / n shrinkage the estimator applies at path length:
+        # |full_sample| * lag / months, and at least half of it must actually show up,
+        # or the fixture is not length-sensitive and the test would prove nothing.
+        predicted_shrinkage = abs(full_sample) * lag / months
+        assert abs(full_sample - value) > 0.5 * predicted_shrinkage, (
+            f"{name}: expected a length artifact of ~{predicted_shrinkage:.3f}, saw "
+            f"{abs(full_sample - value):.3f}"
+        )
+        assert not (band.lo <= full_sample <= band.hi)

@@ -292,6 +292,131 @@ conventions:
     inside this seal, so the same generator could have been judged either way depending
     on which battery ran.
 
+  # --------------------------------------------------------------------------- #
+  # Metric estimator conventions (WP2.2 Task 2 and its fix pass). Sealed here because
+  # a band is meaningless without the estimator that produced it: two defensible
+  # estimators of "the ACF decay rate" give materially different numbers on the same
+  # data, and after the seal a change to any of the statements below is a dated,
+  # post-hoc-flagged amendment.
+  # --------------------------------------------------------------------------- #
+  acf_estimator: >-
+    ONE ACF CONVENTION for the whole platform: the Box-Jenkins sample autocorrelation
+    with the OVERALL SAMPLE MEAN and an n-DENOMINATOR -- acf_k = gamma_k / gamma_0 with
+    gamma_k = (1/n) * sum_{t=1..n-k} (x_t - xbar)(x_{t+k} - xbar) and gamma_0 =
+    (1/n) * sum_t (x_t - xbar)^2. NOT numpy.corrcoef's pairwise-mean, (n-1)-denominator
+    estimator; the two agree asymptotically but not at finite n. `acf_r_lag{k}` applies
+    it to the raw series (k = 1..5); `acf_abs_lag{k}` applies it to |x - mean(x)|, the
+    volatility proxy, (k = 1..24). Implemented once, in ah.eval.reference, and reused by
+    the metric suite -- never restated.
+  estimator_length_matching: >-
+    THE ESTIMATOR IS LENGTH-DEPENDENT, AND BOTH SIDES OF EVERY BAND ARE MATCHED ON IT.
+    The n-denominator convention above carries a finite-sample bias that is a function
+    of the series length: the (n-k)/n shrinkage alone is ~20% at lag 24 on a 120-month
+    generated path against ~2% on the ~1100-month historical series, and the
+    mean-subtraction term is larger still for a persistent process. A reference band
+    drawn at history's length is therefore NOT a criterion a short-path generator can
+    satisfy even by reproducing history exactly -- the gap is an artifact of the
+    estimator, not evidence about the generator. Every reference band is therefore drawn
+    with `resample_length` equal to the judged ensemble's own path length: each
+    moving-block bootstrap replicate carries that many months, drawn from the full
+    train+validation sample, so both sides carry the identical bias. CONSEQUENCE, stated
+    because it looks like a defect otherwise: a length-matched band's `point` (the
+    statistic on all of history) is NOT expected to lie inside its own [lo, hi]. The
+    rejected alternative was an (n-k) denominator, which would have to change every ACF
+    in the platform at once and still corrects only the shrinkage term, leaving the
+    mean-subtraction bias intact and still length-dependent.
+    RESIDUAL, NOT COVERED: length matching is applied uniformly at the PATH length,
+    which is right for the per-path statistics (every ACF, the decay, the leverage
+    correlation) and wrong for the POOLED ones -- skew, excess_kurtosis, the Hill
+    indices, the aggregational-Gaussianity kurtoses and crisis_corr_lift are computed by
+    the metric suite over n_paths * months pooled observations while a replicate carries
+    only months, and all of those estimators are small-sample biased. Their bands are
+    conservatively wide and their bias is unmatched. See
+    governance/retrofit-register.md RFR-15: WP2.3 must decide before sealing a band over
+    any pooled statistic.
+    ALSO NOT AUTOMATIC: a moving-block bootstrap preserves a lag-k relationship only for
+    the pairs inside one block, keeping a (b-k)/b share of them, so the block length
+    must comfortably exceed the longest judged lag (24) while still cutting history into
+    enough blocks for a percentile band. The sealed default is 120 months
+    (ah.eval.reference.DEFAULT_BLOCK_LENGTH); at the previous default of 24 every
+    long-lag band was an artifact of the resampling rather than a statement about
+    history.
+  acf_abs_decay_estimator: >-
+    `acf_abs_decay` is the rate of the exponential value ~= A * exp(-rate * lag) fitted
+    to the 24-point curve (acf_abs_lag1 .. acf_abs_lag24) BY ORDINARY LEAST SQUARES ON
+    THE VALUES THEMSELVES, not in log space. For a fixed rate the amplitude has the
+    closed form A*(rate) = sum_k v_k e_k / sum_k e_k^2 with e_k = exp(-rate * lag_k), so
+    the fit reduces to a one-dimensional minimization of the profiled sum of squares:
+    241 equally spaced grid points across rate in [-1.0, 5.0], then golden-section
+    search within the bracketing interval to an interval width of 1e-10 (at most 200
+    iterations). Deterministic, no RNG, no optimizer dependency. rate > 0 is decay;
+    rate < 0 is growth and is reported signed, never floored at zero. NaN only for fewer
+    than two lags, a non-finite value, or an all-zero curve.
+    WHY LEVELS, NOT LOG SPACE: a log-space fit needs value > 0, and dropping the
+    non-positive values is a ONE-SIDED SELECTION -- at lags where the true
+    autocorrelation is ~0 only upward noise survives the filter, lifting the fitted tail
+    and biasing the rate downward, worst exactly where a volatility-clustering curve is
+    most informative. Clamping trades one bias for another. The levels fit consumes
+    every lag whatever its sign, so no selection happens at all.
+    WHY AN EXPONENTIAL AT ALL, given that the canonical stylized fact (Cont 2001) is a
+    slow POWER-LAW decay of ACF(|r|): the number is read only as a comparative summary
+    against the same estimator applied to reference replicates of the same length over
+    the same fixed lag window, never as a claim about the true functional form; a
+    log-log power-law fit is not a neutral alternative (equally misspecified if the truth
+    is nearer exponential, and its log-spaced abscissa weights the first four lags more
+    heavily still); and the long-memory information an exponential summary compresses
+    away is not lost, because every acf_abs_lag{k} for k = 1..24 is separately registered
+    and separately banded, so "slow decay" versus "fast decay with high short-memory
+    persistence" is discriminated by the lag-24 band rather than by this number.
+    RESIDUAL BIAS: a levels fit weights absolute residuals equally, so the large low-lag
+    values dominate and the rate summarizes the curve's early decay more than its tail.
+    Ensemble-side, the rate is fitted PER PATH and averaged (never fitted to a
+    path-averaged curve, which is a materially less biased and therefore NON-comparable
+    functional than the single-series estimator the reference band is built from).
+  hill_tail_index_estimator: >-
+    LEFT tail (losses), Hill (1975) ratio form. Losses are -x, sorted descending
+    L_(1) >= ... >= L_(n); with k = max(1, round(tail_fraction * n)) and the (k+1)-th
+    order statistic as threshold, alpha_hat = ( (1/k) * sum_{i=1..k} ln(L_(i)/L_(k+1)) )
+    ^ -1. Registered at tail_fraction 0.05 and 0.01. A SMALLER alpha_hat is a FATTER
+    tail. NaN -- never a number computed from the wrong side -- when n < k+1, when any of
+    the top k+1 losses is <= 0, or when the mean log-ratio is <= 0. CONSEQUENCE: a level
+    factor (a rate, a spread, an index) is normally all-positive and so reports NaN by
+    construction; the Hill tail index of a level is not a meaningful quantity and NaN is
+    the honest answer.
+  agg_gaussianity_estimator: >-
+    Excess kurtosis (the same m4/m2^2 - 3 population definition as `excess_kurtosis`) of
+    NON-OVERLAPPING horizon-month sums, the partial tail dropped, computed within each
+    path and then pooled across paths. Registered at horizons 3 and 12 months only:
+    horizon 1 is the identity aggregation and is EXACTLY `excess_kurtosis`, so
+    registering it again would put two sealed names and two thresholds on one number.
+    The stylized fact is the ORDERING -- excess kurtosis decaying toward 0 as the horizon
+    grows -- read with `excess_kurtosis` as its h=1 anchor. NaN below 30 pooled sums: the
+    sample excess kurtosis of n draws has standard error ~sqrt(24/n), which is 0.9 at
+    n = 30 and 2.4 at n = 4, so below that floor the number carries no information about
+    the effect it exists to detect.
+  leverage_correlation_estimator: >-
+    corr(r_t, |r_{t+1} - mean(r)|) within one path, LAG 1 MONTH, Pearson. The volatility
+    proxy is the same |x - mean(x)| used by `acf_abs_lag{k}` -- not a third,
+    independently invented proxy. Negative is the classical leverage effect (a down
+    month followed by higher realized volatility). NaN for a path shorter than 3 months.
+  cross_block_corr_matrix_distance_estimator: >-
+    FROBENIUS NORM of the entrywise difference between the generated ensemble's
+    cross-block correlation matrix and the reference's, sqrt(sum((a-b)^2)), over exactly
+    the factor axis that reference.py computes a cross-block `correlation` for. Chosen
+    over the Herdin et al. normalized correlation-matrix distance because both matrices
+    are already on the same bounded [-1, 1] scale, so no normalization is needed to make
+    them comparable. Its value on history is identically zero (history's distance to
+    itself), so it is registered in PANEL_STATS with no historical band and its threshold
+    is an ABSOLUTE BOUND, not a band. WITHIN-BLOCK PAIRS ARE NOT COVERED -- reference.py
+    registers no within-block pairwise correlation statistic to be a distance to
+    (governance/retrofit-register.md RFR-14) -- which is why the metric carries the
+    qualified name rather than a bare `corr_matrix_distance` that would overstate it.
+    CONSEQUENCE: a single degenerate factor (zero pooled variance) makes its own
+    correlation entries NaN and so NaNs this whole panel-level metric. That is correct
+    under nan_metric_rule below; it is deliberately not softened by dropping the
+    offending row, because silently shrinking the matrix would change WHICH pairs the
+    sealed distance is a distance over, run to run.
+
   loss_sign: >-
     VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of
     return; VaR at level p is the p-quantile of the pooled loss distribution; ES at
@@ -605,24 +730,34 @@ d4_strategies:
 # ah.eval.reference computes the real train+validation bands and WP2.3 replaces every
 # entry below with one before sealing.
 #
-# A per-block key is "<factor>.<stat>", matching ah.eval.reference.SINGLE_FACTOR_STATS'
-# naming (mean, std, skew, excess_kurtosis, acf_1, acf_abs_1). A cross-block key is
-# "<factorA>~<factorB>.<stat>", matching ah.eval.reference.CROSS_BLOCK_STATS' naming
-# (correlation, crisis_corr_lift). `severity` is `enforce` (an out-of-band value blocks
-# the gate) or `report` (recorded, non-blocking). ah.eval.prereg.verify() checks: every
-# active block has a thresholds.blocks entry; no entry names an inactive block; every
-# active cross-block pair (ah.factors.FactorManifest.cross_block_pairs(), currently
-# just global|us) has a thresholds.cross_blocks entry; no entry names an inactive
-# block; every severity is enforce/report; min <= max where both are given.
+# THREE SECTIONS, THREE KEY SHAPES, one per statistic scope:
+#   thresholds.blocks.<block>       key "<factor>.<stat>",           stat in
+#                                   ah.eval.reference.SINGLE_FACTOR_STATS
+#   thresholds.cross_blocks.<a|b>   key "<factorA>~<factorB>.<stat>", stat in
+#                                   ah.eval.reference.CROSS_BLOCK_STATS
+#   thresholds.panel                key "<stat>" (bare),              stat in
+#                                   ah.eval.reference.PANEL_STATS
+# A panel statistic is a property of the whole factor panel and belongs to no single
+# factor or pair, so it carries no prefix at all -- cross_block_corr_matrix_distance is
+# the one entry today. `severity` is `enforce` (an out-of-band value blocks the gate) or
+# `report` (recorded, non-blocking). ah.eval.prereg.verify() checks: every active block
+# has a thresholds.blocks entry; no entry names an inactive block; every active
+# cross-block pair (ah.factors.FactorManifest.cross_block_pairs(), currently just
+# global|us) has a thresholds.cross_blocks entry; no entry names an inactive block;
+# every severity is enforce/report; min <= max where both are given.
 #
 # The KEY NAMING RULE above is itself machine-checked, not merely stated: verify()
 # rejects a per-block key that is not exactly "<factor>.<stat>" with the factor in that
-# same block and the stat registered in SINGLE_FACTOR_STATS, and a cross-block key that
+# same block and the stat registered in SINGLE_FACTOR_STATS; a cross-block key that
 # is not exactly "<factorA>~<factorB>.<stat>" with factorA drawn from the pair key's
 # first block, factorB from its second (the pair key is sorted, and reference.py keys
-# the statistic in that order), and the stat registered in CROSS_BLOCK_STATS. Without
-# that check a sealed `enforce` threshold could name a statistic nothing computes -- a
-# threshold that judges nothing, silently, forever.
+# the statistic in that order), and the stat registered in CROSS_BLOCK_STATS; and a
+# panel key that is not a bare name registered in PANEL_STATS. Without those checks a
+# sealed `enforce` threshold could name a statistic nothing computes -- a threshold that
+# judges nothing, silently, forever. NOTE, because it decides how a bad entry fails:
+# once `sealed: true` lands, ah.eval.battery.run_battery calls verify() on EVERY
+# invocation, so a key naming an unregistered statistic does not merely fail the seal --
+# it stops every battery run.
 # --------------------------------------------------------------------------- #
 thresholds:
   blocks:
@@ -635,11 +770,24 @@ thresholds:
       # PROVISIONAL placeholder -- not derived from history (see file header).
       "policy_rate.std": {min: 0.0, max: 50.0, severity: enforce}
       # PROVISIONAL placeholder -- not derived from history (see file header).
-      "ust_10y.acf_1": {min: -1.0, max: 1.0, severity: report}
+      # (Named acf_r_lag1, not acf_1: WP2.2 Task 2's fix pass folded the two lag-1 ACF
+      # statistics into the lag-indexed scheme so that no two registered names compute
+      # one number. Free while sealed: false; a dated amendment afterwards.)
+      "ust_10y.acf_r_lag1": {min: -1.0, max: 1.0, severity: report}
   cross_blocks:
     "global|us":
       # PROVISIONAL placeholder -- not derived from history (see file header).
       "equity_mkt~ust_10y.correlation": {min: -1.0, max: 1.0, severity: report}
+  panel:
+    # PROVISIONAL placeholder -- not derived from history (see file header).
+    # cross_block_corr_matrix_distance is a DISTANCE between the generated ensemble's
+    # cross-block correlation matrix and the reference's own, so its value on history is
+    # identically zero and there is no historical band to compute: a threshold on it is
+    # an absolute bound, not a band. Frobenius norm of the entrywise difference,
+    # restricted to exactly the factor pairs reference.py computes a cross-block
+    # `correlation` for (within-block pairs have no registered reference statistic to be
+    # a distance TO -- governance/retrofit-register.md RFR-14).
+    "cross_block_corr_matrix_distance": {min: 0.0, max: 10.0, severity: report}
 
 # --------------------------------------------------------------------------- #
 # Item 3 decisions -- R5 (FX) and J3 (UK block), both CLOSED-deferred (WP2.1b Task 5
