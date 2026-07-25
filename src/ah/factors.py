@@ -16,6 +16,7 @@ from collections.abc import Mapping
 from dataclasses import dataclass
 from functools import cache
 from pathlib import Path
+from types import MappingProxyType
 
 import yaml
 
@@ -96,11 +97,13 @@ def _validate(factor_blocks: object, active_blocks: object, source: Path) -> Fac
 
     for block_id in active_blocks:
         if not isinstance(block_id, str) or not block_id:
-            raise ManifestError(f"{source}: active_blocks entries must be non-empty strings")
+            raise ManifestError(
+                f"{source}: active_blocks entries must be non-empty strings, got {block_id!r}"
+            )
         if block_id not in blocks:
             raise ManifestError(f"{source}: active_blocks references unknown block '{block_id}'")
 
-    return FactorManifest(blocks=blocks, active_blocks=tuple(active_blocks))
+    return FactorManifest(blocks=MappingProxyType(blocks), active_blocks=tuple(active_blocks))
 
 
 @cache

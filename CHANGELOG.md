@@ -106,6 +106,15 @@ All notable changes to this project are documented here. The project follows
   no factor in two blocks, no empty block. `EnsembleMeta` gains `active_blocks:
   tuple[str, ...] = ()`; `battery/report.py`'s `BatteryReport` gains the same field,
   populated from `load_manifest()`.
+- **WP2.1b Task 1 review fixes.** `FactorManifest.blocks` is now wrapped in
+  `types.MappingProxyType` before being stored on the frozen dataclass, so the
+  identity-cached `load_manifest()` object can no longer be mutated through its
+  `blocks` mapping (the frozen dataclass only blocked attribute reassignment, not
+  mutation of the dict's contents). `active_blocks` non-string/empty-entry errors
+  now interpolate the offending value, matching the two parallel checks nearby.
+  Added tests for the previously-untested "factor names and block ids must be
+  non-empty strings" validation branches (empty-string factor, non-string factor,
+  empty-string `active_blocks` entry) and for the new `blocks` immutability.
 
 ## [v0.1.0-g0] — 2026-07-24
 

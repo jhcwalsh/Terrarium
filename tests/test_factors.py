@@ -7,6 +7,7 @@ rather than a wholesale re-seal: existing per-block thresholds stay byte-identic
 
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import pytest
@@ -137,3 +138,54 @@ def test_load_manifest_default_path_is_repo_root_factors_yaml() -> None:
     manifest = load_manifest()
     assert isinstance(manifest, FactorManifest)
     assert (ROOT / "factors.yaml").exists()
+
+
+def test_blocks_mapping_is_immutable() -> None:
+    # load_manifest() is memoized by object identity (test_load_manifest_is_cached_by_identity),
+    # and downstream work relies on that identity holding for the process lifetime. A plain
+    # dict on a frozen dataclass is still mutable through its contents (frozen only blocks
+    # attribute *reassignment*), so an accidental `manifest.blocks["x"] = (...)` anywhere would
+    # silently corrupt the single shared manifest. Assert that mutation is rejected outright.
+    manifest = load_manifest()
+    with pytest.raises(TypeError):
+        manifest.blocks["us"] = ("hacked",)  # type: ignore[index]
+
+
+def test_block_with_empty_string_factor_raises(tmp_path: Path) -> None:
+    bad = tmp_path / "factors.yaml"
+    bad.write_text(
+        "factor_blocks:\n  global: [equity_mkt, '']\nactive_blocks: [global]\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ManifestError):
+        load_manifest(bad)
+
+
+def test_block_with_non_string_factor_raises(tmp_path: Path) -> None:
+    bad = tmp_path / "factors.yaml"
+    bad.write_text(
+        "factor_blocks:\n  global: [equity_mkt, 5]\nactive_blocks: [global]\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ManifestError):
+        load_manifest(bad)
+
+
+def test_active_blocks_entry_empty_string_raises(tmp_path: Path) -> None:
+    bad = tmp_path / "factors.yaml"
+    bad.write_text(
+        "factor_blocks:\n  global: [equity_mkt]\nactive_blocks: ['']\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ManifestError):
+        load_manifest(bad)
+
+
+def test_active_blocks_entry_error_message_includes_offending_value(tmp_path: Path) -> None:
+    bad = tmp_path / "factors.yaml"
+    bad.write_text(
+        "factor_blocks:\n  global: [equity_mkt]\nactive_blocks: ['']\n",
+        encoding="utf-8",
+    )
+    with pytest.raises(ManifestError, match=re.escape(repr(""))):
+        load_manifest(bad)
