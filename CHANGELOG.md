@@ -141,6 +141,58 @@ All notable changes to this project are documented here. The project follows
   tail-dependence coefficients remain WP2.2 scope (named, not stubbed).
   `tests/test_tails_import_graph.py` walks the AST of both new modules and asserts
   no import names a portfolio/sleeve/institution module.
+- **WP2.1b Task 2 review fixes (fix pass 1) — derived series, and a sealed file that
+  stands alone.** Review returned Spec: FAIL. Three defects mattered most.
+  *(1) Levels are not returns.* `sixty_forty`, `endowment_proxy` and `carry` weighted
+  rate/spread **levels** (`ust_10y`, `hy_spread`, `policy_rate`) as if they were period
+  returns and summed them with `equity_mkt`: the 60/40 bond leg *rose* when yields
+  rose, the endowment credit leg booked spread widening as a gain, and `carry`'s pooled
+  loss distribution was dominated by a positive constant, so `var_es` returned a
+  negative number in violation of its own positive-loss-magnitude convention.
+  `pre-registration.yaml` gains a `derived_series:` block, declared before
+  `d4_strategies`, in which a level factor is converted to a monthly decimal return by
+  a named transform with every parameter, the closed-form formula, the
+  percent-to-decimal conversion, the lag and the warm-up all stated: `govt_tr_10y`
+  (`bond_total_return` on `ust_10y`, `duration_years: 8.5`), `credit_xs_hy`
+  (`spread_excess_return` on `hy_spread`, `spread_duration_years: 4.0`) and
+  `cash_tr_1m` (`bond_total_return` on `policy_rate` with `duration_years: 0.0` — cash
+  is a zero-duration bond, so `carry`'s funding leg needs no bespoke arithmetic and no
+  third transform). One convention throughout: levels are percent, `r_t = 0.01 * (
+  x_{t-1}/12 - D*(x_t - x_{t-1}) )`, and month 0 is 0.0 under the file's single
+  warm-up rule (the same rule `momentum` uses). `strategies.py` gains `DerivedSeries`,
+  `load_derived_series()` (memoized by resolved path, like `load_d4_strategies()`) and
+  `KNOWN_TRANSFORMS`; a strategy weight key may now name an active factor **or** a
+  declared derived series, and nothing else. `sixty_forty` is now
+  `{equity_mkt: 0.6, govt_tr_10y: 0.4}`; `endowment_proxy`'s govt/credit legs are
+  `govt_tr_10y`/`credit_xs_hy` at unchanged sleeve weights; `carry` is long
+  `govt_tr_10y` funded at `cash_tr_1m`. `eqw_factors` is unchanged.
+  *(2) The sealed file no longer incorporates unsealed code by reference.* `carry`'s
+  units convention and `momentum`'s warm-up were defined by pointing at
+  `tails.py`'s module docstring; both are now stated in full in a `conventions:` block
+  inside the file, and `tails.py`'s "factor-slab convention" paragraph is deleted and
+  replaced by the levels-only-through-a-derived-series rule.
+  *(3) The import-graph acceptance test passed without protecting.* It appended only
+  `node.module` for `ast.ImportFrom`, so `from ah.core import institution` (and the
+  `as`-aliased and relative forms) were missed — and `ah/core/institution.py` really
+  exists and really holds `SLEEVES`. The checker now also emits
+  `f"{node.module}.{alias.name}"` per alias and handles `node.module is None`, with a
+  parametrized test proving it catches all five forms from parsed strings.
+  Also: rule lookbacks are declared exactly once (`Strategy.lookback` drives the rule;
+  `lookback_months` inside `params` is rejected); sealed parameters have no code-side
+  defaults (a missing one raises `StrategyError` naming it); unknown keys and duplicate
+  YAML mapping keys are hard errors (`_UniqueKeyLoader`); rule target series are sealed
+  data (`params` keys ending `_series`, validated against the active factors plus the
+  declared derived series at load, not at metric time); `endowment_proxy`'s
+  `proxy_mapping` is loaded and its sleeve weights must roll up to the flat `weights`
+  within 1e-9; `KNOWN_RULES`/`KNOWN_TRANSFORMS` are asserted equal to `tails.py`'s
+  dispatch tables (and the `# pragma: no cover` that hid the gap is gone); the analytic
+  VaR/ES tolerance drops from 2e-3 to 5e-4 (~8x the MC standard error at n=2e6, not
+  ~33x); `Ensemble.factor` raises a named `UnknownFactorError` identifying the factor
+  and the available set; and the seal now states, once, that `commodities` has no
+  registered series and therefore **two of the five D4 strategies have no computable
+  reference statistics at seal time**. Tests use plausible *level* magnitudes (a 10y
+  yield near 4, a HY OAS near 4.5) for the rate/spread factors — the previous
+  zero-mean N(0, 0.02) fixture is precisely why the sign inversion survived review.
 
 ## [v0.1.0-g0] — 2026-07-24
 
