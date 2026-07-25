@@ -115,6 +115,32 @@ All notable changes to this project are documented here. The project follows
   Added tests for the previously-untested "factor names and block ids must be
   non-empty strings" validation branches (empty-string factor, non-string factor,
   empty-string `active_blocks` entry) and for the new `blocks` immutability.
+- **WP2.1b Task 2 — D4 benchmark-strategy set over generator outputs only (pre-seal
+  patch).** The D4 set (VaR/ES tail fidelity, and the WP2.8 tail auxiliary loss)
+  previously included an "endowment mix" defined over portfolio sleeves, which the
+  battery could not compute without Step-3 machinery and an unfrozen sleeve
+  taxonomy. `strategies.py` (top-level, peer of `factors.py`/`splits.py` — not under
+  `eval/`, so `ah.gen.blocks.losses` (WP2.8) can import the same `Strategy`
+  definitions without `ah.gen` depending on `ah.eval`): `Strategy` (frozen dataclass:
+  static-weight or rule-based, factor id -> weight, rebalance/lookback/rule/params/
+  notes) + `load_d4_strategies()`, `lru_cache`'d by resolved path so every caller
+  gets the same object; validates every weight against `ah.factors.load_manifest()
+  .active_factors()`, static weights sum to 1.0 within 1e-9, rule ids are known.
+  `pre-registration.yaml` (repo root, new, marked UNSEALED — Task 4 adds thresholds
+  and the seal machinery) now carries the `d4_strategies` block: `eqw_factors`
+  (equal-weight across the return-bearing active factors), `sixty_forty`
+  (equity_mkt/ust_10y), `endowment_proxy` (equity/govt/credit/commodities/REITs with
+  an explicit `proxy_mapping` for private sleeves — private equity and REITs to
+  equity_mkt, private credit to hy_spread, real assets to commodities), `momentum`
+  (12-1 on equity_mkt, stated warm-up), and `carry` (static long ust_10y / short
+  policy_rate — a funded long-short whose exposures sum to 0.0, which is why it is
+  `kind: rule` rather than `static_weights`). `eval/metrics/tails.py` (new package):
+  `strategy_returns()` (weighted sum of factor slabs, or rule dispatch for
+  momentum/carry), `var_es()` (historical VaR/ES as positive loss magnitudes),
+  `d4_tail_table()`. Elicitability, Kupiec/Christoffersen backtests, and
+  tail-dependence coefficients remain WP2.2 scope (named, not stubbed).
+  `tests/test_tails_import_graph.py` walks the AST of both new modules and asserts
+  no import names a portfolio/sleeve/institution module.
 
 ## [v0.1.0-g0] — 2026-07-24
 

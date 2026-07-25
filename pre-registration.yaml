@@ -1,0 +1,170 @@
+# pre-registration.yaml
+#
+# STATUS: UNSEALED.
+#
+# This file is the eventual target of the WP2.3 pre-registration seal: once sealed,
+# every change to it becomes a dated, post-hoc-flagged amendment visible in every
+# evaluation report thereafter (Instructions/WP2.1b-PRE-SEAL-PATCH.md). It is created
+# here by WP2.1b Task 2, ahead of the seal, to hold the D4 benchmark-strategy set --
+# the portfolios whose VaR/ES define tail fidelity, and what the WP2.8 tail auxiliary
+# loss optimizes. WP2.1b Task 4 extends this same file with acceptance thresholds,
+# minimum ensemble sizes, block-nested threshold sections, and the seal/amendment-log
+# machinery (`prereg.seal()` / `prereg.verify()`); do not attempt to seal from this
+# file until those sections land.
+#
+# Every value below must be sufficient, on its own, to reconstruct the D4 strategy
+# set with no reference to code outside the sealed hash (WP2.1b Item 1 acceptance).
+# The factor ids referenced below are the active factor namespace declared in
+# factors.yaml (`global` + `us` blocks; see ah.factors.load_manifest()).
+
+rationale:
+  d4_factor_level: >-
+    the generator's outputs are factors; tail fidelity is therefore assessed on
+    factor-level portfolios. The endowment proxy stands in for the institutional mix
+    at the factor level. Sleeve-level tail behaviour is a Step-3 property, evaluated
+    separately once mappings exist, and is not a G2 criterion.
+
+d4_strategies:
+  eqw_factors:
+    kind: static_weights
+    rebalance: monthly
+    lookback: null
+    rule: null
+    weights:
+      equity_mkt: 0.2
+      smb: 0.2
+      hml: 0.2
+      mom: 0.2
+      commodities: 0.2
+    params: {}
+    notes: >-
+      Equal weight across the active factor set's return-bearing series.
+      Return-bearing here means the factor's native units are a period return (per
+      requirements.yaml: french.mkt_rf/smb/hml/mom are units:ret; commodities is
+      declared in the `global` block as the intended total-return commodities
+      factor -- see the pending-data note below). The remaining active factors
+      (equity_vol, ig_spread, hy_spread, policy_rate, ust_2y, ust_10y, cpi,
+      hqm_curve, funding_spread) are level/rate/spread series, not return-bearing,
+      and are excluded from this strategy by construction. commodities has no
+      Step-1 data source yet (factors.yaml documents this gap; see the WP1.9
+      emergent-requirements rule in requirements.yaml); its weight is declared here
+      but its reference statistics are pending until a commodities series is
+      registered.
+
+  sixty_forty:
+    kind: static_weights
+    rebalance: monthly
+    lookback: null
+    rule: null
+    weights:
+      equity_mkt: 0.6
+      ust_10y: 0.4
+    params: {}
+    notes: >-
+      60% equity total return (equity_mkt), 40% long-government total return,
+      proxied by ust_10y -- the manifest's long-duration government rate point.
+      ust_2y (short/intermediate) is not used here.
+
+  endowment_proxy:
+    kind: static_weights
+    rebalance: monthly
+    lookback: null
+    rule: null
+    weights:
+      # This is the factor-keyed table ah.strategies.Strategy.weights loads.
+      # proxy_mapping below is the sleeve-level breakdown; entries that share a
+      # factor are summed here (equity 0.45 + reits 0.20 = equity_mkt 0.65).
+      equity_mkt: 0.65
+      ust_10y: 0.10
+      hy_spread: 0.15
+      commodities: 0.10
+    proxy_mapping:
+      equity:
+        weight: 0.45
+        factor: equity_mkt
+        reason: >-
+          Public equity, plus the private-equity sleeve (buyout, growth, venture
+          capital). De-smoothed private-equity returns are dominated by public-
+          equity beta over the multi-year/tail horizons D4 targets (the same
+          desmoothing logic ah.data.desmooth is built on); nearest factor proxy is
+          equity_mkt. No separate private-equity factor exists in the manifest.
+      reits:
+        weight: 0.20
+        factor: equity_mkt
+        reason: >-
+          Public and private real estate (REITs + direct real estate). No REITs or
+          real-estate factor is declared in factors.yaml; over tail horizons listed
+          REIT total returns carry a dominant equity beta, so equity_mkt is the
+          nearest factor proxy. This is a stated simplification -- it drops REITs'
+          secondary rate sensitivity.
+      govt:
+        weight: 0.10
+        factor: ust_10y
+        reason: "Fixed-income ballast; ust_10y is the manifest's long-government point."
+      credit:
+        weight: 0.15
+        factor: hy_spread
+        reason: >-
+          Public credit, plus the private-credit sleeve (direct lending, mezzanine,
+          distressed). Private/direct-lending credit risk is economically closest to
+          leveraged/high-yield corporate credit; nearest factor proxy is hy_spread.
+          No separate private-credit factor exists in the manifest.
+      commodities:
+        weight: 0.10
+        factor: commodities
+        reason: >-
+          Real assets / infrastructure sleeve, proxied by the commodities factor --
+          the nearest available real-asset exposure in the active manifest.
+          Pending data: commodities has no Step-1 series yet (see factors.yaml and
+          the eqw_factors note above); this weight is declared but its reference
+          statistics are pending until a source is registered.
+    notes: >-
+      Factor-level stand-in for a typical institutional endowment mix: equity /
+      govt / credit / commodities / REITs, with private sleeves represented by
+      their nearest factor proxy (proxy_mapping above states each sleeve's own
+      weight, its proxy factor, and the reason -- required so private-sleeve
+      representation is explicit and auditable, WP2.1b Item 1). Sleeve-level tail
+      behaviour is a Step-3 property once real mappings exist and is not a G2
+      criterion -- see the `rationale` block above.
+
+  momentum:
+    kind: rule
+    rebalance: monthly
+    lookback: 12
+    rule: momentum_12_1
+    weights: {}
+    params:
+      lookback_months: 12
+      skip_months: 1
+    notes: >-
+      12-1 momentum on the equity factor (equity_mkt), monthly rebalanced. Signal
+      at month t = sum of equity_mkt's monthly factor-path values over months
+      [t-lookback_months, t-skip_months) -- i.e. t-12 .. t-2 inclusive (11 months);
+      the most recent skip_months=1 month is excluded, the standard 12-1 convention
+      to avoid short-term reversal contamination. Position is long-only and binary:
+      fully invested (weight 1.0 on equity_mkt) if the signal is strictly positive,
+      flat (weight 0.0) otherwise. Warm-up: the first lookback_months=12 months of
+      a path have no complete signal window and are flat by construction (position
+      0.0) -- stated warm-up behaviour, applied consistently
+      (ah/eval/metrics/tails.py). Realized return at month t = position_t *
+      equity_mkt_t.
+
+  carry:
+    kind: rule
+    rebalance: monthly
+    lookback: null
+    rule: term_structure_carry
+    weights: {}
+    params:
+      long_weight: 1.0
+      funding_weight: -1.0
+    notes: >-
+      Term-structure carry: a static, always-on long ust_10y (long_weight=+1.0)
+      funded at policy_rate (funding_weight=-1.0) -- no timing signal, unlike
+      momentum. This is exactly why carry is `kind: rule` and not
+      `static_weights`: a funded long-short position's exposures sum to 0.0, not
+      1.0, so it cannot satisfy the static_weights validation rule (weights must
+      sum to 1.0 within 1e-9). Realized return at month t = long_weight * ust_10y_t
+      + funding_weight * policy_rate_t (both raw factor-path values for that month
+      -- see the factor-slab convention in ah/eval/metrics/tails.py's module
+      docstring). No lookback: the position is contemporaneous every month.
