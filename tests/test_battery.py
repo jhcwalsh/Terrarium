@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import yaml
 
 from ah.battery.report import (
     BATTERY_VERSION,
@@ -30,6 +31,8 @@ from ah.battery.stylized import (
 from ah.core.engine import run_ensemble
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
+from ah.eval import prereg
+from ah.factors import load_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 _EXAMPLE: dict[str, Any] = json.loads(
@@ -160,3 +163,69 @@ def test_report_records_active_blocks_from_factor_manifest() -> None:
 
 def test_main_returns_zero() -> None:
     assert main([]) == 0
+
+
+# --------------------------------------------------------------------------- #
+# WP2.1b Item 2 acceptance: "a synthetic two-block configuration passes the battery"
+# --------------------------------------------------------------------------- #
+
+
+def test_run_battery_accepts_injected_synthetic_manifest(tmp_path: Path) -> None:
+    # A synthetic two-block manifest, disjoint from the real repo's global/us.
+    factors_path = tmp_path / "factors.yaml"
+    factors_path.write_text(
+        "factor_blocks:\n"
+        "  alpha: [alpha_factor]\n"
+        "  beta: [beta_factor]\n"
+        "active_blocks: [alpha, beta]\n",
+        encoding="utf-8",
+    )
+    synthetic_manifest = load_manifest(factors_path)
+    assert synthetic_manifest.active_blocks == ("alpha", "beta")
+
+    report = run_battery(_ensemble(), manifest=synthetic_manifest)
+    assert report.passed
+    assert report.active_blocks == ("alpha", "beta")
+    assert "active_blocks: alpha, beta" in render_markdown(report)
+    payload = json.loads(render_json(report))
+    assert payload["active_blocks"] == ["alpha", "beta"]
+
+    # A matching prereg -- block/cross-block thresholds for exactly this manifest,
+    # verified against it (proves the "matching" claim, not just that the battery
+    # accepted the manifest injection).
+    prereg_doc = {
+        "schema_version": "1.0",
+        "sealed": False,
+        "campaign_vintage_id": "test",
+        "factor_manifest": "factors.yaml",
+        "active_blocks": ["alpha", "beta"],
+        "conventions": {
+            "percent_to_decimal": 0.01,
+            "months_per_year": 12.0,
+            "return_bearing_factors": ["alpha_factor"],
+            "level_factors": ["beta_factor"],
+            "rebalance_cadences": ["monthly"],
+            "static_weights_composition": "test fixture",
+        },
+        "thresholds": {
+            "blocks": {
+                "alpha": {"alpha_factor.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+                "beta": {"beta_factor.std": {"min": 0.0, "max": 5.0, "severity": "report"}},
+            },
+            "cross_blocks": {
+                "alpha|beta": {
+                    "alpha_factor~beta_factor.correlation": {
+                        "min": -1.0,
+                        "max": 1.0,
+                        "severity": "report",
+                    }
+                }
+            },
+        },
+        "decisions": {},
+    }
+    prereg_path = tmp_path / "pre-registration.yaml"
+    prereg_path.write_text(yaml.safe_dump(prereg_doc, sort_keys=False), encoding="utf-8")
+
+    loaded = prereg.load(prereg_path)
+    prereg.verify(loaded, synthetic_manifest)  # must not raise

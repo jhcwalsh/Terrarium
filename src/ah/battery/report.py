@@ -29,7 +29,7 @@ from ah.battery.stylized import (
 from ah.core.engine import ASSETS, EnsembleResult, run_ensemble
 from ah.core.loader import load_worldspec
 from ah.core.numericworld import project_numeric
-from ah.factors import load_manifest
+from ah.factors import FactorManifest, load_manifest
 
 BATTERY_VERSION = "battery-0.1"
 _THRESHOLDS_PATH = Path(__file__).parent / "thresholds.yaml"
@@ -123,14 +123,22 @@ def evaluate(scalars: dict[str, float], thresholds: dict[str, dict[str, Any]]) -
 
 
 def run_battery(
-    ensemble: EnsembleResult, thresholds: dict[str, dict[str, Any]] | None = None
+    ensemble: EnsembleResult,
+    thresholds: dict[str, dict[str, Any]] | None = None,
+    manifest: FactorManifest | None = None,
 ) -> BatteryReport:
+    """Run the battery. ``manifest`` defaults to the repo-root ``factors.yaml``
+    (``ah.factors.load_manifest()``); inject a synthetic one (e.g. built from a
+    ``tmp_path`` fixture) to exercise the battery against a block configuration other
+    than the real campaign's (WP2.1b Item 2 acceptance: "a synthetic two-block
+    configuration passes the battery")."""
     if thresholds is None:
         thresholds = load_thresholds()
+    if manifest is None:
+        manifest = load_manifest()
     scalars, details = compute_panel(ensemble)
     checks = evaluate(scalars, thresholds)
-    active_blocks = load_manifest().active_blocks
-    return BatteryReport(BATTERY_VERSION, scalars, details, checks, active_blocks)
+    return BatteryReport(BATTERY_VERSION, scalars, details, checks, manifest.active_blocks)
 
 
 def render_markdown(report: BatteryReport) -> str:

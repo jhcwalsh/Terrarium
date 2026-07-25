@@ -1,16 +1,25 @@
 # pre-registration.yaml
 #
-# STATUS: UNSEALED.
+# STATUS: UNSEALED. sealed: false below; WP2.3 is the only PR allowed to flip it.
 #
 # This file is the eventual target of the WP2.3 pre-registration seal: once sealed,
-# every change to it becomes a dated, post-hoc-flagged amendment visible in every
-# evaluation report thereafter (Instructions/WP2.1b-PRE-SEAL-PATCH.md). It is created
-# here by WP2.1b Task 2, ahead of the seal, to hold the D4 benchmark-strategy set --
-# the portfolios whose VaR/ES define tail fidelity, and what the WP2.8 tail auxiliary
-# loss optimizes. WP2.1b Task 4 extends this same file with acceptance thresholds,
-# minimum ensemble sizes, block-nested threshold sections, and the seal/amendment-log
-# machinery (`prereg.seal()` / `prereg.verify()`); do not attempt to seal from this
-# file until those sections land.
+# every change to it becomes a dated, post-hoc-flagged amendment recorded in
+# governance/amendment-log.yaml and visible in every evaluation report thereafter
+# (Instructions/WP2.1b-PRE-SEAL-PATCH.md). It was created by WP2.1b Task 2 to hold the
+# D4 benchmark-strategy set -- the portfolios whose VaR/ES define tail fidelity, and
+# what the WP2.8 tail auxiliary loss optimizes -- and is extended here by WP2.1b Task 4
+# with block-nested acceptance thresholds, the two Item-3 decisions (R5, J3), and the
+# seal/amendment-log machinery (`ah.eval.prereg.seal()` / `ah.eval.prereg.verify()`).
+#
+# *** THRESHOLDS BELOW ARE PROVISIONAL PLACEHOLDERS. *** Every `min`/`max` in the
+# `thresholds:` block is a stand-in so `ah.eval.prereg.verify()` has a real,
+# non-trivial file to check end to end (WP2.1b Task 4's dry-run seal + verify,
+# Instructions/WP2.1b-PRE-SEAL-PATCH.md Definition of done item 4) -- none of them is
+# derived from a historical reference statistic. WP2.2's `ah.eval.reference` computes
+# the real train+validation bands (per block, and per cross-block pair); WP2.3
+# replaces every threshold below with one of those bands (or a stated, justified
+# deviation) before sealing for real. Do not treat a `min`/`max` below as meaningful,
+# and do not flip `sealed: true` from WP2.1b -- that act belongs to WP2.3 alone.
 #
 # SELF-CONTAINMENT RULE (WP2.1b Item 1 acceptance, line 25). Every value below must be
 # sufficient, on its own, to reconstruct the D4 strategy set with no reference to code
@@ -21,6 +30,26 @@
 #
 # The factor ids referenced below are the active factor namespace declared in
 # factors.yaml (`global` + `us` blocks; the manifest loader is ah.factors.load_manifest).
+
+schema_version: "1.0"
+
+# WP2.3 flips this to true at the moment of sealing. Nothing in WP2.1b sets it.
+sealed: false
+
+# Placeholder pending WP2.3: there is no real campaign yet, so this string names no
+# real vintage. WP2.3 replaces it with the actual campaign_vintage_id being sealed
+# against.
+campaign_vintage_id: "provisional-unset"
+
+# The sealed factor namespace (WP2.1b Task 1, ah.factors.load_manifest). Path is
+# relative to this file; ah.eval.prereg.seal() reads it to know which factors.yaml to
+# include in the sealed digest.
+factor_manifest: factors.yaml
+
+# Must equal factors.yaml's active_blocks at seal time -- ah.eval.prereg.verify()
+# checks this exactly against the live FactorManifest, so the pre-registration can
+# never silently drift from the manifest it was authored against.
+active_blocks: [global, us]
 
 rationale:
   d4_factor_level: >-
@@ -425,3 +454,53 @@ d4_strategies:
       exposures sum to 0.0, not 1.0, so it cannot satisfy the static_weights
       validation rule (weights must sum to 1.0 within 1e-9). Warm-up: both legs are
       0.0 in month 0 (conventions.warm_up), so carry's month 0 is 0.0.
+
+# --------------------------------------------------------------------------- #
+# Acceptance thresholds -- block-nested (WP2.1b Item 2 / Task 4).
+#
+# *** PROVISIONAL PLACEHOLDERS -- see the file header. *** None of the min/max values
+# below comes from a historical reference statistic; they exist only so
+# ah.eval.prereg.verify() has real block/cross-block coverage to check. WP2.2's
+# ah.eval.reference computes the real train+validation bands and WP2.3 replaces every
+# entry below with one before sealing.
+#
+# A per-block key is "<factor>.<stat>", matching ah.eval.reference.SINGLE_FACTOR_STATS'
+# naming (mean, std, skew, excess_kurtosis, acf_1, acf_abs_1). A cross-block key is
+# "<factorA>~<factorB>.<stat>", matching ah.eval.reference.CROSS_BLOCK_STATS' naming
+# (correlation, crisis_corr_lift). `severity` is `enforce` (an out-of-band value blocks
+# the gate) or `report` (recorded, non-blocking). ah.eval.prereg.verify() checks: every
+# active block has a thresholds.blocks entry; no entry names an inactive block; every
+# active cross-block pair (ah.factors.FactorManifest.cross_block_pairs(), currently
+# just global|us) has a thresholds.cross_blocks entry; no entry names an inactive
+# block; every severity is enforce/report; min <= max where both are given.
+# --------------------------------------------------------------------------- #
+thresholds:
+  blocks:
+    global:
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "equity_mkt.skew": {min: -3.0, max: 3.0, severity: enforce}
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "equity_mkt.excess_kurtosis": {min: -2.0, max: 30.0, severity: report}
+    us:
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "policy_rate.std": {min: 0.0, max: 50.0, severity: enforce}
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "ust_10y.acf_1": {min: -1.0, max: 1.0, severity: report}
+  cross_blocks:
+    "global|us":
+      # PROVISIONAL placeholder -- not derived from history (see file header).
+      "equity_mkt~ust_10y.correlation": {min: -1.0, max: 1.0, severity: report}
+
+# --------------------------------------------------------------------------- #
+# Item 3 decisions -- R5 (FX) and J3 (UK block), both CLOSED-deferred (WP2.1b Task 5
+# records the same two `consequence` strings, verbatim, in
+# governance/decision-register.md; the strings must match exactly between the two
+# files).
+# --------------------------------------------------------------------------- #
+decisions:
+  R5:  # FX / unhedged foreign-currency exposure -- out-of-scope-for-v1 deferral.
+    status: CLOSED-deferred
+    consequence: "Institutions with material unhedged foreign-currency exposure are out of scope for v1. Adding FX later requires a block_addition amendment and retraining the generator, since cross-block correlation cannot be added to trained weights."
+  J3:  # UK block activation -- deferred until a block_addition amendment.
+    status: CLOSED-deferred
+    consequence: "UK-domiciled institution twins are blocked until a block_addition amendment; the InstitutionProfile interface accommodates them without rework. Same retraining consequence applies."

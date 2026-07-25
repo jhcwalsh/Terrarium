@@ -315,6 +315,71 @@ All notable changes to this project are documented here. The project follows
   of two hardcoded, coincidentally-equal `4`s. `tests/test_reference.py` grew from 12
   to 28 tests; no existing test was weakened or deleted. Full suite, ruff, and pyright
   clean.
+- **WP2.1b Task 4 — Pre-registration seal machinery: block-nested thresholds,
+  seal/verify, `block_addition` (pre-seal patch).** `eval/prereg.py` (new): builds the
+  WP2.3 seal machinery with the block structure already in it — **nothing here seals
+  for real**; `pre-registration.yaml`'s `sealed` flag stays `false`, and the
+  acceptance bar is a dry-run `seal()` + `verify()` passing end to end (Instructions/
+  WP2.1b-PRE-SEAL-PATCH.md Definition of done item 4). Public surface: `Threshold`
+  (`min`/`max`/`severity`), `Decision`, `PreRegistration` (`sealed`, `active_blocks`,
+  `block_thresholds`, `cross_block_thresholds`, `decisions`, `raw`), `Amendment`
+  (`amendment_id`/`type`/`date`/`rationale`/`post_hoc`/`payload`), `PreRegError`,
+  `load()`, `verify()`, `seal()`, `load_amendments()`, `append_amendment()`,
+  `apply_block_addition()`. `verify()` checks: every active block has a
+  `thresholds.blocks` entry and no entry names an inactive block; every active
+  cross-block pair (`FactorManifest.cross_block_pairs()`) has a
+  `thresholds.cross_blocks` entry and no entry names an inactive block;
+  `prereg.active_blocks == manifest.active_blocks`; every threshold's `severity` is
+  `enforce`/`report` and `min <= max`; and, closing a hole found in review, that the
+  `conventions:` block is present and declares every key `ah.strategies.
+  load_conventions()` reads (`percent_to_decimal`, `months_per_year`,
+  `return_bearing_factors`, `level_factors`, `rebalance_cadences`,
+  `static_weights_composition`), with `return_bearing_factors`/`level_factors`
+  together classifying every active factor and none in both — `ah.strategies`
+  deliberately treats a *missing* `conventions:` block as "none declared" (a
+  concession for minimal test fixtures), which would otherwise let a misspelled
+  `conventons:` key silently disable enforcement in the very file the seal hashes;
+  `verify()` re-checks this unconditionally, reading `PreRegistration.raw` directly
+  rather than re-reading the file through `ah.strategies` (which needs a path this
+  module isn't guaranteed to have post-amendment). `seal()` hashes, canonically
+  (reusing `ah.core.digest.canonical_json` + `hashlib.sha256` — no second hashing
+  scheme), the pre-registration YAML, the `factors.yaml` it references, and the
+  source text of every file in `judged_sources` (default: the WP2.2 metric-suite
+  modules that exist yet, plus `eval/g2.py`, resolved lazily so files WP2.2 hasn't
+  added don't block this task); writes a JSON lock (`digest`, `hashed_files`,
+  `sealed_at`) unless `dry_run`. `sealed_at` is a required keyword argument — never
+  `date.today()` (no-clock-reads invariant) — and plays no part in the digest itself
+  (sealing the same inputs at two different `sealed_at` values gives the same
+  digest). `governance/amendment-log.yaml` (new): append-only log, starting empty;
+  header documents the four amendment types and states `block_addition`'s additive
+  property verbatim (WP2.1b-PRE-SEAL-PATCH.md's required wording) — it adds new
+  per-block and new cross-block thresholds for the newly-active block without
+  invalidating any existing block's thresholds, so it is not a re-seal.
+  `append_amendment()` opens the log in file-append mode, so every byte already on
+  disk is provably untouched (not merely unchanged in content) by a later append.
+  `apply_block_addition()` merges a `block_addition` amendment's new per-block and
+  new cross-block thresholds into a `PreRegistration`, carrying every pre-existing
+  block's/pair's thresholds over by reference (same `Threshold` objects) so they are
+  byte-identical (via canonical-JSON serialization) before and after — the patch's
+  acceptance criterion. `pre-registration.yaml` extended (not replaced): `schema_
+  version`, `sealed: false`, a provisional `campaign_vintage_id`, `factor_manifest:
+  factors.yaml`, `active_blocks: [global, us]`, a block-nested `thresholds:` section
+  (one enforce- and one report-severity entry per active block, one cross-block entry
+  — every value explicitly commented as a provisional placeholder pending WP2.2's
+  reference statistics), and a `decisions:` block carrying R5 (FX) and J3 (UK block)
+  from Item 3, both `CLOSED-deferred`, with their consequence strings verbatim (Task
+  5 records the same strings in `governance/decision-register.md`). `battery/
+  report.py`: `run_battery()` gained a `manifest: FactorManifest | None = None`
+  parameter (same injection pattern as Task 3's `series_id_for`), defaulting to
+  `load_manifest()`, so a synthetic block configuration can be run through the
+  battery without a real campaign's `factors.yaml` (Item 2 acceptance: "a synthetic
+  two-block configuration passes the battery"). `tests/test_prereg.py` (new, 35
+  tests): the 13 tests named in the Task 4 brief plus dedicated coverage of the
+  `conventions` closure (missing block, missing key, double-classified factor,
+  unclassified active factor, and the block-addition-safe case of a conventions
+  block pre-classifying a not-yet-active block's factors) and threshold sanity
+  (invalid severity, `min > max`). `tests/test_battery.py` gained the synthetic-
+  manifest acceptance test. Full suite (516 tests), ruff, and pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 
