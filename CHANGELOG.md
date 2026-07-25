@@ -269,6 +269,52 @@ All notable changes to this project are documented here. The project follows
   closed-form values; `acf_1` recovers a known AR(1) phi; `excess_kurtosis` near zero
   for a normal sample and clearly positive for a Student-t sample; every band brackets
   its point estimate; `to_dict()` round-trips through `json.dumps`.
+- **WP2.1b Task 3 review fixes (fix pass 1).** Addresses one Critical and four
+  Important/Minor findings against `eval/reference.py`. *Critical:* the leakage-guard
+  test's `_RecordingAccess` recorded dates from `DataAccess.train_val()`, which is
+  already holdout-clean by construction and proven so independently
+  (`test_leakage_guard.py::test_train_val_excludes_holdout`) — the offenders assertion
+  could never fire, so it detected no new leak channel; a direct/parallel holdout read
+  (`access.frame(sid, "holdout", token=...)`) bypassed it entirely and also escaped the
+  AST guard, whose `ast.Name`/`ast.ImportFrom` checks don't cover qualified access like
+  `ah.splits.FinalEvaluationToken`. Fixed by re-pointing `_RecordingAccess` at
+  `frame()` (the method `train_val()` calls internally) and broadening the AST guard to
+  flag `ast.Attribute` nodes too; both fixes are proven with mutation tests that apply
+  the exact leak quoted in the review and show the (pre-fix) guard missing it and the
+  (post-fix) guard catching it. *Important — alignment was global, not scoped:*
+  `compute_reference` inner-joined every active factor onto one shared date axis before
+  computing anything, so one short-history factor silently truncated every other
+  factor's own reference window (real Step-1 series make this likely: spread/vol
+  indices start decades after the equity series in the same `global` block), and a
+  zero-overlap cross-block pair raised an unhandled `ValueError` from inside
+  `block_bootstrap_band`. Alignment is now scoped to what each statistic needs: a
+  single-factor stat reads only that factor's own train+validation observations (no
+  join with any other factor, same block or not); a cross-block stat aligns only its
+  own factor pair. A pair with zero overlap is recorded in the new
+  `CrossBlockReference.zero_overlap_pairs` (surfaced in `to_dict()`) instead of
+  raising. *Important — error messages didn't name the offender:* `_read_train_val`
+  now validates the `date`/`value` columns itself and raises a new
+  `ReferenceComputationError` naming the factor and series id for a malformed frame
+  (previously an anonymous `KeyError` could propagate from deep in the alignment code);
+  `block_bootstrap_band` gained a `context` parameter threaded from every call site
+  (`block=... factor=...`/`pair=... factors=...`) so any of its `ValueError`s name what
+  failed. *Important — `skew`/`acf_abs_1` had no ground-truth test:* added hand-computed
+  exact-arithmetic tests for both (a 4-point sample for `skew`, a 6-point sample for
+  `acf_abs_1` whose lag-1 autocorrelation of `|x - mean(x)|` works out to exactly
+  `1/4`). *Minor:* the moving-block resample draw is now an explicit, reusable step
+  (`_draw_moving_block_indices`, drawn once per factor/pair and passed into every stat
+  sharing that panel via `block_bootstrap_band`'s new `resample_indices` parameter)
+  instead of an emergent side effect of separate calls sharing `(seed, T, block_length,
+  n_resamples)`; `CROSS_BLOCK_STATS` now carries `tier` on a `RegisteredCrossStat`
+  record, symmetric with `SINGLE_FACTOR_STATS`'s `RegisteredStat`, instead of
+  hardcoding `tier="monthly"` at the call site; `block_bootstrap_band` validates
+  `block_length >= 1` instead of silently clamping a non-positive value to 1; the
+  same-seed determinism test now compares the whole `ReferenceStats` object instead of
+  just `.blocks`/`.cross_blocks` separately; `test_band_brackets_point_estimate_for_
+  every_stat`'s expected count is now derived from the fixture's manifest shape instead
+  of two hardcoded, coincidentally-equal `4`s. `tests/test_reference.py` grew from 12
+  to 28 tests; no existing test was weakened or deleted. Full suite, ruff, and pyright
+  clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

@@ -38,18 +38,51 @@ panel: tail behavior, ACF, skew, corr matrix, crisis-conditional correlation lif
 DN-1.1 Sec.II.6 states the 1-5yr tier's acceptance criterion as "within block-bootstrap
 90% bands of history" -- which is why ``level`` defaults to 0.9 below; the monthly tier
 inherits the same band mechanics here, ahead of WP2.2 stating its own criterion.
+``SINGLE_FACTOR_STATS`` and ``CROSS_BLOCK_STATS`` both carry ``tier`` on a registration
+record (:class:`RegisteredStat` / :class:`RegisteredCrossStat`) -- symmetric, so neither
+table hardcodes tier as an inline literal at the call site.
 
-Data alignment and the ``commodities`` gap
---------------------------------------------
-:func:`compute_reference` reads every active factor via
-``access.train_val(series_id_for(factor))`` and aligns all of them on their common
-(inner-joined) date index before computing anything, so every statistic in the same
-run sees the same time axis. A factor the reader has no data for (as of this task, no
-Step-1 series sources ``commodities`` -- see ``factors.yaml``'s header note) is *not*
-an error and does not silently produce ``NaN``: it is skipped and its name recorded in
-``ReferenceStats.missing_factors``. Concretely, a factor is "missing" when
-``access.train_val`` either raises ``KeyError`` (no such series) or returns an empty
-frame (no rows in train+validation).
+Data alignment is scoped to what each statistic actually needs
+-----------------------------------------------------------------
+:func:`compute_reference` reads every active factor once, independently, via
+``access.train_val(series_id_for(factor))``. It does **not** inner-join every active
+factor onto one shared date axis before computing anything -- with real Step-1 series
+that is not a hypothetical problem: spread and volatility indices start decades after
+the equity series they share a block with, and rates/inflation series in one block
+commonly cover a different span than another block's series entirely. A single
+short-history factor must not silently truncate the reference window used for a
+*different* factor's own statistics.
+
+Alignment is therefore scoped per statistic:
+
+- A **single-factor** statistic (every entry in :data:`SINGLE_FACTOR_STATS`) is
+  computed over that one factor's own train+validation observations only -- no join
+  with any other factor, in its own block or any other. ``equity_mkt``'s mean is not
+  truncated by ``hy_spread`` starting fifty years later, even though both are in the
+  ``global`` block.
+- A **cross-block** statistic (every entry in :data:`CROSS_BLOCK_STATS`) is computed
+  over exactly its own factor pair's aligned (inner-joined) overlap -- not the two
+  blocks' full factor sets, and not every other active block. If a pair's date ranges
+  do not overlap at all, that is not an error: the pair is recorded in
+  ``CrossBlockReference.zero_overlap_pairs`` and contributes no stat entries, rather
+  than raising an unhandled ``ValueError`` out of :func:`block_bootstrap_band`.
+
+Nothing registered by this task is a genuinely joint (multi-factor) *within-block*
+statistic, so no such alignment is implemented here; if WP2.2 registers one, it should
+align only that statistic's own block-scoped factors, not reintroduce a single
+all-active-factors join.
+
+The ``commodities`` gap
+-------------------------
+No Step-1 series sources ``commodities`` yet (see ``factors.yaml``'s header note). A
+factor the reader has no data for is *not* an error and does not silently produce
+``NaN``: it is skipped and its name recorded in ``ReferenceStats.missing_factors``.
+Concretely, a factor is "missing" when ``access.train_val`` either raises ``KeyError``
+(no such series) or returns an empty frame (no rows in train+validation). A frame that
+*is* returned but is malformed (missing the ``date``/``value`` columns the rest of this
+module assumes) is a different failure mode -- a bug, not a data gap -- and raises a
+named :class:`ReferenceComputationError` identifying the offending factor and series id
+rather than propagating an anonymous ``KeyError`` from deep inside pandas.
 
 The factor-id -> catalog-series-id mapping does not exist anywhere in the repo yet
 (that mapping is WP2.2/Step-2R scope). ``compute_reference`` therefore takes a
@@ -69,6 +102,21 @@ import pandas as pd
 
 from ah.factors import FactorManifest
 from ah.splits import DataAccess
+
+# --------------------------------------------------------------------------- #
+# errors
+# --------------------------------------------------------------------------- #
+
+
+class ReferenceComputationError(RuntimeError):
+    """Reference-statistic computation failed in a way that must name its cause.
+
+    Raised (never a bare ``KeyError``/``ValueError``) whenever a reader failure can't
+    be attributed to a legitimate data gap (see the module docstring's ``commodities``
+    note) -- the message always names the offending factor, series id, and/or
+    block/pair so the failure is diagnosable without a debugger.
+    """
+
 
 # --------------------------------------------------------------------------- #
 # public result types
@@ -98,7 +146,9 @@ class StatBand:
 class BlockReference:
     """Reference statistics for one factor block.
 
-    ``stats`` is keyed ``"<factor>.<stat_name>"``, e.g. ``"equity_mkt.mean"``.
+    ``stats`` is keyed ``"<factor>.<stat_name>"``, e.g. ``"equity_mkt.mean"``. Each
+    factor's stats are computed over that factor's own observations only -- see the
+    module docstring's "Data alignment" section.
     """
 
     block: str
@@ -114,11 +164,16 @@ class CrossBlockReference:
     reconstruct which pair a stat belongs to from context. ``stats`` is keyed
     ``"<factorA>~<factorB>.<stat_name>"`` for every factor pair drawn from the two
     blocks (Cartesian product of each block's present factors), e.g.
-    ``"equity_mkt~ust_10y.correlation"``.
+    ``"equity_mkt~ust_10y.correlation"``, computed over exactly that pair's aligned
+    overlap (never a wider join). ``zero_overlap_pairs`` names every ``"<factorA>~
+    <factorB>"`` pair whose train+validation date ranges do not overlap at all -- a
+    named outcome, not the ``ValueError`` that would otherwise come out of
+    :func:`block_bootstrap_band` for an empty panel.
     """
 
     pair: tuple[str, str]
     stats: Mapping[str, StatBand]
+    zero_overlap_pairs: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -142,7 +197,9 @@ class ReferenceStats:
         """JSON-serializable rendering (for the battery report and Task 4's threshold authoring).
 
         Cross-block pair keys render as ``"block_a|block_b"`` (tuples cannot be JSON
-        object keys); everything else maps through directly.
+        object keys); everything else maps through directly. ``zero_overlap_pairs`` is
+        included only for pairs that actually have one (keeping the common-case JSON
+        uncluttered).
         """
 
         def _stats_dict(stats: Mapping[str, StatBand]) -> dict[str, dict[str, float | int | str]]:
@@ -158,6 +215,12 @@ class ReferenceStats:
                 for name, band in stats.items()
             }
 
+        zero_overlap = {
+            "|".join(pair): list(ref.zero_overlap_pairs)
+            for pair, ref in self.cross_blocks.items()
+            if ref.zero_overlap_pairs
+        }
+
         return {
             "vintage_id": self.vintage_id,
             "seed": self.seed,
@@ -168,6 +231,7 @@ class ReferenceStats:
             "cross_blocks": {
                 "|".join(pair): _stats_dict(ref.stats) for pair, ref in self.cross_blocks.items()
             },
+            "zero_overlap_pairs": zero_overlap,
         }
 
 
@@ -268,6 +332,18 @@ SINGLE_FACTOR_STATS: dict[str, RegisteredStat] = {
 # --------------------------------------------------------------------------- #
 
 
+@dataclass(frozen=True)
+class RegisteredCrossStat:
+    """A cross-block statistic function paired with its DN-1.1 Sec.II.6 horizon tier.
+
+    Symmetric with :class:`RegisteredStat`: tier is carried on the registration record,
+    not hardcoded inline where the stat is invoked.
+    """
+
+    fn: Callable[[np.ndarray, np.ndarray], float]
+    tier: str
+
+
 def _correlation(a: np.ndarray, b: np.ndarray) -> float:
     """Pearson correlation between two aligned 1-D arrays."""
     a = np.asarray(a, dtype=np.float64)
@@ -304,15 +380,61 @@ def _crisis_corr_lift(a: np.ndarray, b: np.ndarray) -> float:
     return conditional - unconditional
 
 
-CROSS_BLOCK_STATS: dict[str, Callable[[np.ndarray, np.ndarray], float]] = {
-    "correlation": _correlation,
-    "crisis_corr_lift": _crisis_corr_lift,
+CROSS_BLOCK_STATS: dict[str, RegisteredCrossStat] = {
+    "correlation": RegisteredCrossStat(fn=_correlation, tier="monthly"),
+    "crisis_corr_lift": RegisteredCrossStat(fn=_crisis_corr_lift, tier="monthly"),
 }
 
 
 # --------------------------------------------------------------------------- #
 # moving-block bootstrap
 # --------------------------------------------------------------------------- #
+
+
+def _ctx(context: str) -> str:
+    return f" [{context}]" if context else ""
+
+
+def _draw_moving_block_indices(
+    t: int, *, seed: int, n_resamples: int, block_length: int, context: str = ""
+) -> np.ndarray:
+    """Precompute ``n_resamples`` moving-block row-index draws for a ``t``-row panel.
+
+    Returns an ``(n_resamples, t)`` int array; row ``i`` is the row-index sequence for
+    resample ``i``. Extracted from :func:`block_bootstrap_band` so a caller that needs
+    to evaluate several statistics over the *same* panel can draw once and reuse the
+    same indices explicitly (see :func:`block_bootstrap_band`'s ``resample_indices``
+    parameter) instead of relying on separate calls with matching ``(seed, t,
+    block_length, n_resamples)`` happening to produce the same draws as an emergent
+    side effect of content-independent RNG parameters.
+
+    Determinism: all randomness flows from ``numpy.random.Generator(PCG64(seed))``
+    constructed fresh here from the given ``seed`` -- no global RNG, no ``random``.
+    """
+    if t < 1:
+        raise ValueError(f"_draw_moving_block_indices{_ctx(context)}: t must be >= 1, got {t}")
+    if n_resamples < 1:
+        raise ValueError(
+            f"_draw_moving_block_indices{_ctx(context)}: n_resamples must be >= 1, "
+            f"got {n_resamples}"
+        )
+    if block_length < 1:
+        raise ValueError(
+            f"_draw_moving_block_indices{_ctx(context)}: block_length must be >= 1, "
+            f"got {block_length}"
+        )
+
+    eff_block_length = min(block_length, t)
+    max_start = t - eff_block_length
+    n_blocks_needed = -(-t // eff_block_length)  # ceil division
+
+    rng = np.random.Generator(np.random.PCG64(seed))
+    indices = np.empty((n_resamples, t), dtype=np.int64)
+    for i in range(n_resamples):
+        starts = rng.integers(0, max_start + 1, size=n_blocks_needed)
+        row_idx = np.concatenate([np.arange(s, s + eff_block_length) for s in starts])[:t]
+        indices[i] = row_idx
+    return indices
 
 
 def block_bootstrap_band(
@@ -324,6 +446,8 @@ def block_bootstrap_band(
     level: float,
     block_length: int,
     tier: str = "monthly",
+    context: str = "",
+    resample_indices: np.ndarray | None = None,
 ) -> StatBand:
     """Moving-block bootstrap confidence band for ``sample_fn`` evaluated over ``panel``.
 
@@ -344,6 +468,16 @@ def block_bootstrap_band(
     5th/95th percentile of the resample distribution for ``level=0.9``) over the
     ``n_resamples`` resampled values.
 
+    ``resample_indices``, if given, must be the ``(n_resamples, T)`` output of
+    :func:`_draw_moving_block_indices` for this exact ``T`` -- pass the *same* array to
+    every statistic sharing a panel to make the "these stats saw the same resample"
+    property explicit rather than an accident of matching parameters. If omitted, the
+    indices are drawn fresh from ``seed`` (still fully deterministic on its own).
+
+    ``context``, if given, is appended to any raised ``ValueError`` so a caller
+    computing many bands (one per factor, one per cross-block pair, ...) can identify
+    which one failed without a debugger.
+
     Determinism: all randomness flows from ``numpy.random.Generator(PCG64(seed))``
     constructed fresh here from the given ``seed`` -- no global RNG, no ``random``.
     The same ``seed`` (with the same ``panel``, ``n_resamples``, ``level`` and
@@ -352,28 +486,40 @@ def block_bootstrap_band(
     panel = np.asarray(panel, dtype=np.float64)
     if panel.ndim != 2:
         raise ValueError(
-            f"block_bootstrap_band: expected a 2-D (T, k) panel, got shape {panel.shape}"
+            f"block_bootstrap_band{_ctx(context)}: expected a 2-D (T, k) panel, "
+            f"got shape {panel.shape}"
         )
     t = panel.shape[0]
     if t == 0:
-        raise ValueError("block_bootstrap_band: panel has zero rows")
+        raise ValueError(f"block_bootstrap_band{_ctx(context)}: panel has zero rows")
     if not 0.0 < level < 1.0:
-        raise ValueError(f"block_bootstrap_band: level must be in (0, 1), got {level}")
+        raise ValueError(
+            f"block_bootstrap_band{_ctx(context)}: level must be in (0, 1), got {level}"
+        )
     if n_resamples < 1:
-        raise ValueError(f"block_bootstrap_band: n_resamples must be >= 1, got {n_resamples}")
+        raise ValueError(
+            f"block_bootstrap_band{_ctx(context)}: n_resamples must be >= 1, got {n_resamples}"
+        )
+    if block_length < 1:
+        raise ValueError(
+            f"block_bootstrap_band{_ctx(context)}: block_length must be >= 1, got {block_length}"
+        )
 
     point = float(sample_fn(panel))
 
-    eff_block_length = max(1, min(block_length, t))
-    max_start = t - eff_block_length
-    n_blocks_needed = -(-t // eff_block_length)  # ceil division
+    if resample_indices is None:
+        resample_indices = _draw_moving_block_indices(
+            t, seed=seed, n_resamples=n_resamples, block_length=block_length, context=context
+        )
+    elif resample_indices.shape != (n_resamples, t):
+        raise ValueError(
+            f"block_bootstrap_band{_ctx(context)}: resample_indices shape "
+            f"{resample_indices.shape} does not match (n_resamples={n_resamples}, t={t})"
+        )
 
-    rng = np.random.Generator(np.random.PCG64(seed))
     resample_stats = np.empty(n_resamples, dtype=np.float64)
     for i in range(n_resamples):
-        starts = rng.integers(0, max_start + 1, size=n_blocks_needed)
-        idx = np.concatenate([np.arange(s, s + eff_block_length) for s in starts])[:t]
-        resample_stats[i] = sample_fn(panel[idx])
+        resample_stats[i] = sample_fn(panel[resample_indices[i]])
 
     alpha = (1.0 - level) / 2.0
     lo = float(np.percentile(resample_stats, 100.0 * alpha))
@@ -392,13 +538,17 @@ def _identity(factor_id: str) -> str:
 
 def _read_train_val(
     access: DataAccess, factor: str, series_id_for: Callable[[str], str]
-) -> pd.DataFrame | None:
-    """``access.train_val`` for one factor, or ``None`` if the series has no data.
+) -> pd.Series | None:
+    """``access.train_val`` for one factor, as a date-indexed value series, or ``None``.
 
-    "No data" covers both an unknown series id (``KeyError`` from the underlying
+    ``None`` covers both an unknown series id (``KeyError`` from the underlying
     reader, propagated through :meth:`~ah.splits.DataAccess.train_val`) and a known
     series id with zero rows in train+validation -- both are the ``commodities``-style
-    gap this module must not raise or NaN on.
+    gap this module must not raise or NaN on. A frame that *is* non-empty but is
+    missing the ``date``/``value`` columns is a different failure mode entirely (a bug,
+    not a gap) and raises :class:`ReferenceComputationError` naming the factor and
+    series id, rather than letting a bare ``KeyError`` propagate anonymously from
+    ``df.set_index("date")["value"]``.
     """
     series_id = series_id_for(factor)
     try:
@@ -407,64 +557,97 @@ def _read_train_val(
         return None
     if df.empty:
         return None
-    return df
+    missing_cols = {"date", "value"} - set(df.columns)
+    if missing_cols:
+        raise ReferenceComputationError(
+            f"factor '{factor}' (series_id '{series_id}'): train_val frame is missing "
+            f"required column(s) {sorted(missing_cols)}"
+        )
+    return df.set_index("date")["value"].sort_index()
 
 
-def _aligned_panel(
+def _read_all_factors(
     access: DataAccess, factors: tuple[str, ...], series_id_for: Callable[[str], str]
-) -> tuple[pd.DataFrame, tuple[str, ...]]:
-    """Read every factor via train_val, inner-join on date, return (panel, missing).
+) -> tuple[dict[str, pd.Series], tuple[str, ...]]:
+    """Read every factor's own train+validation series independently.
 
-    The returned panel's columns are exactly the factors that had data, in the same
-    relative order as ``factors``; the second element lists the ones that did not.
+    No cross-factor alignment happens here -- each statistic aligns only what it
+    needs (see the module docstring's "Data alignment" section). Returns
+    ``(factor -> date-indexed value series, missing factor names)``, missing names in
+    ``factors`` order.
     """
-    per_factor: dict[str, pd.Series] = {}
+    series_by_factor: dict[str, pd.Series] = {}
     missing: list[str] = []
     for factor in factors:
-        df = _read_train_val(access, factor, series_id_for)
-        if df is None:
+        series = _read_train_val(access, factor, series_id_for)
+        if series is None:
             missing.append(factor)
-            continue
-        per_factor[factor] = df.set_index("date")["value"]
+        else:
+            series_by_factor[factor] = series
+    return series_by_factor, tuple(missing)
 
-    if not per_factor:
-        return pd.DataFrame(), tuple(missing)
 
-    panel = pd.concat(per_factor, axis=1, join="inner").sort_index()
-    present = tuple(f for f in factors if f in panel.columns)
-    return panel[list(present)], tuple(missing)
+def _aligned_pair(series_by_factor: Mapping[str, pd.Series], fa: str, fb: str) -> np.ndarray | None:
+    """Inner-join ``fa`` and ``fb``'s own series on date into a ``(T, 2)`` array.
+
+    Returns ``None`` if the aligned overlap is empty (``T == 0``) -- the "zero-overlap
+    pair" case that must be a named outcome (see ``CrossBlockReference.zero_overlap_pairs``)
+    rather than an unhandled ``ValueError`` raised from deep inside
+    :func:`block_bootstrap_band`.
+    """
+    joined = pd.concat(
+        {fa: series_by_factor[fa], fb: series_by_factor[fb]}, axis=1, join="inner"
+    ).sort_index()
+    if joined.empty:
+        return None
+    return joined.to_numpy(dtype=np.float64)
 
 
 def _block_reference(
     block: str,
     block_factors: list[str],
-    panel: pd.DataFrame,
+    series_by_factor: Mapping[str, pd.Series],
     *,
     seed: int,
     n_resamples: int,
     level: float,
     block_length: int,
 ) -> BlockReference:
-    if not block_factors:
-        return BlockReference(block=block, stats=MappingProxyType({}))
-    block_panel = panel[block_factors].to_numpy(dtype=np.float64)
+    """Every :data:`SINGLE_FACTOR_STATS` entry for every present factor of ``block``.
+
+    Each factor gets its own panel (its own observations only -- see the module
+    docstring) and its own moving-block resample draw, drawn once per factor and
+    reused across every stat registered for that factor (:func:`_draw_moving_block_indices`),
+    not redrawn per ``(factor, stat)``.
+    """
     stats: dict[str, StatBand] = {}
-    for stat_name, registered in SINGLE_FACTOR_STATS.items():
-        for j, factor in enumerate(block_factors):
+    for factor in block_factors:
+        panel = series_by_factor[factor].to_numpy(dtype=np.float64).reshape(-1, 1)
+        t = panel.shape[0]
+        resample_indices = _draw_moving_block_indices(
+            t,
+            seed=seed,
+            n_resamples=n_resamples,
+            block_length=block_length,
+            context=f"block={block} factor={factor}",
+        )
+        for stat_name, registered in SINGLE_FACTOR_STATS.items():
 
             def sample_fn(
-                arr: np.ndarray, _j: int = j, _fn: Callable[[np.ndarray], float] = registered.fn
+                arr: np.ndarray, _fn: Callable[[np.ndarray], float] = registered.fn
             ) -> float:
-                return _fn(arr[:, _j])
+                return _fn(arr[:, 0])
 
             band = block_bootstrap_band(
                 sample_fn,
-                block_panel,
+                panel,
                 seed=seed,
                 n_resamples=n_resamples,
                 level=level,
                 block_length=block_length,
                 tier=registered.tier,
+                context=f"block={block} factor={factor} stat={stat_name}",
+                resample_indices=resample_indices,
             )
             stats[f"{factor}.{stat_name}"] = band
     return BlockReference(block=block, stats=MappingProxyType(stats))
@@ -474,21 +657,41 @@ def _cross_block_reference(
     pair: tuple[str, str],
     factors_a: list[str],
     factors_b: list[str],
-    panel: pd.DataFrame,
+    series_by_factor: Mapping[str, pd.Series],
     *,
     seed: int,
     n_resamples: int,
     level: float,
     block_length: int,
 ) -> CrossBlockReference:
+    """Every :data:`CROSS_BLOCK_STATS` entry for every present factor pair drawn from ``pair``.
+
+    Each ``(fa, fb)`` pair is aligned against *only itself* (:func:`_aligned_pair`), not
+    the rest of either block, and gets its own moving-block resample draw reused across
+    every stat registered for that pair. A pair with zero date overlap is recorded in
+    the result's ``zero_overlap_pairs`` and contributes no stat entries.
+    """
     stats: dict[str, StatBand] = {}
+    zero_overlap: list[str] = []
     for fa in factors_a:
         for fb in factors_b:
-            pair_panel = panel[[fa, fb]].to_numpy(dtype=np.float64)
-            for stat_name, fn in CROSS_BLOCK_STATS.items():
+            pair_panel = _aligned_pair(series_by_factor, fa, fb)
+            if pair_panel is None:
+                zero_overlap.append(f"{fa}~{fb}")
+                continue
+            t = pair_panel.shape[0]
+            resample_indices = _draw_moving_block_indices(
+                t,
+                seed=seed,
+                n_resamples=n_resamples,
+                block_length=block_length,
+                context=f"pair={pair[0]}|{pair[1]} factors={fa}~{fb}",
+            )
+            for stat_name, registered in CROSS_BLOCK_STATS.items():
 
                 def sample_fn(
-                    arr: np.ndarray, _fn: Callable[[np.ndarray, np.ndarray], float] = fn
+                    arr: np.ndarray,
+                    _fn: Callable[[np.ndarray, np.ndarray], float] = registered.fn,
                 ) -> float:
                     return _fn(arr[:, 0], arr[:, 1])
 
@@ -499,10 +702,14 @@ def _cross_block_reference(
                     n_resamples=n_resamples,
                     level=level,
                     block_length=block_length,
-                    tier="monthly",
+                    tier=registered.tier,
+                    context=f"pair={pair[0]}|{pair[1]} factors={fa}~{fb} stat={stat_name}",
+                    resample_indices=resample_indices,
                 )
                 stats[f"{fa}~{fb}.{stat_name}"] = band
-    return CrossBlockReference(pair=pair, stats=MappingProxyType(stats))
+    return CrossBlockReference(
+        pair=pair, stats=MappingProxyType(stats), zero_overlap_pairs=tuple(zero_overlap)
+    )
 
 
 def compute_reference(
@@ -519,41 +726,46 @@ def compute_reference(
     """Compute train+validation reference statistics and bootstrap bands, per block.
 
     Reads every :meth:`FactorManifest.active_factors` factor through
-    ``access.train_val`` (never ``access.frame(..., "holdout", ...)``, and this module
-    holds no :class:`~ah.splits.FinalEvaluationToken` with which it even could), aligns
-    them on their common date index, then computes:
+    ``access.train_val(series_id_for(factor))`` (never ``access.frame(..., "holdout",
+    ...)``, and this module holds no :class:`~ah.splits.FinalEvaluationToken` with
+    which it even could), each independently -- see the module docstring's "Data
+    alignment" section for why this function does not inner-join every active factor
+    onto one shared date axis before computing anything. Then computes:
 
     - Every :data:`SINGLE_FACTOR_STATS` entry for every present factor, per active
       block (:class:`BlockReference`, one per ``manifest.active_blocks`` entry -- every
       active block gets an entry even if every one of its factors turned out to be
-      missing, so a caller can always find the block by key).
+      missing, so a caller can always find the block by key), each over that factor's
+      own observations only.
     - Every :data:`CROSS_BLOCK_STATS` entry for every present factor pair drawn from
       each ``manifest.cross_block_pairs()`` block pair (:class:`CrossBlockReference`,
-      one per pair, with the pair recorded on the object).
+      one per pair, with the pair recorded on the object), each over exactly that
+      factor pair's aligned overlap. A pair with zero overlap is recorded in
+      ``zero_overlap_pairs`` rather than raising.
 
     Factors belonging to an inactive block (declared in ``manifest.blocks`` but absent
     from ``manifest.active_blocks``) are never read: ``manifest.active_factors()``
     already excludes them, and this function does not fall back to
     ``manifest.blocks`` directly for iteration.
 
-    A single ``seed`` drives every block-bootstrap draw in this call (via
-    :func:`block_bootstrap_band`, constructed fresh from ``seed`` each time): the
-    same ``seed`` against the same data gives bit-identical bands. Passing the same
-    ``block_length`` and the shared per-block panel to every statistic in that block
-    means the resampled row positions (not their content) are identical across a
-    block's stats for a given ``seed`` -- the "blocks are drawn jointly across
-    factors" property the moving-block bootstrap is required to have.
+    A single ``seed`` drives every block-bootstrap draw in this call: the same ``seed``
+    against the same data gives bit-identical bands. For a given factor (or cross-block
+    pair), the moving-block resample row positions are drawn exactly once and reused
+    across every stat computed for that factor/pair (:func:`_draw_moving_block_indices`),
+    not redrawn per ``(factor, stat)`` -- so the "stats sharing a panel share a
+    resample" property is explicit, not an emergent side effect of separate calls
+    happening to share the same ``(seed, T, block_length, n_resamples)``.
     """
     active_factors = manifest.active_factors()
-    panel, missing = _aligned_panel(access, active_factors, series_id_for)
+    series_by_factor, missing = _read_all_factors(access, active_factors, series_id_for)
 
     blocks: dict[str, BlockReference] = {}
     for block in manifest.active_blocks:
-        block_factors = [f for f in manifest.blocks[block] if f in panel.columns]
+        block_factors = [f for f in manifest.blocks[block] if f in series_by_factor]
         blocks[block] = _block_reference(
             block,
             block_factors,
-            panel,
+            series_by_factor,
             seed=seed,
             n_resamples=n_resamples,
             level=level,
@@ -563,13 +775,13 @@ def compute_reference(
     cross_blocks: dict[tuple[str, str], CrossBlockReference] = {}
     for pair in manifest.cross_block_pairs():
         block_a, block_b = pair
-        factors_a = [f for f in manifest.blocks[block_a] if f in panel.columns]
-        factors_b = [f for f in manifest.blocks[block_b] if f in panel.columns]
+        factors_a = [f for f in manifest.blocks[block_a] if f in series_by_factor]
+        factors_b = [f for f in manifest.blocks[block_b] if f in series_by_factor]
         cross_blocks[pair] = _cross_block_reference(
             pair,
             factors_a,
             factors_b,
-            panel,
+            series_by_factor,
             seed=seed,
             n_resamples=n_resamples,
             level=level,
