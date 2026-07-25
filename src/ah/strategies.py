@@ -480,7 +480,11 @@ def _validate_weights(
 
 
 def _validate_params(
-    raw: object, strategy_id: str, known_series: frozenset[str], source: Path
+    raw: object,
+    strategy_id: str,
+    known_series: frozenset[str],
+    level_factors: frozenset[str],
+    source: Path,
 ) -> dict[str, float | str]:
     raw_map = _require_mapping(raw or {}, f"d4_strategies.{strategy_id}.params", source)
     params: dict[str, float | str] = {}
@@ -499,6 +503,12 @@ def _validate_params(
                     f"{source}: d4_strategies.{strategy_id}.params['{key_str}'] names "
                     f"unknown series '{series}' -- must be an active factor or a "
                     f"declared derived series"
+                )
+            if series in level_factors:
+                raise StrategyError(
+                    f"{source}: d4_strategies.{strategy_id}.params['{key_str}'] names level factor "
+                    f"'{series}' directly; a level factor may enter a D4 portfolio only "
+                    f"through a declared derived_series (conventions.level_factors)"
                 )
             params[key_str] = series
         else:
@@ -592,7 +602,9 @@ def _validate_strategy(
     weights = _validate_weights(
         entry_map.get("weights"), strategy_id, known_series, conventions.level_factors, source
     )
-    params = _validate_params(entry_map.get("params"), strategy_id, known_series, source)
+    params = _validate_params(
+        entry_map.get("params"), strategy_id, known_series, conventions.level_factors, source
+    )
     raw_proxy = entry_map.get("proxy_mapping")
 
     if kind == "static_weights":

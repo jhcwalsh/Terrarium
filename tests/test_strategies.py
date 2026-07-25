@@ -541,6 +541,52 @@ def test_every_sealed_series_param_resolves() -> None:
                 assert value in known, f"{strategy.strategy_id}.{key} -> {value!r}"
 
 
+def test_level_factor_in_series_param_raises_naming_it(tmp_path: Path) -> None:
+    """Gap 1 fix: level factors cannot appear directly in _series-suffixed params.
+
+    A rule's target series must be an active factor (if return-bearing) or a declared
+    derived series (if level-bearing). Naming a level factor directly bypasses the
+    declared-transform guard, same defect as IMPORTANT 2 for weights.
+    """
+    bad = _write(
+        tmp_path,
+        _CONVENTIONS_BLOCK + "d4_strategies:\n"
+        "  momentum:\n"
+        "    kind: rule\n"
+        "    rebalance: monthly\n"
+        "    lookback: 12\n"
+        "    rule: momentum_12_1\n"
+        "    weights: {}\n"
+        "    params: {target_series: ust_10y, skip_months: 1}\n"
+        "    notes: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="ust_10y"):
+        load_d4_strategies(bad)
+
+
+def test_level_factor_in_carry_long_series_raises_naming_it(tmp_path: Path) -> None:
+    """Gap 1 fix: another test case for term_structure_carry's long_series param."""
+    bad = _write(
+        tmp_path,
+        _CONVENTIONS_BLOCK + _DERIVED_BLOCK + "  cash_tr_1m:\n"
+        "    from: policy_rate\n"
+        "    transform: bond_total_return\n"
+        "    params: {duration_years: 0.0}\n"
+        "    formula: f\n"
+        "d4_strategies:\n"
+        "  carry:\n"
+        "    kind: rule\n"
+        "    rebalance: monthly\n"
+        "    lookback: null\n"
+        "    rule: term_structure_carry\n"
+        "    weights: {}\n"
+        "    params: {long_series: hy_spread, funding_series: cash_tr_1m, long_weight: 1.0, funding_weight: -1.0}\n"
+        "    notes: fixture\n",
+    )
+    with pytest.raises(StrategyError, match="hy_spread"):
+        load_d4_strategies(bad)
+
+
 # --------------------------------------------------------------------------- #
 # FINDING 9 -- duplicate ids
 # --------------------------------------------------------------------------- #

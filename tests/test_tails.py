@@ -405,6 +405,15 @@ def test_d4_tail_table_requires_derived_when_strategies_given_explicitly() -> No
         d4_tail_table(_plausible_ensemble(n_paths=2, months=15), strategies=strategies)
 
 
+def test_d4_tail_table_requires_strategies_when_derived_given_explicitly() -> None:
+    """Gap 2 fix: symmetric guard. Passing `derived` from a non-default file without
+    pairing `strategies` would silently pair it with the DEFAULT file's strategies --
+    reject it instead."""
+    derived = load_derived_series()
+    with pytest.raises(StrategyError, match="strategies"):
+        d4_tail_table(_plausible_ensemble(n_paths=2, months=15), derived=derived)
+
+
 def test_d4_tail_table_pairs_explicit_strategies_with_matching_derived(tmp_path: Path) -> None:
     """A strategy and derived-series pair loaded from the SAME non-default file must
     be usable together, and must produce different numbers than pairing the same

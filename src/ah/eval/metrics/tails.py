@@ -333,16 +333,19 @@ def d4_tail_table(
     explicit ``strategies`` (e.g. loaded from a non-default path via
     ``load_d4_strategies(other_path)``), you must also pass the matching ``derived``
     (``load_derived_series(other_path)``) -- this function will not guess which file
-    ``strategies`` came from.
+    ``strategies`` came from. The same symmetry holds in the other direction: if you
+    pass an explicit ``derived``, you must also pass the matching ``strategies``.
     """
+    strategies_provided = strategies is not None
+    derived_provided = derived is not None
+    if strategies_provided != derived_provided:
+        raise StrategyError(
+            "d4_tail_table: 'strategies' and 'derived' must be supplied together, so the "
+            "strategy set and its derived-series transforms are guaranteed to come from "
+            "the same source file"
+        )
     if strategies is None:
         strategies = load_d4_strategies()
-    elif derived is None:
-        raise StrategyError(
-            "d4_tail_table: 'derived' must be supplied explicitly when 'strategies' is "
-            "supplied, so the strategy set and its derived-series transforms are "
-            "guaranteed to come from the same source file"
-        )
     if derived is None:
         derived = load_derived_series()
     table: dict[str, dict[str, float]] = {}
