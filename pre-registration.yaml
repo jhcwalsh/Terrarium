@@ -41,8 +41,11 @@
 #   - the acceptance thresholds and the factor namespace they are keyed to: this file and
 #     the factors.yaml it names above, plus src/ah/factors.py (which decides which blocks
 #     and factors are active at all);
-#   - the metrics being judged: every enforce-tier metric suite under src/ah/eval/metrics/
-#     that exists yet (WP2.2 adds the rest; a suite that does not exist yet is skipped);
+#   - the metrics being judged: the enforce-tier metric suites under src/ah/eval/metrics/
+#     that exist yet (WP2.2 adds the rest; a suite that does not exist yet is skipped).
+#     NOTE: this is a fixed name list in prereg.py (_METRIC_SUITE_NAMES), not a directory
+#     scan -- a helper module beside the suites, or a judging module anywhere else, joins
+#     the seal only by being added to that list in the same PR that adds the module;
 #   - the statistics the bands are derived from: src/ah/eval/reference.py;
 #   - the code that compares values to thresholds and decides: src/ah/eval/prereg.py and
 #     src/ah/eval/g2.py;

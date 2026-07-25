@@ -42,8 +42,13 @@ pass/fail verdict on their own. **The invariant governs**, so
 - *acceptance thresholds and the factor namespace they are keyed to*: the
   pre-registration YAML and the ``factors.yaml`` it names (added by :func:`seal`), plus
   ``ah/factors.py``, which decides which blocks and factors are active at all;
-- *the metrics being judged*: every enforce-tier metric suite under
-  ``src/ah/eval/metrics/`` that exists yet;
+- *the metrics being judged*: the enforce-tier metric suites under
+  ``src/ah/eval/metrics/`` that exist yet. **This is a fixed name list**
+  (``_METRIC_SUITE_NAMES``), not a directory scan: a helper module added under
+  ``eval/metrics/`` beside the suites -- or any new judging module anywhere else --
+  joins the seal only by being added to ``_METRIC_SUITE_NAMES`` /
+  ``_REQUIRED_JUDGED_SOURCES``. WP2.2 must do that in the same PR that adds the module,
+  or the module silently sits outside the hash;
 - *the statistics the bands are derived from*: ``ah/eval/reference.py``;
 - *the code that compares values to thresholds and decides*: ``ah/eval/prereg.py``
   (this module) and ``ah/eval/g2.py``;
