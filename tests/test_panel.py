@@ -221,6 +221,44 @@ def test_derived_expr_arity_mismatch_raises_panel_error() -> None:
         build_panel(access, manifest)
 
 
+def test_derived_expr_output_missing_columns_raises_panel_error(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """MINOR 4: a derived expr's *output* is column-checked like every input frame.
+
+    ``_read_series`` validates ``date``/``value`` on every input; before this fix
+    ``_compute_derived`` handed its helper's return value straight to
+    ``set_index("date")["value"]`` with no check at all. Safe today only because every
+    registered ``_DERIVED_EXPRS`` entry happens to call ``ah.data.derive._frame()``,
+    which always returns exactly those two columns -- a future transform that didn't
+    would fall through this hole silently. Monkeypatch a broken entry into the
+    dispatch table to exercise the defence directly, without depending on any real
+    helper misbehaving.
+    """
+    import ah.eval.panel as panel_mod
+
+    broken_spec = panel_mod.DerivedExpr(
+        arity=1,
+        fn=lambda frames: pd.DataFrame({"date": frames[0]["date"]}),  # no `value`
+    )
+    monkeypatch.setitem(panel_mod._DERIVED_EXPRS, "broken_no_value", broken_spec)
+
+    manifest = FactorManifest(
+        blocks={"global": ("weird",)},
+        active_blocks=("global",),
+        sources={
+            "weird": FactorSource(
+                kind="derived", expr="broken_no_value", inputs=("s.a",), units="pct"
+            )
+        },
+    )
+    frames = {"s.a": _synthetic_frame(1, _START, _END)}
+    access = DataAccess(_reader_from(frames))
+
+    with pytest.raises(PanelError, match="missing required column"):
+        build_panel(access, manifest)
+
+
 # --------------------------------------------------------------------------- #
 # 4. never reads the holdout
 # --------------------------------------------------------------------------- #

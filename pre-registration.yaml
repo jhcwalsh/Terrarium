@@ -172,6 +172,22 @@ conventions:
     would -- it is capital-committing yet quoted net of a rate -- and the loader rejects
     one outright. That distinction, not a general tolerance for mixing, is why this
     file can carry one numeraire and still hold long-short legs.
+    CONSEQUENCE, not covered by the leg-level check above: the leg taxonomy governs
+    what each LEG is quoted on, not what the STRATEGY's realized return series is
+    quoted on, and those are different claims. A strategy holding a zero-cost overlay
+    at less than 100% of its weight (eqw_factors at 0.6, endowment_proxy at 0.15 --
+    both via credit_xs_hy and, for eqw_factors, also smb/hml/mom), or a `rule` strategy
+    that is flat under its own rule for some months (momentum, in its 12-month warm-up
+    and every month its signal is non-positive), is CASH-UNCOLLATERALIZED BY
+    CONSTRUCTION: static_weights_composition and the rule strategies' own arithmetic
+    (see their `notes`) credit no return at all to the uncommitted or unallocated
+    capital, rather than crediting it the cash rate a genuinely fully-invested
+    total-return portfolio would earn on an uninvested balance. The realized series is
+    therefore below the total-return numeraire by exactly that uncommitted-capital cash
+    return, for every affected month -- a strategy-level consequence the leg-level
+    `zero_cost` declaration does not, and cannot, capture. See
+    governance/retrofit-register.md RFR-12 for the full accounting (which strategies,
+    by how much) and the options WP2.3 must choose between before sealing.
   units_of_return_bearing_factors: >-
     equity_mkt, smb, hml, mom and commodities are treated by D4 as monthly returns in
     DECIMAL units (0.01 = +1% for the month). They are used directly, with no
@@ -183,7 +199,7 @@ conventions:
     french.mom (all `units: ret` in requirements.yaml), each a long-short spread return
     declared `numeraire: zero_cost`. commodities has no Step-1 series
     (`factor_sources.commodities.kind: unavailable`, governance/retrofit-register.md
-    RFR-1); D4 assumes it will be a return-bearing TOTAL return once sourced (recorded
+    RFR-8); D4 assumes it will be a return-bearing TOTAL return once sourced (recorded
     machine-visibly as `factor_sources.commodities.numeraire: total_return`), and that
     assumption is recorded here rather than presented as a property of the manifest.
 
@@ -210,9 +226,12 @@ conventions:
     definitive factor-to-series mapping (this paragraph previously named "candidate"
     series before that mapping existed): policy_rate -> fred.FEDFUNDS (the ADMINISTERED
     effective federal funds rate, registered by WP2.2 Task 1 under the requirements.yaml
-    WP1.9 rule and backfilled before 1954-07 from fred.TB3MS via ah.data.splice, flagged
-    is_proxy -- NOT fred.TB3MS itself, which is a market bill yield and shares its
-    construction with funding_spread's TED leg), ust_2y ->
+    WP1.9 rule -- NOT fred.TB3MS itself, which is a market bill yield and shares its
+    construction with funding_spread's TED leg. A rule to backfill pre-1954-07 history
+    from fred.TB3MS via ah.data.splice, flagged is_proxy, is REGISTERED but not applied
+    by ah.data.refresh today, so read_factor_frames reads fred.FEDFUNDS unextended;
+    factors.yaml's factor_sources.policy_rate.proxy_for and
+    governance/retrofit-register.md RFR-10 have the current status), ust_2y ->
     fred.DGS2, ust_10y -> fred.DGS10, hqm_curve -> treasury.hqm_curve, ig_spread ->
     derived from fred.BAA - fred.AAA, hy_spread -> fred.HY_OAS, funding_spread ->
     derived from fred.TEDRATE -- all `units: pct` there or in requirements.yaml. cpi

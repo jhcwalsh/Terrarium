@@ -137,6 +137,50 @@ All notable changes to this project are documented here. The project follows
   added. `ruff` respects `.gitignore` by default, so those sources had never been
   linted; 13 pre-existing lint findings surfaced and are fixed here. See
   `governance/retrofit-register.md` RFR-11.
+- **WP2.2 Task 1 review fix pass 2 — the numeraire defect survives at portfolio level;
+  three documentation gaps closed; one defence-in-depth hole closed.** All
+  documentation-only except the last item.
+  - *The `zero_cost` leg taxonomy is sound at leg level but the sealed claim is
+    portfolio-level.* Under `conventions.numeraire: total_return` with no cash leg, a
+    strategy carrying uncommitted zero-cost notional, or flat under its own rule,
+    realizes **zero** on that capital rather than the cash rate — three of five D4
+    strategies are affected (`eqw_factors` at 0.6, `endowment_proxy` at 0.15, and
+    `momentum` in its warm-up and every flat month, broken by this task's own numeraire
+    switch and not previously recorded). `_validate_numeraires` cannot see this: it
+    checks declared leg numeraires, not implied cash positions. Recorded as
+    `governance/retrofit-register.md` RFR-12 (widens RFR-9) and a new paragraph in
+    `pre-registration.yaml`'s `conventions.numeraire_statement`; WP2.3 must choose
+    between an explicit `cash_tr_1m` residual leg or sealing the bias as-is. No code
+    change — the fix is documenting the gap accurately before WP2.3 decides.
+  - *`factors.yaml`'s `hy_spread`/`policy_rate` `proxy_for` entries overstated what
+    `read_factor_frames` actually reads.* They read `fred.HY_OAS`/`fred.FEDFUNDS`
+    directly, unextended; neither splice rule is applied by `ah.data.refresh` today
+    (RFR-10, already known, but the manifest text implied otherwise). Reworded both
+    `proxy_for` entries and their `notes` to say REGISTERED BUT NOT YET APPLIED, name
+    WP2.3 as the owner, and cross-reference RFR-10; the same overstatement in
+    `pre-registration.yaml`'s `units_of_level_factors` is corrected too.
+  - *The RFR-1 circularity was only half-broken.* `factors.yaml`'s header already
+    pointed at RFR-8, but `factor_sources.commodities.reason` and
+    `pre-registration.yaml`'s `units_of_return_bearing_factors` still cited RFR-1
+    directly. Both now point at RFR-8.
+  - *`ah.eval.panel._compute_derived` validated input frames' columns but not its own
+    output.* `_read_series` checks every input for `date`/`value`; the derived expr's
+    return value went straight to `set_index("date")["value"]` with no check at all.
+    Safe today only because every registered `_DERIVED_EXPRS` entry happens to return
+    `ah.data.derive._frame()`'s exact two columns — a future transform need not. Now
+    checked the same way, raising `PanelError` instead of a bare `KeyError` several
+    frames inside pandas. New test
+    `test_derived_expr_output_missing_columns_raises_panel_error` (monkeypatches a
+    broken entry into `_DERIVED_EXPRS`; confirmed red — `KeyError: 'value'` — before
+    the fix).
+  - *`src/ah/data/cli.py` had two pre-existing lint violations, newly visible after the
+    `.gitignore` fix.* Line 8's `from __future__ import annotations` violated
+    `CLAUDE.md`'s documented rule for that exact file (Typer resolves parameter hints
+    at runtime). Verified `ah data --help`, `ah data refresh --help` and `ah data
+    status` all behave identically with and without it, then removed it — the file was
+    simply never checked against the rule until the gitignore fix made it visible to
+    `ruff`/review. Line 100's em dash in a CLI-echoed string (cp1252-safe today, but
+    against the ASCII rule) replaced with `--`.
 
 ### Added
 - **WP2.1 — Experiment infra, splits, leakage guards, registry.** `splits.py`:

@@ -5,8 +5,6 @@ provider (a directory of canonical ``<series_id>.csv`` files via ``--fixtures``,
 no-op when offline). The scheduled GitHub Actions call the same orchestration.
 """
 
-from __future__ import annotations
-
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -97,7 +95,7 @@ def data_refresh(
         typer.echo(f"[dry-run] {len(result.planned)} series due: {result.planned}")
         return
     if result.already_exists:
-        typer.echo(f"vintage {result.vintage} already exists — no-op (idempotent).")
+        typer.echo(f"vintage {result.vintage} already exists -- no-op (idempotent).")
         return
     if result.gaps_md:
         (data_root / "GAPS.md").write_text(result.gaps_md, encoding="utf-8")

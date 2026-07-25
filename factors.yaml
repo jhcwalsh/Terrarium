@@ -139,10 +139,12 @@ factor_sources:
     kind: unavailable
     numeraire: total_return
     reason: >-
-      no Step-1 series registered; see governance/retrofit-register.md RFR-1. Carries
-      weight in two D4 strategies (eqw_factors, endowment_proxy) whose reference
-      statistics are consequently unavailable at seal time (pre-registration.yaml's
-      rationale.d4_commodities_consequence).
+      no Step-1 series registered; see governance/retrofit-register.md RFR-8 (RFR-1
+      originally assigned this to WP2.2, but WP2.2 Task 1 was citing RFR-1 as its own
+      reason -- circular -- so RFR-8 supersedes it with a real owner and reason; see
+      this file's header note). Carries weight in two D4 strategies (eqw_factors,
+      endowment_proxy) whose reference statistics are consequently unavailable at seal
+      time (pre-registration.yaml's rationale.d4_commodities_consequence).
   ig_spread:
     kind: derived
     expr: difference
@@ -157,14 +159,22 @@ factor_sources:
     units: pct
     proxy: true
     proxy_for: >-
-      derived.baa_aaa_spread before 1996-12, via ah.data.splice PROXY_RULES
-      ['hy_oas_pre1996'] (regression on the 1996-2005 overlap), every spliced
-      observation flagged is_proxy.
+      derived.baa_aaa_spread before 1996-12, via the ah.data.splice PROXY_RULES
+      ['hy_oas_pre1996'] rule (regression on the 1996-2005 overlap). REGISTERED BUT
+      NOT YET APPLIED: this rule is not run by ah.data.refresh today, so the panel
+      this factor sources from does not yet contain the spliced pre-1996-12
+      observations or any is_proxy flag -- read_factor_frames reads fred.HY_OAS
+      directly, unextended. Applying the rule (and confirming which the sealed
+      campaign vintage actually contains) is WP2.3's decision; see
+      governance/retrofit-register.md RFR-10.
     notes: >-
       ICE BofA US High Yield OAS via FRED (BAMLH0A0HYM2). requirements.yaml notes FRED
       serves only ~3 years of history for this series under ICE licensing terms, so it
-      alone does not cover the full campaign window -- ah.data.splice extends it
-      backward with the Baa-Aaa proxy, flagged is_proxy, upstream of this mapping.
+      alone does not cover the full campaign window. A splice rule to extend it
+      backward with the Baa-Aaa proxy is REGISTERED in ah.data.splice but NOT applied
+      upstream of this mapping today (see proxy_for above and RFR-10) -- as things
+      stand, this factor's train+validation history is honestly limited to
+      fred.HY_OAS's own ~3 years, unextended.
 
   # --- us block ---
   policy_rate:
@@ -173,9 +183,14 @@ factor_sources:
     units: pct
     proxy: true
     proxy_for: >-
-      fred.TB3MS before 1954-07 (FRED's first FEDFUNDS observation), via
-      ah.data.splice PROXY_RULES['fedfunds_pre1954'] (regression on the 1954-1990
-      overlap), every spliced observation flagged is_proxy.
+      fred.TB3MS before 1954-07 (FRED's first FEDFUNDS observation), via the
+      ah.data.splice PROXY_RULES['fedfunds_pre1954'] rule (regression on the
+      1954-1990 overlap). REGISTERED BUT NOT YET APPLIED: this rule is not run by
+      ah.data.refresh today, so the panel this factor sources from does not yet
+      contain the spliced pre-1954-07 observations or any is_proxy flag --
+      read_factor_frames reads fred.FEDFUNDS directly, unextended. Applying the rule
+      (and confirming which the sealed campaign vintage actually contains) is
+      WP2.3's decision; see governance/retrofit-register.md RFR-10.
     notes: >-
       Effective federal funds rate -- the ADMINISTERED US policy rate. Registered in
       requirements.yaml by WP2.2 Task 1 under the WP1.9 emergent-requirements rule

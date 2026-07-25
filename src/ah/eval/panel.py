@@ -197,7 +197,24 @@ def _compute_derived(
             f"factor '{factor}': derived expr '{source.expr}' expects "
             f"{spec.arity} input(s), got {len(input_frames)}"
         )
-    return spec.fn(input_frames)
+    output = spec.fn(input_frames)
+    # Defence in depth (WP2.2 Task 1 fix pass, MINOR 4): every _DERIVED_EXPRS helper
+    # today returns ah.data.derive's own _frame(), which always carries exactly
+    # date/value, so this never fires yet -- but _read_series validates the same
+    # contract on every *input* frame, and a future DerivedExpr entry could easily
+    # return something else. Checking the output closes that hole the same way.
+    if not isinstance(output, pd.DataFrame):
+        raise PanelError(
+            f"factor '{factor}': derived expr '{source.expr}' returned "
+            f"{type(output).__name__}, not a DataFrame"
+        )
+    missing_cols = _REQUIRED_COLUMNS - set(output.columns)
+    if missing_cols:
+        raise PanelError(
+            f"factor '{factor}': derived expr '{source.expr}' output is missing "
+            f"required column(s) {sorted(missing_cols)}"
+        )
+    return output
 
 
 @dataclass(frozen=True)
