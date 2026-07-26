@@ -233,6 +233,15 @@ _REQUIRED_JUDGED_SOURCES = (
     # value in the platform. Exactly the "helper module added beside the suites" case
     # the module docstring warns joins the seal only by being named.
     ("src", "ah", "eval", "metrics", "_pooling.py"),
+    # WP2.2b Task 7: the negative-control suite. Judging code created outside
+    # `src/ah/eval/metrics/`, so per the rule stated in the module docstring it joins
+    # this list in the same commit that adds it. It is judging code in the strict sense
+    # -- it defines what "the battery caught this control" MEANS (the substantive vs.
+    # NaN-driven split, and the reference-band criterion the battery itself does not
+    # apply), and `G2-EVIDENCE.md` cites its table as the record that the battery
+    # detects badness at all. A version of that record produced by unsealed code would
+    # be exactly the "seal appears stronger than it is" failure this list prevents.
+    ("src", "ah", "eval", "negative_controls.py"),
 )
 
 # Sealed input DATA (not code) that an estimator is defined over: `(directory parts,

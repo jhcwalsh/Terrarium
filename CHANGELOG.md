@@ -232,6 +232,48 @@ All notable changes to this project are documented here. The project follows
     against the ASCII rule) replaced with `--`.
 
 ### Added
+- **WP2.2b Task 7 — `eval/negative_controls.py`, the negative-control suite.** Five
+  deliberately broken generators registered through `ah.gen.registry` exactly like a
+  real one, so the battery cannot tell them apart: `nc1-iid-gaussian` (iid draws from
+  the joint panel's own mean vector and full covariance — means/stdevs/contemporaneous
+  correlations preserved, all tails/ACF/clustering destroyed); `nc2-shuffled` (real
+  train+validation rows in a random order, one permutation per path **common across
+  factors**, so marginals and contemporaneous structure are exact and only time
+  ordering dies); `nc3-shifted-bootstrap` (moving-block bootstrap, block 24m, then
+  `x' = mu + 1.5*(x-mu) + 0.5*sigma` per factor — both constants derived from band
+  geometry, not tuned); `nc4-memorizer` (verbatim replay of a uniformly-drawn
+  contiguous TRAIN window per path plus iid noise at `NC4_NOISE_FRACTION = 0.10` of
+  each factor's own sigma — derived from the memorization suite's own 24-dimensional
+  block geometry: a copy sits at `sqrt(24)*0.1 ≈ 0.49` from its source against
+  `sqrt(48) ≈ 6.9` for two independent historical decades); `nc5-condition-ignoring`
+  (NC3 with the distortion switched off, i.e. a plain block bootstrap, whose only
+  defect is that it never reads `world.factor_conditions`). All randomness flows from
+  one `PCG64(seed)`; all real data flows through `ReferenceStats.historical_series`,
+  never a fresh catalog read and never the holdout (AST guard on `ah.eval.g2`, plus a
+  guard that no control object retains a `DataAccess`). `run_negative_controls` emits a
+  `NegativeControlReport` (JSON + markdown, `BatteryReport` conventions) with a row per
+  control and a column per tier, naming every metric that fired, splitting failures by
+  rejection surface (`enforce` / `report` threshold vs. reference band) and separating
+  **substantive** (finite-valued) failures from NaN-driven ones — a control rejected by
+  a metric that is NaN for every generator has not been caught. `negative_controls.py`
+  joins `prereg._REQUIRED_JUDGED_SOURCES`.
+- **WP2.2b Task 7 — what the controls found.** All five are rejected and all five are
+  caught by their designated tier, but **not one is caught by an `enforce`-severity
+  threshold for a reason specific to its own defect**. Four findings, each pinned by a
+  named test in `tests/test_negative_controls.py` rather than papered over:
+  (1) *no metric suite in the battery emits a `<factor>.mean`, `<factor>.std` or
+  `<a>~<b>.correlation` metric at all*, although `reference.SINGLE_FACTOR_STATS` /
+  `CROSS_BLOCK_STATS` register all three and `compute_reference` computes a real
+  length-matched band for each — so NC3's drift (`equity_mkt` pooled mean 0.0233 against
+  a band of `[-0.0016, 0.0101]`; std 0.0653 against `[0.0210, 0.0541]`) is invisible to
+  the battery on exactly the axis it was built to break; (2) the only enforce gate that
+  fires anywhere is `floor_violations`, and it fires identically for all five including
+  controls replaying real values verbatim (a realistic funding spread sits below the
+  sealed 100bp `SPREAD_FLOOR_PCT`), so it discriminates nothing; (3) a plain block
+  bootstrap — the shape of WP2.4's own G2 benchmark — scores *worse* on
+  `near_duplicate_fraction` (0.239) and `nn_distance_p05` (0.069) than the deliberate
+  memorizer (0.065 / 0.649); (4) the `10yr` tier produced no substantive failure for
+  any control (13 of its 22 metrics are structurally NaN for every generator).
 - **WP2.1 — Experiment infra, splits, leakage guards, registry.** `splits.py`:
   train/validation/holdout spans with a `DataAccess` guard — the holdout is reachable
   only via a `FinalEvaluationToken` minted solely in `ah.eval.g2`, proven by an
