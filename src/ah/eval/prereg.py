@@ -104,17 +104,20 @@ What remains deliberately **outside** the seal, and why:
   amendment, which inverts the seal's purpose: it exists to freeze the judge, not to
   freeze the thing being judged.
 - ``ah/data/splice.py`` -- **excluded on evidence, not on principle.** Its
-  ``PROXY_RULES`` would backfill ``policy_rate`` (pre-1954) and ``hy_spread``
-  (pre-1996), but ``ah.data.refresh`` does not apply them and
+  ``PROXY_RULES`` would backfill ``policy_rate`` (pre-1954, from ``fred.TB3MS``) and
+  ``hy_spread`` (pre-1996), but ``ah.data.refresh`` does not apply them and
   :func:`ah.eval.panel.read_factor_frames` never calls this module at all, so no sealed
   band is a function of its code. The sealed reference run *demonstrates* that rather
-  than assuming it: both factors appear in ``reference_run.missing_factors`` precisely
-  because the backfills are absent from the frozen campaign vintage -- which is also the
-  answer to RFR-10's standing question about which backfills the vintage contains
-  (neither). What the vintage holds is pinned by the sealed ``campaign_vintage_id``, not
-  by this module. If a later work package applies either rule, that produces a new
-  vintage -- a campaign restart and a dated amendment regardless -- and ``splice.py``
-  joins the seal at that point, because it will then be on the read path.
+  than assuming it, in two independent ways: ``hy_spread`` appears in
+  ``reference_run.missing_factors`` precisely because its backfill is absent, and
+  ``policy_rate`` -- which *is* present on campaign vintage ``2026-07-26.1`` -- starts
+  at 1954-07, ``fred.FEDFUNDS``'s own first observation, rather than at
+  ``fred.TB3MS``'s 1934-01. That is the answer to RFR-10's standing question about
+  which backfills the vintage contains: neither. What the vintage holds is pinned by
+  the sealed ``campaign_vintage_id``, not by this module. If a later work package
+  applies either rule, that produces a new vintage -- a campaign restart and a dated
+  amendment regardless -- and ``splice.py`` joins the seal at that point, because it
+  will then be on the read path.
 
 Two entries WP2.1b listed here are now **inside** the seal, each named in
 :data:`_REQUIRED_JUDGED_SOURCES` / :data:`_REQUIRED_JUDGED_DATA` with its own reasoning:
@@ -262,7 +265,9 @@ _REQUIRED_JUDGED_SOURCES = (
     # the argument (its PROXY_RULES are registered but not applied by
     # `ah.data.refresh`, and `read_factor_frames` never calls it, so it cannot move a
     # band; what the frozen vintage contains is pinned by the sealed
-    # `campaign_vintage_id`, not by that module).
+    # `campaign_vintage_id`, not by that module -- demonstrated on the sealed vintage
+    # by `policy_rate` starting at fred.FEDFUNDS's own 1954-07 rather than at the
+    # splice rule's fred.TB3MS source, and by `hy_spread` having no history at all).
     ("src", "ah", "data", "derive.py"),
 )
 
@@ -1389,8 +1394,20 @@ def verify(
         _check_structurally_unavailable(prereg, prereg.raw, errors)
         _check_ensemble_size(prereg.raw, ensemble_n_paths, ensemble_months, errors)
 
-    if lock_path is not None and lock_path.exists():
-        _verify_lock(lock_path, prereg, errors)
+    if lock_path is not None:
+        if lock_path.exists():
+            _verify_lock(lock_path, prereg, errors)
+        elif prereg.sealed:
+            # WP2.3 re-seal, review Important 2. A missing lock used to be silently
+            # tolerated, so DELETING pre-registration.lock made every battery run verify
+            # clean -- the one failure mode the lock exists to make impossible, reachable
+            # with `rm`. An UNSEALED document legitimately has no lock yet (that is the
+            # pre-seal state seal() is called from), so only the sealed case errors.
+            errors.append(
+                f"{lock_path}: pre-registration is sealed but its lock file is missing; "
+                f"a sealed document without a lock judges nothing -- re-seal with "
+                f"ah.eval.prereg.seal() or restore the lock from version control"
+            )
 
     if errors:
         raise PreRegError(

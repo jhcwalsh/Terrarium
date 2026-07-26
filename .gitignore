@@ -41,3 +41,13 @@ Thumbs.db
 # Step 2 experiments (local-first; manifests may be kept manually)
 experiments/
 .superpowers/
+
+# Provenance-script outputs (scripts/compute_campaign_reference.py,
+# measure_seal_evidence.py, measure_block_length_window.py, measure_mc_error_grid.py).
+# Large, derived, and reproducible bit-for-bit from the sealed parameters against the
+# sealed campaign vintage -- which is the point: `pre-registration.yaml` seals the
+# parameters and quotes the numbers, so the JSON is a local check, not an artifact.
+/reference-run*.json
+/seal-evidence.json
+/block-length-window.json
+/mc-error-grid.json

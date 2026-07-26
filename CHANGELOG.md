@@ -7,6 +7,112 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.3 re-seal — a new campaign vintage, and six defects in what was sealed.** The
+  first seal froze campaign vintage `2026-07-24`, a snapshot taken *before*
+  `fred.FEDFUNDS` was registered — so `policy_rate` had no data for reasons that had
+  nothing to do with the data existing, and the seal made that permanent. A live refresh
+  restored it (864 monthly observations, 1954-07 → 2026-06), the campaign vintage moved
+  to **`2026-07-26.1`**, and every band, floor, strategy statistic and measured claim was
+  re-derived. `pre-registration.lock` is fresh. Amendments `AM-2026-07-26-003` (the
+  vintage move) and `-004` (the document defects), both `post_hoc: false` — no generator
+  has been fitted, so nothing could be fitted to.
+
+  - **What the vintage move restored.** `policy_rate` joins `reference_run.coverage`
+    (1954-07→2020-12, n=798) and `bootstrap_v1.factor_set` (eleven factors → **twelve**);
+    the **`carry`** D4 strategy becomes computable and gains sealed thresholds
+    (`var_95` [0.0116, 0.1045], `es_95` [0.0173, 0.1561], from a measured VaR95 of
+    0.03482 / ES95 of 0.05203 over 708 months); `term_premium`, `equity_risk_premium`
+    and `policy_anchor_deviation` stop being NaN on every possible ensemble;
+    `policy_rate.excess_kurtosis` is **restored** (at `report`, max 7.6079 — the first
+    seal removed it, the pre-seal draft had it at `enforce`). Uncomputable D4 strategies
+    go from three to two. **The check that the move touched only what depended on it:**
+    every pre-existing per-factor band, and `sixty_forty`/`momentum`'s D4 statistics,
+    came back **bit-identical**.
+  - **What it did not fix, stated so it is not assumed.** `hy_spread` is still dead — 37
+    observations, all inside the holdout; that is an ICE licensing limit on what FRED
+    serves, not a stale snapshot, and no refresh will ever fix it. `commodities` is still
+    unsourced, so `eqw_factors` and `endowment_proxy` stay uncomputable.
+    `bootstrap_v1.block_draw_span` is still **1990-2020** because `equity_vol` (VIX)
+    binds it, not `policy_rate` — now sealed as a machine-measured
+    `block_draw_span_binding_factor` rather than asserted.
+  - **The block-length window was re-measured and it MOVED.** Both edges are functions of
+    the factor count. At twelve factors: L=3 fails the dependence gate at 0.537 (worst
+    seed 0.556); **L=4's worst seed lands on exactly 0.500** against a `max` of 0.5 and is
+    excluded on the knife-edge principle; `nn_distance_p05` now collapses to 0.0 at
+    **L=10** rather than L=12, and L=8's margin falls 0.512 → 0.394. The window is
+    roughly **5 ≤ L ≤ 9**, up from 4 ≤ L ≤ 8. `mean_block_months` stays **6**, now one
+    step from the lower edge rather than mid-window — stated, not smoothed.
+    `moment_band_exceedance_fraction` is 0.0833 (2 of 24) at every L, unchanged in
+    substance. `scripts/measure_block_length_window.py` is the new provenance script; the
+    first seal's numbers came from an uncommitted prototype.
+  - **`ensemble_size.n_paths` 1000 → 1024, and its evidence moved inside the seal.** Two
+    defects in one value: 1000 was a round number standing in for the 1024 the MC-error
+    grid was actually measured at, and the grid itself lived in the *unsealed*
+    `governance/decision-register.md`, editable with no amendment and no lock violation.
+    The grid is now `ensemble_size.mc_error_grid`, re-measured on the new vintage at the
+    sealed `mean_block_months`, with `scripts/measure_mc_error_grid.py` as its provenance
+    script. **WP2.4 and WP2.8–2.10 must produce criterion-bearing ensembles at 1024×120.**
+  - **The promotion rule's gating clause was unexecutable.** It said "beats bootstrap-v1
+    on **the tail tier**" — but `battery.TIERS` has no tail tier and every tails-suite
+    metric is registered `tier="monthly"`, so WP2.11 would have had to invent the
+    definition *after seeing results*. `multi_seed_decision_rule.tail_tier_definition`
+    now defines it as the `tails` **suite** with its two metric families named, and
+    `beats_definition` states the objective (strictly lower mean `elicitability_score`),
+    the no-tail-band-regression condition, the NaN direction, and the pooled arm as an
+    exact inequality on the cross-seed mean and sd. Pinned by test against a live suite
+    registration.
+  - **The head-to-head is biased toward promotion, and it is now sealed.**
+    `bootstrap-v1` resamples 1990-2020 only, while a challenger fitted on the full span
+    has seen 1929-33, 1937, 1973-74 and 1987 — and both are scored against the *same*
+    realizations. `multi_seed_decision_rule.benchmark_draw_span_bias` records it and
+    obliges `G2-EVIDENCE.md` to report the comparison restricted to the common window
+    alongside any PROMOTE.
+  - **`tuning_protocol.selection_lambda: 1.0`.** The first seal said "at the config's own
+    sealed lambda" and sealed no lambda anywhere — which pinned nothing and would have let
+    each trial carry its own weighting. Authored, not derived, and named as such; the
+    load-bearing property is invariance across systems, samplers and seeds, and it may
+    never be selected from the trials.
+  - **RFR-12 re-taken on measured evidence; RFR-9 finally answered.** With `policy_rate`
+    present the `cash_tr_1m` residual leg is buildable, so the numeraire decision was
+    re-taken rather than inherited from an impossibility argument that no longer holds.
+    Still option (b): adding the leg truncates `momentum`'s sample 1134 → 798 months
+    (ES99 0.15597 → 0.12923) while changing VaR95/ES95/VaR99/ES99 by **nothing at five
+    decimals** on that same span — it corrects a mean-level bias invisible to every
+    statistic sealed for `momentum`, at the cost of the worst tail in the record. Re-entry
+    is now concrete (the `fedfunds_pre1954` splice from `fred.TB3MS`, 1934-01). RFR-9 —
+    open since WP2.2 and assigned to WP2.3 — is closed as `S2-ENDOWMENT-WEIGHTS`:
+    `endowment_proxy`'s `credit_xs_hy` 0.15 is a **risk budget**, not a capital share.
+  - **`verify()` no longer tolerates a missing lock.** It skipped the lock check entirely
+    when the file was absent, so `rm pre-registration.lock` made every battery run verify
+    clean and silent — and a test *asserted* that behaviour. Naming a `lock_path` for a
+    sealed document now asserts the lock is there. An unsealed document (the pre-seal
+    state `seal()` is called from) is unaffected.
+  - **Memorization floors re-derived**: the pooled historical null moved from p05 0.0548
+    / p50 2.1660 (n=339, 11 factors) to **0.0557 / 2.0742** (n=367, 12 factors), so the
+    sealed floors move to **0.0279 / 1.0371**. `scripts/measure_seal_evidence.py` is the
+    new provenance script and calls the battery's own private helpers rather than
+    reimplementing the search.
+  - Count corrections: `structurally_unavailable_statistics` said "eleven names" for a
+    twelve-name list; `d4_commodities_consequence` attributed both uncomputable D4
+    strategies to `commodities` alone (`endowment_proxy` is independently blocked by
+    `hy_spread`). New retrofit rows **RFR-61…RFR-69**.
+
+### Fixed
+- **`ah.data.refresh` silently dropped every fresh series from each new vintage.** A
+  vintage is documented as a complete as-of snapshot and every read pins exactly one, but
+  `plan` only fetches series that are *missing or stale* — so the first refresh after the
+  initial build wrote only the due series and every fresh one vanished from pinned reads,
+  reporting 0% coverage in `GAPS.md` while its observations sat on disk under the older
+  vintage. `fred.TEDRATE` (retired 2022-01, therefore never stale under its 9999-day SLA)
+  fell out of the `2026-07-26` vintage, taking `funding_spread` with it. `Catalog.
+  latest_vintage_with()` plus `refresh._carry_forward()` now re-stamp every already-held,
+  not-refetched series into the new vintage; immutability is untouched (a new
+  `(vintage, series)` key, the older vintage byte-identical) and carried rows are not
+  re-submitted to QC, because re-judging unchanged history against a later as-of date
+  would quarantine a vintage for the sole reason that a retired series is still retired.
+  `ah data refresh` reports the carried count. This is why the campaign vintage is
+  `2026-07-26.1` and not `2026-07-26`. (RFR-62.)
+
 - **WP2.3 — the pre-registration seal. This is the one-way door.** `pre-registration.yaml`
   is `sealed: true` and `pre-registration.lock` is committed, hashing 32 files: the
   document, `factors.yaml`, all eight metric suites, `reference.py`, `battery.py`,

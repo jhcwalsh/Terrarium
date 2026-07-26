@@ -102,7 +102,10 @@ def data_refresh(
     if result.status_md:
         (data_root / "DATA-STATUS.md").write_text(result.status_md, encoding="utf-8")
     status = "QUARANTINED" if result.quarantined else "committed"
-    typer.echo(f"vintage {result.vintage} {status}: wrote {len(result.written)} series.")
+    typer.echo(
+        f"vintage {result.vintage} {status}: wrote {len(result.written)} series, "
+        f"carried forward {len(result.carried_forward)}."
+    )
     if result.warnings:
         typer.echo(f"  skipped {len(result.warnings)} series (fetch/parse failed):")
         for w in result.warnings:

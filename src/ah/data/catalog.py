@@ -239,6 +239,25 @@ class Catalog:
             raise CatalogError(f"no vintage current as of {as_of}")
         return self.read_observations(vintage, series_id)
 
+    def latest_vintage_with(self, series_id: str) -> str | None:
+        """The most recent *pointer-history* vintage that holds ``series_id``, or None.
+
+        A vintage is supposed to be a complete as-of snapshot, but ``ah.data.refresh``
+        only fetches series that are missing or stale, so a series that was neither
+        would never be written into the new vintage and would silently vanish from
+        every pinned read. This walks the append-only ``current_pointer`` newest-first
+        and reports where the series was last seen, which is what lets ``refresh``
+        carry it forward instead of dropping it. Read-only; no fallback is applied at
+        read time, so a pinned ``read_observations`` stays exactly as literal as before.
+        """
+        rows = self.con.execute(
+            "SELECT p.vintage_id FROM current_pointer p "
+            "JOIN observations_index o ON o.vintage_id = p.vintage_id "
+            "WHERE o.series_id = ? ORDER BY p.seq DESC LIMIT 1",
+            [series_id],
+        ).fetchone()
+        return str(rows[0]) if rows else None
+
     # -- logs -------------------------------------------------------------- #
 
     def _next_id(self, table: str) -> int:

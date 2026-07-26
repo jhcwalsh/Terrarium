@@ -32,6 +32,7 @@ class RefreshResult:
     dry_run: bool = False
     already_exists: bool = False
     quarantined: bool = False
+    carried_forward: list[str] = field(default_factory=list)
     qc: QCReport | None = None
     gaps_md: str = ""
     status_md: str = ""
@@ -92,6 +93,8 @@ def refresh(
         written.append(req.series_id)
         pairs.append((req, frame))
 
+    carried = _carry_forward(catalog, reqs, vintage, written)
+
     qc = (
         run_qc(catalog, vintage, pairs, asof=asof, created_at=created_at) if pairs else QCReport([])
     )
@@ -109,7 +112,45 @@ def refresh(
         gaps_md=gaps_md,
         status_md=status_md,
         warnings=warnings,
+        carried_forward=carried,
     )
+
+
+def _carry_forward(
+    catalog: Catalog, reqs: Requirements, vintage: str, written: list[str]
+) -> list[str]:
+    """Copy every already-held series that this refresh did not fetch into ``vintage``.
+
+    A vintage is documented as a complete as-of snapshot and every read pins one
+    (``catalog.read_observations``/``read_asof`` resolve a single vintage id, with no
+    per-series fallback). But ``plan`` only fetches series that are missing or stale,
+    so without this step the first refresh after the initial build silently DROPS every
+    series that happened to be fresh -- it disappears from pinned reads and is reported
+    as absent with 0% coverage in GAPS.md even though its observations are still on
+    disk under the older vintage. That is how ``fred.TEDRATE`` (retired 2022-01, so
+    never stale under its 9999-day SLA) fell out of the 2026-07-26 vintage.
+
+    Carrying forward re-stamps the rows with the new vintage id, which is a new
+    ``(vintage, series)`` key -- immutability is untouched, nothing is overwritten, and
+    the older vintage stays byte-identical. Carried rows are NOT re-submitted to QC:
+    they passed when they were fetched, they are unchanged, and re-judging unchanged
+    history against a later as-of date would quarantine a vintage for the sole reason
+    that a retired series is still retired.
+    """
+    done = set(written)
+    carried: list[str] = []
+    for req in reqs:
+        if req.series_id in done:
+            continue
+        source_vintage = catalog.latest_vintage_with(req.series_id)
+        if source_vintage is None or source_vintage == vintage:
+            continue
+        frame = catalog.read_observations(source_vintage, req.series_id)
+        if frame.empty:
+            continue
+        catalog.write_observations(vintage, req.series_id, frame[["date", "value"]])
+        carried.append(req.series_id)
+    return carried
 
 
 _SHARED_FILE_SOURCES = {"french", "jst", "shiller"}

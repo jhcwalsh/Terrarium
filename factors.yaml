@@ -201,12 +201,19 @@ factor_sources:
       ah.data.refresh today, so the panel this factor sources from does not yet
       contain the spliced pre-1954-07 observations or any is_proxy flag --
       read_factor_frames reads fred.FEDFUNDS directly, unextended. WP2.3 CONFIRMED
-      (2026-07-26) which the sealed campaign vintage contains: NEITHER backfill -- and,
-      worse for this factor, the 2026-07-24 vintage PREDATES fred.FEDFUNDS's own
-      registration, so it holds no fred.FEDFUNDS parquet at all. `policy_rate` is
-      therefore in reference_run.missing_factors, which makes `cash_tr_1m`, `carry`,
-      `term_premium`, `equity_risk_premium` and `policy_anchor_deviation` all
-      uncomputable on this campaign. See governance/retrofit-register.md RFR-48/50/51.
+      (2026-07-26) which the sealed campaign vintage contains: NEITHER backfill. The
+      DEMONSTRATION for this factor is now direct rather than inferred: on campaign
+      vintage 2026-07-26.1 its train+validation history starts at 1954-07, which is
+      fred.FEDFUNDS's own first observation, not at fred.TB3MS's 1934-01 -- so the
+      splice rule is visibly unapplied. CORRECTION TO THE FIRST SEAL (2026-07-26,
+      same day): the 2026-07-24 vintage predated fred.FEDFUNDS's own registration and
+      held no parquet for it at all, so `policy_rate` was in
+      reference_run.missing_factors and `cash_tr_1m`, `carry`, `term_premium`,
+      `equity_risk_premium` and `policy_anchor_deviation` were all uncomputable. A live
+      refresh restored the series (864 monthly observations, 1954-07 to 2026-06; 798 in
+      train+validation) and the campaign vintage moved to 2026-07-26.1. All five are
+      computable. See governance/retrofit-register.md RFR-48/50/51 for the superseded
+      state and RFR-61/62/63 for the restoration.
     notes: >-
       Effective federal funds rate -- the ADMINISTERED US policy rate. Registered in
       requirements.yaml by WP2.2 Task 1 under the WP1.9 emergent-requirements rule

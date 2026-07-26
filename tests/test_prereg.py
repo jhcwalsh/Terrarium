@@ -107,11 +107,15 @@ def test_load_real_file_explicit_path() -> None:
     assert set(loaded.decisions) == {
         "R5",
         "J3",
-        # WP2.3's three sealed decisions -- see pre-registration.yaml's `decisions:` and
-        # governance/decision-register.md's Step 2 section.
+        # WP2.3's sealed decisions -- see pre-registration.yaml's `decisions:` and
+        # governance/decision-register.md's Step 2 section. S2-ENDOWMENT-WEIGHTS is the
+        # re-seal's addition: RFR-9 was assigned to WP2.3 and the first seal never
+        # answered it, so `endowment_proxy`'s credit_xs_hy weight is now sealed
+        # explicitly as a risk budget rather than a capital share.
         "S2-NC5-EXEMPTION",
         "S2-SPREAD-FLOOR",
         "S2-NUMERAIRE-BIAS",
+        "S2-ENDOWMENT-WEIGHTS",
     }
     assert loaded.decisions["R5"].status == "CLOSED-deferred"
     assert loaded.decisions["J3"].status == "CLOSED-deferred"
@@ -473,6 +477,38 @@ def test_verify_fails_against_stale_lock_after_prereg_mutation(tmp_path: Path) -
         prereg.verify(loaded, manifest, lock_path=lock_path)
 
 
+def test_verify_fails_when_sealed_and_lock_file_is_missing(tmp_path: Path) -> None:
+    """WP2.3 re-seal, review Important 2: deleting the lock must not verify clean.
+
+    ``verify`` used to skip the lock check entirely when the file was absent, so ``rm
+    pre-registration.lock`` disarmed every hashed-source check with no error anywhere.
+    """
+    prereg_path, factors_path = _copy_real_prereg_and_factors(tmp_path)
+    lock_path = tmp_path / "pre-registration.lock"
+    prereg.seal(prereg_path, out_path=lock_path, sealed_at="2026-01-01T00:00:00Z")
+
+    loaded = prereg.load(prereg_path)
+    manifest = load_manifest(factors_path)
+    prereg.verify(loaded, manifest, lock_path=lock_path)  # baseline: passes with the lock
+
+    lock_path.unlink()
+    assert loaded.sealed
+    with pytest.raises(PreRegError, match="lock file is missing"):
+        prereg.verify(loaded, manifest, lock_path=lock_path)
+
+
+def test_verify_tolerates_missing_lock_while_unsealed(tmp_path: Path) -> None:
+    """The pre-seal state is legitimate: an unsealed document has no lock yet."""
+    prereg_path, factors_path = _copy_real_prereg_and_factors(tmp_path)
+    doc = yaml.safe_load(prereg_path.read_text(encoding="utf-8"))
+    doc["sealed"] = False
+    prereg_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+
+    loaded = prereg.load(prereg_path)
+    assert not loaded.sealed
+    prereg.verify(loaded, load_manifest(factors_path), lock_path=tmp_path / "absent.lock")
+
+
 def test_verify_fails_against_stale_lock_after_judged_source_mutation(tmp_path: Path) -> None:
     prereg_path, factors_path = _copy_real_prereg_and_factors(tmp_path)
     judged = tmp_path / "fake_metric_module.py"
@@ -531,10 +567,20 @@ def test_verify_without_lock_path_skips_lock_check(tmp_path: Path) -> None:
     prereg.verify(loaded, manifest)  # no lock_path kwarg; must not raise
 
 
-def test_verify_with_nonexistent_lock_path_skips_lock_check() -> None:
+def test_verify_with_nonexistent_lock_path_errors_once_sealed() -> None:
+    """WP2.3 re-seal, review Important 2 -- this test previously asserted the DEFECT.
+
+    It used to require that a named-but-absent lock be skipped silently, which is what
+    made ``rm pre-registration.lock`` a clean way to disarm the seal. The contract is
+    now: naming a lock path for a SEALED document asserts that the lock is there.
+    Passing no ``lock_path`` at all (the test above) is still the supported way to run
+    the structural checks alone, so nothing lost a way to be checked.
+    """
     loaded = prereg.load()
     manifest = load_manifest()
-    prereg.verify(loaded, manifest, lock_path=Path("does-not-exist.lock"))  # must not raise
+    assert loaded.sealed
+    with pytest.raises(PreRegError, match="lock file is missing"):
+        prereg.verify(loaded, manifest, lock_path=Path("does-not-exist.lock"))
 
 
 # --------------------------------------------------------------------------- #
@@ -1850,11 +1896,22 @@ def test_sealed_splits_match_the_code(tmp_path: Path) -> None:
 
 
 def test_verify_rejects_a_threshold_on_a_factor_with_no_data(tmp_path: Path) -> None:
-    """RFR-5, closed. ``policy_rate`` has no train+validation data on the sealed
-    campaign vintage; the pre-seal file carried ``policy_rate.excess_kurtosis`` at
-    ENFORCE, which under THE ONE NaN RULE would have failed every run forever."""
+    """RFR-5, closed. A threshold on a factor with no train+validation data judges
+    nothing, silently, forever -- and at ENFORCE, under THE ONE NaN RULE, it fails every
+    run forever, reading in the artifact as a real generator defect.
+
+    RE-TARGETED AT THE RE-SEAL, and the reason is the finding. This test used to name
+    ``policy_rate``, which was in ``missing_factors`` only because campaign vintage
+    2026-07-24 predated ``fred.FEDFUNDS``'s registration -- a stale snapshot, not a data
+    gap. On 2026-07-26.1 that factor has 798 train+validation months and a real sealed
+    band, so it is no longer an example of anything. ``hy_spread`` is the durable one:
+    FRED serves ~3 licensed years of it and all of them fall inside the holdout, so no
+    refresh will ever give it a train+validation sample. The check is unchanged; only
+    the factor it is demonstrated on has moved to one that is genuinely absent.
+    """
     doc = _load_real_doc()
-    doc["thresholds"]["blocks"]["us"]["policy_rate.excess_kurtosis"] = {
+    assert "hy_spread" in doc["reference_run"]["missing_factors"]
+    doc["thresholds"]["blocks"]["global"]["hy_spread.excess_kurtosis"] = {
         "min": -2.0,
         "max": 50.0,
         "severity": "enforce",
@@ -1865,10 +1922,18 @@ def test_verify_rejects_a_threshold_on_a_factor_with_no_data(tmp_path: Path) -> 
 
 
 def test_verify_rejects_a_threshold_on_an_uncomputable_d4_strategy(tmp_path: Path) -> None:
-    """The strategy-scoped half of RFR-5. ``carry``'s funding leg is derived from
-    ``policy_rate``, so it has no historical return path on the sealed vintage."""
+    """The strategy-scoped half of RFR-5.
+
+    RE-TARGETED AT THE RE-SEAL for the same reason as the factor-scoped test above: this
+    used to name ``carry``, whose funding leg derives from ``policy_rate`` and which the
+    campaign-vintage move made computable (it now carries four sealed thresholds).
+    ``endowment_proxy`` is the durable example -- it is blocked twice over, by
+    ``commodities`` (unsourced) and independently by ``hy_spread`` via ``credit_xs_hy``,
+    so sourcing either one alone would not restore it.
+    """
     doc = _load_real_doc()
-    doc["thresholds"]["strategies"]["carry.var_95"] = {
+    assert "endowment_proxy" in doc["reference_run"]["uncomputable_d4_strategies"]
+    doc["thresholds"]["strategies"]["endowment_proxy.var_95"] = {
         "min": 0.0,
         "max": 1.0,
         "severity": "report",
@@ -1991,3 +2056,171 @@ def test_the_reference_run_script_agrees_with_the_sealed_parameters() -> None:
     # makes every length-matched band comparable to the ensemble it judges.
     assert doc["ensemble_size"]["months"] == module.RESAMPLE_LENGTH
     assert run["vintage_id"] == doc["campaign_vintage_id"]
+
+
+# --------------------------------------------------------------------------- #
+# WP2.3 re-seal -- the multi-seed rule's tail tier (review Critical 1)
+# --------------------------------------------------------------------------- #
+
+
+def test_the_sealed_tail_tier_is_a_suite_because_no_tail_TIER_exists() -> None:
+    """The re-seal defines "the tail tier" as the ``tails`` SUITE, not a horizon tier.
+
+    That phrasing is not stylistic: ``ah.eval.battery.TIERS`` has no ``tail`` member and
+    every ``ah.eval.metrics.tails`` spec is registered ``tier="monthly"``, so the first
+    seal's promotion rule named something nothing could resolve. If a later work package
+    ever adds a real ``tail`` tier, this test fails and the sealed wording must be
+    revisited by amendment rather than silently reinterpreted.
+    """
+    from ah.eval.battery import TIERS
+
+    assert "tail" not in TIERS
+    assert "tails" not in TIERS
+
+    doc = _load_real_doc()
+    rule = doc["multi_seed_decision_rule"]
+    assert "tail_tier_definition" in rule
+    assert "beats_definition" in rule
+    assert 'suite == "tails"' in rule["tail_tier_definition"]
+
+
+def test_the_sealed_tail_tier_definition_matches_the_registered_statistics() -> None:
+    """The sealed definition enumerates the tail suite's two families by name. Those
+    names come from ``ah.eval.reference``'s registries, which are what
+    ``ah.eval.metrics.tails.build_tails_suite`` builds its specs from -- so the sealed
+    words and the emitted metrics cannot drift without this failing."""
+    from ah.eval.reference import CROSS_BLOCK_STATS, STRATEGY_STATS
+
+    doc = _load_real_doc()
+    definition = doc["multi_seed_decision_rule"]["tail_tier_definition"]
+
+    # Family (a): every registered D4 strategy statistic, and there are eleven.
+    assert len(STRATEGY_STATS) == 11
+    assert "eleven names" in definition
+    for stat in ("var_95", "es_95", "var_99", "es_99", "elicitability_score"):
+        assert stat in STRATEGY_STATS
+        assert stat in definition
+    for prefix in (
+        "kupiec_pof",
+        "christoffersen_independence",
+        "christoffersen_conditional_coverage",
+    ):
+        assert f"{prefix}_lr_1path" in STRATEGY_STATS
+        assert f"{prefix}_chi2_tail_1path" in STRATEGY_STATS
+        assert prefix in definition
+
+    # Family (b): the two cross-block tail-dependence statistics.
+    for stat in ("tail_dependence_lower", "tail_dependence_upper"):
+        assert stat in CROSS_BLOCK_STATS
+        assert stat in definition
+
+    # The comparison set is defined by subtraction from the sealed lists, so both must
+    # be present and the subtraction must be non-empty (otherwise clause (1) of the
+    # promotion rule compares nothing).
+    strategy_ids = set(doc["d4_strategies"])
+    uncomputable = set(doc["reference_run"]["uncomputable_d4_strategies"])
+    assert uncomputable < strategy_ids
+    assert strategy_ids - uncomputable
+
+
+def test_the_sealed_beats_definition_names_a_directional_registered_statistic() -> None:
+    """ "Beats" is defined on ``elicitability_score`` -- the only directional scalar in
+    the suite. If that name ever leaves ``STRATEGY_STATS`` the promotion rule's objective
+    becomes uncomputable, which is the failure this pins."""
+    from ah.eval.reference import STRATEGY_STATS
+
+    doc = _load_real_doc()
+    beats = doc["multi_seed_decision_rule"]["beats_definition"]
+    assert "elicitability_score" in STRATEGY_STATS
+    assert "elicitability_score" in beats
+    # The three properties that make the clause executable rather than rhetorical.
+    assert "STRICTLY LOWER" in beats
+    assert "ddof=1" in beats
+    assert "NaN" in beats
+
+
+def test_the_benchmark_draw_span_bias_is_sealed_and_names_its_direction() -> None:
+    """Review Critical 2: the benchmark's 1990-2020 draw span biases the head-to-head
+    TOWARD promotion, and that must be inside the hash rather than in a report."""
+    doc = _load_real_doc()
+    bias = doc["multi_seed_decision_rule"]["benchmark_draw_span_bias"]
+    assert "TOWARD PROMOTION" in bias
+    span = doc["bootstrap_v1"]["block_draw_span"]
+    assert str(span["start"]) in bias or "1990-2020" in bias
+    # The span is bound by equity_vol, not by policy_rate -- sealed as a value so the
+    # claim is checkable rather than narrative.
+    assert doc["bootstrap_v1"]["block_draw_span_binding_factor"] == "equity_vol"
+
+
+def test_the_tuning_selection_lambda_is_pinned_to_a_number() -> None:
+    """Review Important 5: the first seal referred to "the config's own sealed lambda"
+    and sealed no lambda anywhere, which pinned nothing and would have let each trial
+    carry its own weighting."""
+    doc = _load_real_doc()
+    tuning = doc["tuning_protocol"]
+    assert isinstance(tuning["selection_lambda"], (int, float))
+    assert "selection_lambda" in tuning["selection_criterion"]
+
+
+def test_the_mc_error_grid_is_sealed_and_brackets_the_sealed_ensemble_size() -> None:
+    """Review Important 3: the MC-error grid that justifies ``ensemble_size.n_paths``
+    used to live in the UNSEALED decision register, and the sealed size (1000) was not
+    one of the sizes it measured (1024). Both are now inside the hash, and the sealed
+    size must be a MEASURED point of the grid, not an interpolation between two."""
+    doc = _load_real_doc()
+    size = doc["ensemble_size"]
+    grid = size["mc_error_grid"]
+    assert str(size["n_paths"]) in {str(k) for k in grid["rows"]}
+    assert size["n_paths"] == max(int(k) for k in grid["rows"])
+
+
+def test_the_mc_error_grid_script_agrees_with_the_sealed_grid() -> None:
+    """``scripts/measure_mc_error_grid.py`` is the sealed grid's provenance script; its
+    measured sizes and generator parameters must match what the file seals."""
+    import importlib.util
+    import sys
+
+    scripts_dir = ROOT / "scripts"
+    sys.path.insert(0, str(scripts_dir))
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_mc_error_grid", scripts_dir / "measure_mc_error_grid.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(scripts_dir))
+
+    doc = _load_real_doc()
+    grid = doc["ensemble_size"]["mc_error_grid"]
+    assert sorted(int(k) for k in grid["rows"]) == sorted(module.N_PATHS_GRID)
+    assert grid["mean_block_months"] == module.MEAN_BLOCK_MONTHS
+    assert grid["mean_block_months"] == doc["bootstrap_v1"]["mean_block_months"]
+    assert doc["ensemble_size"]["months"] == module.MONTHS
+
+
+def test_the_block_length_window_script_agrees_with_the_sealed_vintage() -> None:
+    """``scripts/measure_block_length_window.py`` is the provenance script for
+    ``bootstrap_v1.block_length_derivation``; it must read the sealed campaign vintage
+    and the sealed reference-run parameters, or the quoted window is a window over
+    different data."""
+    import importlib.util
+    import sys
+
+    scripts_dir = ROOT / "scripts"
+    sys.path.insert(0, str(scripts_dir))
+    try:
+        spec = importlib.util.spec_from_file_location(
+            "_block_length_window", scripts_dir / "measure_block_length_window.py"
+        )
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(scripts_dir))
+
+    doc = _load_real_doc()
+    assert doc["campaign_vintage_id"] == module.CAMPAIGN_VINTAGE_ID
+    assert doc["reference_run"]["seed"] == module.REFERENCE_SEED
+    assert doc["bootstrap_v1"]["mean_block_months"] in module.BLOCK_LENGTHS
