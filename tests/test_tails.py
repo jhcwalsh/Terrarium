@@ -16,16 +16,46 @@ policy_rate must keep using level magnitudes.
 
 from __future__ import annotations
 
+import ast
+import math
 from collections.abc import Mapping
 from pathlib import Path
 from statistics import NormalDist
 
 import numpy as np
+import pandas as pd
 import pytest
 from numpy.random import PCG64, Generator
 
 from ah.eval.metrics import tails
-from ah.eval.metrics.tails import d4_tail_table, derived_series_values, strategy_returns, var_es
+from ah.eval.metrics.tails import (
+    _chi2_sf,
+    _historical_strategy_returns,
+    build_tails_suite,
+    christoffersen_conditional_coverage,
+    christoffersen_independence,
+    d4_tail_table,
+    derived_series_values,
+    elicitability_score,
+    exceedance_indicator,
+    kupiec_pof,
+    strategy_returns,
+    tail_dependence_lower,
+    tail_dependence_upper,
+    var_es,
+)
+from ah.eval.reference import (
+    CROSS_BLOCK_STATS,
+    STRATEGY_STATS,
+    ReferenceStats,
+)
+from ah.eval.reference import (
+    tail_dependence_lower as reference_tail_dependence_lower,
+)
+from ah.eval.reference import (
+    tail_dependence_upper as reference_tail_dependence_upper,
+)
+from ah.factors import load_manifest
 from ah.gen.base import Ensemble, EnsembleMeta, UnknownFactorError
 from ah.strategies import (
     DerivedSeries,
@@ -691,3 +721,410 @@ def test_lagged_carry_minus_duration_computes_at_float64_precision_for_float32_i
     np.testing.assert_array_equal(result, upcast_first)
     # Confirms this test is not vacuous: the old code path really did disagree.
     assert not np.array_equal(result, old_out)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: elicitability_score
+# --------------------------------------------------------------------------- #
+
+
+def test_elicitability_score_is_minimized_at_the_true_var_es_pair() -> None:
+    """The property that makes this a strictly consistent scoring rule: on a fixed
+    sample, the (VaR, ES) pair var_es() itself computes scores strictly better (lower)
+    than every mis-specified pair tried -- both directions, both over- and
+    under-stating each of VaR and ES independently and jointly. A test that only
+    checked the score is finite would prove nothing about consistency."""
+    rng = Generator(PCG64(2026))
+    returns = rng.standard_t(5, size=20000) * 0.02  # fat-tailed, deterministic sample
+    level = 0.95
+    true_var, true_es = var_es(returns, level)
+    true_score = elicitability_score(returns, true_var, true_es, level)
+    assert np.isfinite(true_score)
+
+    for dv, de in [
+        (1.5, 1.0),
+        (0.5, 1.0),
+        (1.0, 1.5),
+        (1.0, 0.5),
+        (1.3, 1.3),
+        (0.7, 0.7),
+        (1.2, 0.8),
+    ]:
+        mis_score = elicitability_score(returns, true_var * dv, true_es * de, level)
+        assert mis_score > true_score, (dv, de, mis_score, true_score)
+
+
+def test_elicitability_score_orientation_is_lower_is_better_by_construction() -> None:
+    """Restates the property above at a single mis-specified point, explicitly framed
+    as an orientation check: a flipped sign would make this assertion fail."""
+    rng = Generator(PCG64(7))
+    returns = rng.normal(0.0, 0.03, size=5000)
+    var, es = var_es(returns, 0.95)
+    correct = elicitability_score(returns, var, es, 0.95)
+    wrong = elicitability_score(returns, var * 3.0, es * 3.0, 0.95)
+    assert correct < wrong
+
+
+def test_elicitability_score_nan_when_es_not_positive() -> None:
+    returns = np.array([0.01, -0.02, 0.03])
+    assert math.isnan(elicitability_score(returns, 0.02, 0.0, 0.95))
+    assert math.isnan(elicitability_score(returns, 0.02, -1.0, 0.95))
+
+
+def test_elicitability_score_rejects_invalid_level() -> None:
+    with pytest.raises(ValueError, match="level"):
+        elicitability_score(np.array([0.01]), 0.01, 0.02, 1.5)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: chi-square survival function (df 1, 2 only)
+# --------------------------------------------------------------------------- #
+
+
+def test_chi2_sf_matches_known_critical_values() -> None:
+    """The standard chi-square 95th-percentile critical values: sf(3.841459, 1) and
+    sf(5.991465, 2) are both ~0.05 (textbook values, e.g. any statistics reference
+    table)."""
+    assert _chi2_sf(3.841459, 1) == pytest.approx(0.05, abs=1e-4)
+    assert _chi2_sf(5.991465, 2) == pytest.approx(0.05, abs=1e-4)
+
+
+def test_chi2_sf_at_zero_is_one() -> None:
+    assert _chi2_sf(0.0, 1) == pytest.approx(1.0)
+    assert _chi2_sf(0.0, 2) == pytest.approx(1.0)
+
+
+def test_chi2_sf_rejects_unsupported_df() -> None:
+    with pytest.raises(ValueError, match="df"):
+        _chi2_sf(1.0, 3)
+
+
+def test_chi2_sf_rejects_negative_x() -> None:
+    with pytest.raises(ValueError, match="x"):
+        _chi2_sf(-1.0, 1)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: kupiec_pof
+# --------------------------------------------------------------------------- #
+
+
+def test_kupiec_pof_hand_computed_on_a_small_fixed_sequence() -> None:
+    """T=10, x=2 exceedances (20%) at level=0.95 (alpha=0.05): LR = 2.7955733336530155,
+    p-value = 0.09452495105441394 -- hand-computed via the closed form in
+    pre-registration.yaml's kupiec_pof_estimator (independently, offline, not by
+    calling this module)."""
+    indicator = np.array([False] * 8 + [True] * 2)
+    lr, pvalue = kupiec_pof(indicator, 0.95)
+    assert lr == pytest.approx(2.7955733336530155, abs=1e-9)
+    assert pvalue == pytest.approx(0.09452495105441394, abs=1e-9)
+
+
+def test_kupiec_pof_is_near_zero_at_exactly_the_expected_rate() -> None:
+    """T=20, x=1: p_hat = 1/20 = 0.05 = alpha EXACTLY, so LR is EXACTLY 0 (both terms
+    of the log-likelihood ratio are identical), not merely small."""
+    indicator = np.array([False] * 19 + [True])
+    lr, pvalue = kupiec_pof(indicator, 0.95)
+    assert lr == pytest.approx(0.0, abs=1e-9)
+    assert pvalue == pytest.approx(1.0, abs=1e-9)
+
+
+def test_kupiec_pof_rejects_at_double_the_rate_on_a_large_sample() -> None:
+    """T=1000, x=100 (10%, double the nominal 5%): large LR, tiny p-value -- rejects
+    H0 at any conventional significance level."""
+    rng = Generator(PCG64(11))
+    n1_positions = rng.choice(1000, size=100, replace=False)
+    indicator = np.zeros(1000, dtype=bool)
+    indicator[n1_positions] = True
+    lr, pvalue = kupiec_pof(indicator, 0.95)
+    assert lr > 3.841459  # exceeds the chi-square(1) 95% critical value
+    assert pvalue < 0.001
+
+
+def test_kupiec_pof_empty_sequence_is_nan() -> None:
+    lr, pvalue = kupiec_pof(np.array([], dtype=bool), 0.95)
+    assert math.isnan(lr)
+    assert math.isnan(pvalue)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: christoffersen_independence / christoffersen_conditional_coverage
+# --------------------------------------------------------------------------- #
+
+
+def test_christoffersen_independence_near_zero_on_an_iid_sequence() -> None:
+    rng = Generator(PCG64(3))
+    indicator = rng.random(4000) < 0.05
+    lr, pvalue = christoffersen_independence(indicator)
+    # An iid Bernoulli sequence has no genuine transition-probability dependence on
+    # the previous state; at n=4000 the LR statistic should sit comfortably below its
+    # own chi-square(1) 95% critical value (3.841459) essentially always.
+    assert lr < 3.841459
+    assert pvalue > 0.05
+
+
+def test_christoffersen_independence_large_on_a_clustered_sequence() -> None:
+    """All exceedances consecutive -- the textbook clustering failure mode."""
+    n = 2000
+    indicator = np.zeros(n, dtype=bool)
+    indicator[900:1000] = True  # one contiguous 100-month block of exceedances
+    lr, pvalue = christoffersen_independence(indicator)
+    assert lr > 3.841459
+    assert pvalue < 0.01
+
+
+def test_christoffersen_independence_short_sequence_is_nan() -> None:
+    lr, pvalue = christoffersen_independence(np.array([True]))
+    assert math.isnan(lr)
+    assert math.isnan(pvalue)
+
+
+def test_christoffersen_conditional_coverage_is_kupiec_plus_independence() -> None:
+    rng = Generator(PCG64(5))
+    indicator = rng.random(3000) < 0.05
+    lr_pof, _ = kupiec_pof(indicator, 0.95)
+    lr_ind, _ = christoffersen_independence(indicator)
+    lr_cc, pvalue_cc = christoffersen_conditional_coverage(indicator, 0.95)
+    assert lr_cc == pytest.approx(lr_pof + lr_ind, abs=1e-9)
+    assert pvalue_cc == pytest.approx(_chi2_sf(lr_cc, df=2), abs=1e-12)
+
+
+def test_christoffersen_conditional_coverage_nan_when_a_component_is_nan() -> None:
+    lr, pvalue = christoffersen_conditional_coverage(np.array([], dtype=bool), 0.95)
+    assert math.isnan(lr)
+    assert math.isnan(pvalue)
+
+
+def test_exceedance_indicator_orientation() -> None:
+    returns = np.array([0.10, -0.05, -0.30, 0.02])
+    indicator = exceedance_indicator(returns, var=0.04)
+    np.testing.assert_array_equal(indicator, [False, True, True, False])
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: tail_dependence_lower / tail_dependence_upper (re-exported from
+# ah.eval.reference -- same function objects, tested for numeric ground truth there;
+# this only confirms the re-export)
+# --------------------------------------------------------------------------- #
+
+
+def test_tail_dependence_functions_are_the_reference_module_objects() -> None:
+    assert tail_dependence_lower is reference_tail_dependence_lower
+    assert tail_dependence_upper is reference_tail_dependence_upper
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: _historical_strategy_returns
+# --------------------------------------------------------------------------- #
+
+
+def _reference_with_historical_series(series: Mapping[str, pd.Series]) -> ReferenceStats:
+    return ReferenceStats(
+        blocks={},
+        cross_blocks={},
+        active_blocks=(),
+        vintage_id="v",
+        n_resamples=1,
+        seed=0,
+        missing_factors=(),
+        historical_series=series,
+    )
+
+
+def test_historical_strategy_returns_reuses_strategy_returns_on_the_aligned_legs() -> None:
+    dates = pd.date_range("2000-01-01", periods=5, freq="MS")
+    equity = pd.Series([0.01, 0.02, -0.01, 0.03, 0.00], index=dates)
+    ust = pd.Series([4.0, 4.5, 4.2, 4.0, 4.1], index=dates)
+    reference = _reference_with_historical_series({"equity_mkt": equity, "ust_10y": ust})
+    strategy = Strategy(
+        strategy_id="test_sixty_forty",
+        kind="static_weights",
+        weights={"equity_mkt": 0.6, "govt_tr_10y": 0.4},
+        rebalance="monthly",
+        lookback=None,
+        rule=None,
+        params={},
+        notes="",
+    )
+    result = _historical_strategy_returns(reference, strategy, _DERIVED)
+    assert result is not None
+    assert result.shape == (1, 5)
+
+    # Must equal strategy_returns() applied directly to the same aligned data -- the
+    # "no second route" requirement, checked by construction rather than assumed.
+    expected_ensemble = Ensemble(
+        paths=np.stack([equity.to_numpy(), ust.to_numpy()], axis=-1)[np.newaxis, :, :],
+        factor_names=["equity_mkt", "ust_10y"],
+        meta=EnsembleMeta("x", "v", 0, 1, 5),
+    )
+    expected = strategy_returns(expected_ensemble, strategy, _DERIVED)
+    np.testing.assert_allclose(result, expected)
+
+
+def test_historical_strategy_returns_none_when_a_leg_factor_is_absent() -> None:
+    """The commodities case: a strategy needing a factor with no historical series at
+    all reports None (the metric layer then reports NaN), never raises."""
+    reference = _reference_with_historical_series({})
+    strategy = Strategy(
+        strategy_id="test",
+        kind="static_weights",
+        weights={"commodities": 1.0},
+        rebalance="monthly",
+        lookback=None,
+        rule=None,
+        params={},
+        notes="",
+    )
+    assert _historical_strategy_returns(reference, strategy, {}) is None
+
+
+def test_historical_strategy_returns_none_on_empty_overlap() -> None:
+    dates_a = pd.date_range("1990-01-01", periods=3, freq="MS")
+    dates_b = pd.date_range("2010-01-01", periods=3, freq="MS")
+    reference = _reference_with_historical_series(
+        {
+            "equity_mkt": pd.Series([0.01, 0.02, 0.03], index=dates_a),
+            "ust_10y": pd.Series([4.0, 4.1, 4.2], index=dates_b),
+        }
+    )
+    strategy = Strategy(
+        strategy_id="test_sixty_forty",
+        kind="static_weights",
+        weights={"equity_mkt": 0.6, "govt_tr_10y": 0.4},
+        rebalance="monthly",
+        lookback=None,
+        rule=None,
+        params={},
+        notes="",
+    )
+    assert _historical_strategy_returns(reference, strategy, _DERIVED) is None
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: build_tails_suite / register_tails_suite -- wiring
+# --------------------------------------------------------------------------- #
+
+
+def test_every_tails_metric_name_can_carry_a_sealed_threshold() -> None:
+    """Mirrors ``test_every_monthly_metric_name_is_a_registered_reference_statistic``
+    (test_monthly.py) and ``test_every_metric_is_registered_at_its_dn1_1_tier``
+    (test_horizon.py): every metric this suite emits must be keyed under a name
+    ``ah.eval.prereg`` can validate, or an entry authored under it would break every
+    battery run once sealed."""
+    manifest = load_manifest()
+    reference = _reference_with_historical_series({})
+    specs = build_tails_suite(manifest, reference)
+    assert specs
+    for spec in specs:
+        assert spec.tier == "monthly"
+        assert spec.suite == "tails"
+        if "~" in spec.name:
+            stat = spec.name.split(".", 1)[1]
+            assert stat in CROSS_BLOCK_STATS, spec.name
+        else:
+            strategy_id, stat = spec.name.split(".", 1)
+            assert strategy_id in {s.strategy_id for s in load_d4_strategies()}, spec.name
+            assert stat in STRATEGY_STATS, spec.name
+
+
+def test_build_tails_suite_covers_every_d4_strategy_and_stat() -> None:
+    manifest = load_manifest()
+    reference = _reference_with_historical_series({})
+    specs = build_tails_suite(manifest, reference)
+    names = {s.name for s in specs}
+    for strategy in load_d4_strategies():
+        for stat in STRATEGY_STATS:
+            assert f"{strategy.strategy_id}.{stat}" in names
+
+
+def test_build_tails_suite_never_crashes_when_a_strategy_leg_is_absent_everywhere() -> None:
+    """Every metric must NaN, not raise, when the ensemble and the reference both
+    lack a strategy's legs (e.g. commodities) -- THE ONE NaN RULE, and the same
+    absent-factor convention every other metric suite in this platform follows."""
+    manifest = load_manifest()
+    reference = _reference_with_historical_series({})
+    specs = build_tails_suite(manifest, reference)
+    ensemble = Ensemble(
+        paths=np.zeros((2, 6, 1), dtype=np.float64),
+        factor_names=["equity_mkt"],
+        meta=EnsembleMeta("x", "v", 0, 2, 6),
+    )
+    for spec in specs:
+        value = spec.fn(ensemble)  # must not raise
+        assert isinstance(value, float)
+
+
+def test_generating_less_never_improves_a_backtest_metric() -> None:
+    """A generator that simply omits a D4 strategy's leg must not score BETTER than
+    one that supplies plausible data for it -- the "gamed by generating less"
+    failure mode this platform's other suites already guard against
+    (cross_block_corr_matrix_distance, drawdown episode floors, decade-frequency
+    windowing). Omitting a leg must NaN the metric (which THE ONE NaN RULE already
+    fails against any enforce bound), never report a friendlier number."""
+    manifest = load_manifest()
+    ensemble_full = _plausible_ensemble(seed=999, n_paths=50, months=60)
+    dates = pd.date_range("2000-01-01", periods=60, freq="MS")
+    reference = _reference_with_historical_series(
+        {
+            "equity_mkt": pd.Series(ensemble_full.factor("equity_mkt")[0], index=dates),
+            "ust_10y": pd.Series(ensemble_full.factor("ust_10y")[0], index=dates),
+            "hy_spread": pd.Series(ensemble_full.factor("hy_spread")[0], index=dates),
+            "policy_rate": pd.Series(ensemble_full.factor("policy_rate")[0], index=dates),
+            "smb": pd.Series(ensemble_full.factor("smb")[0], index=dates),
+            "hml": pd.Series(ensemble_full.factor("hml")[0], index=dates),
+            "mom": pd.Series(ensemble_full.factor("mom")[0], index=dates),
+        }
+    )
+    full_specs = {s.name: s for s in build_tails_suite(manifest, reference)}
+
+    # A generator that omits ust_10y entirely (so sixty_forty/carry cannot be evaluated).
+    reduced_factor_names = [f for f in _FACTOR_NAMES if f != "ust_10y"]
+    reduced_paths = np.delete(ensemble_full.paths, _FACTOR_NAMES.index("ust_10y"), axis=2)
+    ensemble_reduced = Ensemble(
+        reduced_paths, reduced_factor_names, EnsembleMeta("x", "v", 0, *reduced_paths.shape[:2])
+    )
+
+    for name in ("sixty_forty.var_95", "sixty_forty.elicitability_score", "carry.var_95"):
+        omitted_value = full_specs[name].fn(ensemble_reduced)
+        assert math.isnan(omitted_value), f"{name} did not NaN when its leg was omitted"
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: run_full_battery integration + registration bookkeeping
+# --------------------------------------------------------------------------- #
+
+
+def test_tails_is_registered_in_prereg_metric_suite_names() -> None:
+    from ah.eval import prereg as prereg_mod
+
+    assert "tails" in prereg_mod._METRIC_SUITE_NAMES
+
+
+def test_tails_suite_registered_in_reference_dependent_suite_builders() -> None:
+    from ah.eval import battery as battery_mod
+
+    assert battery_mod._REFERENCE_DEPENDENT_SUITE_BUILDERS["tails"] == (
+        "ah.eval.metrics.tails",
+        "build_tails_suite",
+    )
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: tails.py never imports ah.eval.g2 (mirrors test_reference.py's guard)
+# --------------------------------------------------------------------------- #
+
+_TAILS_PATH = Path(__file__).resolve().parents[1] / "src" / "ah" / "eval" / "metrics" / "tails.py"
+
+
+def test_tails_module_never_imports_g2_or_names_the_token() -> None:
+    text = _TAILS_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(text, filename=str(_TAILS_PATH))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert "ah.eval.g2" not in alias.name
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            assert "g2" not in module.split("."), module
+            for alias in node.names:
+                assert alias.name != "FinalEvaluationToken"

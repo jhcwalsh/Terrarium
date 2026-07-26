@@ -173,6 +173,7 @@ from ah.eval.reference import (
     CROSS_BLOCK_STATS,
     PANEL_STATS,
     SINGLE_FACTOR_STATS,
+    STRATEGY_STATS,
     VARIANCE_RATIO_HORIZONS,
 )
 from ah.factors import FactorManifest
@@ -275,6 +276,14 @@ class PreRegistration:
     raw: Mapping[str, Any]
     source_path: Path
     panel_thresholds: Mapping[str, Threshold] = MappingProxyType({})
+    # WP2.2 Task 4. The `thresholds.strategies` section: flat, keyed
+    # `"<strategy_id>.<stat>"` (a D4 benchmark strategy from this same document's
+    # `d4_strategies:` block, and a stat registered in
+    # `ah.eval.reference.STRATEGY_STATS`). Flat like `panel_thresholds` -- there is no
+    # per-strategy outer nesting -- but, unlike a panel key, DOES carry a dot, because
+    # the axis (which strategy) has to be named somewhere and panel keys are reserved
+    # for statistics that belong to no single strategy/factor/pair at all.
+    strategy_thresholds: Mapping[str, Threshold] = MappingProxyType({})
 
 
 @dataclass(frozen=True)
@@ -371,6 +380,23 @@ ESTIMATOR_CONVENTION_KEYS: Mapping[str, str] = MappingProxyType(
         "regime_duration_p90": "regime_duration_estimator",
         "ten_year_return_vs_valuation_slope": "ten_year_return_vs_valuation_estimator",
         "ten_year_return_vs_valuation_r2": "ten_year_return_vs_valuation_estimator",
+        # WP2.2 Task 4.
+        "tail_dependence_lower": "tail_dependence_estimator",
+        "tail_dependence_upper": "tail_dependence_estimator",
+        "discriminative_score": "discriminative_score_estimator",
+        "predictive_score": "predictive_score_estimator",
+        "tstr_degradation": "tstr_degradation_estimator",
+        "var_95": "d4_var_es_estimator",
+        "es_95": "d4_var_es_estimator",
+        "var_99": "d4_var_es_estimator",
+        "es_99": "d4_var_es_estimator",
+        "elicitability_score": "elicitability_score_estimator",
+        "kupiec_pof_stat": "kupiec_pof_estimator",
+        "kupiec_pof_pvalue": "kupiec_pof_estimator",
+        "christoffersen_independence_stat": "christoffersen_independence_estimator",
+        "christoffersen_independence_pvalue": "christoffersen_independence_estimator",
+        "christoffersen_conditional_coverage_stat": "christoffersen_conditional_coverage_estimator",
+        "christoffersen_conditional_coverage_pvalue": "christoffersen_conditional_coverage_estimator",
     }
 )
 
@@ -386,7 +412,7 @@ def missing_estimator_definitions(prereg: PreRegistration) -> tuple[str, ...]:
     conventions = prereg.raw.get("conventions")
     present = set(conventions) if isinstance(conventions, dict) else set()
     missing: list[str] = []
-    for stat in sorted({*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS}):
+    for stat in sorted({*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS, *STRATEGY_STATS}):
         key = ESTIMATOR_CONVENTION_KEYS.get(stat)
         if key is None:
             missing.append(stat)
@@ -520,6 +546,11 @@ def load(path: Path | None = None) -> PreRegistration:
         raise PreRegError(f"{resolved}: 'thresholds.panel' must be a mapping")
     panel_thresholds = _parse_threshold_map(panel_doc, "thresholds.panel", resolved)
 
+    strategies_doc = thresholds_doc.get("strategies") or {}
+    if not isinstance(strategies_doc, dict):
+        raise PreRegError(f"{resolved}: 'thresholds.strategies' must be a mapping")
+    strategy_thresholds = _parse_threshold_map(strategies_doc, "thresholds.strategies", resolved)
+
     decisions_doc = doc.get("decisions") or {}
     if not isinstance(decisions_doc, dict):
         raise PreRegError(f"{resolved}: 'decisions' must be a mapping")
@@ -537,6 +568,7 @@ def load(path: Path | None = None) -> PreRegistration:
         raw=MappingProxyType(doc),
         source_path=resolved,
         panel_thresholds=MappingProxyType(panel_thresholds),
+        strategy_thresholds=MappingProxyType(strategy_thresholds),
     )
 
 
@@ -713,6 +745,41 @@ def _check_panel_threshold_key(key: str, errors: list[str]) -> None:
         )
 
 
+def _check_strategy_threshold_key(key: str, raw: Mapping[str, Any], errors: list[str]) -> None:
+    """A strategy threshold key must be ``"<strategy_id>.<stat>"``, strategy_id sealed here.
+
+    ``strategy_id`` is looked up in THIS document's own ``d4_strategies:`` block
+    (``prereg.raw``), never via :func:`ah.strategies.load_d4_strategies` -- that
+    function always reads the real repo-root ``pre-registration.yaml`` regardless of
+    which document is being verified, which would silently pass a threshold naming a
+    strategy that exists only in the real file while verifying an unrelated (e.g. test
+    fixture) document, or reject a strategy that genuinely is declared in the document
+    under test. Reading ``prereg.raw`` directly is the same choice
+    :func:`_check_conventions` already makes, for the identical reason (see the module
+    docstring's "The hole this task closes").
+    """
+    label = f"thresholds.strategies.{key!r}"
+    if key.count(".") != 1 or "~" in key:
+        errors.append(
+            f"{label}: a strategy threshold key must be '<strategy_id>.<stat>' "
+            f"(exactly one '.', no '~')"
+        )
+        return
+    strategy_id, stat = key.split(".")
+    d4_strategies = raw.get("d4_strategies")
+    known_strategies = set(d4_strategies) if isinstance(d4_strategies, dict) else set()
+    if strategy_id not in known_strategies:
+        errors.append(
+            f"{label}: '{strategy_id}' is not a d4_strategies entry in this document; "
+            f"known: {sorted(known_strategies)}"
+        )
+    if stat not in STRATEGY_STATS:
+        errors.append(
+            f"{label}: '{stat}' is not a registered strategy statistic; known: "
+            f"{sorted(STRATEGY_STATS)}"
+        )
+
+
 def _canonical_key(resolved: Path, doc_root: Path) -> str:
     """The path's stable, checkout-independent identity: a relative posix path.
 
@@ -880,9 +947,12 @@ def verify(
       ``"<factor>.<stat>"`` with the factor in that block and the stat registered in
       :data:`~ah.eval.reference.SINGLE_FACTOR_STATS`, and
       ``"<factorA>~<factorB>.<stat>"`` with the factors drawn in order from the pair's
-      two blocks and the stat in :data:`~ah.eval.reference.CROSS_BLOCK_STATS`, and a
+      two blocks and the stat in :data:`~ah.eval.reference.CROSS_BLOCK_STATS`, a
       bare ``"<stat>"`` under ``thresholds.panel`` registered in
-      :data:`~ah.eval.reference.PANEL_STATS`;
+      :data:`~ah.eval.reference.PANEL_STATS`, and (WP2.2 Task 4)
+      ``"<strategy_id>.<stat>"`` under ``thresholds.strategies`` with the strategy id a
+      ``d4_strategies`` entry of *this same document* and the stat registered in
+      :data:`~ah.eval.reference.STRATEGY_STATS`;
     - every threshold's ``severity`` is ``enforce``/``report``, and ``min <= max``
       when both are given;
     - if ``lock_path`` is given and exists, the lock was sealed for *this*
@@ -949,6 +1019,9 @@ def verify(
     for key, th in prereg.panel_thresholds.items():
         _check_threshold_sanity(th, f"thresholds.panel.{key}", errors)
         _check_panel_threshold_key(key, errors)
+    for key, th in prereg.strategy_thresholds.items():
+        _check_threshold_sanity(th, f"thresholds.strategies.{key}", errors)
+        _check_strategy_threshold_key(key, prereg.raw, errors)
 
     if lock_path is not None and lock_path.exists():
         _verify_lock(lock_path, prereg, errors)
@@ -1321,7 +1394,9 @@ def apply_block_addition(
         decisions=prereg.decisions,
         raw=MappingProxyType(new_raw),
         source_path=prereg.source_path,
-        # Panel statistics are not block-scoped, so a block addition neither adds to
-        # nor invalidates them: carried over by reference, provably byte-identical.
+        # Panel and strategy statistics are not block-scoped, so a block addition
+        # neither adds to nor invalidates them: carried over by reference, provably
+        # byte-identical.
         panel_thresholds=prereg.panel_thresholds,
+        strategy_thresholds=prereg.strategy_thresholds,
     )

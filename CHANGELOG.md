@@ -919,6 +919,56 @@ All notable changes to this project are documented here. The project follows
   _rank_corr`) — recorded as RFR-19, not fixed here (shared, sealed infrastructure).
   Full suite green (758 tests, up from 716 at task start — 42 new), ruff/pyright
   clean.
+- **WP2.2 Task 4 — `eval/metrics/tails.py` completed, `eval/metrics/utility.py` added.**
+  Both wired into `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` and
+  `prereg._METRIC_SUITE_NAMES` (the latter already listed `utility`), with
+  `run_full_battery` acceptance tests that fail without the wiring, exactly as Task 3
+  set the precedent.
+  `tails.py` (tier `monthly`, on the frozen D4 strategy set): `elicitability_score`,
+  the Fissler-Ziegel (2016) strictly consistent joint (VaR, ES) scoring rule at level
+  0.95 — lower is better, minimized in expectation exactly at the true (VaR, ES) pair
+  (a first-order-conditions derivation is in the docstring and empirically checked: a
+  mis-specified pair scores strictly worse on a fixed sample, not merely "finite").
+  `kupiec_pof`/`christoffersen_independence`/`christoffersen_conditional_coverage`:
+  the standard proportion-of-failures and Markov-chain independence LR backtests,
+  df-1/df-2 chi-square p-values via a closed-form `_chi2_sf` (no scipy; verified
+  against the textbook 3.841/5.991 critical values). All three score the GENERATED
+  ensemble's realized exceedances against the HISTORICAL (train+validation) VaR
+  forecast for that same D4 strategy — never the generated sample's own statistics,
+  which would trivially optimize and prove nothing about tail fidelity.
+  `_historical_strategy_returns` builds that historical series by inner-joining
+  exactly one strategy's own legs from the new `ReferenceStats.historical_series`
+  field (never a fresh catalog read) and wrapping them as a single-path `Ensemble`, so
+  the SAME `strategy_returns` function evaluates history and the generator — no second
+  route to the arithmetic. `tail_dependence_lower`/`_upper` (cross-block factor pairs,
+  not D4 strategies — DN-1.1's own scoping): a nonparametric rank-based estimator at
+  the sealed 5% tail fraction (matching `hill_tail_index`'s own convention), defined
+  in `ah.eval.reference` (a real `CROSS_BLOCK_STATS` entry, so the existing
+  block-bootstrap machinery gives it a genuine historical band for free) and
+  re-exported into `tails.py` under the same name, exactly as `monthly.py` already
+  does for `hill_tail_index`/`corr_matrix_distance`.
+  A new small registry, `ah.eval.reference.STRATEGY_STATS` (11 names — the four
+  `var_95`/`es_95`/`var_99`/`es_99` plus the seven backtest outputs), because a D4
+  strategy is sealed *data*, not a `FactorManifest` factor/pair/panel axis; a new
+  `pre-registration.yaml` `thresholds.strategies` section (`"<strategy_id>.<stat>"`,
+  strategy id checked against *that document's own* `d4_strategies:` block, never a
+  fresh `ah.strategies.load_d4_strategies()` read, mirroring how `_check_conventions`
+  already avoids that trap) and `ah.eval.prereg._check_strategy_threshold_key`.
+  `utility.py` (tier `monthly`, three whole-panel `PANEL_STATS` entries):
+  `discriminative_score` (logistic regression, numpy gradient descent, on pooled
+  `[mean, std]` window features of real vs. generated factor dynamics —
+  `|test accuracy - 0.5|`), `predictive_score` (train-on-synthetic-test-on-real
+  one-step-ahead linear-model MSE), `tstr_degradation` (`MSE_tstr / MSE_trtr` against
+  a train-on-real-test-on-real baseline fit the same way). No sklearn/scipy. Every
+  fit's only randomness (which examples are selected/split) flows from
+  `numpy.random.Generator(PCG64(UTILITY_FIT_SEED))` — a sealed module constant, not
+  the battery's own run seed, so re-running the battery at a different seed reports a
+  bit-identical utility tier for an unchanged ensemble (asserted directly, both
+  directions: identical seed bit-identical, different seed different). Real data
+  read exclusively through `ReferenceStats.historical_series`; an AST guard proves
+  neither module imports `ah.eval.g2`, in the style of `test_reference.py`'s own.
+  Full suite green (850 tests, up from 776 at task start — 74 new), ruff/pyright
+  clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

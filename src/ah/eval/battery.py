@@ -167,16 +167,14 @@ class MetricResult:
 # this via register_suite(); run_battery() iterates it generically (sorted by suite
 # name, for a deterministic report independent of import order).
 #
-# TODO(WP2.2 Tasks 4-6): only `monthly` and `horizon` are WIRED here (registered in
-# _REFERENCE_DEPENDENT_SUITE_BUILDERS), so a real battery run today covers those two
-# tiers' suites and nothing else. `tails.py` (WP2.1b) already exists as a file but is
-# NOT wired -- its `d4_tail_table` does not share this table's `build_<suite>(manifest,
-# reference) -> tuple[MetricSpec, ...]` shape, which is itself unresolved scope, not an
-# oversight of this task. Every remaining suite (tails, utility, memorization,
-# economics, conditional, calibration) must be added to this table (or register itself)
-# as it lands, or it will be written, tested, and then never run. Tracked as
-# governance/retrofit-register.md RFR-13; the verdict a partial battery produces is a
-# partial verdict and WP2.3 must not read it as a full one.
+# TODO(WP2.2 Tasks 5-6): `monthly`, `horizon`, `tails` and `utility` are WIRED here
+# (registered in _REFERENCE_DEPENDENT_SUITE_BUILDERS; WP2.2 Task 4 added the latter
+# two -- `tails.py`'s `d4_tail_table`/backtests are consumed through
+# `build_tails_suite`, not called directly). `memorization`, `economics`, `conditional`
+# and `calibration` remain unwired and must be added to this table (or register
+# themselves) as they land, or they will be written, tested, and then never run.
+# Tracked as governance/retrofit-register.md RFR-13; the verdict a partial battery
+# produces is a partial verdict and WP2.3 must not read it as a full one.
 SUITES: dict[str, tuple[MetricSpec, ...]] = {}
 
 
@@ -331,7 +329,16 @@ def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
         entries = prereg.cross_block_thresholds[pair]
         if name in entries:
             return entries[name]
-    return prereg.panel_thresholds.get(name)
+    if name in prereg.panel_thresholds:
+        return prereg.panel_thresholds[name]
+    # WP2.2 Task 4: thresholds.strategies, key "<strategy_id>.<stat>" -- flat like the
+    # panel section (no per-block indirection: a D4 strategy is sealed data in
+    # pre-registration.yaml, not an ah.factors.FactorManifest block), so this is a
+    # direct name lookup exactly like the panel one above it. No collision risk with a
+    # block key of the same "<x>.<y>" shape: a D4 strategy id (eqw_factors,
+    # sixty_forty, endowment_proxy, momentum, carry) never coincides with an active
+    # factor name, so the block-threshold loop above never matches one of these first.
+    return prereg.strategy_thresholds.get(name)
 
 
 def _passed(value: float, threshold: Threshold) -> bool:
@@ -719,6 +726,9 @@ def run_battery(
 _REFERENCE_DEPENDENT_SUITE_BUILDERS: dict[str, tuple[str, str]] = {
     "monthly": ("ah.eval.metrics.monthly", "build_monthly_suite"),
     "horizon": ("ah.eval.metrics.horizon", "build_horizon_suite"),
+    # WP2.2 Task 4.
+    "tails": ("ah.eval.metrics.tails", "build_tails_suite"),
+    "utility": ("ah.eval.metrics.utility", "build_utility_suite"),
 }
 
 

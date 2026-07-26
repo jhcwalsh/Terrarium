@@ -34,12 +34,17 @@ from ah.eval import reference as reference_mod
 from ah.eval.reference import (
     CROSS_BLOCK_STATS,
     SINGLE_FACTOR_STATS,
+    STRATEGY_STATS,
+    TAIL_DEPENDENCE_MIN_TAIL_OBS,
     ReferenceComputationError,
     RegisteredCrossStat,
     RegisteredStat,
+    RegisteredStrategyStat,
     _draw_moving_block_indices,
     block_bootstrap_band,
     compute_reference,
+    tail_dependence_lower,
+    tail_dependence_upper,
 )
 from ah.factors import FactorManifest, FactorSource, load_manifest
 from ah.splits import HOLDOUT, DataAccess, FinalEvaluationToken, Reader
@@ -315,6 +320,73 @@ def test_acf1_recovers_known_ar1_phi() -> None:
     assert estimate == pytest.approx(phi, abs=0.03)
 
 
+def test_tail_dependence_near_zero_for_independent_factors() -> None:
+    """Independent legs: at the sealed 5% tail fraction, the TRUE tail-dependence
+    coefficient is 0.05 (the fraction itself, not exactly 0 -- see the estimator's own
+    docstring for why), so a small, bounded-below-0.15 value at n=20000 is the
+    expected, honest outcome (0.15 comfortably covers the estimator's own sampling
+    noise at this n: the tail itself holds ~1000 observations, so the joint-exceedance
+    count's relative standard error is a few percent of 0.05)."""
+    rng = np.random.Generator(np.random.PCG64(41))
+    n = 20_000
+    a = rng.normal(size=n)
+    b = rng.normal(size=n)  # independent of a
+    assert tail_dependence_lower(a, b) < 0.15
+    assert tail_dependence_upper(a, b) < 0.15
+
+
+def test_tail_dependence_near_one_for_a_comonotone_pair() -> None:
+    """A == B exactly: every rank exceedance coincides, so the coefficient is exactly
+    1.0 at any tail fraction -- both directions."""
+    rng = np.random.Generator(np.random.PCG64(42))
+    a = rng.normal(size=2000)
+    b = a.copy()
+    assert tail_dependence_lower(a, b) == pytest.approx(1.0)
+    assert tail_dependence_upper(a, b) == pytest.approx(1.0)
+
+
+def test_tail_dependence_nan_below_the_minimum_tail_observation_floor() -> None:
+    rng = np.random.Generator(np.random.PCG64(3))
+    n = TAIL_DEPENDENCE_MIN_TAIL_OBS * 2  # n * 0.05 < TAIL_DEPENDENCE_MIN_TAIL_OBS
+    a = rng.normal(size=n)
+    b = rng.normal(size=n)
+    assert np.isnan(tail_dependence_lower(a, b))
+    assert np.isnan(tail_dependence_upper(a, b))
+
+
+def test_tail_dependence_nan_on_mismatched_lengths() -> None:
+    assert np.isnan(tail_dependence_lower(np.zeros(500), np.zeros(400)))
+
+
+def test_tail_dependence_registered_in_cross_block_stats() -> None:
+    assert CROSS_BLOCK_STATS["tail_dependence_lower"].fn is tail_dependence_lower
+    assert CROSS_BLOCK_STATS["tail_dependence_upper"].fn is tail_dependence_upper
+    assert CROSS_BLOCK_STATS["tail_dependence_lower"].tier == "monthly"
+
+
+def test_strategy_stats_registry_has_the_eleven_wp22_task4_names() -> None:
+    """RegisteredStrategyStat carries no `fn` (see the registry's own docstring) --
+    this only proves the eleven names and their tier exist, the same shape
+    ``test_mean_and_std_closed_form`` proves for SINGLE_FACTOR_STATS's `fn`."""
+    expected = {
+        "var_95",
+        "es_95",
+        "var_99",
+        "es_99",
+        "elicitability_score",
+        "kupiec_pof_stat",
+        "kupiec_pof_pvalue",
+        "christoffersen_independence_stat",
+        "christoffersen_independence_pvalue",
+        "christoffersen_conditional_coverage_stat",
+        "christoffersen_conditional_coverage_pvalue",
+    }
+    assert set(STRATEGY_STATS) == expected
+    for registered in STRATEGY_STATS.values():
+        assert isinstance(registered, RegisteredStrategyStat)
+        assert registered.tier == "monthly"
+
+
 def test_excess_kurtosis_normal_near_zero_student_t_clearly_positive() -> None:
     rng = np.random.Generator(np.random.PCG64(7))
     normal_sample = rng.normal(0.0, 1.0, size=200_000)
@@ -498,6 +570,49 @@ def test_malformed_frame_raises_named_error() -> None:
     access = DataAccess(reader)
     with pytest.raises(ReferenceComputationError, match="g2"):
         compute_reference(access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=6)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: historical_series is populated, unaligned, train+val only
+# --------------------------------------------------------------------------- #
+
+
+def test_historical_series_is_populated_per_present_factor() -> None:
+    """ah.eval.metrics.tails/utility both read ReferenceStats.historical_series
+    (never a fresh catalog read) -- this is the field that makes that possible."""
+    manifest = _small_manifest()
+    seeds = {"g1": 1, "g2": 2, "u1": 3, "u2": 4}
+    access = DataAccess(_make_reader(seeds, start="1950-01-01", end="2026-06-01"))
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert set(ref.historical_series) == {"g1", "g2", "u1", "u2"}
+    # Train+validation only (never the full synthetic series, which extends into the
+    # holdout era) -- compare against access.train_val() itself, the sanctioned
+    # surface, not the raw (longer) synthetic frame.
+    expected_g1 = access.train_val("g1")
+    np.testing.assert_allclose(
+        ref.historical_series["g1"].to_numpy(), expected_g1["value"].to_numpy()
+    )
+    # Sidesteps pandas-stubs' overly broad DatetimeIndex.max() return type: a plain
+    # Python list of Timestamps, maxed with the builtin, is unambiguously typed.
+    holdout_start = pd.Timestamp(HOLDOUT.start)
+    g1_dates: list[pd.Timestamp] = list(ref.historical_series["g1"].index)
+    assert max(g1_dates) < holdout_start
+
+
+def test_historical_series_omits_a_factor_with_no_data() -> None:
+    manifest = _small_manifest()
+    seeds = {"g1": 1, "u1": 3, "u2": 4}  # g2's reader raises KeyError (no data at all)
+    access = DataAccess(_make_reader(seeds, start="1950-01-01", end="2026-06-01"))
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+    assert "g2" not in ref.historical_series
+    assert "g2" in ref.missing_no_data
 
 
 # --------------------------------------------------------------------------- #

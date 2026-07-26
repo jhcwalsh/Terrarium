@@ -653,6 +653,189 @@ conventions:
     reference band, and `_require_mc_error_reported` (which enforces "bands or it didn't
     happen" for the 10yr tier) must not be read as having supplied it.
 
+  # --------------------------------------------------------------------------- #
+  # WP2.2 Task 4 estimator definitions: the D4-strategy-level tail backtests
+  # (elicitability, Kupiec, Christoffersen, VaR/ES itself), cross-block tail
+  # dependence, and the three utility-tier metrics. Same rule as every block above:
+  # `tests/test_prereg.py::test_every_registered_statistic_has_an_estimator_definition`
+  # requires one of these for every name in `ah.eval.reference.STRATEGY_STATS` /
+  # the two new `CROSS_BLOCK_STATS` entries / the three new `PANEL_STATS` entries.
+  # --------------------------------------------------------------------------- #
+  d4_var_es_estimator: >-
+    `var_95`/`es_95`/`var_99`/`es_99`, one set per D4 strategy (thresholds.strategies
+    key `"<strategy_id>.var_95"` etc.), are the GENERATED ensemble's own realized
+    historical VaR/ES on that strategy's pooled return path (all paths x all months
+    flattened), computed by `ah.eval.metrics.tails.var_es` -- identically the estimator
+    WP2.1b sealed (loss_sign above): losses are the negative of returns, VaR at level p
+    is the p-quantile of the pooled loss distribution, ES at level p is the mean loss at
+    or beyond VaR_p. Levels 0.95 and 0.99. Descriptive report metrics: the GENERATED
+    ensemble's own tail risk, not compared against a historical band of their own (see
+    elicitability_score_estimator below for the value that actually compares generated
+    to historical).
+  elicitability_score_estimator: >-
+    THE FISSLER-ZIEGEL (2016) STRICTLY CONSISTENT SCORING RULE for the joint (VaR, ES)
+    pair, in this platform's positive-loss-magnitude convention (loss_sign above), at
+    level p = 0.95 (tail probability alpha = 1 - p = 0.05). Let ell_t = -r_t (loss;
+    r_t the GENERATED ensemble's pooled realized return for one strategy), V the
+    forecast VaR (a positive loss magnitude), E > 0 the forecast ES (a positive loss
+    magnitude, E >= V). The score for one observation:
+      s_t = 1{ell_t >= V} * (ell_t - V) / (alpha * E) + V/E + ln(E) - 1
+    and the reported value is the MEAN of s_t over every pooled observation. LOWER IS
+    BETTER: this platform reports the score to be MINIMIZED, and V, E ARE MINIMIZED IN
+    EXPECTATION EXACTLY AT THE TRUE VaR_alpha AND ES_alpha OF THE LOSS DISTRIBUTION
+    ell_t IS DRAWN FROM (a first-order-conditions derivation is in
+    ah.eval.metrics.tails.elicitability_score's docstring) -- this is what makes it a
+    CONSISTENT SCORING RULE for the pair, and is the property
+    `tests/test_tails.py` checks by asserting a mis-specified (V, E) scores strictly
+    worse than the true pair on a fixed sample, not merely that the number is finite.
+    FORECAST SOURCE, load-bearing for the G2 tail-fidelity criterion: V, E are NOT
+    fitted on the same GENERATED sample being scored (which would trivially minimize
+    the score by construction, proving nothing) -- they are the HISTORICAL
+    (train+validation) VaR_95/ES_95 of that SAME D4 strategy's own realized return
+    series, `var_es` applied to `ah.eval.metrics.tails._historical_strategy_returns`
+    (the strategy's own legs, inner-joined onto their shared date overlap from
+    `ah.eval.reference.ReferenceStats.historical_series` -- never a fresh catalog read,
+    never re-deriving strategy arithmetic: the SAME `ah.eval.metrics.tails.
+    strategy_returns` function evaluates both the historical panel, wrapped as a
+    single-path Ensemble, and the generated ensemble). A low score means the GENERATED
+    ensemble's realized tail losses are well-approximated by HISTORY's own VaR/ES
+    forecast -- i.e. the generator reproduces history's tail risk -- which is DN-1.1
+    Sec.II.6's "VaR/ES elicitability on D4 strategies... beats bootstrap (G2)" row read
+    literally: this is the auxiliary loss WP2.8's L3 training optimizes, and is the tail
+    objective a flipped orientation would silently invert. Auxiliary G1 term (Fissler-
+    Ziegel's general family) is 0 -- the simplest member of the family, chosen because
+    the auxiliary G2 term (`1/E`, the log-barrier antiderivative `ln E`) alone is
+    already sufficient for strict consistency and needs no code-side default for a
+    second family parameter. NaN if E <= 0 (no positive ES magnitude to score against,
+    e.g. the historical strategy has no computable VaR/ES because a leg's factor has no
+    Step-1 source -- commodities) or if alpha is outside (0, 1).
+  kupiec_pof_estimator: >-
+    Kupiec (1995) proportion-of-failures unconditional-coverage LIKELIHOOD-RATIO TEST,
+    at level p = 0.95 (alpha = 0.05), on the exceedance indicator sequence
+    I_t = 1{ell_t >= V_hist} -- ell_t the GENERATED ensemble's pooled realized loss,
+    V_hist the HISTORICAL VaR_95 (see elicitability_score_estimator: the SAME
+    historical forecast, never re-derived a second way). With T = len(I), x = sum(I)
+    (observed exceedances), p_hat = x/T (observed rate):
+      LR_pof = -2 * ln[ (1-alpha)^(T-x) * alpha^x / ( (1-p_hat)^(T-x) * p_hat^x ) ]
+    with the 0*ln(0) := 0 convention (an exact-boundary count, x=0 or x=T, contributes
+    0 to the corresponding term rather than raising). Under H0 (true rate = alpha),
+    LR_pof ~ chi-square(1) asymptotically; `kupiec_pof_pvalue` = P(chi-square(1) > LR_pof),
+    computed WITHOUT scipy via the exact closed form for one degree of freedom,
+    chi2_sf(x, 1) = 2 * (1 - Phi(sqrt(x))), Phi the standard normal CDF
+    (statistics.NormalDist().cdf) -- verified against the standard chi-square(1) 95th
+    percentile critical value 3.841. A SMALL p-value (large LR_pof) rejects H0: the
+    generated ensemble's exceedance rate against history's own VaR threshold disagrees
+    with the nominal rate. NOT length-matched to a resample band (see
+    estimator_length_matching): this is a test statistic on the GENERATED ensemble's
+    own pooled sequence, evaluated against a fixed asymptotic chi-square null, not a
+    quantity with a train+validation reference band of its own.
+  christoffersen_independence_estimator: >-
+    Christoffersen (1998) INDEPENDENCE LIKELIHOOD-RATIO TEST on the SAME exceedance
+    indicator sequence I_t kupiec_pof_estimator defines, testing whether exceedances
+    cluster in time (a VaR model that is well-calibrated on average but whose failures
+    come in runs is still a bad model). Let n_ij count observed one-step transitions
+    I_t=i -> I_{t+1}=j for i,j in {0,1}, pi_01 = n01/(n00+n01), pi_11 = n11/(n10+n11)
+    (transition-conditional exceedance probabilities), pi = (n01+n11)/(n00+n01+n10+n11)
+    (the unconditional rate under H0: independence, i.e. pi_01 = pi_11 = pi):
+      LR_ind = -2 * [ L(pi; n01+n11, n00+n10) - L(pi_01; n01, n00) - L(pi_11; n11, n10) ]
+    with L(p; n1, n0) = n1*ln(p) + n0*ln(1-p) (0*ln(0) := 0, so a count of zero in
+    either cell of a term never needs that term's probability to be defined -- handles
+    every degenerate transition-count case, including a state visited zero times,
+    without a special case). Under H0, LR_ind ~ chi-square(1). ENSEMBLE-WIDE
+    AGGREGATION: n_ij are SUMMED across every path's own transitions (never a
+    transition spanning two different paths -- the identical "never cross a path
+    boundary" rule every time-ordered statistic in this platform follows), which is the
+    mathematically correct combination of K independent Markov chains' joint likelihood
+    (the joint log-likelihood over independent chains sharing one transition matrix IS
+    the sum of the per-chain log-likelihoods, which reduces exactly to using the summed
+    counts) -- not a per-path LR averaged, which would be a different, noisier
+    statistic. p-value via the SAME chi2_sf(x, 1) as kupiec_pof_estimator.
+  christoffersen_conditional_coverage_estimator: >-
+    THE JOINT TEST: `christoffersen_conditional_coverage_stat` = LR_pof + LR_ind (the
+    two already-defined statistics, summed) ~ chi-square(2) under H0 (correct
+    unconditional coverage AND independence, jointly). p-value via the exact closed
+    form for TWO degrees of freedom, chi2_sf(x, 2) = exp(-x/2) (verified against the
+    standard chi-square(2) 95th percentile critical value 5.991: exp(-5.991/2) = 0.05).
+    NaN if either component statistic is NaN (e.g. fewer than 2 observations in the
+    sequence).
+  tail_dependence_estimator: >-
+    NONPARAMETRIC empirical tail-dependence coefficient (Frahm, Junker & Schmidt 2005),
+    computed between an active CROSS-BLOCK FACTOR PAIR's pooled ensemble observations
+    (never a D4 strategy -- this is the one WP2.2 Task 4 statistic keyed like
+    ah.eval.reference's existing cross-block statistics, "<factorA>~<factorB>.<stat>",
+    per DN-1.1's "corr matrix" row reading "tail-dependence coefficients" as a factor-
+    pair, not a strategy-level, criterion). Rank-based pseudo-observations
+    U = rank(a)/(n+1), V = rank(b)/(n+1) (ties averaged, the identical ranking
+    ah.eval.reference.spearman_rank_correlation already uses). At the SEALED tail
+    fraction 0.05 (TAIL_DEPENDENCE_TAIL_FRACTION, matching hill_tail_index_estimator's
+    own 5% convention rather than an independently chosen number):
+      upper: u = 0.95; lambda_U = mean(1{U > u AND V > u}) / 0.05
+      lower: u = 0.05; lambda_L = mean(1{U <= u AND V <= u}) / 0.05
+    Both estimate P(other variable in its tail | one variable in its tail) at threshold
+    u: exactly 1.0 for a comonotone pair at every fraction; converging to 0 as the
+    fraction shrinks under independence (a small, nonzero value at THIS finite
+    fraction -- 0.05 in expectation under independence -- is the honest, expected
+    outcome, not a defect). NaN below 10 observations actually inside the tail
+    (n * fraction, TAIL_DEPENDENCE_MIN_TAIL_OBS -- the same floor shape as
+    VARIANCE_RATIO_MIN_SUMS/DRAWDOWN_MIN_EPISODES) or if the two arrays are not the
+    same length. Computed identically on both sides (a real train+validation band via
+    the existing block-bootstrap machinery, and the generated ensemble's own pooled
+    factor pair), unlike the D4-strategy backtests above.
+  discriminative_score_estimator: >-
+    A CLASSIFIER TRAINED TO DISTINGUISH real windows of factor dynamics from generated
+    ones, reported as |test accuracy - 0.5| (0 = indistinguishable; the generator fools
+    the classifier). Windows: non-overlapping UTILITY_WINDOW_MONTHS=24-month blocks,
+    extracted independently WITHIN each real factor's own train+validation series
+    (ah.eval.reference.ReferenceStats.historical_series) and within each generated
+    path (never spanning a path or series boundary), for every active factor present on
+    BOTH sides. Features: [mean, std] of each window (2 numbers), POOLED across every
+    contributing factor and window into one (N, 2) matrix per side (real label 1,
+    generated label 0) -- a factor's own scale is not removed, so a generator with a
+    shifted mean or variance for ANY active factor remains detectable. Classifier:
+    logistic regression (bias + 2 weights) with L2 penalty 1e-3, fit by full-batch
+    gradient descent (learning rate 0.1, 200 epochs, zero weight initialization -- the
+    convex logistic loss needs no random init) on a SEEDED random TRAIN_FRACTION=0.7
+    shuffle-split of the pooled, labelled example set; features standardized (z-score)
+    using the TRAIN split's own mean/std only (never the test split's, avoiding a
+    leakage channel in the feature scaling itself). Reported value is
+    |test-set accuracy - 0.5|. Determinism: seed = UTILITY_FIT_SEED (a sealed module
+    constant, NOT the battery's own run seed -- see ah.eval.metrics.utility's module
+    docstring), driving the shuffle-split via numpy.random.Generator(PCG64(seed)) and
+    nothing else (gradient descent itself is deterministic given fixed data and zero
+    init). Lower is better as a G2 criterion.
+  predictive_score_estimator: >-
+    TRAIN-ON-SYNTHETIC, TEST-ON-REAL (TSTR) one-step-ahead prediction error. Model: a
+    single linear map x_{t+1} = a + b*x_t + noise, fit by the SAME gradient-descent
+    machinery discriminative_score_estimator uses (squared-error loss in place of
+    logistic; learning rate 0.1, 200 epochs, zero init, L2 penalty 1e-3) on a SEEDED
+    random 50% subsample of GENERATED one-step-ahead pairs (x_t, x_{t+1}), pooled
+    across every active factor present in the ensemble and, within each factor, across
+    every ensemble path (pairs never span a path boundary) -- the SAME [mean, std]-free
+    standardization convention discriminative_score_estimator uses is applied here too
+    (each factor's own values z-scored by that factor's REAL historical mean/std before
+    pooling, so one linear model is not dominated by whichever factor happens to have
+    the largest raw scale). Error: mean squared error of the fitted (a, b) evaluated
+    on EVERY real one-step-ahead pair (ah.eval.reference.ReferenceStats.historical_series,
+    no subsampling on the real/test side). Determinism: seed = UTILITY_FIT_SEED, driving
+    the generated-pair subsample only.
+  tstr_degradation_estimator: >-
+    THE RATIO MSE_tstr / MSE_trtr (predictive_score_estimator's TSTR error divided by a
+    TRAIN-ON-REAL-TEST-ON-REAL baseline), fit by the identical linear-model /
+    gradient-descent machinery on a SEEDED random 50% shuffle-split of the REAL
+    one-step-ahead pairs (fit half / eval half; seed = UTILITY_FIT_SEED, the SAME seed
+    predictive_score_estimator's subsample uses, so one seed drives every stochastic
+    element of one battery run's utility tier). ORIENTATION: >= 1.0 means the
+    synthetic-trained model predicts real one-step-ahead dynamics no better than a
+    model trained directly on (half of) real data -- 1.0 is "no degradation" (the
+    generator's dynamics are as informative as real data for this simple predictor);
+    LOWER IS BETTER, and a value < 1.0 (the synthetic-trained model beating the
+    real-trained baseline on its own held-out real data) is possible and not an error --
+    it would mean the generator's larger effective sample size for fitting a two-
+    parameter linear model outweighs the sim-to-real gap for this particular
+    (intentionally simple) predictor. NaN if either MSE is NaN, or +inf if
+    MSE_trtr == 0.0 exactly (a degenerate real series with zero one-step variance,
+    against which no ratio is informative).
+
   loss_sign: >-
     VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of
     return; VaR at level p is the p-quantile of the pooled loss distribution; ES at
@@ -966,13 +1149,17 @@ d4_strategies:
 # ah.eval.reference computes the real train+validation bands and WP2.3 replaces every
 # entry below with one before sealing.
 #
-# THREE SECTIONS, THREE KEY SHAPES, one per statistic scope:
+# FOUR SECTIONS, FOUR KEY SHAPES, one per statistic scope (WP2.2 Task 4 adds the
+# fourth, thresholds.strategies):
 #   thresholds.blocks.<block>       key "<factor>.<stat>",           stat in
 #                                   ah.eval.reference.SINGLE_FACTOR_STATS
 #   thresholds.cross_blocks.<a|b>   key "<factorA>~<factorB>.<stat>", stat in
 #                                   ah.eval.reference.CROSS_BLOCK_STATS
 #   thresholds.panel                key "<stat>" (bare),              stat in
 #                                   ah.eval.reference.PANEL_STATS
+#   thresholds.strategies           key "<strategy_id>.<stat>",       strategy_id a
+#                                   d4_strategies entry of THIS document, stat in
+#                                   ah.eval.reference.STRATEGY_STATS
 # A panel statistic is a property of the whole factor panel and belongs to no single
 # factor or pair, so it carries no prefix at all -- cross_block_corr_matrix_distance is
 # the one entry today. `severity` is `enforce` (an out-of-band value blocks the gate) or
@@ -1036,6 +1223,17 @@ thresholds:
     # `correlation` for (within-block pairs have no registered reference statistic to be
     # a distance TO -- governance/retrofit-register.md RFR-14).
     "cross_block_corr_matrix_distance": {min: 0.0, max: 10.0, severity: report}
+  # WP2.2 Task 4 -- thresholds.strategies, key "<strategy_id>.<stat>", stat in
+  # ah.eval.reference.STRATEGY_STATS (see that module and ah.eval.prereg
+  # ._check_strategy_threshold_key). PROVISIONAL placeholders, same as every other
+  # value in this thresholds: block -- not derived from a historical reference
+  # statistic; not exhaustive over every registered strategy stat (WP2.3's job).
+  strategies:
+    # PROVISIONAL placeholder -- not derived from history (see file header).
+    "sixty_forty.elicitability_score": {min: null, max: 5.0, severity: report}
+    # PROVISIONAL placeholder -- not derived from history (see file header). A p-value
+    # floor of 0.01 is a deliberately loose non-rejection band while unsealed.
+    "sixty_forty.kupiec_pof_pvalue": {min: 0.01, max: null, severity: report}
 
 # --------------------------------------------------------------------------- #
 # Item 3 decisions -- R5 (FX) and J3 (UK block), both CLOSED-deferred (WP2.1b Task 5

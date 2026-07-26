@@ -181,6 +181,19 @@ _CONVENTIONS_KEYS = frozenset(
         "regime_duration_estimator",
         "ten_year_return_vs_valuation_estimator",
         "mc_error_is_not_the_small_n_band",
+        # WP2.2 Task 4: tails.py's remaining estimators, utility.py's three metrics, and
+        # the D4-strategy-level backtest estimators. Same reasoning as the block above --
+        # prose-only to this module, but must be ALLOWED here or the whole
+        # pre-registration fails to load.
+        "tail_dependence_estimator",
+        "discriminative_score_estimator",
+        "predictive_score_estimator",
+        "tstr_degradation_estimator",
+        "d4_var_es_estimator",
+        "elicitability_score_estimator",
+        "kupiec_pof_estimator",
+        "christoffersen_independence_estimator",
+        "christoffersen_conditional_coverage_estimator",
     }
 )
 

@@ -30,6 +30,12 @@ registry for whole-panel statistics.
 - :data:`CROSS_BLOCK_STATS` -- one factor pair's aligned overlap, keyed
   ``"<factorA>~<factorB>.<stat>"``.
 - :data:`PANEL_STATS` -- the whole factor panel, keyed by a bare ``"<stat>"``.
+- :data:`STRATEGY_STATS` (WP2.2 Task 4) -- one sealed D4 benchmark strategy
+  (``ah.strategies.load_d4_strategies``), keyed ``"<strategy_id>.<stat>"`` in
+  ``ah.eval.prereg``'s ``thresholds.strategies`` section. A fourth scope, not a
+  variant of the other three: its axis is sealed *data* in ``pre-registration.yaml``,
+  not a factor or factor pair in ``ah.factors.FactorManifest``. See its own section
+  below for why every entry carries no ``fn``.
 
 **These registries are the platform's statistic vocabulary, not merely this module's.**
 :mod:`ah.eval.prereg` validates every ``pre-registration.yaml`` threshold key against
@@ -43,8 +49,9 @@ STEP2-GENERATOR-PLAN Sec.WP2.2 owns the eight metric suites these registries ser
 ``monthly``, ``horizon``, ``tails``, ``utility``, ``memorization``, ``economics``,
 ``conditional``, ``calibration``
 (``src/ah/eval/metrics/{monthly,horizon,tails,utility,memorization,economics,
-conditional,calibration}.py``). Only ``monthly``, ``horizon`` and ``tails`` exist yet;
-the rest are intentionally not stubbed here.
+conditional,calibration}.py``). Only ``monthly``, ``horizon``, ``tails`` and
+``utility`` exist yet (WP2.2 Task 4 added the latter two); the rest are intentionally
+not stubbed here.
 
 Horizon tiers (DN-1.1 Sec.II.6)
 --------------------------------
@@ -285,6 +292,25 @@ class ReferenceStats:
     missing_declared: tuple[str, ...] = ()
     missing_no_data: tuple[str, ...] = ()
     coverage: Mapping[str, FactorCoverage] = MappingProxyType({})
+    # WP2.2 Task 4. Per-factor, date-indexed train+validation series (the SAME objects
+    # `compute_reference` already builds internally as `series_by_factor`, before any
+    # per-statistic alignment happens -- see the module docstring's "Data alignment").
+    # Exposed here because the D4 tail-fidelity backtests (`ah.eval.metrics.tails`) and
+    # the utility-tier suite (`ah.eval.metrics.utility`) both need genuinely joint,
+    # multi-factor historical data (a strategy's weighted sum across several legs; a
+    # real-vs-generated comparison) that no existing single-factor/cross-block-pair
+    # registry can serve, and BOTH must read it through this one surface -- never a
+    # fresh `DataAccess`/catalog read -- so the holdout-leakage guard and the "train+val
+    # only" invariant cover them exactly as they cover every other reference statistic.
+    # Keyed by factor id (not series id); values are UNALIGNED (each factor keeps its
+    # own date index and length, exactly as `_series_by_factor` produced them) -- a
+    # consumer that needs several factors aligned together (a D4 strategy's own legs, in
+    # `ah.eval.metrics.tails`) is responsible for its own inner join over exactly the
+    # factors it needs, the same pattern `_aligned_pair` already uses for a cross-block
+    # pair, generalized to more than two series. This module deliberately does not
+    # pre-join every active factor onto one shared axis (see "Data alignment" above): a
+    # single short-history factor must not truncate a computation that never needed it.
+    historical_series: Mapping[str, pd.Series] = MappingProxyType({})
 
     def to_dict(self) -> dict[str, Any]:
         """JSON-serializable rendering (for the battery report and Task 4's threshold authoring).
@@ -1567,9 +1593,93 @@ def _crisis_corr_lift(a: np.ndarray, b: np.ndarray) -> float:
     return conditional - unconditional
 
 
+# WP2.2 Task 4 -- empirical tail-dependence coefficients (ah.eval.metrics.tails' item
+# 4). Live HERE, not in ah.eval.metrics.tails, for the identical structural reason
+# every other CROSS_BLOCK_STATS estimator does (see the module docstring): a
+# statistic defined only in a metric suite could never carry a sealed threshold, and
+# registering it here gives it a real computed train+validation point + block-
+# bootstrap band for free, via the existing `_cross_block_reference` machinery -- no
+# new plumbing needed. `ah.eval.metrics.tails` imports and re-exports these two names
+# under its own module (the SAME function objects, not wrappers), exactly as
+# `ah.eval.metrics.monthly` already does for `hill_tail_index`/`corr_matrix_distance`;
+# a direct import from `ah.eval.metrics.tails` into this module would cycle
+# (tails -> battery -> reference), so the direction must run this way.
+TAIL_DEPENDENCE_TAIL_FRACTION = 0.05
+# Matches Hill's own 5% tail-fraction convention (HILL_TAIL_FRACTIONS in
+# ah.eval.metrics.monthly) rather than an independently chosen number -- the same "top
+# ~5%" reading of "the tail" applies to a bivariate joint-exceedance estimator as it
+# does to a univariate one, and reusing the constant means one amendment moves both if
+# it ever does.
+TAIL_DEPENDENCE_MIN_TAIL_OBS = 10
+# The same shape of floor VARIANCE_RATIO_MIN_SUMS/DRAWDOWN_MIN_EPISODES impose: below
+# this many observations actually IN the tail (n * fraction), the joint-exceedance
+# fraction is computed from a literal handful of points and reports NaN rather than a
+# number with no information content.
+
+
+def _pseudo_observations(x: np.ndarray) -> np.ndarray:
+    """Rank-based pseudo-observations in ``(0, 1)``: ``rank(x) / (n + 1)``.
+
+    The standard empirical-copula transform to uniform margins (Frahm, Junker & Schmidt
+    2005); ``/(n+1)`` rather than ``/n`` keeps every value strictly inside ``(0, 1)`` (no
+    boundary value at exactly 1.0), and ties are averaged via :func:`_rank` -- the same
+    ranking convention :func:`spearman_rank_correlation` already uses, not a second one.
+    """
+    return _rank(x) / (x.shape[0] + 1.0)
+
+
+def _tail_dependence(a: np.ndarray, b: np.ndarray, *, upper: bool) -> float:
+    """Nonparametric tail-dependence coefficient estimator, upper or lower tail.
+
+    With pseudo-observations ``U = rank(a)/(n+1)``, ``V = rank(b)/(n+1)`` and
+    ``fraction = TAIL_DEPENDENCE_TAIL_FRACTION`` (0.05):
+
+    - upper: ``u = 1 - fraction``; ``lambda_U = mean(1{U > u AND V > u}) / fraction``.
+    - lower: ``u = fraction``; ``lambda_L = mean(1{U <= u AND V <= u}) / fraction``.
+
+    Both estimate ``P(other in its tail | one in its tail)`` at threshold ``u``: under
+    independence this converges to ``fraction`` -> 0 as ``fraction`` shrinks (so a small,
+    stated, nonzero value at a finite ``fraction`` is the expected, honest outcome, not a
+    defect); for a comonotone pair (``a == b`` exactly) it is exactly 1.0 at every
+    ``fraction``, since both legs' rank exceedances coincide perfectly. ``NaN`` if ``a``
+    and ``b`` are not the same length, or if the aligned sample has fewer than
+    :data:`TAIL_DEPENDENCE_MIN_TAIL_OBS` observations actually inside the tail
+    (``n * fraction``).
+    """
+    a = np.asarray(a, dtype=np.float64).reshape(-1)
+    b = np.asarray(b, dtype=np.float64).reshape(-1)
+    if a.shape[0] != b.shape[0]:
+        return float("nan")
+    n = a.shape[0]
+    fraction = TAIL_DEPENDENCE_TAIL_FRACTION
+    if n * fraction < TAIL_DEPENDENCE_MIN_TAIL_OBS:
+        return float("nan")
+    u_a = _pseudo_observations(a)
+    u_b = _pseudo_observations(b)
+    if upper:
+        threshold = 1.0 - fraction
+        joint = np.mean((u_a > threshold) & (u_b > threshold))
+    else:
+        threshold = fraction
+        joint = np.mean((u_a <= threshold) & (u_b <= threshold))
+    return float(joint) / fraction
+
+
+def tail_dependence_lower(a: np.ndarray, b: np.ndarray) -> float:
+    """Empirical lower-tail dependence coefficient -- see :func:`_tail_dependence`."""
+    return _tail_dependence(a, b, upper=False)
+
+
+def tail_dependence_upper(a: np.ndarray, b: np.ndarray) -> float:
+    """Empirical upper-tail dependence coefficient -- see :func:`_tail_dependence`."""
+    return _tail_dependence(a, b, upper=True)
+
+
 CROSS_BLOCK_STATS: dict[str, RegisteredCrossStat] = {
     "correlation": RegisteredCrossStat(fn=_correlation, tier="monthly"),
     "crisis_corr_lift": RegisteredCrossStat(fn=_crisis_corr_lift, tier="monthly"),
+    "tail_dependence_lower": RegisteredCrossStat(fn=tail_dependence_lower, tier="monthly"),
+    "tail_dependence_upper": RegisteredCrossStat(fn=tail_dependence_upper, tier="monthly"),
 }
 
 
@@ -1623,6 +1733,67 @@ PANEL_STATS: dict[str, RegisteredPanelStat] = {
     "regime_duration_p90": RegisteredPanelStat(tier="1_5yr"),
     "ten_year_return_vs_valuation_slope": RegisteredPanelStat(tier="10yr"),
     "ten_year_return_vs_valuation_r2": RegisteredPanelStat(tier="10yr"),
+    # WP2.2 Task 4 -- ah.eval.metrics.utility's three whole-panel metrics (a
+    # real-vs-generated comparison over the whole active factor panel, not a single
+    # factor or pair -- see that module's docstring for why a per-factor scope was
+    # rejected). No `fn`/band for the identical reason `cross_block_corr_matrix_distance`
+    # has none: these compare a GENERATED ensemble against real data directly, so there
+    # is no single-argument historical point estimate to bootstrap.
+    "discriminative_score": RegisteredPanelStat(tier="monthly"),
+    "predictive_score": RegisteredPanelStat(tier="monthly"),
+    "tstr_degradation": RegisteredPanelStat(tier="monthly"),
+}
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4 -- D4-strategy-level tail-fidelity statistics.
+#
+# A fourth, small registry, structurally distinct from the three above because its
+# axis is neither a factor, a factor pair, nor the whole panel: it is one of the five
+# SEALED D4 BENCHMARK STRATEGIES (`ah.strategies.load_d4_strategies`), which are named
+# data in `pre-registration.yaml`, not entries of `ah.factors.FactorManifest`. This
+# module does not import `ah.strategies` (unnecessary -- see below) and the strategy
+# IDs are validated against the live D4 set only by `ah.eval.prereg` (which already
+# imports `ah.strategies` to interpret the sealed D4 definitions -- see that module's
+# docstring, "What the seal covers").
+#
+# Threshold keys are `"<strategy_id>.<stat>"` (`ah.eval.prereg`'s new
+# `thresholds.strategies` section, a flat mapping mirroring `thresholds.panel`'s shape
+# but with the dotted key `PANEL_STATS`'s own key-shape rule forbids -- see
+# `ah.eval.prereg._check_strategy_threshold_key`).
+#
+# Like `PANEL_STATS`, every entry here carries no `fn`: `var_95`/`es_95`/`var_99`/
+# `es_99` are the GENERATED ensemble's own realized historical VaR/ES (a descriptive
+# report, not a value with a train+val band -- see `ah.eval.metrics.tails.var_es`, WP2.1b).
+# `elicitability_score`/`kupiec_pof_*`/`christoffersen_*` are backtests of the GENERATED
+# ensemble's exceedances against the HISTORICAL (train+validation) D4 strategy return
+# series' own VaR/ES -- an out-of-sample-style comparison, not a value with a symmetric
+# historical band of its own; a test statistic or a scoring-rule value is judged by an
+# absolute bound (a critical value, a p-value floor), never by "does it look like
+# history's own value of the same statistic" (there is no such thing: history has no
+# ensemble of its own exceedance sequences to compare against). All computation lives in
+# `ah.eval.metrics.tails.build_tails_suite`, which reads `ReferenceStats.historical_series`
+# (never a fresh catalog read) to obtain the D4 strategies' historical return series.
+@dataclass(frozen=True)
+class RegisteredStrategyStat:
+    """A D4-strategy-level statistic: a name and its DN-1.1 Sec.II.6 horizon tier, no
+    function -- see the section header above for why every entry here has none."""
+
+    tier: str
+
+
+STRATEGY_STATS: dict[str, RegisteredStrategyStat] = {
+    "var_95": RegisteredStrategyStat(tier="monthly"),
+    "es_95": RegisteredStrategyStat(tier="monthly"),
+    "var_99": RegisteredStrategyStat(tier="monthly"),
+    "es_99": RegisteredStrategyStat(tier="monthly"),
+    "elicitability_score": RegisteredStrategyStat(tier="monthly"),
+    "kupiec_pof_stat": RegisteredStrategyStat(tier="monthly"),
+    "kupiec_pof_pvalue": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_independence_stat": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_independence_pvalue": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_conditional_coverage_stat": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_conditional_coverage_pvalue": RegisteredStrategyStat(tier="monthly"),
 }
 
 
@@ -2174,4 +2345,5 @@ def compute_reference(
         missing_declared=factor_frames.missing_declared,
         missing_no_data=factor_frames.missing_no_data,
         coverage=MappingProxyType(_coverage(series_by_factor)),
+        historical_series=MappingProxyType(dict(series_by_factor)),
     )

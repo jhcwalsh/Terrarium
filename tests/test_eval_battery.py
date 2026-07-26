@@ -1038,6 +1038,52 @@ def test_run_full_battery_returns_a_non_empty_metric_set() -> None:
     assert horizon_results["ten_year_return_vs_valuation_slope"].mc_error is not None
 
 
+def test_run_full_battery_returns_tails_and_utility_metrics_by_name() -> None:
+    """WP2.2 Task 4: `tails` and `utility` must be wired the identical way `horizon`
+    was wired in Task 3 (`_REFERENCE_DEPENDENT_SUITE_BUILDERS`, not a hand-edit of
+    `run_full_battery` itself) -- this test is the direct analogue of the horizon
+    assertions in `test_run_full_battery_returns_a_non_empty_metric_set` above, and
+    fails identically to how that one would fail if a later task's suite were written,
+    tested, and never registered (RFR-13)."""
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    tails_results = {r.name: r for r in report.results if r.suite == "tails"}
+    assert tails_results, "run_full_battery must register and run the tails suite"
+    # The D4 strategy names' own metrics are present (though NaN here: the
+    # orchestration fixture's factors are g1/u1, not the real D4 strategies' equity_mkt
+    # etc, so every strategy leg is absent from this ensemble -- see
+    # ah.eval.metrics.tails.build_tails_suite's absent-leg NaN guard).
+    assert "sixty_forty.var_95" in tails_results
+    assert tails_results["sixty_forty.var_95"].tier == "monthly"
+    assert np.isnan(tails_results["sixty_forty.var_95"].value)
+    # The cross-block tail-dependence metrics ARE computable on this fixture (g1/u1
+    # are a real active cross-block pair), and must produce a REAL, finite number --
+    # not NaN -- proving the suite is not universally NaN by construction.
+    assert "g1~u1.tail_dependence_lower" in tails_results
+    assert np.isfinite(tails_results["g1~u1.tail_dependence_lower"].value)
+
+    utility_results = {r.name: r for r in report.results if r.suite == "utility"}
+    assert utility_results, "run_full_battery must register and run the utility suite"
+    assert {"discriminative_score", "predictive_score", "tstr_degradation"} == set(utility_results)
+    for r in utility_results.values():
+        assert r.tier == "monthly"
+        # g1/u1 ARE shared between the real historical series and this ensemble, so
+        # the utility tier is genuinely computable here too.
+        assert np.isfinite(r.value)
+
+
 def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
     manifest = _orchestration_manifest()
     ensemble = _orchestration_ensemble()

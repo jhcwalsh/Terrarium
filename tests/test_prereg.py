@@ -1335,6 +1335,166 @@ def test_verify_rejects_a_factor_scoped_panel_threshold_key(tmp_path: Path) -> N
         prereg.verify(loaded, load_manifest(factors_path))
 
 
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4: thresholds.strategies -- "<strategy_id>.<stat>", strategy_id a
+# d4_strategies entry of THIS document, stat in ah.eval.reference.STRATEGY_STATS.
+# --------------------------------------------------------------------------- #
+
+
+def test_load_parses_thresholds_strategies() -> None:
+    """The two example rows the real file declares (WP2.2 Task 4) round-trip."""
+    loaded = prereg.load()
+    assert "sixty_forty.elicitability_score" in loaded.strategy_thresholds
+    assert loaded.strategy_thresholds["sixty_forty.elicitability_score"].severity == "report"
+
+
+def test_verify_accepts_the_real_files_strategy_thresholds() -> None:
+    """The real pre-registration.yaml's own thresholds.strategies rows verify clean --
+    proven independently of test_verify_accepts_the_real_pre_registration_file (which
+    covers every section at once) so a regression here is diagnosable on its own."""
+    loaded = prereg.load()
+    prereg.verify(loaded, load_manifest())  # must not raise
+
+
+def _verify_with_strategy_threshold(tmp_path: Path, key: str) -> None:
+    doc = _load_real_doc()
+    doc.setdefault("thresholds", {}).setdefault("strategies", {})
+    doc["thresholds"]["strategies"][key] = {"min": None, "max": 10.0, "severity": "enforce"}
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
+
+
+def test_verify_rejects_a_strategy_id_not_in_this_documents_d4_strategies(
+    tmp_path: Path,
+) -> None:
+    with pytest.raises(PreRegError, match="not_a_real_strategy"):
+        _verify_with_strategy_threshold(tmp_path, "not_a_real_strategy.elicitability_score")
+
+
+def test_verify_rejects_an_unregistered_strategy_stat(tmp_path: Path) -> None:
+    with pytest.raises(PreRegError, match="not a registered strategy statistic"):
+        _verify_with_strategy_threshold(tmp_path, "sixty_forty.not_a_real_stat")
+
+
+def test_verify_rejects_a_malformed_strategy_threshold_key(tmp_path: Path) -> None:
+    with pytest.raises(PreRegError, match="strategy threshold key"):
+        _verify_with_strategy_threshold(tmp_path, "sixty_forty.elicitability_score.extra")
+
+
+def test_verify_rejects_a_cross_style_strategy_threshold_key(tmp_path: Path) -> None:
+    with pytest.raises(PreRegError, match="strategy threshold key"):
+        _verify_with_strategy_threshold(tmp_path, "sixty_forty~carry.elicitability_score")
+
+
+def test_verify_uses_this_documents_own_d4_strategies_not_the_real_repo_file(
+    tmp_path: Path,
+) -> None:
+    """The key design choice: a strategy id is checked against THIS document's own
+    ``d4_strategies:`` block, never a fresh ``ah.strategies.load_d4_strategies()`` call
+    (which always reads the real repo-root file). A synthetic strategy declared only in
+    this fixture must verify; one absent from it must not, even if it happens to be a
+    real D4 strategy id in the actual repo file."""
+    doc = _load_real_doc()
+    doc["d4_strategies"]["synthetic_only"] = dict(doc["d4_strategies"]["sixty_forty"])
+    doc.setdefault("thresholds", {}).setdefault("strategies", {})
+    doc["thresholds"]["strategies"]["synthetic_only.elicitability_score"] = {
+        "min": None,
+        "max": 5.0,
+        "severity": "report",
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))  # must not raise
+
+
+def test_block_addition_carries_strategy_thresholds_through_unchanged(tmp_path: Path) -> None:
+    """Symmetric with the panel-threshold guarantee below: a strategy statistic is not
+    block-scoped either, so a block_addition amendment must not touch it. Mirrors
+    ``test_block_addition_carries_panel_thresholds_through_unchanged``'s synthetic
+    alpha/beta/gamma fixture, with a ``d4_strategies``/``thresholds.strategies``
+    section added."""
+    from ah.eval.prereg import Amendment, apply_block_addition
+
+    _write_synthetic_factors(tmp_path, "factors_before.yaml", ["alpha", "beta"])
+    after_path = _write_synthetic_factors(
+        tmp_path, "factors_after.yaml", ["alpha", "beta", "gamma"]
+    )
+    doc = {
+        "schema_version": "1.0",
+        "sealed": False,
+        "campaign_vintage_id": "test",
+        "factor_manifest": "factors_before.yaml",
+        "active_blocks": ["alpha", "beta"],
+        "conventions": {
+            "percent_to_decimal": 0.01,
+            "months_per_year": 12.0,
+            "return_bearing_factors": ["a1", "b1"],
+            "level_factors": ["a1_lvl"],
+            "rebalance_cadences": ["monthly"],
+            "static_weights_composition": "test fixture",
+            "numeraire": "total_return",
+            "numeraire_zero_cost_legs": [],
+        },
+        "d4_strategies": {
+            "test_strategy": {
+                "kind": "static_weights",
+                "rebalance": "monthly",
+                "lookback": None,
+                "rule": None,
+                "weights": {"a1": 1.0},
+                "params": {},
+                "notes": "fixture",
+            }
+        },
+        "thresholds": {
+            "blocks": {
+                "alpha": {"a1.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+                "beta": {"b1.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+            },
+            "cross_blocks": {
+                "alpha|beta": {
+                    "a1~b1.correlation": {"min": -1.0, "max": 1.0, "severity": "report"}
+                },
+            },
+            "panel": {},
+            "strategies": {
+                "test_strategy.var_95": {"min": 0.0, "max": 1.0, "severity": "report"},
+            },
+        },
+        "decisions": {},
+    }
+    prereg_path = tmp_path / "pre-registration.yaml"
+    prereg_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+
+    before = prereg.load(prereg_path)
+    assert "test_strategy.var_95" in before.strategy_thresholds
+
+    amendment = Amendment(
+        amendment_id="AMEND-GAMMA-STRATEGY",
+        type="block_addition",
+        date="2026-02-01",
+        rationale="fixture: activate gamma block",
+        post_hoc=True,
+        payload={
+            "block": "gamma",
+            "block_thresholds": {"g1.mean": {"min": -1.0, "max": 1.0, "severity": "enforce"}},
+            "cross_block_thresholds": {
+                "alpha|gamma": {
+                    "a1~g1.correlation": {"min": -1.0, "max": 1.0, "severity": "report"}
+                },
+                "beta|gamma": {
+                    "b1~g1.correlation": {"min": -1.0, "max": 1.0, "severity": "report"}
+                },
+            },
+        },
+    )
+    merged = apply_block_addition(before, load_manifest(after_path), amendment)
+
+    assert merged.strategy_thresholds == before.strategy_thresholds
+    assert canonical_json(_threshold_dict(merged.strategy_thresholds)) == canonical_json(
+        _threshold_dict(before.strategy_thresholds)
+    )
+
+
 def test_block_addition_carries_panel_thresholds_through_unchanged(tmp_path: Path) -> None:
     """`block_addition` is additive over blocks and pairs; a panel statistic is not
     block-scoped at all, so it must survive the merge byte-identically -- otherwise
@@ -1452,8 +1612,13 @@ def test_every_registered_statistic_has_an_estimator_definition() -> None:
 def test_estimator_convention_table_names_no_statistic_that_does_not_exist() -> None:
     """The reverse guard: a renamed or dropped statistic must not leave a stale row
     pointing at nothing, which would make the check above pass vacuously for it."""
-    from ah.eval.reference import CROSS_BLOCK_STATS, PANEL_STATS, SINGLE_FACTOR_STATS
+    from ah.eval.reference import (
+        CROSS_BLOCK_STATS,
+        PANEL_STATS,
+        SINGLE_FACTOR_STATS,
+        STRATEGY_STATS,
+    )
 
-    registered = {*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS}
+    registered = {*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS, *STRATEGY_STATS}
     stale = sorted(set(prereg.ESTIMATOR_CONVENTION_KEYS) - registered)
     assert not stale, f"ESTIMATOR_CONVENTION_KEYS names unregistered statistic(s): {stale}"
