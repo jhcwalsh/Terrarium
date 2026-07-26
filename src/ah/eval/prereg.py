@@ -419,6 +419,30 @@ ESTIMATOR_CONVENTION_KEYS: Mapping[str, str] = MappingProxyType(
         "money_pump_violations": "money_pump_estimator",
         "floor_violations": "floor_violations_estimator",
         "policy_anchor_deviation": "policy_anchor_deviation_estimator",
+        # WP2.2 Task 6. One convention key per condition type, covering its {mean, p90}
+        # pair -- the same "one family, one key" shape acf_estimator (many lags) and
+        # drawdown_episode_estimator (three summaries of one episode definition) already
+        # use, since p90 is a sub-variant of the same per-path error definition, not an
+        # independent estimator.
+        "condition_adherence_error_inflation": "condition_adherence_inflation_estimator",
+        "condition_adherence_error_p90_inflation": "condition_adherence_inflation_estimator",
+        "condition_adherence_error_rate": "condition_adherence_rate_estimator",
+        "condition_adherence_error_p90_rate": "condition_adherence_rate_estimator",
+        "condition_adherence_error_crisis_timing": "condition_adherence_crisis_timing_estimator",
+        "condition_adherence_error_p90_crisis_timing": "condition_adherence_crisis_timing_estimator",
+        "condition_adherence_error_crisis_severity": "condition_adherence_crisis_severity_estimator",
+        "condition_adherence_error_p90_crisis_severity": "condition_adherence_crisis_severity_estimator",
+        # One shared key for all eight off-support names -- a single estimator family
+        # parameterized by level, the same shape variance_ratio_estimator covers four
+        # horizons with.
+        "off_support_adherence_at_typical": "off_support_estimator",
+        "off_support_adherence_at_p95": "off_support_estimator",
+        "off_support_adherence_at_p99": "off_support_estimator",
+        "off_support_adherence_at_beyond": "off_support_estimator",
+        "off_support_pass_rate_at_typical": "off_support_estimator",
+        "off_support_pass_rate_at_p95": "off_support_estimator",
+        "off_support_pass_rate_at_p99": "off_support_estimator",
+        "off_support_pass_rate_at_beyond": "off_support_estimator",
     }
 )
 

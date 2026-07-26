@@ -1814,6 +1814,30 @@ PANEL_STATS: dict[str, RegisteredPanelStat] = {
     "money_pump_violations": RegisteredPanelStat(tier="economic"),
     "floor_violations": RegisteredPanelStat(tier="economic"),
     "policy_anchor_deviation": RegisteredPanelStat(tier="economic"),
+    # WP2.2 Task 6 -- ah.eval.metrics.conditional's condition-adherence + off-support
+    # metrics. No `fn`/band for the identical reason the economics/memorization/utility
+    # entries above have none: every one of these compares a FRESHLY REGENERATED
+    # ensemble against a WorldSpec's STATED target (or a distance-from-support sweep of
+    # one), never a single-argument historical point estimate. Tier "monthly" per the
+    # brief's own instruction (DN-1.1 Sec.II.6 names no "conditional" row). Reported
+    # only (severity: report in pre-registration.yaml) -- STEP2-GENERATOR-PLAN
+    # Sec.WP2.3's sealed decision rule states conditional-tier results are non-gating.
+    "condition_adherence_error_inflation": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_p90_inflation": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_rate": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_p90_rate": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_crisis_timing": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_p90_crisis_timing": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_crisis_severity": RegisteredPanelStat(tier="monthly"),
+    "condition_adherence_error_p90_crisis_severity": RegisteredPanelStat(tier="monthly"),
+    "off_support_adherence_at_typical": RegisteredPanelStat(tier="monthly"),
+    "off_support_adherence_at_p95": RegisteredPanelStat(tier="monthly"),
+    "off_support_adherence_at_p99": RegisteredPanelStat(tier="monthly"),
+    "off_support_adherence_at_beyond": RegisteredPanelStat(tier="monthly"),
+    "off_support_pass_rate_at_typical": RegisteredPanelStat(tier="monthly"),
+    "off_support_pass_rate_at_p95": RegisteredPanelStat(tier="monthly"),
+    "off_support_pass_rate_at_p99": RegisteredPanelStat(tier="monthly"),
+    "off_support_pass_rate_at_beyond": RegisteredPanelStat(tier="monthly"),
 }
 
 

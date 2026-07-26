@@ -1176,6 +1176,7 @@ def test_every_real_threshold_key_is_produced_by_a_registered_metric() -> None:
     well-formed and still be inert.
     """
     from ah.eval.metrics.calibration import build_calibration_suite
+    from ah.eval.metrics.conditional import build_conditional_suite
     from ah.eval.metrics.economics import build_economics_suite
     from ah.eval.metrics.horizon import build_horizon_suite
     from ah.eval.metrics.memorization import build_memorization_suite
@@ -1196,16 +1197,19 @@ def test_every_real_threshold_key_is_produced_by_a_registered_metric() -> None:
     )
     # `thresholds.panel`/`.blocks`/`.cross_blocks` carry entries judged by every
     # reference-dependent suite, not only monthly.py's -- `produced` must be the union
-    # of ALL SEVEN wired suites' own names (WP2.2 Task 5 fix pass, Minor: an earlier
+    # of ALL EIGHT wired suites' own names (WP2.2 Task 5 fix pass, Minor: an earlier
     # version of this test unioned only monthly/memorization/economics/calibration --
     # four of seven -- so a real threshold judged by horizon.py, tails.py or utility.py
     # alone would have read as "inert" here purely because those three builders were
     # never called, the exact failure mode this test exists to catch, just missed for
-    # its own three suites. horizon.py/tails.py/utility.py's builders are safe to call
-    # against this bare, empty-history `reference` -- none of them eagerly reads
-    # `historical_series` in a way that raises when it is empty (build_tails_suite's
-    # `_HistoricalCache.returns` returns `None`, not an error, when a strategy's legs
-    # have no historical series at all).
+    # its own three suites; WP2.2 Task 6 adds conditional.py as the eighth). horizon.py/
+    # tails.py/utility.py's builders are safe to call against this bare, empty-history
+    # `reference` -- none of them eagerly reads `historical_series` in a way that raises
+    # when it is empty (build_tails_suite's `_HistoricalCache.returns` returns `None`,
+    # not an error, when a strategy's legs have no historical series at all).
+    # conditional.py's builder is likewise safe here: it never reads `reference` for
+    # Part A, and Part B's `historical_series.get(...)` on an empty mapping returns
+    # `None` (its own support-distribution NaN path), not an error.
     produced = (
         {s.name for s in build_monthly_suite(manifest, reference)}
         | {s.name for s in build_horizon_suite(manifest, reference)}
@@ -1214,6 +1218,7 @@ def test_every_real_threshold_key_is_produced_by_a_registered_metric() -> None:
         | {s.name for s in build_memorization_suite(manifest, reference)}
         | {s.name for s in build_economics_suite(manifest, reference)}
         | {s.name for s in build_calibration_suite(manifest, reference)}
+        | {s.name for s in build_conditional_suite(manifest, reference)}
     )
 
     loaded = prereg.load()

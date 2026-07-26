@@ -286,6 +286,7 @@ __all__ = [
     "TAYLOR_R_STAR",
     "TIER",
     "build_economics_suite",
+    "cpi_yoy_from_level",
     "register_economics_suite",
 ]
 
@@ -408,10 +409,18 @@ def _floor_violations_metric() -> MetricFn:
 # --------------------------------------------------------------------------- #
 
 
-def _cpi_yoy(cpi_level: np.ndarray) -> np.ndarray:
+def cpi_yoy_from_level(cpi_level: np.ndarray) -> np.ndarray:
     """Trailing 12-month percent change, per path -- ``cpi_level`` is ``(n_paths,
     months)``; the result is ``(n_paths, months - 12)``, aligned to months
-    ``12..months-1`` (matching :func:`ah.data.derive.yoy`'s convention)."""
+    ``12..months-1`` (matching :func:`ah.data.derive.yoy`'s convention).
+
+    Public (not ``_cpi_yoy``, WP2.2 Task 6): :mod:`ah.eval.metrics.conditional`'s
+    ``inflation`` condition-adherence check needs the identical trailing-12-month
+    YoY transform this module already defines for :func:`_policy_anchor_deviation_metric`
+    -- reused directly rather than re-derived, per this work package's standing rule
+    that two independent definitions of one quantity is a defect class, not a style
+    choice (it has already cost WP2.2 a sign-inverted tail target once).
+    """
     if cpi_level.shape[1] <= 12:
         return np.empty((cpi_level.shape[0], 0), dtype=np.float64)
     return (cpi_level[:, 12:] / cpi_level[:, :-12] - 1.0) * 100.0
@@ -421,7 +430,7 @@ def _policy_anchor_deviation_metric() -> MetricFn:
     def fn(ensemble: Ensemble) -> float:
         if "policy_rate" not in ensemble.factor_names or "cpi" not in ensemble.factor_names:
             return float("nan")
-        cpi_yoy = _cpi_yoy(ensemble.factor("cpi").astype(np.float64))
+        cpi_yoy = cpi_yoy_from_level(ensemble.factor("cpi").astype(np.float64))
         if cpi_yoy.shape[1] == 0:
             return float("nan")
         anchor = TAYLOR_R_STAR + TAYLOR_PI_TARGET + TAYLOR_PHI_PI * (cpi_yoy - TAYLOR_PI_TARGET)

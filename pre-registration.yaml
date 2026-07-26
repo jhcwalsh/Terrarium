@@ -1331,6 +1331,86 @@ conventions:
     deterministic anchor-follower FAILS the low side. NaN if policy_rate or cpi is
     absent, if fewer than 12 months are available at all, if fewer than 60 pooled
     observations result, or on any non-finite observation.
+  condition_adherence_inflation_estimator: >-
+    WP2.2 Task 6. abs(mean(trailing-12m YoY CPI inflation) - factor_conditions.
+    inflation.average_pct), per path, percentage points. The YoY transform is
+    ah.eval.metrics.economics.cpi_yoy_from_level (the SAME function
+    policy_anchor_deviation_estimator already uses), applied to the ensemble's cpi
+    level and averaged over the whole path (months 12..end). condition_adherence_
+    error_inflation is the POOLED MEAN of this per-path array across every path of
+    every checked-in fixtures/worlds/conditional/*.json world tagged
+    extensions.x_condition_type="inflation"; condition_adherence_error_p90_inflation
+    is the pooled 90th percentile of the identical array. Lower is better without a
+    two-sided floor (unlike policy_anchor_deviation_estimator): the WorldSpec
+    EXPLICITLY asked for this exact number, so an exact hit is the correct answer, not
+    a degenerate one. NaN (poisoning the WHOLE pooled metric, not dropping silently)
+    if the ensemble's own generator_id has no registered generator, the generator
+    raises, cpi is absent from a regenerated world's ensemble, or fewer than
+    CONDITIONAL_MIN_OBS=20 pooled per-path observations result.
+  condition_adherence_rate_estimator: >-
+    WP2.2 Task 6. The mean of abs(realized_start - start_pct) and
+    abs(realized_end - end_pct), per path, percentage points, over whichever of
+    factor_conditions.policy_rate.{start_pct,end_pct} the world specifies (both, in
+    every checked-in fixture) -- realized_start/realized_end are the path's own
+    first-month/last-month policy_rate level. Pooled mean/p90 exactly as
+    condition_adherence_inflation_estimator, across every world tagged
+    extensions.x_condition_type="rate". Same NaN/poisoning rules (unresolvable
+    generator, policy_rate absent, fewer than 20 pooled observations).
+  condition_adherence_crisis_timing_estimator: >-
+    WP2.2 Task 6. abs(quarter_of_worst_equity_shock - target_quarter), per path, in
+    quarters. quarter_of_worst_equity_shock is the index (0-based, in quarters) of the
+    non-overlapping 3-month block of equity_mkt with the most negative cumulative sum
+    over the whole path (ah.eval.reference.nonoverlapping_sums, horizon_months=3,
+    reused -- not a second windowing scheme); target_quarter is factor_conditions.
+    crisis_windows[0].start_quarter + length_quarters/2 (the window's own midpoint).
+    Pooled mean/p90 across every world tagged extensions.x_condition_type=
+    "crisis_timing". Same NaN/poisoning rules as condition_adherence_inflation_
+    estimator, substituting equity_mkt for cpi.
+  condition_adherence_crisis_severity_estimator: >-
+    WP2.2 Task 6. abs(realized_worst_quarterly_shock_pct - target_shock_pct), per
+    path, percentage points. realized_worst_quarterly_shock_pct = max(0, -min(non-
+    overlapping 3-month equity_mkt sums over the whole path)) * 100 -- the magnitude of
+    the path's GLOBAL worst quarterly shock, deliberately NOT restricted to the
+    specified crisis window (condition_adherence_error_crisis_timing already measures
+    placement; conflating the two would double-count a timing miss as a severity
+    failure too). target_shock_pct = factor_conditions.crisis_windows[0].severity *
+    CRISIS_SEVERITY_REFERENCE_QUARTERLY_SHOCK_PCT (22.0) -- a STATED, SIMPLIFIED linear
+    mapping: Q4 2008 S&P 500 total return was approximately -21.9% (rounded to 22.0),
+    the historical event the WorldSpec schema's own crisis_windows.severity
+    description names as the severity=1.0 anchor ("1 = 2008-scale"); no generator-
+    visible quantity gives severity a formula of its own, the identical shape of
+    substitution TAYLOR_PI_TARGET makes for policy_anchor_deviation_estimator. Pooled
+    mean/p90 across every world tagged extensions.x_condition_type="crisis_severity".
+    Same NaN/poisoning rules, substituting equity_mkt for cpi.
+  off_support_estimator: >-
+    WP2.2 Task 6, Part B. Sweeps exactly the "inflation" and "rate" condition types
+    (see conditional.py's module docstring for why crisis_timing/crisis_severity are
+    excluded -- no real-valued historical distance under this simple definition;
+    WP2.7's support.py, Mahalanobis distance on encoder features, supersedes this
+    placeholder for every condition type once encoder features exist). DISTANCE FROM
+    SUPPORT: for a swept target v against a reference quantity X (trailing-12m YoY CPI
+    inflation for "inflation"; the raw policy_rate level for "rate" -- both read from
+    ReferenceStats.historical_series, train+validation only, never a fresh catalog
+    read), distance(v) = abs(v - mean(X)) / std(X), an ordinary z-score. Four swept
+    levels, each a STATED z-score constructing the actual target as mean(X) +
+    z*std(X), clipped to the WorldSpec schema's own valid range for that field:
+    typical (z=0.0, the historical mean itself), p95/p99 (the standard-normal
+    95th/99th-percentile z-scores 1.6448536269514722 / 2.3263478740408408 -- a
+    Gaussian PROXY for "that far from the mean", not history's own empirical
+    percentile), beyond (z=4.0, a stated counterfactual extreme). off_support_
+    adherence_at_{level} is the pooled MEAN of condition_adherence_inflation_
+    estimator's and condition_adherence_rate_estimator's own per-path error
+    definitions (both percentage points, so directly poolable), evaluated at that
+    level's swept target, across BOTH swept types. off_support_pass_rate_at_{level} is
+    the fraction of the IDENTICAL pooled per-path error array at or below
+    OFF_SUPPORT_PASS_TOLERANCE_PCT=2.0 percentage points (a stated, round tolerance in
+    the shared unit). "Battery" here names this suite's OWN pooled checks across the
+    two swept types at a level, NOT the full cross-suite validation battery -- see
+    conditional.py's module docstring. Same NaN/poisoning rules as the four
+    condition_adherence_*_estimator blocks above (unresolvable generator, absent
+    factor, fewer than 20 pooled observations); additionally NaN if reference.
+    historical_series lacks cpi/policy_rate train+validation data to compute a support
+    mean/std from at all.
 
 # --------------------------------------------------------------------------- #
 # Derived series -- declared BEFORE d4_strategies, because strategies reference them.
@@ -1705,6 +1785,26 @@ thresholds:
     "nn_distance_p50": {min: 0.1, max: null, severity: report}
     "membership_inference_auc": {min: null, max: 0.75, severity: report}
     "near_duplicate_fraction": {min: null, max: 0.05, severity: report}
+    # WP2.2 Task 6. ALL "report" -- STEP2-GENERATOR-PLAN Sec.WP2.3's sealed decision
+    # rule states conditional-tier results are reported alongside G2 but do not gate
+    # promotion. PROVISIONAL placeholders (not derived from a real run), same as every
+    # other entry in this section.
+    "condition_adherence_error_inflation": {min: null, max: 5.0, severity: report}
+    "condition_adherence_error_p90_inflation": {min: null, max: 10.0, severity: report}
+    "condition_adherence_error_rate": {min: null, max: 3.0, severity: report}
+    "condition_adherence_error_p90_rate": {min: null, max: 6.0, severity: report}
+    "condition_adherence_error_crisis_timing": {min: null, max: 4.0, severity: report}
+    "condition_adherence_error_p90_crisis_timing": {min: null, max: 8.0, severity: report}
+    "condition_adherence_error_crisis_severity": {min: null, max: 10.0, severity: report}
+    "condition_adherence_error_p90_crisis_severity": {min: null, max: 20.0, severity: report}
+    "off_support_adherence_at_typical": {min: null, max: 3.0, severity: report}
+    "off_support_adherence_at_p95": {min: null, max: 5.0, severity: report}
+    "off_support_adherence_at_p99": {min: null, max: 8.0, severity: report}
+    "off_support_adherence_at_beyond": {min: null, max: 15.0, severity: report}
+    "off_support_pass_rate_at_typical": {min: 0.5, max: null, severity: report}
+    "off_support_pass_rate_at_p95": {min: 0.3, max: null, severity: report}
+    "off_support_pass_rate_at_p99": {min: 0.1, max: null, severity: report}
+    "off_support_pass_rate_at_beyond": {min: 0.0, max: null, severity: report}
   # WP2.2 Task 4 -- thresholds.strategies, key "<strategy_id>.<stat>", stat in
   # ah.eval.reference.STRATEGY_STATS (see that module and ah.eval.prereg
   # ._check_strategy_threshold_key). PROVISIONAL placeholders, same as every other

@@ -167,15 +167,14 @@ class MetricResult:
 # this via register_suite(); run_battery() iterates it generically (sorted by suite
 # name, for a deterministic report independent of import order).
 #
-# TODO(WP2.2 Task 6): `monthly`, `horizon`, `tails`, `utility`, `memorization`,
-# `economics` and `calibration` are WIRED here (registered in
-# _REFERENCE_DEPENDENT_SUITE_BUILDERS; WP2.2 Task 4 added `tails`/`utility` -- see
+# All eight WP2.2 metric suites (`monthly`, `horizon`, `tails`, `utility`,
+# `memorization`, `economics`, `conditional`, `calibration`) are WIRED here, registered
+# in `_REFERENCE_DEPENDENT_SUITE_BUILDERS` (WP2.2 Task 4 added `tails`/`utility` -- see
 # `tails.py`'s `d4_tail_table`/backtests, consumed through `build_tails_suite`, not
-# called directly -- and Task 5 added `memorization`/`economics`/`calibration`).
-# `conditional` remains unwired and must be added to this table (or register itself)
-# when it lands, or it will be written, tested, and then never run. Tracked as
-# governance/retrofit-register.md RFR-13; the verdict a partial battery produces is a
-# partial verdict and WP2.3 must not read it as a full one.
+# called directly; Task 5 added `memorization`/`economics`/`calibration`; Task 6 added
+# `conditional`). Tracked as governance/retrofit-register.md RFR-13: a suite written and
+# tested but never added to this table would be a partial battery WP2.3 must not read
+# as a full one -- closed for all eight as of Task 6.
 SUITES: dict[str, tuple[MetricSpec, ...]] = {}
 
 
@@ -734,6 +733,8 @@ _REFERENCE_DEPENDENT_SUITE_BUILDERS: dict[str, tuple[str, str]] = {
     "memorization": ("ah.eval.metrics.memorization", "build_memorization_suite"),
     "economics": ("ah.eval.metrics.economics", "build_economics_suite"),
     "calibration": ("ah.eval.metrics.calibration", "build_calibration_suite"),
+    # WP2.2 Task 6.
+    "conditional": ("ah.eval.metrics.conditional", "build_conditional_suite"),
 }
 
 

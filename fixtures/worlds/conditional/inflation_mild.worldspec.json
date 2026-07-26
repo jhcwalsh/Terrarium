@@ -1,0 +1,41 @@
+{
+  "spec_version": "1.0.0",
+  "world_id": "conditional-inflation-mild-v1",
+  "status": "validated",
+
+  "provenance": {
+    "created_at": "2026-07-24T00:00:00Z",
+    "author": "sso:wp22-task6",
+    "source": { "kind": "manual" }
+  },
+
+  "narrative": {
+    "language": "en",
+    "title": "Mild inflation adherence probe",
+    "tagline": "A quiet decade near target",
+    "summary": "A minimal authored world whose only purpose is to probe condition adherence: inflation runs mildly above the historical average and nothing else is stressed.",
+    "lesson": "Not a scenario for a user -- a WP2.2 Task 6 battery fixture exercising the inflation condition type at a mild intensity.",
+    "dispatches": [
+      { "date": "2027", "headline": "Inflation prints a touch above target", "detail": "Nothing else in this world is stressed." },
+      { "date": "2030", "headline": "Prices stay mildly elevated", "detail": "No crisis, no rate shock." },
+      { "date": "2033", "headline": "The decade closes uneventfully", "detail": "A control case for the adherence suite." }
+    ]
+  },
+
+  "horizon": { "start": "2027-Q1", "quarters": 40 },
+
+  "regimes": { "mode": "unconditional" },
+
+  "factor_conditions": {
+    "inflation": { "average_pct": 3.0 }
+  },
+
+  "structural": { "parameter_vintage": "historical_average" },
+
+  "engine_defaults": {
+    "generator_id": "bootstrap-stratified",
+    "n_paths": 1000
+  },
+
+  "extensions": { "x_condition_type": "inflation", "x_intensity": "mild" }
+}

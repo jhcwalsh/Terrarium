@@ -1,0 +1,43 @@
+{
+  "spec_version": "1.0.0",
+  "world_id": "conditional-crisis-timing-late-v1",
+  "status": "validated",
+
+  "provenance": {
+    "created_at": "2026-07-24T00:00:00Z",
+    "author": "sso:wp22-task6",
+    "source": { "kind": "manual" }
+  },
+
+  "narrative": {
+    "language": "en",
+    "title": "Late crisis-timing adherence probe",
+    "tagline": "A shock near the end",
+    "summary": "A minimal authored world whose only purpose is to probe condition adherence: a single crisis window is placed late in the horizon and nothing else is stressed.",
+    "lesson": "Not a scenario for a user -- a WP2.2 Task 6 battery fixture exercising the crisis_timing condition type placed late.",
+    "dispatches": [
+      { "date": "2027", "headline": "The first years are uneventful", "detail": "Only the placement is being probed here." },
+      { "date": "2034", "headline": "A shock hits late in the horizon", "detail": "The crisis window opens at quarter 30." },
+      { "date": "2035", "headline": "The window closes after four quarters", "detail": "The same moderate, stated severity as the early pair." }
+    ]
+  },
+
+  "horizon": { "start": "2027-Q1", "quarters": 40 },
+
+  "regimes": { "mode": "unconditional" },
+
+  "factor_conditions": {
+    "crisis_windows": [
+      { "start_quarter": 30, "length_quarters": 4, "severity": 0.3 }
+    ]
+  },
+
+  "structural": { "parameter_vintage": "historical_average" },
+
+  "engine_defaults": {
+    "generator_id": "bootstrap-stratified",
+    "n_paths": 1000
+  },
+
+  "extensions": { "x_condition_type": "crisis_timing", "x_intensity": "late" }
+}

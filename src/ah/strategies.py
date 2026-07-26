@@ -219,6 +219,14 @@ _CONVENTIONS_KEYS = frozenset(
         "money_pump_estimator",
         "floor_violations_estimator",
         "policy_anchor_deviation_estimator",
+        # WP2.2 Task 6: conditional.py's estimators. Same reasoning as every block
+        # above -- prose-only to this module, but must be ALLOWED here or the whole
+        # pre-registration fails to load.
+        "condition_adherence_inflation_estimator",
+        "condition_adherence_rate_estimator",
+        "condition_adherence_crisis_timing_estimator",
+        "condition_adherence_crisis_severity_estimator",
+        "off_support_estimator",
     }
 )
 

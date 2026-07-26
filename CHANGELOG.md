@@ -1186,6 +1186,73 @@ All notable changes to this project are documented here. The project follows
     tier for a 60-month horizon), reconsidered and corrected before the pre-registration
     seal rather than carried forward as a known-wrong assignment.
   - Full suite green, ruff/pyright clean.
+- **WP2.2 Task 6 — `eval/metrics/conditional.py`, condition adherence + off-support
+  degradation.** The last WP2.2 suite, and the only one whose metrics REGENERATE
+  ensembles rather than reading the judged one: every metric resolves
+  `ensemble.meta.generator_id` via `ah.gen.registry.resolve` and calls that SAME
+  generator's `.sample(world, n_paths, seed)` fresh, once per authored/swept
+  `NumericWorld` — "the bootstrap runs this suite too" is meaningful because the
+  generator under test is re-invoked against conditions it may never have seen, not
+  read off a stashed unconditional ensemble. Registered tier `monthly` (DN-1.1 names no
+  "conditional" row); every threshold sealed `report`, never `enforce` — nothing here
+  gates G2 (STEP2-GENERATOR-PLAN §WP2.3's own sealed rationale).
+  - *Part A — condition adherence.* Four condition types mapped to
+    `factor_conditions` (`inflation.average_pct`, `policy_rate.{start_pct,end_pct}`,
+    `crisis_windows[0].{start_quarter,length_quarters}`,
+    `crisis_windows[0].severity`), each backed by two checked-in authored worlds
+    (mild/severe) under new `fixtures/worlds/conditional/*.json` (validated against the
+    schema by both production code and a dedicated test). Two metrics per type —
+    `condition_adherence_error_{type}` (pooled mean of every per-path error, across
+    every path of every world of that type) and `condition_adherence_error_p90_{type}`
+    (the pooled 90th percentile of the identical array), so a generator "usually right,
+    occasionally wildly wrong" cannot hide behind a mean. `crisis_severity`'s target
+    magnitude uses a stated, simplified linear map from the schema's own "1 =
+    2008-scale" anchor (Q4 2008 S&P 500 TR ≈ -21.9%, `CRISIS_SEVERITY_REFERENCE_
+    QUARTERLY_SHOCK_PCT = 22.0`) — the identical kind of substitution
+    `economics.py`'s `TAYLOR_*` constants make, for the identical reason.
+  - *Part B — off-support degradation.* Swept over `inflation`/`rate` only (the two
+    condition types with a real train+validation quantity to define "distance from
+    support" against — `crisis_timing`/`crisis_severity` have no real-valued analog
+    under this simple definition; **WP2.7's `support.py` supersedes this placeholder
+    for every condition type**). Distance is an ordinary z-score against
+    `ReferenceStats.historical_series`; four levels (`typical` z=0, `p95`/`p99` the
+    standard-normal quantiles, `beyond` z=4) construct the swept target
+    `mean+z*std`, clipped to the schema's bounds. `off_support_adherence_at_{level}`
+    (pooled mean error) and `off_support_pass_rate_at_{level}` (fraction within a
+    stated 2pp tolerance) — "battery" here names this suite's own pooled checks, not
+    the full cross-suite battery (that is WP2.9/WP2.11's severe-test-shaped
+    evaluation).
+  - *Anti-gaming, this work package's dominant failure mode, addressed from the
+    start rather than by a fix pass.* Every pooled metric NaNs the WHOLE aggregate
+    (never drops silently to a smaller surviving sample) on any single world's
+    unresolvable `generator_id`, a generator exception during `.sample()`, an absent
+    conditioned factor, or a non-finite value — `CONDITIONAL_MIN_OBS=20` is an
+    additional floor. Tests prove both directions per condition type (a hand-built
+    exact-tracking generator scores ~0; one mirroring WP2.2b's NC5 — ignores
+    `factor_conditions` entirely — scores clearly worse), the p90-catches-a-tail case
+    (88%-exact/12%-wildly-off generator: mean stays small, p90 does not), monotonic
+    off-support degradation and a typical-vs-beyond pass-rate gap (both against a
+    generator whose fidelity is a stated, known function of distance), and that
+    omitting the conditioned factor NaNs rather than reading as a smaller error than a
+    generator that emits it and adheres badly.
+  - *Registration.* 16 names in `ah.eval.reference.PANEL_STATS` (no `fn`/band, the
+    `economics`/`memorization`/`utility` shape — every metric compares a freshly
+    generated ensemble to a WorldSpec's stated target, never a single-argument
+    historical point estimate); `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS["conditional"]`
+    (a test asserts a real `run_full_battery` call returns all 16 by name, confirmed to
+    fail before the row was added); five new `conventions.<x>_estimator` blocks in
+    `pre-registration.yaml` (one per condition type covering its mean/p90 pair, one
+    shared across all eight off-support names), plus their five keys added to
+    `ah.strategies._CONVENTIONS_KEYS`'s allow-list (missed the first pass — the sealed
+    document otherwise fails to load at all). `ah.eval.metrics.economics._cpi_yoy`
+    renamed to public `cpi_yoy_from_level` so `conditional.py` reuses the identical
+    trailing-12m YoY transform rather than restating it.
+  - *`mc_error` is honestly `0.0`, not NaN, for every metric here* — every metric
+    ignores the passed ensemble's own paths (only `generator_id`/`seed` carry into the
+    regeneration), so `ah.eval.battery.mc_error`'s subsampling recomputes the identical
+    value on every subsample by construction. Stated in the module docstring and pinned
+    by a test rather than left to be discovered.
+  - Full suite green, ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

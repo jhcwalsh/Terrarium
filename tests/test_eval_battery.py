@@ -1143,6 +1143,68 @@ def test_run_full_battery_returns_memorization_economics_calibration_metrics_by_
     assert calibration_results["pit_ks_stat_1y"].tier == "monthly"
 
 
+def test_run_full_battery_returns_conditional_metrics_by_name() -> None:
+    """WP2.2 Task 6: `conditional` must be wired the identical way Tasks 3-5 wired
+    `horizon`/`tails`/`utility`/`memorization`/`economics`/`calibration` -- the direct
+    analogue of the assertions above, and fails identically to how it would fail if
+    Task 6's suite were written, tested, and never registered (RFR-13).
+
+    This assertion FAILED before `conditional` was added to
+    `ah.eval.battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` (`report.results` carried no
+    `suite == "conditional"` rows at all -- `KeyError`/empty-set, not a passing
+    assertion).
+
+    Every value is honestly NaN here: `_orchestration_ensemble()`'s
+    `generator_id="orchestration-test"` has no registered factory in `ah.gen.registry`
+    (no generator is registered in production until WP2.4), so
+    `ah.eval.metrics.conditional._regenerate` cannot resolve it and every metric NaNs
+    by design -- see that module's docstring's "Platform-gap consequence, stated
+    plainly". `tests/test_conditional.py` proves the suite computes real, finite,
+    discriminating values once a generator IS registered.
+    """
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    conditional_results = {r.name: r for r in report.results if r.suite == "conditional"}
+    assert conditional_results, "run_full_battery must register and run the conditional suite"
+    assert {
+        "condition_adherence_error_inflation",
+        "condition_adherence_error_p90_inflation",
+        "condition_adherence_error_rate",
+        "condition_adherence_error_p90_rate",
+        "condition_adherence_error_crisis_timing",
+        "condition_adherence_error_p90_crisis_timing",
+        "condition_adherence_error_crisis_severity",
+        "condition_adherence_error_p90_crisis_severity",
+        "off_support_adherence_at_typical",
+        "off_support_adherence_at_p95",
+        "off_support_adherence_at_p99",
+        "off_support_adherence_at_beyond",
+        "off_support_pass_rate_at_typical",
+        "off_support_pass_rate_at_p95",
+        "off_support_pass_rate_at_p99",
+        "off_support_pass_rate_at_beyond",
+    } == set(conditional_results)
+    for r in conditional_results.values():
+        assert r.tier == "monthly"
+        assert r.suite == "conditional"
+        # "orchestration-test" has no registered generator -- a platform gap, not a
+        # generator-quality signal (see the module docstring).
+        assert np.isnan(r.value), (r.name, r.value)
+        assert r.severity == "report", (r.name, r.severity)
+
+
 def test_run_full_battery_orchestration_fixture_fails_on_the_money_pump_and_floor_gates() -> None:
     """Important 7 (WP2.2 Task 5 fix pass): the orchestration fixture's factors are
     synthetic g1/u1, not the real D4 legs -- it emits NONE of
