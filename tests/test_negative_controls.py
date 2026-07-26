@@ -161,14 +161,13 @@ _SEED = 4242
 def _isolate_globals() -> Iterator[None]:
     """Snapshot/restore both process-global tables this module writes through."""
     suites = dict(battery_mod.SUITES)
-    registry = dict(gen_registry._REGISTRY)
+    registry = gen_registry.snapshot()
     try:
         yield
     finally:
         battery_mod.SUITES.clear()
         battery_mod.SUITES.update(suites)
-        gen_registry._REGISTRY.clear()
-        gen_registry._REGISTRY.update(registry)
+        gen_registry.restore(registry)
 
 
 @pytest.fixture(scope="module")
@@ -263,14 +262,40 @@ def test_battery_verdict_is_bit_identical_for_the_same_seed(
     4 concurrent processes, 4 concurrent runs of this module, and 2 concurrent full
     suites. Since the fitted panel, the reference, and all five ensembles are separately
     proven bit-identical (the three tests above), any difference must be a metric landing
-    on the far side of a bound it was already sitting on. The leading hypothesis is
-    last-bit variation in a threaded BLAS reduction (numpy here is scipy-openblas 0.3.33,
-    ``DYNAMIC_ARCH``, ``MAX_THREADS=24``, ``NO_AFFINITY``, whose GEMM partitioning is
-    thread-count dependent) reaching one of the few metrics that route through
-    ``np.corrcoef`` or a large matmul. The assertion is deliberately kept exact rather
-    than given a tolerance: a real determinism regression moves a value by O(1), not by
-    an ULP, and a tolerance would hide it. If this fails again, the dict diff names the
-    control, tier, suite and failure list that moved -- start there."""
+    on the far side of a bound it was already sitting on.
+
+    **Cause: unexplained. A previously-stated leading hypothesis is FALSIFIED and is
+    recorded here as a ruled-out cause, not a live one.** Threaded-OpenBLAS last-bit
+    variation (numpy here is scipy-openblas 0.3.33, ``DYNAMIC_ARCH``, ``MAX_THREADS=24``,
+    ``NO_AFFINITY``) was the original leading hypothesis; it does not survive a direct
+    check. The SHA-256 digest over all 4340 ``(control, metric, value)`` triples this
+    suite produces is bit-identical with ``OPENBLAS_NUM_THREADS``/``OMP_NUM_THREADS`` set
+    to 1, to 8, and left at their process default -- and OpenBLAS fixes its thread count
+    once, at library init from the core count, not per-call from instantaneous load, so
+    a same-machine, same-process run cannot see it vary mid-run regardless.
+
+    **What IS established, and is sufficient on its own to explain an occasional
+    flip.** Of the 3035 (value, band) comparisons in one run that have a finite value
+    AND a fully finite band, 148 sit at EXACTLY zero distance from their own band edge
+    (``value == band.lo`` or ``value == band.hi``) -- passing today only because the
+    band's bracket is closed (``lo <= value <= hi``) -- and are therefore one ULP of
+    perturbation, in either direction, away from flipping which side of the bound they
+    land on. 33 of those 148 rest on a fully degenerate ``[0.0, 0.0]`` band (7 distinct
+    metric names, all ``tail_dependence_{lower,upper}`` pairs whose historical
+    block-bootstrap replicates never once produced a joint exceedance -- e.g.
+    ``hy_spread~ust_2y.tail_dependence_upper``: value ``0.0``, band ``[0.0, 0.0]``). A
+    verdict change on a knife-edge comparison is therefore structurally GUARANTEED to be
+    visible under any nonzero perturbation of any size, which does not by itself require
+    identifying WHERE such a perturbation would come from (thread scheduling in a
+    non-BLAS reduction, allocator-dependent summation order, or something else) to
+    explain why this assertion is fragile in principle. See
+    ``test_finding_the_battery_has_knife_edge_band_comparisons`` below, which pins the
+    148/3035 and 33/148 counts directly, and ``governance/retrofit-register.md``.
+
+    The assertion above is deliberately kept exact rather than given a tolerance: a real
+    determinism regression moves a value by O(1), not by an ULP, and a tolerance would
+    hide it. If this fails again, the dict diff names the control, tier, suite and
+    failure list that moved -- start there."""
     again = nc.run_negative_controls(
         access=_synthetic_access(),
         manifest=load_manifest(),
@@ -388,9 +413,15 @@ def test_nc4_is_caught_by_the_memorization_suite_at_its_stated_noise_level(
 
 
 def test_nc5_is_caught_by_the_conditional_suite(report: NegativeControlReport) -> None:
-    """NC5 is the unshifted bootstrap -- statistically the most defensible of the five
-    -- whose ONLY defect is that it ignores ``factor_conditions``. So a conditional
-    rejection here is unambiguously about conditioning."""
+    """NC5 is the unshifted bootstrap -- statistically the most defensible of the five.
+    It is rejected here with a real, large, quantified adherence error. **This is NOT,
+    on its own, evidence that the rejection is "about conditioning"** -- see
+    ``test_finding_the_conditional_tier_fires_for_every_control_not_specifically_nc5``
+    below: every one of the five controls ignores ``factor_conditions`` (none has any
+    conditioning mechanism at all -- see ``_Control.sample``'s docstring), and the tier
+    fires substantively for all five. The suite has no construction whose ONLY defect is
+    condition-ignoring, so this test establishes only that the tier rejects NC5, not that
+    it does so FOR the reason NC5 was designed to exercise."""
     outcome = report.outcome(NC5_CONDITION_IGNORING)
     conditional = outcome.suite_metrics("conditional")
     assert conditional, "the conditional suite produced no metrics for NC5"
@@ -400,6 +431,55 @@ def test_nc5_is_caught_by_the_conditional_suite(report: NegativeControlReport) -
     assert conditional["condition_adherence_error_crisis_timing"] > 4.0, conditional
     fired = set(outcome.designated_substantive_failures)
     assert fired, f"the conditional suite did not reject NC5: {conditional}"
+
+
+def test_finding_the_conditional_tier_fires_for_every_control_not_specifically_nc5(
+    report: NegativeControlReport,
+) -> None:
+    """**Fifth finding** (CRITICAL 2 of the WP2.2b Task 7 review). The previous test's
+    docstring used to claim a conditional-suite rejection of NC5 is "unambiguously about
+    conditioning" -- false on two counts: :meth:`_Control.sample`'s own docstring states
+    every control ignores ``factor_conditions``, and empirically the tier rejects all
+    five, not just NC5. NC1 (the iid Gaussian -- designated to the ``monthly`` tier, with
+    no connection to conditioning at all) fires on MOST of NC5's own designated
+    conditional metrics and is far WORSE than NC5 on the inflation-adherence metric,
+    which is the opposite of what "NC5's rejection is about conditioning" would predict
+    if conditioning specificity were actually being measured."""
+    nc5_fired = set(report.outcome(NC5_CONDITION_IGNORING).designated_substantive_failures)
+    assert nc5_fired, "NC5 must still be caught by the conditional tier"
+    for control_id in NEGATIVE_CONTROL_IDS:
+        outcome = report.outcome(control_id)
+        conditional_fired = {
+            name
+            for cell in outcome.cells
+            if cell.suite == "conditional"
+            for name in cell.substantive_failures
+        }
+        assert conditional_fired, (
+            f"the conditional tier produced no substantive rejection for {control_id}, "
+            f"which would contradict the finding that it fires for all five"
+        )
+
+    nc1_conditional = {
+        name
+        for cell in report.outcome(NC1_IID_GAUSSIAN).cells
+        if cell.suite == "conditional"
+        for name in cell.substantive_failures
+    }
+    # NC1 fires on the large majority of NC5's own designated conditional metrics --
+    # a control with zero relationship to conditioning is not being told apart from
+    # NC5 by this tier.
+    overlap = nc1_conditional & nc5_fired
+    assert len(overlap) >= len(nc5_fired) - 2, (overlap, nc5_fired)
+
+    nc1_conditional_values = report.outcome(NC1_IID_GAUSSIAN).suite_metrics("conditional")
+    nc5_conditional_values = report.outcome(NC5_CONDITION_IGNORING).suite_metrics("conditional")
+    # NC1 is WORSE than NC5 on the inflation-adherence error, not better -- the opposite
+    # of what "NC5's rejection is specifically about conditioning" would predict.
+    assert (
+        nc1_conditional_values["condition_adherence_error_inflation"]
+        > nc5_conditional_values["condition_adherence_error_inflation"]
+    ), (nc1_conditional_values, nc5_conditional_values)
 
 
 # --------------------------------------------------------------------------- #
@@ -462,27 +542,67 @@ def test_finding_nc3s_drift_would_be_rejected_by_bands_that_are_never_consulted(
     assert not (std_band.lo <= _std(values) <= std_band.hi), (_std(values), std_band)
 
 
-def test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap(
-    report: NegativeControlReport,
-) -> None:
+def test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap() -> None:
     """The sharpest form of the primary finding, and the reason it matters.
 
     NC5 is NC3's construction with the distortion switched off -- the two differ ONLY by
-    a +0.5 sigma mean shift and a 1.5x volatility multiplier on every factor. In the
-    monthly tier's own designated cell, NC3 (distorted) produces *no more* band failures
-    than NC5 (undistorted): the distortion adds two long-lag ACF rejections and removes
-    three others. The tier's answer to "did this generator's location and scale drift"
-    is therefore indistinguishable from noise, because nothing in the tier measures
-    location or scale at all."""
-    nc3_cell = report.outcome(NC3_SHIFTED_BOOTSTRAP).cell("monthly", "monthly")
-    nc5_cell = report.outcome(NC5_CONDITION_IGNORING).cell("monthly", "monthly")
+    a +0.5 sigma mean shift and a 1.5x volatility multiplier on every factor
+    (:class:`~ah.eval.negative_controls.ConditionIgnoringControl` IS
+    :class:`~ah.eval.negative_controls.ShiftedBootstrapControl` at neutral parameters).
+    This is deliberately a PAIRED comparison, sampling both controls at the SAME seed,
+    not the independently-seeded one this test formerly ran (NC3 at `seed+7919*2`, NC5
+    at `seed+7919*4`, from the shared `report` fixture). That mattered: the old
+    assertion (`len(nc3.band_failures) <= len(nc5.band_failures)`) held by a one-metric
+    margin (38 <= 39) between two ensembles whose only guaranteed relationship was "drawn
+    from the same panel" -- a different seed can and eventually would flip it, which
+    under this module's own convention ("when WP2.3 closes one of these, the test fails
+    loudly and is deleted") would misread as the finding being CLOSED when nothing
+    changed.
+
+    At a shared seed the two controls draw the identical moving-block indices, so NC3's
+    paths are a bit-exact affine transform of NC5's -- verified directly below, not
+    assumed -- and the monthly tier's designated cell must therefore reject both
+    identically or neither: any metric that fired for one and not the other would be
+    evidence about that metric's sensitivity to the shift, not sampling noise. It rejects
+    both identically. That is a STRONGER statement than the one this test used to make:
+    the monthly tier is not merely weak against this drift, it is PROVABLY invariant to
+    it, because nothing in the tier measures location or scale at all (Finding 1)."""
+    access = _synthetic_access()
+    manifest = load_manifest()
+    prereg = prereg_mod.load()
+    reference = nc.control_reference(
+        access, manifest, n_resamples=_N_RESAMPLES, months=_MONTHS, seed=_SEED
+    )
+    battery_mod.register_reference_dependent_suites(manifest, reference)
+    panel = nc.fit_historical_panel(reference)
+    controls = nc.build_negative_controls(reference)
+    nc3_ensemble = controls[NC3_SHIFTED_BOOTSTRAP].sample_months(_MONTHS, _N_PATHS, _SEED)
+    nc5_ensemble = controls[NC5_CONDITION_IGNORING].sample_months(_MONTHS, _N_PATHS, _SEED)
+
+    expected = (
+        panel.mean
+        + nc.NC3_VOL_MULTIPLIER * (nc5_ensemble.paths - panel.mean)
+        + nc.NC3_MEAN_SHIFT_SDS * panel.std
+    )
+    assert np.array_equal(nc3_ensemble.paths, expected), "NC3 is not an exact affine map of NC5"
+
+    with nc.negative_control_registry(reference):
+        nc3_report = battery_mod.run_battery(
+            nc3_ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
+        )
+        nc5_report = battery_mod.run_battery(
+            nc5_ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
+        )
+    nc3_cell = nc._build_outcome(NC3_SHIFTED_BOOTSTRAP, nc3_report, nc3_report.results).cell(
+        "monthly", "monthly"
+    )
+    nc5_cell = nc._build_outcome(NC5_CONDITION_IGNORING, nc5_report, nc5_report.results).cell(
+        "monthly", "monthly"
+    )
     assert nc3_cell is not None and nc5_cell is not None
-    added = set(nc3_cell.band_failures) - set(nc5_cell.band_failures)
-    # Not one of the metrics the distortion added measures location or scale.
-    assert not [m for m in added if m.endswith((".mean", ".std"))], added
-    assert len(nc3_cell.band_failures) <= len(nc5_cell.band_failures), (
-        len(nc3_cell.band_failures),
-        len(nc5_cell.band_failures),
+    assert set(nc3_cell.band_failures) == set(nc5_cell.band_failures), (
+        sorted(nc3_cell.band_failures),
+        sorted(nc5_cell.band_failures),
     )
 
 
@@ -525,18 +645,128 @@ def test_finding_a_plain_block_bootstrap_scores_worse_than_the_memorizer(
     assert bootstrap["nn_distance_p05"] < memorizer["nn_distance_p05"], (bootstrap, memorizer)
 
 
+class _GridSnappedMemorizerControl(nc.MemorizerControl):
+    """Test-only variant of :class:`~ah.eval.negative_controls.MemorizerControl` whose
+    replay start is snapped DOWN to the memorization suite's own 24-month block grid,
+    used only to isolate ``near_duplicate_fraction``'s sensitivity to block-phase
+    alignment from its sensitivity to actual copying (see the finding below). Not a
+    proposed fifth control -- it never leaves this test module."""
+
+    generator_id = "nc4-grid-snapped-test-only"
+
+    def _draw(self, months: int, n_paths: int, rng: np.random.Generator) -> np.ndarray:
+        train = self._panel.values[: self._panel.train_rows]
+        n_train = train.shape[0]
+        grid = nc.NC3_BLOCK_MONTHS  # the suite's own 24-month block length
+        max_start = max(1, n_train - months + 1)
+        raw_starts = rng.integers(0, max_start, size=n_paths)
+        starts = np.minimum((raw_starts // grid) * grid, max_start - 1)
+        offsets = np.arange(months) % n_train
+        idx = (starts[:, None] + offsets[None, :]) % n_train
+        replay = train[idx]
+        noise = rng.standard_normal(replay.shape) * (self._noise_fraction * self._panel.std)
+        return replay + noise
+
+
+def test_finding_near_duplicate_fraction_is_dominated_by_block_phase_not_copying(
+    report: NegativeControlReport,
+) -> None:
+    """**IMPORTANT 5 of the WP2.2b Task 7 review.** The report's original remedy
+    recommendation -- bound ``near_duplicate_fraction`` relative to a block-bootstrap
+    baseline (exactly what the test above pins) -- inherits a blindness the ordering
+    comparison alone does not reveal: the metric is dominated by whether the GENERATED
+    side's block boundaries happen to align with the suite's own fixed, index-0-anchored
+    24-month chopping, not by how much of the source a block actually reproduces.
+
+    Isolated by varying ONLY NC4's start-index distribution, holding everything else
+    fixed at the SAME seed NC4 itself uses (``seed + 7919 * 3``, its position in
+    :data:`~ah.eval.negative_controls.NEGATIVE_CONTROL_IDS`):
+
+    - as-built NC4 (noisy, uniformly-random start): 0.0654 (``report`` fixture, below).
+    - start snapped DOWN to the 24-month grid (:class:`_GridSnappedMemorizerControl`,
+      same noise level): 0.8875 -- an order of magnitude higher, from a phase change
+      alone, nothing about copying.
+    - ZERO noise, literal verbatim copy, uniformly-random (non-grid) start: 0.2423 --
+      statistically indistinguishable from the plain block bootstrap's own 0.2394
+      (``nc5-condition-ignoring``, ``report`` fixture) even though a verbatim copy is as
+      memorized as a block can possibly be.
+
+    **Consequence for the remedy**: a bound relative to a block-bootstrap baseline
+    compares two constructions that share the SAME fixed-grid blindness, so it would not
+    separate a literal copier from a resampler either. The suite would need to compare
+    the generated side against ALL offsets (sliding windows), not the fixed grid it
+    chops both sides on today. Not fixed here (``ah.eval.metrics.memorization`` is
+    untouched by this WP) -- see ``governance/retrofit-register.md``."""
+    access = _synthetic_access()
+    manifest = load_manifest()
+    prereg = prereg_mod.load()
+    reference = nc.control_reference(
+        access, manifest, n_resamples=_N_RESAMPLES, months=_MONTHS, seed=_SEED
+    )
+    battery_mod.register_reference_dependent_suites(manifest, reference)
+    panel = nc.fit_historical_panel(reference)
+
+    k_nc4 = NEGATIVE_CONTROL_IDS.index(NC4_MEMORIZER)
+    shared_seed = _SEED + 7919 * k_nc4
+
+    zero_noise = nc.MemorizerControl(
+        panel, reference.vintage_id, reference.active_blocks, noise_fraction=0.0
+    )
+    grid_snapped = _GridSnappedMemorizerControl(
+        panel, reference.vintage_id, reference.active_blocks
+    )
+
+    def _near_duplicate_fraction(control: nc._Control) -> float:
+        ensemble = control.sample_months(_MONTHS, _N_PATHS, shared_seed)
+        saved = gen_registry.snapshot()
+        try:
+            gen_registry.register(control.generator_id, lambda c=control: c)
+            rep = battery_mod.run_battery(
+                ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
+            )
+        finally:
+            gen_registry.restore(saved)
+        return next(r.value for r in rep.results if r.name == "near_duplicate_fraction")
+
+    grid_value = _near_duplicate_fraction(grid_snapped)
+    zero_noise_value = _near_duplicate_fraction(zero_noise)
+
+    nc4_baseline = report.outcome(NC4_MEMORIZER).suite_metrics("memorization")[
+        "near_duplicate_fraction"
+    ]
+    bootstrap_baseline = report.outcome(NC5_CONDITION_IGNORING).suite_metrics("memorization")[
+        "near_duplicate_fraction"
+    ]
+    assert nc4_baseline == pytest.approx(0.0654, abs=1e-4)
+    assert bootstrap_baseline == pytest.approx(0.2394, abs=1e-4)
+    assert grid_value == pytest.approx(0.8875)
+    assert zero_noise_value == pytest.approx(0.2423076923076923)
+
+    # The comparisons the finding rests on: phase alone swamps the as-built NC4's own
+    # noise-driven signal, and a literal verbatim copy is indistinguishable from a plain
+    # resampler once phase is held equal (both are uniformly-random, non-grid starts).
+    assert grid_value > 10 * nc4_baseline, (grid_value, nc4_baseline)
+    assert zero_noise_value == pytest.approx(bootstrap_baseline, abs=0.01), (
+        zero_noise_value,
+        bootstrap_baseline,
+    )
+
+
 def test_finding_the_10yr_tier_catches_nothing(report: NegativeControlReport) -> None:
     """**Fourth finding.** The ``10yr`` tier produced no substantive failure for any of
-    the five controls: 13 of its 22 metrics are the structural-gap metrics that are NaN
-    for every generator (no valuation/regime factor exists in ``factors.yaml``), and the
-    remainder did not move enough to leave their own very wide decade bands. NC2 in
-    particular -- whose dynamics are destroyed outright -- is designated to this tier and
-    is not caught by it."""
+    the five controls, and the remainder did not move enough to leave their own very
+    wide decade bands. NC2 in particular -- whose dynamics are destroyed outright -- is
+    designated to this tier and is not caught by it.
+
+    The ``>= 13`` below is a FLOOR, not the true count of structurally-unavailable
+    metrics -- see ``test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metrics``
+    for why counting off :attr:`CellOutcome.band_nan_metrics`/
+    :attr:`~CellOutcome.enforce_nan_failures` alone undercounts (13 of 22, 59%) against
+    the true figure (16 of 22, 73%)."""
     for o in report.outcomes:
         tenyr = [c for c in o.cells if c.tier == "10yr"]
         assert tenyr, o.control_id
         fired = {name for c in tenyr for name in c.substantive_failures}
-        # 13 structurally-unavailable metrics per control, for every control alike.
         assert sum(len(c.band_nan_metrics) + len(c.enforce_nan_failures) for c in tenyr) >= 13
         if o.control_id == NC3_SHIFTED_BOOTSTRAP:
             # The one exception, and only via the two decade FREQUENCY statistics --
@@ -547,6 +777,94 @@ def test_finding_the_10yr_tier_catches_nothing(report: NegativeControlReport) ->
             ), fired
             continue
         assert not fired, (o.control_id, fired)
+
+
+def test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metrics() -> None:
+    """**IMPORTANT 6 of the WP2.2b Task 7 review.** The sealed text used to say "13 of
+    its 22 metrics are structurally NaN" -- true only of how many land in
+    :attr:`CellOutcome.band_nan_metrics`/:attr:`~CellOutcome.enforce_nan_failures` (which
+    excludes a metric whose :class:`~ah.eval.battery.MetricResult` carries ``band=None``
+    entirely, since :func:`ah.eval.negative_controls._outside_band` requires a band to
+    judge). The metric spec's own ``status`` field says 16 of the 10yr tier's 22 metrics
+    are ``STRUCTURALLY_UNAVAILABLE`` (73%, not 59%): 14 ``<factor>.ergodicity_gap`` (one
+    per active factor) plus ``ten_year_return_vs_valuation_{r2,slope}``. Also pinned
+    here: ``regime_duration_{mean,p50,p90}`` is registered at the ``1_5yr`` tier
+    (:data:`ah.eval.metrics.horizon.TIER_1_5YR`), not ``10yr`` -- a natural but wrong
+    guess given DN-1.1's own table groups it under the same "climate state" heading as
+    the ergodicity/valuation gaps."""
+    from ah.eval.battery import STRUCTURALLY_UNAVAILABLE
+
+    access = _synthetic_access()
+    manifest = load_manifest()
+    prereg = prereg_mod.load()
+    reference = nc.control_reference(
+        access, manifest, n_resamples=_N_RESAMPLES, months=_MONTHS, seed=_SEED
+    )
+    battery_mod.register_reference_dependent_suites(manifest, reference)
+    control = nc.build_negative_controls(reference)[NC1_IID_GAUSSIAN]
+    with nc.negative_control_registry(reference):
+        ensemble = control.sample_months(_MONTHS, _N_PATHS, _SEED)
+        rep = battery_mod.run_battery(
+            ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
+        )
+    tenyr = [r for r in rep.results if r.tier == "10yr"]
+    assert len(tenyr) == 22, len(tenyr)
+    unavailable = [r for r in tenyr if r.status == STRUCTURALLY_UNAVAILABLE]
+    assert len(unavailable) == 16, sorted(r.name for r in unavailable)
+    ergodicity = [r for r in unavailable if r.name.endswith(".ergodicity_gap")]
+    valuation = [r for r in unavailable if r.name.startswith("ten_year_return_vs_valuation_")]
+    assert len(ergodicity) == 14, sorted(r.name for r in ergodicity)
+    assert len(valuation) == 2, sorted(r.name for r in valuation)
+    assert not [r for r in tenyr if r.name.startswith("regime_duration_")], (
+        "regime_duration_* must not appear in the 10yr tier"
+    )
+
+
+def test_finding_the_battery_has_knife_edge_band_comparisons() -> None:
+    """**CRITICAL 3 of the WP2.2b Task 7 review.** Pins the structural fact that a
+    previously-stated "leading hypothesis" (threaded-OpenBLAS last-bit variation, see
+    ``test_battery_verdict_is_bit_identical_for_the_same_seed``'s docstring) was replaced
+    by: some fraction of this suite's band comparisons sit at EXACTLY zero distance from
+    their own edge and are therefore one ULP of perturbation away from flipping sides,
+    regardless of what -- if anything -- would ever supply that perturbation.
+
+    Recomputed fresh here (not read off a fixture) so the count stays true if the
+    synthetic history, factor set, or reference parameters ever change."""
+    access = _synthetic_access()
+    manifest = load_manifest()
+    prereg = prereg_mod.load()
+    reference = nc.control_reference(
+        access, manifest, n_resamples=_N_RESAMPLES, months=_MONTHS, seed=_SEED
+    )
+    battery_mod.register_reference_dependent_suites(manifest, reference)
+
+    controls = nc.build_negative_controls(reference)
+    finite_banded = 0
+    knife_edge: list[tuple[str, str]] = []
+    degenerate_zero_band: list[tuple[str, str]] = []
+    with nc.negative_control_registry(reference):
+        for k, control_id in enumerate(NEGATIVE_CONTROL_IDS):
+            control = controls[control_id]
+            ensemble = control.sample_months(_MONTHS, _N_PATHS, _SEED + 7919 * k)
+            rep = battery_mod.run_battery(
+                ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
+            )
+            for r in rep.results:
+                if r.band is None or not np.isfinite(r.value):
+                    continue
+                if not (np.isfinite(r.band.lo) and np.isfinite(r.band.hi)):
+                    continue
+                finite_banded += 1
+                if r.value == r.band.lo or r.value == r.band.hi:
+                    knife_edge.append((control_id, r.name))
+                    if r.band.lo == 0.0 and r.band.hi == 0.0:
+                        degenerate_zero_band.append((control_id, r.name))
+
+    assert finite_banded == 3035, finite_banded
+    assert len(knife_edge) == 148, len(knife_edge)
+    assert len(degenerate_zero_band) == 33, sorted(degenerate_zero_band)
+    # The example named in the sealed text.
+    assert (NC1_IID_GAUSSIAN, "hy_spread~ust_2y.tail_dependence_upper") in degenerate_zero_band
 
 
 # --------------------------------------------------------------------------- #

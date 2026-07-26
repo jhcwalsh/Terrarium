@@ -143,9 +143,18 @@ standard deviation ``NC4_NOISE_FRACTION * sigma_f`` per factor. See
 the distortion switched off (``mean shift 0``, ``vol multiplier 1``), i.e. a plain
 moving-block bootstrap of real history: statistically the most defensible of the five,
 and the closest thing this module has to a competent generator. Its ``sample(world, ...)``
-ignores ``world.factor_conditions`` entirely. That isolation is the point -- a
-``conditional``-suite rejection of NC5 is unambiguously about conditioning, because
-nothing else about NC5 is wrong.
+ignores ``world.factor_conditions`` entirely -- **but every other control's ``sample``
+does too** (see :meth:`_Control.sample`'s docstring: none of the five has any
+conditioning mechanism at all), so a ``conditional``-suite rejection of NC5 is **NOT**
+attributable to condition-ignoring specifically. Measured: NC1 (the iid Gaussian, whose
+designated defect is unrelated to conditioning) fires 12 of NC5's 14 designated
+conditional metrics and is roughly an order of magnitude WORSE than NC5 on
+``condition_adherence_error_inflation`` (220.7 vs 23.3). This suite has no construction
+whose *only* defect is condition-ignoring while everything else about it is competent
+(that needs a control that DOES read ``factor_conditions``, which none of the five
+attempt), so the conditional tier's *specificity* -- would it also pass a generator that
+gets everything else right and only mishandles conditioning -- is untested. See Finding
+5.
 
 Cost, and why the reference is computed once
 ----------------------------------------------
@@ -164,17 +173,24 @@ Recorded here rather than only in a report, because this module is the evidence 
 finding is pinned by a named ``test_finding_*`` in ``tests/test_negative_controls.py``;
 when WP2.3 closes one, that test fails loudly and is deleted in the same commit.
 
+**Every number below is exactly what this module's own synthetic-fixture run produces**
+(``tests/test_negative_controls.py``'s ``_SEED``/``_N_PATHS``/``_MONTHS``/
+``_N_RESAMPLES``) -- restated here for a reader of this docstring, not a separate,
+unverifiable production run.
+
 1. **No metric suite emits a** ``<factor>.mean``, ``<factor>.std`` **or**
    ``<factorA>~<factorB>.correlation`` **metric at all**, although
    :data:`ah.eval.reference.SINGLE_FACTOR_STATS` and
    :data:`~ah.eval.reference.CROSS_BLOCK_STATS` register all three and
    :func:`~ah.eval.reference.compute_reference` computes a real length-matched band for
    each. NC3 exists to break exactly that axis and is invisible to it: its
-   ``equity_mkt`` pooled mean (0.0233) and standard deviation (0.0653) both sit well
-   outside their own bands ([-0.0016, 0.0101] and [0.0210, 0.0541]), and in its own
-   designated cell NC3 produces *no more* band failures than
-   ``nc5-condition-ignoring``, which is the identical construction with the distortion
-   switched off.
+   ``equity_mkt`` pooled mean and standard deviation both sit well outside their own
+   train+validation bands, and in its own designated cell NC3's band-failure SET is
+   IDENTICAL to ``nc5-condition-ignoring``'s -- the identical construction with the
+   distortion switched off -- when the two are sampled at the same seed (see
+   ``tests/test_negative_controls.py::
+   test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap``
+   for the exact, paired comparison this claim now rests on).
 2. **The battery's blocking surface is currently blind to all five controls.** Only four
    ``enforce``-severity thresholds exist; three fired for nobody, and the fourth
    (``floor_violations``) fired identically for all five, including for controls that
@@ -182,11 +198,56 @@ when WP2.3 closes one, that test fails loudly and is deleted in the same commit.
    shared_enforce_failures`, which exists so that gate cannot be misread as a detection.
    Every substantive catch came from a reference band the battery does not judge against
    or from a ``report``-severity threshold that does not block.
-3. **A plain moving-block bootstrap scores WORSE on memorization than the memorizer**
-   (``near_duplicate_fraction`` 0.239 vs 0.065; ``nn_distance_p05`` 0.069 vs 0.649).
-   WP2.4's G2 benchmark generator is a block bootstrap, so it will trip the same metric.
-4. **The 10yr tier caught nothing**: 13 of its 22 metrics are structurally NaN for every
-   generator, and NC2 -- designated to that tier -- is not caught by it.
+3. **A plain moving-block bootstrap scores WORSE on** ``near_duplicate_fraction`` **than
+   the deliberate memorizer** (0.2394 vs 0.0654; ``nn_distance_p05`` 0.0687 vs 0.6491).
+   WP2.4's G2 benchmark generator is a block bootstrap, so it will trip the same metric
+   -- **but the metric's real defect is larger than that comparison alone suggests.**
+   Varying ONLY NC4's start-index distribution (holding its noise level fixed) shows
+   ``near_duplicate_fraction`` is dominated by block-PHASE alignment, not by copying:
+   snapping the replay start to the suite's own 24-month block grid drives it to 0.8875
+   (every "copy" now lands on a grid boundary the memorization suite also chops on),
+   while a ZERO-noise, literal verbatim copy at a random (non-grid) offset scores 0.2423
+   -- statistically indistinguishable from the plain block bootstrap's own 0.2394 above,
+   even though a verbatim copy is about as memorized as a block can get. The suite's own
+   windowing (non-overlapping 24-month blocks anchored at index 0 on both the generated
+   and TRAIN sides) is the confound. **Consequence for the remedy Finding 3 previously
+   implied**: a *relative* bound against a block-bootstrap baseline inherits this same
+   phase blindness and would not fix it; the suite would need to compare against ALL
+   offsets (sliding windows) rather than a fixed grid on either side. Not fixed here
+   (``ah.eval.metrics.memorization`` is untouched by this WP) -- see
+   ``governance/retrofit-register.md``.
+4. **The 10yr tier caught nothing.** 16 of its 22 metrics -- 14 ``<factor>.ergodicity_gap``
+   (one per active factor) plus ``ten_year_return_vs_valuation_{r2,slope}`` -- carry
+   ``status=structurally_unavailable`` and are NaN for every generator (73%, not the 59%
+   a naive read of the report's own NaN-bucket columns suggests: 3 of the 16 -- one
+   ``ergodicity_gap`` with no reference band at all, plus both
+   ``ten_year_return_vs_valuation_*`` names -- have ``band=None`` and so never land in
+   :attr:`CellOutcome.band_nan_metrics`/:attr:`~CellOutcome.enforce_nan_failures`, which
+   is where "13" comes from if counted off those buckets alone). NC2 -- designated to
+   this tier -- is not caught by it. (``regime_duration_{mean,p50,p90}`` is registered at
+   the ``1_5yr`` tier, not ``10yr`` -- named here only to head off the natural but wrong
+   assumption that it is one of this tier's NaN metrics.)
+5. **A ``conditional``-suite rejection is not specific to condition-ignoring.** All five
+   controls ignore ``factor_conditions`` (none has any conditioning mechanism), and the
+   tier fires substantively for all five -- NC1 (iid Gaussian, whose designated defect is
+   unrelated to conditioning) fires 12 of NC5's 14 designated conditional metrics and is
+   ~10x worse than NC5 on ``condition_adherence_error_inflation`` (220.7 vs 23.3). The
+   suite has no control that honours conditions while being otherwise competent, so the
+   conditional tier's specificity -- would it let a condition-honouring generator pass
+   while still catching a condition-ignoring one -- is untested. See
+   ``governance/retrofit-register.md`` for the missing condition-honouring control.
+6. **The battery-verdict instability recorded on
+   ``test_battery_verdict_is_bit_identical_for_the_same_seed`` has a structural, not a
+   numerical-noise, cause.** 148 of 3035 finite (value, band) comparisons across all five
+   controls sit at *exactly* zero distance from their own band edge -- passing today only
+   because a closed interval includes its own boundary -- and are therefore one ULP of
+   perturbation away from flipping sides. 33 of those 148 rest on a fully degenerate
+   ``[0.0, 0.0]`` band (7 distinct metric names, all ``tail_dependence_{lower,upper}``
+   pairs whose historical block-bootstrap replicates never once produced a joint
+   exceedance; e.g. ``hy_spread~ust_2y.tail_dependence_upper``: value ``0.0``, band
+   ``[0.0, 0.0]``). Any nonzero perturbation of any size is structurally guaranteed to
+   flip a knife-edge comparison, which is sufficient on its own to explain an
+   occasional bit-level verdict change and requires no BLAS thread-count hypothesis.
 """
 
 from __future__ import annotations
@@ -202,6 +263,7 @@ import numpy as np
 import pandas as pd
 
 from ah.core.numericworld import NumericWorld
+from ah.eval import battery as battery_mod
 from ah.eval import prereg as prereg_mod
 from ah.eval.battery import (
     BATTERY_VERSION,
@@ -314,6 +376,17 @@ NC3_VOL_MULTIPLIER = 1.5
 # the metric). It also leaves 99% of the source variance intact, so NC4 remains a
 # convincing generator to every OTHER suite: its marginals, ACF, tails and clustering are
 # history's own. That is what makes it a clean test of the memorization tier specifically.
+#
+# Stated assumption, not closed here: this scale is applied as
+# `0.10 * HistoricalPanel.std`, which is the panel's TRAIN+VALIDATION standard
+# deviation (`fit_historical_panel` computes it over the whole joint panel), while
+# `ah.eval.metrics.memorization` standardizes its own distances by that factor's TRAIN
+# split ALONE (`_train_mean_std`). The two are close in practice (TRAIN is the large
+# majority of the joint panel and standard deviation is a slowly-varying statistic), but
+# they are not the identical number, so `NC4_NOISE_FRACTION`'s derivation above (which
+# reasons in units of ONE shared sigma) is strictly correct only if TRAIN's and
+# TRAIN+VALIDATION's sigmas coincide. Not tightened here -- see
+# `governance/retrofit-register.md`.
 NC4_NOISE_FRACTION = 0.10
 
 # NC5 reuses NC3's block length; the two differ ONLY in the distortion applied after
@@ -773,7 +846,11 @@ class ConditionIgnoringControl(ShiftedBootstrapControl):
 
         ``world.factor_conditions`` -- the inflation average, the policy-rate endpoints,
         the crisis window's timing and severity -- is read nowhere. That is the defect
-        this control exists to be caught for.
+        this control was DESIGNED to be caught for -- but note it is not the only
+        control with that defect: every other control ignores ``factor_conditions`` too
+        (see :meth:`_Control.sample` and the module docstring's Finding 5), so a
+        ``conditional``-suite rejection here cannot, by itself, be attributed to
+        condition-ignoring specifically.
         """
         return self.sample_months(world.horizon.quarters * 3, n_paths, seed)
 
@@ -815,14 +892,13 @@ def negative_control_registry(reference: ReferenceStats) -> Iterator[tuple[str, 
     conditional suite gets the object this function fitted, not a re-fit.
     """
     controls = build_negative_controls(reference)
-    saved = dict(gen_registry._REGISTRY)
+    saved = gen_registry.snapshot()
     try:
         for control_id, control in controls.items():
             gen_registry.register(control_id, lambda c=control: c)
         yield NEGATIVE_CONTROL_IDS
     finally:
-        gen_registry._REGISTRY.clear()
-        gen_registry._REGISTRY.update(saved)
+        gen_registry.restore(saved)
 
 
 # --------------------------------------------------------------------------- #
@@ -961,7 +1037,32 @@ class ControlOutcome:
 
     @property
     def caught(self) -> bool:
+        """Caught by ANY rejection surface (enforce, report, or band) in a designated
+        cell. This is a weaker claim than :attr:`caught_at_criterion` and must not be
+        read as "caught via the mechanism this control was designed to exercise" -- see
+        that property's docstring for why the distinction matters."""
         return bool(self.designated_substantive_failures)
+
+    @property
+    def caught_at_criterion(self) -> bool:
+        """Caught specifically via :attr:`Designation.criterion` -- the rejection
+        surface the plan actually names for this control (``"enforce"`` or ``"band"``).
+
+        Exists because the report table prints ``criterion`` and ``caught`` side by
+        side, and a reader can misread ``criterion: enforce`` next to ``caught: yes`` as
+        "this control was caught AT enforce level" -- which, per the module docstring's
+        Finding 2, is false for every control except via the one shared, non-
+        discriminating ``floor_violations`` gate. This property answers the narrower
+        question the table invites but does not itself answer: did THIS SPECIFIC surface
+        fire, substantively, in a designated cell.
+        """
+        out: set[str] = set()
+        for c in self.designated_cells:
+            surface = (
+                c.band_failures if self.designation.criterion == "band" else c.enforce_failures
+            )
+            out |= set(surface)
+        return bool(out)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -974,6 +1075,7 @@ class ControlOutcome:
             "construction": self.designation.construction,
             "battery_passed": self.battery_passed,
             "caught_by_designated_tier": self.caught,
+            "caught_at_criterion": self.caught_at_criterion,
             "designated_substantive_failures": list(self.designated_substantive_failures),
             "substantive_failures": list(self.substantive_failures),
             "enforce_failures": list(self.enforce_failures),
@@ -1092,11 +1194,23 @@ class NegativeControlReport:
             "reference-band failures, counting only metrics with a FINITE value. `*` "
             "marks a designated cell; `MISS` marks a designated cell that did not fire.",
             "",
+            "`caught_on_any_surface`: caught by SOME designated-cell rejection surface "
+            "(enforce, report, or band). `caught_at_criterion`: caught specifically via "
+            "the `criterion` column -- the surface this control was designed to "
+            "exercise. The two differ whenever a control was caught only by a surface "
+            "other than its own designated one (see the module docstring's Finding 2): "
+            "read `criterion: enforce` next to `caught_on_any_surface: yes` as NOT "
+            "implying an enforce-level catch unless `caught_at_criterion` also says yes.",
+            "",
         ]
 
-        header = "| control | criterion | " + " | ".join(TIERS) + " | caught |"
+        header = (
+            "| control | criterion | "
+            + " | ".join(TIERS)
+            + " | caught_on_any_surface | caught_at_criterion |"
+        )
         lines.append(header)
-        lines.append("| --- | --- | " + " | ".join("---" for _ in TIERS) + " | --- |")
+        lines.append("| --- | --- | " + " | ".join("---" for _ in TIERS) + " | --- | --- |")
         for o in self.outcomes:
             cells: list[str] = []
             for tier in TIERS:
@@ -1118,10 +1232,11 @@ class NegativeControlReport:
                     text = f"*{text}" if fired else f"*{text} MISS"
                 cells.append(text)
             verdict = "yes" if o.caught else "**NO**"
+            at_criterion = "yes" if o.caught_at_criterion else "**NO**"
             lines.append(
                 f"| {o.control_id} | {o.designation.criterion} | "
                 + " | ".join(cells)
-                + f" | {verdict} |"
+                + f" | {verdict} | {at_criterion} |"
             )
         lines.append("")
 
@@ -1136,7 +1251,11 @@ class NegativeControlReport:
             )
             lines.append(f"- battery verdict: {'PASS' if o.battery_passed else 'FAIL'}")
             lines.append(
-                f"- caught by designated tier: {'yes' if o.caught else 'NO -- see the report'}"
+                f"- caught on any surface: {'yes' if o.caught else 'NO -- see the report'}"
+            )
+            lines.append(
+                f"- caught at its designated criterion ({o.designation.criterion}): "
+                f"{'yes' if o.caught_at_criterion else 'NO -- caught, if at all, by a different surface'}"
             )
             lines.append("")
             lines.append(
@@ -1274,6 +1393,15 @@ def run_negative_controls(
     platform-wide ensemble-seed stride) and the battery's Monte-Carlo subsampling;
     ``reference_seed`` (defaulting to ``seed``) drives the bootstrap bands. The same
     inputs give a bit-identical report.
+
+    ``ah.eval.battery.SUITES`` is process-global, exactly like
+    :mod:`ah.gen.registry`'s ``_REGISTRY`` that :func:`negative_control_registry`
+    already snapshots and restores: this function calls
+    :func:`~ah.eval.battery.register_reference_dependent_suites`, which mutates
+    ``SUITES`` in place, so it snapshots ``SUITES`` first and restores it in a
+    ``finally`` -- symmetric with the generator-registry handling, so a CLI caller (with
+    no test fixture to compensate) does not leak this call's reference-dependent suites
+    into a later, unrelated battery run in the same process.
     """
     reference = control_reference(
         access,
@@ -1285,23 +1413,28 @@ def run_negative_controls(
         seed=seed if reference_seed is None else reference_seed,
     )
     panel = fit_historical_panel(reference)
-    register_reference_dependent_suites(manifest, reference)
 
     outcomes: list[ControlOutcome] = []
     digest = ""
-    with negative_control_registry(reference):
-        for k, control_id in enumerate(NEGATIVE_CONTROL_IDS):
-            control = gen_registry.resolve(control_id)
-            ensemble = control.sample_months(months, n_paths, seed + 7919 * k)
-            report = run_battery(
-                ensemble,
-                reference=reference,
-                prereg=prereg,
-                manifest=manifest,
-                seed=seed,
-            )
-            digest = report.prereg_digest
-            outcomes.append(_build_outcome(control_id, report, report.results))
+    saved_suites = dict(battery_mod.SUITES)
+    try:
+        register_reference_dependent_suites(manifest, reference)
+        with negative_control_registry(reference):
+            for k, control_id in enumerate(NEGATIVE_CONTROL_IDS):
+                control = gen_registry.resolve(control_id)
+                ensemble = control.sample_months(months, n_paths, seed + 7919 * k)
+                report = run_battery(
+                    ensemble,
+                    reference=reference,
+                    prereg=prereg,
+                    manifest=manifest,
+                    seed=seed,
+                )
+                digest = report.prereg_digest
+                outcomes.append(_build_outcome(control_id, report, report.results))
+    finally:
+        battery_mod.SUITES.clear()
+        battery_mod.SUITES.update(saved_suites)
 
     if not digest:  # pragma: no cover - NEGATIVE_CONTROL_IDS is never empty
         digest = prereg_mod.seal(prereg.source_path, sealed_at="n/a", dry_run=True)

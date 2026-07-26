@@ -7,6 +7,39 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.2b Task 7 review fix pass — evidence-integrity findings in the negative-control
+  suite.** Three claims in the sealed, `G2-EVIDENCE.md`-cited text asserted more than the
+  evidence supported; corrected without touching any control's construction or any
+  `pre-registration.yaml` threshold (the red result stands). **Critical 1**: the paired
+  NC3-vs-NC5 monthly-tier comparison (`tests/test_negative_controls.py`) compared two
+  INDEPENDENTLY seeded ensembles (`seed+7919*2` vs `seed+7919*4`) via `<=`, which held by
+  a one-metric margin and would flip on a different seed; replaced with a same-seed
+  comparison verified bit-exact-affine (`np.array_equal`) and an exact
+  `set(nc3.band_failures) == set(nc5.band_failures)`. **Critical 2**: NC5's conditional-
+  suite rejection was described as "unambiguously about conditioning" -- false, since
+  every control ignores `factor_conditions` and the tier fires for all five (NC1 alone
+  fires 12 of NC5's 14 designated conditional metrics and is ~10x worse on
+  `condition_adherence_error_inflation`); corrected, and the missing condition-honouring
+  control recorded (`governance/retrofit-register.md` RFR-39). **Critical 3**: a
+  threaded-OpenBLAS hypothesis for the suite's rare battery-verdict non-reproducibility
+  is FALSIFIED (the 4340-value metric digest is bit-identical at
+  `OPENBLAS_NUM_THREADS`/`OMP_NUM_THREADS` = 1, 8, and default) and downgraded to
+  unexplained; the real, measured, sufficient explanation -- 148 of 3035 finite banded
+  comparisons sit at exactly zero distance from a band edge, 33 on a fully degenerate
+  `[0.0, 0.0]` band -- is now recorded (RFR-38). Also: `ah.eval.negative_controls`'s "13
+  of the 10yr tier's 22 metrics are structurally NaN" corrected to the true figure, 16 of
+  22 (73%, not 59% -- three carry `band=None` and never land in the report's own NaN
+  buckets), and `regime_duration_*` confirmed to sit at the `1_5yr` tier, not `10yr`
+  (RFR-37); `near_duplicate_fraction` shown to be dominated by block-PHASE alignment
+  rather than by copying, which changes the shape of remedy WP2.3 should consider
+  (RFR-36); a `caught_at_criterion` column added to `NegativeControlReport` alongside the
+  renamed `caught_on_any_surface`, so a reader can no longer misread `criterion: enforce`
+  next to a "caught" cell as an enforce-level catch (RFR-35); `run_negative_controls` now
+  restores `ah.eval.battery.SUITES` symmetrically with its existing `gen_registry`
+  restore; `ah.gen.registry` gained public `snapshot()`/`restore()` so
+  `negative_control_registry` no longer reaches into `_REGISTRY` directly. Six new rows
+  in `governance/retrofit-register.md` (RFR-34..RFR-39) carry every finding this fix pass
+  could not itself close.
 - **WP1.10 — Refresh orchestration, scheduling, CLI.** `refresh.py`: `plan`
   (manifest ∩ due-by-SLA ∩ source, auto-intake only) → provider fetch/parse → QC →
   vintage commit or quarantine → reports; idempotent (re-running a vintage id is a
