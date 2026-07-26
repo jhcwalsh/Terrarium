@@ -46,9 +46,20 @@ A "sequence" is a non-overlapping :data:`MEMORIZATION_BLOCK_MONTHS`-month window
 factor's own path (never spanning a path boundary on the generated side, never crossing
 the train/validation boundary on the real side), reused at
 :data:`~ah.eval.metrics.utility.UTILITY_WINDOW_MONTHS`'s scale (24 months, imported
-directly rather than restated -- see the module docstring's "Reuse" note) so this suite
-does not invent a second arbitrary window length beside the one ``utility.py`` already
-uses for its own real-vs-generated windowing.
+directly rather than restated) so this suite does not invent a second arbitrary window
+length beside the one ``utility.py`` already uses for its own real-vs-generated
+windowing. **Pinned, not merely reused (Important 5, WP2.2 Task 5 fix pass):**
+``pre-registration.yaml``'s ``memorization_nn_distance_estimator`` states 24 as a
+sealed LITERAL, not as "whatever ``utility.py``'s window happens to be" -- so
+:data:`MEMORIZATION_BLOCK_MONTHS` is defined as ``UTILITY_WINDOW_MONTHS`` (avoiding a
+second hand-restated constant that could drift out of sync with ``utility.py``'s own)
+AND asserted equal to 24 at import time. Before this pin, a change to
+``UTILITY_WINDOW_MONTHS`` for a purely utility-tier reason would have silently
+redefined this suite's sealed 24-month block length with nothing failing -- the
+previous test only asserted ``> 1``. The import-time check makes that impossible: any
+future change to ``UTILITY_WINDOW_MONTHS`` away from 24 raises immediately, forcing a
+deliberate, dated amendment to this module's own constant rather than an accidental,
+silent one.
 
 Each block is the RAW (not summarized) 24-dimensional vector of that factor's own
 monthly values over the window, **standardized by that factor's own TRAIN mean/std**
@@ -127,6 +138,32 @@ favourable 0/0.5/0 computed from too little -- THE ONE NaN RULE, and the same
 "generating less must not improve the metric" discipline every other WP2.2 suite
 states).
 
+A third anti-gaming floor: :data:`MEMORIZATION_MIN_GENERATED_BLOCKS` (Important 3,
+WP2.2 Task 5 fix pass)
+--------------------------------------------------------------------------------------
+The floor above guards only the TRAIN side; every sibling suite that pools an
+ensemble-side sample also floors the GENERATED side (``ah.eval.metrics.economics``'s
+:data:`~ah.eval.metrics.economics.ECONOMICS_MIN_OBS`,
+``ah.eval.metrics.calibration``'s
+:data:`~ah.eval.metrics.calibration.CALIBRATION_MIN_GENERATED_SUMS`), and before this
+fix pass this suite did not. A one-path, 24-month ensemble yields exactly ONE generated
+block, at which point ``nn_distance_p05``/``nn_distance_p50`` are literally one
+observation (a percentile of a singleton is that singleton, not a distribution) and
+``membership_inference_auc`` drifts toward its FAVOURABLE 0.5 value purely because the
+generator produced almost nothing to attack, not because it is genuinely
+non-memorizing -- "the generator produces less" reading as a better score, the
+identical failure mode every other floor in this platform exists to close.
+:data:`MEMORIZATION_MIN_GENERATED_BLOCKS` (30, matching
+:data:`~ah.eval.metrics.calibration.CALIBRATION_MIN_GENERATED_SUMS`'s floor on a pooled
+generated sample of comparable shape) is the TOTAL pooled generated-block count across
+every qualifying factor; below it, ALL FOUR metric names are NaN (poisons the whole
+suite, not a per-metric partial NaN, matching :data:`MEMORIZATION_MIN_TRAIN_BLOCKS`'s
+own all-or-nothing shape) -- see :func:`_pooled_memorization_signals`.
+``tests/test_memorization.py``'s
+``test_memorization_nan_when_generated_side_is_too_small_even_with_ample_train`` is the
+deliverable: TRAIN clears its own floor easily while the generated side is starved, and
+the suite must NaN rather than report a favourable degenerate number.
+
 Registration is deferred, exactly as every other reference-dependent suite
 -------------------------------------------------------------------------------
 Needs a computed :class:`~ah.eval.reference.ReferenceStats` (for ``historical_series``)
@@ -138,6 +175,9 @@ production caller, via ``battery._REFERENCE_DEPENDENT_SUITE_BUILDERS``'s
 """
 
 from __future__ import annotations
+
+import weakref
+from collections.abc import Callable
 
 import numpy as np
 import pandas as pd
@@ -158,12 +198,35 @@ TIER = "monthly"
 # definition below can see the scale without leaving the file.
 MEMORIZATION_BLOCK_MONTHS = UTILITY_WINDOW_MONTHS
 
+# Important 5, WP2.2 Task 5 fix pass -- see the module docstring's "Pinned, not merely
+# reused" paragraph. pre-registration.yaml's memorization_nn_distance_estimator states
+# 24 as a sealed literal; this makes a divergence a loud import-time failure instead of
+# a silent redefinition of a sealed estimator.
+if MEMORIZATION_BLOCK_MONTHS != 24:
+    raise AssertionError(
+        f"MEMORIZATION_BLOCK_MONTHS = {MEMORIZATION_BLOCK_MONTHS} (from "
+        f"UTILITY_WINDOW_MONTHS), but pre-registration.yaml's "
+        f"memorization_nn_distance_estimator seals this suite's block length at the "
+        f"LITERAL value 24. UTILITY_WINDOW_MONTHS changed for a utility-tier reason "
+        f"without anyone deciding whether the sealed memorization estimator should "
+        f"change with it -- that decision must be made explicitly (and, once sealed, "
+        f"logged as an amendment), not made by accident."
+    )
+
 # See the module docstring's "Two anti-gaming floors". 5, not the elsewhere-used 10 or
 # 30: a leave-one-out epsilon needs >= 2 blocks to be defined at all (one block to be
 # "left out", at least one other to measure distance to), and a nearest-neighbour
 # distance itself is meaningful from a single candidate upward -- 5 is a small margin
 # above the bare minimum, not a moment-matching floor like AGG_GAUSSIANITY_MIN_SUMS.
 MEMORIZATION_MIN_TRAIN_BLOCKS = 5
+
+# Important 3, WP2.2 Task 5 fix pass -- see the module docstring's "A third
+# anti-gaming floor". The TOTAL pooled generated-block count (across every qualifying
+# factor) below which all four metric names NaN. 30 matches
+# ah.eval.metrics.calibration.CALIBRATION_MIN_GENERATED_SUMS's floor on a pooled
+# generated sample of comparable shape (a handful of blocks per factor is not a
+# distribution).
+MEMORIZATION_MIN_GENERATED_BLOCKS = 30
 
 # The percentile of TRAIN's own leave-one-out nearest-neighbour distance distribution
 # that defines "near duplicate" -- see the module docstring's "near_duplicate_fraction"
@@ -175,6 +238,7 @@ MEMORIZATION_EPSILON_PERCENTILE = 5.0
 __all__ = [
     "MEMORIZATION_BLOCK_MONTHS",
     "MEMORIZATION_EPSILON_PERCENTILE",
+    "MEMORIZATION_MIN_GENERATED_BLOCKS",
     "MEMORIZATION_MIN_TRAIN_BLOCKS",
     "SUITE",
     "TIER",
@@ -359,7 +423,16 @@ def _pooled_memorization_signals(
 ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
     """``(nn_distances, train_proximity, val_proximity, near_dup_hits)`` pooled over
     every qualifying shared factor -- the one pass every metric's closure is built on,
-    so the four numbers are guaranteed consistent with each other."""
+    so the four numbers are guaranteed consistent with each other.
+
+    Important 3 (WP2.2 Task 5 fix pass): ``nn_distances`` carries exactly one entry per
+    pooled GENERATED block, so its length IS the generated-side sample size the module
+    docstring's "A third anti-gaming floor" describes. Below
+    :data:`MEMORIZATION_MIN_GENERATED_BLOCKS`, every array is returned EMPTY -- not
+    partially populated -- so all four downstream metrics NaN identically (THE ONE NaN
+    RULE, and the same all-or-nothing shape :data:`MEMORIZATION_MIN_TRAIN_BLOCKS`
+    already has on the train side).
+    """
     nn_distances: list[float] = []
     train_proximity: list[float] = []
     val_proximity: list[float] = []
@@ -383,6 +456,14 @@ def _pooled_memorization_signals(
         for v in inputs.val_blocks:
             val_proximity.append(-_nearest_neighbor_distance(v, generated))
 
+    if len(nn_distances) < MEMORIZATION_MIN_GENERATED_BLOCKS:
+        return (
+            np.empty(0, dtype=np.float64),
+            np.empty(0, dtype=np.float64),
+            np.empty(0, dtype=np.float64),
+            np.empty(0, dtype=bool),
+        )
+
     return (
         np.array(nn_distances, dtype=np.float64),
         np.array(train_proximity, dtype=np.float64),
@@ -391,11 +472,44 @@ def _pooled_memorization_signals(
     )
 
 
+def _cached_pooled_signals(
+    manifest: FactorManifest, reference: ReferenceStats
+) -> Callable[[Ensemble], tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]]:
+    """A single-slot cache of :func:`_pooled_memorization_signals`, shared by all four
+    metric closures :func:`build_memorization_suite` builds (Minor, WP2.2 Task 5 fix
+    pass: before this, every pairwise distance was computed 4x -- once per metric --
+    for the identical ``(manifest, reference, ensemble)`` triple).
+
+    Keyed on ensemble IDENTITY, verified via a weak reference rather than trusted by
+    ``id()`` alone: ``id()`` can be reused after garbage collection, and a stale hit
+    keyed only on a recycled id would silently return another ensemble's signals. The
+    cache holds exactly one entry -- the suite is evaluated ensemble-by-ensemble
+    (:func:`~ah.eval.battery.run_battery` calls ``spec.fn(ensemble)`` for all four specs
+    on the SAME ensemble object in sequence before moving to the next one, and
+    ``mc_error`` builds a fresh sub-ensemble per subsample anyway, so a single slot
+    captures the actual 4x duplication without unbounded growth).
+    """
+    cache: dict[int, tuple[weakref.ReferenceType[Ensemble], tuple[np.ndarray, ...]]] = {}
+
+    def get(ensemble: Ensemble) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        key = id(ensemble)
+        hit = cache.get(key)
+        if hit is not None and hit[0]() is ensemble:
+            return hit[1]  # type: ignore[return-value]
+        result = _pooled_memorization_signals(manifest, reference, ensemble)
+        cache.clear()
+        cache[key] = (weakref.ref(ensemble), result)
+        return result
+
+    return get
+
+
 def _nn_distance_metric(
-    manifest: FactorManifest, reference: ReferenceStats, which: str
+    signals: Callable[[Ensemble], tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]],
+    which: str,
 ) -> MetricFn:
     def fn(ensemble: Ensemble) -> float:
-        nn_distances, _, _, _ = _pooled_memorization_signals(manifest, reference, ensemble)
+        nn_distances, _, _, _ = signals(ensemble)
         if nn_distances.size == 0:
             return float("nan")
         return float(np.percentile(nn_distances, 5 if which == "p05" else 50))
@@ -404,12 +518,10 @@ def _nn_distance_metric(
 
 
 def _membership_inference_auc_metric(
-    manifest: FactorManifest, reference: ReferenceStats
+    signals: Callable[[Ensemble], tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]],
 ) -> MetricFn:
     def fn(ensemble: Ensemble) -> float:
-        _, train_proximity, val_proximity, _ = _pooled_memorization_signals(
-            manifest, reference, ensemble
-        )
+        _, train_proximity, val_proximity, _ = signals(ensemble)
         if train_proximity.size == 0 or val_proximity.size == 0:
             return float("nan")
         return _mann_whitney_auc(train_proximity, val_proximity)
@@ -418,10 +530,10 @@ def _membership_inference_auc_metric(
 
 
 def _near_duplicate_fraction_metric(
-    manifest: FactorManifest, reference: ReferenceStats
+    signals: Callable[[Ensemble], tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]],
 ) -> MetricFn:
     def fn(ensemble: Ensemble) -> float:
-        _, _, _, near_dup_hits = _pooled_memorization_signals(manifest, reference, ensemble)
+        _, _, _, near_dup_hits = signals(ensemble)
         if near_dup_hits.size == 0:
             return float("nan")
         return float(np.mean(near_dup_hits))
@@ -439,11 +551,12 @@ def build_memorization_suite(
     """The four whole-panel memorization-tier :class:`~ah.eval.battery.MetricSpec`
     entries. Whole-panel, matching :data:`~ah.eval.reference.PANEL_STATS`'s bare-name
     registration for these four names -- see the module docstring."""
+    signals = _cached_pooled_signals(manifest, reference)
     return (
-        _spec("nn_distance_p05", _nn_distance_metric(manifest, reference, "p05")),
-        _spec("nn_distance_p50", _nn_distance_metric(manifest, reference, "p50")),
-        _spec("membership_inference_auc", _membership_inference_auc_metric(manifest, reference)),
-        _spec("near_duplicate_fraction", _near_duplicate_fraction_metric(manifest, reference)),
+        _spec("nn_distance_p05", _nn_distance_metric(signals, "p05")),
+        _spec("nn_distance_p50", _nn_distance_metric(signals, "p50")),
+        _spec("membership_inference_auc", _membership_inference_auc_metric(signals)),
+        _spec("near_duplicate_fraction", _near_duplicate_fraction_metric(signals)),
     )
 
 

@@ -2,9 +2,23 @@
 
 STEP2-GENERATOR-PLAN Sec.WP2.2's ``calibration.py`` bullet: "Rolling-origin
 probabilistic calibration on train+validation: PIT histograms and interval coverage at
-1y and 5y horizons for factor aggregates. Cheap here; gives Step 5 a baseline." All six
-metrics are tier ``"monthly"`` (the DN-1.1 tier a battery run reports them under is
-orthogonal to the 1y/5y horizon baked into each metric's own name).
+1y and 5y horizons for factor aggregates. Cheap here; gives Step 5 a baseline." The
+three ``_1y`` names (``pit_ks_stat_1y``, ``interval_coverage_{50,90}_1y``) are tier
+``"monthly"``; the three ``_5y`` names are tier ``"1_5yr"`` -- DN-1.1 Sec.II.6's own
+tier for a 60-month horizon (Minor, WP2.2 Task 5 fix pass, reconsidered from an earlier
+draft that put all six under ``"monthly"`` regardless of horizon: that reading was
+defended as "the DN-1.1 tier a battery run reports them under is orthogonal to the
+1y/5y horizon baked into each metric's own name", but ``ah.eval.battery.TIERS`` exists
+specifically so a report groups a metric under the horizon it actually measures, and a
+60-month statistic filed under ``monthly`` would read as a different, shorter-horizon
+claim than the one it makes. Re-tiering AFTER the pre-registration seal is a dated
+amendment (:mod:`ah.eval.prereg`'s own machinery), so this is corrected now, before
+WP2.3 seals, rather than carried forward as a known-wrong tier assignment.
+
+The tier split is orthogonal to every other rule in this module: both horizons still
+share the identical rolling-origin protocol, the identical two floors, and the identical
+two-sided coverage reasoning -- only which :data:`~ah.eval.battery.TIERS` bucket a
+battery report groups the metric's :class:`~ah.eval.battery.MetricResult` under changes.
 
 Where the definitions live, and why not here
 ----------------------------------------------
@@ -114,6 +128,12 @@ TIER = "monthly"
 # names explicitly for this suite.
 CALIBRATION_HORIZONS: tuple[tuple[int, str], ...] = ((12, "1y"), (60, "5y"))
 
+# Minor, WP2.2 Task 5 fix pass -- see the module docstring's re-tiering paragraph. The
+# 1y names report under DN-1.1 Sec.II.6's monthly tier; the 5y names report under its
+# 1_5yr tier (a 60-month horizon), not both crammed under "monthly" regardless of the
+# horizon baked into the metric's own name.
+CALIBRATION_TIER_BY_SUFFIX: dict[str, str] = {"1y": "monthly", "5y": "1_5yr"}
+
 CALIBRATION_LEVELS: tuple[int, ...] = (50, 90)
 
 # See the module docstring's "Two floors". 30 matches
@@ -128,6 +148,7 @@ __all__ = [
     "CALIBRATION_LEVELS",
     "CALIBRATION_MIN_GENERATED_SUMS",
     "CALIBRATION_MIN_ORIGINS",
+    "CALIBRATION_TIER_BY_SUFFIX",
     "SUITE",
     "TIER",
     "build_calibration_suite",
@@ -315,23 +336,27 @@ def _coverage_metric(
     return fn
 
 
-def _spec(name: str, fn: MetricFn) -> MetricSpec:
-    return MetricSpec(name=name, tier=TIER, fn=fn, suite=SUITE)
+def _spec(name: str, fn: MetricFn, *, tier: str) -> MetricSpec:
+    return MetricSpec(name=name, tier=tier, fn=fn, suite=SUITE)
 
 
 def build_calibration_suite(
     manifest: FactorManifest, reference: ReferenceStats
 ) -> tuple[MetricSpec, ...]:
-    """Every ``calibration``-tier :class:`~ah.eval.battery.MetricSpec` -- six names,
-    two per horizon (``pit_ks_stat``) plus four (``interval_coverage_{50,90}``). See
-    the module docstring for the full rolling-origin protocol."""
+    """Every ``calibration``-suite :class:`~ah.eval.battery.MetricSpec` -- six names,
+    two per horizon (``pit_ks_stat``) plus four (``interval_coverage_{50,90}``); the 1y
+    names tier ``"monthly"``, the 5y names tier ``"1_5yr"`` (see
+    :data:`CALIBRATION_TIER_BY_SUFFIX` and the module docstring's re-tiering
+    paragraph). See the module docstring for the full rolling-origin protocol."""
     return_bearing = load_conventions().return_bearing_factors
     specs: list[MetricSpec] = []
     for horizon, suffix in CALIBRATION_HORIZONS:
+        tier = CALIBRATION_TIER_BY_SUFFIX[suffix]
         specs.append(
             _spec(
                 f"pit_ks_stat_{suffix}",
                 _pit_ks_metric(manifest, reference, horizon, return_bearing),
+                tier=tier,
             )
         )
         for level in CALIBRATION_LEVELS:
@@ -339,6 +364,7 @@ def build_calibration_suite(
                 _spec(
                     f"interval_coverage_{level}_{suffix}",
                     _coverage_metric(manifest, reference, horizon, level, return_bearing),
+                    tier=tier,
                 )
             )
     return tuple(specs)

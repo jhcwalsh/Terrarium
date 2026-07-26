@@ -21,6 +21,7 @@ from ah.eval.metrics.calibration import (
     CALIBRATION_HORIZONS,
     CALIBRATION_MIN_GENERATED_SUMS,
     CALIBRATION_MIN_ORIGINS,
+    CALIBRATION_TIER_BY_SUFFIX,
     _pit_value,
     build_calibration_suite,
     ks_statistic_vs_uniform,
@@ -204,6 +205,47 @@ def _overconfident_fixture(
     return manifest, reference, ensemble
 
 
+def _underconfident_fixture(
+    seed: int, n_paths: int = 40, months: int = 240, real_months: int = 1000
+) -> tuple[FactorManifest, ReferenceStats, Ensemble]:
+    """IMPORTANT 4 (WP2.2 Task 5 fix pass): the generated distribution has the SAME
+    mean but a MUCH LARGER variance than the real data -- a deliberately
+    UNDER-confident (too-wide) forecast. This is the LIKELIER gaming route (a lazy,
+    high-variance generator earns near-perfect coverage for free) and was previously
+    UNTESTED: only the too-narrow direction had a fixture. Coverage must come out
+    clearly ABOVE nominal, not merely "not below" it."""
+    rng = Generator(PCG64(seed))
+    manifest = _manifest()
+    dates = pd.date_range("1950-01-01", periods=real_months, freq="MS")
+    real = pd.Series(rng.normal(0.01, 0.05, size=real_months), index=dates)
+    reference = _reference_with_series({"equity_mkt": real})
+    paths = rng.normal(0.01, 0.5, size=(n_paths, months, 1))  # 10x wider than real
+    ensemble = Ensemble(paths=paths, factor_names=["equity_mkt"], meta=_meta(n_paths, months))
+    return manifest, reference, ensemble
+
+
+def test_underconfident_forecast_shows_high_coverage_and_a_large_ks_statistic() -> None:
+    """THE DELIVERABLE for Important 4: docstring claims over-coverage is "exactly as
+    much a calibration failure" as under-coverage, and the sealed bands cap at
+    0.8/0.99 -- but until this test, nothing exercised the over-wide direction that
+    would actually approach those caps. A lazy, huge-variance generator must show
+    coverage well above nominal (not merely uncaught) and a large KS statistic (a
+    too-wide predictive distribution concentrates real PIT values near 0.5, which is
+    also non-uniform)."""
+    manifest, reference, ensemble = _underconfident_fixture(seed=104)
+    specs = {s.name: s for s in build_calibration_suite(manifest, reference)}
+    ks_1y = specs["pit_ks_stat_1y"].fn(ensemble)
+    assert ks_1y > 0.2, ks_1y
+    for level in (50, 90):
+        coverage = specs[f"interval_coverage_{level}_1y"].fn(ensemble)
+        # A 10x-too-wide generator over-covers dramatically: comfortably above nominal
+        # for both levels, and close to 1.0 -- 90%'s own "well above nominal" band
+        # (+0.15) would exceed 1.0 and can never be satisfied, so this asserts the
+        # actually-observable shape of over-coverage instead.
+        assert coverage > (level / 100.0), (level, coverage)
+        assert coverage > 0.95, (level, coverage)
+
+
 def test_correctly_specified_forecast_is_well_calibrated() -> None:
     manifest, reference, ensemble = _correctly_specified_fixture(seed=100)
     specs = {s.name: s for s in build_calibration_suite(manifest, reference)}
@@ -252,7 +294,7 @@ def test_calibration_nan_when_generated_ensemble_is_too_short_for_the_floor() ->
     number -- THE ONE NaN RULE, and the anti-gaming floor this module states."""
     manifest, reference, _ = _correctly_specified_fixture(seed=102)
     tiny_ensemble = Ensemble(
-        paths=np.random.default_rng(1).normal(0.01, 0.05, size=(1, 5, 1)),
+        paths=Generator(PCG64(1)).normal(0.01, 0.05, size=(1, 5, 1)),
         factor_names=["equity_mkt"],
         meta=_meta(1, 5),
     )
@@ -270,9 +312,15 @@ def test_every_calibration_metric_name_can_carry_a_sealed_threshold() -> None:
             expected.add(f"interval_coverage_{level}_{suffix}")
     assert {s.name for s in specs} == expected
     for spec in specs:
-        assert spec.tier == "monthly"
         assert spec.suite == "calibration"
         assert spec.name in PANEL_STATS
+        # Minor (WP2.2 Task 5 fix pass): 1y names tier "monthly", 5y names tier
+        # "1_5yr" -- DN-1.1's own tier for a 60-month horizon, reconsidered and fixed
+        # before the pre-registration seal rather than carried forward as a known-wrong
+        # assignment (re-tiering after the seal is a dated amendment).
+        suffix = spec.name.rsplit("_", 1)[-1]
+        assert suffix in CALIBRATION_TIER_BY_SUFFIX, spec.name
+        assert spec.tier == CALIBRATION_TIER_BY_SUFFIX[suffix], spec.name
 
 
 # --------------------------------------------------------------------------- #

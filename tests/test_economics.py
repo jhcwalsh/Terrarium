@@ -11,14 +11,16 @@ decorative, not a check.
 
 from __future__ import annotations
 
+import ast
 import math
 from pathlib import Path
 
 import numpy as np
 import pytest
+from numpy.random import PCG64, Generator
 
 from ah.data.derive import REGIME_LABELS
-from ah.eval.battery import STRUCTURALLY_UNAVAILABLE
+from ah.eval.battery import STRUCTURALLY_UNAVAILABLE, _passed
 from ah.eval.metrics.economics import (
     ECONOMICS_MIN_OBS,
     RATE_FLOOR_FACTORS,
@@ -152,7 +154,7 @@ def test_equity_risk_premium_nan_when_equity_mkt_absent() -> None:
 
 def test_money_pump_violations_is_zero_for_a_realistic_two_sided_zero_cost_leg() -> None:
     n_paths, months = 4, 120
-    rng = np.random.default_rng(1)
+    rng = Generator(PCG64(1))
     smb = rng.normal(0.0, 0.03, size=(n_paths, months))  # genuinely two-sided
     ensemble = _ensemble({"smb": smb}, n_paths, months)
     specs = {s.name: s for s in build_economics_suite(_real_manifest(), _empty_reference())}
@@ -173,7 +175,7 @@ def test_money_pump_violations_flags_a_deliberately_never_negative_zero_cost_leg
 
 def test_money_pump_violations_counts_only_the_violating_paths() -> None:
     n_paths, months = 4, 120
-    rng = np.random.default_rng(2)
+    rng = Generator(PCG64(2))
     smb = rng.normal(0.0, 0.03, size=(n_paths, months))
     smb[0, :] = 0.001  # path 0 is the deliberate violator; the rest are two-sided
     ensemble = _ensemble({"smb": smb}, n_paths, months)
@@ -281,6 +283,77 @@ def test_policy_anchor_deviation_nan_when_too_short_for_any_yoy_value() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# 5b. CRITICAL 1 -- policy_anchor_deviation must not reward a degenerate generator.
+# THE DELIVERABLE: a test showing a zero-variance generator scores better than a
+# realistic one under the raw metric, and a second test showing this is caught by the
+# sealed two-sided band.
+# --------------------------------------------------------------------------- #
+
+
+def test_policy_anchor_deviation_near_zero_is_not_automatically_good() -> None:
+    """A generator emitting a policy_rate that DETERMINISTICALLY equals the simplified
+    anchor every month scores exactly 0.0 -- the numerically best possible value --
+    under the raw metric alone, despite being LESS realistic than a generator with
+    genuine idiosyncratic variation: real policy rates deviate from any Taylor-type
+    anchor by roughly 1-2 percentage points RMS in practice. This is the gaming route
+    Critical 1 names, demonstrated directly: the degenerate (zero-variance) generator
+    scores STRICTLY BETTER than the more realistic (noisy) one."""
+    n_paths, months = 2, 50
+    cpi = _constant_slab(100.0, n_paths, months)
+    anchor = TAYLOR_R_STAR + TAYLOR_PI_TARGET + TAYLOR_PHI_PI * (0.0 - TAYLOR_PI_TARGET)
+    specs = {s.name: s for s in build_economics_suite(_real_manifest(), _empty_reference())}
+
+    degenerate_ensemble = _ensemble(
+        {"policy_rate": _constant_slab(anchor, n_paths, months), "cpi": cpi}, n_paths, months
+    )
+    degenerate_value = specs["policy_anchor_deviation"].fn(degenerate_ensemble)
+
+    rng = Generator(PCG64(99))
+    realistic_policy_rate = anchor + rng.normal(0.0, 1.5, size=(n_paths, months))
+    realistic_ensemble = _ensemble(
+        {"policy_rate": realistic_policy_rate, "cpi": cpi}, n_paths, months
+    )
+    realistic_value = specs["policy_anchor_deviation"].fn(realistic_ensemble)
+
+    assert degenerate_value == pytest.approx(0.0, abs=1e-9)
+    assert realistic_value > 1.0, realistic_value
+    # THE GAMING: less realistic (deterministic) reads as strictly better than more
+    # realistic (noisy).
+    assert degenerate_value < realistic_value
+
+
+def test_policy_anchor_deviation_degenerate_generator_fails_the_sealed_two_sided_band() -> None:
+    """...and now it is caught: pre-registration.yaml's policy_anchor_deviation
+    threshold is sealed TWO-SIDED (min bounded away from 0.0), following
+    interval_coverage's precedent that both directions of a calibration-style
+    statistic are failures. The degenerate exact-tracker fails the sealed band; a
+    realistically noisy generator passes it."""
+    from ah.eval import prereg as prereg_mod
+
+    threshold = prereg_mod.load().panel_thresholds["policy_anchor_deviation"]
+    assert threshold.min is not None and threshold.min > 0.0, threshold
+
+    n_paths, months = 2, 50
+    cpi = _constant_slab(100.0, n_paths, months)
+    anchor = TAYLOR_R_STAR + TAYLOR_PI_TARGET + TAYLOR_PHI_PI * (0.0 - TAYLOR_PI_TARGET)
+    specs = {s.name: s for s in build_economics_suite(_real_manifest(), _empty_reference())}
+
+    degenerate_ensemble = _ensemble(
+        {"policy_rate": _constant_slab(anchor, n_paths, months), "cpi": cpi}, n_paths, months
+    )
+    degenerate_value = specs["policy_anchor_deviation"].fn(degenerate_ensemble)
+    assert not _passed(degenerate_value, threshold)
+
+    rng = Generator(PCG64(98))
+    realistic_policy_rate = anchor + rng.normal(0.0, 1.5, size=(n_paths, months))
+    realistic_ensemble = _ensemble(
+        {"policy_rate": realistic_policy_rate, "cpi": cpi}, n_paths, months
+    )
+    realistic_value = specs["policy_anchor_deviation"].fn(realistic_ensemble)
+    assert _passed(realistic_value, threshold)
+
+
+# --------------------------------------------------------------------------- #
 # 6. implied_sharpe_{regime} -- structural gap, mirrors ah.eval.metrics.horizon
 # --------------------------------------------------------------------------- #
 
@@ -329,3 +402,28 @@ def test_economics_suite_registered_in_reference_dependent_suite_builders() -> N
         "ah.eval.metrics.economics",
         "build_economics_suite",
     )
+
+
+# --------------------------------------------------------------------------- #
+# 8. economics.py never imports ah.eval.g2 (Minor, WP2.2 Task 5 fix pass -- mirrors
+# tests/test_calibration.py's / tests/test_memorization.py's identical guard; this
+# suite has no leakage-relevant DataAccess/FinalEvaluationToken concern of its own
+# (see the module docstring's "Registration is deferred"), but the g2-import guard is
+# a repo-wide convention every reference-dependent suite in eval/metrics/ carries).
+# --------------------------------------------------------------------------- #
+
+_ECONOMICS_PATH = ROOT / "src" / "ah" / "eval" / "metrics" / "economics.py"
+
+
+def test_economics_module_never_imports_g2_or_names_the_token() -> None:
+    text = _ECONOMICS_PATH.read_text(encoding="utf-8")
+    tree = ast.parse(text, filename=str(_ECONOMICS_PATH))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert "ah.eval.g2" not in alias.name
+        elif isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            assert "g2" not in module.split("."), module
+            for alias in node.names:
+                assert alias.name != "FinalEvaluationToken"

@@ -1118,9 +1118,74 @@ All notable changes to this project are documented here. The project follows
     loads), `money_pump_violations`/`floor_violations` sealed `enforce, max: 0` in
     `thresholds.panel` (not a placeholder — the definition itself), and
     `test_every_real_threshold_key_is_produced_by_a_registered_metric` widened to union
-    every reference-dependent suite's produced names rather than `monthly`'s alone (a
+    four of the seven reference-dependent suites' produced names (`monthly`,
+    `memorization`, `economics`, `calibration`) rather than `monthly`'s alone (a
     pre-existing scope gap the new panel entries were the first to expose). Full suite
     green (934 tests, up from 864 — 70 new), ruff/pyright clean.
+- **WP2.2 Task 5 review fix pass — the eighth "generator produces less" instance, two
+  missing generated-side floors, and an unstated NaN-driven verdict.**
+  - *Critical 1 — `policy_anchor_deviation` rewarded a degenerate generator.* A
+    `policy_rate` path DETERMINISTICALLY equal to the simplified anchor every month
+    scored exactly 0.0 — the numerically best value — under the old one-sided
+    `{min: null, max: 10.0}` band, despite being LESS realistic than a generator with
+    genuine idiosyncratic variation (real policy rates deviate from a Taylor-type
+    anchor by ~1-2pp RMS). `pre-registration.yaml`'s threshold is now TWO-SIDED
+    (`min: 0.3`), mirroring `interval_coverage`'s own "neither direction is free"
+    precedent; `economics.py`'s module docstring and the `policy_anchor_deviation_estimator`
+    convention state the caveat explicitly. `tests/test_economics.py` gains the
+    deliverable: `test_policy_anchor_deviation_near_zero_is_not_automatically_good`
+    shows the degenerate generator scoring strictly better than a realistic one, and
+    `test_policy_anchor_deviation_degenerate_generator_fails_the_sealed_two_sided_band`
+    shows the sealed band now catches it.
+  - *Important 2 — `money_pump_violations` narrowed to a per-leg check.* DN-1.1's audit
+    names a strictly dominating COMBINATION of factors; the implementation checks only
+    single legs, with no search over weighted combinations. Stated in `economics.py`'s
+    docstring and `pre-registration.yaml`'s `money_pump_estimator`, and recorded as
+    `governance/retrofit-register.md` RFR-29.
+  - *Important 3 — `memorization.py` had no generated-side floor.* Both sibling suites
+    floor the generated side (`ECONOMICS_MIN_OBS`, `CALIBRATION_MIN_GENERATED_SUMS`);
+    memorization only floored TRAIN. A one-path, 24-month ensemble collapsed
+    `nn_distance_p05/p50` to a single observation and drifted
+    `membership_inference_auc` toward its favourable 0.5 — "the generator produces
+    less" reading as a pass. New `MEMORIZATION_MIN_GENERATED_BLOCKS = 30` (matching
+    `CALIBRATION_MIN_GENERATED_SUMS`'s shape) NaNs all four names together below the
+    floor; `test_memorization_nan_when_generated_side_is_too_small_even_with_ample_train`
+    is the deliverable (TRAIN clears its own floor easily; the generated side does not).
+  - *Important 4 — calibration tested only the under-confidence direction.* The
+    over-wide (under-confident) direction — the likelier gaming route, a lazy
+    huge-variance generator earning near-perfect coverage for free — was untested.
+    `test_underconfident_forecast_shows_high_coverage_and_a_large_ks_statistic` adds it.
+  - *Important 5 — `MEMORIZATION_BLOCK_MONTHS` silently followed `UTILITY_WINDOW_MONTHS`.*
+    The sealed estimator states 24 as a literal; the code now raises `AssertionError`
+    at import time if the two ever diverge, and a new test pins the value directly.
+  - *Important 6 — `TAYLOR_PI_TARGET`'s literature substitution had no retrofit-register
+    row.* RFR-27 covered only `implied_sharpe_*`'s structural gap. New RFR-28 records
+    the substitution and the dropped `phi_c*c_t` term as the durable artifact WP2.3
+    reads (an implementer's report is not).
+  - *Important 7 — two new enforce gates changed the battery verdict, unstated.* On the
+    `run_full_battery` orchestration fixture, `money_pump_violations`/`floor_violations`
+    are both NaN (the fixture emits none of the audited factors), which FAILS both
+    enforce thresholds under THE ONE NaN RULE — `report.passed` is `False`, previously
+    unasserted anywhere. Decided explicitly rather than softened: NaN continues to fail
+    (consistent with the platform's one uniform NaN rule; an ensemble that omits the
+    audited factors has produced less, exactly the failure mode these gates exist to
+    catch). `test_run_full_battery_orchestration_fixture_fails_on_the_money_pump_and_floor_gates`
+    pins the verdict; `governance/retrofit-register.md` RFR-30 records the decision and
+    its consequence for WP2.4 (the bootstrap generator must emit at least one audited
+    factor from each set).
+  - *Minor.* The three stray `np.random.default_rng(...)` call sites (two in
+    `test_economics.py`, one in `test_calibration.py`) converted to
+    `Generator(PCG64(seed))`, the repo's one seeded-RNG convention.
+    `test_economics.py` gains the `ah.eval.g2`-import AST guard its two siblings
+    already had. `test_every_real_threshold_key_is_produced_by_a_registered_metric`
+    widened from four of the seven reference-dependent suites' produced names to all
+    seven (adding `horizon`/`tails`/`utility`). `_pooled_memorization_signals` is now
+    computed once per ensemble and cached (identity-keyed via a weak reference) across
+    all four memorization metric closures, instead of four times. `pit_ks_stat_5y`/
+    `interval_coverage_{50,90}_5y` re-tiered from `monthly` to `1_5yr` (DN-1.1's own
+    tier for a 60-month horizon), reconsidered and corrected before the pre-registration
+    seal rather than carried forward as a known-wrong assignment.
+  - Full suite green, ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

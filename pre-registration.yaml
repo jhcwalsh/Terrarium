@@ -1130,7 +1130,15 @@ conventions:
     ah.splits.TRAIN/VALIDATION date boundaries, applied directly to
     ReferenceStats.historical_series (already train+validation combined) -- never a
     second catalog read. NaN if the factor's TRAIN split carries fewer than 5
-    non-overlapping blocks (see MEMORIZATION_MIN_TRAIN_BLOCKS_estimator).
+    non-overlapping blocks (see MEMORIZATION_MIN_TRAIN_BLOCKS_estimator), OR (Important
+    3, WP2.2 Task 5 fix pass) if fewer than MEMORIZATION_MIN_GENERATED_BLOCKS=30 pooled
+    GENERATED blocks result across every qualifying factor -- the identical
+    generated-side floor ECONOMICS_MIN_OBS/CALIBRATION_MIN_GENERATED_SUMS already apply
+    to their own suites: a one-path, 24-month ensemble yields exactly one generated
+    block, which made nn_distance_p05/p50 a single observation and drifted
+    membership_inference_auc toward its favourable 0.5 value purely from having too
+    little to attack, not from genuinely not memorizing. Below the floor ALL FOUR
+    metric names NaN together.
   membership_inference_auc_estimator: >-
     A DISTANCE-TO-NEAREST-SYNTHETIC-SAMPLE MEMBERSHIP-INFERENCE ATTACK. For every TRAIN
     block (see memorization_nn_distance_estimator for the block/standardization/
@@ -1188,7 +1196,12 @@ conventions:
     sorted sample. Perfect calibration -> pooled PIT is uniform -> D = 0; LOWER IS
     BETTER. NaN if fewer than 30 (CALIBRATION_MIN_GENERATED_SUMS) pooled generated
     sums are available for EVERY factor at that horizon, or fewer than 30
-    (CALIBRATION_MIN_ORIGINS) pooled PIT values result.
+    (CALIBRATION_MIN_ORIGINS) pooled PIT values result. TIER (Minor, WP2.2 Task 5 fix
+    pass, reconsidered before sealing rather than after): pit_ks_stat_1y reports under
+    DN-1.1's monthly tier; pit_ks_stat_5y reports under its 1_5yr tier -- a 60-month
+    horizon statistic filed under "monthly" would read as a shorter-horizon claim than
+    it makes, and re-tiering after this file seals is a dated amendment, so it is
+    corrected now.
   interval_coverage_estimator: >-
     REALIZED COVERAGE OF A NOMINAL q% PREDICTION INTERVAL, q in {50, 90}, at horizon h
     in {12 ("1y"), 60 ("5y")} months -- shares pit_ks_stat_estimator's rolling-origin
@@ -1202,7 +1215,9 @@ conventions:
     higher nor lower is "better": an over-wide generated distribution reads as
     OVER-coverage, exactly as much a calibration failure as under-coverage, so a
     sealed band brackets q/100 on both sides. Same two NaN floors as
-    pit_ks_stat_estimator.
+    pit_ks_stat_estimator. Same TIER split as pit_ks_stat_estimator too:
+    interval_coverage_{50,90}_1y report under monthly, interval_coverage_{50,90}_5y
+    under 1_5yr.
 
   # WP2.2 Task 5 -- economic tier (ah.eval.metrics.economics). DN-1.1 Sec.II.6's
   # "Economic" row states this tier's own acceptance criterion as "Defensible ranges,
@@ -1252,6 +1267,19 @@ conventions:
     month) observations result, or if any pooled observation is non-finite (poisons
     the whole metric -- a NaN/inf return never satisfies ">= 0" so silently ignoring it
     would let a generator dodge this audit by overflowing rather than complying).
+    COVERAGE LIMITATION (Important 2, WP2.2 Task 5 fix pass): DN-1.1's own economic row
+    names the audit as catching a strictly dominating COMBINATION of generated factors;
+    this is a PER-LEG check only, with no search over weighted combinations of two or
+    more zero-cost legs (e.g. a relative-value spread between smb and hml that
+    dominates even though neither leg alone does). It catches the single-leg degenerate
+    case by construction and is, for any genuinely stochastic leg, a real (if narrow)
+    check -- but it is not the full combinatorial audit DN-1.1 describes.
+    governance/retrofit-register.md RFR-29 records the gap. CONSEQUENCE WHEN NO
+    ZERO-COST LEG IS PRESENT (Important 7): this NaNs the metric, which FAILS the
+    sealed enforce/max:0 threshold under nan_metric_rule above -- deliberately, not a
+    bug: an ensemble omitting every audited leg has not demonstrated compliance with an
+    audit it cannot be checked against. WP2.4's generator must emit at least one of
+    smb/hml/mom/credit_xs_hy for a real battery run to reach a genuine verdict here.
   floor_violations_estimator: >-
     STRUCTURAL FLOORS FROM DN-1.1 SEC.II.4 ("rates and spreads generated in softplus
     space with floors, i >= -1%, spread >= 100bp"). severity: enforce, max: 0. Two
@@ -1263,7 +1291,11 @@ conventions:
     floor, summed over every qualifying factor present in the ensemble. NaN if no
     floor-bearing factor is present, if fewer than 60 pooled observations result, or on
     any non-finite observation (poisons the whole metric, same reasoning as
-    money_pump_estimator).
+    money_pump_estimator). CONSEQUENCE WHEN NO FLOOR-BEARING FACTOR IS PRESENT
+    (Important 7, WP2.2 Task 5 fix pass): identical to money_pump_estimator's -- NaN
+    FAILS the sealed enforce/max:0 threshold, deliberately. WP2.4's generator must emit
+    at least one of policy_rate/ust_2y/ust_10y/hqm_curve/ig_spread/hy_spread/
+    funding_spread for a real battery run to reach a genuine verdict here.
   policy_anchor_deviation_estimator: >-
     ROOT-MEAN-SQUARE DEVIATION FROM A SIMPLIFIED TAYLOR-TYPE ANCHOR. DN-1.1 Sec.II.2's
     policy anchor is i_t = r*_t + pi*_t + phi_pi*(pi_t - pi*_t) + phi_c*c_t + eps_t,
@@ -1285,10 +1317,20 @@ conventions:
     generator-visible proxy and DN-1.1 gives no phi_c prior to substitute) -- a stated
     simplification. Reported value: sqrt(mean((policy_rate_t - anchor_t)^2)), POOLED
     over every (path, month >= 12) observation (month < 12 has no defined cpi_yoy).
-    LOWER IS BETTER; 0 = the generated policy path exactly tracks the simplified
-    anchor. NaN if policy_rate or cpi is absent, if fewer than 12 months are available
-    at all, if fewer than 60 pooled observations result, or on any non-finite
-    observation.
+    LOWER IS BETTER, BUT NOT UNBOUNDEDLY, AND 0 IS NOT THE TARGET (CRITICAL 1, WP2.2
+    Task 5 fix pass -- the eighth instance of this work package's dominant failure
+    mode, "a metric that improves when the generator produces less/simpler"). Real
+    policy rates deviate from any Taylor-type anchor by roughly 1-2 percentage points
+    RMS in practice (discretion, the dropped phi_c*c_t term, measurement noise); a
+    generator whose policy_rate DETERMINISTICALLY equals anchor_t every month scores
+    exactly 0.0 -- the numerically best possible value -- while being LESS realistic
+    than a generator with genuine idiosyncratic variation. Exactly the same two-sided
+    reasoning interval_coverage_estimator above already states explicitly for its own
+    metric (over-coverage is exactly as much a failure as under-coverage): the sealed
+    threshold below is TWO-SIDED (min bounded away from 0.0, not only a max), so a
+    deterministic anchor-follower FAILS the low side. NaN if policy_rate or cpi is
+    absent, if fewer than 12 months are available at all, if fewer than 60 pooled
+    observations result, or on any non-finite observation.
 
 # --------------------------------------------------------------------------- #
 # Derived series -- declared BEFORE d4_strategies, because strategies reference them.
@@ -1643,7 +1685,16 @@ thresholds:
     # PROVISIONAL placeholders -- not derived from a real run (see file header).
     "term_premium": {min: -2.0, max: 5.0, severity: report}
     "equity_risk_premium": {min: -0.05, max: 0.15, severity: report}
-    "policy_anchor_deviation": {min: null, max: 10.0, severity: report}
+    # TWO-SIDED, not a bare max (CRITICAL 1, WP2.2 Task 5 fix pass): a one-sided
+    # {min: null, max: 10.0} band scores a DETERMINISTIC anchor-follower (policy_rate
+    # exactly equal to anchor_t every month) at 0.0, the numerically best possible
+    # value, despite being less realistic than a generator with genuine idiosyncratic
+    # variation -- real policy rates deviate from a Taylor-type anchor by roughly 1-2pp
+    # RMS. min: 0.3 is a conservative, non-zero floor (well below the empirical 1-2pp
+    # range, but strictly above the degenerate 0.0) so an exact-tracker fails rather
+    # than reading as optimal; see policy_anchor_deviation_estimator above and
+    # ah.eval.metrics.economics's module docstring for the full argument.
+    "policy_anchor_deviation": {min: 0.3, max: 10.0, severity: report}
     "pit_ks_stat_1y": {min: null, max: 0.3, severity: report}
     "pit_ks_stat_5y": {min: null, max: 0.3, severity: report}
     "interval_coverage_50_1y": {min: 0.2, max: 0.8, severity: report}

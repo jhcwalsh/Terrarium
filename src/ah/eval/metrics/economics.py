@@ -90,6 +90,22 @@ somewhere -- weakly dominates cash at zero cost, for the whole path). The report
 count is the number of ``(leg, path)`` pairs violating, POOLED across every qualifying
 leg (this is a total COUNT, not a per-path average: a per-(leg,path) indicator, summed).
 
+**Coverage limitation, stated rather than left implicit (Important 2, WP2.2 Task 5 fix
+pass).** DN-1.1's own economic row names the audit as catching "a strictly dominating
+COMBINATION of generated factors" -- this implementation narrows that to a PER-LEG check
+with no combination search: it asks only "does any single zero-cost leg, on its own,
+never lose money on some path", never "does some weighted COMBINATION of two or more
+zero-cost legs (e.g. a relative-value spread between ``smb`` and ``hml``) dominate even
+though neither leg alone does". A generator could construct exactly that kind of
+multi-leg free lunch and this gate would report 0 violations, silently. It DOES catch
+the degenerate single-leg case the deliverable test above exercises, and for any
+genuinely stochastic per-leg process (any leg with real two-sided variance) the
+per-path probability that 120 consecutive months are all ``>= 0`` is astronomically
+small, so in practice this gate almost never fires except on a literally-degenerate
+leg -- it is a narrow but non-vacuous check, not the full combinatorial audit the brief
+describes. Recorded as ``governance/retrofit-register.md`` RFR-29 so WP2.3 knows the
+gate's real coverage before relying on it as evidence of no-arbitrage compliance.
+
 5. ``floor_violations`` -- structural floors from DN-1.1 Sec.II.4
 ------------------------------------------------------------------------
 ``enforce``, ``max: 0``. DN-1.1 Sec.II.4: "rates and spreads generated in softplus
@@ -103,6 +119,29 @@ and are excluded. WP2.8's ``constraints.py`` will make these structurally imposs
 construction (generating in softplus space); this metric is the check that the
 constraint actually held, for a generator built before that lands. POOLED count of
 ``(factor, path, month)`` observations below their factor's floor.
+
+**Consequence for an ensemble that omits the audited factors entirely (Important 7,
+WP2.2 Task 5 fix pass), stated deliberately rather than discovered by WP2.4.** Both
+``money_pump_violations`` and ``floor_violations`` are ``enforce``-severity, ``max: 0``
+in ``pre-registration.yaml``, and both NaN (see :data:`ECONOMICS_MIN_OBS`'s docstring
+below) when the ensemble emits NONE of ``conventions.numeraire_zero_cost_legs`` /
+NONE of :data:`RATE_FLOOR_FACTORS`/:data:`SPREAD_FLOOR_FACTORS` respectively -- and
+under THE ONE NaN RULE (``ah.eval.battery._passed``, ``pre-registration.yaml``'s
+``conventions.nan_metric_rule``) a NaN value against an ``enforce`` threshold FAILS.
+**This is intentional, not a bug to be softened**: these two gates exist precisely so
+"the generator produces less" is never a route to a better-looking number, and an
+ensemble that omits the audited factors altogether has, by construction, produced
+LESS than one that emits them and passes honestly -- it has not demonstrated
+compliance with an audit it structurally cannot be checked against, so THE ONE NaN
+RULE's existing, uniform judgment (no metric-specific carve-out) is the correct one
+here too. The consequence is real for WP2.4, though: **any ensemble not emitting at
+least one of ``smb``/``hml``/``mom``/``credit_xs_hy`` and at least one
+rate/spread floor-bearing factor hard-fails these two enforce gates on a battery run
+that reaches ``run_full_battery``.** WP2.4's bootstrap generator must emit these
+factors for the battery to reach a genuine verdict on them.
+``tests/test_eval_battery.py::test_run_full_battery_orchestration_fixture_fails_on_the_money_pump_and_floor_gates``
+pins this behaviour so a future change to it is a deliberate, tested decision rather
+than a silent regression either way.
 
 6. ``policy_anchor_deviation`` -- deviation from a simplified Taylor-type anchor
 --------------------------------------------------------------------------------------
@@ -134,8 +173,36 @@ term ``phi_c * c_t`` is DROPPED entirely (``c_t`` has no generator-visible proxy
 DN-1.1's table gives no ``phi_c`` prior to substitute) -- a stated simplification, not
 an oversight. The reported value is the ROOT-MEAN-SQUARE deviation of ``policy_rate_t``
 from ``anchor_t``, pooled over every ``(path, month >= 12)`` observation (month < 12 has
-no defined ``cpi_yoy``). **Lower is better**; 0 = the generated policy path exactly
-tracks the simplified anchor.
+no defined ``cpi_yoy``). **Lower is better, but NOT unboundedly, and 0 is not the
+target** -- see the module docstring's "Anti-gaming: two-sided ``policy_anchor_deviation``"
+section below for why an exact-tracking generator is a WORSE, more degenerate generator
+than a realistically noisy one, and why the sealed band is two-sided rather than a bare
+``max``.
+
+Anti-gaming: two-sided ``policy_anchor_deviation``, so tracking the anchor exactly is
+not free
+--------------------------------------------------------------------------------------
+The RMS deviation reported above is **not** "lower is better without limit". A real
+policy-setting process deviates from any Taylor-type anchor by roughly 1-2 percentage
+points RMS in practice (discretion, the DROPPED ``phi_c*c_t`` cycle term, measurement
+noise, everything the simplified anchor above does not capture) -- so a generator whose
+``policy_rate`` DETERMINISTICALLY equals ``anchor_t`` every month scores exactly 0.0,
+the numerically best possible value, while being LESS realistic than a generator with
+genuine idiosyncratic variation around the anchor. This is the eighth instance of this
+work package's dominant failure mode ("a metric that improves when the generator
+produces less/simpler"), on the identical axis :func:`interval_coverage`'s sibling
+metric in :mod:`ah.eval.metrics.calibration` already reasons about explicitly: an
+over-wide predictive distribution is exactly as much a calibration failure as an
+under-wide one, so that metric's sealed band is two-sided rather than treating one
+direction as free. ``pre-registration.yaml``'s
+``thresholds.panel.policy_anchor_deviation`` is likewise sealed TWO-SIDED here (a
+``min`` bounded away from 0.0, not only a ``max``), so a deterministic anchor-follower
+FAILS the low side rather than reading as the best possible generator.
+``tests/test_economics.py``'s ``test_policy_anchor_deviation_near_zero_is_not_automatically_good``
+is the deliverable proving the gaming route directly (a degenerate exact-tracker scores
+strictly better than a realistically noisy one under the raw metric alone), and
+``test_policy_anchor_deviation_degenerate_generator_fails_the_sealed_two_sided_band``
+proves the sealed band catches it.
 
 Anti-gaming floor: :data:`ECONOMICS_MIN_OBS`
 --------------------------------------------------

@@ -1143,6 +1143,51 @@ def test_run_full_battery_returns_memorization_economics_calibration_metrics_by_
     assert calibration_results["pit_ks_stat_1y"].tier == "monthly"
 
 
+def test_run_full_battery_orchestration_fixture_fails_on_the_money_pump_and_floor_gates() -> None:
+    """Important 7 (WP2.2 Task 5 fix pass): the orchestration fixture's factors are
+    synthetic g1/u1, not the real D4 legs -- it emits NONE of
+    conventions.numeraire_zero_cost_legs (smb/hml/mom/credit_xs_hy) and none of
+    RATE_FLOOR_FACTORS/SPREAD_FLOOR_FACTORS, so money_pump_violations and
+    floor_violations are both NaN on this fixture (see
+    ah.eval.metrics.economics.build_economics_suite's absent-input NaN guard). Both are
+    sealed enforce/max:0 in pre-registration.yaml, and THE ONE NaN RULE means a NaN
+    enforce metric FAILS -- so this real orchestration path produces two enforce
+    failures and BatteryReport.passed is False. No test previously asserted a verdict
+    on this fixture at all, so this behaviour (a deliberate, documented consequence --
+    see economics.py's module docstring and governance/retrofit-register.md RFR-30, not
+    a bug) was unpinned and could regress silently in either direction. This test pins
+    it: any ensemble not emitting the audited factors hard-fails G2 on an audit it
+    structurally cannot be checked against, and WP2.4's generator must emit at least
+    one factor from each audited set for a real battery run to reach a genuine
+    (non-NaN-forced) verdict on these two gates.
+    """
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    economics_results = {r.name: r for r in report.results if r.suite == "economics"}
+    assert np.isnan(economics_results["money_pump_violations"].value)
+    assert np.isnan(economics_results["floor_violations"].value)
+    assert economics_results["money_pump_violations"].severity == "enforce"
+    assert economics_results["floor_violations"].severity == "enforce"
+    assert economics_results["money_pump_violations"].passed is False
+    assert economics_results["floor_violations"].passed is False
+
+    enforce_failure_names = {r.name for r in report.enforce_failures}
+    assert {"money_pump_violations", "floor_violations"} <= enforce_failure_names
+    assert report.passed is False
+
+
 def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
     manifest = _orchestration_manifest()
     ensemble = _orchestration_ensemble()

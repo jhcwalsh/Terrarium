@@ -24,6 +24,7 @@ from numpy.random import PCG64, Generator
 from ah.eval.metrics.memorization import (
     MEMORIZATION_BLOCK_MONTHS,
     MEMORIZATION_EPSILON_PERCENTILE,
+    MEMORIZATION_MIN_GENERATED_BLOCKS,
     MEMORIZATION_MIN_TRAIN_BLOCKS,
     _block_distance,
     _leave_one_out_epsilon,
@@ -320,6 +321,54 @@ def test_independent_draw_scores_as_not_memorized() -> None:
     assert dup_frac < 0.05, dup_frac
 
 
+def test_memorization_nan_when_generated_side_is_too_small_even_with_ample_train() -> None:
+    """THE DELIVERABLE for Important 3: TRAIN clears MEMORIZATION_MIN_TRAIN_BLOCKS
+    easily (600 train months = 25 blocks per factor), but the GENERATED side is a
+    single one-path, 24-month ensemble -- exactly ONE generated block per factor.
+    Before the generated-side floor, nn_distance_p05/p50 degenerated to a single
+    observation and membership_inference_auc drifted toward the FAVOURABLE 0.5 value
+    purely because the generator produced almost nothing to attack, not because it is
+    genuinely non-memorizing -- "the generator produces less" reading as a better
+    score. The floor must NaN all four metrics instead."""
+    rng = Generator(PCG64(50))
+    manifest, reference = _panel(rng, train_months=600, val_months=200)
+    tiny_generated_ensemble = _independent_ensemble(
+        n_paths=1, months=MEMORIZATION_BLOCK_MONTHS, seed=51
+    )
+    specs = {s.name: s for s in build_memorization_suite(manifest, reference)}
+    for name in (
+        "nn_distance_p05",
+        "nn_distance_p50",
+        "membership_inference_auc",
+        "near_duplicate_fraction",
+    ):
+        assert math.isnan(specs[name].fn(tiny_generated_ensemble)), name
+
+
+def test_memorization_generated_floor_varies_the_generated_axis_not_only_the_real_one() -> None:
+    """Important 3's review note: both pre-existing directional tests
+    (`test_literal_replayer_scores_as_memorized` /
+    `test_independent_draw_scores_as_not_memorized`) fix the generated side at 6 paths
+    x 240 months and vary only the real/train side -- the vulnerable axis was never
+    exercised. This test holds TRAIN/VALIDATION fixed and grows the GENERATED side
+    across the floor: below MEMORIZATION_MIN_GENERATED_BLOCKS every metric NaNs; once
+    comfortably above it, an independent (non-memorizing) draw scores correctly."""
+    rng = Generator(PCG64(52))
+    manifest, reference = _panel(rng, train_months=600, val_months=200)
+    specs = {s.name: s for s in build_memorization_suite(manifest, reference)}
+
+    below_floor = _independent_ensemble(
+        n_paths=1, months=MEMORIZATION_BLOCK_MONTHS * 2, seed=53
+    )  # 2 blocks per factor, well under the 30-block floor
+    for name in ("nn_distance_p05", "membership_inference_auc"):
+        assert math.isnan(specs[name].fn(below_floor)), name
+
+    above_floor = _independent_ensemble(n_paths=6, months=240, seed=54)  # 60 blocks/factor
+    auc = specs["membership_inference_auc"].fn(above_floor)
+    assert not math.isnan(auc)
+    assert auc == pytest.approx(0.5, abs=0.2), auc
+
+
 def test_memorization_nan_when_no_factor_has_enough_train_blocks() -> None:
     manifest = _manifest()
     reference = _reference_with_series({})  # no historical data at all
@@ -338,9 +387,24 @@ def test_memorization_block_months_is_a_positive_constant() -> None:
     assert MEMORIZATION_BLOCK_MONTHS > 1
 
 
+def test_memorization_block_months_is_pinned_to_24() -> None:
+    """Important 5 (WP2.2 Task 5 fix pass): pre-registration.yaml's
+    memorization_nn_distance_estimator states 24 as a sealed LITERAL, not "whatever
+    UTILITY_WINDOW_MONTHS happens to be" -- the previous test above (`> 1`) would not
+    catch a change to UTILITY_WINDOW_MONTHS silently redefining this sealed estimator.
+    ah.eval.metrics.memorization itself raises AssertionError at import time if this
+    ever drifts (see the module docstring's "Pinned, not merely reused"), so this test
+    is a second, independent guard at the value this suite is actually sealed at."""
+    assert MEMORIZATION_BLOCK_MONTHS == 24
+
+
 def test_memorization_min_train_blocks_floor_is_at_least_two() -> None:
     # leave-one-out epsilon needs >= 2 train blocks per factor to be defined at all.
     assert MEMORIZATION_MIN_TRAIN_BLOCKS >= 2
+
+
+def test_memorization_min_generated_blocks_floor_is_a_positive_constant() -> None:
+    assert MEMORIZATION_MIN_GENERATED_BLOCKS > 1
 
 
 def test_every_memorization_metric_name_can_carry_a_sealed_threshold() -> None:
