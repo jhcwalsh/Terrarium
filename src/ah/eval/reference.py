@@ -1551,10 +1551,26 @@ class RegisteredCrossStat:
 
     Symmetric with :class:`RegisteredStat`: tier is carried on the registration record,
     not hardcoded inline where the stat is invoked.
+
+    ``length_matched`` (default ``True``) carries exactly the meaning it does on
+    :class:`RegisteredStat`, and is here for exactly the same reason -- WP2.2 Task 4's
+    fix pass found a registered statistic whose band could not do its job without it.
+    :func:`tail_dependence_lower`/:func:`tail_dependence_upper` need
+    ``n >= TAIL_DEPENDENCE_MIN_TAIL_OBS / TAIL_DEPENDENCE_TAIL_FRACTION`` = 200
+    observations before they return a number at all, so at production settings (every
+    replicate length-matched to the ensemble's 120-month paths) EVERY replicate returned
+    NaN and the band was ``(nan, nan)`` with ``n_valid_resamples = 0``. Drawing them at
+    the full train+validation length instead is not a workaround: the coefficient is a
+    joint-exceedance FRACTION at a fixed 5% tail, an estimator whose value does not
+    depend on series length (only its sampling error does) -- the identical argument
+    that makes ``lost_decade_frequency`` unmatched. Contrast ``correlation`` and
+    ``crisis_corr_lift``, whose sampling behaviour at 120 rows is genuinely different
+    from 1100 and which therefore stay matched.
     """
 
     fn: Callable[[np.ndarray, np.ndarray], float]
     tier: str
+    length_matched: bool = True
 
 
 def _correlation(a: np.ndarray, b: np.ndarray) -> float:
@@ -1598,8 +1614,13 @@ def _crisis_corr_lift(a: np.ndarray, b: np.ndarray) -> float:
 # every other CROSS_BLOCK_STATS estimator does (see the module docstring): a
 # statistic defined only in a metric suite could never carry a sealed threshold, and
 # registering it here gives it a real computed train+validation point + block-
-# bootstrap band for free, via the existing `_cross_block_reference` machinery -- no
-# new plumbing needed. `ah.eval.metrics.tails` imports and re-exports these two names
+# bootstrap band via the existing `_cross_block_reference` machinery. That band is only
+# real because both entries are registered `length_matched=False` (WP2.2 Task 4 fix
+# pass, Important 3): at the production `resample_length` of 120 the 5% tail of a
+# replicate holds 6 observations, below TAIL_DEPENDENCE_MIN_TAIL_OBS, so every replicate
+# was NaN and the band was empty. It was NOT free, and the earlier claim that it was is
+# corrected here rather than left standing. `ah.eval.metrics.tails` imports and
+# re-exports these two names
 # under its own module (the SAME function objects, not wrappers), exactly as
 # `ah.eval.metrics.monthly` already does for `hill_tail_index`/`corr_matrix_distance`;
 # a direct import from `ah.eval.metrics.tails` into this module would cycle
@@ -1678,8 +1699,15 @@ def tail_dependence_upper(a: np.ndarray, b: np.ndarray) -> float:
 CROSS_BLOCK_STATS: dict[str, RegisteredCrossStat] = {
     "correlation": RegisteredCrossStat(fn=_correlation, tier="monthly"),
     "crisis_corr_lift": RegisteredCrossStat(fn=_crisis_corr_lift, tier="monthly"),
-    "tail_dependence_lower": RegisteredCrossStat(fn=tail_dependence_lower, tier="monthly"),
-    "tail_dependence_upper": RegisteredCrossStat(fn=tail_dependence_upper, tier="monthly"),
+    # length_matched=False on both -- see RegisteredCrossStat: at a 120-month matched
+    # replicate the 5% tail holds 6 observations, below TAIL_DEPENDENCE_MIN_TAIL_OBS, so
+    # every replicate is NaN and the band is empty. Not a tuning choice.
+    "tail_dependence_lower": RegisteredCrossStat(
+        fn=tail_dependence_lower, tier="monthly", length_matched=False
+    ),
+    "tail_dependence_upper": RegisteredCrossStat(
+        fn=tail_dependence_upper, tier="monthly", length_matched=False
+    ),
 }
 
 
@@ -2177,12 +2205,20 @@ def _cross_block_reference(
     """Every :data:`CROSS_BLOCK_STATS` entry for every present factor pair drawn from ``pair``.
 
     Each ``(fa, fb)`` pair is aligned against *only itself* (:func:`_aligned_pair`), not
-    the rest of either block, and gets its own moving-block resample draw reused across
-    every stat registered for that pair. A pair with zero date overlap is recorded in
-    the result's ``zero_overlap_pairs`` and contributes no stat entries.
+    the rest of either block, and gets **at most two** moving-block resample draws --
+    the length-matched draw at ``resample_length`` and, only if some registered
+    cross-block stat declares ``length_matched=False``, a full-sample-length draw --
+    each drawn once per pair and reused across every stat that needs it. This mirrors
+    :func:`_block_reference`'s two-draw structure exactly; WP2.2 Task 4's fix pass added
+    it here because :class:`RegisteredCrossStat` gained the same flag (see that class).
+    A pair with zero date overlap is recorded in the result's ``zero_overlap_pairs`` and
+    contributes no stat entries.
     """
     stats: dict[str, StatBand] = {}
     zero_overlap: list[str] = []
+    needs_unmatched = resample_length is not None and any(
+        not registered.length_matched for registered in CROSS_BLOCK_STATS.values()
+    )
     for fa in factors_a:
         for fb in factors_b:
             pair_panel = _aligned_pair(series_by_factor, fa, fb)
@@ -2190,14 +2226,27 @@ def _cross_block_reference(
                 zero_overlap.append(f"{fa}~{fb}")
                 continue
             t = pair_panel.shape[0]
-            resample_indices = _draw_moving_block_indices(
-                t,
-                seed=seed,
-                n_resamples=n_resamples,
-                block_length=block_length,
-                context=f"pair={pair[0]}|{pair[1]} factors={fa}~{fb}",
-                resample_length=resample_length,
-            )
+            indices_by_length: dict[int | None, np.ndarray] = {
+                resample_length: _draw_moving_block_indices(
+                    t,
+                    seed=seed,
+                    n_resamples=n_resamples,
+                    block_length=block_length,
+                    context=f"pair={pair[0]}|{pair[1]} factors={fa}~{fb}",
+                    resample_length=resample_length,
+                )
+            }
+            if needs_unmatched:
+                indices_by_length[None] = _draw_moving_block_indices(
+                    t,
+                    seed=seed,
+                    n_resamples=n_resamples,
+                    block_length=block_length,
+                    context=(
+                        f"pair={pair[0]}|{pair[1]} factors={fa}~{fb} (full-length replicates)"
+                    ),
+                    resample_length=None,
+                )
             for stat_name, registered in CROSS_BLOCK_STATS.items():
 
                 def sample_fn(
@@ -2206,6 +2255,7 @@ def _cross_block_reference(
                 ) -> float:
                     return _fn(arr[:, 0], arr[:, 1])
 
+                stat_resample_length = resample_length if registered.length_matched else None
                 band = block_bootstrap_band(
                     sample_fn,
                     pair_panel,
@@ -2215,8 +2265,8 @@ def _cross_block_reference(
                     block_length=block_length,
                     tier=registered.tier,
                     context=f"pair={pair[0]}|{pair[1]} factors={fa}~{fb} stat={stat_name}",
-                    resample_indices=resample_indices,
-                    resample_length=resample_length,
+                    resample_indices=indices_by_length[stat_resample_length],
+                    resample_length=stat_resample_length,
                 )
                 stats[f"{fa}~{fb}.{stat_name}"] = band
     return CrossBlockReference(

@@ -969,6 +969,55 @@ All notable changes to this project are documented here. The project follows
   neither module imports `ah.eval.g2`, in the style of `test_reference.py`'s own.
   Full suite green (850 tests, up from 776 at task start — 74 new), ruff/pyright
   clean.
+- **WP2.2 Task 4 fix pass 1 — metrics that improved when the generator produced less.**
+  Four findings shared one root and are fixed as a family, with
+  `test_generating_less_never_improves_a_backtest_metric` extended from the one case
+  that was already safe (omit a leg → NaN) to all four.
+  **`elicitability_score`'s arguments were inverted (Critical).** The metric froze
+  `(V, E)` at history's values and varied the *generated* losses, collapsing the score
+  to `c1·mean((L−V)⁺) + c2` with `c1 > 0` — monotone increasing in generated tail
+  heaviness, with a generator emitting **identically zero** as its global optimum
+  (measured: −3.139 for zero output vs −2.856 for matching history). DN-1.1 line 95
+  makes this WP2.8's auxiliary loss, so shipping it would have trained toward zero
+  volatility. Now the Tail-GAN direction: `(VaR, ES)` estimated from the **generated**
+  ensemble, scored against **real** realizations — coercive as ES→0 and minimized
+  exactly when generated `(VaR, ES)` matches history's. The scoring rule itself is
+  unchanged and its consistency test passes under either wiring, so the deliverable is
+  the new test that varies the *sample* rather than the *forecast*.
+  **`discriminative_score` measured class imbalance, not fidelity (Critical).** Real
+  and generated windows were pooled unbalanced (~100:1 at production scale) and scored
+  by raw accuracy, which the majority-class predictor maximizes: with the two
+  distributions held identical the score read 0.008 at 1:1 but 0.493 at 150:1, and
+  *improved* as the ensemble shrank. Now a class-stratified split, inverse-class-
+  frequency weights in the fit, and **balanced** accuracy (exactly 0.5 for any constant
+  predictor at any ratio).
+  **The backtest statistics scaled with `n_paths`.** `LR = 2·T·KL(p̂‖α)` with
+  `T = months × n_paths` meant halving the ensemble halved the statistic and raised the
+  p-value. The pooled sample size is now fixed in the sealed definition at **one path**
+  (`months`, or `months−1` transitions): pooling still sharpens `p̂`, but the reported
+  statistic is what a single reference-length path with that rate would have produced —
+  an effect size on a p-value scale, stated as such in the new
+  `conventions.backtest_reference_sample_size`.
+  **`christoffersen_independence` was perfect on zero exceedances** (every count 0 ⇒
+  `LR = 0`, `p = 1.0` at every `T`); now a `BACKTEST_MIN_EXCEEDANCES = 10` floor → NaN,
+  in the shape of `DRAWDOWN_MIN_EPISODES`. Kupiec is deliberately *not* floored.
+  Also: `RegisteredCrossStat` gains `length_matched` (mirroring `RegisteredStat`) and
+  both `tail_dependence_*` entries set it `False` — at the production `resample_length`
+  of 120 their 5% tail held 6 observations, below the estimator's own floor, so every
+  replicate was NaN and the band was empty; the three places claiming a "band for free"
+  are corrected. `_fit_gd` gains a Lipschitz-bounded step (`min(0.1, 1/L)`) and a
+  gradient-norm stopping criterion — it previously ran a fixed 200 epochs at `lr=0.1`
+  and diverged to `inf`/`nan` on a design ~4.5× real volatility. `_historical_strategy
+  _returns` now asserts its inner join is a contiguous run of months (adjacent rows are
+  read as consecutive months and multiplied by a duration of 8.5). Historical VaR/ES is
+  memoized per `(strategy_id, level)` (~735 redundant pandas joins per battery run).
+  Both LR builders normalize `-0.0`. RFR-23's premise is corrected in place: the ~1.2
+  expected exceedances at 99% is the *per-path* count and Kupiec pools, so the real
+  constraint is Christoffersen's per-path transition counts. `conventions.warm_up`
+  records the momentum warm-up asymmetry (a perfect generator's expected exceedance
+  rate is ~4.57%, not 5%) and why the reference-sample-size fix bounds its consequence
+  to `LR ≈ 0.049` from `≈ 49`. Full suite green (862 tests, up from 850 — 12 new),
+  ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

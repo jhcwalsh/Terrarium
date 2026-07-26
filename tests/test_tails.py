@@ -1088,6 +1088,236 @@ def test_generating_less_never_improves_a_backtest_metric() -> None:
         omitted_value = full_specs[name].fn(ensemble_reduced)
         assert math.isnan(omitted_value), f"{name} did not NaN when its leg was omitted"
 
+    # ------------------------------------------------------------------ #
+    # Vector 2 (Critical 1): a generator emitting LESS TAIL must not score better on
+    # `elicitability_score`. The historical (VaR, ES) pair is the target; a generated
+    # ensemble whose own (VaR, ES) is a fraction of history's must score STRICTLY
+    # WORSE than one that reproduces it, and a generator emitting (near-)nothing must
+    # not be the global optimum. See
+    # `test_elicitability_metric_is_minimized_by_matching_history` for the full
+    # four-way ordering; this is the "generating less" face of the same property.
+    # ------------------------------------------------------------------ #
+    elicitability = full_specs["sixty_forty.elicitability_score"]
+    matching = elicitability.fn(ensemble_full)
+    shrunk = elicitability.fn(_volatility_scaled(ensemble_full, 0.25))
+    assert np.isfinite(matching)
+    assert shrunk > matching, (shrunk, matching)
+
+    # ------------------------------------------------------------------ #
+    # Vector 3 (Important 4): halving the ENSEMBLE SIZE must not move a backtest
+    # statistic or its p-value. Pooling n_paths x months observations made
+    # `LR = 2*T*KL(p_hat || alpha)` scale linearly with n_paths, so running 100 paths
+    # instead of 1000 divided the statistic by 10 and let a `min:` p-value floor pass
+    # that the full ensemble would have failed. The reference-sample-size
+    # normalization makes both invariant: the SAME paths repeated 4x are the same
+    # p_hat and must give the bit-identical value.
+    # ------------------------------------------------------------------ #
+    tiled = Ensemble(
+        np.tile(ensemble_full.paths, (4, 1, 1)),
+        list(ensemble_full.factor_names),
+        EnsembleMeta("x", "v", 0, ensemble_full.n_paths * 4, ensemble_full.months),
+    )
+    for name in (
+        "sixty_forty.kupiec_pof_stat",
+        "sixty_forty.kupiec_pof_pvalue",
+        "sixty_forty.christoffersen_independence_stat",
+        "sixty_forty.christoffersen_independence_pvalue",
+        "sixty_forty.christoffersen_conditional_coverage_stat",
+        "sixty_forty.christoffersen_conditional_coverage_pvalue",
+    ):
+        small = full_specs[name].fn(ensemble_full)
+        large = full_specs[name].fn(tiled)
+        assert np.isfinite(small), name
+        assert large == pytest.approx(small, rel=1e-9), (name, small, large)
+
+    # ------------------------------------------------------------------ #
+    # Vector 4 (Important 6): a generator whose losses NEVER reach history's VaR gets
+    # zero exceedances, and with n01 = n10 = n11 = 0 every Christoffersen
+    # log-likelihood term vanishes under the 0*ln0 convention -- LR_ind = 0, p = 1.0,
+    # a maximally favourable independence score for emitting nothing. Below the
+    # minimum-exceedance floor the statistic must be NaN instead.
+    # ------------------------------------------------------------------ #
+    flat = _volatility_scaled(ensemble_full, 0.0)
+    for name in (
+        "sixty_forty.christoffersen_independence_stat",
+        "sixty_forty.christoffersen_independence_pvalue",
+        "sixty_forty.christoffersen_conditional_coverage_stat",
+        "sixty_forty.christoffersen_conditional_coverage_pvalue",
+    ):
+        assert math.isnan(full_specs[name].fn(flat)), f"{name} rewarded a zero-tail generator"
+    # Kupiec is already coercive on the same ensemble (0% observed vs 5% nominal) and
+    # must keep rejecting it -- the floor above must not silently disarm it too.
+    assert full_specs["sixty_forty.kupiec_pof_pvalue"].fn(flat) < 0.05
+
+
+def _volatility_scaled(ensemble: Ensemble, factor: float) -> Ensemble:
+    """``ensemble`` with every factor's per-path variation about its own path mean
+    scaled by ``factor`` (levels keep their mean, so a rate factor stays a plausible
+    rate rather than collapsing to zero and inverting a bond leg's carry)."""
+    paths = np.asarray(ensemble.paths, dtype=np.float64)
+    means = paths.mean(axis=1, keepdims=True)
+    scaled = means + factor * (paths - means)
+    return Ensemble(
+        scaled,
+        list(ensemble.factor_names),
+        EnsembleMeta("x", "v", 0, ensemble.n_paths, ensemble.months),
+    )
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4 fix pass: the elicitability METRIC (not merely the scoring rule)
+# --------------------------------------------------------------------------- #
+
+
+def _pure_equity_strategy() -> Strategy:
+    """A one-leg strategy whose realized return IS the ``equity_mkt`` slab.
+
+    Deliberately not one of the five sealed D4 strategies: this test needs to control
+    the strategy's realized return path EXACTLY (to scale its volatility by a known
+    factor), which a multi-leg strategy mixing a return factor with a duration-scaled
+    level factor does not allow. The metric wiring under test is identical either way.
+    """
+    return Strategy(
+        strategy_id="test_pure_equity",
+        kind="static_weights",
+        weights={"equity_mkt": 1.0},
+        rebalance="monthly",
+        lookback=None,
+        rule=None,
+        params={},
+        notes="",
+    )
+
+
+def _equity_ensemble(values: np.ndarray) -> Ensemble:
+    paths = np.asarray(values, dtype=np.float64)[:, :, np.newaxis]
+    return Ensemble(
+        paths, ["equity_mkt"], EnsembleMeta("x", "v", 0, paths.shape[0], paths.shape[1])
+    )
+
+
+def test_elicitability_metric_is_minimized_by_matching_history() -> None:
+    """THE metric-level property, distinct from the scoring rule's own consistency.
+
+    ``test_elicitability_score_is_minimized_at_the_true_var_es_pair`` varies (V, E) on
+    a FIXED sample: it validates the scoring RULE, and passes under either argument
+    wiring. This test varies the GENERATED SAMPLE with history fixed -- which is what
+    the battery metric actually does -- and is the only thing that can tell the two
+    wirings apart.
+
+    The pre-fix wiring froze (V, E) at history's values and varied the generated
+    losses, collapsing the score to ``c1 * mean((L - V)^+) + c2`` with ``c1 > 0``: a
+    monotone increasing function of generated tail heaviness, minimized by a generator
+    emitting IDENTICALLY ZERO. Since DN-1.1 line 95 makes this the WP2.8 auxiliary
+    loss, that would have trained the generator toward zero volatility.
+
+    The correct (Tail-GAN) direction estimates (V, E) from the GENERATED sample and
+    scores them against REAL realizations, which is coercive as E -> 0 and is minimized
+    exactly when the generated (VaR, ES) equals history's.
+    """
+    rng = Generator(PCG64(4242))
+    months = 600
+    historical = rng.standard_t(5, size=months) * 0.02
+    dates = pd.date_range("1960-01-01", periods=months, freq="MS")
+    reference = _reference_with_historical_series(
+        {"equity_mkt": pd.Series(historical, index=dates)}
+    )
+    strategy = _pure_equity_strategy()
+    metric = tails._elicitability_metric(strategy, tails._HistoricalCache(reference, {}))
+
+    matched = rng.standard_t(5, size=(40, 120)) * 0.02  # same law as history
+    score_matched = metric(_equity_ensemble(matched))
+    assert np.isfinite(score_matched)
+
+    for label, scale in (("half", 0.5), ("double", 2.0), ("near-zero", 0.01)):
+        score = metric(_equity_ensemble(matched * scale))
+        assert score > score_matched, (label, score, score_matched)
+
+    # An identically-zero generator has no positive ES magnitude at all: NaN, which
+    # THE ONE NaN RULE already fails against any enforce bound. Under the pre-fix
+    # wiring it was finite and the single BEST score in the whole comparison.
+    assert math.isnan(metric(_equity_ensemble(np.zeros((40, 120)))))
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4 fix pass: minimum-exceedance floor (Important 6)
+# --------------------------------------------------------------------------- #
+
+
+def test_christoffersen_independence_is_nan_below_the_minimum_exceedance_floor() -> None:
+    """Zero exceedances leaves n01 = n10 = n11 = 0, so every log-likelihood term
+    vanishes under the 0*ln(0) := 0 convention and LR_ind is -0.0 with p = 1.0 at
+    EVERY sequence length -- a perfect independence score for a generator whose losses
+    never reach the threshold. Below BACKTEST_MIN_EXCEEDANCES the statistic is NaN."""
+    assert tails.BACKTEST_MIN_EXCEEDANCES > 1
+    for n1 in range(tails.BACKTEST_MIN_EXCEEDANCES):
+        indicator = np.zeros(2000, dtype=bool)
+        indicator[np.arange(n1) * 97] = True
+        lr, pvalue = christoffersen_independence(indicator)
+        assert math.isnan(lr), n1
+        assert math.isnan(pvalue), n1
+
+    # One exceedance above the floor: defined again, not NaN for all time.
+    indicator = np.zeros(2000, dtype=bool)
+    indicator[np.arange(tails.BACKTEST_MIN_EXCEEDANCES) * 97] = True
+    lr, pvalue = christoffersen_independence(indicator)
+    assert np.isfinite(lr)
+    assert np.isfinite(pvalue)
+
+
+def test_christoffersen_conditional_coverage_inherits_the_exceedance_floor() -> None:
+    lr, pvalue = christoffersen_conditional_coverage(np.zeros(2000, dtype=bool), 0.95)
+    assert math.isnan(lr)
+    assert math.isnan(pvalue)
+
+
+def test_lr_statistics_are_never_negative_zero() -> None:
+    """`max(x, 0.0)` returns -0.0 when x is -0.0 (Python returns the FIRST argument on
+    a tie), and the battery markdown then prints `-0`. Both LR builders normalize."""
+    # level=0.5 makes alpha EXACTLY 0.5 (1 - 0.95 is 0.05000000000000004, which is why
+    # the "expected rate" Kupiec test above does not actually reach the tie); 10 of 20
+    # is then p_hat == alpha bit-exactly, both log-likelihoods are identical, and the
+    # raw statistic is -2.0 * 0.0 == -0.0.
+    lr = tails._pof_lr_from_counts(10, 20, 0.5)
+    assert lr == 0.0
+    assert math.copysign(1.0, lr) > 0.0
+    # pi01 == pi11 == pi == 0 exactly: every log-likelihood term is 0 under 0*ln0 := 0.
+    lr_ind = tails._independence_lr_from_counts(100, 0, 10, 0)
+    assert lr_ind == 0.0
+    assert math.copysign(1.0, lr_ind) > 0.0
+    scaled = tails._reference_scaled_lr(lr_ind, 110, 120)
+    assert math.copysign(1.0, scaled) > 0.0
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4 fix pass: the historical join must be contiguous monthly (Minor)
+# --------------------------------------------------------------------------- #
+
+
+def test_historical_strategy_returns_raises_on_a_non_contiguous_monthly_join() -> None:
+    """`_lagged_carry_minus_duration` treats adjacent rows as CONSECUTIVE months, so a
+    single interior gap silently becomes a multi-month yield change scaled by duration
+    8.5 -- a fabricated bond return an order of magnitude too large."""
+    dates = pd.DatetimeIndex(["2000-01-01", "2000-02-01", "2000-05-01", "2000-06-01"])
+    reference = _reference_with_historical_series(
+        {
+            "equity_mkt": pd.Series([0.01, 0.02, -0.01, 0.03], index=dates),
+            "ust_10y": pd.Series([4.0, 4.5, 4.2, 4.0], index=dates),
+        }
+    )
+    strategy = Strategy(
+        strategy_id="test_sixty_forty",
+        kind="static_weights",
+        weights={"equity_mkt": 0.6, "govt_tr_10y": 0.4},
+        rebalance="monthly",
+        lookback=None,
+        rule=None,
+        params={},
+        notes="",
+    )
+    with pytest.raises(StrategyError, match="contiguous"):
+        _historical_strategy_returns(reference, strategy, _DERIVED)
+
 
 # --------------------------------------------------------------------------- #
 # WP2.2 Task 4: run_full_battery integration + registration bookkeeping

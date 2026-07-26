@@ -26,6 +26,7 @@ from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.eval import battery
 from ah.eval import prereg as prereg_mod
+from ah.eval import reference as reference_mod
 from ah.eval.battery import (
     BatteryError,
     BatteryReport,
@@ -1102,9 +1103,22 @@ def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
     assert set(report.coverage) == {"g1", "u1"}, "the reference was actually computed"
     banded = [r for r in report.results if r.band is not None]
     assert banded, "no metric matched a computed reference band by name"
-    # Important 3: the reference replicates are drawn at the ENSEMBLE's path length,
-    # so both sides of every per-path statistic carry the same estimator bias.
-    assert all(r.band is not None and r.band.resample_length == ensemble.months for r in banded)
+    # Important 3: the reference replicates are drawn at the ENSEMBLE's path length, so
+    # both sides of every per-path statistic carry the same estimator bias -- EXCEPT for
+    # the statistics whose registry entry declares `length_matched=False`, which are
+    # drawn at the full train+validation length instead and record `None` (WP2.2 Task 3's
+    # decade frequencies; WP2.2 Task 4's tail-dependence coefficients). The assertion is
+    # over the split, not a blanket value, so a future statistic silently opting out of
+    # length matching still fails here.
+    unmatched_stats = {
+        name for name, reg in reference_mod.SINGLE_FACTOR_STATS.items() if not reg.length_matched
+    } | {name for name, reg in reference_mod.CROSS_BLOCK_STATS.items() if not reg.length_matched}
+    assert unmatched_stats, "the split this assertion is over must be non-empty"
+    for r in banded:
+        assert r.band is not None
+        stat = r.name.split(".", 1)[1] if "." in r.name else r.name
+        expected = None if stat in unmatched_stats else ensemble.months
+        assert r.band.resample_length == expected, (r.name, r.band.resample_length)
 
 
 def test_run_full_battery_is_repeatable_without_a_duplicate_registration_error() -> None:

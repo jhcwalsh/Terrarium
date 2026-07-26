@@ -19,6 +19,7 @@ import pandas as pd
 import pytest
 from numpy.random import PCG64, Generator
 
+from ah.eval.metrics import utility as utility_mod
 from ah.eval.metrics.utility import (
     UTILITY_FIT_SEED,
     UTILITY_WINDOW_MONTHS,
@@ -109,6 +110,49 @@ def test_discriminative_score_different_seed_gives_a_different_score() -> None:
     a = discriminative_score(real, generated, seed=7)
     b = discriminative_score(real, generated, seed=8)
     assert a != b
+
+
+def test_discriminative_score_is_immune_to_generated_to_real_class_imbalance() -> None:
+    """CRITICAL 2. Real and generated windows were pooled into one UNBALANCED set and
+    scored by RAW accuracy. At production scale real windows number ~history_months/24
+    per factor and generated ~(months/24) * n_paths -- roughly 100:1 -- so the
+    majority-class predictor pinned the score near its 0.5 maximum whatever the
+    generator did, and the score IMPROVED as the ensemble shrank toward balance.
+
+    Measured on the pre-fix code with the two distributions held IDENTICAL: 0.008 at a
+    1:1 ratio, 0.333 at 5:1, 0.447 at 20:1, 0.493 at 150:1 -- i.e. a perfect generator
+    scored 0.49 out of a 0.5 maximum. Both pre-existing tests used balanced 500/500
+    samples and could not see it.
+
+    With balanced-class accuracy and a class-stratified split the score must stay near
+    0 at every ratio, since the two samples really are the same distribution."""
+    rng = Generator(PCG64(77))
+    real = rng.normal(0.0, 1.0, size=(200, 2))
+    for ratio in (1, 5, 20, 150):
+        generated = rng.normal(0.0, 1.0, size=(200 * ratio, 2))
+        score = discriminative_score(real, generated, seed=1)
+        # Balanced accuracy on the minority class is estimated from ~60 held-out real
+        # windows, binomial SE ~ 0.5/sqrt(60) ~ 0.065; 0.15 covers that with headroom
+        # while still being far below the 0.447/0.493 the pre-fix code returned.
+        assert score < 0.15, (ratio, score)
+
+
+def test_discriminative_score_still_detects_a_shifted_generator_under_imbalance() -> None:
+    """The balanced-accuracy fix must not buy imbalance-immunity by making the metric
+    blind: a 3-sigma mean shift stays detectable at a 100:1 generated:real ratio."""
+    rng = Generator(PCG64(78))
+    real = rng.normal(0.0, 1.0, size=(200, 2))
+    generated = rng.normal(3.0, 1.0, size=(20000, 2))
+    assert discriminative_score(real, generated, seed=1) > 0.3
+
+
+def test_discriminative_score_nan_when_a_class_cannot_be_split() -> None:
+    """A class-stratified split needs at least 2 examples of each class (one to fit
+    on, one to score on). Fewer, and balanced accuracy is undefined -- NaN, not a
+    score computed from a test split that holds only one of the two classes."""
+    real = np.zeros((1, 2))
+    generated = np.ones((50, 2))
+    assert math.isnan(discriminative_score(real, generated, seed=1))
 
 
 def test_discriminative_score_nan_below_four_pooled_examples() -> None:
@@ -230,6 +274,45 @@ def test_fit_gd_is_seed_free_and_deterministic() -> None:
     np.testing.assert_array_equal(a, b)
 
 
+def test_fit_gd_does_not_diverge_on_a_badly_scaled_design() -> None:
+    """IMPORTANT 7. A fixed 200 epochs at lr=0.1 with nothing checking convergence
+    diverges whenever ``lr > 2 / lambda_max(X^T X / n + lambda I)``. The predictive
+    design matrix is z-scored by the REAL mean/std, so a generated ensemble with ~4.5x
+    real volatility pushes ``lambda_max > 20`` and the fit blows up to inf/nan. The
+    failure direction was safe (it fails the gate) but the metric stopped being a
+    measurement. The step size is now bounded by a Lipschitz estimate of the actual
+    design, so the fit converges at ANY input scale."""
+    rng = Generator(PCG64(22))
+    x = rng.normal(0.0, 50.0, size=4000).reshape(-1, 1)  # lambda_max ~ 2500 >> 2/lr
+    y = 2.0 * x[:, 0] + 0.5
+    weights = _fit_gd(x, y, loss="squared")
+    assert np.all(np.isfinite(weights)), weights
+    predicted = weights[0] * x[:, 0] + weights[1]
+    assert float(np.mean((y - predicted) ** 2)) < 1e-3 * float(np.var(y))
+
+
+def test_fit_gd_stops_at_the_gradient_norm_criterion() -> None:
+    """The stated stopping criterion, not merely a fixed epoch budget: a converged fit
+    must be unchanged by giving it more epochs."""
+    rng = Generator(PCG64(23))
+    x = rng.normal(0.0, 1.0, size=(2000, 1))
+    y = 2.0 * x[:, 0] + 0.5
+    a = _fit_gd(x, y, loss="squared")
+    b = _fit_gd(x, y, loss="squared", max_epochs=utility_mod._GD_MAX_EPOCHS * 4)
+    np.testing.assert_allclose(a, b, atol=1e-9)
+
+
+def test_fit_gd_honours_sample_weights() -> None:
+    """Class-balancing weights are how discriminative_score keeps a 100:1 majority
+    class from simply owning the fit; a weight of zero must remove an example
+    entirely."""
+    x = np.array([[0.0], [1.0], [1.0]])
+    y = np.array([0.0, 1.0, 0.0])
+    weighted = _fit_gd(x, y, loss="squared", sample_weight=np.array([1.0, 1.0, 0.0]))
+    unweighted = _fit_gd(x[:2], y[:2], loss="squared")
+    np.testing.assert_allclose(weighted, unweighted, atol=1e-9)
+
+
 def test_fit_gd_rejects_unknown_loss() -> None:
     with pytest.raises(ValueError, match="loss"):
         _fit_gd(np.zeros((3, 1)), np.zeros(3), loss="bogus")
@@ -305,8 +388,28 @@ def test_build_utility_suite_nan_when_no_factor_is_shared() -> None:
 def test_utility_fit_seed_is_a_fixed_module_constant() -> None:
     """Re-running the battery at a different run seed must not change the utility
     tier's value for an unchanged ensemble -- UTILITY_FIT_SEED, not the battery's own
-    seed, drives every stochastic step in this suite (see the module docstring)."""
+    seed, drives every stochastic step in this suite (see the module docstring).
+
+    Tests the PROPERTY, not merely the constant's type: rebuilding the suite (a fresh
+    set of closures, as a second battery run at a different run seed produces) must
+    give a bit-identical value for an unchanged ensemble.
+    """
     assert isinstance(UTILITY_FIT_SEED, int)
+    rng = Generator(PCG64(31))
+    months = 120
+    reference = _reference_with_series(
+        {"g1": _plausible_series(rng, months), "u1": _plausible_series(rng, months)}
+    )
+    paths = np.stack(
+        [rng.normal(0.005, 0.04, size=(4, months)), rng.normal(0.005, 0.04, size=(4, months))],
+        axis=-1,
+    )
+    ensemble = Ensemble(paths=paths, factor_names=["g1", "u1"], meta=_meta(4, months))
+
+    first = {s.name: s.fn(ensemble) for s in build_utility_suite(_manifest(), reference)}
+    second = {s.name: s.fn(ensemble) for s in build_utility_suite(_manifest(), reference)}
+    assert first == second
+    assert all(np.isfinite(v) for v in first.values()), first
 
 
 def test_utility_window_months_is_a_positive_constant() -> None:

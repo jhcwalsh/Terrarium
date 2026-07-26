@@ -279,6 +279,56 @@ conventions:
     (position 0.0, hence realized return 0.0) and the warm-up length is `lookback`
     months. Warm-up months are NOT dropped, masked, or treated as missing: they are
     zeros, and they are included in the pooled sample when VaR/ES is computed.
+    KNOWN ASYMMETRY, RECORDED RATHER THAN CORRECTED (WP2.2 Task 4 fix pass, Important
+    5). The generated and historical sides of a backtest carry DIFFERENT warm-up
+    fractions, because the generated side is many short paths and the historical side is
+    one long one: `momentum` (lookback 12) is structurally flat for 12/120 = 10% of a
+    generated path but only 12/~800 = 1.5% of the historical series. A structurally flat
+    month cannot produce an exceedance, so the exceedance rate a PERFECT generator would
+    exhibit against history's own VaR_95 is about 0.95 * 5% = 4.57%, not 5% -- a small
+    but real downward bias in Kupiec's p_hat for the rule-based strategies. It is NOT
+    corrected by dropping warm-up months, because that would make the pooled sample of a
+    metric differ from the pooled sample of the descriptive var_95/es_95 computed on the
+    same strategy, and two different "the strategy's return path" conventions in one
+    file is a worse defect than a quantified bias. Its CONSEQUENCE is bounded by
+    backtest_reference_sample_size: at the sealed reference sample size of one 120-month
+    path, a 4.57%-vs-5% discrepancy gives LR_pof ~ 0.049 (p ~ 0.82), i.e. nothing. Under
+    the pre-fix pooled sample size of 120,000 the SAME bias gave LR_pof ~ 49 -- a
+    confident rejection of a correct generator. `sixty_forty`/`carry` warm up for month 0
+    only (~0.7pp) and are unaffected either way. WP2.3 must accept this explicitly or
+    amend the momentum lookback/path length.
+
+  backtest_reference_sample_size: >-
+    THE POOLED SAMPLE SIZE OF EVERY D4 BACKTEST STATISTIC IS FIXED IN THIS FILE, NOT
+    CHOSEN BY THE GENERATOR. Applies to all six Kupiec/Christoffersen names
+    (`kupiec_pof_stat`/`_pvalue`, `christoffersen_independence_stat`/`_pvalue`,
+    `christoffersen_conditional_coverage_stat`/`_pvalue`). Added by WP2.2 Task 4's fix
+    pass, which found the previous definition gameable.
+    THE PROBLEM. Both likelihood-ratio statistics are exactly LINEAR in their sufficient
+    counts at fixed estimated proportions: Kupiec's is 2 * T * KL(p_hat || alpha) and
+    Christoffersen's is 2 * N times a function of the three transition ratios alone.
+    Pooling an ensemble's n_paths * months observations therefore multiplied both by
+    n_paths, so HALVING THE ENSEMBLE HALVED THE STATISTIC AND RAISED THE P-VALUE:
+    running 100 paths instead of 1000 let `kupiec_pof_pvalue` clear a `min: 0.01` floor
+    that the full ensemble would have failed. That is "the metric improves when the
+    generator produces less", on four sealed names.
+    THE DEFINITION. Counts are still pooled across the whole ensemble -- that is what
+    estimates p_hat and the transition ratios precisely -- and the reported statistic is
+    then re-expressed at a REFERENCE SAMPLE SIZE OF ONE PATH: T = months for Kupiec,
+    N = months - 1 transitions for Christoffersen. Equivalently, multiply the pooled LR
+    by (reference count / pooled count). The reported number is therefore "the LR a
+    SINGLE reference-length path would have produced, had it exhibited the exceedance
+    rate and transition ratios the whole ensemble exhibits". It is invariant to n_paths
+    by construction.
+    WHAT THE REPORTED P-VALUE THEN MEANS, stated because the metric name does not say
+    it. `..._pvalue` remains chi2_sf of the reported statistic, so it is that single
+    reference-length path's p-value: an EFFECT SIZE on a p-value scale, NOT an
+    asymptotically valid significance level at the pooled sample size. This is
+    deliberate. At n_paths = 1000 the pooled statistic rejects essentially any departure
+    from nominal coverage however economically negligible, which makes a sealed
+    threshold on it a statement about ensemble size rather than about tail fidelity. The
+    rejected alternative was replacing the p-value with a coverage band on p_hat, which
+    would have changed four sealed metric names' MEANING rather than their scale.
 
   nan_metric_rule: >-
     A METRIC THAT EVALUATES TO NaN FAILS. One rule for the whole platform: an
@@ -688,27 +738,45 @@ conventions:
     CONSISTENT SCORING RULE for the pair, and is the property
     `tests/test_tails.py` checks by asserting a mis-specified (V, E) scores strictly
     worse than the true pair on a fixed sample, not merely that the number is finite.
-    FORECAST SOURCE, load-bearing for the G2 tail-fidelity criterion: V, E are NOT
-    fitted on the same GENERATED sample being scored (which would trivially minimize
-    the score by construction, proving nothing) -- they are the HISTORICAL
-    (train+validation) VaR_95/ES_95 of that SAME D4 strategy's own realized return
-    series, `var_es` applied to `ah.eval.metrics.tails._historical_strategy_returns`
+    WHICH SIDE SUPPLIES (V, E) AND WHICH SUPPLIES ell_t -- the entire content of this
+    metric, and CORRECTED BY THE WP2.2 TASK 4 FIX PASS (this block previously stated the
+    inverted assignment). (V, E) ARE ESTIMATED FROM THE GENERATED ENSEMBLE (`var_es`
+    applied to the generated ensemble's own pooled realized return path for that
+    strategy) AND ell_t ARE THE HISTORICAL (train+validation) REALIZATIONS of that SAME
+    D4 strategy's own return series -- `ah.eval.metrics.tails._historical_strategy_returns`
     (the strategy's own legs, inner-joined onto their shared date overlap from
-    `ah.eval.reference.ReferenceStats.historical_series` -- never a fresh catalog read,
-    never re-deriving strategy arithmetic: the SAME `ah.eval.metrics.tails.
+    `ah.eval.reference.ReferenceStats.historical_series`; never a fresh catalog read,
+    never re-deriving strategy arithmetic, since the SAME `ah.eval.metrics.tails.
     strategy_returns` function evaluates both the historical panel, wrapped as a
-    single-path Ensemble, and the generated ensemble). A low score means the GENERATED
-    ensemble's realized tail losses are well-approximated by HISTORY's own VaR/ES
-    forecast -- i.e. the generator reproduces history's tail risk -- which is DN-1.1
-    Sec.II.6's "VaR/ES elicitability on D4 strategies... beats bootstrap (G2)" row read
-    literally: this is the auxiliary loss WP2.8's L3 training optimizes, and is the tail
-    objective a flipped orientation would silently invert. Auxiliary G1 term (Fissler-
+    single-path Ensemble, and the generated ensemble). This is the TAIL-GAN direction
+    (DN-1.1 Sec.II.4's citation [5], the auxiliary term WP2.8's L3 loss minimizes), and
+    it is the ONLY direction the consistency derivation above licenses: that derivation
+    establishes optimality IN (V, E) WITH THE REALIZATIONS HELD FIXED, so the pair under
+    judgement must be the generator's and the realizations must be history's. It is
+    coercive -- as the generated E shrinks toward 0 the score diverges to +inf -- and by
+    strict consistency it is MINIMIZED EXACTLY WHEN THE GENERATED (VaR_95, ES_95) EQUALS
+    HISTORY'S OWN. A low score means the generator's tail risk reproduces history's,
+    which is DN-1.1 Sec.II.6's "VaR/ES elicitability on D4 strategies... beats bootstrap
+    (G2)" row read literally.
+    THE INVERTED ASSIGNMENT IS A DEFECT, NOT A VARIANT, and is recorded here so a future
+    reader cannot re-introduce it: freezing (V, E) at HISTORY's values and varying the
+    GENERATED losses collapses the score to c1 * mean((ell - V)^+) + c2 with c1 > 0 -- a
+    monotone increasing function of generated tail heaviness whose global minimum is a
+    generator emitting IDENTICALLY ZERO. Measured on the pre-fix code with historical
+    V = 0.0410, E = 0.0583: -2.856 for a generator matching history, -3.124 at half
+    volatility, -3.139 (best) for identically zero. Since this score is WP2.8's
+    auxiliary loss, shipping it would have trained the generator toward zero volatility.
+    THE TEST THAT DISTINGUISHES THE TWO WIRINGS varies the generated SAMPLE with history
+    fixed (tests/test_tails.py::test_elicitability_metric_is_minimized_by_matching_history);
+    the scoring-rule consistency test above varies (V, E) on a fixed sample and passes
+    under either wiring, so it is not sufficient on its own. Auxiliary G1 term (Fissler-
     Ziegel's general family) is 0 -- the simplest member of the family, chosen because
     the auxiliary G2 term (`1/E`, the log-barrier antiderivative `ln E`) alone is
     already sufficient for strict consistency and needs no code-side default for a
-    second family parameter. NaN if E <= 0 (no positive ES magnitude to score against,
-    e.g. the historical strategy has no computable VaR/ES because a leg's factor has no
-    Step-1 source -- commodities) or if alpha is outside (0, 1).
+    second family parameter. NaN if E <= 0 (the GENERATED ensemble has no positive ES
+    magnitude at all -- an identically-zero generator lands here, and NaN fails under
+    nan_metric_rule), if the historical strategy return series cannot be built because a
+    leg's factor has no Step-1 source (commodities), or if alpha is outside (0, 1).
   kupiec_pof_estimator: >-
     Kupiec (1995) proportion-of-failures unconditional-coverage LIKELIHOOD-RATIO TEST,
     at level p = 0.95 (alpha = 0.05), on the exceedance indicator sequence
@@ -729,6 +797,15 @@ conventions:
     estimator_length_matching): this is a test statistic on the GENERATED ensemble's
     own pooled sequence, evaluated against a fixed asymptotic chi-square null, not a
     quantity with a train+validation reference band of its own.
+    THE POOLED SAMPLE SIZE IS FIXED IN THIS DEFINITION, NOT CHOSEN BY THE GENERATOR
+    (WP2.2 Task 4 fix pass; see backtest_reference_sample_size below for the full
+    statement, which applies identically to the Christoffersen statistics). T is the
+    number of MONTHS IN ONE PATH, not n_paths * months: the ensemble's pooled
+    exceedances estimate p_hat, and the reported LR is then evaluated at that fixed
+    reference T. Without this, LR_pof = 2 * T * KL(p_hat || alpha) scaled linearly with
+    n_paths, so asking the generator for 100 paths instead of 1000 divided the statistic
+    by 10 and raised the p-value -- a metric improved by generating less, on names WP2.3
+    seals.
   christoffersen_independence_estimator: >-
     Christoffersen (1998) INDEPENDENCE LIKELIHOOD-RATIO TEST on the SAME exceedance
     indicator sequence I_t kupiec_pof_estimator defines, testing whether exceedances
@@ -749,15 +826,30 @@ conventions:
     (the joint log-likelihood over independent chains sharing one transition matrix IS
     the sum of the per-chain log-likelihoods, which reduces exactly to using the summed
     counts) -- not a per-path LR averaged, which would be a different, noisier
-    statistic. p-value via the SAME chi2_sf(x, 1) as kupiec_pof_estimator.
+    statistic. The summed counts are then re-expressed at a reference sample size of
+    ONE PATH's transitions (months - 1) exactly as kupiec_pof_estimator's T is -- see
+    backtest_reference_sample_size. p-value via the SAME chi2_sf(x, 1) as
+    kupiec_pof_estimator.
+    MINIMUM-EXCEEDANCE FLOOR (WP2.2 Task 4 fix pass): NaN unless the judged sequence
+    contains at least BACKTEST_MIN_EXCEEDANCES = 10 exceedances in total. With zero
+    exceedances n01 = n10 = n11 = 0, so under the 0*ln(0) := 0 convention EVERY
+    log-likelihood term vanishes and LR_ind is exactly 0 with a p-value of 1.0 at every
+    T -- a MAXIMALLY FAVOURABLE independence score for a generator whose losses never
+    reach history's VaR at all. Same floor shape as DRAWDOWN_MIN_EPISODES /
+    TAIL_DEPENDENCE_MIN_TAIL_OBS. Kupiec is deliberately NOT floored: zero exceedances
+    against a 5% nominal rate is exactly the case its LR is built to reject, and
+    flooring it would disarm the one test that already punishes a suppressed tail.
   christoffersen_conditional_coverage_estimator: >-
     THE JOINT TEST: `christoffersen_conditional_coverage_stat` = LR_pof + LR_ind (the
     two already-defined statistics, summed) ~ chi-square(2) under H0 (correct
     unconditional coverage AND independence, jointly). p-value via the exact closed
     form for TWO degrees of freedom, chi2_sf(x, 2) = exp(-x/2) (verified against the
     standard chi-square(2) 95th percentile critical value 5.991: exp(-5.991/2) = 0.05).
-    NaN if either component statistic is NaN (e.g. fewer than 2 observations in the
-    sequence).
+    Both components are the reference-sample-size-normalized statistics defined above,
+    so the sum is too. NaN if either component statistic is NaN -- fewer than 2
+    observations in the sequence, or fewer than BACKTEST_MIN_EXCEEDANCES exceedances
+    (the independence floor propagates here by construction, which is correct: NaN fails
+    under nan_metric_rule, so a zero-tail generator still fails this name).
   tail_dependence_estimator: >-
     NONPARAMETRIC empirical tail-dependence coefficient (Frahm, Junker & Schmidt 2005),
     computed between an active CROSS-BLOCK FACTOR PAIR's pooled ensemble observations
@@ -781,10 +873,30 @@ conventions:
     same length. Computed identically on both sides (a real train+validation band via
     the existing block-bootstrap machinery, and the generated ensemble's own pooled
     factor pair), unlike the D4-strategy backtests above.
+    NOT LENGTH-MATCHED, and this is load-bearing rather than a tuning choice (WP2.2 Task
+    4 fix pass, Important 3; contrast estimator_length_matching, whose blanket "every
+    reference band is drawn at the judged ensemble's own path length" does not hold for
+    these two). The floor above needs n >= 10 / 0.05 = 200 observations before the
+    estimator returns a number at all, so at the production resample_length of 120 EVERY
+    bootstrap replicate was NaN and the band was (nan, nan) with n_valid_resamples = 0 --
+    an empty band on a registered, sealable statistic, and the earlier claim in this
+    block that the band came "for free" was false at production settings. Both entries
+    are therefore registered length_matched=False on
+    ah.eval.reference.RegisteredCrossStat, drawing their replicates at the full
+    train+validation length. The justification is the same one lost_decade_frequency
+    uses: the coefficient is a joint-exceedance FRACTION at a fixed 5% tail, whose value
+    does not depend on series length -- only its sampling error does, which is exactly
+    what the band measures. correlation and crisis_corr_lift stay matched.
+    RESIDUAL, NOT COVERED: the generated side pools n_paths * months observations
+    (~120,000) against a ~1,100-observation historical point and full-length replicates,
+    so three different sample sizes meet in one comparison. The estimator is a bounded
+    fraction and not strongly length-biased, but this is the same class of gap
+    estimator_length_matching's RFR-15 residual records for the pooled statistics, and
+    WP2.3 must judge it before sealing a band here.
   discriminative_score_estimator: >-
     A CLASSIFIER TRAINED TO DISTINGUISH real windows of factor dynamics from generated
-    ones, reported as |test accuracy - 0.5| (0 = indistinguishable; the generator fools
-    the classifier). Windows: non-overlapping UTILITY_WINDOW_MONTHS=24-month blocks,
+    ones, reported as |BALANCED test accuracy - 0.5| (0 = indistinguishable; the
+    generator fools the classifier). Windows: non-overlapping UTILITY_WINDOW_MONTHS=24-month blocks,
     extracted independently WITHIN each real factor's own train+validation series
     (ah.eval.reference.ReferenceStats.historical_series) and within each generated
     path (never spanning a path or series boundary), for every active factor present on
@@ -793,21 +905,44 @@ conventions:
     generated label 0) -- a factor's own scale is not removed, so a generator with a
     shifted mean or variance for ANY active factor remains detectable. Classifier:
     logistic regression (bias + 2 weights) with L2 penalty 1e-3, fit by full-batch
-    gradient descent (learning rate 0.1, 200 epochs, zero weight initialization -- the
-    convex logistic loss needs no random init) on a SEEDED random TRAIN_FRACTION=0.7
-    shuffle-split of the pooled, labelled example set; features standardized (z-score)
-    using the TRAIN split's own mean/std only (never the test split's, avoiding a
-    leakage channel in the feature scaling itself). Reported value is
-    |test-set accuracy - 0.5|. Determinism: seed = UTILITY_FIT_SEED (a sealed module
-    constant, NOT the battery's own run seed -- see ah.eval.metrics.utility's module
-    docstring), driving the shuffle-split via numpy.random.Generator(PCG64(seed)) and
-    nothing else (gradient descent itself is deterministic given fixed data and zero
-    init). Lower is better as a G2 criterion.
+    gradient descent (see gradient_descent_fit_estimator for the step size and stopping
+    criterion; zero weight initialization -- the convex logistic loss needs no random
+    init) on a SEEDED random TRAIN_FRACTION=0.7 CLASS-STRATIFIED split of the pooled,
+    labelled example set; features standardized (z-score) using the TRAIN split's own
+    mean/std only (never the test split's, avoiding a leakage channel in the feature
+    scaling itself).
+    CLASS IMBALANCE IS THE DEFINING CONSTRAINT OF THIS METRIC, and the WP2.2 Task 4 fix
+    pass rewrote this paragraph because the first definition measured the imbalance
+    rather than the generator. The two sides are never the same size: real windows number
+    history_months/24 per factor, generated windows (months/24) * n_paths -- roughly
+    100:1 at production scale. RAW accuracy under 100:1 imbalance is maximized at 0.99 by
+    the constant majority-class predictor, so |raw accuracy - 0.5| sat near its 0.5
+    maximum whatever the generator did; measured with the two distributions held
+    IDENTICAL, the pre-fix score was 0.008 at a 1:1 ratio, 0.333 at 5:1, 0.447 at 20:1
+    and 0.493 at 150:1 -- and it IMPROVED as the ensemble shrank toward balance, another
+    metric gameable by generating less. Three changes, all three necessary:
+    (a) the train/test split is CLASS-STRATIFIED -- train_fraction of EACH class -- so
+    the test split always holds both classes and the split cannot itself create
+    imbalance; (b) the fit is weighted by INVERSE CLASS FREQUENCY (each class's weights
+    summing to 0.5), so the majority class does not simply own the logistic objective;
+    and (c) the reported value is |BALANCED accuracy - 0.5|, balanced accuracy being
+    0.5 * (recall_real + recall_generated), the unweighted mean of the two per-class
+    recalls -- whose value for ANY constant predictor is exactly 0.5 at every class
+    ratio. Reported value is in [0, 0.5]. NaN if fewer than 4 pooled examples or if
+    EITHER class has fewer than 2 (a stratified split needs one of each class to fit on
+    and one to score on).
+    Determinism: seed = UTILITY_FIT_SEED (a sealed module constant, NOT the battery's own
+    run seed -- see ah.eval.metrics.utility's module docstring), driving the stratified
+    split via numpy.random.Generator(PCG64(seed)) and nothing else, with the two classes
+    drawn in a fixed order (real, then generated) so the draw sequence is a function of
+    the seed alone; gradient descent itself is deterministic given fixed data and zero
+    init. Lower is better as a G2 criterion.
   predictive_score_estimator: >-
     TRAIN-ON-SYNTHETIC, TEST-ON-REAL (TSTR) one-step-ahead prediction error. Model: a
     single linear map x_{t+1} = a + b*x_t + noise, fit by the SAME gradient-descent
     machinery discriminative_score_estimator uses (squared-error loss in place of
-    logistic; learning rate 0.1, 200 epochs, zero init, L2 penalty 1e-3) on a SEEDED
+    logistic; zero init, L2 penalty 1e-3, step size and stopping criterion per
+    gradient_descent_fit_estimator) on a SEEDED
     random 50% subsample of GENERATED one-step-ahead pairs (x_t, x_{t+1}), pooled
     across every active factor present in the ensemble and, within each factor, across
     every ensemble path (pairs never span a path boundary) -- the SAME [mean, std]-free
@@ -822,9 +957,11 @@ conventions:
     THE RATIO MSE_tstr / MSE_trtr (predictive_score_estimator's TSTR error divided by a
     TRAIN-ON-REAL-TEST-ON-REAL baseline), fit by the identical linear-model /
     gradient-descent machinery on a SEEDED random 50% shuffle-split of the REAL
-    one-step-ahead pairs (fit half / eval half; seed = UTILITY_FIT_SEED, the SAME seed
-    predictive_score_estimator's subsample uses, so one seed drives every stochastic
-    element of one battery run's utility tier). ORIENTATION: >= 1.0 means the
+    one-step-ahead pairs (fit half / eval half; seed = UTILITY_FIT_SEED, the same seed
+    predictive_score_estimator's subsample uses, so one seed value drives every
+    stochastic element of one battery run's utility tier -- via two independently
+    constructed numpy.random.Generator(PCG64(seed)) instances, i.e. the SAME draw
+    sequence rather than two successive draws from one shared generator). ORIENTATION: >= 1.0 means the
     synthetic-trained model predicts real one-step-ahead dynamics no better than a
     model trained directly on (half of) real data -- 1.0 is "no degradation" (the
     generator's dynamics are as informative as real data for this simple predictor);
@@ -835,6 +972,34 @@ conventions:
     (intentionally simple) predictor. NaN if either MSE is NaN, or +inf if
     MSE_trtr == 0.0 exactly (a degenerate real series with zero one-step variance,
     against which no ratio is informative).
+
+  gradient_descent_fit_estimator: >-
+    THE ONE MODEL-FITTING PROCEDURE the whole utility tier uses -- logistic loss for
+    discriminative_score_estimator, squared loss for predictive_score_estimator and
+    tstr_degradation_estimator. Full-batch gradient descent on a linear model with a
+    bias term appended as a constant feature; zero weight initialization (the losses are
+    convex, so no random start is needed and none is used); L2 penalty 1e-3 applied to
+    every weight INCLUDING the bias (a stated simplification); optional per-example
+    weights, used only by discriminative_score_estimator's class balancing.
+    STEP SIZE AND STOPPING CRITERION, added by the WP2.2 Task 4 fix pass because the
+    procedure previously had neither and stopped being a measurement on some inputs. The
+    step is min(0.1, 1/L), where L = c * (trace of the weighted second-moment matrix of
+    the design, divided by the total weight) + 1e-3 bounds the loss's gradient-Lipschitz
+    constant, with c = 1 for the squared loss and c = 0.25 for the logistic (the maximum
+    of the sigmoid's derivative). Gradient descent on an L-smooth convex objective is
+    monotonically non-increasing for any step <= 1/L, so the iteration is provably
+    non-divergent at ANY input scale. Under the previous fixed step of 0.1 the squared
+    loss diverged whenever lambda_max exceeded 20, which a generated ensemble with about
+    4.5x real volatility reaches (the predictive design is z-scored by the REAL mean/std,
+    so a mis-scaled generator is exactly the case that triggered it) -- the fit returned
+    inf/nan, and the failure direction was safe but the metric had stopped being a
+    measurement. On the well-scaled designs this suite normally builds, L is about 2, the
+    0.1 cap binds, and the step is unchanged. The loop stops when the gradient's infinity
+    norm falls below 1e-10, with a bound of 5000 epochs on work; a converged fit is
+    therefore invariant to the epoch budget, which is what makes the returned weights a
+    property of the data rather than of the schedule. The fit is otherwise pure and
+    seed-free: all randomness in the utility tier is in WHICH EXAMPLES are selected,
+    never in the fit itself.
 
   loss_sign: >-
     VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of

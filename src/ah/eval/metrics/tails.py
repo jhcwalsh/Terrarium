@@ -60,14 +60,39 @@ never confused:
   -- never a fresh catalog read, and never the full active-factor panel (which would
   poison the result with leading NaN from factors the strategy never holds).
 
-:func:`elicitability_score` and the Kupiec/Christoffersen backtests all score the
-**generated** ensemble's realized losses against the **historical** VaR/ES -- an
-out-of-sample-style comparison ("does the generator's own tail risk look like the
-forecast history itself would have made"), not a self-referential score of the
-generated sample against its own sample statistics (which would trivially optimize by
-construction and prove nothing about tail fidelity). :func:`tail_dependence_lower` /
-:func:`tail_dependence_upper` are re-exported, not restated, from
-:mod:`ah.eval.reference` -- see :func:`build_tails_suite` for why they live there.
+The two directions, and why they differ (WP2.2 Task 4 fix pass, Critical 1)
+..........................................................................
+:func:`elicitability_score` scores a **forecast (VaR, ES) pair** against a sample of
+**realizations**, and which side supplies which is the whole meaning of the metric:
+
+- **The metric wiring estimates (VaR, ES) from the GENERATED ensemble and scores them
+  against the HISTORICAL realizations** -- the Tail-GAN direction (DN-1.1 line 95's
+  citation [5]). It is *coercive*: as the generated ES shrinks toward 0 the score
+  diverges to ``+inf``, and by strict consistency the score is minimized exactly when
+  the generated ``(VaR, ES)`` equals history's own. A generator that suppresses its
+  tails is punished, which is the only orientation that can be used as WP2.8's
+  auxiliary training loss.
+- The **inverted** wiring -- freezing ``(V, E)`` at history's values and varying the
+  generated losses -- was what shipped first and is a *defect*, not a variant. With
+  ``(V, E)`` held constant the score collapses to ``c1 * mean((L - V)^+) + c2`` with
+  ``c1 > 0``: a monotone increasing function of generated tail heaviness whose global
+  minimum is a generator emitting identically zero. The Fissler-Ziegel consistency
+  derivation in :func:`elicitability_score`'s docstring establishes optimality **in
+  (V, E) with the realizations held fixed**, so it licenses the first direction only.
+  ``tests/test_tails.py::test_elicitability_metric_is_minimized_by_matching_history``
+  is the test that distinguishes them (varying the *sample*, not the *forecast* --
+  which is why the scoring-rule consistency test passes under either wiring).
+
+The Kupiec/Christoffersen backtests run the other way round on purpose, and are not
+gamed by it: they score the **generated** ensemble's exceedances of the **historical**
+VaR threshold, and a generator emitting less tail produces *too few* exceedances, which
+Kupiec rejects. Christoffersen's independence test alone is not coercive that way (zero
+exceedances leave every transition count at 0 and the LR at 0), so it carries an
+explicit :data:`BACKTEST_MIN_EXCEEDANCES` floor -- see :func:`christoffersen_independence`.
+
+:func:`tail_dependence_lower` / :func:`tail_dependence_upper` are re-exported, not
+restated, from :mod:`ah.eval.reference` -- see :func:`build_tails_suite` for why they
+live there.
 
 Registration is deferred, exactly as ``ah.eval.metrics.monthly``/``horizon``: this
 suite needs a computed :class:`~ah.eval.reference.ReferenceStats` (for
@@ -130,11 +155,32 @@ tail_dependence_upper = _reference_tail_dependence_upper
 
 # The single VaR/ES level the Kupiec/Christoffersen backtests and elicitability_score
 # run at, per pre-registration.yaml's kupiec_pof_estimator/elicitability_score_estimator
-# blocks. NOT also 0.99: the expected exceedance count at alpha=0.01 over a 120-month
-# generated path is ~1.2, far too few for a binomial/Markov-chain backtest to have any
-# power -- a deliberate, stated scope decision, not an oversight. `var_95`/`es_95`/
-# `var_99`/`es_99` (d4_var_es_estimator) remain descriptive at both levels.
+# blocks. NOT also 0.99. The premise, restated correctly by the WP2.2 Task 4 fix pass
+# (governance/retrofit-register.md RFR-23 originally stated it wrongly): the ~1.2
+# expected exceedances at alpha=0.01 is the PER-PATH count over 120 months, and Kupiec
+# pools across paths, so a 1000-path ensemble would have ~1,200 expected exceedances at
+# 99% -- ample power for Kupiec on its own. The binding constraint is Christoffersen:
+# transition counts are per-path (a transition never crosses a path boundary), and at
+# ~1.2 exceedances per path the transition matrix of any single path is essentially
+# empty, so the independence and conditional-coverage tests have no power at 99%
+# regardless of ensemble size. Running the Kupiec/elicitability names at 99% while the
+# Christoffersen names could not follow would split one sealed backtest family across
+# two levels; keeping the family at one level is the deliberate scope decision.
+# `var_95`/`es_95`/`var_99`/`es_99` (d4_var_es_estimator) remain descriptive at both.
 BACKTEST_LEVEL = 0.95
+
+# WP2.2 Task 4 fix pass (Important 6). Below this many exceedances in the whole judged
+# sequence, Christoffersen's independence statistic is NaN rather than a number. With
+# zero exceedances every transition count (n01, n10, n11) is 0, so under the
+# `0*ln(0) := 0` convention every log-likelihood term vanishes and LR_ind is exactly 0
+# with a p-value of 1.0 -- a MAXIMALLY FAVOURABLE independence score for a generator
+# whose losses never reach the historical VaR at all. Same shape of floor as
+# `DRAWDOWN_MIN_EPISODES`/`TAIL_DEPENDENCE_MIN_TAIL_OBS`/`VARIANCE_RATIO_MIN_SUMS`, and
+# the same reason: a statistic computed from a literal handful of events carries no
+# information and must say so. Kupiec is deliberately NOT floored -- zero exceedances
+# against a 5% nominal rate is exactly the case its LR is built to reject, and flooring
+# it would disarm the one test that already punishes a suppressed-tail generator.
+BACKTEST_MIN_EXCEEDANCES = 10
 
 
 # --------------------------------------------------------------------------- #
@@ -480,6 +526,17 @@ def elicitability_score(
     the family for which strict consistency already holds, needing no second,
     arbitrarily-chosen family parameter.
 
+    **Which argument is which, and why it is not interchangeable.** Everything above
+    establishes optimality **in ``(var, es)`` with ``returns`` held fixed**. So
+    ``returns`` must be the sample of REALIZATIONS one is honest about, and
+    ``(var, es)`` the FORECAST PAIR under judgement. :func:`_elicitability_metric` calls
+    this with history's realizations and the GENERATED ensemble's ``(VaR, ES)`` -- the
+    Tail-GAN direction. Passing generated realizations with history's frozen pair
+    reverses the roles and inverts the metric's meaning: with ``(var, es)`` constant the
+    expression collapses to ``c1 * mean((loss - var)^+) + c2``, ``c1 > 0``, minimized by
+    a generator emitting identically zero. See the module docstring's "The two
+    directions" for the full statement of that defect.
+
     ``NaN`` if ``es <= 0`` (no positive ES magnitude to score against) or ``level`` is
     not in ``(0, 1)``.
     """
@@ -549,13 +606,61 @@ def _bernoulli_loglik(n1: int, n0: int, p: float) -> float:
     return ll
 
 
+def _clamp_lr(lr: float) -> float:
+    """A likelihood-ratio statistic is non-negative by construction; floating-point
+    cancellation can make it a tiny negative or ``-0.0``. ``max(x, 0.0)`` is NOT enough:
+    Python's ``max`` returns its FIRST argument on a tie, so ``max(-0.0, 0.0)`` is
+    ``-0.0`` and the battery markdown prints ``-0``. This returns ``+0.0``."""
+    return lr if lr > 0.0 else 0.0
+
+
 def _pof_lr_from_counts(n1: int, t: int, level: float) -> float:
     """Kupiec proportion-of-failures LR statistic from exceedance count ``n1`` of ``t``."""
     alpha = 1.0 - level
     p_hat = n1 / t
     ll_null = _bernoulli_loglik(n1, t - n1, alpha)
     ll_alt = _bernoulli_loglik(n1, t - n1, p_hat)
-    return max(-2.0 * (ll_null - ll_alt), 0.0)
+    return _clamp_lr(-2.0 * (ll_null - ll_alt))
+
+
+def _reference_scaled_lr(lr: float, pooled_n: int, reference_n: int) -> float:
+    """Re-express a pooled LR statistic at a fixed REFERENCE sample size.
+
+    WP2.2 Task 4 fix pass, Important 4 -- "the backtest statistics scale with
+    ``n_paths``". Both LR statistics in this module are exactly linear in their
+    sufficient counts at fixed estimated proportions: Kupiec's is
+    ``2 * T * KL(p_hat || alpha)`` and Christoffersen's is ``2 * N`` times a function of
+    the three transition ratios alone. Pooling an ensemble's ``n_paths * months``
+    observations therefore multiplied both by ``n_paths``, so **halving the ensemble
+    halved the statistic and raised the p-value**: running 100 paths instead of 1000 let
+    ``kupiec_pof_pvalue`` clear a sealed ``min:`` floor that the full ensemble would have
+    failed. That is "generating less improves the metric" on four names WP2.3 seals.
+
+    The fix is to fix the sample size in the definition rather than let the generator
+    choose it (the first of the two options the review offered; the second was replacing
+    the p-value with a coverage band, which would have changed four sealed metric names'
+    meanings rather than their scale). ``reference_n`` is **one generated path's worth**
+    of the relevant count -- ``months`` for Kupiec, ``months - 1`` transitions for
+    Christoffersen -- so the reported statistic is:
+
+        "the LR a SINGLE reference-length path would have produced, had it exhibited
+        the exceedance rate / transition ratios the whole ensemble exhibits"
+
+    Pooling still does real work: it estimates those ratios far more precisely than one
+    path could. What it no longer does is inflate the statistic without bound.
+
+    **What this means for the reported p-value, stated because the name does not say
+    it.** ``kupiec_pof_pvalue`` etc. remain ``chi2_sf`` of the reported statistic, so
+    they are the p-value of that single reference-length path -- an EFFECT SIZE on a
+    p-value scale, not an asymptotically valid significance level at the pooled sample
+    size (at ``n_paths = 1000`` the pooled statistic would reject essentially any
+    departure, however economically negligible). That is the quantity a sealed
+    threshold on tail-coverage fidelity should judge, and it is invariant to how many
+    paths the generator was asked for. ``NaN`` if either count is non-positive.
+    """
+    if pooled_n <= 0 or reference_n <= 0:
+        return float("nan")
+    return _clamp_lr(lr * (reference_n / pooled_n))
 
 
 def kupiec_pof(indicator: np.ndarray, level: float = BACKTEST_LEVEL) -> tuple[float, float]:
@@ -597,7 +702,7 @@ def _independence_lr_from_counts(n00: int, n01: int, n10: int, n11: int) -> floa
     pi = (n01 + n11) / total
     ll_alt = _bernoulli_loglik(n01, n00, pi01) + _bernoulli_loglik(n11, n10, pi11)
     ll_null = _bernoulli_loglik(n01 + n11, n00 + n10, pi)
-    return max(-2.0 * (ll_null - ll_alt), 0.0)
+    return _clamp_lr(-2.0 * (ll_null - ll_alt))
 
 
 def christoffersen_independence(indicator: np.ndarray) -> tuple[float, float]:
@@ -608,10 +713,14 @@ def christoffersen_independence(indicator: np.ndarray) -> tuple[float, float]:
     previous state). Returns ``(LR statistic, p-value)``, ``p-value = _chi2_sf(LR,
     df=1)``. Full closed form in ``pre-registration.yaml``'s
     ``christoffersen_independence_estimator``. ``(NaN, NaN)`` for a sequence shorter
-    than 2 (no transitions to count).
+    than 2 (no transitions to count), or with fewer than
+    :data:`BACKTEST_MIN_EXCEEDANCES` exceedances in the whole sequence -- see that
+    constant for why a floor is mandatory here and forbidden for Kupiec.
     """
     x = np.asarray(indicator, dtype=bool).reshape(-1)
     if x.shape[0] < 2:
+        return float("nan"), float("nan")
+    if int(np.sum(x)) < BACKTEST_MIN_EXCEEDANCES:
         return float("nan"), float("nan")
     n00, n01, n10, n11 = _transition_counts(x)
     lr = _independence_lr_from_counts(n00, n01, n10, n11)
@@ -648,6 +757,41 @@ def exceedance_indicator(returns: np.ndarray, var: float) -> np.ndarray:
 # --------------------------------------------------------------------------- #
 
 
+def _require_contiguous_months(index: pd.Index, strategy: Strategy) -> None:
+    """Raise unless ``index`` is a strictly consecutive run of calendar months.
+
+    WP2.2 Task 4 fix pass (Minor). Every consumer of the joined historical panel treats
+    ADJACENT ROWS AS CONSECUTIVE MONTHS: ``_lagged_carry_minus_duration`` reads
+    ``level[:, 1:] - level[:, :-1]`` as one month's yield change (then multiplies it by
+    a duration of 8.5), and ``_momentum_12_1`` reads a ``lookback``-row slice as a
+    12-month window. The inner join above is sorted but has no reason of its own to be
+    gap-free, so a single interior missing month would silently become a multi-month
+    yield change scaled by 8.5 -- a fabricated bond return an order of magnitude too
+    large, in the series the generated ensemble is scored against. This is a loud
+    :class:`~ah.strategies.StrategyError` naming the gap rather than a ``None``, because
+    a gap in a Step-1 monthly series is a data defect to fix, not a coverage limitation
+    to report as NaN.
+    """
+    if len(index) < 2:
+        return
+    if not isinstance(index, pd.DatetimeIndex):
+        raise StrategyError(
+            f"strategy '{strategy.strategy_id}': historical series must be indexed by "
+            f"date to be checked for contiguous monthly steps, got {type(index).__name__}"
+        )
+    ordinals = np.asarray(index.to_period("M").astype("int64"))
+    gaps = np.diff(ordinals)
+    if not bool(np.all(gaps == 1)):
+        first = int(np.argmax(gaps != 1))
+        raise StrategyError(
+            f"strategy '{strategy.strategy_id}': the aligned historical series is not a "
+            f"contiguous run of months -- {index[first].date()} is followed by "
+            f"{index[first + 1].date()} ({int(gaps[first])} months later). Adjacent rows "
+            f"are read as consecutive months by every strategy transform, so a gap would "
+            f"silently fabricate a multi-month change scaled by a duration parameter."
+        )
+
+
 def _historical_strategy_returns(
     reference: ReferenceStats, strategy: Strategy, derived: Mapping[str, DerivedSeries]
 ) -> np.ndarray | None:
@@ -681,6 +825,7 @@ def _historical_strategy_returns(
     ).sort_index()
     if joined.empty:
         return None
+    _require_contiguous_months(joined.index, strategy)
     values = joined.to_numpy(dtype=np.float64)
     hist_ensemble = Ensemble(
         paths=values[np.newaxis, :, :],
@@ -709,6 +854,44 @@ def _historical_var_es(
     if hist_returns is None:
         return float("nan"), float("nan")
     return var_es(hist_returns, level)
+
+
+class _HistoricalCache:
+    """Per-suite memo of the historical D4 strategy return paths and their VaR/ES.
+
+    WP2.2 Task 4 fix pass (Minor). :func:`_historical_var_es` rebuilds the full
+    multi-leg pandas join on EVERY metric call, and
+    :func:`ah.eval.battery.mc_error` calls each metric 21 times -- roughly 735 identical
+    joins per battery run for the seven backtest metrics of five strategies. The inputs
+    are two frozen objects (``reference.historical_series`` and the sealed ``derived``
+    transforms), so the result is a pure function of ``(strategy_id, level)`` and is
+    memoized here. One cache is built per :func:`build_tails_suite` call and shared by
+    every closure it returns, so it never outlives the ``ReferenceStats`` it was
+    computed from -- there is no module-level state and no cache key that could go stale.
+    """
+
+    def __init__(self, reference: ReferenceStats, derived: Mapping[str, DerivedSeries]) -> None:
+        self.reference = reference
+        self.derived = derived
+        self._returns: dict[str, np.ndarray | None] = {}
+        self._var_es: dict[tuple[str, float], tuple[float, float]] = {}
+
+    def returns(self, strategy: Strategy) -> np.ndarray | None:
+        sid = strategy.strategy_id
+        if sid not in self._returns:
+            self._returns[sid] = _historical_strategy_returns(
+                self.reference, strategy, self.derived
+            )
+        return self._returns[sid]
+
+    def var_es(self, strategy: Strategy, level: float) -> tuple[float, float]:
+        key = (strategy.strategy_id, level)
+        if key not in self._var_es:
+            hist = self.returns(strategy)
+            self._var_es[key] = (
+                (float("nan"), float("nan")) if hist is None else var_es(hist, level)
+            )
+        return self._var_es[key]
 
 
 # --------------------------------------------------------------------------- #
@@ -746,52 +929,62 @@ def _var_es_metric(
     return fn
 
 
-def _elicitability_metric(
-    strategy: Strategy, derived: Mapping[str, DerivedSeries], reference: ReferenceStats
-) -> MetricFn:
+def _elicitability_metric(strategy: Strategy, cache: _HistoricalCache) -> MetricFn:
+    """The GENERATED ensemble's own ``(VaR, ES)`` scored against the HISTORICAL
+    realizations -- the Tail-GAN direction, and the fix for the review's Critical 1.
+
+    Argument order is the entire content of this metric (see the module docstring's
+    "The two directions"): :func:`elicitability_score` is strictly consistent *in its
+    forecast pair, with its realization sample held fixed*, so the pair being judged has
+    to be the generator's and the realizations have to be history's. That direction is
+    coercive as the generated ES shrinks to 0, and is minimized exactly when the
+    generated ``(VaR, ES)`` reproduces history's. The shipped-then-fixed inversion
+    (history's pair, generated realizations) made an identically-zero generator the
+    global optimum of the loss DN-1.1 line 95 hands to WP2.8 training.
+
+    NaN when the generated strategy path cannot be built (an absent leg), when the
+    historical one cannot (``commodities``), or when the generated ES is not positive
+    (an ensemble with no loss tail at all has no forecast to score).
+    """
+
     def fn(ensemble: Ensemble) -> float:
-        pooled = _generated_pooled_returns(ensemble, strategy, derived)
+        pooled = _generated_pooled_returns(ensemble, strategy, cache.derived)
         if pooled is None or pooled.size == 0:
             return float("nan")
-        hist_var, hist_es = _historical_var_es(reference, strategy, derived, BACKTEST_LEVEL)
-        if np.isnan(hist_var) or np.isnan(hist_es):
+        hist_returns = cache.returns(strategy)
+        if hist_returns is None or hist_returns.size == 0:
             return float("nan")
-        return elicitability_score(pooled, hist_var, hist_es, BACKTEST_LEVEL)
+        gen_var, gen_es = var_es(pooled, BACKTEST_LEVEL)
+        return elicitability_score(hist_returns, gen_var, gen_es, BACKTEST_LEVEL)
 
     return fn
 
 
 def _backtest_metric(
-    strategy: Strategy,
-    derived: Mapping[str, DerivedSeries],
-    reference: ReferenceStats,
-    test: str,
-    which: str,
+    strategy: Strategy, cache: _HistoricalCache, test: str, which: str
 ) -> MetricFn:
     """``test`` in {"kupiec", "christoffersen_independence", "christoffersen_cc"};
     ``which`` in {"stat", "pvalue"} -- shared plumbing for the six Kupiec/Christoffersen
-    metric specs (both levels of both outputs of both tests)."""
+    metric specs (both outputs of all three tests).
+
+    Counts are pooled across paths (Kupiec) / summed across each path's own internal
+    transitions (Christoffersen, never crossing a path boundary), and the resulting LR
+    is then re-expressed at a fixed reference sample size of ONE PATH via
+    :func:`_reference_scaled_lr` -- read that docstring before changing anything here;
+    it is why halving ``n_paths`` no longer halves the statistic. The
+    :data:`BACKTEST_MIN_EXCEEDANCES` floor applies to the Christoffersen branches only.
+    """
 
     def fn(ensemble: Ensemble) -> float:
-        pooled_2d = _generated_returns_2d(ensemble, strategy, derived)
+        pooled_2d = _generated_returns_2d(ensemble, strategy, cache.derived)
         if pooled_2d is None:
             return float("nan")
-        hist_var, hist_es = _historical_var_es(reference, strategy, derived, BACKTEST_LEVEL)
+        hist_var, hist_es = cache.var_es(strategy, BACKTEST_LEVEL)
         del hist_es  # only the VaR forecast is needed for a backtest's indicator
         if np.isnan(hist_var):
             return float("nan")
-        if test == "kupiec":
-            n1_total = 0
-            t_total = 0
-            for i in range(pooled_2d.shape[0]):
-                indicator = exceedance_indicator(pooled_2d[i], hist_var)
-                n1_total += int(np.sum(indicator))
-                t_total += indicator.size
-            if t_total == 0:
-                return float("nan")
-            lr = _pof_lr_from_counts(n1_total, t_total, BACKTEST_LEVEL)
-            return lr if which == "stat" else _chi2_sf(lr, df=1)
 
+        months = int(pooled_2d.shape[1])
         n00 = n01 = n10 = n11 = 0
         n1_total = 0
         t_total = 0
@@ -807,16 +1000,30 @@ def _backtest_metric(
                 n11 += c11
         if t_total == 0:
             return float("nan")
-        lr_ind = _independence_lr_from_counts(n00, n01, n10, n11)
-        if test == "christoffersen_independence":
-            if np.isnan(lr_ind):
+
+        lr_pof = _reference_scaled_lr(
+            _pof_lr_from_counts(n1_total, t_total, BACKTEST_LEVEL), t_total, months
+        )
+        if test == "kupiec":
+            if np.isnan(lr_pof):
                 return float("nan")
+            return lr_pof if which == "stat" else _chi2_sf(lr_pof, df=1)
+
+        if n1_total < BACKTEST_MIN_EXCEEDANCES:
+            return float("nan")
+        lr_ind = _reference_scaled_lr(
+            _independence_lr_from_counts(n00, n01, n10, n11),
+            n00 + n01 + n10 + n11,
+            months - 1,
+        )
+        if np.isnan(lr_ind):
+            return float("nan")
+        if test == "christoffersen_independence":
             return lr_ind if which == "stat" else _chi2_sf(lr_ind, df=1)
 
         # christoffersen_cc
-        if np.isnan(lr_ind):
+        if np.isnan(lr_pof):
             return float("nan")
-        lr_pof = _pof_lr_from_counts(n1_total, t_total, BACKTEST_LEVEL)
         lr_cc = lr_pof + lr_ind
         return lr_cc if which == "stat" else _chi2_sf(lr_cc, df=2)
 
@@ -836,18 +1043,15 @@ def _generated_returns_2d(
         return None
 
 
-def _strategy_specs(
-    strategy: Strategy, derived: Mapping[str, DerivedSeries], reference: ReferenceStats
-) -> list[MetricSpec]:
+def _strategy_specs(strategy: Strategy, cache: _HistoricalCache) -> list[MetricSpec]:
     sid = strategy.strategy_id
+    derived = cache.derived
     specs = [
         _strategy_spec(f"{sid}.var_95", _var_es_metric(strategy, derived, 0.95, "var")),
         _strategy_spec(f"{sid}.es_95", _var_es_metric(strategy, derived, 0.95, "es")),
         _strategy_spec(f"{sid}.var_99", _var_es_metric(strategy, derived, 0.99, "var")),
         _strategy_spec(f"{sid}.es_99", _var_es_metric(strategy, derived, 0.99, "es")),
-        _strategy_spec(
-            f"{sid}.elicitability_score", _elicitability_metric(strategy, derived, reference)
-        ),
+        _strategy_spec(f"{sid}.elicitability_score", _elicitability_metric(strategy, cache)),
     ]
     for test, prefix in (
         ("kupiec", "kupiec_pof"),
@@ -855,14 +1059,11 @@ def _strategy_specs(
         ("christoffersen_cc", "christoffersen_conditional_coverage"),
     ):
         specs.append(
-            _strategy_spec(
-                f"{sid}.{prefix}_stat", _backtest_metric(strategy, derived, reference, test, "stat")
-            )
+            _strategy_spec(f"{sid}.{prefix}_stat", _backtest_metric(strategy, cache, test, "stat"))
         )
         specs.append(
             _strategy_spec(
-                f"{sid}.{prefix}_pvalue",
-                _backtest_metric(strategy, derived, reference, test, "pvalue"),
+                f"{sid}.{prefix}_pvalue", _backtest_metric(strategy, cache, test, "pvalue")
             )
         )
     return specs
@@ -894,8 +1095,9 @@ def build_tails_suite(
     specs: list[MetricSpec] = []
     strategies = load_d4_strategies()
     derived = load_derived_series()
+    cache = _HistoricalCache(reference, derived)
     for strategy in strategies:
-        specs.extend(_strategy_specs(strategy, derived, reference))
+        specs.extend(_strategy_specs(strategy, cache))
 
     active_set = set(manifest.active_factors())
     seen_pairs: set[tuple[str, str]] = set()

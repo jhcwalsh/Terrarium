@@ -194,6 +194,17 @@ _CONVENTIONS_KEYS = frozenset(
         "kupiec_pof_estimator",
         "christoffersen_independence_estimator",
         "christoffersen_conditional_coverage_estimator",
+        # WP2.2 Task 4 fix pass: one cross-cutting statement shared by all six
+        # Kupiec/Christoffersen names (why the pooled sample size is fixed in the
+        # definition rather than chosen by the generator), stated once rather than three
+        # times. Not an `<x>_estimator` block and therefore not in
+        # `ah.eval.prereg.ESTIMATOR_CONVENTION_KEYS`, which maps registered statistics
+        # to the block that DEFINES them -- the three estimator blocks above still do.
+        "backtest_reference_sample_size",
+        # WP2.2 Task 4 fix pass: the one gradient-descent fitting procedure the whole
+        # utility tier shares (step size, stopping criterion, penalty, weighting),
+        # stated once instead of three times inside the three utility estimator blocks.
+        "gradient_descent_fit_estimator",
     }
 )
 

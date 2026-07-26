@@ -1586,6 +1586,28 @@ def test_decade_frequency_bands_are_drawn_at_the_full_sample_length() -> None:
     assert stats["g1.variance_ratio_12m"].resample_length == 120
 
 
+def test_tail_dependence_bands_are_drawn_at_the_full_sample_length() -> None:
+    """IMPORTANT 3. ``TAIL_DEPENDENCE_MIN_TAIL_OBS = 10`` at a 5% tail fraction needs
+    ``n >= 200``, but a length-matched replicate is drawn at the ensemble's own path
+    length (120 at production settings), so EVERY replicate returned NaN and the band
+    was ``(nan, nan)`` with ``n_valid_resamples = 0`` -- an empty band on a registered,
+    sealable statistic whose "real historical band for free" was the stated reason for
+    registering it here at all. ``RegisteredCrossStat`` now carries the same
+    ``length_matched`` flag ``RegisteredStat`` does, and these two are the entries that
+    set it False."""
+    ref = _frequency_reference()
+    stats = ref.cross_blocks[("global", "us")].stats
+    for stat in ("tail_dependence_lower", "tail_dependence_upper"):
+        band = stats[f"g1~u1.{stat}"]
+        assert band.resample_length is None, stat
+        assert band.n_valid_resamples == band.n_resamples, stat
+        assert np.isfinite(band.lo) and np.isfinite(band.hi), (stat, band)
+    # The length-sensitive cross-block statistics stay matched -- the assertion is over
+    # the split, so a future statistic silently opting out fails this test.
+    assert stats["g1~u1.correlation"].resample_length == 120
+    assert stats["g1~u1.crisis_corr_lift"].resample_length == 120
+
+
 def test_band_records_how_many_resamples_were_valid() -> None:
     """RFR-19 stays deferred, but its degeneracy must be VISIBLE in the artifact: a
     single NaN among the resamples destroys both bounds today, and without this field
