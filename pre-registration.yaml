@@ -290,45 +290,84 @@ conventions:
     corrected by dropping warm-up months, because that would make the pooled sample of a
     metric differ from the pooled sample of the descriptive var_95/es_95 computed on the
     same strategy, and two different "the strategy's return path" conventions in one
-    file is a worse defect than a quantified bias. Its CONSEQUENCE is bounded by
-    backtest_reference_sample_size: at the sealed reference sample size of one 120-month
-    path, a 4.57%-vs-5% discrepancy gives LR_pof ~ 0.049 (p ~ 0.82), i.e. nothing. Under
-    the pre-fix pooled sample size of 120,000 the SAME bias gave LR_pof ~ 49 -- a
-    confident rejection of a correct generator. `sixty_forty`/`carry` warm up for month 0
-    only (~0.7pp) and are unaffected either way. WP2.3 must accept this explicitly or
-    amend the momentum lookback/path length.
+    file is a worse defect than a quantified bias.
+    ITS CONSEQUENCE, CORRECTED (WP2.2 Task 4 fix pass 2, BLOCKING 3 -- the arithmetic
+    below is unchanged, only the READING of it was wrong and is replaced). At the sealed
+    reference sample size of one 120-month path, a 4.57%-vs-5% discrepancy gives
+    LR_pof ~ 0.049 (p ~ 0.82). The earlier wording called that "nothing" -- FALSE
+    COMFORT. `backtest_reference_sample_size`'s normalization rescales EVERY departure
+    from nominal coverage uniformly, whatever causes it: a GENUINE coverage defect of
+    the identical magnitude (a generator whose true exceedance rate differs from 5% by
+    the same ~0.43 percentage points the warm-up produces, for a reason that has nothing
+    to do with warm-up) yields the exact SAME LR_pof ~ 0.049. So "0.049 is nothing" is
+    not a property of the warm-up bias being small -- it is a property of 0.43pp being
+    small relative to a one-path reference sample's power, and that property applies
+    equally to a real defect of the same size. The honest statement is: THE WARM-UP BIAS
+    IS A FIXED ~0.43-PERCENTAGE-POINT OFFSET IN p_hat (4.57% observed vs 5% nominal
+    under a perfect generator) THAT EVERY SEALED THRESHOLD ON
+    `kupiec_pof_chi2_tail_1path` MUST ACCOMMODATE -- and because any threshold loose
+    enough to admit a perfect generator's own 4.57% is, by the same normalization, at
+    least that loose for a genuine miscalibration of comparable size, the bias SETS A
+    FLOOR ON THE SMALLEST REAL COVERAGE ERROR THIS BACKTEST FAMILY CAN DETECT for
+    `momentum` and the other rule-based strategies. Under the pre-fix pooled sample size
+    of 120,000 the SAME bias gave LR_pof ~ 49 -- a confident rejection of a correct
+    generator, the opposite failure mode. `sixty_forty`/`carry` warm up for month 0 only
+    (~0.7pp) and are far less affected either way. WP2.3 must accept this explicitly --
+    setting no threshold tighter than the floor allows -- or amend the momentum
+    lookback/path length; this paragraph records a decision to be made, not a
+    demonstration that the bias may be ignored.
 
   backtest_reference_sample_size: >-
     THE POOLED SAMPLE SIZE OF EVERY D4 BACKTEST STATISTIC IS FIXED IN THIS FILE, NOT
     CHOSEN BY THE GENERATOR. Applies to all six Kupiec/Christoffersen names
-    (`kupiec_pof_stat`/`_pvalue`, `christoffersen_independence_stat`/`_pvalue`,
-    `christoffersen_conditional_coverage_stat`/`_pvalue`). Added by WP2.2 Task 4's fix
-    pass, which found the previous definition gameable.
+    (`kupiec_pof_lr_1path`/`_chi2_tail_1path`,
+    `christoffersen_independence_lr_1path`/`_chi2_tail_1path`,
+    `christoffersen_conditional_coverage_lr_1path`/`_chi2_tail_1path` -- renamed by
+    WP2.2 Task 4 fix pass 2, BLOCKING 1, from `..._stat`/`..._pvalue`: the second of each
+    pair is a chi-square TAIL of a one-path-normalized statistic, and the paragraph below
+    explicitly denies it is a significance level, so `_pvalue` was a name whose only
+    justification was the reading this file itself rejects). Added by WP2.2 Task 4's fix
+    pass, which found the previous definition gameable on the `n_paths` axis.
     THE PROBLEM. Both likelihood-ratio statistics are exactly LINEAR in their sufficient
     counts at fixed estimated proportions: Kupiec's is 2 * T * KL(p_hat || alpha) and
     Christoffersen's is 2 * N times a function of the three transition ratios alone.
     Pooling an ensemble's n_paths * months observations therefore multiplied both by
     n_paths, so HALVING THE ENSEMBLE HALVED THE STATISTIC AND RAISED THE P-VALUE:
-    running 100 paths instead of 1000 let `kupiec_pof_pvalue` clear a `min: 0.01` floor
-    that the full ensemble would have failed. That is "the metric improves when the
-    generator produces less", on four sealed names.
-    THE DEFINITION. Counts are still pooled across the whole ensemble -- that is what
-    estimates p_hat and the transition ratios precisely -- and the reported statistic is
-    then re-expressed at a REFERENCE SAMPLE SIZE OF ONE PATH: T = months for Kupiec,
-    N = months - 1 transitions for Christoffersen. Equivalently, multiply the pooled LR
-    by (reference count / pooled count). The reported number is therefore "the LR a
-    SINGLE reference-length path would have produced, had it exhibited the exceedance
-    rate and transition ratios the whole ensemble exhibits". It is invariant to n_paths
-    by construction.
+    running 100 paths instead of 1000 let `kupiec_pof_chi2_tail_1path` clear a
+    `min: 0.01` floor that the full ensemble would have failed. That is "the metric
+    improves when the generator produces less", on four sealed names.
+    THE DEFINITION, PINNED ON BOTH AXES (WP2.2 Task 4 fix pass 2, BLOCKING 2 / NEW-1
+    corrects the second). Counts are still pooled across the whole ensemble -- that is
+    what estimates p_hat and the transition ratios precisely -- and the reported
+    statistic is then re-expressed at a REFERENCE SAMPLE SIZE OF ONE 120-MONTH PATH:
+    T = 120 (`ah.eval.metrics.tails.BACKTEST_REFERENCE_MONTHS`) for Kupiec, N = 119
+    transitions for Christoffersen -- A SEALED CONSTANT, NOT the judged ensemble's own
+    `months`. The first fix pass re-expressed at "months", which closed the `n_paths`
+    gameability but reopened the IDENTICAL failure on the `months` axis: because
+    `reference_n` was read off the generated ensemble itself, a 60-month ensemble
+    reported HALF the statistic (LR 3.84 -> 1.92, moving the tail from 0.05 to 0.17) that
+    a 120-month ensemble with the SAME exceedance rate reported -- "the metric improves
+    when the generator produces less" had moved from the `n_paths` axis to the `months`
+    axis, not closed. Pinning T at the fixed constant 120 (matching this platform's
+    standard production path length) closes it on both axes: the reported number is "the
+    LR a SINGLE 120-month reference path would have produced, had it exhibited the
+    exceedance rate and transition ratios the whole ensemble exhibits", invariant to
+    n_paths AND to the ensemble's own path length, by construction.
     WHAT THE REPORTED P-VALUE THEN MEANS, stated because the metric name does not say
-    it. `..._pvalue` remains chi2_sf of the reported statistic, so it is that single
-    reference-length path's p-value: an EFFECT SIZE on a p-value scale, NOT an
-    asymptotically valid significance level at the pooled sample size. This is
-    deliberate. At n_paths = 1000 the pooled statistic rejects essentially any departure
-    from nominal coverage however economically negligible, which makes a sealed
-    threshold on it a statement about ensemble size rather than about tail fidelity. The
-    rejected alternative was replacing the p-value with a coverage band on p_hat, which
-    would have changed four sealed metric names' MEANING rather than their scale.
+    it. `..._chi2_tail_1path` remains chi2_sf of the reported statistic, so it is that
+    single 120-month reference path's p-value: an EFFECT SIZE on a p-value scale, NOT an
+    asymptotically valid significance level at the pooled sample size, and NOT an
+    asymptotically valid significance level at the judged ensemble's own path length
+    either. This is deliberate. At n_paths = 1000 the pooled statistic rejects
+    essentially any departure from nominal coverage however economically negligible,
+    which makes a sealed threshold on it a statement about ensemble size rather than
+    about tail fidelity. The rejected alternative was replacing the p-value with a
+    coverage band on p_hat (`kupiec_exceedance_rate` = p_hat judged against a band
+    directly, rather than through a chi-square tail at all), which would have changed
+    six sealed metric names' MEANING rather than their scale -- WP2.3 may prefer it for
+    exactly that reason (more honest, at the cost of redefining rather than merely
+    renaming); see governance/retrofit-register.md for the option, recorded rather than
+    built here.
 
   nan_metric_rule: >-
     A METRIC THAT EVALUATES TO NaN FAILS. One rule for the whole platform: an
@@ -367,9 +406,18 @@ conventions:
     drawn at history's length is therefore NOT a criterion a short-path generator can
     satisfy even by reproducing history exactly -- the gap is an artifact of the
     estimator, not evidence about the generator. Every reference band is therefore drawn
-    with `resample_length` equal to the judged ensemble's own path length: each
-    moving-block bootstrap replicate carries that many months, drawn from the full
-    train+validation sample, so both sides carry the identical bias. CONSEQUENCE, stated
+    BY DEFAULT with `resample_length` equal to the judged ensemble's own path length:
+    each moving-block bootstrap replicate carries that many months, drawn from the full
+    train+validation sample, so both sides carry the identical bias.
+    THIS IS A DEFAULT, NOT A BLANKET RULE (WP2.2 Task 4 fix pass 2, MINOR 6 -- an
+    earlier version of this paragraph stated it as if it held everywhere). THREE
+    REGISTERED STATISTICS DEPART FROM IT (`length_matched=False` on their own
+    registration record): `lost_decade_frequency` and `long_inflation_era_frequency`
+    (see their own `..._estimator` blocks below for why a 120-month replicate would make
+    every replicate value 0.0 or 1.0), and `tail_dependence_lower`/`tail_dependence_upper`
+    (see `tail_dependence_estimator` below -- at the production `resample_length` of 120
+    the tail-observation floor was never met and every replicate was NaN). Every other
+    registered statistic follows the default stated above. CONSEQUENCE, stated
     because it looks like a defect otherwise: a length-matched band's `point` (the
     statistic on all of history) is NOT expected to lie inside its own [lo, hi]. The
     rejected alternative was an (n-k) denominator, which would have to change every ACF
@@ -787,9 +835,9 @@ conventions:
       LR_pof = -2 * ln[ (1-alpha)^(T-x) * alpha^x / ( (1-p_hat)^(T-x) * p_hat^x ) ]
     with the 0*ln(0) := 0 convention (an exact-boundary count, x=0 or x=T, contributes
     0 to the corresponding term rather than raising). Under H0 (true rate = alpha),
-    LR_pof ~ chi-square(1) asymptotically; `kupiec_pof_pvalue` = P(chi-square(1) > LR_pof),
-    computed WITHOUT scipy via the exact closed form for one degree of freedom,
-    chi2_sf(x, 1) = 2 * (1 - Phi(sqrt(x))), Phi the standard normal CDF
+    LR_pof ~ chi-square(1) asymptotically; `kupiec_pof_chi2_tail_1path` = P(chi-square(1)
+    > LR_pof), computed WITHOUT scipy via the exact closed form for one degree of
+    freedom, chi2_sf(x, 1) = 2 * (1 - Phi(sqrt(x))), Phi the standard normal CDF
     (statistics.NormalDist().cdf) -- verified against the standard chi-square(1) 95th
     percentile critical value 3.841. A SMALL p-value (large LR_pof) rejects H0: the
     generated ensemble's exceedance rate against history's own VaR threshold disagrees
@@ -797,15 +845,18 @@ conventions:
     estimator_length_matching): this is a test statistic on the GENERATED ensemble's
     own pooled sequence, evaluated against a fixed asymptotic chi-square null, not a
     quantity with a train+validation reference band of its own.
-    THE POOLED SAMPLE SIZE IS FIXED IN THIS DEFINITION, NOT CHOSEN BY THE GENERATOR
-    (WP2.2 Task 4 fix pass; see backtest_reference_sample_size below for the full
-    statement, which applies identically to the Christoffersen statistics). T is the
-    number of MONTHS IN ONE PATH, not n_paths * months: the ensemble's pooled
-    exceedances estimate p_hat, and the reported LR is then evaluated at that fixed
-    reference T. Without this, LR_pof = 2 * T * KL(p_hat || alpha) scaled linearly with
-    n_paths, so asking the generator for 100 paths instead of 1000 divided the statistic
-    by 10 and raised the p-value -- a metric improved by generating less, on names WP2.3
-    seals.
+    THE POOLED SAMPLE SIZE IS FIXED IN THIS DEFINITION, NOT CHOSEN BY THE GENERATOR AND
+    NOT READ FROM THE GENERATED ENSEMBLE'S OWN PATH LENGTH EITHER (WP2.2 Task 4 fix
+    pass, widened by fix pass 2's BLOCKING 2 -- see backtest_reference_sample_size below
+    for the full statement, which applies identically to the Christoffersen
+    statistics). T = 120 (`ah.eval.metrics.tails.BACKTEST_REFERENCE_MONTHS`), a SEALED
+    CONSTANT, not n_paths * months and not the judged ensemble's own `months`: the
+    ensemble's pooled exceedances estimate p_hat, and the reported LR is then evaluated
+    at that fixed reference T = 120. Without pinning T, LR_pof = 2 * T * KL(p_hat ||
+    alpha) scaled linearly with n_paths (fixed pre-seal) AND with months (the residual
+    gap fix pass 2 closed): asking the generator for 100 paths instead of 1000, OR for
+    60 months instead of 120, divided the statistic and raised the p-value -- a metric
+    improved by generating less, on names WP2.3 seals, on either axis.
   christoffersen_independence_estimator: >-
     Christoffersen (1998) INDEPENDENCE LIKELIHOOD-RATIO TEST on the SAME exceedance
     indicator sequence I_t kupiec_pof_estimator defines, testing whether exceedances
@@ -827,9 +878,10 @@ conventions:
     the sum of the per-chain log-likelihoods, which reduces exactly to using the summed
     counts) -- not a per-path LR averaged, which would be a different, noisier
     statistic. The summed counts are then re-expressed at a reference sample size of
-    ONE PATH's transitions (months - 1) exactly as kupiec_pof_estimator's T is -- see
-    backtest_reference_sample_size. p-value via the SAME chi2_sf(x, 1) as
-    kupiec_pof_estimator.
+    ONE 120-MONTH reference path's transitions (119 = BACKTEST_REFERENCE_MONTHS - 1),
+    a SEALED CONSTANT exactly as kupiec_pof_estimator's T = 120 is -- NOT the judged
+    ensemble's own `months - 1` -- see backtest_reference_sample_size. p-value via the
+    SAME chi2_sf(x, 1) as kupiec_pof_estimator.
     MINIMUM-EXCEEDANCE FLOOR (WP2.2 Task 4 fix pass): NaN unless the judged sequence
     contains at least BACKTEST_MIN_EXCEEDANCES = 10 exceedances in total. With zero
     exceedances n01 = n10 = n11 = 0, so under the 0*ln(0) := 0 convention EVERY
@@ -840,7 +892,7 @@ conventions:
     against a 5% nominal rate is exactly the case its LR is built to reject, and
     flooring it would disarm the one test that already punishes a suppressed tail.
   christoffersen_conditional_coverage_estimator: >-
-    THE JOINT TEST: `christoffersen_conditional_coverage_stat` = LR_pof + LR_ind (the
+    THE JOINT TEST: `christoffersen_conditional_coverage_lr_1path` = LR_pof + LR_ind (the
     two already-defined statistics, summed) ~ chi-square(2) under H0 (correct
     unconditional coverage AND independence, jointly). p-value via the exact closed
     form for TWO degrees of freedom, chi2_sf(x, 2) = exp(-x/2) (verified against the
@@ -937,6 +989,18 @@ conventions:
     drawn in a fixed order (real, then generated) so the draw sequence is a function of
     the seed alone; gradient descent itself is deterministic given fixed data and zero
     init. Lower is better as a G2 criterion.
+    THE NOISE FLOOR, DISCLOSED (WP2.2 Task 4 fix pass 2, MINOR 4). Balanced accuracy is
+    the mean of two per-class recalls, and the real-class recall is estimated from only
+    the TEST split's real examples: (1 - TRAIN_FRACTION) of the real windows, roughly
+    0.3 * n_real_windows -- about 60 at this suite's typical scale (n_real_windows
+    around 200 with 24-month windows over ~800-1100 months of history and several
+    active factors pooled). A binomial proportion estimated from ~60 examples has
+    standard error ~0.5/sqrt(60) ~ 0.065, so even a PERFECT generator (real and
+    generated genuinely indistinguishable) reports |balanced_accuracy - 0.5| in roughly
+    the 0.05-0.10 range from TEST-SPLIT SAMPLING NOISE ALONE, not the ~0 a noiseless
+    estimator would return. A sealed threshold on this name must be set above that
+    floor -- WP2.3 must not read a value in that range as evidence of a detectable
+    generator defect.
   predictive_score_estimator: >-
     TRAIN-ON-SYNTHETIC, TEST-ON-REAL (TSTR) one-step-ahead prediction error. Model: a
     single linear map x_{t+1} = a + b*x_t + noise, fit by the SAME gradient-descent
@@ -1396,9 +1460,18 @@ thresholds:
   strategies:
     # PROVISIONAL placeholder -- not derived from history (see file header).
     "sixty_forty.elicitability_score": {min: null, max: 5.0, severity: report}
-    # PROVISIONAL placeholder -- not derived from history (see file header). A p-value
-    # floor of 0.01 is a deliberately loose non-rejection band while unsealed.
-    "sixty_forty.kupiec_pof_pvalue": {min: 0.01, max: null, severity: report}
+    # PROVISIONAL placeholder -- not derived from history (see file header). WP2.2 Task
+    # 4 fix pass 2 (BLOCKING 1): renamed from `kupiec_pof_pvalue`. A p-value floor of
+    # 0.01 is a deliberately loose non-rejection band while unsealed -- and, since fix
+    # pass 2's BLOCKING 2 correction, it is now the floor at the SEALED one-path
+    # reference count (T=120, not a pooled count ~1000x larger), where it is close to
+    # vacuous: it rejects only a KL(p_hat||alpha) large enough to be an obviously broken
+    # generator, not the size of miscalibration G2 should actually care about. Left as a
+    # placeholder rather than replaced with an invented number -- this file seals no
+    # threshold not derived from a real run (see the file header) -- and
+    # governance/retrofit-register.md records that WP2.3 must derive this, and every
+    # other threshold, from a POST-FIX run, never from this provisional value.
+    "sixty_forty.kupiec_pof_chi2_tail_1path": {min: 0.01, max: null, severity: report}
 
 # --------------------------------------------------------------------------- #
 # Item 3 decisions -- R5 (FX) and J3 (UK block), both CLOSED-deferred (WP2.1b Task 5

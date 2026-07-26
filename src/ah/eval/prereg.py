@@ -391,12 +391,16 @@ ESTIMATOR_CONVENTION_KEYS: Mapping[str, str] = MappingProxyType(
         "var_99": "d4_var_es_estimator",
         "es_99": "d4_var_es_estimator",
         "elicitability_score": "elicitability_score_estimator",
-        "kupiec_pof_stat": "kupiec_pof_estimator",
-        "kupiec_pof_pvalue": "kupiec_pof_estimator",
-        "christoffersen_independence_stat": "christoffersen_independence_estimator",
-        "christoffersen_independence_pvalue": "christoffersen_independence_estimator",
-        "christoffersen_conditional_coverage_stat": "christoffersen_conditional_coverage_estimator",
-        "christoffersen_conditional_coverage_pvalue": "christoffersen_conditional_coverage_estimator",
+        # WP2.2 Task 4 fix pass 2 (BLOCKING 1): renamed from `..._stat`/`..._pvalue` --
+        # see ah.eval.reference.STRATEGY_STATS's identical comment.
+        "kupiec_pof_lr_1path": "kupiec_pof_estimator",
+        "kupiec_pof_chi2_tail_1path": "kupiec_pof_estimator",
+        "christoffersen_independence_lr_1path": "christoffersen_independence_estimator",
+        "christoffersen_independence_chi2_tail_1path": "christoffersen_independence_estimator",
+        "christoffersen_conditional_coverage_lr_1path": "christoffersen_conditional_coverage_estimator",
+        "christoffersen_conditional_coverage_chi2_tail_1path": (
+            "christoffersen_conditional_coverage_estimator"
+        ),
     }
 )
 

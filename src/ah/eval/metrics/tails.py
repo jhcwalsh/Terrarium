@@ -182,6 +182,25 @@ BACKTEST_LEVEL = 0.95
 # it would disarm the one test that already punishes a suppressed-tail generator.
 BACKTEST_MIN_EXCEEDANCES = 10
 
+# WP2.2 Task 4 fix pass 2 (BLOCKING 2 / NEW-1). The sealed reference sample size
+# ``_reference_scaled_lr`` re-expresses every pooled Kupiec/Christoffersen statistic
+# at. Pinned to a constant -- NOT read from the judged ensemble's own ``months`` --
+# because both LR statistics are exactly linear in their sufficient counts at fixed
+# estimated proportions, so reading ``reference_n`` off the ensemble left
+# ``LR ~ months``: a 60-month ensemble reported HALF the statistic (and a materially
+# larger tail -- LR 3.84 -> 1.92 moves ``chi2_sf`` from 0.05 to 0.17) that a 120-month
+# ensemble with the IDENTICAL exceedance rate reported. That is the same "the metric
+# improves when the generator produces less" failure ``backtest_reference_sample_size``
+# already closed on the ``n_paths`` axis (see ``_reference_scaled_lr``) -- it had not
+# closed on the ``months`` axis, because the fix there still let the ensemble's own
+# path length choose ``reference_n``. 120 matches the platform's standard production
+# path length (``ah.eval.reference.DEFAULT_BLOCK_LENGTH``, and the ~1.2-exceedances-
+# per-120-months figure ``BACKTEST_LEVEL``'s own comment already assumes), so the
+# reported statistic is legible against the 95%/99% Kupiec/Christoffersen critical
+# values a reader already knows for a ONE-DECADE path, regardless of how many months
+# or paths the generator was actually asked for.
+BACKTEST_REFERENCE_MONTHS = 120
+
 
 # --------------------------------------------------------------------------- #
 # derived-series transforms
@@ -633,30 +652,36 @@ def _reference_scaled_lr(lr: float, pooled_n: int, reference_n: int) -> float:
     the three transition ratios alone. Pooling an ensemble's ``n_paths * months``
     observations therefore multiplied both by ``n_paths``, so **halving the ensemble
     halved the statistic and raised the p-value**: running 100 paths instead of 1000 let
-    ``kupiec_pof_pvalue`` clear a sealed ``min:`` floor that the full ensemble would have
-    failed. That is "generating less improves the metric" on four names WP2.3 seals.
+    ``kupiec_pof_chi2_tail_1path`` clear a sealed ``min:`` floor that the full ensemble
+    would have failed. That is "generating less improves the metric" on four names
+    WP2.3 seals.
 
     The fix is to fix the sample size in the definition rather than let the generator
     choose it (the first of the two options the review offered; the second was replacing
     the p-value with a coverage band, which would have changed four sealed metric names'
-    meanings rather than their scale). ``reference_n`` is **one generated path's worth**
-    of the relevant count -- ``months`` for Kupiec, ``months - 1`` transitions for
-    Christoffersen -- so the reported statistic is:
+    meanings rather than their scale). ``reference_n`` is :data:`BACKTEST_REFERENCE_MONTHS`
+    (Kupiec) or ``BACKTEST_REFERENCE_MONTHS - 1`` (Christoffersen's transition count) --
+    a SEALED CONSTANT, not derived from the judged ensemble's own path length (WP2.2
+    Task 4 fix pass 2, NEW-1: reading it off the ensemble left the reported statistic
+    scaling with ``months`` too, the identical failure shape one axis over -- see
+    :data:`BACKTEST_REFERENCE_MONTHS`'s own docstring) -- so the reported statistic is:
 
-        "the LR a SINGLE reference-length path would have produced, had it exhibited
+        "the LR a SINGLE 120-month reference path would have produced, had it exhibited
         the exceedance rate / transition ratios the whole ensemble exhibits"
 
     Pooling still does real work: it estimates those ratios far more precisely than one
-    path could. What it no longer does is inflate the statistic without bound.
+    path could. What it no longer does is inflate the statistic without bound, on
+    EITHER the ``n_paths`` axis or the ``months`` axis.
 
     **What this means for the reported p-value, stated because the name does not say
-    it.** ``kupiec_pof_pvalue`` etc. remain ``chi2_sf`` of the reported statistic, so
-    they are the p-value of that single reference-length path -- an EFFECT SIZE on a
-    p-value scale, not an asymptotically valid significance level at the pooled sample
-    size (at ``n_paths = 1000`` the pooled statistic would reject essentially any
-    departure, however economically negligible). That is the quantity a sealed
-    threshold on tail-coverage fidelity should judge, and it is invariant to how many
-    paths the generator was asked for. ``NaN`` if either count is non-positive.
+    it.** ``kupiec_pof_chi2_tail_1path`` etc. remain ``chi2_sf`` of the reported
+    statistic, so they are the p-value of that single reference-length path -- an
+    EFFECT SIZE on a p-value scale, not an asymptotically valid significance level at
+    the pooled sample size (at ``n_paths = 1000`` the pooled statistic would reject
+    essentially any departure, however economically negligible). That is the quantity a
+    sealed threshold on tail-coverage fidelity should judge, and it is invariant to how
+    many paths OR MONTHS the generator was asked for. ``NaN`` if either count is
+    non-positive.
     """
     if pooled_n <= 0 or reference_n <= 0:
         return float("nan")
@@ -671,6 +696,15 @@ def kupiec_pof(indicator: np.ndarray, level: float = BACKTEST_LEVEL) -> tuple[fl
     ``_chi2_sf(LR, df=1)``. Full closed form, and why it is the right null, in
     ``pre-registration.yaml``'s ``kupiec_pof_estimator``. ``(NaN, NaN)`` for an empty
     sequence.
+
+    **This is the RAW statistic on whatever sequence you hand it -- it is not the
+    registered ``kupiec_pof_lr_1path``/``kupiec_pof_chi2_tail_1path`` metric the battery
+    reports** (WP2.2 Task 4 fix pass 2, MINOR 5). The registered metric pools across an
+    ensemble's paths and then re-expresses the pooled LR at the sealed
+    :data:`BACKTEST_REFERENCE_MONTHS` reference length via :func:`_reference_scaled_lr`
+    (see :func:`_backtest_metric`) before judging it; calling this function directly on
+    an ensemble's raw pooled indicator returns the UNSCALED statistic, which is what a
+    sealed threshold does NOT see.
     """
     x = np.asarray(indicator, dtype=bool).reshape(-1)
     t = x.shape[0]
@@ -716,6 +750,12 @@ def christoffersen_independence(indicator: np.ndarray) -> tuple[float, float]:
     than 2 (no transitions to count), or with fewer than
     :data:`BACKTEST_MIN_EXCEEDANCES` exceedances in the whole sequence -- see that
     constant for why a floor is mandatory here and forbidden for Kupiec.
+
+    **This is the RAW statistic, not the registered
+    ``christoffersen_independence_lr_1path``/``..._chi2_tail_1path`` metric** (WP2.2
+    Task 4 fix pass 2, MINOR 5) -- see :func:`kupiec_pof`'s identical note and
+    :func:`_backtest_metric`, which sums transition counts across an ensemble's paths
+    and re-expresses them at :data:`BACKTEST_REFERENCE_MONTHS` before judging.
     """
     x = np.asarray(indicator, dtype=bool).reshape(-1)
     if x.shape[0] < 2:
@@ -736,6 +776,10 @@ def christoffersen_conditional_coverage(
 
     Returns ``(LR statistic, p-value)``, ``p-value = _chi2_sf(LR_cc, df=2)``. ``(NaN,
     NaN)`` if either component test is undefined (e.g. fewer than 2 observations).
+
+    **This is the RAW statistic, not the registered
+    ``christoffersen_conditional_coverage_lr_1path``/``..._chi2_tail_1path`` metric**
+    (WP2.2 Task 4 fix pass 2, MINOR 5) -- see :func:`kupiec_pof`'s identical note.
     """
     lr_pof, pof_pvalue = kupiec_pof(indicator, level)
     lr_ind, ind_pvalue = christoffersen_independence(indicator)
@@ -969,9 +1013,14 @@ def _backtest_metric(
 
     Counts are pooled across paths (Kupiec) / summed across each path's own internal
     transitions (Christoffersen, never crossing a path boundary), and the resulting LR
-    is then re-expressed at a fixed reference sample size of ONE PATH via
-    :func:`_reference_scaled_lr` -- read that docstring before changing anything here;
-    it is why halving ``n_paths`` no longer halves the statistic. The
+    is then re-expressed at the fixed reference sample size
+    :data:`BACKTEST_REFERENCE_MONTHS` via :func:`_reference_scaled_lr` -- read that
+    docstring before changing anything here; it is why halving ``n_paths`` no longer
+    halves the statistic. **``reference_n`` is the sealed constant, never
+    ``pooled_2d.shape[1]``** (WP2.2 Task 4 fix pass 2, NEW-1) -- reading it off the
+    judged ensemble's own path length reopened the identical "generating less improves
+    the metric" failure one axis over: a 60-month ensemble reported half the statistic
+    a 120-month ensemble with the same exceedance rate reported. The
     :data:`BACKTEST_MIN_EXCEEDANCES` floor applies to the Christoffersen branches only.
     """
 
@@ -984,7 +1033,6 @@ def _backtest_metric(
         if np.isnan(hist_var):
             return float("nan")
 
-        months = int(pooled_2d.shape[1])
         n00 = n01 = n10 = n11 = 0
         n1_total = 0
         t_total = 0
@@ -1002,7 +1050,9 @@ def _backtest_metric(
             return float("nan")
 
         lr_pof = _reference_scaled_lr(
-            _pof_lr_from_counts(n1_total, t_total, BACKTEST_LEVEL), t_total, months
+            _pof_lr_from_counts(n1_total, t_total, BACKTEST_LEVEL),
+            t_total,
+            BACKTEST_REFERENCE_MONTHS,
         )
         if test == "kupiec":
             if np.isnan(lr_pof):
@@ -1014,7 +1064,7 @@ def _backtest_metric(
         lr_ind = _reference_scaled_lr(
             _independence_lr_from_counts(n00, n01, n10, n11),
             n00 + n01 + n10 + n11,
-            months - 1,
+            BACKTEST_REFERENCE_MONTHS - 1,
         )
         if np.isnan(lr_ind):
             return float("nan")
@@ -1053,17 +1103,29 @@ def _strategy_specs(strategy: Strategy, cache: _HistoricalCache) -> list[MetricS
         _strategy_spec(f"{sid}.es_99", _var_es_metric(strategy, derived, 0.99, "es")),
         _strategy_spec(f"{sid}.elicitability_score", _elicitability_metric(strategy, cache)),
     ]
+    # WP2.2 Task 4 fix pass 2 (BLOCKING 1). Suffixed `_lr_1path`/`_chi2_tail_1path`,
+    # never `_stat`/`_pvalue`: `conventions.backtest_reference_sample_size` explicitly
+    # disclaims the significance-level reading of the second number (it is the chi-
+    # square tail of a ONE-PATH-reference-normalized LR, not an asymptotically valid
+    # p-value at the pooled sample size -- see `_reference_scaled_lr`), so `_pvalue` was
+    # a name whose only justification is the interpretation the sealed definition
+    # itself denies. The scope -- what sample size, what statistic -- is now in the
+    # name, the same fix `corr_matrix_distance` -> `cross_block_corr_matrix_distance`
+    # made pre-seal (RFR-14).
     for test, prefix in (
         ("kupiec", "kupiec_pof"),
         ("christoffersen_independence", "christoffersen_independence"),
         ("christoffersen_cc", "christoffersen_conditional_coverage"),
     ):
         specs.append(
-            _strategy_spec(f"{sid}.{prefix}_stat", _backtest_metric(strategy, cache, test, "stat"))
+            _strategy_spec(
+                f"{sid}.{prefix}_lr_1path", _backtest_metric(strategy, cache, test, "stat")
+            )
         )
         specs.append(
             _strategy_spec(
-                f"{sid}.{prefix}_pvalue", _backtest_metric(strategy, cache, test, "pvalue")
+                f"{sid}.{prefix}_chi2_tail_1path",
+                _backtest_metric(strategy, cache, test, "pvalue"),
             )
         )
     return specs
@@ -1091,12 +1153,25 @@ def build_tails_suite(
     (``manifest.cross_block_pairs()``, the identical loop
     ``ah.eval.metrics.monthly.build_monthly_suite`` uses for ``crisis_corr_lift``) gets
     its two tail-dependence metrics (``"<factorA>~<factorB>.<stat>"``).
+
+    **The historical cache is warmed here, eagerly, one strategy at a time** (WP2.2
+    Task 4 fix pass 2, MINOR 8). ``_HistoricalCache`` is otherwise lazy -- it builds a
+    strategy's historical return path on first use -- and nothing previously forced
+    that first use before the battery actually ran a metric. A gap in the real
+    historical panel is a loud :class:`~ah.strategies.StrategyError` from
+    ``_require_contiguous_months``, which is correct, but a LAZY raise meant it fired
+    mid-battery-run, inside whichever metric happened to touch that strategy first --
+    aborting every OTHER suite's results for a defect in one strategy's legs. Calling
+    ``cache.returns(strategy)`` for every strategy here moves that failure to
+    registration time, before any metric is ever evaluated, so a bad historical join is
+    caught at battery setup rather than discovered by losing an entire run.
     """
     specs: list[MetricSpec] = []
     strategies = load_d4_strategies()
     derived = load_derived_series()
     cache = _HistoricalCache(reference, derived)
     for strategy in strategies:
+        cache.returns(strategy)  # warm now -- see "The historical cache is warmed" above
         specs.extend(_strategy_specs(strategy, cache))
 
     active_set = set(manifest.active_factors())

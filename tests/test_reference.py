@@ -374,12 +374,12 @@ def test_strategy_stats_registry_has_the_eleven_wp22_task4_names() -> None:
         "var_99",
         "es_99",
         "elicitability_score",
-        "kupiec_pof_stat",
-        "kupiec_pof_pvalue",
-        "christoffersen_independence_stat",
-        "christoffersen_independence_pvalue",
-        "christoffersen_conditional_coverage_stat",
-        "christoffersen_conditional_coverage_pvalue",
+        "kupiec_pof_lr_1path",
+        "kupiec_pof_chi2_tail_1path",
+        "christoffersen_independence_lr_1path",
+        "christoffersen_independence_chi2_tail_1path",
+        "christoffersen_conditional_coverage_lr_1path",
+        "christoffersen_conditional_coverage_chi2_tail_1path",
     }
     assert set(STRATEGY_STATS) == expected
     for registered in STRATEGY_STATS.values():

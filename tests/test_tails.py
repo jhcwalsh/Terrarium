@@ -1118,12 +1118,12 @@ def test_generating_less_never_improves_a_backtest_metric() -> None:
         EnsembleMeta("x", "v", 0, ensemble_full.n_paths * 4, ensemble_full.months),
     )
     for name in (
-        "sixty_forty.kupiec_pof_stat",
-        "sixty_forty.kupiec_pof_pvalue",
-        "sixty_forty.christoffersen_independence_stat",
-        "sixty_forty.christoffersen_independence_pvalue",
-        "sixty_forty.christoffersen_conditional_coverage_stat",
-        "sixty_forty.christoffersen_conditional_coverage_pvalue",
+        "sixty_forty.kupiec_pof_lr_1path",
+        "sixty_forty.kupiec_pof_chi2_tail_1path",
+        "sixty_forty.christoffersen_independence_lr_1path",
+        "sixty_forty.christoffersen_independence_chi2_tail_1path",
+        "sixty_forty.christoffersen_conditional_coverage_lr_1path",
+        "sixty_forty.christoffersen_conditional_coverage_chi2_tail_1path",
     ):
         small = full_specs[name].fn(ensemble_full)
         large = full_specs[name].fn(tiled)
@@ -1139,15 +1139,15 @@ def test_generating_less_never_improves_a_backtest_metric() -> None:
     # ------------------------------------------------------------------ #
     flat = _volatility_scaled(ensemble_full, 0.0)
     for name in (
-        "sixty_forty.christoffersen_independence_stat",
-        "sixty_forty.christoffersen_independence_pvalue",
-        "sixty_forty.christoffersen_conditional_coverage_stat",
-        "sixty_forty.christoffersen_conditional_coverage_pvalue",
+        "sixty_forty.christoffersen_independence_lr_1path",
+        "sixty_forty.christoffersen_independence_chi2_tail_1path",
+        "sixty_forty.christoffersen_conditional_coverage_lr_1path",
+        "sixty_forty.christoffersen_conditional_coverage_chi2_tail_1path",
     ):
         assert math.isnan(full_specs[name].fn(flat)), f"{name} rewarded a zero-tail generator"
     # Kupiec is already coercive on the same ensemble (0% observed vs 5% nominal) and
     # must keep rejecting it -- the floor above must not silently disarm it too.
-    assert full_specs["sixty_forty.kupiec_pof_pvalue"].fn(flat) < 0.05
+    assert full_specs["sixty_forty.kupiec_pof_chi2_tail_1path"].fn(flat) < 0.05
 
 
 def _volatility_scaled(ensemble: Ensemble, factor: float) -> Ensemble:
@@ -1162,6 +1162,91 @@ def _volatility_scaled(ensemble: Ensemble, factor: float) -> Ensemble:
         list(ensemble.factor_names),
         EnsembleMeta("x", "v", 0, ensemble.n_paths, ensemble.months),
     )
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 4 fix pass 2: the backtest reference sample size is a SEALED CONSTANT,
+# never the judged ensemble's own path length (BLOCKING 2 / NEW-1)
+# --------------------------------------------------------------------------- #
+
+
+def test_backtest_reference_sample_size_is_pinned_not_ensemble_derived() -> None:
+    """NEW-1 (WP2.2 Task 4 fix pass 2). ``_backtest_metric`` used to read
+    ``reference_n`` off the GENERATED ensemble's own ``months``
+    (``pooled_2d.shape[1]``), so ``LR ~ months``: a 60-month ensemble reported HALF the
+    statistic (and a materially larger tail -- LR 3.84 -> 1.92 moves the tail from 0.05
+    to 0.17) that a 120-month ensemble with the IDENTICAL exceedance rate reported. The
+    dominant failure mode this work package exists to close -- a metric that improves
+    when the generator produces less -- had not closed; it had moved from the
+    ``n_paths`` axis (closed by ``_reference_scaled_lr``'s own reference-sample-size fix)
+    to the ``months`` axis. ``BACKTEST_REFERENCE_MONTHS`` pins the reference length to a
+    sealed constant, so two ensembles with the same per-month exceedance rate and
+    transition ratios but DIFFERENT path lengths must report the bit-identical
+    statistic.
+
+    A period-5 pattern (1 exceedance every 5 months) tiled to two different total
+    lengths makes ``p_hat`` EXACTLY invariant (Kupiec's statistic depends on nothing
+    else, so its check below is bit-exact to ``rel=1e-9``). The transition RATIOS
+    Christoffersen depends on are only ASYMPTOTICALLY invariant under this
+    construction: a linear (non-circular) tiling of ``N`` period-repeats has exactly
+    ``N - 1`` period-boundary transitions, not ``N`` (the final repeat's trailing
+    element has no successor to transition into), so ``n01`` is short by exactly one
+    count regardless of ``N`` -- a real, understood O(1/N) discretization artifact of
+    this test's construction, not a defect in the code under test. At the repeat counts
+    below (200 and 400) that artifact is a fraction of a percent in the LR statistic --
+    comfortably inside the tolerances used here -- and utterly unlike the ~2x (100%)
+    discrepancy the pre-fix ``months``-derived ``reference_n`` produced between a
+    1000- and a 2000-month ensemble at the identical exceedance rate.
+    """
+    rng = Generator(PCG64(909))
+    historical = rng.standard_t(5, size=600) * 0.02
+    dates = pd.date_range("1960-01-01", periods=600, freq="MS")
+    reference = _reference_with_historical_series(
+        {"equity_mkt": pd.Series(historical, index=dates)}
+    )
+    strategy = _pure_equity_strategy()
+    cache = tails._HistoricalCache(reference, {})
+
+    period = np.array([-1.0, 0.01, 0.01, 0.01, 0.01], dtype=np.float64)  # 1-in-5 exceedance
+    short = np.tile(period, 200).reshape(1, -1)  # 1000 months, 200 exceedances, p_hat = 0.2
+    long = np.tile(period, 400).reshape(1, -1)  # 2000 months, 400 exceedances, p_hat = 0.2
+    assert short.shape[1] != long.shape[1]
+
+    # Kupiec depends only on the pooled exceedance count -- reps / (5*reps) = 0.2
+    # exactly, at every length -- so its invariance is checked bit-exactly.
+    for which in ("stat", "pvalue"):
+        metric = tails._backtest_metric(strategy, cache, "kupiec", which)
+        value_short = metric(_equity_ensemble(short))
+        value_long = metric(_equity_ensemble(long))
+        assert np.isfinite(value_short), which
+        assert value_long == pytest.approx(value_short, rel=1e-9), (
+            which,
+            value_short,
+            value_long,
+        )
+
+    # Christoffersen's transition ratios carry the O(1/N) tiling artifact described
+    # above. The "stat" (LR) tolerance is loose-but-discriminating (the pre-fix bug's
+    # own gap was ~100%, so 5% still cleanly separates "fixed" from "still reads
+    # reference_n off the ensemble"); "pvalue" is chi2_sf of the stat and therefore
+    # amplifies a small stat discrepancy exponentially, so it gets a wider -- but still
+    # utterly unlike the pre-fix order-of-magnitude gap -- tolerance.
+    for test in ("christoffersen_independence", "christoffersen_cc"):
+        stat_metric = tails._backtest_metric(strategy, cache, test, "stat")
+        stat_short = stat_metric(_equity_ensemble(short))
+        stat_long = stat_metric(_equity_ensemble(long))
+        assert np.isfinite(stat_short), test
+        assert stat_long == pytest.approx(stat_short, rel=0.05), (test, stat_short, stat_long)
+
+        pvalue_metric = tails._backtest_metric(strategy, cache, test, "pvalue")
+        pvalue_short = pvalue_metric(_equity_ensemble(short))
+        pvalue_long = pvalue_metric(_equity_ensemble(long))
+        assert np.isfinite(pvalue_short), test
+        assert pvalue_long == pytest.approx(pvalue_short, rel=0.5), (
+            test,
+            pvalue_short,
+            pvalue_long,
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -1317,6 +1402,28 @@ def test_historical_strategy_returns_raises_on_a_non_contiguous_monthly_join() -
     )
     with pytest.raises(StrategyError, match="contiguous"):
         _historical_strategy_returns(reference, strategy, _DERIVED)
+
+
+def test_build_tails_suite_raises_at_build_time_on_a_non_contiguous_historical_join() -> None:
+    """MINOR 8 (WP2.2 Task 4 fix pass 2). ``_HistoricalCache`` is lazy by design (each
+    strategy's historical join is built once, on first use, and memoized) and
+    ``build_tails_suite`` never forced that first use -- so a real
+    ``_require_contiguous_months`` gap surfaced only when SOME metric's ``.fn`` happened
+    to be called mid-battery-run, aborting every OTHER suite's results for a data defect
+    in one strategy's legs. ``build_tails_suite`` now warms the cache for every strategy
+    eagerly, so the identical gap now raises at REGISTRATION time, before any metric is
+    ever evaluated -- the same ``StrategyError`` ``_historical_strategy_returns`` always
+    raised, just surfaced earlier."""
+    manifest = load_manifest()
+    dates = pd.DatetimeIndex(["2000-01-01", "2000-02-01", "2000-05-01", "2000-06-01"])
+    reference = _reference_with_historical_series(
+        {
+            "equity_mkt": pd.Series([0.01, 0.02, -0.01, 0.03], index=dates),
+            "ust_10y": pd.Series([4.0, 4.5, 4.2, 4.0], index=dates),
+        }
+    )
+    with pytest.raises(StrategyError, match="contiguous"):
+        build_tails_suite(manifest, reference)
 
 
 # --------------------------------------------------------------------------- #

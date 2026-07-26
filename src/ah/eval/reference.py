@@ -1816,12 +1816,19 @@ STRATEGY_STATS: dict[str, RegisteredStrategyStat] = {
     "var_99": RegisteredStrategyStat(tier="monthly"),
     "es_99": RegisteredStrategyStat(tier="monthly"),
     "elicitability_score": RegisteredStrategyStat(tier="monthly"),
-    "kupiec_pof_stat": RegisteredStrategyStat(tier="monthly"),
-    "kupiec_pof_pvalue": RegisteredStrategyStat(tier="monthly"),
-    "christoffersen_independence_stat": RegisteredStrategyStat(tier="monthly"),
-    "christoffersen_independence_pvalue": RegisteredStrategyStat(tier="monthly"),
-    "christoffersen_conditional_coverage_stat": RegisteredStrategyStat(tier="monthly"),
-    "christoffersen_conditional_coverage_pvalue": RegisteredStrategyStat(tier="monthly"),
+    # WP2.2 Task 4 fix pass 2 (BLOCKING 1): renamed from `..._stat`/`..._pvalue`. The
+    # second of each pair is a chi-square TAIL of a statistic normalized to a ONE-PATH
+    # reference sample size (`ah.eval.metrics.tails.BACKTEST_REFERENCE_MONTHS`), and
+    # `pre-registration.yaml`'s `conventions.backtest_reference_sample_size` explicitly
+    # disclaims the significance-level reading `_pvalue` implied -- so the scope is now
+    # in the name, exactly as `corr_matrix_distance` -> `cross_block_corr_matrix_distance`
+    # pre-seal (RFR-14).
+    "kupiec_pof_lr_1path": RegisteredStrategyStat(tier="monthly"),
+    "kupiec_pof_chi2_tail_1path": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_independence_lr_1path": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_independence_chi2_tail_1path": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_conditional_coverage_lr_1path": RegisteredStrategyStat(tier="monthly"),
+    "christoffersen_conditional_coverage_chi2_tail_1path": RegisteredStrategyStat(tier="monthly"),
 }
 
 

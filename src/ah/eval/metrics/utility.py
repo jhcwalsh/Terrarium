@@ -288,6 +288,15 @@ def discriminative_score(
     ``NaN`` if fewer than 4 pooled examples, or if either class has fewer than 2
     examples (a stratified split needs one of each class to fit on and one to score on;
     with fewer, balanced accuracy is undefined rather than merely noisy).
+
+    **The noise floor, disclosed** (WP2.2 Task 4 fix pass 2, MINOR 4 -- see
+    ``pre-registration.yaml``'s ``discriminative_score_estimator`` for the full
+    statement). Real-class recall is estimated from only the TEST split's real
+    examples, ``(1 - train_fraction)`` of ``n_real_windows`` -- around 60 at this
+    suite's typical scale. A binomial proportion at ``n ~ 60`` has standard error
+    ``~0.5/sqrt(60) ~ 0.065``, so even a PERFECT generator reports a value in roughly
+    ``[0.05, 0.10]`` from test-split sampling noise alone, not ``~0``. A sealed
+    threshold must be set above that floor.
     """
     real = np.asarray(real_features, dtype=np.float64)
     generated = np.asarray(generated_features, dtype=np.float64)

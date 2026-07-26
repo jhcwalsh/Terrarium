@@ -1018,6 +1018,33 @@ All notable changes to this project are documented here. The project follows
   rate is ~4.57%, not 5%) and why the reference-sample-size fix bounds its consequence
   to `LR ≈ 0.049` from `≈ 49`. Full suite green (862 tests, up from 850 — 12 new),
   ruff/pyright clean.
+- **WP2.2 Task 4 fix pass 2 — the reference sample size was still gameable, one axis
+  over.** Fix pass 1 pinned the Kupiec/Christoffersen reference sample size against the
+  `n_paths` axis but read it off the judged ensemble's own `months` — so `LR ~ months`
+  survived: a 60-month ensemble reported half the statistic (tail 0.05 → 0.17) a
+  120-month ensemble with the identical exceedance rate reported. **The dominant "the
+  metric improves when the generator produces less" failure mode had moved, not
+  closed.** Fixed by pinning a new constant, `BACKTEST_REFERENCE_MONTHS = 120`, as
+  `reference_n` unconditionally. The six backtest names are renamed
+  `..._stat`/`..._pvalue` → `..._lr_1path`/`..._chi2_tail_1path` — the sealed
+  `backtest_reference_sample_size` convention explicitly disclaims the significance-level
+  reading `_pvalue` implied, so the scope is now in the name (the same fix
+  `corr_matrix_distance` → `cross_block_corr_matrix_distance` made pre-seal, RFR-14).
+  `conventions.warm_up`'s "LR_pof ~ 0.049, i.e. nothing" is corrected: the normalization
+  rescales every departure uniformly, so a genuine coverage defect of the same magnitude
+  reads identically — the honest statement is that the warm-up bias sets a *floor* on
+  the smallest real coverage error this family can detect, which WP2.3 must accept or
+  close, not wave away. Also: `discriminative_score`'s ~0.05–0.10 noise floor (binomial
+  SE at ~60 held-out real windows) is now stated in both the sealed prose and the
+  function docstring; the three public LR functions now say they differ from the
+  registered (reference-scaled) metrics; `estimator_length_matching`'s blanket claim is
+  now "by default", with the three departures named; `_HistoricalCache` is warmed inside
+  `build_tails_suite` so a non-contiguous historical join raises at registration, not
+  mid-battery-run. `governance/retrofit-register.md` gains three rows (RFR-24: a
+  coverage-band alternative for WP2.3 to weigh; RFR-25: every threshold must be derived
+  from post-fix runs; RFR-26: extends RFR-15's pooled-length mismatch to
+  `tail_dependence_*`'s three-way version, which RFR-15's remedy doesn't reach). Full
+  suite green (864 tests, up from 862 — 2 new), ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 
