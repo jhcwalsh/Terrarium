@@ -76,10 +76,19 @@ This module therefore reports both, side by side, and never merges them:
   split by severity. Copied from :class:`~ah.eval.battery.MetricResult`, computed
   nowhere here.
 - ``band_failures`` -- the metric's value outside its own ``[lo, hi]``. This is the
-  DN-1.1 criterion made explicit for the report table; it changes no verdict, gates
-  nothing, and :func:`ah.eval.battery.run_battery` is untouched by it. WP2.3 is the work
-  package that turns bands into sealed thresholds; until it does, band membership is
-  *evidence*, presented as such.
+  DN-1.1 criterion made explicit for the report table. **Reconciled after WP2.2c Item
+  3, which partially overtook this paragraph**: a single ``band_failures`` entry still
+  changes no verdict on its own and :func:`ah.eval.battery.run_battery` still reads no
+  per-name band directly -- that half is unchanged. But the three
+  ``*_band_exceedance_fraction`` gates :mod:`ah.eval.metrics.monthly` now registers are
+  computed FROM exactly these per-name band comparisons (the fraction of one family
+  outside its own band) and two of the three are sealed ``severity: enforce`` in
+  ``pre-registration.yaml`` -- so bands, in aggregate, now do gate the battery, not "no
+  verdict, gates nothing" as an earlier version of this paragraph said before that item
+  landed. What is still true, and still WP2.3's to close: no *per-name* band comparison
+  is itself a sealed threshold, and ``tail_band_exceedance_fraction`` stays
+  ``severity: report`` (RFR-43) -- so ``band_failures`` remains the finer-grained
+  evidence a reader needs beyond what the three aggregate gates alone show.
 
 Substantive vs. NaN-driven rejection
 --------------------------------------

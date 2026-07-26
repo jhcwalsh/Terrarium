@@ -1237,7 +1237,7 @@ def test_reference_splits_missing_declared_from_missing_no_data() -> None:
 # WP2.2 Task 2 fix pass -- Critical 2: the monthly statistics are registered here
 #
 # `ah.eval.prereg` validates a threshold key's `<stat>` against these registries, and
-# `ah.eval.battery._lookup_band` matches a metric to its historical band by the same
+# `ah.eval.battery.lookup_band` matches a metric to its historical band by the same
 # name. A monthly metric whose statistic is not registered here can therefore neither
 # carry a sealed threshold nor be shown against history.
 # --------------------------------------------------------------------------- #

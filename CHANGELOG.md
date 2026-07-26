@@ -63,9 +63,19 @@ All notable changes to this project are documented here. The project follows
     must not cite a 10yr pass (RFR-42).
   - **Item 6 — knife-edge comparisons made visible.** Every banded result carries
     `band_distance` (signed margin; `0.0` = exactly on an edge) and `band_degenerate` in
-    the JSON, plus a `band dist` markdown column. A zero-width band is **reported but
-    never gated on** (`battery.band_is_usable`): it can be satisfied only by exact
-    floating-point equality, and 33 exist.
+    the JSON, plus a `band dist` markdown column: a zero-width band can be satisfied
+    only by exact floating-point equality, and 33 exist in the synthetic-fixture run
+    (35 in a real run against `factors.yaml`). This carries two DIFFERENT consequences,
+    corrected here to distinguish them (WP2.2c honesty fix pass): the raw
+    `band_distance`/`band_degenerate` values are unconditionally preserved in
+    `MetricResult`/its JSON for every metric, degenerate or not (`battery.band_is_usable`
+    only ever gates the *aggregate* `*_band_exceedance_fraction` metrics, never the raw
+    report) — but `ah.eval.negative_controls`'s own `band_failures` list, which the
+    negative-control report table uses as per-control evidence, calls
+    `battery.outside_band` (itself gated by `band_is_usable`), so a degenerate-band
+    comparison no longer counts there either. In the real run, 2 of the 35 degenerate
+    comparisons (both `nc1-iid-gaussian`) were previously reported `band_failures` and
+    are not anymore — a real, if small, evidentiary change, not merely a cosmetic one.
 
   **Not closed, disclaimed:** `nc5-condition-ignoring` is not caught at `enforce` in its
   designated cell, because the conditional tier is non-gating by
@@ -77,6 +87,48 @@ All notable changes to this project are documented here. The project follows
   (RFR-43). A block bootstrap with blocks ≥ 24 months now fails the memorization gate —
   correctly, but WP2.4's `bootstrap-v1` must use shorter blocks or carry an amendment
   (RFR-40). No negative control was weakened and no threshold was tuned to make one fire.
+
+- **WP2.2c honesty fix pass — disclosure findings inside the text WP2.3 is about to
+  hash.** No threshold moved and no control was weakened; every change below is text and
+  disclosure, plus one public-name promotion. **Critical 1**: `BAND_EXCEEDANCE_FAMILIES`'s
+  moment/tail split is an undisclosed, outcome-determining degree of freedom, not a
+  DN-1.1 mandate — DN-1.1 Sec.II.6's monthly row names no `mean`/`std` at all, and its
+  citation was doing more work than it can bear. `skew` is affine-invariant like
+  `mean`/`std`; moving it into the moment family flips `nc3-shifted-bootstrap`'s
+  `moment_band_exceedance_fraction` 0.654 (FAIL) → 0.487 (PASS) at a real run against
+  `factors.yaml`. Now recorded in full in `pre-registration.yaml`'s
+  `band_exceedance_gate_estimator` convention and `ah.eval.metrics.monthly`'s
+  `BAND_EXCEEDANCE_FAMILIES` comment, including that a reader may reasonably disagree
+  with the taxonomy shipped. **Critical 2**: `ah.eval.metrics.monthly`'s module docstring
+  claimed the moment gate's margins were "not knife-edge... drifted control near 1.0,
+  undistorted near 0.1" — the measured values are 0.654 and 0.231, and
+  `pre-registration.yaml` already said so; the docstring is corrected to match.
+  **Important 3**: the three `*_band_exceedance_fraction` gates' design (summed ACF over
+  per-lag aggregation) was chosen by measuring three candidates against the five negative
+  controls — for these three gates the controls are therefore no longer independent
+  design evidence, only evidence the sealed 0.5 bound isn't trivially satisfied.
+  Recorded in `pre-registration.yaml` and `governance/retrofit-register.md` (RFR-45);
+  `bootstrap-v1` (WP2.4) is named as the first genuinely independent test. **Important
+  4**: `near_duplicate_fraction` at `enforce` is named as the eleventh instance of this
+  work package's dominant failure mode and the first inside the blocking surface —
+  `nc1-iid-gaussian` scores a perfect `0.0` on it, which is structural (nothing shares
+  block structure with an iid series) and plan-grounded, not a defect, but a reader must
+  not read the pass as fidelity evidence. **Minor**: four wrong numbers corrected —
+  `near_duplicate_fraction`'s NC4 score (~1.0 → 0.7096) and its "cleared the old bound by
+  31%" claim (was actually a *failure* of the old 0.05 bound by 31%); the dependence
+  family's Binomial tail probability (~1e-30 → 1.0e-10, a 20-order-of-magnitude
+  correction); the Hoeffding family-wise error rate (1% → 1.56%,
+  `exp(-2·13·0.4²)`); and the claim that a degenerate band "is not removed from the
+  report" — true for the raw `MetricResult`/JSON, but `ah.eval.negative_controls`'s own
+  `band_failures` list (via `outside_band` → `band_is_usable`) does drop degenerate-band
+  comparisons, 2 of which (both `nc1-iid-gaussian`) were previously reported failures.
+  Two stale passages reconciled: `negative_controls.py`'s "bands... gate nothing" claim,
+  overtaken by Item 3's aggregate gates; and the private `battery._lookup_band` import
+  from a second sealed module, promoted to public `battery.lookup_band`. Two live,
+  not-implemented options recorded for WP2.3 in `governance/retrofit-register.md`: a
+  baseline-relative memorization bound (RFR-46, no longer blind now that Item 2 fixed
+  phase-blindness) and a per-factor tail-gate combination (RFR-47, with the caveat that
+  validating it on NC1 would repeat the Important-3 problem).
 
 - **WP2.2b Task 7 review fix pass — evidence-integrity findings in the negative-control
   suite.** Three claims in the sealed, `G2-EVIDENCE.md`-cited text asserted more than the

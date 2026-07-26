@@ -637,9 +637,54 @@ conventions:
     majority rule, and from nothing else: under the null E[fraction] <= 1 - level = 0.10,
     so Markov gives P(fraction > 0.5) <= 0.2 under ARBITRARY dependence between the
     comparisons, and Hoeffding over the ~13 effectively-independent factor units gives
-    the same 0.5 at a 1% family-wise error rate. No control's measured value was
-    consulted to choose it. See each threshold entry for the per-metric severity
-    decision and its evidence.
+    the same 0.5 at exp(-2*13*0.4^2) ~= 1.56% family-wise error rate (not the ~1% this
+    file previously stated -- corrected in WP2.2c's honesty fix pass; the qualitative
+    conclusion, that Hoeffding independently supports the same 0.5 bound Markov gives
+    with room to spare, is unchanged). No control's measured value was consulted to
+    choose it. See each threshold entry for the per-metric severity decision and its
+    evidence.
+    THE FAMILY MEMBERSHIP IS ALSO A REAL DEGREE OF FREEDOM, DISCLOSED HERE RATHER THAN
+    LEFT IMPLICIT (WP2.2c honesty fix pass, Critical 1). The three families are a
+    location/scale ("moment") vs shape ("tail") vs dependence taxonomy, defensible ex
+    ante but not the only defensible one: `skew` is the third STANDARDIZED moment and
+    is affine-invariant exactly like `mean`/`std`, so classing it with the tail
+    statistics rather than the moment ones is a taxonomic choice, not a derivation, and
+    it is outcome-determining. Measured at a real run against `factors.yaml` (seed
+    4242): `nc3-shifted-bootstrap`'s `moment_band_exceedance_fraction` is 17/26 = 0.654
+    (FAILS the 0.5 bound) as shipped; moving `skew` into the moment family gives
+    19/39 = 0.487 (PASSES); adding `excess_kurtosis` too gives 22/52 = 0.423 (PASSES).
+    Four comparisons out of 26 separate a fail from a pass on the taxonomy alone, on the
+    control this gate's headline result rests on. This is NOT a finding that the
+    taxonomy was fitted to the controls -- ah.eval.metrics.monthly.BAND_EXCEEDANCE_
+    FAMILIES was written before this counterfactual was measured, and the location/
+    scale-vs-shape-vs-dependence split is the ordinary statistical one -- but a sealed
+    degree of freedom with a 4-comparison margin and a verdict-reversing alternative
+    reading must be named, not merely exercised silently. A reader who classes `skew` as
+    a moment rather than a shape statistic will reasonably disagree with the grouping
+    shipped here, and is entitled to read this paragraph as the reason the disagreement
+    is visible rather than buried.
+    THE CONTROLS INFORMED THIS GATE'S DESIGN, WHICH MEANS THEY ARE NO LONGER INDEPENDENT
+    EVIDENCE OF IT (WP2.2c honesty fix pass, Important 3). Three constructions of the
+    dependence gate were measured against the five negative controls and the separating
+    one was kept: the per-lag aggregate (403 comparisons, NC1 0.367/NC2 0.377, no
+    separation from a majority bound), a two-stage majority-of-factors-by-majority-of-
+    lags variant (0.077 for both NC1 and NC5, worse), and the acf_r_sum/acf_abs_sum
+    construction actually sealed (NC1 0.615, NC2 0.718). The statistical argument for a
+    Box-Pierce-style sum over a set of noisy per-lag comparisons is standard, and no
+    bound was moved to fit a control -- but the honest statement, made nowhere before
+    this paragraph, is that for these three gates the negative controls are NOT
+    independent evidence that the gate design works: they were the evidence used to
+    choose among candidate designs, and a design that failed to separate them was
+    rejected before this file was sealed. Measured counterfactual: including the 403
+    per-lag comparisons ALONGSIDE the two sums and the decay rate in one family gives
+    NC1 0.389 -- UNCAUGHT at the sealed 0.5 bound. Nobody should later cite "catches 4 of
+    5 negative controls" as independent validation of the gate DESIGN, as opposed to
+    validation that the sealed bound (0.5, derived from `level` and never moved) is not
+    trivially satisfied by these five constructions. The first genuinely independent
+    test of this gate design is `bootstrap-v1` (WP2.4) -- a generator not used to choose
+    among candidate statistics. This paragraph is the source material
+    `G2-EVIDENCE.md` must draw from when it is written; see
+    `governance/retrofit-register.md` for the tracking row.
   crisis_corr_lift_estimator: >-
     corr(a[crisis], b[crisis]) - corr(a, b), where `a` is the block-A factor, the
     threshold is the 10th PERCENTILE of `a` over the aligned sample, and the crisis
@@ -1939,7 +1984,11 @@ thresholds:
     #   - Markov: P(fraction > 0.5) <= 0.10/0.5 = 0.2 under ARBITRARY dependence between
     #     the comparisons -- i.e. assuming nothing at all about the factor panel's
     #     correlation structure. Under anything near independence the same probability
-    #     is ~1e-8 (moment family) to ~1e-30 (dependence family).
+    #     is ~3.0e-8 (P(Binom(26, 0.1) > 13), moment family) to ~1.0e-10
+    #     (P(Binom(39, 0.1) > 19), dependence family) -- corrected in WP2.2c's honesty
+    #     fix pass from a previously-stated ~1e-30, which was wrong by 20 orders of
+    #     magnitude; the qualitative point (astronomically small under near-independence)
+    #     is unaffected.
     # A per-NAME band gate was rejected and the rejection is the reason these exist: at
     # ~570 monthly comparisons, gating each name at enforce rejects a PERFECT generator
     # with probability indistinguishable from 1.
@@ -2062,11 +2111,14 @@ thresholds:
     # The severity. WP2.2b showed the metric could not separate a literal verbatim copy
     # (0.2423) from a plain block bootstrap (0.2394) because it measured block phase;
     # post-Item-2 a copy scores ~1.0 and a short-block resampler ~0.05-0.33. NC4 fails
-    # this gate at ~1.0 against a bound TEN TIMES LOOSER than the one it previously
-    # cleared by 31% -- which is the evidence that the promotion is not a threshold
-    # tuned to make a control fire. Memorization is also a hard, non-statistical
-    # failure: STEP2-GENERATOR-PLAN Sec.WP2.3's own decision rule names "memorization
-    # below floor" as a promotion gate, not as a reported diagnostic.
+    # this gate at 0.7096 (corrected in WP2.2c's honesty fix pass -- previously stated
+    # here as "~1.0") against a bound TEN TIMES LOOSER than the one it previously FAILED
+    # by 31% (0.0654 measured against the old max of 0.05 -- previously misstated here
+    # as "cleared by 31%": 0.0654 is 31% ABOVE 0.05, i.e. a failure of the old bound, not
+    # a pass of it) -- which is the evidence that the promotion is not a threshold tuned
+    # to make a control fire. Memorization is also a hard, non-statistical failure:
+    # STEP2-GENERATOR-PLAN Sec.WP2.3's own decision rule names "memorization below floor"
+    # as a promotion gate, not as a reported diagnostic.
     #
     # CONSEQUENCE FOR WP2.4, recorded here rather than discovered there
     # (governance/retrofit-register.md RFR-40): a stationary block bootstrap whose block
@@ -2076,6 +2128,25 @@ thresholds:
     # but it means `bootstrap-v1` must either use blocks materially shorter than 24
     # months or carry a dated exemption in governance/amendment-log.yaml. WP2.3 must
     # ratify one of the two before sealing.
+    #
+    # NAMED, NOT JUST FIXED (WP2.2c honesty fix pass, Important 4): this is the eleventh
+    # instance of this work package's dominant failure mode ("a metric that improves
+    # when the generator produces less/is less like history" -- nine found in the
+    # original WP2.2 suite review, per ah.eval.negative_controls's module docstring,
+    # plus the corr-matrix-distance absent-factor gaming vector and this metric's own
+    # block-phase blindness before Item 2's fix) -- and the FIRST one inside the
+    # blocking (enforce) surface rather than caught by a guard test before it shipped.
+    # nc1-iid-gaussian -- the worst generator in this suite, the one every other gate in
+    # the battery exists partly to catch -- scores 0.0 on this metric and passes it
+    # perfectly: an iid Gaussian shares no 24-month block structure with history at all,
+    # so it is maximally UNLIKE any training window, which this metric reads as maximally
+    # non-memorizing. This is structural to every memorization/near-duplicate metric
+    # (the whole point is to compare against history, and a generator with nothing in
+    # common with history trivially cannot look too much like it) and is plan-grounded --
+    # STEP2-GENERATOR-PLAN Sec.WP2.3 names "memorization below floor" as a real promotion
+    # gate -- so it is not a defect to fix. It is named here so a reader does not read a
+    # near_duplicate_fraction PASS as a positive result about a generator's fidelity: it
+    # is silent on fidelity entirely and only informative about copying.
     "near_duplicate_fraction": {min: null, max: 0.5, severity: enforce}
     # WP2.2 Task 6. ALL "report" -- STEP2-GENERATOR-PLAN Sec.WP2.3's sealed decision
     # rule states conditional-tier results are reported alongside G2 but do not gate

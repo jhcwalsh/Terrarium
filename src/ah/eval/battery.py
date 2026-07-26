@@ -305,8 +305,14 @@ def _n_subsamples_for(ensemble: Ensemble) -> int:
 # --------------------------------------------------------------------------- #
 
 
-def _lookup_band(name: str, reference: ReferenceStats) -> StatBand | None:
+def lookup_band(name: str, reference: ReferenceStats) -> StatBand | None:
     """First match across sorted blocks, then sorted cross-block pairs.
+
+    Public (promoted from ``_lookup_band`` in WP2.2c's honesty fix pass, Minor 6):
+    :mod:`ah.eval.metrics.monthly` is a sealed module reaching across the seal boundary
+    into another sealed module, which is safe either way -- but importing a name
+    spelled private for that from a second sealed module read as an accident rather
+    than a decision, so the name now says what it is.
 
     **Coupling, stated rather than assumed:** this is a flat lookup by metric name over
     a block-nested structure, and it is correct only because factor ids are globally
@@ -333,7 +339,7 @@ def _lookup_band(name: str, reference: ReferenceStats) -> StatBand | None:
 def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
     """First match across sorted blocks, then sorted pairs, then the panel section.
 
-    See :func:`_lookup_band` for the globally-unique-factor-id coupling the first two
+    See :func:`lookup_band` for the globally-unique-factor-id coupling the first two
     rely on. The panel section is keyed by a bare statistic name (a whole-panel
     statistic belongs to no factor and no pair -- see
     :data:`ah.eval.reference.PANEL_STATS`), and those names carry no ``"."``, so they
@@ -511,7 +517,7 @@ def _run_suites(
             estimator = mc_error if spec.mc_error_fn is None else spec.mc_error_fn
             error = estimator(spec.fn, ensemble, seed=seed, n_subsamples=n_subsamples)
             _require_mc_error_reported(spec.tier, spec.name, error)
-            band = _lookup_band(spec.name, reference)
+            band = lookup_band(spec.name, reference)
             threshold = _lookup_threshold(spec.name, prereg)
             if threshold is not None:
                 severity = threshold.severity

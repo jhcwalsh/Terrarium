@@ -124,9 +124,14 @@ bands. This is derived, not fitted:
   (``P(Binom(26, 0.1) > 13) ~ 1e-8`` for the moment family alone).
 
 The bound is a function of the sealed band ``level`` and of a majority rule, and of
-nothing else. No control's measured value was consulted to choose it, and the observed
-margins are not knife-edge: the drifted control sits near 1.0 and the undistorted one
-near 0.1 against a bound of 0.5.
+nothing else. No control's measured value was consulted to choose it -- but the
+observed margin on the moment gate is the smallest of the three and is stated as such
+rather than glossed: ``nc3-shifted-bootstrap`` measures ``0.654`` (17 of 26
+comparisons) against ``nc5-condition-ignoring`` -- the identical bootstrap with the
+distortion switched off -- at ``0.231``, a margin of 4 comparisons out of 26. See
+``pre-registration.yaml``'s ``moment_band_exceedance_fraction`` threshold entry for the
+full accounting (the dependence gate's margin is far wider: ``0.615``/``0.718`` against
+``0.077``-``0.128``).
 
 **Degenerate and unusable bands drop out of both numerator and denominator**
 (:func:`ah.eval.battery.band_is_usable`); a NaN metric value with a usable band counts
@@ -207,7 +212,7 @@ Naming
 in every case ``<stat>`` is **exactly** a key of the corresponding ``reference.py``
 registry. That is what lets a metric's value be matched, by name alone, against its
 train+validation :class:`~ah.eval.reference.StatBand`
-(:func:`ah.eval.battery._lookup_band`) and against its sealed
+(:func:`ah.eval.battery.lookup_band`) and against its sealed
 :class:`~ah.eval.prereg.Threshold` (:func:`ah.eval.battery._lookup_threshold`). There is
 no metric-only naming scheme; the registries are the vocabulary.
 
@@ -281,11 +286,9 @@ from ah.eval.battery import (
     MetricFn,
     MetricSpec,
     band_is_usable,
+    lookup_band,
     outside_band,
     register_suite,
-)
-from ah.eval.battery import (
-    _lookup_band as lookup_band,
 )
 from ah.eval.metrics._pooling import mean_over_paths, pooled
 from ah.eval.reference import (
@@ -540,9 +543,27 @@ def _spec(name: str, fn: MetricFn) -> MetricSpec:
 # --------------------------------------------------------------------------- #
 
 # metric name -> the SINGLE_FACTOR_STATS keys whose per-factor band comparisons it
-# aggregates. Grouped by what the statistic measures, following DN-1.1 Sec.II.6's own
-# monthly row ("tail index, ACF |r|, skew, corr matrix"), NOT by which control each
-# group happens to catch. Insertion order is the report order.
+# aggregates. Grouped by what the statistic measures -- a location/scale ("moment") vs
+# shape ("tail") vs dependence taxonomy -- NOT by which control each group happens to
+# catch. Insertion order is the report order.
+#
+# THE CITATION THIS GROUPING CAN HONESTLY CLAIM, AND NO MORE (WP2.2c honesty fix pass,
+# Critical 1). DN-1.1 Sec.II.6's monthly row lists "tail index, ACF |r|, skew, corr
+# matrix" -- it names no `mean` or `std` at all, and it places `skew` BESIDE tail index,
+# not beside a moment pair. That row is evidence that grouping `skew` with the tail
+# statistics is consistent with DN-1.1's own ordering; it is not evidence that DN-1.1
+# mandates a location/scale-vs-shape split at all, and an earlier version of this
+# comment cited it as if it settled the question. It does not, and the choice is a real,
+# outcome-determining degree of freedom: `skew` is the third STANDARDIZED moment and is
+# affine-invariant like `mean`/`std`, so a taxonomy that calls it a "moment" and puts it
+# in the `moment_` family instead of `tail_` is at least as defensible as this one.
+# Measured at a real run against `factors.yaml` (seed 4242): moving `skew` into the
+# moment family flips `nc3-shifted-bootstrap`'s `moment_band_exceedance_fraction` from
+# 17/26 = 0.654 (FAILS the sealed 0.5 bound) to 19/39 = 0.487 (PASSES); adding
+# `excess_kurtosis` alongside it moves it to 22/52 = 0.423. See
+# `pre-registration.yaml`'s `band_exceedance_gate_estimator` convention for the full
+# disclosure, including that a reader may reasonably disagree with the taxonomy shipped
+# here.
 BAND_EXCEEDANCE_FAMILIES: dict[str, tuple[str, ...]] = {
     "moment_band_exceedance_fraction": ("mean", "std"),
     "tail_band_exceedance_fraction": (
