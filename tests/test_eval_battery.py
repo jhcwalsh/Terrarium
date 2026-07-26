@@ -1085,6 +1085,64 @@ def test_run_full_battery_returns_tails_and_utility_metrics_by_name() -> None:
         assert np.isfinite(r.value)
 
 
+def test_run_full_battery_returns_memorization_economics_calibration_metrics_by_name() -> None:
+    """WP2.2 Task 5: `memorization`, `economics` and `calibration` must be wired the
+    identical way Task 3/4 wired `horizon`/`tails`/`utility` -- the direct analogue of
+    the assertions above, and it fails identically to how it would fail if Task 5's
+    suites were written, tested, and never registered (RFR-13).
+
+    `economics`/`calibration` are largely NaN on THIS fixture's synthetic g1/u1 factor
+    names (economics needs the real factor names -- equity_mkt, policy_rate, cpi, etc
+    -- and calibration is scoped to conventions.return_bearing_factors, which does not
+    include g1/u1 either) -- exactly the same "sixty_forty.var_95 is NaN here" shape
+    `test_run_full_battery_returns_tails_and_utility_metrics_by_name` already accepts
+    for `tails`; both suites are proven to compute REAL, finite values on realistic
+    fixtures in `tests/test_economics.py`/`tests/test_calibration.py`. `memorization`
+    IS genuinely computable on g1/u1 (they are shared, real-valued factors with enough
+    train+validation history in this fixture), so it is asserted finite here.
+    """
+    manifest = _orchestration_manifest()
+    ensemble = _orchestration_ensemble()
+
+    report = battery.run_full_battery(
+        ensemble,
+        access=_orchestration_access(),
+        manifest=manifest,
+        prereg=prereg_mod.load(),
+        seed=0,
+        reference_seed=11,
+        n_resamples=8,
+        block_length=24,
+    )
+
+    memorization_results = {r.name: r for r in report.results if r.suite == "memorization"}
+    assert memorization_results, "run_full_battery must register and run the memorization suite"
+    assert {
+        "nn_distance_p05",
+        "nn_distance_p50",
+        "membership_inference_auc",
+        "near_duplicate_fraction",
+    } == set(memorization_results)
+    for r in memorization_results.values():
+        assert r.tier == "monthly"
+        assert np.isfinite(r.value), (r.name, r.value)
+
+    economics_results = {r.name: r for r in report.results if r.suite == "economics"}
+    assert economics_results, "run_full_battery must register and run the economics suite"
+    assert "term_premium" in economics_results
+    assert economics_results["term_premium"].tier == "economic"
+    assert np.isnan(economics_results["term_premium"].value)
+    from ah.data.derive import REGIME_LABELS
+
+    assert economics_results["implied_sharpe_EXP"].status == "structurally_unavailable"
+    assert all(f"implied_sharpe_{r}" in economics_results for r in REGIME_LABELS)
+
+    calibration_results = {r.name: r for r in report.results if r.suite == "calibration"}
+    assert calibration_results, "run_full_battery must register and run the calibration suite"
+    assert "pit_ks_stat_1y" in calibration_results
+    assert calibration_results["pit_ks_stat_1y"].tier == "monthly"
+
+
 def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
     manifest = _orchestration_manifest()
     ensemble = _orchestration_ensemble()

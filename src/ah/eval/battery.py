@@ -167,14 +167,15 @@ class MetricResult:
 # this via register_suite(); run_battery() iterates it generically (sorted by suite
 # name, for a deterministic report independent of import order).
 #
-# TODO(WP2.2 Tasks 5-6): `monthly`, `horizon`, `tails` and `utility` are WIRED here
-# (registered in _REFERENCE_DEPENDENT_SUITE_BUILDERS; WP2.2 Task 4 added the latter
-# two -- `tails.py`'s `d4_tail_table`/backtests are consumed through
-# `build_tails_suite`, not called directly). `memorization`, `economics`, `conditional`
-# and `calibration` remain unwired and must be added to this table (or register
-# themselves) as they land, or they will be written, tested, and then never run.
-# Tracked as governance/retrofit-register.md RFR-13; the verdict a partial battery
-# produces is a partial verdict and WP2.3 must not read it as a full one.
+# TODO(WP2.2 Task 6): `monthly`, `horizon`, `tails`, `utility`, `memorization`,
+# `economics` and `calibration` are WIRED here (registered in
+# _REFERENCE_DEPENDENT_SUITE_BUILDERS; WP2.2 Task 4 added `tails`/`utility` -- see
+# `tails.py`'s `d4_tail_table`/backtests, consumed through `build_tails_suite`, not
+# called directly -- and Task 5 added `memorization`/`economics`/`calibration`).
+# `conditional` remains unwired and must be added to this table (or register itself)
+# when it lands, or it will be written, tested, and then never run. Tracked as
+# governance/retrofit-register.md RFR-13; the verdict a partial battery produces is a
+# partial verdict and WP2.3 must not read it as a full one.
 SUITES: dict[str, tuple[MetricSpec, ...]] = {}
 
 
@@ -729,6 +730,10 @@ _REFERENCE_DEPENDENT_SUITE_BUILDERS: dict[str, tuple[str, str]] = {
     # WP2.2 Task 4.
     "tails": ("ah.eval.metrics.tails", "build_tails_suite"),
     "utility": ("ah.eval.metrics.utility", "build_utility_suite"),
+    # WP2.2 Task 5.
+    "memorization": ("ah.eval.metrics.memorization", "build_memorization_suite"),
+    "economics": ("ah.eval.metrics.economics", "build_economics_suite"),
+    "calibration": ("ah.eval.metrics.calibration", "build_calibration_suite"),
 }
 
 

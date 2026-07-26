@@ -49,9 +49,9 @@ STEP2-GENERATOR-PLAN Sec.WP2.2 owns the eight metric suites these registries ser
 ``monthly``, ``horizon``, ``tails``, ``utility``, ``memorization``, ``economics``,
 ``conditional``, ``calibration``
 (``src/ah/eval/metrics/{monthly,horizon,tails,utility,memorization,economics,
-conditional,calibration}.py``). Only ``monthly``, ``horizon``, ``tails`` and
-``utility`` exist yet (WP2.2 Task 4 added the latter two); the rest are intentionally
-not stubbed here.
+conditional,calibration}.py``). Only ``conditional`` does not exist yet (WP2.2 Task 4
+added ``tails``/``utility``; Task 5 added ``memorization``/``economics``/
+``calibration``); it is intentionally not stubbed here.
 
 Horizon tiers (DN-1.1 Sec.II.6)
 --------------------------------
@@ -1770,6 +1770,50 @@ PANEL_STATS: dict[str, RegisteredPanelStat] = {
     "discriminative_score": RegisteredPanelStat(tier="monthly"),
     "predictive_score": RegisteredPanelStat(tier="monthly"),
     "tstr_degradation": RegisteredPanelStat(tier="monthly"),
+    # WP2.2 Task 5 -- ah.eval.metrics.memorization's four whole-panel metrics: like
+    # discriminative_score above, these compare the GENERATED ensemble directly against
+    # real TRAIN/VALIDATION data (never a fresh catalog read -- see that module's
+    # docstring), so there is no single-argument historical point estimate to bootstrap
+    # a band around. No `fn`, for the identical reason.
+    "nn_distance_p05": RegisteredPanelStat(tier="monthly"),
+    "nn_distance_p50": RegisteredPanelStat(tier="monthly"),
+    "membership_inference_auc": RegisteredPanelStat(tier="monthly"),
+    "near_duplicate_fraction": RegisteredPanelStat(tier="monthly"),
+    # WP2.2 Task 5 -- ah.eval.metrics.calibration's six whole-panel metrics (PIT
+    # Kolmogorov-Smirnov statistic and interval coverage, pooled across every shared
+    # return-bearing active factor at each of two horizons). No `fn`/band for the
+    # identical reason as the memorization/utility entries above: a rolling-origin PIT
+    # value is already a comparison of the GENERATED ensemble's own predictive
+    # distribution against real realizations, not a single-argument statistic of one
+    # historical series.
+    "pit_ks_stat_1y": RegisteredPanelStat(tier="monthly"),
+    "pit_ks_stat_5y": RegisteredPanelStat(tier="monthly"),
+    "interval_coverage_50_1y": RegisteredPanelStat(tier="monthly"),
+    "interval_coverage_90_1y": RegisteredPanelStat(tier="monthly"),
+    "interval_coverage_50_5y": RegisteredPanelStat(tier="monthly"),
+    "interval_coverage_90_5y": RegisteredPanelStat(tier="monthly"),
+    # WP2.2 Task 5 -- ah.eval.metrics.economics's six DN-1.1 Sec.II.6 "economic"-tier
+    # metrics (Implied Sharpe ratios by regime, term premium, ERP, no-money-pump audit,
+    # policy-anchor sanity). DN-1.1's own row states this tier's acceptance criterion as
+    # "Defensible ranges, documented" against "Literature ranges" -- an ABSOLUTE bound,
+    # not a comparison to a train+validation bootstrap band -- and three of the six
+    # (term_premium, equity_risk_premium, money_pump_violations) combine factors from
+    # DIFFERENT blocks or a factor against a derived cash series, for which no
+    # CROSS_BLOCK_STATS entry exists (RFR-14: cross-block coverage is restricted to
+    # pairs reference.py's own `correlation`/`crisis_corr_lift`/tail-dependence
+    # estimators compute) and floor_violations/policy_anchor_deviation are not
+    # two-factor comparisons at all. No `fn`, matching every other no-band entry above.
+    "implied_sharpe_EXP": RegisteredPanelStat(tier="economic"),
+    "implied_sharpe_SLOW": RegisteredPanelStat(tier="economic"),
+    "implied_sharpe_REC": RegisteredPanelStat(tier="economic"),
+    "implied_sharpe_CRI": RegisteredPanelStat(tier="economic"),
+    "implied_sharpe_STAG": RegisteredPanelStat(tier="economic"),
+    "implied_sharpe_REF": RegisteredPanelStat(tier="economic"),
+    "term_premium": RegisteredPanelStat(tier="economic"),
+    "equity_risk_premium": RegisteredPanelStat(tier="economic"),
+    "money_pump_violations": RegisteredPanelStat(tier="economic"),
+    "floor_violations": RegisteredPanelStat(tier="economic"),
+    "policy_anchor_deviation": RegisteredPanelStat(tier="economic"),
 }
 
 

@@ -1045,6 +1045,82 @@ All notable changes to this project are documented here. The project follows
   from post-fix runs; RFR-26: extends RFR-15's pooled-length mismatch to
   `tail_dependence_*`'s three-way version, which RFR-15's remedy doesn't reach). Full
   suite green (864 tests, up from 862 — 2 new), ruff/pyright clean.
+- **WP2.2 Task 5 — `eval/metrics/memorization.py`, `eval/metrics/economics.py`,
+  `eval/metrics/calibration.py`.** Three smaller suites, wired into
+  `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` and `prereg._METRIC_SUITE_NAMES`
+  (already listed there) exactly as Task 3/4's suites were.
+  - *`memorization.py` (tier `monthly`)* — `nn_distance_{p05,p50}`,
+    `membership_inference_auc`, `near_duplicate_fraction`, the suite that makes "the
+    generator did not memorize its training data" falsifiable for WP2.2b's NC4. A
+    "block" is a non-overlapping 24-month window (`UTILITY_WINDOW_MONTHS`, reused, not
+    restated) of one factor's own path, standardized by that factor's own TRAIN
+    mean/std; distance is Euclidean, within one factor only. `nn_distance` is the
+    pooled nearest-TRAIN-neighbour distance of every generated block;
+    `membership_inference_auc` is a distance-to-nearest-synthetic-sample
+    membership-inference attack (Mann-Whitney AUC, via `ah.eval.reference._rank`'s
+    tie-averaging, reused not restated) distinguishing TRAIN from VALIDATION by
+    proximity to the generated output; `near_duplicate_fraction` uses a data-driven
+    epsilon (the 5th percentile of TRAIN's own leave-one-out nearest-neighbour
+    distance). TRAIN/VALIDATION are split from `ReferenceStats.historical_series`
+    (already train+validation combined) by the SEALED `ah.splits.TRAIN`/`VALIDATION`
+    date boundaries, never a second `DataAccess` read — the only reference-dependent
+    suite builder that needed this trick, since `register_reference_dependent_suites`'s
+    `(manifest, reference)` call shape carries no live catalog access and the task
+    brief asked not to touch it. Both directions tested: a literal
+    training-decade replayer (with 1e-6 noise) scores `nn_distance < 1e-3`,
+    `membership_inference_auc > 0.9`, `near_duplicate_fraction > 0.9`; an independent
+    seeded draw scores `nn_distance > 0.5`, AUC `≈ 0.5`, fraction `< 0.05`.
+  - *`economics.py` (tier `economic`)* — DN-1.1 §II.6's Economic row
+    ("Implied Sharpe ratios, term premium, ERP by regime; no-money-pump audit;
+    policy-anchor sanity — Defensible ranges, documented") judged as absolute
+    literature-range bounds, never a bootstrap band, matching that row's own
+    reference-data column. `implied_sharpe_{EXP,SLOW,REC,CRI,STAG,REF}` is a
+    structural gap (RFR-27, mirroring RFR-17/18/20/22): `label_regime` needs `usrec`/
+    `growth_yoy`, neither mapped in `factors.yaml`. `term_premium` =
+    `mean(ust_10y - policy_rate)` (levels, no numeraire question); `equity_risk_premium`
+    = `mean(equity_mkt - cash_tr_1m)`, subtracting the ALREADY-SEALED `cash_tr_1m`
+    derived series (not a second, independently invented cash-rate decision — the
+    exact numeraire trap RFR-12 already documents). `money_pump_violations` (enforce,
+    max 0) audits every `conventions.numeraire_zero_cost_legs` leg per path for
+    "never negative, sometimes positive" (a costless free lunch); a deliberately
+    always-positive `smb` fixture proves a non-zero count, the deliverable Task 5's
+    brief demanded. `floor_violations` (enforce, max 0) checks DN-1.1 §II.4's stated
+    floors (`i >= -1%`, `spread >= 100bp`) directly against generated values, ahead of
+    WP2.8's `constraints.py` making them structurally impossible. `policy_anchor_deviation`
+    substitutes a stated, simplified Taylor rule (`TAYLOR_R_STAR`/`TAYLOR_PHI_PI` from
+    DN-1.1 §II.2's own prior means; `TAYLOR_PI_TARGET` from the literature, since DN-1.1
+    deliberately leaves π* undetermined) for the latent r*/π*/cycle-term anchor DN-1.1
+    actually specifies, which no generated factor can supply. Every computable metric
+    NaNs (poisons, never drops) below `ECONOMICS_MIN_OBS = 60` pooled observations or on
+    any non-finite value — closing the "generate fewer months to dodge the audit" vector
+    a raw count would otherwise open.
+  - *`calibration.py` (tier `monthly`)* — `pit_ks_stat_{1y,5y}`,
+    `interval_coverage_{50,90}_{1y,5y}`. Rolling-origin protocol stated in full: the
+    predictive distribution is the generated ensemble's own pooled non-overlapping
+    12/60-month sums (deliberately unconditional — no history-conditioned forecast
+    exists below Step 3); the real side is every OVERLAPPING 1-month-spaced window of
+    train+validation, fixed by history alone. PIT uses a mid-rank empirical CDF;
+    `pit_ks_stat` is a closed-form one-sample Kolmogorov-Smirnov statistic against
+    Uniform(0,1) (no scipy — verified against the hand-derivable `D = 1/(2n)` closed
+    form for an evenly spaced sample, and cross-checked against the textbook sup-norm
+    definition on a fine grid). Interval coverage brackets the nominal rate on BOTH
+    sides (over-coverage is exactly as much a failure as under-coverage). Both floors
+    (`CALIBRATION_MIN_GENERATED_SUMS`/`CALIBRATION_MIN_ORIGINS = 30`) NaN rather than
+    report a small-sample-lucky number. A correctly-specified seeded forecast scores
+    `pit_ks_stat < 0.08` and coverage within 0.08 of nominal; a deliberately
+    over-confident (10x-too-narrow) forecast scores `pit_ks_stat > 0.2` and coverage
+    more than 0.15 below nominal.
+  - *Registration.* All three registered in `ah.eval.reference.PANEL_STATS` (no `fn` —
+    every metric compares the generated ensemble against real data or a stated rule
+    directly, the same shape `discriminative_score` already uses), eleven new
+    `conventions.<name>_estimator` blocks in `pre-registration.yaml` (plus the
+    `_CONVENTIONS_KEYS` allow-list entries in `ah/strategies.py` so the file still
+    loads), `money_pump_violations`/`floor_violations` sealed `enforce, max: 0` in
+    `thresholds.panel` (not a placeholder — the definition itself), and
+    `test_every_real_threshold_key_is_produced_by_a_registered_metric` widened to union
+    every reference-dependent suite's produced names rather than `monthly`'s alone (a
+    pre-existing scope gap the new panel entries were the first to expose). Full suite
+    green (934 tests, up from 864 — 70 new), ruff/pyright clean.
 
 ## [v0.1.0-g0] — 2026-07-24
 

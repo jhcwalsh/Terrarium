@@ -166,6 +166,7 @@ from typing import Any
 import yaml
 
 from ah.core.digest import canonical_json
+from ah.data.derive import REGIME_LABELS
 from ah.eval.reference import (
     ACF_ABS_MAX_LAG,
     ACF_R_MAX_LAG,
@@ -401,6 +402,23 @@ ESTIMATOR_CONVENTION_KEYS: Mapping[str, str] = MappingProxyType(
         "christoffersen_conditional_coverage_chi2_tail_1path": (
             "christoffersen_conditional_coverage_estimator"
         ),
+        # WP2.2 Task 5.
+        "nn_distance_p05": "memorization_nn_distance_estimator",
+        "nn_distance_p50": "memorization_nn_distance_estimator",
+        "membership_inference_auc": "membership_inference_auc_estimator",
+        "near_duplicate_fraction": "near_duplicate_fraction_estimator",
+        "pit_ks_stat_1y": "pit_ks_stat_estimator",
+        "pit_ks_stat_5y": "pit_ks_stat_estimator",
+        "interval_coverage_50_1y": "interval_coverage_estimator",
+        "interval_coverage_90_1y": "interval_coverage_estimator",
+        "interval_coverage_50_5y": "interval_coverage_estimator",
+        "interval_coverage_90_5y": "interval_coverage_estimator",
+        **{f"implied_sharpe_{r}": "implied_sharpe_estimator" for r in REGIME_LABELS},
+        "term_premium": "term_premium_estimator",
+        "equity_risk_premium": "equity_risk_premium_estimator",
+        "money_pump_violations": "money_pump_estimator",
+        "floor_violations": "floor_violations_estimator",
+        "policy_anchor_deviation": "policy_anchor_deviation_estimator",
     }
 )
 

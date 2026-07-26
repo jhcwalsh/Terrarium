@@ -1175,23 +1175,33 @@ def test_every_real_threshold_key_is_produced_by_a_registered_metric() -> None:
     `_check_block_threshold_key` exists to prevent, one level up: a key can be
     well-formed and still be inert.
     """
+    from ah.eval.metrics.calibration import build_calibration_suite
+    from ah.eval.metrics.economics import build_economics_suite
+    from ah.eval.metrics.memorization import build_memorization_suite
     from ah.eval.metrics.monthly import build_monthly_suite
     from ah.eval.reference import ReferenceStats
 
     manifest = load_manifest()
-    specs = build_monthly_suite(
-        manifest,
-        ReferenceStats(
-            blocks={},
-            cross_blocks={},
-            active_blocks=manifest.active_blocks,
-            vintage_id="v",
-            n_resamples=1,
-            seed=0,
-            missing_factors=(),
-        ),
+    reference = ReferenceStats(
+        blocks={},
+        cross_blocks={},
+        active_blocks=manifest.active_blocks,
+        vintage_id="v",
+        n_resamples=1,
+        seed=0,
+        missing_factors=(),
     )
-    produced = {s.name for s in specs}
+    # WP2.2 Task 5: `thresholds.panel` now carries entries judged by memorization.py,
+    # economics.py and calibration.py too, not only monthly.py's -- `produced` must be
+    # the union of every reference-dependent suite's own names, not one suite's alone,
+    # or a real threshold judged by (say) economics.py reads as "inert" here purely
+    # because monthly.py never emits it.
+    produced = (
+        {s.name for s in build_monthly_suite(manifest, reference)}
+        | {s.name for s in build_memorization_suite(manifest, reference)}
+        | {s.name for s in build_economics_suite(manifest, reference)}
+        | {s.name for s in build_calibration_suite(manifest, reference)}
+    )
 
     loaded = prereg.load()
     inert: list[str] = []

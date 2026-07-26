@@ -1110,6 +1110,186 @@ conventions:
     funding_weight * funding_series_t); static_weights strategies use identical
     arithmetic, they simply have no per-leg formula field of their own to state it in.
 
+  # WP2.2 Task 5 -- memorization tier (ah.eval.metrics.memorization).
+  memorization_nn_distance_estimator: >-
+    NEAREST-NEIGHBOUR DISTANCE FROM EACH GENERATED BLOCK TO THE NEAREST TRAIN BLOCK.
+    A "block" is a non-overlapping MEMORIZATION_BLOCK_MONTHS=24-month window of ONE
+    factor's own path (never spanning a path boundary on the generated side, never
+    crossing the TRAIN/VALIDATION boundary on the real side; 24 is reused from
+    UTILITY_WINDOW_MONTHS, not a second arbitrary window length). Each block is the
+    RAW 24-dimensional vector of monthly values over the window, standardized by that
+    SAME factor's own TRAIN-split mean/std (never train+validation combined -- train is
+    the population this metric checks copying against). Distance between two blocks of
+    the SAME factor: Euclidean, sqrt(sum((u_i - v_i)^2)), over the standardized
+    24-vector; blocks of DIFFERENT factors are never compared to each other. For every
+    generated block (extracted independently within each path, pooled across paths and
+    factors), its nearest-neighbour distance is the minimum such distance to any TRAIN
+    block of the same factor. nn_distance_p05/nn_distance_p50 are the 5th percentile
+    and median of that pooled distribution. Small values -> generated blocks sit close
+    to specific training examples. TRAIN/VALIDATION split: the sealed
+    ah.splits.TRAIN/VALIDATION date boundaries, applied directly to
+    ReferenceStats.historical_series (already train+validation combined) -- never a
+    second catalog read. NaN if the factor's TRAIN split carries fewer than 5
+    non-overlapping blocks (see MEMORIZATION_MIN_TRAIN_BLOCKS_estimator).
+  membership_inference_auc_estimator: >-
+    A DISTANCE-TO-NEAREST-SYNTHETIC-SAMPLE MEMBERSHIP-INFERENCE ATTACK. For every TRAIN
+    block (see memorization_nn_distance_estimator for the block/standardization/
+    distance definitions), its proximity signal is its OWN nearest-neighbour distance
+    to the pooled GENERATED blocks of the same factor (note the direction: nearest
+    GENERATED neighbour of a REAL block, the reverse of nn_distance's direction); the
+    identical signal is computed for every VALIDATION block of the same factor. The
+    attack classifies "is this a training block?" by smaller distance -> more likely
+    training. membership_inference_auc is the AUC of that classifier, POOLED across
+    every qualifying factor: the Mann-Whitney U statistic of {-distance : train} against
+    {-distance : validation}, computed from average (tie-split) ranks of the pooled
+    signal -- AUC = (rank_sum(train) - n_train*(n_train+1)/2) / (n_train*n_val). 0.5 =
+    train and validation blocks are equally close to the generator's output (no
+    detectable leakage); 1.0 = train blocks are systematically closer (the generator's
+    output betrays which examples it trained on). NaN if either pooled population is
+    empty.
+  near_duplicate_fraction_estimator: >-
+    FRACTION OF GENERATED BLOCKS WITHIN A DATA-DRIVEN EPSILON OF A TRAIN BLOCK. Reuses
+    the SAME per-generated-block nearest-train-neighbour distance
+    memorization_nn_distance_estimator pools. Epsilon, per factor: the 5th percentile
+    (MEMORIZATION_EPSILON_PERCENTILE) of that SAME factor's TRAIN split's own
+    LEAVE-ONE-OUT nearest-neighbour distance (every train block against every OTHER
+    train block of the same factor) -- self-calibrated to how close two genuinely
+    INDEPENDENT historical trajectories of the factor ever naturally sit, so only a
+    generated block sitting closer to some training example than all but the tightest
+    5% of distinct historical examples ever sit to each other counts as a duplicate.
+    near_duplicate_fraction is the fraction of pooled generated blocks (pooled across
+    every qualifying factor) whose nearest-train distance is below that factor's own
+    epsilon. NaN if no factor's TRAIN split clears the 5-block floor (a leave-one-out
+    epsilon needs >= 2 blocks to be defined at all).
+
+  # WP2.2 Task 5 -- calibration tier (ah.eval.metrics.calibration).
+  pit_ks_stat_estimator: >-
+    ROLLING-ORIGIN PIT AGAINST THE GENERATED ENSEMBLE'S OWN UNCONDITIONAL PREDICTIVE
+    DISTRIBUTION, at horizon h in {12 ("1y"), 60 ("5y")} months, pooled over every
+    ACTIVE, RETURN-BEARING factor (conventions.return_bearing_factors intersected with
+    the active factor set) present in both ReferenceStats.historical_series and the
+    judged ensemble. The predictive distribution for one factor at horizon h is the
+    generated ensemble's own pooled population of NON-OVERLAPPING h-month sums
+    (computed independently within each path via nonoverlapping_sums, then
+    concatenated across paths -- the identical convention agg_gaussianity_estimator
+    uses) -- deliberately UNCONDITIONAL, the same distribution used at every origin
+    below, since nothing in the platform today produces a history-conditioned forecast
+    (Step 3's job); this is the cheap baseline STEP2-GENERATOR-PLAN's brief calls for.
+    The rolling origins are every h-month OVERLAPPING window of the REAL
+    train+validation series, origin spacing 1 month (origin t covers [t, t+h);
+    len(series) - h + 1 origins per factor -- fixed by history, not the generator, so
+    not gameable by producing a shorter/longer ensemble). PIT for one realized origin
+    sum s is the mid-rank empirical CDF of s against the generated pooled distribution
+    (ties averaged: (count strictly less + 0.5 * count equal) / n). Every origin of
+    every qualifying factor contributes one PIT value to one pooled sample (PIT values
+    are unitless in [0, 1], so pooling across factors of different raw scales is safe).
+    pit_ks_stat is the one-sample Kolmogorov-Smirnov statistic of that pooled PIT
+    sample against Uniform(0, 1): D = max_i max(i/n - x_(i), x_(i) - (i-1)/n) on the
+    sorted sample. Perfect calibration -> pooled PIT is uniform -> D = 0; LOWER IS
+    BETTER. NaN if fewer than 30 (CALIBRATION_MIN_GENERATED_SUMS) pooled generated
+    sums are available for EVERY factor at that horizon, or fewer than 30
+    (CALIBRATION_MIN_ORIGINS) pooled PIT values result.
+  interval_coverage_estimator: >-
+    REALIZED COVERAGE OF A NOMINAL q% PREDICTION INTERVAL, q in {50, 90}, at horizon h
+    in {12 ("1y"), 60 ("5y")} months -- shares pit_ks_stat_estimator's rolling-origin
+    protocol (same predictive distribution, same real rolling origins, same two
+    floors). Per factor: alpha = (1 - q/100) / 2; the interval is
+    [quantile(alpha), quantile(1 - alpha)] of that factor's own generated pooled
+    h-month-sum distribution. The pooled coverage INDICATOR (1 if a real origin sum
+    falls inside its own factor's interval, else 0) is pooled across every qualifying
+    factor and origin; interval_coverage_{q}_{1y,5y} is the mean of that pooled
+    indicator. Perfect calibration -> the reported value equals q/100 -- NEITHER
+    higher nor lower is "better": an over-wide generated distribution reads as
+    OVER-coverage, exactly as much a calibration failure as under-coverage, so a
+    sealed band brackets q/100 on both sides. Same two NaN floors as
+    pit_ks_stat_estimator.
+
+  # WP2.2 Task 5 -- economic tier (ah.eval.metrics.economics). DN-1.1 Sec.II.6's
+  # "Economic" row states this tier's own acceptance criterion as "Defensible ranges,
+  # documented" against "Literature ranges" -- an ABSOLUTE bound, never a
+  # train+validation bootstrap band, unlike every monthly/1-5yr/10yr entry above.
+  implied_sharpe_estimator: >-
+    A STRUCTURAL GAP, ALWAYS NaN TODAY -- not computed. DN-1.1's "Implied Sharpe ratios
+    ... by regime" needs ah.data.derive.label_regime's six labels (EXP, SLOW, REC, CRI,
+    STAG, REF), which needs FIVE inputs (usrec, cpi_yoy, growth_yoy, drawdown, hy_oas);
+    only three are constructible from a generated factor (cpi -> cpi_yoy, equity_mkt ->
+    drawdown, hy_spread -> hy_oas) -- usrec (NBER recession) and growth_yoy (industrial
+    production) have no factors.yaml mapping at all, the identical structural gap
+    regime_duration_estimator records. All six implied_sharpe_{EXP,SLOW,REC,CRI,STAG,REF}
+    names are therefore NaN on every ensemble today, status=structurally_unavailable,
+    carrying the regime ruleset version (ah.data.derive.regime_thresholds()["version"])
+    they would be evaluated under once the gap closes. Recorded as
+    governance/retrofit-register.md RFR-27.
+  term_premium_estimator: >-
+    mean(ust_10y - policy_rate), POOLED over every (path, month) observation of the
+    generated ensemble. Both are LEVELS in percentage points
+    (conventions.level_factors), so this is a level-space yield-curve slope, not a
+    return -- no numeraire question arises. NaN if either factor is absent from the
+    ensemble, if fewer than ECONOMICS_MIN_OBS=60 pooled observations result, or if any
+    pooled observation is non-finite (poisons the whole metric rather than silently
+    dropping it -- a NaN/inf comparison would otherwise never register as informative
+    either way).
+  equity_risk_premium_estimator: >-
+    mean(equity_mkt - cash_tr_1m), POOLED over every (path, month) observation.
+    equity_mkt is total-return (conventions.numeraire: total_return); cash_tr_1m is the
+    SEALED derived_series entry declared above (bond_total_return on policy_rate at
+    duration_years=0.0, i.e. the pure carry term: 0.01 * policy_rate_{t-1}/12, r_0=0.0)
+    -- the SAME cash leg governance/retrofit-register.md RFR-12 already discusses, used
+    here directly rather than a second, independently invented cash-rate decision. Same
+    NaN rules as term_premium_estimator (absent leg, < 60 pooled observations, any
+    non-finite observation).
+  money_pump_estimator: >-
+    A NO-ARBITRAGE AUDIT OVER THE ZERO-COST LEGS. severity: enforce, max: 0 -- must be
+    exactly zero. conventions.numeraire_zero_cost_legs names every self-financing,
+    costless overlay leg (resolved exactly as ah.eval.metrics.tails resolves any D4
+    strategy leg: a raw active factor directly, or a declared derived_series). For each
+    zero-cost leg and each PATH of the ensemble independently, the leg "violates" on
+    that path iff every month's realized return is >= 0 AND at least one month's return
+    is > 0 (never loses, sometimes gains, at zero committed capital -- a free lunch by
+    construction). money_pump_violations is the COUNT of (leg, path) pairs violating,
+    pooled across every qualifying leg (a total count, not a per-path average). NaN if
+    no zero-cost leg is present in the ensemble, if fewer than 60 pooled (leg, path,
+    month) observations result, or if any pooled observation is non-finite (poisons
+    the whole metric -- a NaN/inf return never satisfies ">= 0" so silently ignoring it
+    would let a generator dodge this audit by overflowing rather than complying).
+  floor_violations_estimator: >-
+    STRUCTURAL FLOORS FROM DN-1.1 SEC.II.4 ("rates and spreads generated in softplus
+    space with floors, i >= -1%, spread >= 100bp"). severity: enforce, max: 0. Two
+    disjoint groups: RATE_FLOOR_FACTORS (policy_rate, ust_2y, ust_10y, hqm_curve) each
+    floored at -1.0 (percentage points); SPREAD_FLOOR_FACTORS (ig_spread, hy_spread,
+    funding_spread) each floored at 1.0 (100bp). cpi (an index level) and equity_vol (a
+    volatility index) carry no DN-1.1-stated floor and are excluded. floor_violations is
+    the POOLED count of (factor, path, month) observations below their factor's own
+    floor, summed over every qualifying factor present in the ensemble. NaN if no
+    floor-bearing factor is present, if fewer than 60 pooled observations result, or on
+    any non-finite observation (poisons the whole metric, same reasoning as
+    money_pump_estimator).
+  policy_anchor_deviation_estimator: >-
+    ROOT-MEAN-SQUARE DEVIATION FROM A SIMPLIFIED TAYLOR-TYPE ANCHOR. DN-1.1 Sec.II.2's
+    policy anchor is i_t = r*_t + pi*_t + phi_pi*(pi_t - pi*_t) + phi_c*c_t + eps_t,
+    but r*_t (neutral real rate), pi*_t (trend inflation) and c_t (the L2 cycle term)
+    are LATENT Layer-1/Layer-2 states with no factors.yaml mapping -- an honest reading
+    of DN-1.1's own equation cannot be evaluated from generated factors alone (the same
+    gap ten_year_return_vs_valuation_estimator and implied_sharpe_estimator record).
+    This metric substitutes a stated, simplified anchor built only from what a
+    generator emits: anchor_t = TAYLOR_R_STAR + TAYLOR_PI_TARGET + TAYLOR_PHI_PI *
+    (cpi_yoy_t - TAYLOR_PI_TARGET), where cpi_yoy_t = (cpi_t / cpi_{t-12} - 1) * 100
+    (the generated cpi level's trailing 12-month percent change, ah.data.derive.yoy's
+    convention). TAYLOR_R_STAR = 0.75 and TAYLOR_PHI_PI = 0.5 are DN-1.1 Sec.II.2's own
+    table entries (mu_r and phi_pi prior means); TAYLOR_PI_TARGET = 2.0 is NOT from
+    DN-1.1 (DN-1.1 states pi* itself has "a diffuse prior -- the target can drift",
+    deliberately not a fixed number) -- it substitutes the conventional post-1990s
+    central-bank inflation target from the literature, consistent with this tier's own
+    "Literature ranges" reference-data column, used only because the model's own latent
+    pi*_t is unavailable. The cycle term phi_c*c_t is DROPPED entirely (c_t has no
+    generator-visible proxy and DN-1.1 gives no phi_c prior to substitute) -- a stated
+    simplification. Reported value: sqrt(mean((policy_rate_t - anchor_t)^2)), POOLED
+    over every (path, month >= 12) observation (month < 12 has no defined cpi_yoy).
+    LOWER IS BETTER; 0 = the generated policy path exactly tracks the simplified
+    anchor. NaN if policy_rate or cpi is absent, if fewer than 12 months are available
+    at all, if fewer than 60 pooled observations result, or on any non-finite
+    observation.
+
 # --------------------------------------------------------------------------- #
 # Derived series -- declared BEFORE d4_strategies, because strategies reference them.
 #
@@ -1452,6 +1632,28 @@ thresholds:
     # `correlation` for (within-block pairs have no registered reference statistic to be
     # a distance TO -- governance/retrofit-register.md RFR-14).
     "cross_block_corr_matrix_distance": {min: 0.0, max: 10.0, severity: report}
+    # WP2.2 Task 5. money_pump_violations/floor_violations are audits of a HARD
+    # structural constraint that should never fire on a well-behaved generator (DN-1.1
+    # Sec.II.4's own floors; WP2.8's constraints.py makes them structurally impossible
+    # by construction) -- max: 0 is not a provisional placeholder the way the other
+    # entries in this section are, it is the definition itself: any count above zero is
+    # a real violation. severity: enforce, so a single violation blocks G2.
+    "money_pump_violations": {min: null, max: 0.0, severity: enforce}
+    "floor_violations": {min: null, max: 0.0, severity: enforce}
+    # PROVISIONAL placeholders -- not derived from a real run (see file header).
+    "term_premium": {min: -2.0, max: 5.0, severity: report}
+    "equity_risk_premium": {min: -0.05, max: 0.15, severity: report}
+    "policy_anchor_deviation": {min: null, max: 10.0, severity: report}
+    "pit_ks_stat_1y": {min: null, max: 0.3, severity: report}
+    "pit_ks_stat_5y": {min: null, max: 0.3, severity: report}
+    "interval_coverage_50_1y": {min: 0.2, max: 0.8, severity: report}
+    "interval_coverage_90_1y": {min: 0.6, max: 0.99, severity: report}
+    "interval_coverage_50_5y": {min: 0.2, max: 0.8, severity: report}
+    "interval_coverage_90_5y": {min: 0.6, max: 0.99, severity: report}
+    "nn_distance_p05": {min: 0.05, max: null, severity: report}
+    "nn_distance_p50": {min: 0.1, max: null, severity: report}
+    "membership_inference_auc": {min: null, max: 0.75, severity: report}
+    "near_duplicate_fraction": {min: null, max: 0.05, severity: report}
   # WP2.2 Task 4 -- thresholds.strategies, key "<strategy_id>.<stat>", stat in
   # ah.eval.reference.STRATEGY_STATS (see that module and ah.eval.prereg
   # ._check_strategy_threshold_key). PROVISIONAL placeholders, same as every other

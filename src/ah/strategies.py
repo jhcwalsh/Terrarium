@@ -205,6 +205,20 @@ _CONVENTIONS_KEYS = frozenset(
         # utility tier shares (step size, stopping criterion, penalty, weighting),
         # stated once instead of three times inside the three utility estimator blocks.
         "gradient_descent_fit_estimator",
+        # WP2.2 Task 5: memorization.py, calibration.py and economics.py's estimators.
+        # Same reasoning as every block above -- prose-only to this module, but must be
+        # ALLOWED here or the whole pre-registration fails to load.
+        "memorization_nn_distance_estimator",
+        "membership_inference_auc_estimator",
+        "near_duplicate_fraction_estimator",
+        "pit_ks_stat_estimator",
+        "interval_coverage_estimator",
+        "implied_sharpe_estimator",
+        "term_premium_estimator",
+        "equity_risk_premium_estimator",
+        "money_pump_estimator",
+        "floor_violations_estimator",
+        "policy_anchor_deviation_estimator",
     }
 )
 
