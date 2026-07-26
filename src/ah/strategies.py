@@ -162,6 +162,25 @@ _CONVENTIONS_KEYS = frozenset(
         "agg_gaussianity_estimator",
         "leverage_correlation_estimator",
         "cross_block_corr_matrix_distance_estimator",
+        # WP2.2 Task 3 and its fix pass: the horizon-tier estimators, plus the two
+        # cross-cutting statements that had no home before (the elementary population
+        # moments every other definition builds on, and why a Monte-Carlo error over
+        # 1000 generated paths is NOT the small-n historical uncertainty DN-1.1 asks to
+        # be reported). `ah.eval.prereg.ESTIMATOR_CONVENTION_KEYS` maps every registered
+        # statistic to the block that defines it, and a test asserts the mapping is
+        # total in both directions -- so this list cannot fall behind the registry
+        # silently.
+        "elementary_moment_estimators",
+        "crisis_corr_lift_estimator",
+        "variance_ratio_estimator",
+        "mean_reversion_halflife_estimator",
+        "drawdown_episode_estimator",
+        "lost_decade_frequency_estimator",
+        "long_inflation_era_frequency_estimator",
+        "ergodicity_gap_estimator",
+        "regime_duration_estimator",
+        "ten_year_return_vs_valuation_estimator",
+        "mc_error_is_not_the_small_n_band",
     }
 )
 

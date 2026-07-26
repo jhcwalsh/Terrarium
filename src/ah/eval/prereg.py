@@ -166,7 +166,15 @@ from typing import Any
 import yaml
 
 from ah.core.digest import canonical_json
-from ah.eval.reference import CROSS_BLOCK_STATS, PANEL_STATS, SINGLE_FACTOR_STATS
+from ah.eval.reference import (
+    ACF_ABS_MAX_LAG,
+    ACF_R_MAX_LAG,
+    AGG_GAUSSIANITY_HORIZONS,
+    CROSS_BLOCK_STATS,
+    PANEL_STATS,
+    SINGLE_FACTOR_STATS,
+    VARIANCE_RATIO_HORIZONS,
+)
 from ah.factors import FactorManifest
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -204,6 +212,13 @@ _REQUIRED_JUDGED_SOURCES = (
     ("src", "ah", "splits.py"),
     ("src", "ah", "battery", "report.py"),
     ("src", "ah", "battery", "stylized.py"),
+    # WP2.2 Task 3 fix pass 1 (Minor 1): the two ensemble pooling conventions, shared by
+    # every metric suite. It sits under `eval/metrics/` but is not a suite, so
+    # `_METRIC_SUITE_NAMES` does not reach it -- and it decides how an ensemble becomes
+    # the flat series every sealed estimator is defined over, which moves every metric
+    # value in the platform. Exactly the "helper module added beside the suites" case
+    # the module docstring warns joins the seal only by being named.
+    ("src", "ah", "eval", "metrics", "_pooling.py"),
 )
 
 
@@ -310,6 +325,74 @@ _REQUIRED_CONVENTIONS_KEYS = (
     "numeraire",
     "numeraire_zero_cost_legs",
 )
+
+
+# Every registered statistic -> the `conventions.<key>` block in `pre-registration.yaml`
+# that defines its estimator. WP2.2 Task 2 established the rule ("a band is meaningless
+# without the estimator that produced it"); Task 3 registered eight statistics with no
+# block at all, which is how a convention becomes forgettable. The mapping is explicit
+# rather than derived from the statistic name because one block legitimately defines a
+# family (`acf_estimator` covers 29 lag-indexed keys, `drawdown_episode_estimator`
+# covers three summaries of one episode definition) -- a name-derived rule would either
+# forbid that or accept anything.
+#
+# `tests/test_prereg.py::test_every_registered_statistic_has_an_estimator_definition` is
+# the machine check, in both directions: every key of SINGLE_FACTOR_STATS /
+# CROSS_BLOCK_STATS / PANEL_STATS must appear here, and every block named here must
+# exist in the real pre-registration. It is a test rather than a `verify()` clause
+# deliberately: `verify()` runs against synthetic, minimal pre-registrations all over
+# the suite, and requiring twenty prose blocks of every fixture would buy nothing --
+# the invariant is about the ONE real sealed document.
+ESTIMATOR_CONVENTION_KEYS: Mapping[str, str] = MappingProxyType(
+    {
+        **{k: "elementary_moment_estimators" for k in ("mean", "std", "skew", "excess_kurtosis")},
+        "correlation": "elementary_moment_estimators",
+        "crisis_corr_lift": "crisis_corr_lift_estimator",
+        **{f"acf_r_lag{lag}": "acf_estimator" for lag in range(1, ACF_R_MAX_LAG + 1)},
+        **{f"acf_abs_lag{lag}": "acf_estimator" for lag in range(1, ACF_ABS_MAX_LAG + 1)},
+        "acf_abs_decay": "acf_abs_decay_estimator",
+        "hill_tail_index_5pct": "hill_tail_index_estimator",
+        "hill_tail_index_1pct": "hill_tail_index_estimator",
+        **{
+            f"agg_gaussianity_{s}": "agg_gaussianity_estimator" for _, s in AGG_GAUSSIANITY_HORIZONS
+        },
+        "leverage_correlation": "leverage_correlation_estimator",
+        "cross_block_corr_matrix_distance": "cross_block_corr_matrix_distance_estimator",
+        **{f"variance_ratio_{s}": "variance_ratio_estimator" for _, s in VARIANCE_RATIO_HORIZONS},
+        "mean_reversion_halflife": "mean_reversion_halflife_estimator",
+        "drawdown_median_depth": "drawdown_episode_estimator",
+        "drawdown_median_duration": "drawdown_episode_estimator",
+        "drawdown_depth_duration_rank_corr": "drawdown_episode_estimator",
+        "lost_decade_frequency": "lost_decade_frequency_estimator",
+        "long_inflation_era_frequency": "long_inflation_era_frequency_estimator",
+        "ergodicity_gap": "ergodicity_gap_estimator",
+        "regime_duration_mean": "regime_duration_estimator",
+        "regime_duration_p50": "regime_duration_estimator",
+        "regime_duration_p90": "regime_duration_estimator",
+        "ten_year_return_vs_valuation_slope": "ten_year_return_vs_valuation_estimator",
+        "ten_year_return_vs_valuation_r2": "ten_year_return_vs_valuation_estimator",
+    }
+)
+
+
+def missing_estimator_definitions(prereg: PreRegistration) -> tuple[str, ...]:
+    """Registered statistics whose estimator definition is missing from ``prereg``.
+
+    Two failure modes, both reported: a statistic absent from
+    :data:`ESTIMATOR_CONVENTION_KEYS` entirely (nobody said which block defines it), and
+    one whose named block is absent from the document's ``conventions:``. Returned
+    sorted, as ``"<stat>"`` / ``"<stat> -> <missing conventions key>"``.
+    """
+    conventions = prereg.raw.get("conventions")
+    present = set(conventions) if isinstance(conventions, dict) else set()
+    missing: list[str] = []
+    for stat in sorted({*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS}):
+        key = ESTIMATOR_CONVENTION_KEYS.get(stat)
+        if key is None:
+            missing.append(stat)
+        elif key not in present:
+            missing.append(f"{stat} -> {key}")
+    return tuple(missing)
 
 
 def _require_mapping(value: object, what: str, source: Path) -> dict[Any, Any]:

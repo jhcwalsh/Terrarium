@@ -394,39 +394,50 @@ def test_band_brackets_point_estimate_for_every_stat() -> None:
 
     # WP2.2 Task 3: a stat CAN be legitimately, honestly NaN on this fixture's ~76
     # years of history -- exactly the same "by construction" outcome
-    # `hill_tail_index` already documents for a level factor, generalized. Three cases
-    # hit it here, none a defect in the statistic itself:
-    #  - `ergodicity_gap`'s reference-side fn is ALWAYS NaN (no historical analog --
-    #    see `_ergodicity_gap_reference_stub`);
+    # `hill_tail_index` already documents for a level factor, generalized. Any NaN
+    # among point/lo/hi means no bracket claim can honestly be made, so those are
+    # collected rather than asserted against -- and then the collected SET is asserted
+    # to be exactly the expected one (WP2.2 Task 3 fix pass 1, Important 2). Skipping
+    # unconditionally, as the first version of this test did, would silently green-light
+    # any future all-NaN statistic: the generic invariant would still "pass" while
+    # measuring nothing.
+    checked = 0
+    nan_stats: set[str] = set()
+    for block_ref in ref.blocks.values():
+        for name, band in block_ref.stats.items():
+            checked += 1
+            if np.isnan(band.point) or np.isnan(band.lo) or np.isnan(band.hi):
+                nan_stats.add(name.split(".", 1)[1])
+                continue
+            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
+    for pair_ref in ref.cross_blocks.values():
+        for name, band in pair_ref.stats.items():
+            checked += 1
+            if np.isnan(band.point) or np.isnan(band.lo) or np.isnan(band.hi):
+                nan_stats.add(name.split(".", 1)[1])
+                continue
+            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
+
+    # Each of these is a NAMED, understood case, not a blanket exemption:
+    #  - `ergodicity_gap` has no historical analog at all (history is one realization
+    #    and there is no historical ENSEMBLE to compare it against), so its registered
+    #    reference-side fn is always NaN by construction;
     #  - `variance_ratio_120m` needs >= VARIANCE_RATIO_MIN_SUMS (10) non-overlapping
     #    120-month sums, i.e. >= 1200 months (100 years) of history, more than this
     #    fixture's 76-year span provides -- NaN point AND NaN band;
-    #  - `drawdown_depth_duration_rank_corr` can have a REAL point (the full sample has
-    #    plenty of drawdown episodes) but a NaN band: `block_bootstrap_band` draws
-    #    length-matched (block_length=120) resamples, and a resample short on drawdown
-    #    episodes (fewer than 2, see `spearman_rank_correlation`) legitimately returns
-    #    NaN for THAT resample; `np.percentile` then propagates NaN into `lo`/`hi` if
-    #    even one of the 200 resamples was NaN. A real, discovered property of a
-    #    statistic that can be undefined on a short window, not something this test
-    #    (or this task) fixes -- `block_bootstrap_band`'s percentile step is shared,
-    #    sealed infrastructure well outside Task 3's registered-not-edited scope.
-    # Any NaN among point/lo/hi means no bracket claim can honestly be made; skipped,
-    # not asserted against.
-    checked = 0
-    for block_ref in ref.blocks.values():
-        for name, band in block_ref.stats.items():
-            if np.isnan(band.point) or np.isnan(band.lo) or np.isnan(band.hi):
-                checked += 1
-                continue
-            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
-            checked += 1
-    for pair_ref in ref.cross_blocks.values():
-        for name, band in pair_ref.stats.items():
-            if np.isnan(band.point) or np.isnan(band.lo) or np.isnan(band.hi):
-                checked += 1
-                continue
-            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
-            checked += 1
+    #  - the three `drawdown_*` statistics can have a REAL point (the full sample has
+    #    plenty of episodes) but a NaN band: `block_bootstrap_band` draws length-matched
+    #    (120-month) resamples, and a resample carrying fewer than
+    #    DRAWDOWN_MIN_EPISODES pooled episodes legitimately returns NaN for THAT
+    #    resample; `np.percentile` then propagates the single NaN into `lo`/`hi`
+    #    (governance/retrofit-register.md RFR-19, shared sealed infrastructure).
+    assert nan_stats == {
+        "ergodicity_gap",
+        "variance_ratio_120m",
+        "drawdown_median_depth",
+        "drawdown_median_duration",
+        "drawdown_depth_duration_rank_corr",
+    }
 
     # Minor 7: derive the expected count from the fixture instead of hardcoding two
     # coincidentally-equal "4"s (one counted factor instances, the other cross-factor
@@ -518,6 +529,7 @@ def test_to_dict_round_trips_through_json() -> None:
         "level",
         "tier",
         "resample_length",
+        "n_valid_resamples",
     }
     # No zero-overlap pairs in this uniform-range fixture.
     assert decoded["zero_overlap_pairs"] == {}
@@ -1220,9 +1232,22 @@ def test_compute_reference_stamps_the_resample_length_on_every_band() -> None:
         block_length=12,
         resample_length=120,
     )
-    bands = [b for block in ref.blocks.values() for b in block.stats.values()]
-    assert bands
-    assert all(b.resample_length == 120 for b in bands)
+    # Every band records the length its own replicates were drawn at, and the field is
+    # now per STATISTIC rather than uniform (WP2.2 Task 3 fix pass 1, Critical 1): a
+    # statistic registered `length_matched=False` is drawn at the full sample length,
+    # recorded as None, and the two decade-frequency statistics are exactly those. The
+    # assertion is over the split, not over a blanket "everything is 120", so that a
+    # future statistic silently opting out of length matching fails this test.
+    unmatched = {"lost_decade_frequency", "long_inflation_era_frequency"}
+    by_stat = {
+        name.split(".", 1)[1]: band
+        for block in ref.blocks.values()
+        for name, band in block.stats.items()
+    }
+    assert by_stat
+    for stat, band in by_stat.items():
+        expected = None if stat in unmatched else 120
+        assert band.resample_length == expected, stat
 
 
 def test_default_block_length_exceeds_the_longest_registered_lag() -> None:
@@ -1352,3 +1377,106 @@ def test_hill_tail_index_is_nan_for_an_all_positive_level_series() -> None:
     """A rate/spread/index level has no losses, so its Hill tail index is NaN by
     construction rather than a number computed from the wrong side."""
     assert np.isnan(SINGLE_FACTOR_STATS["hill_tail_index_5pct"].fn(np.linspace(1.0, 9.0, 500)))
+
+
+# --------------------------------------------------------------------------- #
+# 13. the decade-frequency statistics get a USABLE band (WP2.2 Task 3 fix pass 1)
+# --------------------------------------------------------------------------- #
+
+
+def _returns_frame(seed: int, start: str, end: str, *, drift: float, sd: float) -> pd.DataFrame:
+    """Deterministic iid monthly returns: low drift, equity-like volatility.
+
+    Low enough drift that a 10-year compounded return is genuinely a coin flip -- the
+    regime in which a lost-decade frequency band is most informative, and the one that
+    makes this test a statement about the estimator rather than about the fixture.
+    """
+    dates = pd.date_range(start, end, freq="MS")
+    rng = np.random.Generator(np.random.PCG64(seed))
+    return pd.DataFrame({"date": dates, "value": rng.normal(drift, sd, size=len(dates))})
+
+
+def _cpi_level_frame(start: str, end: str, *, era_months: int) -> pd.DataFrame:
+    """A CPI index level alternating between ~7.4%/yr and ~1.9%/yr eras.
+
+    Deterministic (no RNG at all). Alternating eras mean some decade windows contain a
+    sustained high-inflation run and some do not, so the historical frequency is a
+    genuine interior fraction rather than a saturated 0 or 1.
+    """
+    dates = pd.date_range(start, end, freq="MS")
+    hot = (np.arange(len(dates)) // era_months) % 2 == 0
+    rates = np.where(hot, 0.006, 0.0016)
+    level = 100.0 * np.cumprod(1.0 + rates)
+    return pd.DataFrame({"date": dates, "value": level})
+
+
+def _frequency_reference() -> reference_mod.ReferenceStats:
+    """``compute_reference`` at PRODUCTION settings (length-matched to a 120-month
+    ensemble) over a century of returns and a century of CPI levels."""
+    manifest = FactorManifest(
+        blocks={"global": ("g1",), "us": ("u1",)},
+        active_blocks=("global", "us"),
+        sources={
+            "g1": FactorSource(kind="series", series_id="g1", units="ret"),
+            "u1": FactorSource(kind="series", series_id="u1", units="index"),
+        },
+    )
+    frames = {
+        "g1": _returns_frame(11, "1900-01-01", "2026-06-01", drift=0.0015, sd=0.05),
+        "u1": _cpi_level_frame("1900-01-01", "2026-06-01", era_months=72),
+    }
+
+    def reader(series_id: str) -> pd.DataFrame:
+        return frames[series_id]
+
+    return compute_reference(
+        DataAccess(reader),
+        manifest,
+        vintage_id="v",
+        seed=17,
+        n_resamples=300,
+        block_length=reference_mod.DEFAULT_BLOCK_LENGTH,
+        resample_length=120,
+    )
+
+
+def test_decade_frequency_bands_are_non_degenerate() -> None:
+    """CRITICAL 1. Both frequency statistics used to be a single 0/1 indicator over the
+    whole input, so every bootstrap replicate returned 0.0 or 1.0 and the percentile
+    band could only ever be [0, 1] (admits every possible ensemble value) or [0, 0] /
+    [1, 1] (fails every generator with a non-zero rate). With internal decade windowing
+    the point estimate is a real fraction and the band is a real interval."""
+    ref = _frequency_reference()
+    lost = ref.blocks["global"].stats["g1.lost_decade_frequency"]
+    era = ref.blocks["us"].stats["u1.long_inflation_era_frequency"]
+    for name, band in (("lost_decade_frequency", lost), ("long_inflation_era_frequency", era)):
+        assert 0.0 < band.point < 1.0, f"{name} point: {band}"
+        assert band.lo < band.hi, f"{name} band is degenerate: {band}"
+        assert band.lo > 0.0, f"{name} lo is not strictly inside [0, 1]: {band}"
+        assert band.hi < 1.0, f"{name} hi is not strictly inside [0, 1]: {band}"
+
+
+def test_decade_frequency_bands_are_drawn_at_the_full_sample_length() -> None:
+    """The length-matching CONSEQUENCE of the fix, made explicit rather than implied.
+
+    A decade-frequency replicate must be long enough to contain many decade windows, so
+    these two statistics are drawn at the full train+validation length while every
+    length-sensitive per-path statistic stays matched to the ensemble's own 120-month
+    path length. Both facts are recorded on the band itself, so the report says which
+    each is."""
+    ref = _frequency_reference()
+    stats = ref.blocks["global"].stats
+    assert stats["g1.lost_decade_frequency"].resample_length is None
+    assert stats["g1.acf_r_lag1"].resample_length == 120
+    assert stats["g1.variance_ratio_12m"].resample_length == 120
+
+
+def test_band_records_how_many_resamples_were_valid() -> None:
+    """RFR-19 stays deferred, but its degeneracy must be VISIBLE in the artifact: a
+    single NaN among the resamples destroys both bounds today, and without this field
+    that is indistinguishable from a statistic that is simply undefined."""
+    ref = _frequency_reference()
+    band = ref.blocks["global"].stats["g1.acf_r_lag1"]
+    assert band.n_valid_resamples == band.n_resamples
+    nan_band = ref.blocks["global"].stats["g1.ergodicity_gap"]
+    assert nan_band.n_valid_resamples == 0

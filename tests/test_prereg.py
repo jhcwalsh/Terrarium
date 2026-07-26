@@ -1428,3 +1428,32 @@ def test_default_judged_sources_pins_every_existing_metric_suite() -> None:
         f"metric suite module(s) {missing} exist on disk but are outside the sealed "
         f"judged-source set -- add them to ah.eval.prereg._METRIC_SUITE_NAMES"
     )
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 3 fix pass 1 (Important 4): a band is meaningless without the estimator
+# that produced it, so every registered statistic must carry a sealed prose definition
+# -- and the rule must be machine-checked, not remembered.
+# --------------------------------------------------------------------------- #
+
+
+def test_every_registered_statistic_has_an_estimator_definition() -> None:
+    """Both directions. A statistic missing from
+    ``prereg.ESTIMATOR_CONVENTION_KEYS`` fails (nobody said which block defines it), and
+    so does one whose named block is absent from ``pre-registration.yaml`` (the block
+    was named but never written). Task 3 originally shipped eight estimators with
+    neither, leaving the constants that change the numbers -- VARIANCE_RATIO_MIN_SUMS,
+    DRAWDOWN_MIN_EPISODES, LONG_INFLATION_MIN_RUN_MONTHS, the 120-month decade window,
+    nominal-not-real -- reconstructible only from ``reference.py``."""
+    real = prereg.load(ROOT / "pre-registration.yaml")
+    assert prereg.missing_estimator_definitions(real) == ()
+
+
+def test_estimator_convention_table_names_no_statistic_that_does_not_exist() -> None:
+    """The reverse guard: a renamed or dropped statistic must not leave a stale row
+    pointing at nothing, which would make the check above pass vacuously for it."""
+    from ah.eval.reference import CROSS_BLOCK_STATS, PANEL_STATS, SINGLE_FACTOR_STATS
+
+    registered = {*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS}
+    stale = sorted(set(prereg.ESTIMATOR_CONVENTION_KEYS) - registered)
+    assert not stale, f"ESTIMATOR_CONVENTION_KEYS names unregistered statistic(s): {stale}"

@@ -1141,3 +1141,93 @@ def test_panel_threshold_is_found_by_the_metric_name_lookup() -> None:
     assert loaded.panel_thresholds, "the real pre-registration declares a panel threshold"
     name = next(iter(loaded.panel_thresholds))
     assert battery._lookup_threshold(name, loaded) is loaded.panel_thresholds[name]
+
+
+# --------------------------------------------------------------------------- #
+# 11. WP2.2 Task 3 fix pass 1: the guards that only count if a real run trips them
+# --------------------------------------------------------------------------- #
+
+
+def test_missing_mc_error_is_rejected_through_run_battery(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """IMPORTANT 1. The three tests above call ``_require_mc_error_reported`` directly
+    with hand-passed arguments, so the ONE failure the guard exists for -- a refactor
+    that drops the call site -- was caught by nothing. This drives a real
+    ``run_battery`` with ``mc_error`` returning ``None`` and asserts the rejection."""
+    name = "_test_mc_error_guard"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean", tier="10yr", fn=lambda e: float(np.mean(e.factor("g1"))), suite=name
+            )
+        ],
+    )
+    monkeypatch.setattr(battery, "mc_error", lambda *args, **kwargs: None)
+    prereg, manifest = _write_synthetic_prereg(tmp_path, min_v=-1.0, max_v=1.0, severity="report")
+    with pytest.raises(BatteryError, match="10yr"):
+        run_battery(
+            _constant_ensemble(0.0),
+            reference=_band_reference(0.0),
+            prereg=prereg,
+            manifest=manifest,
+            seed=3,
+        )
+
+
+def test_structurally_unavailable_status_is_visible_in_json_and_markdown(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> None:
+    """A structural gap and a genuine generator failure are both bare NaN in the
+    report today, and under THE ONE NaN RULE an ``enforce`` threshold on the former
+    fails every run forever. The status marker (and any metric metadata) must reach the
+    G2 evidence artifact, not stay in a module constant."""
+    name = "_test_status_marker"
+    _clean_suite_name(monkeypatch, name)
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="g1.mean",
+                tier="10yr",
+                fn=lambda e: float("nan"),
+                suite=name,
+                status="structurally_unavailable",
+                metadata=(("regime_ruleset_version", "regime_ruleset_v1"),),
+            )
+        ],
+    )
+    prereg, manifest = _write_synthetic_prereg(tmp_path, min_v=-1.0, max_v=1.0, severity="report")
+    report = run_battery(
+        _constant_ensemble(0.0),
+        reference=_band_reference(0.0),
+        prereg=prereg,
+        manifest=manifest,
+        seed=3,
+    )
+    entry = report.to_dict()["unfiltered"]["tiers"]["10yr"][0]
+    assert entry["status"] == "structurally_unavailable"
+    assert entry["metadata"] == {"regime_ruleset_version": "regime_ruleset_v1"}
+    markdown = report.to_markdown()
+    assert "structurally_unavailable" in markdown
+    assert "regime_ruleset_version=regime_ruleset_v1" in markdown
+
+
+def test_register_suite_rejects_an_unknown_status(monkeypatch: pytest.MonkeyPatch) -> None:
+    name = "_test_bad_status"
+    _clean_suite_name(monkeypatch, name)
+    with pytest.raises(BatteryError, match="status"):
+        register_suite(
+            name,
+            [
+                MetricSpec(
+                    name="g1.mean",
+                    tier="monthly",
+                    fn=lambda e: 0.0,
+                    suite=name,
+                    status="probably_fine",
+                )
+            ],
+        )

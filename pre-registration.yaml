@@ -440,6 +440,219 @@ conventions:
     easier-to-satisfy distance. Without this, generating less was a way to pass an
     absolute-bound threshold more easily, not a way to fail it.
 
+  # --------------------------------------------------------------------------- #
+  # WP2.2 Task 3 (and its fix pass) estimator definitions. Task 2 established that
+  # every registered statistic gets a `conventions.<name>_estimator` prose block
+  # precisely so a band is reconstructible from this file alone; Task 3 shipped eight
+  # estimators with none, leaving the constants that change the numbers
+  # (VARIANCE_RATIO_MIN_SUMS, DRAWDOWN_MIN_EPISODES, LONG_INFLATION_MIN_RUN_MONTHS,
+  # the 120-month decade window, nominal-not-real) living only in reference.py.
+  # `tests/test_prereg.py::test_every_registered_statistic_has_an_estimator_definition`
+  # is the machine check that no future statistic can be registered without one.
+  # --------------------------------------------------------------------------- #
+  elementary_moment_estimators: >-
+    POPULATION (not sample-corrected) moments throughout, computed with numpy on the
+    pooled or per-path array the metric suite hands over. `mean` = sum(x)/n; `std` =
+    sqrt(sum((x - xbar)^2)/n), the n-denominator form (numpy's default ddof=0), NOT the
+    (n-1) sample standard deviation; `skew` = m3 / m2^1.5 and `excess_kurtosis` =
+    m4 / m2^2 - 3 with m_k = (1/n) * sum((x - xbar)^k) -- the population definitions, so
+    neither carries the Fisher-Pearson small-sample correction that scipy.stats applies
+    by default and the two must never be compared against a scipy-computed figure.
+    `correlation` (cross-block) is the ordinary Pearson product-moment correlation,
+    NaN when either leg has fewer than 2 observations or zero standard deviation.
+    NOTE ON ddof, stated because it is not uniform across this file: the two variances
+    inside `variance_ratio` DO use ddof=1 (see its own block); the elementary moments
+    here do not. Both are stated rather than assumed because a band computed under one
+    convention is not comparable to a value computed under the other.
+  crisis_corr_lift_estimator: >-
+    corr(a[crisis], b[crisis]) - corr(a, b), where `a` is the block-A factor, the
+    threshold is the 10th PERCENTILE of `a` over the aligned sample, and the crisis
+    subset is every co-dated observation with a <= threshold (a's worst decile by
+    value -- for a return-bearing factor, its worst-loss months). A positive lift means
+    A and B co-move more strongly in A's worst months than on average, which is the
+    crisis-co-movement failure mode this statistic exists to catch. NaN if the crisis
+    subset has fewer than 2 observations or either leg is degenerate within it.
+  variance_ratio_estimator: >-
+    Var(NON-OVERLAPPING k-month sums, ddof=1) / (k * Var(raw monthly values, ddof=1)),
+    registered at k = 12, 36, 60, 120 months. Exactly 1.0 in expectation under an iid
+    null, > 1 under positive serial correlation, < 1 under mean reversion.
+    NON-OVERLAPPING sums, and the partial tail is dropped: overlapping k-month sums are
+    the classical Lo-MacKinlay form and have smaller sampling variance, but they induce
+    a (k-1)/k share of shared observations between neighbouring sums, which is itself a
+    manufactured serial dependence -- exactly the artifact this statistic exists to
+    detect rather than to create. NO small-sample or heteroskedasticity-robust
+    correction is applied: this reports the ratio itself, a description, not a signed
+    test statistic. NaN below 10 non-overlapping sums (VARIANCE_RATIO_MIN_SUMS: a
+    variance's relative standard error is ~sqrt(2/n), ~45% at n=10 -- noisy but not
+    meaningless, unlike the fourth-moment floor of 30 above) or below 2 raw values, or
+    if the raw variance is exactly zero.
+    ENSEMBLE SIDE: sums are formed independently WITHIN each path and then pooled by
+    concatenation across paths, and the ratio is taken ONCE over the pooled arrays --
+    never a per-path ratio averaged. RFR-15's pooled-statistic length mismatch applies.
+    CONSEQUENCE AT k=120, stated because it looks like a defect otherwise: the
+    reference band needs >= 10 non-overlapping 120-month sums, i.e. >= 1200 months
+    (100 years) of history -- at or beyond what even this platform's longest series
+    provide -- so `variance_ratio_120m`'s historical band is NaN in practice. The
+    ensemble side is still computable (pooling across paths supplies the sums), so the
+    metric reports a value with no band to judge it against. WP2.3 must not seal an
+    `enforce` band on it without noticing that.
+  mean_reversion_halflife_estimator: >-
+    ln(0.5) / ln(|phi|) months, with phi the lag-1 sample autocorrelation under
+    `acf_estimator` above -- the ALREADY-REGISTERED estimator, not a second,
+    independently fitted OLS AR(1) coefficient (for an AR(1) process the population
+    lag-1 autocorrelation IS phi, so this is a correct fit rather than an
+    approximation). The MAGNITUDE |phi| drives the decay, not signed phi, so an
+    oscillating-but-decaying process (-1 < phi < 0) still gets a finite, meaningful
+    half-life instead of the log of a negative number. DECIDED BOUNDARIES: |phi| >= 1
+    returns +inf ("never reverts", meaningfully different from "uncomputable", and a
+    reader scanning for a persistence problem should see an explicit infinity, not a
+    blank cell); phi == 0 returns 0.0 (the limit of ln(0.5)/ln(m) as m -> 0); phi NaN
+    returns NaN. ENSEMBLE SIDE: fitted PER PATH and averaged -- an AR(1) half-life is a
+    property of one path's own time-ordered series, and concatenating paths first would
+    manufacture a lag-1 relationship at every path seam.
+  drawdown_episode_estimator: >-
+    An EPISODE is a maximal run of consecutive months whose running drawdown is < 0,
+    where running drawdown is wealth/cummax(wealth) - 1 with wealth = cumprod(1 + r)
+    (ah.data.derive.drawdown_state, reused not reimplemented). A month at exactly 0.0
+    (a new high) ends the episode. `depth` is the positive magnitude of the episode's
+    trough; `duration` is its length in months. An episode still open at the series'
+    final observation IS counted, ending there -- a stated property of a finite window.
+    Three separately registered scalar summaries, not a distribution object:
+    `drawdown_median_depth`, `drawdown_median_duration` (medians over the pooled
+    episode arrays) and `drawdown_depth_duration_rank_corr` (Spearman rank correlation
+    = Pearson correlation of average ranks, ties averaged; no scipy).
+    FLOOR: NaN below 10 pooled episodes (DRAWDOWN_MIN_EPISODES). Without it a generator
+    whose paths mostly never draw down contributes no episodes from those paths and is
+    scored on the minority that did -- a median from a single pooled episode was legal,
+    so generating fewer drawdowns made the median shallower instead of failing the
+    metric. 10 matches VARIANCE_RATIO_MIN_SUMS: a sample median's asymptotic standard
+    error is ~1.25*sigma/sqrt(n), ~40% of a standard deviation at n=10.
+    OVERFLOW IS NaN, NOT "NO DRAWDOWNS": if compounding overflows, wealth/cummax is
+    inf/inf = NaN and NaN < 0.0 is False, which under the episode rule reads as "at a
+    new high" -- so an overflowed path used to report ZERO episodes, the favourable
+    answer, and then vanish from the pooled concatenation. Any non-finite running
+    drawdown now yields one NaN episode, which NaNs every summary that reads it.
+    RESTRICTED to conventions.return_bearing_factors on the ensemble side: compounding
+    a LEVEL series (a rate, a spread, an index) via (1+level).cumprod() is not merely
+    uninformative, it is numerically wrong.
+    ENSEMBLE SIDE: episodes are extracted independently WITHIN each path (never
+    spanning a path boundary) and pooled by concatenation; RFR-15 applies.
+  lost_decade_frequency_estimator: >-
+    The FRACTION of the input series' own OVERLAPPING 120-month windows (stride 1
+    month) whose compounded total return, prod(1 + r) - 1, is <= 0.0. NaN if the series
+    is shorter than 120 months (a decade is the unit of the statistic; a value from a
+    shorter window is a different quantity) or if any window's compounded value is
+    non-finite -- an overflowed product is NaN, never the favourable "not a lost
+    decade" answer that inf <= 0 -> False used to give.
+    OVERLAPPING here, NON-OVERLAPPING in variance_ratio above, and the two are
+    consistent rather than contradictory: overlapping SUMS manufacture serial
+    dependence in the very variance a variance ratio measures, whereas this statistic
+    is a MEAN OF INDICATORS, for which overlap introduces no bias in the estimated
+    marginal probability and costs only effective sample size -- which is the band's
+    job to report, not the point estimate's. Calendar-aligned non-overlapping decades
+    would rest the whole statistic on ~9 windows and on an arbitrary tiling phase.
+    NOMINAL, NOT REAL (CPI-deflated). "Lost decade" is classically a real-return
+    concept; this statistic is registered in SINGLE_FACTOR_STATS, whose reference-side
+    function is applied to exactly ONE factor's own column, so no CPI series is
+    reachable from it. A deflated version needs a joint equity+CPI reference
+    computation. Recorded as governance/retrofit-register.md RFR-21 for WP2.3: seal the
+    nominal version as a stated limitation, or build the joint deflated one first.
+    NOT LENGTH-MATCHED (see estimator_length_matching for the default this departs
+    from): a 120-month replicate holds exactly ONE window, which makes every replicate
+    value 0.0 or 1.0 and the percentile band either [0, 1] (admits everything) or
+    [0, 0] / [1, 1] (fails everything). Replicates are therefore drawn at the FULL
+    train+validation length, recorded as `resample_length: null` on the band. That is
+    the correct reading of length matching rather than an exception to it: matching
+    exists because the ACF family's ESTIMATOR is biased by series length, whereas here
+    the 120-month window fixes the length scale internally and identically on both
+    sides, and the outer length changes only how many windows the frequency averages
+    over -- i.e. its own sampling error, which is exactly what the band measures.
+    CONSEQUENCE: the band is wide, reflecting history's ~9-14 effectively independent
+    decades. That is DN-1.1 Sec.II.6's "wide-band consistency, honestly reported
+    (n ~ 14)" for this tier, not a defect to be tightened away.
+    ENSEMBLE SIDE: computed per path (one window per production-length path) and
+    averaged, which IS the pooled frequency because every path is the same length.
+  long_inflation_era_frequency_estimator: >-
+    The FRACTION of the CPI LEVEL series' own overlapping 120-month windows that
+    contain a sustained high-inflation era. An ERA is a run of >= 24 consecutive months
+    (LONG_INFLATION_MIN_RUN_MONTHS -- long enough to distinguish a multi-year
+    inflationary era from a single hot print, short enough to fit inside one generated
+    decade) with year-on-year CPI inflation at or above the Step-1 regime ruleset's own
+    `cpi_high` threshold (regime_ruleset_v1: 4.0 PERCENT; ah.data.derive.yoy returns
+    percent, and the threshold is reused rather than independently re-chosen, so the
+    number is traceable to that ruleset's version). The whole run must lie inside the
+    window. NaN below 120 level months.
+    WINDOWED ON THE LEVEL, NOT ON cpi_yoy: derive.yoy consumes the first 12 months of
+    whatever it is given, so a 120-month LEVEL window holds 108 cpi_yoy months --
+    ample for a 24-month run -- whereas windowing cpi_yoy at 120 would need 132 level
+    months and make the statistic uncomputable on exactly the 120-month paths a
+    generator produces.
+    Registered for `cpi` only on the ensemble side: unlike the factor-agnostic
+    mathematical statistics, this one is inherently ABOUT inflation, and running it on
+    (say) equity_vol's level would not measure an inflation era.
+    NOT LENGTH-MATCHED, for the identical reason given under
+    lost_decade_frequency_estimator; the same wide-band consequence applies.
+  ergodicity_gap_estimator: >-
+    |mean(long_path) - mean(ensemble pooled)| / std(ensemble pooled, ddof=1): the
+    discrepancy between the TIME average of one long single realization and the
+    CROSS-SECTIONAL average of an ensemble of short paths, in units of the process's
+    own pooled dispersion. This is DN-1.1 Sec.II.6's 10yr row read literally
+    ("ergodicity (long-path vs ensemble stats)"). Under ergodicity the two averages
+    converge to the same population mean and the gap -> 0 whatever the process's
+    persistence; under genuine non-ergodicity (the ensemble mixing several long-run
+    regimes while any one realization stays inside one forever) it stays bounded away
+    from 0. FIRST MOMENTS ONLY -- a second-moment version would be a second registered
+    name and is deliberately not registered.
+    STRUCTURALLY UNAVAILABLE TODAY (governance/retrofit-register.md RFR-20):
+    ah.eval.battery.run_battery is handed one Ensemble of production-length paths and
+    no long path, and no generator exists yet to ask for one, so the metric is NaN for
+    every generator and is MARKED `status: structurally_unavailable` in the report. The
+    reference side is NaN too and always will be: history is one realization and there
+    is no historical ENSEMBLE to compare it against.
+    WHAT THIS REPLACED, recorded because it is the reason the definition changed before
+    sealing: the first version compared Var(per-path time averages) against
+    Var(pooled)/months. At the production path length that is algebraically
+    |variance_ratio_120m - 1| -- two sealed names for one number, the duplication this
+    file already refused when it dropped agg_gaussianity horizon 1 for being
+    excess_kurtosis -- and its iid-within-path null made a perfectly ergodic stationary
+    AR(1) with phi = 0.9 read as a gap of ~18, i.e. it would have failed a CORRECT
+    generator of every persistent factor (ust_10y, cpi, hy_spread).
+  regime_duration_estimator: >-
+    The mean, median and 90th percentile of the length in months of consecutive runs of
+    a single regime label, where labels come from ah.data.derive.label_regime under
+    regime_ruleset_v1 (recorded on each metric's own `metadata` in the battery report,
+    not only in code, because WP2.6 refits on these labels).
+    STRUCTURALLY UNAVAILABLE TODAY (governance/retrofit-register.md RFR-17): label_regime
+    needs five inputs (usrec, cpi_yoy, growth_yoy, drawdown, hy_oas); cpi, equity_mkt
+    and hy_spread supply three, but `usrec` (fred.USREC) and `growth_yoy` (fred.INDPRO)
+    are registered Step-1 catalog series with NO factor mapping in factors.yaml at all --
+    DN-1.1 Sec.II.2's Layer-1 climate state variables, not yet generator-visible.
+    Inventing a substitute value for the missing two would bias every classification
+    toward whatever default was chosen, so all three metrics are NaN and MARKED
+    `status: structurally_unavailable`.
+  ten_year_return_vs_valuation_estimator: >-
+    Ordinary least squares of forward 10-year return on starting valuation
+    (`cape_v` = demeaned log CAPE, ah.data.derive.demeaned_log_cape), in closed form and
+    with no scipy: slope = Sxy/Sxx, R^2 = 1 - SS_res/SS_tot, registered as two separate
+    scalars `..._slope` and `..._r2`. (NaN, NaN) below 3 paired points or when cape_v is
+    exactly constant; R^2 alone is NaN when the response is exactly constant.
+    STRUCTURALLY UNAVAILABLE TODAY (governance/retrofit-register.md RFR-18): no
+    valuation/CAPE factor exists in factors.yaml, though the raw shiller.cape series IS
+    registered in requirements.yaml. NaN and MARKED `status: structurally_unavailable`;
+    the estimator itself is built and tested against synthetic ground truth so it is
+    ready the day a valuation factor lands.
+  mc_error_is_not_the_small_n_band: >-
+    THE MONTE-CARLO ERROR AND THE REFERENCE BAND ANSWER DIFFERENT QUESTIONS, and only
+    one of them is DN-1.1's n ~ 14. `ah.eval.battery.mc_error` is the batch-means
+    standard error of a metric over the GENERATED ensemble's own paths: with 1000
+    generated decades it is small by construction and says only "this generator's own
+    sampling noise is small". It says nothing whatever about how uncertain HISTORY's
+    value of the same statistic is, which -- at ~9-14 effectively independent historical
+    decades for a 10yr-tier metric -- is the dominant uncertainty and the one DN-1.1
+    Sec.II.6 means by "honestly reported (n ~ 14)". That uncertainty lives in the
+    reference band, and `_require_mc_error_reported` (which enforces "bands or it didn't
+    happen" for the 10yr tier) must not be read as having supplied it.
+
   loss_sign: >-
     VaR and ES are reported as POSITIVE MAGNITUDES OF LOSS. Loss is the negative of
     return; VaR at level p is the p-quantile of the pooled loss distribution; ES at

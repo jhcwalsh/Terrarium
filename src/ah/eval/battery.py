@@ -92,6 +92,11 @@ BATTERY_VERSION = "eval-battery-0.1"
 # MetricSpec naming any other string is rejected by register_suite().
 TIERS: tuple[str, ...] = ("monthly", "1_5yr", "10yr", "economic", "severe")
 
+# A metric that cannot be computed on ANY ensemble, because the input it needs does not
+# exist anywhere in the platform yet -- see MetricSpec.status.
+STRUCTURALLY_UNAVAILABLE = "structurally_unavailable"
+METRIC_STATUSES: tuple[str, ...] = ("ok", STRUCTURALLY_UNAVAILABLE)
+
 # How many disjoint subsamples mc_error() draws per metric by default. Bounded by the
 # ensemble's own path count (see _n_subsamples_for) so a small test ensemble never
 # trips mc_error's "fewer paths than subsamples" guard.
@@ -115,12 +120,31 @@ class MetricSpec:
     metric, ``"<factorA>~<factorB>.<stat>"`` for a cross-block metric. A metric with no
     matching band/threshold is still computed and reported (severity ``"report"``,
     ``passed=None``) -- not every useful metric needs a sealed band.
+
+    ``status`` says whether this metric can be computed at all on ANY ensemble
+    (:data:`METRIC_STATUSES`). :data:`STRUCTURALLY_UNAVAILABLE` means the input it needs
+    does not exist anywhere in the platform yet -- a missing factor mapping in
+    ``factors.yaml``, or a generator capability nothing implements -- so the metric is
+    NaN for every generator, always, until that changes. Without the marker such a
+    metric is byte-identical in the report to a genuine generator failure, and under THE
+    ONE NaN RULE (:func:`_passed`) an ``enforce`` threshold sealed on it would fail
+    every run forever with no way for a reader of the artifact to know why. It is
+    deliberately not a severity: severity is what a *threshold* asks of a value, this is
+    what the *platform* can supply.
+
+    ``metadata`` is ordered ``(key, value)`` string pairs carried through to the report
+    (a tuple, not a dict, because :class:`MetricSpec` is frozen and must stay hashable).
+    It exists for facts a threshold reader needs and cannot recompute -- the regime
+    ruleset version a ``regime_duration_*`` label set would be built under, or the
+    retrofit-register row explaining an unavailable metric.
     """
 
     name: str
     tier: str
     fn: MetricFn
     suite: str
+    status: str = "ok"
+    metadata: tuple[tuple[str, str], ...] = ()
 
 
 @dataclass(frozen=True)
@@ -135,6 +159,8 @@ class MetricResult:
     band: StatBand | None
     severity: str
     passed: bool | None
+    status: str = "ok"
+    metadata: tuple[tuple[str, str], ...] = ()
 
 
 # suite name -> its registered MetricSpecs, in registration order. Tasks 2-6 populate
@@ -181,6 +207,11 @@ def register_suite(suite: str, specs: Iterable[MetricSpec]) -> None:
         if spec.tier not in TIERS:
             raise BatteryError(
                 f"register_suite: spec '{spec.name}' has unknown tier {spec.tier!r}; known: {TIERS}"
+            )
+        if spec.status not in METRIC_STATUSES:
+            raise BatteryError(
+                f"register_suite: spec '{spec.name}' has unknown status {spec.status!r}; "
+                f"known: {METRIC_STATUSES}"
             )
         if spec.name in seen_names:
             raise BatteryError(
@@ -388,6 +419,8 @@ def _run_suites(
                     band=band,
                     severity=severity,
                     passed=passed,
+                    status=spec.status,
+                    metadata=spec.metadata,
                 )
             )
     return tuple(results)
@@ -423,9 +456,16 @@ def _result_dict(r: MetricResult) -> dict[str, Any]:
             # this field a length-matched band's point-outside-[lo,hi] outcome is
             # indistinguishable from an unexplained failure.
             "resample_length": r.band.resample_length,
+            # RFR-19: `block_bootstrap_band` uses a NaN-propagating percentile, so a
+            # NaN band can mean "a few replicates were undefined" rather than "this
+            # statistic is uncomputable". The count is what tells the two apart in the
+            # sealed artifact -- see StatBand.n_valid_resamples.
+            "n_valid_resamples": r.band.n_valid_resamples,
         },
         "severity": r.severity,
         "passed": r.passed,
+        "status": r.status,
+        "metadata": dict(r.metadata),
     }
 
 
@@ -567,9 +607,9 @@ class BatteryReport:
                 lines.append("")
                 lines.append(
                     "| metric | suite | value | mc_error | band lo | band hi | "
-                    "resample_length | severity | passed |"
+                    "resample_length | severity | passed | status | notes |"
                 )
-                lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+                lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
                 for r in grouped[tier]:
                     lo = "" if r.band is None else f"{r.band.lo:.6g}"
                     hi = "" if r.band is None else f"{r.band.hi:.6g}"
@@ -587,9 +627,14 @@ class BatteryReport:
                         )
                     )
                     passed_str = "-" if r.passed is None else ("PASS" if r.passed else "FAIL")
+                    # ASCII only (Windows console is cp1252) and one cell, so a NaN
+                    # that is a platform gap reads differently from a NaN that is a
+                    # generator failure without the reader consulting the source.
+                    notes = "; ".join(f"{k}={v}" for k, v in r.metadata)
                     lines.append(
                         f"| {r.name} | {r.suite} | {r.value:.6g} | {mc} | {lo} | {hi} | "
-                        f"{resample_length} | {r.severity} | {passed_str} |"
+                        f"{resample_length} | {r.severity} | {passed_str} | {r.status} | "
+                        f"{notes} |"
                     )
                 lines.append("")
 

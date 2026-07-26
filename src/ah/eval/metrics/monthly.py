@@ -164,6 +164,7 @@ from dataclasses import dataclass
 import numpy as np
 
 from ah.eval.battery import MetricFn, MetricSpec, register_suite
+from ah.eval.metrics._pooling import mean_over_paths, pooled
 from ah.eval.reference import (
     ACF_ABS_MAX_LAG,
     ACF_R_MAX_LAG,
@@ -247,25 +248,12 @@ __all__ = [
 # --------------------------------------------------------------------------- #
 
 
-def _pooled(ensemble: Ensemble, factor: str) -> np.ndarray:
-    """Every ``(path, month)`` observation of ``factor``, flattened to float64 1-D."""
-    return ensemble.factor(factor).reshape(-1).astype(np.float64)
-
-
-def _mean_over_paths(fn: Callable[[np.ndarray], float], ensemble: Ensemble, factor: str) -> float:
-    """Apply a 1-D time-series statistic to each path's own month-series, then average.
-
-    NaN per-path results are dropped, not treated as 0 (a degenerate constant path
-    genuinely has no ACF to report, and averaging it in as 0 would understate the
-    dispersion of paths that *do* have one). If every path is degenerate the mean of
-    an empty array is NaN -- the correct "uncomputable" signal.
-    """
-    slab = ensemble.factor(factor).astype(np.float64)
-    per_path = np.array([fn(slab[i]) for i in range(slab.shape[0])], dtype=np.float64)
-    per_path = per_path[~np.isnan(per_path)]
-    if per_path.size == 0:
-        return float("nan")
-    return float(np.mean(per_path))
+# Both conventions are defined once, in ``ah.eval.metrics._pooling``, and aliased here
+# under this module's historical private names. They used to be a verbatim copy in each
+# suite; two suites pooling under one sealed convention must not be able to diverge
+# silently (WP2.2 Task 3 fix pass 1, Minor 1).
+_pooled = pooled
+_mean_over_paths = mean_over_paths
 
 
 # --------------------------------------------------------------------------- #

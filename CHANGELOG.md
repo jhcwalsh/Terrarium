@@ -87,6 +87,55 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 2 (generator layer)
 
 ### Fixed
+- **WP2.2 Task 3 review fix pass 1 — two sealable bands that could not do their job.**
+  - *The two decade-frequency statistics had a Bernoulli band, i.e. no band at all.*
+    `lost_decade_frequency` and `long_inflation_era_frequency` were a single 0.0/1.0
+    indicator over the whole input, so every bootstrap replicate returned 0 or 1 and the
+    percentile band could only be `[0, 1]` (admits every possible value) or
+    `[0,0]`/`[1,1]` (fails every generator with a non-zero rate) — and the historical
+    frequency, the *mean* of that resample distribution, was never formed anywhere
+    (`block_bootstrap_band` takes percentiles, not a mean). Both are now genuine
+    frequencies: the fraction of the input's own **overlapping 120-month windows**
+    satisfying the property. Stated consequence: a 120-month replicate holds exactly one
+    window, so both are registered `length_matched=False` (`RegisteredStat`) and their
+    replicates are drawn at the **full train+validation length**, recorded as
+    `resample_length: null` on the band — the correct reading of
+    `conventions.estimator_length_matching` (which exists because the ACF estimator is
+    length-biased) rather than an exception to it. The band is consequently wide,
+    reflecting history's ~9-14 independent decades, which is DN-1.1 §II.6's "honestly
+    reported (n≈14)" for this tier. Non-degeneracy (`0 < lo < hi < 1`) is now asserted on
+    a century-long `compute_reference` run.
+  - *`ergodicity_gap` was algebraically `|variance_ratio_120m − 1|`.* At production path
+    length the pooled variance ratio at k=months yields one sum per path, making the old
+    gap the same number under a second sealed name — the duplication this file already
+    refused when it dropped `agg_gaussianity` horizon 1 for being `excess_kurtosis`. Its
+    `Var(pooled)/months` null was also iid-within-path, under which a *correct* generator
+    of a persistent factor (φ=0.9 AR(1) → ≈18) read as catastrophically non-ergodic.
+    Redefined as DN-1.1's actual metric — long-path time average vs ensemble
+    cross-sectional average, in units of pooled dispersion, with no iid null in it — and
+    marked `structurally_unavailable` because `run_battery` is handed no long path
+    (RFR-20). The estimator is built and tested against ergodic, persistent-ergodic and
+    genuinely non-ergodic processes, ready to wire.
+  - *Drawdown metrics could be gamed by generating less, twice over.* Added
+    `DRAWDOWN_MIN_EPISODES = 10` (shared by the reference and ensemble sides), and an
+    overflowed path — `wealth/cummax = inf/inf = nan`, and `nan < 0.0` is `False`, so it
+    was silently recorded as having **no drawdowns**, the favourable answer, then dropped
+    from the pooled concatenation — now NaNs the metric. Same fix for
+    `lost_decade_frequency`'s overflowing product.
+  - *Guards and markers.* The 10yr MC-error guard is now exercised **through**
+    `run_battery` (no code path could trigger it before); `MetricSpec` gains `status`
+    (`structurally_unavailable`) and `metadata`, both surfaced in `to_dict()` and the
+    markdown, so a platform gap is distinguishable from a generator failure and
+    `REGIME_RULESET_VERSION` finally reaches the report; `StatBand` gains
+    `n_valid_resamples`, making RFR-19's NaN-band degeneracy visible in the artifact.
+  - *Governance.* Ten new `conventions.<stat>_estimator` blocks in
+    `pre-registration.yaml` (plus `elementary_moment_estimators`,
+    `crisis_corr_lift_estimator` and `mc_error_is_not_the_small_n_band`), with
+    `prereg.ESTIMATOR_CONVENTION_KEYS` + a two-way machine check so no statistic can be
+    registered without a sealed definition; the two ensemble pooling conventions moved to
+    `ah/eval/metrics/_pooling.py` (and added to the sealed judged-source set); RFR-20
+    (ergodicity), RFR-21 (the nominal-not-real lost-decade row `reference.py` claimed
+    existed but did not), RFR-22 (§WP1.9 considered and inapplicable to RFR-17/18).
 - **WP2.2 Task 1 review fix pass — the mapping is now actually read, the policy rate is
   a policy rate, and there is one numeraire.**
   - *The mapping was not wired in.* `compute_reference` took a `series_id_for` callable

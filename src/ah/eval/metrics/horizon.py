@@ -37,10 +37,10 @@ for the single-indicator-per-series statistics below -- exactly ``months``). Eve
 metric in this suite is one of the following, stated explicitly rather than left for
 WP2.3 to discover:
 
-- **Per-path, averaged** (:func:`_mean_over_paths`, this module's own copy of
-  ``monthly.py``'s helper of the same name and contract -- not imported cross-module,
-  by the same self-containment convention every metrics suite in this package follows):
-  ``mean_reversion_halflife``. An AR(1) half-life is a property of ONE path's own
+- **Per-path, averaged** (:func:`ah.eval.metrics._pooling.mean_over_paths`, the single
+  shared definition both this suite and ``monthly.py`` now call -- they used to hold
+  character-identical private copies, which is two implementations of one sealed
+  convention): ``mean_reversion_halflife``. An AR(1) half-life is a property of ONE path's own
   time-ordered series; concatenating paths before fitting it would manufacture a
   spurious lag-1 relationship at every path seam, exactly as ``monthly.py``'s ACF
   statistics warn against.
@@ -58,31 +58,51 @@ WP2.3 to discover:
   value draws on ``n_paths`` times as much -- the two sides are not sample-size-matched,
   and (for variance and the rank correlation) not bias-matched either. Stated here, not
   discovered at seal time.
-- **A single 0.0/1.0 indicator, per path, then pooled by averaging** (mechanically
-  identical to a per-path mean since each path contributes exactly one Bernoulli-style
-  observation -- :func:`_pooled_indicator_over_paths`): ``lost_decade_frequency``,
-  ``long_inflation_era_frequency``. Governance/retrofit-register.md RFR-15's residual
-  applies identically: the reference band comes from ``block_bootstrap_band`` resamples
-  of length ``ensemble.months`` (one decade each), so the band IS already at the
-  correct "one decade per draw" granularity -- unlike the concatenation-pooled
-  statistics above, these two are not sample-size-mismatched against their own
-  reference band, only against the RFR-15 "which bias does the resample carry" concern
-  in the general case of a very different ``block_length``.
-- **No historical analog at all, so no per-path/pooled distinction applies**:
-  ``ergodicity_gap`` (needs the WHOLE ``(n_paths, months)`` slab at once -- there is no
-  "per path" or "pooled" version of a statistic that is itself a comparison BETWEEN a
-  per-path summary and a pooled one) and ``regime_duration_{mean,p50,p90}`` /
-  ``ten_year_return_vs_valuation_{slope,r2}`` (structural gaps -- see below -- always
-  NaN, so the per-path/pooled question does not arise on any ensemble that exists
-  today).
+- **A decade-window frequency, computed per path and averaged**
+  (:func:`_pooled_window_frequency_over_paths`): ``lost_decade_frequency``,
+  ``long_inflation_era_frequency``. Each estimator is the fraction of ITS INPUT'S OWN
+  overlapping 120-month windows satisfying a property (see
+  :func:`ah.eval.reference.lost_decade_frequency`), so a production 120-month path
+  carries exactly one window and the per-path average IS the pooled frequency over
+  paths; at a longer path length each path contributes equally many windows and the
+  identity still holds.
 
-Two structural gaps, made NaN rather than faked
---------------------------------------------------
-Two DN-1.1-listed metrics need an input that has no factor mapping anywhere in
-``factors.yaml`` today -- not "absent from this particular ensemble" (the routine,
-per-ensemble case ``ah.gen.base.UnknownFactorError`` exists for), but absent from the
-platform's declared factor namespace ENTIRELY, for every generator, always, until
-``factors.yaml`` is amended:
+  **What an earlier version of this paragraph claimed, and why it was wrong** (WP2.2
+  Task 3 fix pass 1, Critical 1): it said these two "are not sample-size-mismatched
+  against their own reference band", on the grounds that a resample of length
+  ``ensemble.months`` is one decade and the estimator was one indicator per decade. Both
+  halves were false. The estimator was a single 0.0/1.0 indicator over the whole input
+  with no internal windowing, and ``block_bootstrap_band`` takes PERCENTILES of the
+  replicate values rather than their mean -- so the historical frequency was never
+  formed anywhere and the band was the 5th/95th percentile of a Bernoulli variable:
+  ``[0, 1]`` or ``[0, 0]``/``[1, 1]``. Both estimators now window internally, and both
+  are registered ``length_matched=False`` so their replicates are drawn at the full
+  train+validation length -- stated in the sealed definition, since it is a deliberate
+  and necessary departure from ``conventions.estimator_length_matching``'s default.
+- **No ensemble-side convention applies at all, because the input does not exist**:
+  ``ergodicity_gap``. DN-1.1 Sec.II.6 defines it as a LONG-PATH-vs-ENSEMBLE comparison,
+  and :func:`ah.eval.battery.run_battery` is handed one ``Ensemble`` of
+  production-length paths and no long path. See "Three structural gaps" below.
+- **Structural gaps, always NaN**: ``regime_duration_{mean,p50,p90}`` /
+  ``ten_year_return_vs_valuation_{slope,r2}`` (see below), so the per-path/pooled
+  question does not arise on any ensemble that exists today.
+
+Three structural gaps, made NaN, MARKED, rather than faked
+-------------------------------------------------------------
+Three DN-1.1-listed metric groups need an input that does not exist anywhere in the
+platform today -- not "absent from this particular ensemble" (the routine, per-ensemble
+case ``ah.gen.base.UnknownFactorError`` exists for), but absent for every generator,
+always, until the manifest or the generator layer is extended.
+
+**They are marked, not merely NaN** (WP2.2 Task 3 fix pass 1). ``MetricSpec.status`` is
+``"structurally_unavailable"`` on every one of them, and :meth:`
+ah.eval.battery.BatteryReport.to_dict` and the markdown both carry it. A bare NaN is
+byte-identical in the report to a genuine generator failure, and under THE ONE NaN RULE
+an ``enforce`` threshold on one of these names would fail **every run forever** -- so a
+WP2.3 reader must be able to tell the two apart from the artifact alone, without
+reading this docstring.
+
+The two whose missing input is a FACTOR MAPPING in ``factors.yaml``:
 
 - ``regime_duration_{mean,p50,p90}``: the Step-1 regime ruleset
   (:func:`ah.data.derive.label_regime`) classifies a month from FIVE inputs --
@@ -107,10 +127,26 @@ platform's declared factor namespace ENTIRELY, for every generator, always, unti
   ``factors.yaml`` maps to it -- the same Layer-1-climate-state gap as above, for the
   valuation state ``v_t`` this time.
 
-Both are recorded in ``governance/retrofit-register.md`` (RFR-17, RFR-18) as the
-commodities/UK-block gaps are (RFR-1/RFR-3): a stated, dated limitation, not a silent
-one, with an owner (WP2.3, or whichever WP first adds the missing factor(s)) and a
-consequence (every threshold sealed under these four names is sealed against a metric
+The third, whose missing input is a GENERATOR CAPABILITY rather than a factor:
+
+- ``ergodicity_gap``: DN-1.1 Sec.II.6's 10yr row defines it as "ergodicity (**long-path
+  vs ensemble** stats)" -- the time average of one long single realization against the
+  cross-sectional average of an ensemble (:func:`ah.eval.reference.ergodicity_gap`
+  implements exactly that, and is tested against both an ergodic and a genuinely
+  non-ergodic process). :func:`ah.eval.battery.run_battery` receives one
+  :class:`~ah.gen.base.Ensemble` of production-length paths and no long path, so there
+  is nothing to put in the first argument, and no generator exists yet to ask for one.
+  The previous implementation avoided that by taking both sides from the same 120-month
+  ensemble -- which made it algebraically ``|variance_ratio_120m - 1|`` at production
+  path length (two sealed names, one number, the duplication this file already refused
+  for ``agg_gaussianity`` horizon 1) and rested it on an iid-within-path null under
+  which a *correct* generator of any persistent factor reads as catastrophically
+  non-ergodic. Recorded as ``governance/retrofit-register.md`` RFR-20.
+
+All three are recorded in ``governance/retrofit-register.md`` (RFR-17, RFR-18, RFR-20)
+as the commodities/UK-block gaps are (RFR-1/RFR-3): a stated, dated limitation, not a
+silent one, with an owner (WP2.3, or whichever WP first supplies the missing input) and
+a consequence (every threshold sealed under these six names is sealed against a metric
 that cannot yet fail OR pass meaningfully -- see :func:`ah.eval.battery._passed`, NaN
 already fails an ``enforce`` bound).
 
@@ -132,7 +168,8 @@ from collections.abc import Callable
 import numpy as np
 
 from ah.data import derive
-from ah.eval.battery import MetricFn, MetricSpec, register_suite
+from ah.eval.battery import STRUCTURALLY_UNAVAILABLE, MetricFn, MetricSpec, register_suite
+from ah.eval.metrics._pooling import mean_over_paths
 from ah.eval.reference import (
     VARIANCE_RATIO_HORIZONS,
     ReferenceStats,
@@ -141,7 +178,10 @@ from ah.eval.reference import (
     drawdown_episodes as reference_drawdown_episodes,
 )
 from ah.eval.reference import (
-    ergodicity_gap as reference_ergodicity_gap,
+    drawdown_median as reference_drawdown_median,
+)
+from ah.eval.reference import (
+    drawdown_rank_corr as reference_drawdown_rank_corr,
 )
 from ah.eval.reference import (
     long_inflation_era_frequency as reference_long_inflation_era_frequency,
@@ -154,9 +194,6 @@ from ah.eval.reference import (
 )
 from ah.eval.reference import (
     nonoverlapping_sums as reference_nonoverlapping_sums,
-)
-from ah.eval.reference import (
-    spearman_rank_correlation as reference_spearman_rank_correlation,
 )
 from ah.eval.reference import (
     variance_ratio_from_arrays as reference_variance_ratio_from_arrays,
@@ -192,33 +229,26 @@ __all__ = [
 # --------------------------------------------------------------------------- #
 
 
-def _mean_over_paths(fn: Callable[[np.ndarray], float], ensemble: Ensemble, factor: str) -> float:
-    """Apply a per-path time-series statistic to each path's own month-series, then
-    average. Self-contained copy of ``ah.eval.metrics.monthly``'s helper of the same
-    name and contract (see the module docstring for why this is not a cross-module
-    import): NaN per-path results are dropped, not treated as 0; NaN overall if every
-    path is degenerate.
-    """
-    slab = ensemble.factor(factor).astype(np.float64)
-    per_path = np.array([fn(slab[i]) for i in range(slab.shape[0])], dtype=np.float64)
-    per_path = per_path[~np.isnan(per_path)]
-    if per_path.size == 0:
-        return float("nan")
-    return float(np.mean(per_path))
+# The one shared definition, aliased under this module's own name so a reader of a
+# metric below can see which convention it uses without leaving the file. This IS
+# ``monthly.py``'s helper -- the same function object, not a second copy.
+_mean_over_paths = mean_over_paths
 
 
-def _pooled_indicator_over_paths(
+def _pooled_window_frequency_over_paths(
     fn: Callable[[np.ndarray], float], ensemble: Ensemble, factor: str
 ) -> float:
-    """Apply a single 0.0/1.0-or-NaN indicator to each path independently, then
-    average the per-path outcomes.
+    """Apply a decade-window frequency estimator to each path independently, then
+    average the per-path frequencies.
 
-    Each path contributes exactly one Bernoulli-style observation, so averaging
-    per-path outcomes IS the pooled frequency -- not merely an approximation to it (see
-    the module docstring's "Per-path vs pooled"). NaN per-path outcomes (e.g. a path
-    too short for the underlying derived series -- ``_cpi_yoy_from_level`` needs 13+
-    months) are dropped, not averaged in as 0, matching :func:`_mean_over_paths`'s
-    same convention.
+    Every path is the same length, so each contributes the same number of 120-month
+    windows and the average of per-path frequencies IS the pooled frequency over all
+    windows -- not merely an approximation to it (see the module docstring's "Per-path
+    vs pooled"). At the production path length that number of windows is exactly one
+    per path. NaN per-path outcomes (a path shorter than one decade, so it carries no
+    window at all) are dropped, not averaged in as 0, matching
+    :func:`ah.eval.metrics._pooling.mean_over_paths`'s convention -- so a generator
+    emitting paths shorter than a decade reports NaN here rather than a frequency of 0.
     """
     return _mean_over_paths(fn, ensemble, factor)
 
@@ -260,8 +290,15 @@ def _pooled_drawdown_episodes(ensemble: Ensemble, factor: str) -> tuple[np.ndarr
 # --------------------------------------------------------------------------- #
 
 
-def _spec(name: str, tier: str, fn: MetricFn) -> MetricSpec:
-    return MetricSpec(name=name, tier=tier, fn=fn, suite=SUITE)
+def _spec(
+    name: str,
+    tier: str,
+    fn: MetricFn,
+    *,
+    status: str = "ok",
+    metadata: tuple[tuple[str, str], ...] = (),
+) -> MetricSpec:
+    return MetricSpec(name=name, tier=tier, fn=fn, suite=SUITE, status=status, metadata=metadata)
 
 
 def _variance_ratio_metric(factor: str, k: int) -> MetricFn:
@@ -287,9 +324,7 @@ def _drawdown_median_depth_metric(factor: str) -> MetricFn:
         if factor not in ensemble.factor_names:
             return float("nan")
         depths, _ = _pooled_drawdown_episodes(ensemble, factor)
-        if depths.size == 0:
-            return float("nan")
-        return float(np.median(depths))
+        return reference_drawdown_median(depths)
 
     return fn
 
@@ -299,9 +334,7 @@ def _drawdown_median_duration_metric(factor: str) -> MetricFn:
         if factor not in ensemble.factor_names:
             return float("nan")
         _, durations = _pooled_drawdown_episodes(ensemble, factor)
-        if durations.size == 0:
-            return float("nan")
-        return float(np.median(durations))
+        return reference_drawdown_median(durations)
 
     return fn
 
@@ -311,9 +344,7 @@ def _drawdown_rank_corr_metric(factor: str) -> MetricFn:
         if factor not in ensemble.factor_names:
             return float("nan")
         depths, durations = _pooled_drawdown_episodes(ensemble, factor)
-        if depths.size < 2:
-            return float("nan")
-        return reference_spearman_rank_correlation(depths, durations)
+        return reference_drawdown_rank_corr(depths, durations)
 
     return fn
 
@@ -322,7 +353,9 @@ def _lost_decade_frequency_metric(factor: str) -> MetricFn:
     def fn(ensemble: Ensemble) -> float:
         if factor not in ensemble.factor_names:
             return float("nan")
-        return _pooled_indicator_over_paths(reference_lost_decade_frequency, ensemble, factor)
+        return _pooled_window_frequency_over_paths(
+            reference_lost_decade_frequency, ensemble, factor
+        )
 
     return fn
 
@@ -331,24 +364,21 @@ def _long_inflation_era_frequency_metric(factor: str) -> MetricFn:
     def fn(ensemble: Ensemble) -> float:
         if factor not in ensemble.factor_names:
             return float("nan")
-        return _pooled_indicator_over_paths(
+        return _pooled_window_frequency_over_paths(
             reference_long_inflation_era_frequency, ensemble, factor
         )
 
     return fn
 
 
-def _ergodicity_gap_metric(factor: str) -> MetricFn:
-    def fn(ensemble: Ensemble) -> float:
-        if factor not in ensemble.factor_names:
-            return float("nan")
-        return reference_ergodicity_gap(ensemble.factor(factor).astype(np.float64))
-
-    return fn
-
-
 def _structural_gap_metric() -> MetricFn:
-    """Always NaN -- see the module docstring's "Two structural gaps"."""
+    """Always NaN -- see the module docstring's "Three structural gaps".
+
+    Deliberately ignores its ensemble: the missing input is missing for every
+    ensemble, so reading one would only make the NaN look conditional. Every spec
+    built on this carries ``status=STRUCTURALLY_UNAVAILABLE`` so the report says which
+    kind of NaN it is.
+    """
 
     def fn(ensemble: Ensemble) -> float:
         del ensemble
@@ -397,7 +427,17 @@ def build_horizon_suite(
                 _mean_reversion_halflife_metric(factor),
             )
         )
-        specs.append(_spec(f"{factor}.ergodicity_gap", TIER_10YR, _ergodicity_gap_metric(factor)))
+        # Structural gap, not a computable metric (see the module docstring's third
+        # bullet): DN-1.1's definition needs a LONG PATH the battery is never handed.
+        specs.append(
+            _spec(
+                f"{factor}.ergodicity_gap",
+                TIER_10YR,
+                _structural_gap_metric(),
+                status=STRUCTURALLY_UNAVAILABLE,
+                metadata=(("requires", "single long path (RFR-20)"),),
+            )
+        )
 
     # Drawdown and lost-decade need a compoundable RETURN series (see
     # reference.py's drawdown_episodes/lost_decade_frequency docstrings) -- restricted
@@ -448,12 +488,33 @@ def build_horizon_suite(
             )
         )
 
-    # Structural gaps (see module docstring): always NaN on any ensemble today.
-    specs.append(_spec("regime_duration_mean", TIER_1_5YR, _structural_gap_metric()))
-    specs.append(_spec("regime_duration_p50", TIER_1_5YR, _structural_gap_metric()))
-    specs.append(_spec("regime_duration_p90", TIER_1_5YR, _structural_gap_metric()))
-    specs.append(_spec("ten_year_return_vs_valuation_slope", TIER_10YR, _structural_gap_metric()))
-    specs.append(_spec("ten_year_return_vs_valuation_r2", TIER_10YR, _structural_gap_metric()))
+    # Structural gaps (see module docstring): always NaN on any ensemble today, and
+    # MARKED as such so a NaN here is distinguishable in the report from a generator
+    # that simply failed to produce a number. The regime metrics also carry the ruleset
+    # version they would be evaluated under once the gap closes -- WP2.6 refits on
+    # these labels and the plan requires that version be traceable, which a module
+    # constant nothing reads is not.
+    regime_metadata = (("regime_ruleset_version", REGIME_RULESET_VERSION), ("gap", "RFR-17"))
+    for name in ("regime_duration_mean", "regime_duration_p50", "regime_duration_p90"):
+        specs.append(
+            _spec(
+                name,
+                TIER_1_5YR,
+                _structural_gap_metric(),
+                status=STRUCTURALLY_UNAVAILABLE,
+                metadata=regime_metadata,
+            )
+        )
+    for name in ("ten_year_return_vs_valuation_slope", "ten_year_return_vs_valuation_r2"):
+        specs.append(
+            _spec(
+                name,
+                TIER_10YR,
+                _structural_gap_metric(),
+                status=STRUCTURALLY_UNAVAILABLE,
+                metadata=(("gap", "RFR-18"),),
+            )
+        )
 
     return tuple(specs)
 
