@@ -1340,7 +1340,17 @@ conventions:
     error_inflation is the POOLED MEAN of this per-path array across every path of
     every checked-in fixtures/worlds/conditional/*.json world tagged
     extensions.x_condition_type="inflation"; condition_adherence_error_p90_inflation
-    is the pooled 90th percentile of the identical array. Lower is better without a
+    is the pooled 90th percentile of the identical array. THOSE AUTHORED WORLDS ARE
+    INSIDE THIS SEAL (ah.eval.prereg._REQUIRED_JUDGED_FIXTURE_GLOBS): they are sealed
+    INPUT DATA in exactly the sense factors.yaml is, because this definition is stated
+    over them by name -- editing one world's average_pct changes this statistic's value,
+    so it is a lock violation requiring a dated amendment, not a fixture edit. MONTE-
+    CARLO ERROR for every statistic in this suite is measured across REGENERATION SEEDS
+    (ah.eval.metrics.conditional.conditional_mc_error: std, ddof=1, over
+    CONDITIONAL_MC_ERROR_REPLICATES=8 further regenerations at
+    meta.seed + 79190000*(r+1)), not across subsamples of the judged ensemble's paths --
+    which no metric here reads, and which would therefore report a misleading 0.0.
+    Lower is better without a
     two-sided floor (unlike policy_anchor_deviation_estimator): the WorldSpec
     EXPLICITLY asked for this exact number, so an exact hit is the correct answer, not
     a degenerate one. NaN (poisoning the WHOLE pooled metric, not dropping silently)
@@ -1393,7 +1403,8 @@ conventions:
     ReferenceStats.historical_series, train+validation only, never a fresh catalog
     read), distance(v) = abs(v - mean(X)) / std(X), an ordinary z-score. Four swept
     levels, each a STATED z-score constructing the actual target as mean(X) +
-    z*std(X), clipped to the WorldSpec schema's own valid range for that field:
+    z*std(X), clipped to the WorldSpec schema's own valid range for that field (READ
+    from schemas/worldspec-v1.0.schema.json at run time, never restated in code):
     typical (z=0.0, the historical mean itself), p95/p99 (the standard-normal
     95th/99th-percentile z-scores 1.6448536269514722 / 2.3263478740408408 -- a
     Gaussian PROXY for "that far from the mean", not history's own empirical
@@ -1409,8 +1420,11 @@ conventions:
     conditional.py's module docstring. Same NaN/poisoning rules as the four
     condition_adherence_*_estimator blocks above (unresolvable generator, absent
     factor, fewer than 20 pooled observations); additionally NaN if reference.
-    historical_series lacks cpi/policy_rate train+validation data to compute a support
-    mean/std from at all.
+    historical_series lacks a usable support mean/std for EITHER swept type. That
+    all-or-nothing rule is load-bearing: "across BOTH swept types" is this statistic's
+    identity, so a vintage carrying policy_rate history but no cpi history must NaN
+    rather than silently report the rate arm alone -- a different, smaller number under
+    a name that says it means something else.
 
 # --------------------------------------------------------------------------- #
 # Derived series -- declared BEFORE d4_strategies, because strategies reference them.
@@ -1804,7 +1818,14 @@ thresholds:
     "off_support_pass_rate_at_typical": {min: 0.5, max: null, severity: report}
     "off_support_pass_rate_at_p95": {min: 0.3, max: null, severity: report}
     "off_support_pass_rate_at_p99": {min: 0.1, max: null, severity: report}
-    "off_support_pass_rate_at_beyond": {min: 0.0, max: null, severity: report}
+    # min: 0.05, not 0.0. A pass RATE is bounded in [0, 1], so `min: 0.0` judges
+    # nothing at all -- it is a threshold that can never be violated, which is worse
+    # than no threshold (it reads in the artifact as a check that passed). 0.05 is the
+    # smallest non-vacuous floor consistent with the descending provisional ladder
+    # above: at z=4.0 we still provisionally expect at least 1 path in 20 to land
+    # within OFF_SUPPORT_PASS_TOLERANCE_PCT of the swept target. Provisional, `report`,
+    # and replaced by WP2.3's real band like every other value in this block.
+    "off_support_pass_rate_at_beyond": {min: 0.05, max: null, severity: report}
   # WP2.2 Task 4 -- thresholds.strategies, key "<strategy_id>.<stat>", stat in
   # ah.eval.reference.STRATEGY_STATS (see that module and ah.eval.prereg
   # ._check_strategy_threshold_key). PROVISIONAL placeholders, same as every other

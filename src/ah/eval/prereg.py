@@ -42,6 +42,18 @@ pass/fail verdict on their own. **The invariant governs**, so
 - *acceptance thresholds and the factor namespace they are keyed to*: the
   pre-registration YAML and the ``factors.yaml`` it names (added by :func:`seal`), plus
   ``ah/factors.py``, which decides which blocks and factors are active at all;
+- *sealed input data an estimator is defined over*: ``fixtures/worlds/conditional/*.json``
+  (:data:`_REQUIRED_JUDGED_FIXTURE_GLOBS`). These are not fixtures in the disposable
+  sense. ``conventions.condition_adherence_*_estimator`` defines each of its statistics as
+  "pooled across every checked-in ``fixtures/worlds/conditional/*.json`` world tagged X",
+  so editing one world's ``factor_conditions.inflation.average_pct`` from 12.0 to 3.0
+  changes every inflation metric's value -- and, before these files joined the seal, did
+  so with no lock violation and no amendment, leaving the estimator not reconstructible
+  from the sealed set alone. They are sealed input data in exactly the sense
+  ``factors.yaml`` is: a document the thresholds are keyed to, not code. Unlike the metric
+  suites, this is a REQUIRED glob -- an empty directory raises rather than silently
+  shrinking the seal, since a suite whose authored worlds vanished would report NaN
+  everywhere rather than erroring;
 - *the metrics being judged*: the enforce-tier metric suites under
   ``src/ah/eval/metrics/`` that exist yet. **This is a fixed name list**
   (``_METRIC_SUITE_NAMES``), not a directory scan: a helper module added under
@@ -221,6 +233,15 @@ _REQUIRED_JUDGED_SOURCES = (
     # value in the platform. Exactly the "helper module added beside the suites" case
     # the module docstring warns joins the seal only by being named.
     ("src", "ah", "eval", "metrics", "_pooling.py"),
+)
+
+# Sealed input DATA (not code) that an estimator is defined over: `(directory parts,
+# glob)` pairs. See the module docstring's "sealed input data an estimator is defined
+# over". REQUIRED, like `_REQUIRED_JUDGED_SOURCES`: a glob matching nothing raises.
+_REQUIRED_JUDGED_FIXTURE_GLOBS: tuple[tuple[tuple[str, ...], str], ...] = (
+    # WP2.2 Task 6 fix pass 1 (Important 5): the authored condition-adherence worlds
+    # `conventions.condition_adherence_*_estimator` pools over by name.
+    (("fixtures", "worlds", "conditional"), "*.json"),
 )
 
 
@@ -1093,9 +1114,10 @@ def _default_judged_sources() -> tuple[Path, ...]:
     fixture.
 
     The WP2.2 metric suites mostly don't exist yet, so a missing one is skipped rather
-    than erroring. :data:`_REQUIRED_JUDGED_SOURCES` is the opposite: every one of those
-    files exists today, and a missing one raises :class:`PreRegError` rather than
-    quietly shrinking the seal.
+    than erroring. :data:`_REQUIRED_JUDGED_SOURCES` and
+    :data:`_REQUIRED_JUDGED_FIXTURE_GLOBS` are the opposite: every one of those files
+    exists today, and a missing one raises :class:`PreRegError` rather than quietly
+    shrinking the seal.
     """
     metric_suites = [
         _REPO_ROOT / "src" / "ah" / "eval" / "metrics" / f"{name}.py"
@@ -1110,7 +1132,26 @@ def _default_judged_sources() -> tuple[Path, ...]:
             f"would silently weaken the guarantee. If a judging module moved, update "
             f"ah.eval.prereg._REQUIRED_JUDGED_SOURCES."
         )
-    return tuple([*(p for p in metric_suites if p.exists()), *required])
+
+    fixture_data: list[Path] = []
+    for parts, pattern in _REQUIRED_JUDGED_FIXTURE_GLOBS:
+        directory = _REPO_ROOT.joinpath(*parts)
+        # Sorted, so the seal is independent of filesystem iteration order (the digest
+        # itself re-sorts by canonical key, but the returned tuple is also read by tests
+        # and by anyone auditing what was hashed).
+        matches = sorted(p for p in directory.glob(pattern) if p.is_file())
+        if not matches:
+            raise PreRegError(
+                f"sealed input data missing from the repository: no file matches "
+                f"'{pattern}' under {directory}. A sealed estimator is defined by name "
+                f"over these documents (see ah.eval.prereg's module docstring); sealing "
+                f"without them would leave the estimator unreconstructible from the "
+                f"sealed set. If the data moved, update "
+                f"ah.eval.prereg._REQUIRED_JUDGED_FIXTURE_GLOBS."
+            )
+        fixture_data.extend(matches)
+
+    return tuple([*(p for p in metric_suites if p.exists()), *required, *fixture_data])
 
 
 def seal(

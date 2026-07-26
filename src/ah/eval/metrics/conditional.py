@@ -10,9 +10,9 @@ bootstrap runs this suite too -- its structural inability to honor novel conditi
 becomes measured evidence, not an aside."
 
 This is the suite that measures whether a generator honours the conditions a WorldSpec
-asks for -- the thing the whole platform exists to do -- and DN-1.1 Sec.WP2.3's sealed
-decision rule is explicit that it is **reported alongside G2 but does not gate
-promotion** ("the platform's purpose weighs conditioning, but historical tail fidelity
+asks for -- the thing the whole platform exists to do -- and STEP2-GENERATOR-PLAN
+Sec.WP2.3's sealed decision rule is explicit that it is **reported alongside G2 but does
+not gate promotion** ("the platform's purpose weighs conditioning, but historical tail fidelity
 remains the falsifiable criterion -- revisit at G3"). Every threshold this suite carries
 in ``pre-registration.yaml`` is therefore ``severity: report``, never ``enforce`` --
 nothing here may block a promotion decision.
@@ -64,7 +64,18 @@ Four condition types, each mapped to the WorldSpec field(s) that express it
 authored worlds under ``fixtures/worlds/conditional/`` (a mild and a severe intensity,
 tagged ``extensions.x_condition_type`` / ``extensions.x_intensity`` -- namespaced
 metadata the schema explicitly permits and engines must ignore, read only by
-:func:`load_conditional_test_worlds`, never by a generator):
+:func:`load_conditional_test_worlds`, never by a generator).
+
+**Those eight files are sealed input data, not fixtures in the disposable sense.** Every
+``condition_adherence_*`` estimator in ``pre-registration.yaml`` defines its statistic as
+"pooled across every checked-in ``fixtures/worlds/conditional/*.json`` world tagged X", so
+editing one world's ``average_pct`` moves every inflation metric's value. They are
+therefore inside the pre-registration seal
+(:data:`ah.eval.prereg._REQUIRED_JUDGED_FIXTURE_GLOBS`,
+``governance/retrofit-register.md`` RFR-33), exactly like the ``factors.yaml`` the bands
+are keyed to: after WP2.3 seals, changing one is a lock violation requiring a dated
+amendment, and the estimator is reconstructible from the sealed set alone. The four
+condition types:
 
 - ``inflation`` -- ``factor_conditions.inflation.average_pct``. Realized (per path):
   the mean of the trailing-12-month YoY CPI inflation
@@ -174,7 +185,21 @@ clipped to the WorldSpec schema's own valid range for that field):
 historical mean IN Z-SCORE TERMS, not literally reading history's own 95th/99th
 percentile, which this simple Gaussian proxy does not attempt to estimate), and
 ``beyond`` (z=4.0, a stated, clearly-outside-any-plausible-normal-quantile
-counterfactual extreme).
+counterfactual extreme). The swept target is clipped into the swept field's OWN
+``schemas/worldspec-v1.0.schema.json`` bounds, **read from that schema at run time**
+(:func:`_off_support_bounds`) rather than restated here: a hand-copied bound is a second
+independent definition of one quantity, and its failure mode is precisely the one
+:func:`_regenerate` now absorbs -- tighten the schema and an unclipped target builds a
+structurally invalid document.
+
+**Partial support poisons the level, exactly as a partial pool poisons a Part A metric.**
+``off_support_adherence_at_{level}``'s sealed definition is "across BOTH swept types", so
+a reference carrying ``policy_rate`` history but no ``cpi`` history must NOT quietly
+report the rate arm alone under that name -- a different, smaller, unlabelled statistic.
+If ANY member of :data:`OFF_SUPPORT_TYPES` has no usable support distribution, every level
+is built empty and every Part B metric is NaN. This is the reference-side half of the
+same never-drop-to-a-smaller-pool discipline :func:`_pooled_errors` applies on the
+generated side.
 
 ``off_support_adherence_at_{level}`` is the pooled mean adherence error (percentage
 points, the shared unit of both swept types) across BOTH swept condition types at that
@@ -199,36 +224,59 @@ reads the FRESHLY REGENERATED ensemble's own factor names, never ``manifest``'s.
 ``ah.eval.metrics.economics`` (which also does not read ``reference``), THIS module DOES
 read ``reference.historical_series`` -- for Part B's support distributions only.
 
-Monte-Carlo error is honestly ``0.0``, not NaN, for every metric here
+Monte-Carlo error: measured over REGENERATION SEEDS, not path subsamples
 --------------------------------------------------------------------------
-:func:`ah.eval.battery.mc_error` recomputes a metric on 20 disjoint subsamples of the
-PASSED ensemble's paths. Every metric in this module ignores those paths entirely --
-only ``ensemble.meta.generator_id``/``ensemble.meta.seed`` cross into the regeneration
--- so every subsample recomputes the bit-identical value, and ``mc_error`` reports
-exactly ``0.0`` by construction (:func:`ah.eval.battery._n_subsamples_for` always
-carries ``n_subsamples >= 2`` into ``np.std(..., ddof=1)``, and the standard deviation
-of ``n`` identical values is exactly ``0.0``). This is honest, not a bug: the quantity
-``mc_error`` exists to estimate genuinely has zero sampling variance with respect to
-WHICH paths of the passed ensemble happen to be in a subsample, for a metric that never
-reads them. The wasted recomputation this causes -- up to 20x the per-world
-``.sample()`` calls a single evaluation already makes, real cost only once a real
-generator with real sampling cost is registered -- is recorded as
-``governance/retrofit-register.md`` RFR-31, a WP2.4/WP2.8 concern, not fixed here.
+:func:`ah.eval.battery.mc_error` recomputes a metric on disjoint subsamples of the
+PASSED ensemble's paths. Every metric in this module ignores those paths entirely -- only
+``ensemble.meta.generator_id``/``ensemble.meta.seed`` cross into the regeneration -- so
+that estimator returns exactly ``0.0`` here, on every metric, always. That number is
+arithmetically correct and *substantively misleading*: these values carry real
+Monte-Carlo uncertainty (each is a pooled statistic over
+:data:`CONDITIONAL_RESAMPLE_N_PATHS` freshly sampled paths per world), and ``mc_error`` is
+exactly the number a WP2.3 threshold author reads to size a band ("MC error << band
+width", STEP2-GENERATOR-PLAN Sec.WP2.2). Reporting a confident ``0.0`` beside a value
+with genuine spread invites a band far tighter than the metric can support.
+
+This suite therefore supplies its OWN estimator, :func:`conditional_mc_error`, wired
+through :attr:`ah.eval.battery.MetricSpec.mc_error_fn` (an additive hook -- every other
+suite keeps the default path-subsampling estimator untouched). It recomputes the metric at
+:data:`CONDITIONAL_MC_ERROR_REPLICATES` further regeneration seeds -- the axis this
+suite's randomness actually flows along -- and reports
+``std(replicates, ddof=1)``. Note the absent ``/sqrt(k)``: :func:`ah.eval.battery.mc_error`
+divides because its ``k`` subsamples partition the paths behind the *reported* value, so
+the batch-means argument scales back up to the full n; here each replicate is an
+INDEPENDENT re-draw of the whole statistic at the same path count, and the reported value
+is one such draw, so the cross-replicate standard deviation IS its standard error
+directly. A generator that ignores ``seed`` (the perfect test double) still reports
+``0.0`` -- now as a measured fact about that generator rather than an artifact of the
+estimator.
+
+Cost is bounded by :func:`_regenerate`'s module-local memo: the value and its replicates
+are a pure function of ``(world document, generator_id, n_paths, seed)``, the mean and p90
+metrics of a condition type share every regeneration, and the memo is cleared at each
+:func:`build_conditional_suite` call so it never outlives one suite registration. That
+takes a full battery evaluation of this suite from ~670 ``.sample()`` calls (16 metrics x
+21 recomputations x 2 worlds, every one of them recomputing a bit-identical value) to
+~144 -- fewer calls than before, now buying a real error bar instead of a tautological
+zero. ``governance/retrofit-register.md`` RFR-32 records this, and closes RFR-31 (which
+had deferred the cost half of it to WP2.4/WP2.8 and never named the honesty half).
 """
 
 from __future__ import annotations
 
+import copy
 import json
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from ah.core.loader import load_worldspec
-from ah.core.numericworld import project_numeric
+from ah.core.digest import canonical_json
+from ah.core.loader import load_worldspec, worldspec_schema
+from ah.core.numericworld import NumericWorld, project_numeric
 from ah.eval.battery import MetricFn, MetricSpec, register_suite
 from ah.eval.metrics.economics import cpi_yoy_from_level
 from ah.eval.reference import ReferenceStats, nonoverlapping_sums
@@ -286,13 +334,37 @@ OFF_SUPPORT_LEVELS: tuple[tuple[str, float], ...] = (
 # (inflation average_pct, policy_rate end_pct) -- see the module docstring's Part B.
 OFF_SUPPORT_PASS_TOLERANCE_PCT = 2.0
 
-# Schema bounds (schemas/worldspec-v1.0.schema.json) the swept target is clipped into,
-# so a large z-score at a high-variance historical quantity cannot construct a
-# structurally invalid WorldSpec document.
-_INFLATION_AVERAGE_PCT_BOUNDS = (-5.0, 20.0)
-_POLICY_RATE_END_PCT_BOUNDS = (0.0, 20.0)
+# The swept field each off-support condition type writes, as a path into
+# `schemas/worldspec-v1.0.schema.json`'s factor_conditions object -- the ONE place either
+# fact is stated. `_sweep_world` writes the field; `_off_support_bounds` reads its bounds.
+_SWEPT_FIELD: dict[str, tuple[str, str]] = {
+    "inflation": ("inflation", "average_pct"),
+    "rate": ("policy_rate", "end_pct"),
+}
+
+# How many further regeneration seeds `conditional_mc_error` recomputes each metric at --
+# see the module docstring's Monte-Carlo section. 8 is enough for a usable order of
+# magnitude on a std with ddof=1 while keeping the per-metric regeneration count bounded;
+# it is deliberately NOT `ah.eval.battery._DEFAULT_MC_SUBSAMPLES`, which is bounded by the
+# PASSED ensemble's path count -- a quantity this suite's metrics never read, and which
+# therefore must not decide how many independent regenerations are available.
+CONDITIONAL_MC_ERROR_REPLICATES = 8
+
+# Replicate seeds are `meta.seed + _MC_REPLICATE_STRIDE*(r+1)`. The stride is a large
+# multiple of `_SEED_STRIDE` so a replicate's own per-world offsets (`+ _SEED_STRIDE*k`,
+# k < 1000 for Part A and k in [1000, 2000) for Part B) can never collide with another
+# replicate's, nor with the reported value's.
+_MC_REPLICATE_STRIDE = _SEED_STRIDE * 10_000
+
+# `_regenerate`'s memo size. Sized to the working set of ONE (mean, p90) metric pair --
+# 2 worlds x (1 reported value + CONDITIONAL_MC_ERROR_REPLICATES) seeds = 18 entries --
+# plus headroom, deliberately NOT to hold every world of every metric: a cached Ensemble
+# is real memory (n_paths x months x n_factors float64), and consecutive metrics are the
+# only ones that share regenerations.
+_REGENERATION_CACHE_SIZE = 32
 
 __all__ = [
+    "CONDITIONAL_MC_ERROR_REPLICATES",
     "CONDITIONAL_MIN_OBS",
     "CONDITIONAL_RESAMPLE_N_PATHS",
     "CONDITION_TYPES",
@@ -305,6 +377,8 @@ __all__ = [
     "TIER",
     "ConditionalFixtureError",
     "build_conditional_suite",
+    "clear_regeneration_cache",
+    "conditional_mc_error",
     "load_conditional_test_worlds",
     "register_conditional_suite",
 ]
@@ -400,13 +474,43 @@ def crisis_severity_error_per_path(ensemble: Ensemble, target_severity: float) -
     return np.abs(realized_shock_pct - target_shock_pct)
 
 
-def _crisis_window_target_quarter(window: dict[str, Any]) -> float:
-    return float(window["start_quarter"]) + float(window["length_quarters"]) / 2.0
+def _crisis_window_target_quarter(window: Any) -> float:
+    """The window's own midpoint quarter, off the numeric projection's ``CrisisWindow``."""
+    return float(window.start_quarter) + float(window.length_quarters) / 2.0
 
 
 # --------------------------------------------------------------------------- #
 # checked-in fixture loading (Part A)
 # --------------------------------------------------------------------------- #
+
+
+def _check_tag_matches_conditions(condition_type: str, world: NumericWorld, label: str) -> None:
+    """A world's ``x_condition_type`` tag must match the ``factor_conditions`` it carries.
+
+    Without this, a world tagged ``inflation`` whose ``factor_conditions`` has no
+    ``inflation`` block is only discovered at metric-evaluation time -- and (before this
+    check) as a raw ``KeyError``/``IndexError`` escaping ``spec.fn``, which aborts the
+    WHOLE battery rather than NaN-ing one metric. The tag and the fields are two
+    statements of one fact, so they are reconciled once, at load time, where a malformed
+    checked-in world is a loud fixture error instead of a runtime surprise.
+    """
+    fc = world.factor_conditions
+    if condition_type == "inflation":
+        ok = fc.inflation is not None and fc.inflation.average_pct is not None
+        needed = "factor_conditions.inflation.average_pct"
+    elif condition_type == "rate":
+        ok = fc.policy_rate is not None and (
+            fc.policy_rate.start_pct is not None or fc.policy_rate.end_pct is not None
+        )
+        needed = "factor_conditions.policy_rate.start_pct and/or .end_pct"
+    else:  # crisis_timing / crisis_severity -- the schema requires all three sub-fields
+        ok = bool(fc.crisis_windows)
+        needed = "a non-empty factor_conditions.crisis_windows"
+    if not ok:
+        raise ConditionalFixtureError(
+            f"{label}: tagged extensions.x_condition_type={condition_type!r} but carries "
+            f"no {needed}; the tag and the conditioned fields must agree"
+        )
 
 
 @lru_cache(maxsize=1)
@@ -418,7 +522,8 @@ def load_conditional_test_worlds() -> tuple[tuple[str, dict[str, Any]], ...]:
     :func:`ah.core.loader.load_worldspec` -- an authored world that does not validate
     is a silent hole in the suite, so this raises rather than skipping it. Every
     document must carry ``extensions.x_condition_type`` naming one of
-    :data:`CONDITION_TYPES`; a fixture that omits it, or names an unknown type, raises
+    :data:`CONDITION_TYPES`, **and must actually carry the ``factor_conditions`` that tag
+    names** (:func:`_check_tag_matches_conditions`); a fixture that omits either raises
     :class:`ConditionalFixtureError`.
 
     ``@lru_cache``: the fixtures are static, read-only, and this is called once per
@@ -428,7 +533,8 @@ def load_conditional_test_worlds() -> tuple[tuple[str, dict[str, Any]], ...]:
     docs: list[tuple[str, dict[str, Any]]] = []
     for path in sorted(FIXTURES_DIR.glob("*.json")):
         raw = json.loads(path.read_text(encoding="utf-8"))
-        load_worldspec(raw)  # schema + pydantic validation; raises on a malformed world
+        # schema + pydantic validation; raises on a malformed world
+        world = project_numeric(load_worldspec(raw))
         extensions = raw.get("extensions") or {}
         condition_type = extensions.get("x_condition_type")
         if condition_type not in CONDITION_TYPES:
@@ -436,60 +542,112 @@ def load_conditional_test_worlds() -> tuple[tuple[str, dict[str, Any]], ...]:
                 f"{path}: extensions.x_condition_type must be one of {CONDITION_TYPES}, "
                 f"got {condition_type!r}"
             )
+        _check_tag_matches_conditions(condition_type, world, str(path))
         docs.append((condition_type, raw))
     if not docs:
         raise ConditionalFixtureError(f"{FIXTURES_DIR}: no authored world fixtures found")
     return tuple(docs)
 
 
-def _worlds_for_type(condition_type: str) -> tuple[dict[str, Any], ...]:
-    docs = tuple(doc for ctype, doc in load_conditional_test_worlds() if ctype == condition_type)
-    if not docs:
+def _worlds_for_type(condition_type: str) -> tuple[tuple[int, dict[str, Any]], ...]:
+    """This type's worlds as ``(k, doc)``, ``k`` a GLOBALLY unique regeneration index.
+
+    ``k`` indexes the whole sorted fixture set, not this type's slice of it, so the
+    ``base_seed + 7919*k`` convention the module docstring cites gives every checked-in
+    world its own seed. Restarting ``k`` per condition type would regenerate
+    ``inflation_mild`` and ``rate_endpoints_mild`` under an identical seed -- harmless
+    today, but a claim in the docstring that the code did not actually honour.
+    """
+    items = tuple(
+        (k, doc)
+        for k, (ctype, doc) in enumerate(load_conditional_test_worlds())
+        if ctype == condition_type
+    )
+    if not items:
         raise ConditionalFixtureError(
             f"no checked-in fixtures/worlds/conditional/*.json world is tagged "
             f"extensions.x_condition_type={condition_type!r}"
         )
-    return docs
+    return items
 
 
 # --------------------------------------------------------------------------- #
 # regeneration + pooling -- shared by Part A and Part B
 # --------------------------------------------------------------------------- #
 
-ErrorFn = Callable[[Ensemble, dict[str, Any]], np.ndarray]
+ErrorFn = Callable[[Ensemble, NumericWorld], np.ndarray]
 
 
-def _regenerate(doc: dict[str, Any], generator_id: str, n_paths: int, seed: int) -> Ensemble | None:
-    """Resolve ``generator_id`` and sample ``doc`` fresh; ``None`` on any failure.
+@lru_cache(maxsize=_REGENERATION_CACHE_SIZE)
+def _regenerate_cached(
+    doc_json: str, generator_id: str, n_paths: int, seed: int
+) -> tuple[Ensemble, NumericWorld] | None:
+    """Memoized :func:`_regenerate`. Keyed on the world document's canonical JSON.
 
-    Every failure mode this suite must not crash on lives here, in one place: an
-    unregistered ``generator_id`` (:class:`~ah.gen.registry.UnknownGeneratorError`),
-    or the generator itself raising during ``.sample()`` (a broad ``Exception`` catch,
-    deliberate and singular in this module -- a generator crashing on a novel/
-    off-support condition is itself adherence evidence to be reported as an
-    unresolvable-world NaN, not a platform failure to propagate and crash the whole
-    battery).
+    **Why the whole document and not just its ``world_id``.** The Part B sweep worlds
+    reuse one ``world_id`` per (condition type, level) while their actual conditioning
+    target is a function of the :class:`~ah.eval.reference.ReferenceStats` the suite was
+    built against -- a second battery run on a different vintage constructs a DIFFERENT
+    world under the SAME id. An id-keyed memo would hand it the first run's ensemble.
+    The canonical JSON is the content itself, so the key cannot be stale.
+
+    **Why memoizing is sound, and what it assumes.** The returned pair is a pure function
+    of these four arguments: :func:`ah.gen.registry.resolve` constructs a fresh generator
+    from a registered factory, :func:`ah.core.loader.load_worldspec` is pure, and
+    ``Generator.sample(world, n_paths, seed)`` is required to be deterministic in
+    ``seed`` (``CLAUDE.md``'s determinism invariant -- the same premise the whole suite
+    rests on). The one assumption is that ``generator_id`` names the same generator for
+    the lifetime of the cache; :func:`build_conditional_suite` clears it on every suite
+    registration, so the cache never outlives one battery run's registry state.
+
+    Callers must treat the returned :class:`~ah.gen.base.Ensemble` as read-only -- it is
+    shared. Every error function in this module reads it through ``.astype(np.float64)``,
+    which copies.
     """
+    # ONE guarded region for every failure mode this suite must not crash on: an
+    # unregistered `generator_id` (`UnknownGeneratorError`); a registered FACTORY that
+    # raises while CONSTRUCTING the generator (WP2.4's bootstrap will load and fit inside
+    # its factory, so this is not hypothetical); a swept/authored document that fails
+    # schema or pydantic validation; and the generator raising during `.sample()`. A
+    # generator crashing on a novel/off-support condition is itself adherence evidence, to
+    # be reported as an unresolvable-world NaN -- never propagated, which would lose every
+    # OTHER suite's results too (`ah.eval.battery._run_suites` calls `spec.fn` unguarded).
     try:
         generator = gen_registry.resolve(generator_id)
-    except gen_registry.UnknownGeneratorError:
-        return None
-    world = project_numeric(load_worldspec(doc))
-    try:
-        return generator.sample(world, n_paths, seed)
+        world = project_numeric(load_worldspec(json.loads(doc_json)))
+        ensemble = generator.sample(world, n_paths, seed)
     except Exception:
         return None
+    return ensemble, world
+
+
+def clear_regeneration_cache() -> None:
+    """Drop every memoized regeneration. Called on each :func:`build_conditional_suite`."""
+    _regenerate_cached.cache_clear()
+
+
+def _regenerate(
+    doc: dict[str, Any], generator_id: str, n_paths: int, seed: int
+) -> tuple[Ensemble, NumericWorld] | None:
+    """Resolve ``generator_id`` and sample ``doc`` fresh; ``None`` on any failure.
+
+    Returns the regenerated ensemble *and* the numeric world it was sampled from, so a
+    caller reads conditioning targets off the SAME projection the generator was handed
+    rather than off the raw JSON dict -- two representations of one quantity otherwise --
+    and so ``load_worldspec`` runs once per regeneration instead of twice.
+    """
+    return _regenerate_cached(canonical_json(doc), generator_id, n_paths, seed)
 
 
 def _pooled_errors(
     generator_id: str,
     seed: int,
-    world_docs: tuple[dict[str, Any], ...],
+    world_items: tuple[tuple[int, dict[str, Any]], ...],
     error_fn: ErrorFn,
     *,
     n_paths: int = CONDITIONAL_RESAMPLE_N_PATHS,
 ) -> np.ndarray:
-    """Pooled per-path error array across every world in ``world_docs``.
+    """Pooled per-path error array across every ``(k, doc)`` in ``world_items``.
 
     Returns a single-NaN array (poisoning every downstream aggregate) if ANY world's
     regeneration fails, the regenerated ensemble cannot produce a non-empty error
@@ -498,11 +656,11 @@ def _pooled_errors(
     """
     _poison = np.array([float("nan")])
     pooled: list[np.ndarray] = []
-    for k, doc in enumerate(world_docs):
+    for k, doc in world_items:
         regen = _regenerate(doc, generator_id, n_paths, seed + _SEED_STRIDE * k)
         if regen is None:
             return _poison
-        errors = error_fn(regen, doc)
+        errors = error_fn(*regen)
         if errors.size == 0 or not bool(np.all(np.isfinite(errors))):
             return _poison
         pooled.append(errors)
@@ -536,28 +694,39 @@ def _p90_metric(pool: Callable[[Ensemble], np.ndarray]) -> MetricFn:
 # --------------------------------------------------------------------------- #
 
 
-def _inflation_world_error(regen: Ensemble, doc: dict[str, Any]) -> np.ndarray:
-    target = doc["factor_conditions"]["inflation"]["average_pct"]
-    return inflation_error_per_path(regen, float(target))
+_EMPTY = np.empty(0, dtype=np.float64)
 
 
-def _rate_world_error(regen: Ensemble, doc: dict[str, Any]) -> np.ndarray:
-    cond = doc["factor_conditions"]["policy_rate"]
-    start = cond.get("start_pct")
-    end = cond.get("end_pct")
+def _inflation_world_error(regen: Ensemble, world: NumericWorld) -> np.ndarray:
+    cond = world.factor_conditions.inflation
+    if cond is None or cond.average_pct is None:
+        return _EMPTY
+    return inflation_error_per_path(regen, float(cond.average_pct))
+
+
+def _rate_world_error(regen: Ensemble, world: NumericWorld) -> np.ndarray:
+    cond = world.factor_conditions.policy_rate
+    if cond is None:
+        return _EMPTY
+    start = cond.start_pct
+    end = cond.end_pct
     return rate_error_per_path(
         regen, None if start is None else float(start), None if end is None else float(end)
     )
 
 
-def _crisis_timing_world_error(regen: Ensemble, doc: dict[str, Any]) -> np.ndarray:
-    window = doc["factor_conditions"]["crisis_windows"][0]
-    return crisis_timing_error_per_path(regen, _crisis_window_target_quarter(window))
+def _crisis_timing_world_error(regen: Ensemble, world: NumericWorld) -> np.ndarray:
+    windows = world.factor_conditions.crisis_windows
+    if not windows:
+        return _EMPTY
+    return crisis_timing_error_per_path(regen, _crisis_window_target_quarter(windows[0]))
 
 
-def _crisis_severity_world_error(regen: Ensemble, doc: dict[str, Any]) -> np.ndarray:
-    window = doc["factor_conditions"]["crisis_windows"][0]
-    return crisis_severity_error_per_path(regen, float(window["severity"]))
+def _crisis_severity_world_error(regen: Ensemble, world: NumericWorld) -> np.ndarray:
+    windows = world.factor_conditions.crisis_windows
+    if not windows:
+        return _EMPTY
+    return crisis_severity_error_per_path(regen, float(windows[0].severity))
 
 
 _ERROR_FNS: dict[str, ErrorFn] = {
@@ -569,11 +738,11 @@ _ERROR_FNS: dict[str, ErrorFn] = {
 
 
 def _make_condition_pool(condition_type: str) -> Callable[[Ensemble], np.ndarray]:
-    world_docs = _worlds_for_type(condition_type)
+    world_items = _worlds_for_type(condition_type)
     error_fn = _ERROR_FNS[condition_type]
 
     def pool(ensemble: Ensemble) -> np.ndarray:
-        return _pooled_errors(ensemble.meta.generator_id, ensemble.meta.seed, world_docs, error_fn)
+        return _pooled_errors(ensemble.meta.generator_id, ensemble.meta.seed, world_items, error_fn)
 
     return pool
 
@@ -611,6 +780,36 @@ def _clip(value: float, bounds: tuple[float, float]) -> float:
     return float(min(max(value, bounds[0]), bounds[1]))
 
 
+@lru_cache(maxsize=1)
+def _off_support_bounds() -> dict[str, tuple[float, float]]:
+    """Each swept field's ``(minimum, maximum)``, READ FROM the WorldSpec JSON Schema.
+
+    ``schemas/`` is the contract and the only definition of these numbers
+    (``CLAUDE.md``); restating them here as literals would be two independent definitions
+    of one quantity, and the failure mode is concrete: tighten the schema without
+    updating the copy and every swept target above the new bound builds a document
+    :func:`ah.core.loader.load_worldspec` rejects. Reading them means a schema change
+    simply moves the clip.
+
+    Raises :class:`ConditionalFixtureError` if a swept field has no bounds in the schema
+    at all -- an unbounded swept field would let ``z=4.0`` construct an arbitrary target,
+    which is not something to discover at battery time.
+    """
+    props = worldspec_schema()["properties"]["factor_conditions"]["properties"]
+    bounds: dict[str, tuple[float, float]] = {}
+    for ctype in OFF_SUPPORT_TYPES:
+        group, field = _SWEPT_FIELD[ctype]
+        node = props[group]["properties"][field]
+        if "minimum" not in node or "maximum" not in node:
+            raise ConditionalFixtureError(
+                f"schemas/worldspec-v1.0.schema.json: factor_conditions.{group}.{field} "
+                f"declares no minimum/maximum, so the off-support sweep has nothing to "
+                f"clip a z=4.0 target into"
+            )
+        bounds[ctype] = (float(node["minimum"]), float(node["maximum"]))
+    return bounds
+
+
 _SWEEP_WORLD_BASE: dict[str, Any] = {
     "spec_version": "1.0.0",
     "status": "validated",
@@ -643,16 +842,10 @@ _SWEEP_WORLD_BASE: dict[str, Any] = {
 
 
 def _sweep_world(condition_type: str, level: str, target: float) -> dict[str, Any]:
-    import copy
-
     doc = copy.deepcopy(_SWEEP_WORLD_BASE)
     doc["world_id"] = f"conditional-offsupport-{condition_type}-{level}"
-    if condition_type == "inflation":
-        doc["factor_conditions"] = {"inflation": {"average_pct": target}}
-    elif condition_type == "rate":
-        doc["factor_conditions"] = {"policy_rate": {"end_pct": target}}
-    else:
-        raise ValueError(f"_sweep_world: unsupported condition_type {condition_type!r}")
+    group, field = _SWEPT_FIELD[condition_type]
+    doc["factor_conditions"] = {group: {field: target}}
     doc["extensions"] = {"x_condition_type": condition_type, "x_intensity": level}
     return doc
 
@@ -660,34 +853,51 @@ def _sweep_world(condition_type: str, level: str, target: float) -> dict[str, An
 @dataclass(frozen=True)
 class _OffSupportLevel:
     level: str
-    world_docs: tuple[dict[str, Any], ...]
+    # (k, doc) pairs, k a globally unique regeneration index across every swept world --
+    # see `_worlds_for_type`'s docstring for why k must not restart.
+    world_items: tuple[tuple[int, dict[str, Any]], ...]
     error_fns: tuple[ErrorFn, ...]
 
 
 def _build_off_support_levels(reference: ReferenceStats) -> tuple[_OffSupportLevel, ...]:
+    """One :class:`_OffSupportLevel` per :data:`OFF_SUPPORT_LEVELS` entry.
+
+    **All-or-nothing across :data:`OFF_SUPPORT_TYPES`.** If any swept type lacks a usable
+    train+validation support distribution, EVERY level is built with no worlds at all --
+    so every Part B metric NaNs rather than reporting the surviving arm alone under a
+    sealed name whose own definition says "across BOTH swept types". See the module
+    docstring's "Partial support poisons the level".
+    """
     support: dict[str, tuple[float, float] | None] = {
         "inflation": _support_mean_std(reference, "cpi", _yoy_1d),
         "rate": _support_mean_std(reference, "policy_rate", _identity_1d),
     }
-    bounds: dict[str, tuple[float, float]] = {
-        "inflation": _INFLATION_AVERAGE_PCT_BOUNDS,
-        "rate": _POLICY_RATE_END_PCT_BOUNDS,
-    }
+    if any(support[ctype] is None for ctype in OFF_SUPPORT_TYPES):
+        return tuple(
+            _OffSupportLevel(level=name, world_items=(), error_fns=())
+            for name, _ in OFF_SUPPORT_LEVELS
+        )
+
+    bounds = _off_support_bounds()
     levels: list[_OffSupportLevel] = []
+    k = 0
     for level_name, z in OFF_SUPPORT_LEVELS:
-        world_docs: list[dict[str, Any]] = []
+        world_items: list[tuple[int, dict[str, Any]]] = []
         error_fns: list[ErrorFn] = []
         for ctype in OFF_SUPPORT_TYPES:
             stats = support[ctype]
-            if stats is None:
-                continue
+            assert stats is not None  # guarded above; narrows for the type checker
             mean, std = stats
             target = _clip(mean + z * std, bounds[ctype])
-            world_docs.append(_sweep_world(ctype, level_name, target))
+            # Distinct seed range from Part A's (k = 0..n_fixtures) -- offset by 1000 so
+            # the two parts' regenerations never collide for the same base ensemble, and
+            # incremented across levels so every swept world has its own seed too.
+            world_items.append((1000 + k, _sweep_world(ctype, level_name, target)))
             error_fns.append(_ERROR_FNS[ctype])
+            k += 1
         levels.append(
             _OffSupportLevel(
-                level=level_name, world_docs=tuple(world_docs), error_fns=tuple(error_fns)
+                level=level_name, world_items=tuple(world_items), error_fns=tuple(error_fns)
             )
         )
     return tuple(levels)
@@ -696,19 +906,16 @@ def _build_off_support_levels(reference: ReferenceStats) -> tuple[_OffSupportLev
 def _off_support_pooled_errors(level: _OffSupportLevel, ensemble: Ensemble) -> np.ndarray:
     """Like :func:`_pooled_errors`, but each world carries its OWN error_fn (inflation
     and rate are pooled together here, so a single shared ``error_fn`` will not do)."""
-    if not level.world_docs:
-        return np.array([float("nan")])
     _poison = np.array([float("nan")])
+    if not level.world_items:
+        return _poison
     pooled: list[np.ndarray] = []
-    for k, (doc, error_fn) in enumerate(zip(level.world_docs, level.error_fns, strict=True)):
-        # Distinct seed range from Part A's (which starts at ensemble.meta.seed +
-        # _SEED_STRIDE*0..k) -- offset by a large stride multiple so the two parts'
-        # regenerations never collide on the same seed for the same base ensemble.
-        seed = ensemble.meta.seed + _SEED_STRIDE * (1000 + k)
+    for (k, doc), error_fn in zip(level.world_items, level.error_fns, strict=True):
+        seed = ensemble.meta.seed + _SEED_STRIDE * k
         regen = _regenerate(doc, ensemble.meta.generator_id, CONDITIONAL_RESAMPLE_N_PATHS, seed)
         if regen is None:
             return _poison
-        errors = error_fn(regen, doc)
+        errors = error_fn(*regen)
         if errors.size == 0 or not bool(np.all(np.isfinite(errors))):
             return _poison
         pooled.append(errors)
@@ -742,8 +949,45 @@ def _off_support_pass_rate_metric(level: _OffSupportLevel) -> MetricFn:
 # --------------------------------------------------------------------------- #
 
 
+def conditional_mc_error(
+    fn: MetricFn, ensemble: Ensemble, *, seed: int, n_subsamples: int
+) -> float:
+    """This suite's Monte-Carlo error: the spread over REGENERATION seeds.
+
+    Signature-compatible with :func:`ah.eval.battery.mc_error` so it can be dropped into
+    :attr:`~ah.eval.battery.MetricSpec.mc_error_fn`, but both of that function's tuning
+    arguments are deliberately unused:
+
+    - ``seed`` drives a ``permutation`` of the PASSED ensemble's paths there. No metric
+      here reads those paths, and nothing in this estimator draws a random number at all
+      -- the replicate seeds are fixed arithmetic on ``ensemble.meta.seed``, which is what
+      makes the reported error bit-reproducible for a given ensemble rather than a
+      function of whichever MC seed the battery was invoked with.
+    - ``n_subsamples`` is bounded by the passed ensemble's path count
+      (:func:`ah.eval.battery._n_subsamples_for`). That count is meaningless here: a
+      2-path placeholder ensemble does not limit how many independent regenerations are
+      available. :data:`CONDITIONAL_MC_ERROR_REPLICATES` decides instead.
+
+    Returns ``std(replicates, ddof=1)`` -- NOT divided by ``sqrt(k)``; see the module
+    docstring's Monte-Carlo section for why the batch-means rescaling does not apply.
+    NaN in (an uncomputable metric) gives NaN out, which is the honest answer and which
+    :func:`ah.eval.battery._require_mc_error_reported` accepts by design.
+    """
+    del seed, n_subsamples
+    estimates = np.empty(CONDITIONAL_MC_ERROR_REPLICATES, dtype=np.float64)
+    for r in range(CONDITIONAL_MC_ERROR_REPLICATES):
+        replicate_meta = replace(
+            ensemble.meta, seed=ensemble.meta.seed + _MC_REPLICATE_STRIDE * (r + 1)
+        )
+        replicate = Ensemble(
+            paths=ensemble.paths, factor_names=ensemble.factor_names, meta=replicate_meta
+        )
+        estimates[r] = fn(replicate)
+    return float(np.std(estimates, ddof=1))
+
+
 def _spec(name: str, fn: MetricFn) -> MetricSpec:
-    return MetricSpec(name=name, tier=TIER, fn=fn, suite=SUITE)
+    return MetricSpec(name=name, tier=TIER, fn=fn, suite=SUITE, mc_error_fn=conditional_mc_error)
 
 
 def build_conditional_suite(
@@ -755,8 +999,12 @@ def build_conditional_suite(
     ``ah.eval.battery._REFERENCE_DEPENDENT_SUITE_BUILDERS`` entry but unused -- see the
     module docstring's "Registration is deferred". ``reference`` supplies Part B's
     train+validation support distributions (``historical_series``) only.
+
+    Clears :func:`_regenerate`'s memo first, so a cached ensemble never outlives the
+    registry state and reference it was produced under (see :func:`_regenerate_cached`).
     """
     del manifest
+    clear_regeneration_cache()
     specs: list[MetricSpec] = []
     for ctype in CONDITION_TYPES:
         pool = _make_condition_pool(ctype)

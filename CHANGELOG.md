@@ -1251,8 +1251,91 @@ All notable changes to this project are documented here. The project follows
     ignores the passed ensemble's own paths (only `generator_id`/`seed` carry into the
     regeneration), so `ah.eval.battery.mc_error`'s subsampling recomputes the identical
     value on every subsample by construction. Stated in the module docstring and pinned
-    by a test rather than left to be discovered.
+    by a test rather than left to be discovered. *(Superseded by the fix pass below:
+    correct arithmetic, misleading number.)*
   - Full suite green, ruff/pyright clean.
+- **WP2.2 Task 6 review fix pass 1 — two Criticals, and the seal widened to cover
+  sealed input data.**
+  - *Critical 1 — partial support silently shrank the off-support pool.* When
+    `_support_mean_std` returned `None` for one of the two swept types, the level was
+    built from the surviving type alone and reported under
+    `off_support_adherence_at_{level}`, whose sealed definition says "across **both**
+    swept types". Now all-or-nothing: if any `OFF_SUPPORT_TYPES` member lacks support,
+    every level is empty and every Part B metric NaNs. The pre-existing guard tested
+    only the both-absent case — holding fixed the exact axis the defect lived on; the
+    one-present/one-absent case is now parametrized over both directions.
+  - *Critical 2 — the off-support monotonicity test's inflation arm was inert.* The
+    `cpi` test fixture was deterministic geometric growth, so its trailing-12m YoY was a
+    **constant** and `std(ddof=1)` ≈ 1e-14: every swept inflation target collapsed onto
+    the historical mean and the arm contributed ~zero error at every level (measured:
+    `[1.32e-13, 1.20e-13, 1.13e-13, 9.37e-14]` — flat, and *decreasing*). The whole
+    monotone trend came from `policy_rate`; the test would have passed with the
+    inflation sweep deleted. `cpi` is now a log random walk with real YoY dispersion,
+    degradation is asserted **per swept arm** (a pooled assertion is what let one dead
+    arm hide), the pooled assertion is strict (it previously read `later >= earlier -
+    1e-9` under a comment claiming "strictly increasing"), and a separate test pins that
+    both support distributions have real dispersion so a future fixture edit cannot
+    silence an arm again.
+  - *`mc_error` now measured over regeneration seeds (Important 7).* Reporting `0.0`
+    beside a value carrying real Monte-Carlo uncertainty is worse than reporting
+    nothing — it is the exact number a WP2.3 threshold author reads to size a band.
+    New `conditional_mc_error` recomputes each metric at
+    `CONDITIONAL_MC_ERROR_REPLICATES = 8` further regeneration seeds and reports
+    `std(replicates, ddof=1)` (no `/sqrt(k)`: each replicate is an independent re-draw
+    of the whole statistic, and the reported value is one such draw). Wired through a
+    new **additive** `ah.eval.battery.MetricSpec.mc_error_fn` hook — default `None`
+    keeps the uniform path-subsampling estimator for every other suite.
+  - *Regeneration memo (Important 8, closes RFR-31 via RFR-32).* `_regenerate` is now
+    memoized on the world **document** (canonical JSON), `generator_id`, `n_paths` and
+    `seed` — keyed on the document rather than `world_id` because Part B's sweep worlds
+    reuse one id per (type, level) while their target is a function of the reference, so
+    an id-keyed memo would serve a second battery run the first run's ensemble. Cleared
+    on every `build_conditional_suite`, so it never outlives one registry state. A full
+    evaluation drops from ~670 `.sample()` calls to ~144 — fewer calls than before, now
+    buying a real error bar instead of a tautological zero.
+  - *The authored worlds are now inside the seal (Important 5, RFR-33).*
+    `conventions.condition_adherence_*_estimator` defines each statistic as "pooled
+    across every checked-in `fixtures/worlds/conditional/*.json` world tagged X", but
+    `prereg._default_judged_sources()` hashed only `.py` files plus two YAMLs — so
+    editing a world's `average_pct` changed every inflation metric with no lock
+    violation and no amendment. New `_REQUIRED_JUDGED_FIXTURE_GLOBS` seals the directory
+    as input data, exactly as `factors.yaml` is; a test edits a world and asserts the
+    digest changes.
+  - *Two exception paths no longer abort the whole battery (Important 3).*
+    `gen_registry.resolve` invokes the registered **factory** (WP2.4's bootstrap will
+    load and fit in its factory) and `load_worldspec(doc)` sat outside the `try`, so a
+    factory raising during construction, or a swept world failing schema/pydantic
+    validation, propagated out of `spec.fn` and lost every other suite's results. Both
+    are inside one guarded region now, with a test each.
+  - *Schema bounds derived, not restated (Important 4).* `_off_support_bounds()` reads
+    `factor_conditions.{inflation.average_pct, policy_rate.end_pct}`'s `minimum`/
+    `maximum` from `schemas/worldspec-v1.0.schema.json`; a new test validates every
+    **programmatically swept** world against the schema (the existing fixture test
+    globbed `FIXTURES_DIR` only).
+  - *Tag↔field consistency validated at load time (Important 6).* A world tagged
+    `inflation` whose `factor_conditions` lacked an `inflation` block raised a raw
+    `KeyError` at metric-evaluation time → battery abort, not NaN.
+  - *Missing tests added.* A determinism pair (same seed ⇒ bit-identical, different seed
+    ⇒ different — using the only test double that consumes `seed`), and the min-obs NaN
+    branch, which was never exercised: the test carrying that name asserted
+    `errors.size >= CONDITIONAL_MIN_OBS`, the **opposite** of its claim. It is renamed
+    to what it actually checks and a real boundary test added (one short ⇒ NaN, exactly
+    at the floor ⇒ reported), for the mean, the p90, and Part B.
+  - *Minors.* Fixed a misattributed citation ("DN-1.1 §WP2.3" → STEP2-GENERATOR-PLAN
+    §WP2.3) in a sealed source; `import copy` hoisted to module level; conditioning
+    targets read off the `NumericWorld` projection the generator was handed rather than
+    the raw JSON dict (`load_worldspec` now runs once per regeneration, not twice); the
+    regeneration index `k` is globally unique instead of restarting per condition type
+    (the docstring's `base_seed + 7919*k` claim is now true); `off_support_pass_rate_at_
+    beyond`'s `min: 0.0` — a threshold on a `[0,1]` rate that can never be violated —
+    raised to a non-vacuous provisional `0.05`; `tests/test_conditional.py` gained an
+    autouse fixture restoring `ah.gen.registry`'s global table (seven registrations
+    previously leaked into every later test module); and `rate_endpoints_mild`'s
+    endpoints widened from 2.0→3.0 to 5.0→2.0, because a 3.0 endpoint was nearly free
+    against the condition-ignoring generator's flat-3.0 output — the discrimination
+    assertion is now a per-type margin scaled to each type's own fixture spread rather
+    than a single flat `+1.0`.
+  - 995 tests pass (was 972); ruff/pyright clean; coverage gate 96.54%.
 
 ## [v0.1.0-g0] — 2026-07-24
 

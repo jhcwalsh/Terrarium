@@ -231,6 +231,49 @@ def test_mc_error_rejects_more_subsamples_than_paths() -> None:
         mc_error(lambda e: 0.0, ensemble, seed=1, n_subsamples=10)
 
 
+def test_a_spec_may_override_the_mc_error_estimator(monkeypatch: pytest.MonkeyPatch) -> None:
+    """WP2.2 Task 6 fix pass 1 (Important 7). `MetricSpec.mc_error_fn` exists because
+    `ah.eval.metrics.conditional`'s metrics ignore the passed ensemble's paths entirely,
+    so path subsampling reports a confident 0.0 beside a value with real Monte-Carlo
+    uncertainty -- and that 0.0 is exactly the number a WP2.3 threshold author reads to
+    size a band. Overriding must reach the REPORT, not just the spec."""
+    name = "_test_suite_mc_override"
+    _clean_suite_name(monkeypatch, name)
+    seen: list[tuple[int, int]] = []
+
+    def _fixed_error(fn: object, ensemble: Ensemble, *, seed: int, n_subsamples: int) -> float:
+        seen.append((seed, n_subsamples))
+        return 0.125
+
+    register_suite(
+        name,
+        [
+            MetricSpec(
+                name="overridden",
+                tier="monthly",
+                fn=lambda e: 1.0,
+                suite=name,
+                mc_error_fn=_fixed_error,
+            ),
+            MetricSpec(name="default", tier="monthly", fn=lambda e: 1.0, suite=name),
+        ],
+    )
+    report = battery.run_battery(
+        _toy_ensemble(),
+        reference=_empty_reference(),
+        prereg=_real_prereg(),
+        manifest=load_manifest(),
+        seed=3,
+        filtered=None,
+    )
+    by_name = {r.name: r for r in report.results if r.suite == name}
+    assert by_name["overridden"].mc_error == pytest.approx(0.125)
+    # The default estimator is untouched for every other spec: a constant metric has
+    # zero spread across subsamples, so 0.0 here is the DEFAULT path having run.
+    assert by_name["default"].mc_error == pytest.approx(0.0)
+    assert seen and all(s == 3 for s, _ in seen), seen
+
+
 # --------------------------------------------------------------------------- #
 # 2b. WP2.2 Task 3: "bands or it didn't happen" made structural for the 10yr tier
 # --------------------------------------------------------------------------- #

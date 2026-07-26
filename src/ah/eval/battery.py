@@ -47,7 +47,10 @@ metric is recomputed on ``n_subsamples`` disjoint groups of an ensemble's paths 
 from a fresh ``numpy.random.Generator(PCG64(seed))``, never a global RNG), and the
 error reported is the standard error of those per-subsample estimates -- see
 :func:`mc_error`'s docstring for the batch-means argument that this recovers the
-correct order of magnitude for a metric that is itself a sample mean.
+correct order of magnitude for a metric that is itself a sample mean. A suite whose
+metrics do not read the passed ensemble's paths at all may supply its own estimator via
+:attr:`MetricSpec.mc_error_fn` (``ah.eval.metrics.conditional`` does; nothing else
+does) -- the default stays the uniform path-subsampling one.
 
 Tiers
 -----
@@ -108,6 +111,8 @@ class BatteryError(RuntimeError):
 
 
 MetricFn = Callable[[Ensemble], float]
+# A drop-in replacement for `mc_error` -- see `MetricSpec.mc_error_fn`.
+MetricErrorFn = Callable[..., float]
 
 
 @dataclass(frozen=True)
@@ -137,6 +142,18 @@ class MetricSpec:
     It exists for facts a threshold reader needs and cannot recompute -- the regime
     ruleset version a ``regime_duration_*`` label set would be built under, or the
     retrofit-register row explaining an unavailable metric.
+
+    ``mc_error_fn`` overrides :func:`mc_error` for this one metric. Default ``None`` means
+    the uniform path-subsampling estimator, which is right for every metric that is a
+    statistic OF the passed ensemble's paths -- almost all of them. It exists because
+    ``ah.eval.metrics.conditional``'s metrics are not: they ignore the passed paths
+    entirely and regenerate their own, so path subsampling measures the spread of a
+    quantity that is constant by construction and reports a confident ``0.0`` beside a
+    value carrying real Monte-Carlo uncertainty -- and ``mc_error`` is precisely the
+    number a WP2.3 threshold author reads to size a band. An override must keep
+    :func:`mc_error`'s signature ``(fn, ensemble, *, seed, n_subsamples) -> float``, so
+    :func:`_run_suites` calls either through one code path and
+    :func:`_require_mc_error_reported` still governs the ``10yr`` tier.
     """
 
     name: str
@@ -145,6 +162,7 @@ class MetricSpec:
     suite: str
     status: str = "ok"
     metadata: tuple[tuple[str, str], ...] = ()
+    mc_error_fn: MetricErrorFn | None = None
 
 
 @dataclass(frozen=True)
@@ -406,7 +424,10 @@ def _run_suites(
     for suite in sorted(SUITES):
         for spec in SUITES[suite]:
             value = float(spec.fn(ensemble))
-            error = mc_error(spec.fn, ensemble, seed=seed, n_subsamples=n_subsamples)
+            # Resolved per spec, and `mc_error` is read as a module global here so a
+            # test may monkeypatch the default estimator exactly as before.
+            estimator = mc_error if spec.mc_error_fn is None else spec.mc_error_fn
+            error = estimator(spec.fn, ensemble, seed=seed, n_subsamples=n_subsamples)
             _require_mc_error_reported(spec.tier, spec.name, error)
             band = _lookup_band(spec.name, reference)
             threshold = _lookup_threshold(spec.name, prereg)
