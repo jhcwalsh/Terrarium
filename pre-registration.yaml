@@ -1,25 +1,50 @@
 # pre-registration.yaml
 #
-# STATUS: UNSEALED. sealed: false below; WP2.3 is the only PR allowed to flip it.
+# STATUS: SEALED (WP2.3, 2026-07-26). `sealed: true` below.
 #
-# This file is the eventual target of the WP2.3 pre-registration seal: once sealed,
-# every change to it becomes a dated, post-hoc-flagged amendment recorded in
-# governance/amendment-log.yaml and visible in every evaluation report thereafter
-# (Instructions/WP2.1b-PRE-SEAL-PATCH.md). It was created by WP2.1b Task 2 to hold the
-# D4 benchmark-strategy set -- the portfolios whose VaR/ES define tail fidelity, and
-# what the WP2.8 tail auxiliary loss optimizes -- and is extended here by WP2.1b Task 4
-# with block-nested acceptance thresholds, the two Item-3 decisions (R5, J3), and the
-# seal/amendment-log machinery (`ah.eval.prereg.seal()` / `ah.eval.prereg.verify()`).
+# THIS IS THE ONE-WAY DOOR. Every change to this file -- and to any file listed in
+# pre-registration.lock's `hashed_files`, which is every module that can move a
+# pass/fail verdict -- is from now on a dated, post-hoc-flagged amendment in
+# governance/amendment-log.yaml, visible in every evaluation report thereafter.
+# `ah.eval.battery.run_battery` verifies this document AND the lock on every
+# invocation, so a modified YAML or a modified enforce-metric implementation stops the
+# battery rather than quietly judging with code the seal never saw.
 #
-# *** THRESHOLDS BELOW ARE PROVISIONAL PLACEHOLDERS. *** Every `min`/`max` in the
-# `thresholds:` block is a stand-in so `ah.eval.prereg.verify()` has a real,
-# non-trivial file to check end to end (WP2.1b Task 4's dry-run seal + verify,
-# Instructions/WP2.1b-PRE-SEAL-PATCH.md Definition of done item 4) -- none of them is
-# derived from a historical reference statistic. WP2.2's `ah.eval.reference` computes
-# the real train+validation bands (per block, and per cross-block pair); WP2.3
-# replaces every threshold below with one of those bands (or a stated, justified
-# deviation) before sealing for real. Do not treat a `min`/`max` below as meaningful,
-# and do not flip `sealed: true` from WP2.1b -- that act belongs to WP2.3 alone.
+# HOW TO CHANGE SOMETHING AFTER THE SEAL (the procedure, stated once):
+#   1. append an entry to governance/amendment-log.yaml via
+#      ah.eval.prereg.append_amendment (type, caller-supplied date, rationale,
+#      post_hoc flag) -- the log is append-only by construction;
+#   2. make the edit;
+#   3. re-run `ah.eval.prereg.seal(...)` to write a NEW pre-registration.lock, and
+#      commit the lock in the same commit as the edit and the amendment.
+# Skipping step 1 is not prevented by the machinery -- nothing can prevent it -- but it
+# is DETECTABLE: the lock's digest and the amendment log are both in the history, and a
+# lock that changed with no amendment beside it is the audit finding.
+#
+# WHAT IS PROVISIONAL, AND WHAT RATIFICATION IT AWAITS. STEP2-GENERATOR-PLAN Sec.WP2.3's
+# human gate reads: "merges only after the D6 workshop ratifies (or with provisional
+# values pre-authorized in the amendment log)." The project owner has taken the second
+# branch: this file seals now with provisional values, pre-authorized as amendment
+# AM-2026-07-26-001 (governance/amendment-log.yaml), which names exactly what is
+# provisional and what D6 must ratify. Sealing provisional values is not the same as
+# leaving them unsealed: a provisional value that later changes is a dated amendment
+# with a stated reason, which is the whole point.
+#
+# THRESHOLD PROVENANCE. Every band below that is derived from history comes from ONE
+# reference run -- see the `reference_run:` block -- reproduced by
+# `uv run python scripts/compute_campaign_reference.py --out <path>`. A threshold that
+# is NOT derived from a run says so in its own comment and states what it is instead
+# (a structural definition, a majority rule, a stated margin). No value below is a
+# placeholder in the WP2.1b sense of "a stand-in nobody derived"; the WP2.1b header
+# that said so has been removed rather than left contradicting the file.
+#
+# WHY EVERY BAND HAD TO BE RECOMPUTED HERE (governance/retrofit-register.md RFR-25).
+# WP2.2's fix passes changed what six sealed names MEAN (the backtest family's
+# `..._lr_1path`/`..._chi2_tail_1path` rename compounded with the one-path
+# normalization; `discriminative_score`'s balanced-accuracy handling) and what two
+# RETURN for identical input (`predictive_score`/`tstr_degradation`, via `_fit_gd`'s
+# convergence change). A band computed before those changes is a band over a definition
+# that no longer exists, so no pre-WP2.2c number survives into this file.
 #
 # SELF-CONTAINMENT RULE (WP2.1b Item 1 acceptance, line 25). Every value below must be
 # sufficient, on its own, to reconstruct the D4 strategy set with no reference to code
@@ -92,13 +117,15 @@
 
 schema_version: "1.0"
 
-# WP2.3 flips this to true at the moment of sealing. Nothing in WP2.1b sets it.
-sealed: false
+# WP2.3 flipped this. See the header for the post-seal amendment procedure.
+sealed: true
 
-# Placeholder pending WP2.3: there is no real campaign yet, so this string names no
-# real vintage. WP2.3 replaces it with the actual campaign_vintage_id being sealed
-# against.
-campaign_vintage_id: "provisional-unset"
+# THE FROZEN CAMPAIGN VINTAGE (STEP2-GENERATOR-PLAN Sec.1, "Campaign vintage freeze").
+# The entire Step-2 campaign -- every reference band in this file, every generator fit,
+# every battery run cited at G2 -- runs on this one Step-1 vintage. Monthly refreshes
+# continue and are not consumed here. A deliberate vintage change restarts the campaign
+# and is a dated amendment.
+campaign_vintage_id: "2026-07-24"
 
 # The sealed factor namespace (WP2.1b Task 1, ah.factors.load_manifest). Path is
 # relative to this file; ah.eval.prereg.seal() reads it to know which factors.yaml to
@@ -109,6 +136,141 @@ factor_manifest: factors.yaml
 # checks this exactly against the live FactorManifest, so the pre-registration can
 # never silently drift from the manifest it was authored against.
 active_blocks: [global, us]
+
+# --------------------------------------------------------------------------- #
+# splits -- the sealed train / validation / holdout boundaries.
+#
+# governance/retrofit-register.md RFR-6. `ah/splits.py` hardcodes these dates and is
+# itself a hashed judged source, so an edit to it already invalidates the lock -- but a
+# lock violation says "some hashed file changed", not "the reference span moved". This
+# block is the normative statement; ah.eval.prereg.verify() checks ah.splits.SPLITS
+# against it exactly, on every battery invocation, and the document wins if they ever
+# disagree (the self-containment rule).
+#
+# `start` is inclusive, `end` is EXCLUSIVE, both ISO YYYY-MM-DD -- the half-open
+# convention ah.splits.DataAccess.frame applies, stated here so a reader does not have
+# to infer it. The holdout is the final ~5 years and is spent EXACTLY ONCE, by WP2.11,
+# through a FinalEvaluationToken mintable only in ah/eval/g2.py.
+# --------------------------------------------------------------------------- #
+splits:
+  train:      {start: "1871-01-01", end: "2011-01-01"}
+  validation: {start: "2011-01-01", end: "2021-01-01"}
+  holdout:    {start: "2021-01-01", end: "2026-08-01"}
+
+# --------------------------------------------------------------------------- #
+# reference_run -- the single run every historical band in this file came from.
+#
+# Reproduce with:
+#   uv run python scripts/compute_campaign_reference.py --out <path>
+# whose module constants are asserted equal to the values below by
+# tests/test_prereg.py, so the script that produced the bands and the file that seals
+# them cannot silently diverge. `data/` is gitignored, so that JSON is the artifact a
+# reader without the catalog checks these numbers against.
+#
+# The bootstrap draw flows from `seed` through numpy.random.Generator(PCG64(seed)); the
+# same seed against the same vintage gives bit-identical bands.
+# --------------------------------------------------------------------------- #
+reference_run:
+  vintage_id: "2026-07-24"
+  seed: 20260726
+  n_resamples: 1000
+  level: 0.9
+  block_length: 120
+  resample_length: 120
+  script: scripts/compute_campaign_reference.py
+  split_reader: train_val  # ah.splits.DataAccess.train_val -- the holdout is unreachable
+
+  # WHAT THE RUN COULD NOT COMPUTE, and why it matters (governance/retrofit-register.md
+  # RFR-5). ah.eval.prereg.verify() reads the two lists below and REJECTS any threshold
+  # keyed to a factor or D4 strategy named in them -- a threshold on a factor with no
+  # computable statistic judges nothing, silently, forever, which is precisely the
+  # failure the key checks exist to stop. This is the machine-checked half of the
+  # cross-check RFR-5 asked WP2.3 to perform.
+  #
+  # THREE of the fourteen declared active factors produced no train+validation data on
+  # the sealed vintage, not one:
+  #   commodities  -- DECLARED unavailable (factors.yaml `kind: unavailable`); no free,
+  #                    already-connectored total-return series exists (RFR-8).
+  #   policy_rate  -- MAPPED to fred.FEDFUNDS, registered in requirements.yaml by WP2.2
+  #                    Task 1, but the frozen 2026-07-24 vintage PREDATES that
+  #                    registration and contains no fred.FEDFUNDS parquet at all. This
+  #                    is a "declared available, no data" factor, the dangerous kind.
+  #   hy_spread    -- MAPPED to fred.HY_OAS, which IS in the vintage, but FRED serves
+  #                    only ~3 years of it under ICE licensing, and all of those
+  #                    observations fall inside the HOLDOUT span (2021-01-01 onward), so
+  #                    its train+validation sample is empty. The ah.data.splice
+  #                    `hy_oas_pre1996` rule that would extend it backward is REGISTERED
+  #                    BUT NOT APPLIED by ah.data.refresh (RFR-10), so the sealed
+  #                    vintage does not contain the backfill. Recorded here as the
+  #                    answer to RFR-10's question "WP2.3 must confirm which the campaign
+  #                    vintage actually contains": neither proxy rule is applied in it.
+  missing_factors: [commodities, hy_spread, policy_rate]
+
+  # CONSEQUENCE FOR D4, wider than rationale.d4_commodities_consequence states. That
+  # paragraph names TWO strategies as unevaluable (eqw_factors, endowment_proxy) on the
+  # strength of `commodities` alone. With policy_rate and hy_spread also absent it is
+  # THREE of five:
+  #   eqw_factors      -- 0.20 commodities.
+  #   endowment_proxy  -- 0.10 commodities AND 0.15 credit_xs_hy (derived from
+  #                        hy_spread).
+  #   carry            -- funding leg cash_tr_1m is derived from policy_rate.
+  # sixty_forty (equity_mkt + govt_tr_10y<-ust_10y) and momentum (equity_mkt) are
+  # unaffected and are the only two D4 strategies with computable historical
+  # statistics on the sealed vintage. Every sealed thresholds.strategies entry is on
+  # one of those two, and verify() rejects one on any of the three below.
+  uncomputable_d4_strategies: [eqw_factors, endowment_proxy, carry]
+
+  # Per-factor train+validation coverage of the run, verbatim from its output. Sealed
+  # because a band that does not say how much history it rests on is not auditable, and
+  # the spread here is roughly threefold.
+  coverage:
+    cpi:            {first: "1913-01-01", last: "2020-12-01", n_obs: 1296}
+    ig_spread:      {first: "1919-01-01", last: "2020-12-01", n_obs: 1224}
+    equity_mkt:     {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
+    hml:            {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
+    smb:            {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
+    mom:            {first: "1927-01-01", last: "2020-12-01", n_obs: 1128}
+    ust_10y:        {first: "1962-01-01", last: "2020-12-01", n_obs: 708}
+    ust_2y:         {first: "1976-06-01", last: "2020-12-01", n_obs: 535}
+    hqm_curve:      {first: "1984-01-01", last: "2020-12-01", n_obs: 444}
+    funding_spread: {first: "1986-01-01", last: "2020-12-01", n_obs: 420}
+    equity_vol:     {first: "1990-01-01", last: "2020-12-01", n_obs: 372}
+
+# --------------------------------------------------------------------------- #
+# ensemble_size -- THE SIZE THE GATE BOUNDS ARE CALIBRATED AT.
+#
+# WHY THIS IS SEALED AT ALL. Every acceptance band in this file is the sampling
+# distribution of a statistic computed on ONE length-matched series (a `months`-row
+# bootstrap replicate of history). The ensemble side of the comparison reports the
+# average over `n_paths` paths. Those are not the same object: at 16 paths the ensemble
+# estimator is roughly 4x tighter than the band's own null; at 1000 paths, roughly 8x
+# tighter again. The DIRECTION is conservative -- a tighter estimator is never pushed
+# outside a band it belongs inside, so no bound below is VIOLATED by running larger --
+# but the gates' POWER rises without limit in n_paths, so `max: 0.5` sealed at 16 paths
+# is simply not the same criterion as `max: 0.5` at 1000. Leaving the size free would
+# leave the strength of every gate free.
+#
+# THE RULE. A run at any other size is NOT criterion-bearing. What enforces that today,
+# and what does not, stated exactly -- a sealed file must not claim a check it does not
+# have. TODAY: ah.eval.prereg.verify(..., ensemble_n_paths=, ensemble_months=) rejects a
+# mismatch when it is asked, and ah.eval.battery.run_battery compares every run's own
+# size against this block and records `criterion_bearing` on the report, with the
+# markdown printing "NO -- diagnostic run, may not be cited as G2 evidence" in bold when
+# it is false. The battery does NOT refuse such a run, deliberately: small-ensemble runs
+# are legitimate and necessary (the negative-control suite runs at 16 paths, CI smoke
+# tests smaller). NOT YET: ah/eval/g2.py implements only the holdout-token mint; the
+# multi-seed rule and its refusal of a non-criterion-bearing report are WP2.11's to
+# build, and multi_seed_decision_rule.criterion_bearing_runs_only is the sealed
+# requirement it must satisfy. Running the campaign at a different ensemble size
+# requires a dated `protocol_change` amendment either way.
+#
+# DOWNSTREAM CONSTRAINT, stated plainly: WP2.4 (bootstrap-v1) and WP2.8-2.10 (the
+# neural systems and the ablation) must produce their criterion-bearing ensembles at
+# exactly this size, or amend.
+# --------------------------------------------------------------------------- #
+ensemble_size:
+  n_paths: 1000
+  months: 120
 
 rationale:
   d4_factor_level: >-
@@ -143,6 +305,28 @@ rationale:
 # Conventions -- one set of rules, applied to every definition in this file.
 # --------------------------------------------------------------------------- #
 conventions:
+  # READ THIS FIRST (WP2.3). Several estimator blocks below end with a sentence of the
+  # form "WP2.3 must decide X before sealing". EVERY ONE OF THOSE IS NOW DECIDED. The
+  # sentences are left standing rather than rewritten, because erasing them would erase
+  # the record of what was genuinely open at seal time -- which is precisely the kind of
+  # history a pre-registration exists to preserve. Read each as "this was open; here is
+  # where it was closed":
+  #   - band semantics, length matching, NaN percentiles, knife-edge comparisons, the
+  #     tail gate's inability to fire, within-block correlation, the 10yr tier, the
+  #     backtest level, and the four named estimator substitutions -> the `limitations:`
+  #     block, which states each as a sealed, accepted limitation with what would close
+  #     it;
+  #   - which modules and documents the seal covers -> the `seal_scope:` block;
+  #   - the NC5 enforce exemption, SPREAD_FLOOR_PCT, and the D4 numeraire bias -> the
+  #     `decisions:` block (S2-NC5-EXEMPTION, S2-SPREAD-FLOOR, S2-NUMERAIRE-BIAS);
+  #   - the statistics that are NaN on every ensemble forever -> the
+  #     `structurally_unavailable_statistics:` block, which verify() now enforces
+  #     against any `enforce` threshold;
+  #   - the memorization floors and the benchmark's block length -> the `thresholds:`
+  #     panel section and the `bootstrap_v1:` block.
+  # governance/retrofit-register.md rows RFR-48..RFR-60 are the audit trail for all of
+  # it, one row per closed or sealed item.
+  #
   # THE ONE NUMERAIRE. Every capital-committing leg of every D4 strategy is a monthly
   # TOTAL return in decimal units. Machine-enforced by ah.strategies at load time
   # against factors.yaml's `factor_sources.<factor>.numeraire` and each derived
@@ -1891,11 +2075,59 @@ d4_strategies:
 # --------------------------------------------------------------------------- #
 # Acceptance thresholds -- block-nested (WP2.1b Item 2 / Task 4).
 #
-# *** PROVISIONAL PLACEHOLDERS -- see the file header. *** None of the min/max values
-# below comes from a historical reference statistic; they exist only so
-# ah.eval.prereg.verify() has real block/cross-block coverage to check. WP2.2's
-# ah.eval.reference computes the real train+validation bands and WP2.3 replaces every
-# entry below with one before sealing.
+# WHAT IS AND IS NOT IN THIS SECTION (WP2.3, read this before reading a number).
+#
+# THE PER-NAME REFERENCE BANDS ARE NOT HERE, AND THAT IS DELIBERATE. Every
+# "<factor>.<stat>" band the battery judges against is computed at run time by
+# ah.eval.reference.compute_reference from the sealed campaign vintage, at the sealed
+# reference_run parameters, and is reproducible bit-for-bit from them -- so the bands
+# ARE sealed, by the reference_run block plus the hashed code that computes them,
+# without 975 numbers being transcribed into this file where they could drift. What
+# lives HERE is the layer above: the family GATES that turn hundreds of band
+# comparisons into a verdict, the structural AUDITS whose bound is a definition rather
+# than an estimate, and a small set of per-name ABSOLUTE bounds.
+#
+# WHY NOT A PER-NAME ENFORCE BAND FOR EVERY STATISTIC. At ~570 monthly comparisons,
+# gating each name at enforce against its own 90% band rejects a PERFECT generator with
+# probability indistinguishable from 1 (1 - 0.9^570). That is why the three
+# *_band_exceedance_fraction gates exist and why they, not per-name bands, are the
+# blocking surface for fidelity.
+#
+# THE ABSOLUTE BOUNDS BELOW ARE "ABSURDITY BOUNDS", derived once, uniformly:
+#     min/max = band_midpoint -+ K * band_half_width,  K = 4
+# on the sealed reference run's own band for that name, INTERSECTED with the
+# statistic's own structural range -- and where 4 half-widths falls outside that range,
+# THAT SIDE IS NOT SEALED AT ALL (`null`) rather than sealed at a value that could
+# never be violated, since a threshold that judges nothing reads in the artifact as a
+# check that passed. K = 4 is derived, not chosen for effect: a 90% band's half-width
+# is 1.645 sigma for a roughly normal statistic, so 4 half-widths is ~6.6 sigma, a
+# two-sided rate of ~5e-11 per comparison and ~3e-8 family-wise over ~570 comparisons
+# -- comfortably below the ~1/570 a per-name bound needs to avoid rejecting a correct
+# generator, with room to spare for the non-normality of these statistics.
+# WHAT THEY ADD over the band lookup, which is the only reason to seal them: an
+# absolute bound still judges when the band does not exist. equity_mkt.variance_ratio_
+# 60m's band is NaN on this run (n_valid_resamples = 0: a 120-month replicate cannot
+# supply the 10 non-overlapping 60-month sums the estimator requires), and 33 of the
+# negative-control run's comparisons rest on fully degenerate zero-width bands that
+# ah.eval.battery.band_is_usable correctly bars from gating. On those, an absolute
+# bound is the only judgment available.
+#
+# EVERY PER-NAME BOUND IS `report`, NOT `enforce`, AND THAT IS A STATED WEAKNESS.
+# Two reasons, both real. (1) The pooled statistics (skew, excess_kurtosis, the Hill
+# indices, the aggregational-Gaussianity kurtoses, crisis_corr_lift) are computed over
+# n_paths*months pooled observations on the generated side while the band's replicates
+# carry only `months`, and sample kurtosis of a fat-tailed process rises with sample
+# size -- so a per-name enforce MAX on a pooled tail statistic, derived from a per-path
+# band, could reject a CORRECT generator by an amount nobody has measured
+# (limitations.pooled_vs_per_path_band_semantics). (2) No measurement of the gates' null
+# exceedance rate exists yet (limitations.null_exceedance_rate_is_unverified), so the
+# K = 4 argument rests on a normal approximation rather than on observation.
+# CONSEQUENCE: the ENFORCE surface of this battery is exactly five names --
+# moment_band_exceedance_fraction, dependence_band_exceedance_fraction,
+# near_duplicate_fraction, money_pump_violations, floor_violations -- and nothing else.
+# WP2.4's bootstrap-v1 run is what makes per-name enforce bounds derivable, by
+# supplying the first real observation of the null; promoting any of them is then a
+# dated threshold_change amendment.
 #
 # FOUR SECTIONS, FOUR KEY SHAPES, one per statistic scope (WP2.2 Task 4 adds the
 # fourth, thresholds.strategies):
@@ -1932,37 +2164,83 @@ d4_strategies:
 # --------------------------------------------------------------------------- #
 thresholds:
   blocks:
+    # Every entry below is `band_midpoint -+ 4 * band_half_width` on the sealed
+    # reference run's own band for that name, with the band quoted in each comment so
+    # the arithmetic is checkable from this file alone, and with a side sealed `null`
+    # wherever 4 half-widths leaves the statistic's structural range. Only names an
+    # actual MetricSpec emits appear -- a threshold on a registered reference statistic
+    # that no suite computes would judge nothing, silently, forever. NOTE that
+    # `<factor>.mean`, `<factor>.std` and `<a>~<b>.correlation` ARE emitted as of WP2.2c
+    # Item 1 (governance/retrofit-register.md RFR-34 is closed; RFR-58 records the
+    # correction), and their bands are judged as a family by
+    # moment_band_exceedance_fraction. They carry no per-name threshold here because a
+    # family gate is the right instrument for them, not because they are unjudged.
     global:
-      # PROVISIONAL placeholder -- not derived from history (see file header).
-      "equity_mkt.skew": {min: -3.0, max: 3.0, severity: enforce}
-      # PROVISIONAL placeholder -- not derived from history (see file header).
-      "equity_mkt.excess_kurtosis": {min: -2.0, max: 30.0, severity: report}
+      # band [-1.087435, 0.668305]; historical point 0.142349. Both sides bind: skew is
+      # unbounded, so nothing clips.
+      "equity_mkt.skew": {min: -3.7210, max: 3.3019, severity: report}
+      # band [-0.389892, 5.443227]; historical point 7.503559. NOTE the point sits ABOVE
+      # its own band -- expected and not a defect: `point` is computed on all 1134
+      # months of history while the band is the interval a 120-month replicate produces,
+      # and excess kurtosis is strongly sample-size dependent (see
+      # conventions.estimator_length_matching). Lower side NOT sealed: 4 half-widths
+      # reaches -9.14, below the structural minimum of -2 that excess kurtosis cannot go
+      # under, so a `min` there could never be violated.
+      "equity_mkt.excess_kurtosis": {min: null, max: 14.1929, severity: report}
+      # band [-0.281798, 3.247541]; historical point 4.281881. DN-1.1's named
+      # volatility-clustering statistic. The enforce judgment on this family is
+      # dependence_band_exceedance_fraction, not this bound.
+      "equity_mkt.acf_abs_sum": {min: -5.5758, max: 8.5416, severity: report}
+      # band [-0.382038, 0.058947]; historical point -0.118227. DN-1.1's leverage
+      # effect. Lower side NOT sealed: 4 half-widths reaches -1.0435, outside a
+      # correlation's own [-1, 1] range.
+      "equity_mkt.leverage_correlation": {min: null, max: 0.7204, severity: report}
+      # band [1.890591, 5.874610]; historical point 2.517642. A Hill index is strictly
+      # positive, so the lower side (4 half-widths reaches -4.09) is NOT sealed.
+      "equity_mkt.hill_tail_index_5pct": {min: null, max: 11.8506, severity: report}
     us:
-      # PROVISIONAL placeholder -- not derived from history (see file header).
-      # (Was "policy_rate.std": WP2.2 Task 2 fix pass 2, Minor 3 -- `std` is a
-      # registered SINGLE_FACTOR_STATS reference statistic (a historical band gets
-      # computed for it) but `build_monthly_suite` emits no metric under that name, so
-      # the threshold judged nothing, silently, forever: no enforce-severity threshold
-      # may name a statistic no metric actually produces. `excess_kurtosis` IS produced
-      # for every active factor including policy_rate.)
-      "policy_rate.excess_kurtosis": {min: -2.0, max: 50.0, severity: enforce}
-      # PROVISIONAL placeholder -- not derived from history (see file header).
-      # (Named acf_r_lag1, not acf_1: WP2.2 Task 2's fix pass folded the two lag-1 ACF
-      # statistics into the lag-indexed scheme so that no two registered names compute
-      # one number. Free while sealed: false; a dated amendment afterwards.)
-      "ust_10y.acf_r_lag1": {min: -1.0, max: 1.0, severity: report}
+      # `policy_rate.excess_kurtosis` WAS HERE, at severity enforce, and is REMOVED.
+      # policy_rate has no train+validation data on the sealed campaign vintage
+      # (reference_run.missing_factors), so that threshold judged nothing -- and at
+      # enforce, under THE ONE NaN RULE, it would have FAILED EVERY RUN FOREVER. This is
+      # exactly the hole governance/retrofit-register.md RFR-5 asked WP2.3 to close, and
+      # ah.eval.prereg.verify() now rejects the entry rather than relying on this note.
+      # band [0.921121, 0.975344]; historical point 0.993107. A PER-PATH statistic, so
+      # the pooled/per-path mismatch does not apply to it. Upper side NOT sealed: 4
+      # half-widths reaches 1.0567, outside an autocorrelation's [-1, 1] range. The
+      # surviving `min` says a 10-year yield LEVEL must stay persistent, which is the
+      # falsifiable content.
+      "ust_10y.acf_r_lag1": {min: 0.8398, max: null, severity: report}
+      # band [3.659931, 4.564024]; historical point 4.873915. Upper side NOT sealed: 4
+      # half-widths reaches 5.9202, above the structural maximum of 5 for a sum of five
+      # autocorrelations.
+      "ust_10y.acf_r_sum": {min: 2.3038, max: null, severity: report}
+      # band [-1.181082, 0.666286]; historical point 0.247950. Lower side NOT sealed
+      # (structural minimum -2, as for equity_mkt above).
+      "ust_10y.excess_kurtosis": {min: null, max: 3.4373, severity: report}
+      # band [-1.545279, 2.006997]; historical point -0.699652. Same structural clip.
+      "cpi.excess_kurtosis": {min: null, max: 7.3354, severity: report}
   cross_blocks:
     "global|us":
-      # PROVISIONAL placeholder -- not derived from history (see file header).
-      # (Was "equity_mkt~ust_10y.correlation": WP2.2 Task 2 fix pass 2, Minor 3 --
-      # `correlation` is a registered CROSS_BLOCK_STATS reference statistic (the
-      # reference band is computed for it, and it feeds cross_block_corr_matrix_distance
-      # internally) but `build_monthly_suite` emits no metric under a bare `.correlation`
-      # cross-block name -- only `.crisis_corr_lift` -- so the threshold judged nothing.
-      # `crisis_corr_lift` for the same pair IS produced.)
-      "equity_mkt~ust_10y.crisis_corr_lift": {min: -2.0, max: 2.0, severity: report}
+      # band [-0.479115, 0.479350]; historical point 0.033634. DN-1.1's crisis-
+      # conditional correlation lift. Both sides bind, but only just: crisis_corr_lift
+      # is a difference of two correlations and so lies structurally in [-2, 2], and 4
+      # half-widths reaches +-1.917 -- so this bound rules out only the last 4% of the
+      # statistic's range at each end. STATED rather than dressed up: it is a weak
+      # bound, and it is weak because the historical band is nearly as wide as the
+      # statistic can be. cross_block_corr_matrix_distance (panel section) and the
+      # dependence gate carry the real cross-block judgment.
+      # (Was "equity_mkt~ust_10y.correlation" until WP2.2 Task 2's fix pass moved it,
+      # because a bare cross-block `.correlation` then had a reference band but no
+      # emitting MetricSpec. WP2.2c Item 1 has since ADDED that MetricSpec, so the
+      # original key would be judgeable again today -- it is not restored here because
+      # `correlation` is now covered as a family by moment_band_exceedance_fraction and
+      # `crisis_corr_lift` is the DN-1.1-named statistic.)
+      "equity_mkt~ust_10y.crisis_corr_lift": {min: -1.9168, max: 1.9170, severity: report}
   panel:
-    # PROVISIONAL placeholder -- not derived from history (see file header).
+    # NOT derived from a band, and cannot be: see the next sentence. The 10.0 is a
+    # loose absolute ceiling on a Frobenius distance over the sealed cross-block pair
+    # set, sealed `report`.
     # cross_block_corr_matrix_distance is a DISTANCE between the generated ensemble's
     # cross-block correlation matrix and the reference's own, so its value on history is
     # identically zero and there is no historical band to compute: a threshold on it is
@@ -2066,7 +2344,20 @@ thresholds:
     # a real violation. severity: enforce, so a single violation blocks G2.
     "money_pump_violations": {min: null, max: 0.0, severity: enforce}
     "floor_violations": {min: null, max: 0.0, severity: enforce}
-    # PROVISIONAL placeholders -- not derived from a real run (see file header).
+    # NOT DERIVED FROM A RUN, AND THEY COULD NOT BE. Both estimators need `policy_rate`
+    # -- term_premium is mean(ust_10y - policy_rate), equity_risk_premium is
+    # mean(equity_mkt - cash_tr_1m) and cash_tr_1m derives from policy_rate -- and
+    # policy_rate has no data on the sealed campaign vintage
+    # (reference_run.missing_factors). Both are therefore NaN for any ensemble emitting
+    # the sealed bootstrap_v1.factor_set, which is every ensemble this campaign can
+    # produce. The bounds below are retained from the pre-seal draft as economically
+    # conservative sanity ranges (a mean 10y-over-policy term premium between -2 and +5
+    # percentage points; a mean monthly equity premium between -5% and +15%) and are
+    # sealed `report`, where a NaN blocks nothing.
+    # SEE limitations.the_economics_tier_reduces_to_two_audits -- with the six
+    # implied_sharpe_* names structurally unavailable and policy_anchor_deviation NaN
+    # for the same reason, the economics tier on this campaign is money_pump_violations
+    # and floor_violations, and nothing else.
     "term_premium": {min: -2.0, max: 5.0, severity: report}
     "equity_risk_premium": {min: -0.05, max: 0.15, severity: report}
     # TWO-SIDED, not a bare max (CRITICAL 1, WP2.2 Task 5 fix pass): a one-sided
@@ -2085,13 +2376,41 @@ thresholds:
     "interval_coverage_90_1y": {min: 0.6, max: 0.99, severity: report}
     "interval_coverage_50_5y": {min: 0.2, max: 0.8, severity: report}
     "interval_coverage_90_5y": {min: 0.6, max: 0.99, severity: report}
-    # PROVISIONAL placeholders -- and NOT comparable to their pre-WP2.2c values: Item 2
-    # replaced the fixed 24-month train grid with a sliding-window (all-offsets) search,
-    # so a nearest-neighbour distance is now a minimum over ~830 candidates rather than
-    # ~35 and falls for EVERY generator. WP2.3 must derive both floors from a
-    # post-WP2.2c run; the old numbers would now reject a well-behaved generator.
-    "nn_distance_p05": {min: 0.05, max: null, severity: report}
-    "nn_distance_p50": {min: 0.1, max: null, severity: report}
+    # RE-DERIVED FROM A POST-WP2.2c RUN (governance/retrofit-register.md RFR-40(a),
+    # closed here). The pre-WP2.2c values (0.05 / 0.1) were computed against a fixed
+    # 24-month train grid; Item 2 replaced that with an all-offsets sliding search, so a
+    # nearest-neighbour distance is now a minimum over ~830 candidates rather than ~35
+    # and falls for every generator. Those numbers do not mean what they meant and none
+    # of them survives here.
+    #
+    # THE NULL, MEASURED ON THE SEALED CAMPAIGN VINTAGE. There is no generator to
+    # calibrate against yet, but there does not need to be: the right null is
+    # HISTORY'S OWN self-similarity, which is the same quantity
+    # near_duplicate_fraction's epsilon is already defined as. For every non-overlapping
+    # 24-month TRAIN block of every factor clearing MEMORIZATION_MIN_TRAIN_BLOCKS,
+    # against every non-overlapping sliding window of the same factor -- i.e. exactly
+    # the search a generated block gets -- the pooled leave-one-out nearest-neighbour
+    # distance (n = 339, over 11 factors) has p05 = 0.0548 and p50 = 2.1660. That is
+    # what "an independent historical trajectory" scores.
+    #
+    # THE FLOORS ARE HALF THOSE VALUES, and the factor of two is a STATED MARGIN, not a
+    # computed quantity: a generator drawn from the same population as history sits AT
+    # the null by construction, so a floor set at the null would flag roughly half of
+    # all well-behaved generators. Half the null flags a generator whose blocks sit
+    # systematically twice as close to training windows as independent history ever
+    # sits to itself. Both are `report` PRECISELY BECAUSE the margin is a judgment: an
+    # enforce bound resting on an unmeasured factor of two would be a gate nobody
+    # derived. near_duplicate_fraction below is the enforce memorization gate, and its
+    # bound IS derived.
+    #
+    # KNOWN COMPOSITION MISMATCH, stated: the historical pooled null weights each factor
+    # by its own train block count (cpi contributes 49 blocks, equity_vol 10), while the
+    # generated side pools n_paths * (months // 24) blocks per factor -- EQUAL weight
+    # across factors. The two pools are therefore not composed alike, and the null is
+    # dominated by the most self-similar factors (cpi's own p05 is 0.0153; smb's is
+    # 2.1672). WP2.4 must report bootstrap-v1's measured values against these floors.
+    "nn_distance_p05": {min: 0.0274, max: null, severity: report}
+    "nn_distance_p50": {min: 1.0830, max: null, severity: report}
     "membership_inference_auc": {min: null, max: 0.75, severity: report}
     # WP2.2c Item 2 + Item 3. severity: enforce, max: 0.5 -- a LOOSENED bound at a
     # RAISED severity, and both halves are deliberate.
@@ -2126,8 +2445,19 @@ thresholds:
     # historical windows and scores ~1.0 on this metric, so it FAILS this enforce gate.
     # That is the metric reporting a true fact about such a generator, not a defect --
     # but it means `bootstrap-v1` must either use blocks materially shorter than 24
-    # months or carry a dated exemption in governance/amendment-log.yaml. WP2.3 must
-    # ratify one of the two before sealing.
+    # months or carry a dated exemption in governance/amendment-log.yaml.
+    # RESOLVED AT SEAL TIME, first option, no exemption needed:
+    # bootstrap_v1.mean_block_months is 6. TWO CORRECTIONS TO THE PARAGRAPH ABOVE, both
+    # measured on the sealed campaign vintage rather than inferred (see
+    # bootstrap_v1.block_length_derivation and governance/retrofit-register.md RFR-52).
+    # (1) The "~1.0" figure was measured on nc5, a FIXED-24-month-block stitch. Block
+    # lengths in a stationary bootstrap are GEOMETRIC, which is a different object: a
+    # 24-month generated window is verbatim only when no restart falls inside it, with
+    # probability (1 - 1/L)^23 -- 38% at L=24, not 100%. Measured near_duplicate_fraction
+    # is 0.064 at L=6, 0.187 at L=12, 0.284 at L=18 and 0.361 at L=24, so a geometric
+    # resampler CLEARS this 0.5 gate at every length tested and this gate is not what
+    # bounds the block length. (2) What does bound it is nn_distance_p05, which collapses
+    # to exactly 0.0 once that verbatim rate passes its own 5th percentile, at L about 8.
     #
     # NAMED, NOT JUST FIXED (WP2.2c honesty fix pass, Important 4): this is the eleventh
     # instance of this work package's dominant failure mode ("a metric that improves
@@ -2150,8 +2480,19 @@ thresholds:
     "near_duplicate_fraction": {min: null, max: 0.5, severity: enforce}
     # WP2.2 Task 6. ALL "report" -- STEP2-GENERATOR-PLAN Sec.WP2.3's sealed decision
     # rule states conditional-tier results are reported alongside G2 but do not gate
-    # promotion. PROVISIONAL placeholders (not derived from a real run), same as every
-    # other entry in this section.
+    # promotion (multi_seed_decision_rule.conditional_tier_is_not_gating; the same rule
+    # is the sealed basis of decisions.S2-NC5-EXEMPTION).
+    # NOT DERIVED FROM A RUN, AND STATED AS SUCH. Every bound below is an authored
+    # tolerance on a condition-adherence ERROR, and no historical analogue of it exists:
+    # these statistics are defined over the checked-in fixtures/worlds/conditional/*.json
+    # worlds (themselves inside the seal), and "how far did the ensemble land from the
+    # requested inflation average" has no counterpart in a historical series to bootstrap
+    # a band from. The ladders are ordered by construction (p90 looser than mean, and
+    # off-support tolerances widening with distance from support), which is the property
+    # that makes them meaningful as a SHAPE even where the levels are authored. They are
+    # `report` and non-gating, so no G2 verdict rests on them. bootstrap-v1 will fail
+    # most of them and that is expected, not a defect --
+    # bootstrap_v1.conditioning_statement says why.
     "condition_adherence_error_inflation": {min: null, max: 5.0, severity: report}
     "condition_adherence_error_p90_inflation": {min: null, max: 10.0, severity: report}
     "condition_adherence_error_rate": {min: null, max: 3.0, severity: report}
@@ -2177,24 +2518,68 @@ thresholds:
     "off_support_pass_rate_at_beyond": {min: 0.05, max: null, severity: report}
   # WP2.2 Task 4 -- thresholds.strategies, key "<strategy_id>.<stat>", stat in
   # ah.eval.reference.STRATEGY_STATS (see that module and ah.eval.prereg
-  # ._check_strategy_threshold_key). PROVISIONAL placeholders, same as every other
-  # value in this thresholds: block -- not derived from a historical reference
-  # statistic; not exhaustive over every registered strategy stat (WP2.3's job).
+  # ._check_strategy_threshold_key). NOT exhaustive over every registered strategy stat,
+  # deliberately: `var_99`/`es_99` and the four Christoffersen names carry no sealed
+  # threshold because limitations.named_estimator_substitutions records why the backtest
+  # family runs at 95% only.
   strategies:
-    # PROVISIONAL placeholder -- not derived from history (see file header).
+    # ONLY TWO OF THE FIVE D4 STRATEGIES APPEAR HERE, and that is the seal-time fact
+    # rationale.d4_commodities_consequence understates. On the sealed campaign vintage
+    # eqw_factors, endowment_proxy and carry have no computable historical return path
+    # at all -- commodities, hy_spread (via credit_xs_hy) and policy_rate (via
+    # cash_tr_1m) respectively -- so a threshold on any of them would judge nothing.
+    # ah.eval.prereg.verify() rejects one, reading reference_run.
+    # uncomputable_d4_strategies. Measured on the sealed run:
+    #   sixty_forty  n = 708 months (1962-2020, limited by ust_10y's start),
+    #                mean 0.00770, sd 0.02971, VaR95 0.04214, ES95 0.06001,
+    #                VaR99 0.07122, ES99 0.08692, realized 95% exceedance rate 0.0508.
+    #   momentum     n = 1134 months (1926-2020), mean 0.00803, sd 0.04110,
+    #                VaR95 0.05613, ES95 0.09102, VaR99 0.11535, ES99 0.15597,
+    #                realized 95% exceedance rate 0.0503.
+    # NOTE for momentum specifically: its realized series carries the uncommitted-
+    # capital bias decisions.S2-NUMERAIRE-BIAS seals -- it books exactly 0.0 in its
+    # 12-month warm-up and in every flat-signal month rather than the cash rate -- so
+    # every number above is on a series biased low in those months.
+    #
+    # A THREE-FOLD SANITY BAND, not a bootstrap band. Unlike the per-factor statistics,
+    # the D4 strategy statistics have NO bootstrap band: ah.eval.reference computes
+    # replicates for SINGLE_FACTOR_STATS and CROSS_BLOCK_STATS only, and STRATEGY_STATS
+    # entries carry no `fn` at all (they are evaluated by ah.eval.metrics.tails against
+    # the historical forecast, not resampled). The absurdity-bound rule used above
+    # therefore has no half-width to work from. What is sealed instead is an explicit
+    # order-of-magnitude band, [historical / 3, historical * 3], stated as such: a
+    # generated ensemble whose 95% VaR on the classic 60/40 portfolio is under 1.4% or
+    # over 12.6% a month is not modelling that portfolio. It is a coarse instrument and
+    # is sealed `report`.
+    "sixty_forty.var_95": {min: 0.0140, max: 0.1264, severity: report}
+    "sixty_forty.es_95": {min: 0.0200, max: 0.1800, severity: report}
+    "momentum.var_95": {min: 0.0187, max: 0.1684, severity: report}
+    "momentum.es_95": {min: 0.0303, max: 0.2731, severity: report}
+    # elicitability_score is the D4 tail objective WP2.8's auxiliary loss optimizes --
+    # the average of the Fissler-Ziegel-style joint (VaR, ES) consistent scoring
+    # function of the GENERATED returns against the HISTORICAL forecast. It is a loss,
+    # so lower is better and only an upper bound is meaningful. No band exists for it
+    # either; 5.0 is retained from the pre-seal draft as a deliberately loose upper
+    # bound and IS NOT DERIVED FROM A RUN -- the one value in this file's thresholds
+    # block of which that is true, and it is sealed `report` and named here rather than
+    # dressed up. WP2.4 must report bootstrap-v1's measured value so a derived bound
+    # replaces it by amendment.
     "sixty_forty.elicitability_score": {min: null, max: 5.0, severity: report}
-    # PROVISIONAL placeholder -- not derived from history (see file header). WP2.2 Task
-    # 4 fix pass 2 (BLOCKING 1): renamed from `kupiec_pof_pvalue`. A p-value floor of
-    # 0.01 is a deliberately loose non-rejection band while unsealed -- and, since fix
-    # pass 2's BLOCKING 2 correction, it is now the floor at the SEALED one-path
-    # reference count (T=120, not a pooled count ~1000x larger), where it is close to
-    # vacuous: it rejects only a KL(p_hat||alpha) large enough to be an obviously broken
-    # generator, not the size of miscalibration G2 should actually care about. Left as a
-    # placeholder rather than replaced with an invented number -- this file seals no
-    # threshold not derived from a real run (see the file header) -- and
-    # governance/retrofit-register.md records that WP2.3 must derive this, and every
-    # other threshold, from a POST-FIX run, never from this provisional value.
+    "momentum.elicitability_score": {min: null, max: 5.0, severity: report}
+    # WP2.2 Task 4 fix pass 2 (BLOCKING 1): renamed from `kupiec_pof_pvalue`, and the
+    # statistic pinned to the SEALED one-path reference count (T = 120), not to a pooled
+    # count ~1000x larger. The 0.01 floor is now DERIVED rather than provisional: it is
+    # the conventional 1% point of the chi-square(1) reference distribution, LR = 6.635,
+    # which at T = 120 and a nominal 95% VaR level corresponds to a realized exceedance
+    # rate outside roughly [0.0042, 0.1125] -- i.e. fewer than about 0.5 or more than
+    # about 13.5 exceedances in 120 months against an expected 6. That interval is wide,
+    # and saying so is the point: at a 120-month reference length a Kupiec test simply
+    # cannot resolve the size of miscalibration G2 would care about, which is why this
+    # is `report` and why governance/retrofit-register.md RFR-24's coverage-band
+    # reformulation stays on the table (see limitations.named_estimator_substitutions
+    # for why it was not adopted here).
     "sixty_forty.kupiec_pof_chi2_tail_1path": {min: 0.01, max: null, severity: report}
+    "momentum.kupiec_pof_chi2_tail_1path": {min: 0.01, max: null, severity: report}
 
 # --------------------------------------------------------------------------- #
 # Item 3 decisions -- R5 (FX) and J3 (UK block), both CLOSED-deferred (WP2.1b Task 5
@@ -2209,3 +2594,672 @@ decisions:
   J3:  # UK block activation -- deferred until a block_addition amendment.
     status: CLOSED-deferred
     consequence: "UK-domiciled institution twins are blocked until a block_addition amendment; the InstitutionProfile interface accommodates them without rework. Same retraining consequence applies."
+  S2-NC5-EXEMPTION:  # WP2.3. The plan contradicts itself; the owner resolved it.
+    status: CLOSED
+    consequence: "STEP2-GENERATOR-PLAN contradicts itself: Sec.WP2.2b requires every negative control to fail its designated tier AT ENFORCE, while Sec.WP2.3's sealed decision rule makes conditional-tier results non-gating. NC5's designated tier IS conditional, so both cannot hold. The project owner has ruled that Sec.WP2.3 governs: the conditional tier stays non-gating, every conditional threshold stays severity report, and NC5's exemption from the enforce criterion is a NAMED, NARROWLY-SCOPED exception covering exactly one control and exactly its designated cell. The exception is not a hole -- NC5 is still detected substantively in that cell (14 of 16 conditional metrics fire) and is still BLOCKED, by near_duplicate_fraction at enforce, because a 24-month-block resampler emits verbatim historical windows. tests/test_negative_controls.py pins which gate blocks it, not merely that something does."
+  S2-SPREAD-FLOOR:  # WP2.3 ratification of governance/retrofit-register.md RFR-41.
+    status: RATIFIED
+    consequence: "ah.eval.metrics.economics.SPREAD_FLOOR_PCT is 0.0, a stated deviation from DN-1.1 Sec.II.4's literal 100bp. RATIFIED at seal time on the evidence: measured on the sealed campaign vintage's own train+validation panel, 54.0% of ig_spread's 1224 observations (minimum 0.32) and 86.9% of funding_spread's 420 (minimum 0.118) sit BELOW 100bp, and NONE of either sits below 0.0. The third SPREAD_FLOOR_FACTORS member, hy_spread, has no train+validation data on this vintage and could not be checked either way. A 100bp floor is therefore a gate that rejects the historical record itself -- it fired identically for all five negative controls including the three that replay real history verbatim, making the only firing enforce gate in the battery incapable of discriminating anything. DN-1.1's floors are a GENERATIVE device (a softplus offset keeping a modelled spread positive); the falsifiable statement that survives as an audit of a generator's OUTPUT is that a credit or funding spread cannot be negative. The alternative deliberately NOT taken, and recorded so it is not rediscovered as novel: a per-factor floor derived from each factor's own observed minimum, which would convert a structural constraint into a data-dependent band and could not be checked against a generator emitting a factor history never covered."
+  S2-NUMERAIRE-BIAS:  # WP2.3 resolution of governance/retrofit-register.md RFR-12.
+    status: CLOSED
+    consequence: "RFR-12's two options were (a) add a cash_tr_1m residual leg to eqw_factors, endowment_proxy and momentum so uncommitted/flat capital earns the cash rate, or (b) seal as-is and record the bias as a named limitation. (b) is sealed, and NOT as a preference: cash_tr_1m is derived from policy_rate, which has NO train+validation data on the sealed campaign vintage (reference_run.missing_factors), so option (a) would have made all three strategies uncomputable rather than unbiased -- it would have propagated the gap instead of closing it. The sealed consequence: eqw_factors (0.6 of weight in zero-cost overlays), endowment_proxy (0.15) and momentum (its 12-month warm-up and every flat-signal month) realize ZERO on uncommitted or unallocated capital instead of the cash rate, so each strategy's realized series sits BELOW the total-return numeraire by exactly the uncommitted-capital cash return for every affected month. Two of the three (eqw_factors, endowment_proxy) are already uncomputable for other reasons; momentum is the one live strategy carrying the bias, and its sealed thresholds must be read as thresholds on a series biased low in flat months. Re-entry: when policy_rate has data, adding the residual leg is a threshold_change amendment plus recomputed bands. Note also that ah.strategies' 'weights sum to 1.0' check sums capital shares and zero-cost notionals together, so it is NOT evidence of full investment and was not read as such here."
+
+# --------------------------------------------------------------------------- #
+# structurally_unavailable_statistics -- names that are NaN on every ensemble, always.
+#
+# A statistic here cannot be computed on ANY generator's output because an input it
+# needs does not exist anywhere in the platform yet (a missing factors.yaml mapping, or
+# a generator capability nothing implements). ah.eval.battery marks the corresponding
+# MetricSpec `status: structurally_unavailable`, and under THE ONE NaN RULE
+# (conventions.nan_metric_rule) a NaN `enforce` metric FAILS -- so an `enforce`
+# threshold on any name below would fail EVERY RUN FOREVER, reading in the artifact as
+# a real generator defect rather than as a platform gap.
+#
+# Before WP2.3 that status was VISIBLE on the metric but not ENFORCED on the threshold.
+# ah.eval.prereg.verify() now REJECTS `severity: enforce` on any statistic named here,
+# on every battery invocation. All eleven names are sealed `report` or omitted
+# deliberately; none carries an enforce threshold.
+#
+# The list is sealed HERE rather than imported from ah.eval.battery for two reasons:
+# the metric suites cannot be imported by ah.eval.prereg (they import ah.eval.battery,
+# which imports prereg), and this file must be reconstructible on its own -- a reader
+# must see which names were known-unavailable at seal time without running the code.
+# tests/test_prereg.py asserts this list equals, in BOTH directions, the set a real
+# suite registration actually marks.
+#
+# `restored_by` names the work package that closes the gap; `unscheduled` means no
+# owner exists today and one must be given before G2 (governance/retrofit-register.md
+# RFR-42 says so for the valuation factor specifically).
+# --------------------------------------------------------------------------- #
+structurally_unavailable_statistics:
+  ergodicity_gap:
+    restored_by: WP2.5
+    reason: >-
+      DN-1.1 Sec.II.6 defines it as long-path vs ensemble moments. The estimator is
+      built and tested (ah.eval.reference.ergodicity_gap, against an ergodic AR(1), an
+      iid process and a genuinely non-ergodic regime mixture), but run_battery is
+      handed one Ensemble of production-length paths and no long path, and no generator
+      can emit one. WP2.5's climate model is the first that could. Registered for all
+      fourteen declared active factors, so this one name accounts for fourteen of the
+      twenty-five unavailable metric instances. See governance/retrofit-register.md
+      RFR-20 (which also records what this metric REPLACED: an earlier version that was
+      algebraically |variance_ratio_120m - 1| and would have failed a CORRECT generator
+      of every persistent factor). variance_ratio_120m remains registered and
+      computable, so the underlying serial-dependence question is not unmeasured.
+  # The three regime_duration_* names and the six implied_sharpe_* names share ONE
+  # blocker, stated once here and referenced by each: ah.data.derive.label_regime needs
+  # `usrec` (NBER recession) and `growth_yoy` (industrial production) to label a
+  # generated month. Both series ARE registered in requirements.yaml with working
+  # connectors and both ARE in the sealed vintage -- the blocker is purely that no
+  # factors.yaml mapping exposes them as generator-visible output factors, which is a
+  # generator-namespace decision, not a data-sourcing one (governance/retrofit-
+  # register.md RFR-22 records that the WP1.9 emergent-requirements route was considered
+  # for exactly this and does not apply). WP2.6's semi-Markov regime skeleton is what
+  # makes a generated path regime-labelled. See RFR-17 (durations) and RFR-27 (Sharpes).
+  regime_duration_mean:
+    restored_by: WP2.6
+    reason: no regime label can be attached to a generated path; see the note above and RFR-17.
+  regime_duration_p50:
+    restored_by: WP2.6
+    reason: no regime label can be attached to a generated path; see the note above and RFR-17.
+  regime_duration_p90:
+    restored_by: WP2.6
+    reason: no regime label can be attached to a generated path; see the note above and RFR-17.
+  implied_sharpe_EXP:
+    restored_by: WP2.6
+    reason: >-
+      DN-1.1 Sec.II.6's "implied Sharpe ratios by regime"; same regime-label blocker as
+      regime_duration_*. Six regime labels, six unavailable names. See RFR-27.
+  implied_sharpe_SLOW:
+    restored_by: WP2.6
+    reason: same regime-label blocker as regime_duration_*; see RFR-27.
+  implied_sharpe_REC:
+    restored_by: WP2.6
+    reason: same regime-label blocker as regime_duration_*; see RFR-27.
+  implied_sharpe_CRI:
+    restored_by: WP2.6
+    reason: same regime-label blocker as regime_duration_*; see RFR-27.
+  implied_sharpe_STAG:
+    restored_by: WP2.6
+    reason: same regime-label blocker as regime_duration_*; see RFR-27.
+  implied_sharpe_REF:
+    restored_by: WP2.6
+    reason: same regime-label blocker as regime_duration_*; see RFR-27.
+  # Both ten_year_return_vs_valuation_* names share one blocker, and it is the only
+  # entry in this block with NO OWNER.
+  ten_year_return_vs_valuation_slope:
+    restored_by: unscheduled
+    reason: &valuation_reason >-
+      DN-1.1's decade row needs a starting-valuation input (demeaned log CAPE).
+      shiller.cape IS registered in requirements.yaml and IS in the sealed vintage, but
+      no factor in factors.yaml maps to it, so no generated path carries a valuation
+      state to regress against. ah.eval.reference.valuation_regression is the tested,
+      ready-to-wire OLS estimator; only the factor mapping is missing. UNSCHEDULED is
+      the honest owner: it is a Step-1 data/manifest item nobody owns today, and
+      governance/retrofit-register.md RFR-42 states it should be given one BEFORE G2,
+      because without it DN-1.1's decade row cannot be posed at all. See RFR-18.
+  ten_year_return_vs_valuation_r2:
+    restored_by: unscheduled
+    reason: *valuation_reason
+
+# --------------------------------------------------------------------------- #
+# seal_scope -- the two questions WP2.1b left explicitly open, decided here.
+#
+# The full accounting of WHAT is hashed lives in this file's header and in
+# ah.eval.prereg's module docstring ("What the seal covers"); pre-registration.lock's
+# `hashed_files` is the authoritative machine-readable list. This block records only
+# the two decisions WP2.1b deferred to WP2.3 by name.
+# --------------------------------------------------------------------------- #
+seal_scope:
+  derive_py: SEALED
+  derive_py_reason: >-
+    governance/retrofit-register.md RFR-10, first half. src/ah/data/derive.py is ON THE
+    READ PATH, not merely referenced by it: ah.eval.panel._DERIVED_EXPRS calls
+    derive.add, derive.difference and derive.funding_stress at panel-read time to
+    construct equity_mkt, ig_spread and funding_spread, so every band for those three
+    factors -- and every cross-block band involving them -- is a function of those
+    helper bodies, recomputed on each read rather than stored in the vintage. Sealing
+    only the BINDING (which helper, which units algebra, via the sealed panel.py) was
+    not enough: an edit to derive.add's body would change what a sealed band is a band
+    OF, with no lock violation. The stated cost is accepted: a future Step-1 change to
+    any of those three helpers is now a dated amendment.
+  splice_py: NOT-SEALED
+  splice_py_reason: >-
+    governance/retrofit-register.md RFR-10, second half. src/ah/data/splice.py's
+    PROXY_RULES (fedfunds_pre1954, hy_oas_pre1996) are REGISTERED but not applied by
+    ah.data.refresh, and ah.eval.panel.read_factor_frames never calls that module at
+    all, so no sealed band is a function of its code today -- which the reference run
+    demonstrates rather than assumes: policy_rate and hy_spread appear in
+    reference_run.missing_factors precisely BECAUSE the backfills are absent from the
+    sealed vintage. RFR-10 asked WP2.3 to "confirm which the campaign vintage actually
+    contains"; the answer is NEITHER backfill. What the vintage contains is pinned by
+    the sealed campaign_vintage_id, not by this module, so hashing it would freeze code
+    that cannot move a verdict. CONSEQUENCE, stated so it is not a surprise: if a later
+    work package applies either proxy rule, that produces a NEW vintage, which is a
+    campaign restart and a dated amendment regardless -- and at that point splice.py
+    joins the seal, because it will then be on the read path.
+  battery_thresholds_yaml: SEALED
+  battery_thresholds_yaml_reason: >-
+    src/ah/battery/thresholds.yaml is Step-0 legacy threshold data, every entry
+    `status: todo`, blocking nothing today -- but it is READ by ah.battery.report.
+    load_thresholds(), and ah/battery/report.py is itself a hashed judged source. A
+    sealed estimator defined over an unsealed input is exactly the failure
+    _REQUIRED_JUDGED_FIXTURE_GLOBS was introduced to close for the authored conditional
+    worlds (governance/retrofit-register.md RFR-33). The alternative WP2.1b named --
+    declaring it inert and superseded by this file's thresholds -- was rejected because
+    "inert today" is a property of its current contents, which is exactly what a seal
+    is for. Sealing it costs nothing (nothing needs to change it) and closes the hole.
+  other_named_documents: NONE
+  other_named_documents_reason: >-
+    RFR-33 asked WP2.3 to decide whether any OTHER checked-in document a sealed
+    estimator names by DIRECTORY belongs in _REQUIRED_JUDGED_FIXTURE_GLOBS. Audited at
+    seal time: fixtures/worlds/conditional/*.json is still the only one. Every other
+    sealed estimator is defined over either code, this file, factors.yaml, or catalog
+    data pinned by campaign_vintage_id. tests/fixtures/** is test scaffolding that no
+    sealed estimator names.
+
+# --------------------------------------------------------------------------- #
+# limitations -- WHAT THIS SEAL DOES NOT ESTABLISH.
+#
+# Read this block before citing any threshold in this file as evidence of anything. A
+# sealed threshold establishes that a criterion was fixed BEFORE the evidence was
+# collected; it does not establish that the criterion has the operating characteristics
+# one would like it to have. Every item below is measured or structural, not
+# speculative, and each names what would close it.
+# --------------------------------------------------------------------------- #
+limitations:
+
+  null_exceedance_rate_is_unverified: >-
+    THE HEADLINE ONE. The three *_band_exceedance_fraction gates are derived from a
+    per-comparison miss rate of 0.10, which is (1 - level) for this file's sealed band
+    `level: 0.9`. THAT 0.10 IS THE BAND'S OWN DEFINITION, NOT A MEASUREMENT: it is what
+    a percentile band means by construction, not an observed false-positive rate. Two
+    gaps follow. (1) The analytic exceedance rates quoted in the gates' own derivation
+    (~3.0e-8 for the moment family, ~1.0e-10 for the dependence family) assume the
+    comparisons are near-INDEPENDENT, and they are not -- the factor panel is
+    correlated, and one factor's own statistics are correlated with each other, so the
+    true rate is larger by an unknown factor. Only the Markov bound (P(fraction > 0.5)
+    <= 0.10/0.5 = 0.2) survives arbitrary dependence, and 0.2 is not a small number.
+    (2) NO NEGATIVE CONTROL IS A KNOWN-GOOD GENERATOR, so nothing in the suite measures
+    the null rate empirically either: the three undistorted controls score 0.231-0.308
+    on the moment gate, which is NOT a false-positive rate, because an iid draw, a
+    shuffle and a 24-month-block stitch all genuinely have the wrong local dispersion at
+    a 120-month scale. WHAT CLOSES IT: bootstrap-v1 (WP2.4) is the first generator that
+    is MEANT to match history, and its measured exceedance fractions are the first real
+    observation of the null. If they sit materially above 0.10 per comparison the
+    bounds need a dated amendment -- and WP2.4 must report them whether or not it likes
+    the answer.
+
+  three_gates_were_designed_against_the_controls: >-
+    The three *_band_exceedance_fraction gates' STATISTIC was chosen by measuring three
+    candidate constructions against the five negative controls and keeping the one that
+    separates them (the 403-per-lag aggregate scored nc1 at 0.389 -- UNCAUGHT at 0.5;
+    the two-stage majority variant scored 0.077 for both nc1 and nc5 -- no separation;
+    the acf_r_sum/acf_abs_sum joint statistic separates them). The BOUND never moved
+    (0.5 is a majority rule derived from `level`, not from any control's score) and no
+    control was weakened -- but that is a limit on how bad the practice was, not a
+    denial that it happened. CONSEQUENCE, and it is a rule not a caveat: G2-EVIDENCE.md
+    MUST NOT cite "the battery catches 4 of 5 negative controls" as independent
+    validation of these three gates' DESIGN. It is not independent; the controls were
+    the evidence used to choose the design. It remains valid as a statement that the
+    battery detects those five specific defects. bootstrap-v1 is the first genuinely
+    independent test. See governance/retrofit-register.md RFR-45.
+
+  every_negative_control_number_is_from_a_synthetic_fixture: >-
+    Every measured negative-control value quoted anywhere in this file -- 0.654 for
+    nc3's moment gate, 0.615/0.718 for nc1/nc2's dependence gate, 0.234 for nc1's tail
+    gate, 0.7096 for nc4's near_duplicate_fraction, the 148 knife-edge comparisons, the
+    16-of-22 10yr-tier count -- comes from tests/test_negative_controls.py's SYNTHETIC
+    panel, not from the sealed campaign vintage. The STRUCTURAL findings hold for any
+    data (a majority rule over a family cannot fire when the failure is confined to a
+    minority of that family; a metric that improves when the generator produces less is
+    broken whatever the panel). THE MAGNITUDES DO NOT TRANSFER. The control suite also
+    runs at 16 paths while this file's criterion size is 1000, so no control number is a
+    criterion-bearing measurement either. Nothing in G2-EVIDENCE.md may quote a control
+    magnitude as a property of the campaign data.
+
+  the_campaign_vintage_is_missing_three_of_fourteen_factors: >-
+    commodities (declared unavailable), policy_rate (mapped to fred.FEDFUNDS, which the
+    frozen vintage predates) and hy_spread (mapped to fred.HY_OAS, whose ~3 years of
+    licensed history all fall inside the holdout). See reference_run.missing_factors for
+    the full account. Consequences that are easy to miss: THREE of five D4 strategies
+    have no computable historical statistics; policy_anchor_deviation is NaN on every
+    run (report severity, so it blocks nothing -- but it also establishes nothing); the
+    `us` block's sealed thresholds rest on five factors, not six; and every threshold
+    keyed to one of the three is rejected by verify() rather than silently judging
+    nothing.
+
+  pooled_vs_per_path_band_semantics: >-
+    governance/retrofit-register.md RFR-15/RFR-26, sealed as a stated limitation rather
+    than fixed. Bootstrap replicates are length-matched to the judged ensemble's PATH
+    length (120 months), which is correct for every per-path statistic under the
+    n-denominator ACF estimator this file fixes as its convention. It is the WRONG
+    length for the POOLED statistics: skew, excess_kurtosis, the two Hill indices, the
+    aggregational-Gaussianity kurtoses and crisis_corr_lift are computed over
+    n_paths*months pooled observations on the generated side while a replicate carries
+    only `months`, and all of those estimators are small-sample biased -- so for those
+    names the two sides match in neither sample size nor bias. The bands are
+    CONSERVATIVELY WIDE in consequence (a fat-tailed generator reads as further from
+    history than it is), which is the safe direction, and it is why the tail gate's
+    inability to fire (below) is the bigger problem. tail_dependence_lower/upper carry a
+    worse, THREE-way version of the same mismatch (generated side pooled at
+    n_paths*months; historical point estimate on the full ~1100-month series; the band's
+    replicates drawn at full sample length, not length-matched at all), and RFR-15's two
+    stated remedies do not apply to them. Closing either needs per-statistic resample
+    lengths inside ah.eval.reference's draw structure, which changes what every pooled
+    band IS.
+
+  the_tail_gate_cannot_fire: >-
+    tail_band_exceedance_fraction is sealed `report`, so the tail machinery blocks
+    NOTHING at enforce, and that is a real gap rather than a preference. The gate is a
+    majority rule over a family spanning every active factor, but a tail failure is
+    characteristically confined to the return-bearing ones (4 of 13 declared-available
+    factors), so it cannot reach 0.5 however severe it is -- nc1-iid-gaussian, which
+    replaces every fat tail in the panel with a Gaussian one, scores 0.234 while
+    producing 11 substantive tail band failures on exactly the excess_kurtosis /
+    hill_tail_index statistics DN-1.1 Sec.II.6 names. A GENERATOR THAT GOT THE DYNAMICS
+    RIGHT AND THE TAILS WRONG PASSES AT ENFORCE TODAY. Sealing it at enforce anyway
+    would be worse: a gate that cannot fire reads in the artifact as a check that
+    passed. Lowering the 0.5 bound was rejected outright -- it is derived from `level`
+    and a majority rule, and moving it to make a control fire would destroy the only
+    evidence the gate is not fitted. See governance/retrofit-register.md RFR-43, and
+    live_options.per_factor_tail_gate below for the construction that would close it.
+
+  knife_edge_band_comparisons: >-
+    governance/retrofit-register.md RFR-38. 148 of 3035 finite (value, band)
+    comparisons in the negative-control run sit at EXACTLY zero distance from a band
+    edge, passing only because the bracket is closed; 33 of those rest on a fully
+    degenerate [0.0, 0.0] band. WP2.2c closed the degenerate half structurally
+    (ah.eval.battery.band_is_usable bars a zero-width band from gating and marks it
+    `band_degenerate` in the report) and made every margin visible (`band_distance` on
+    every banded result). The exact-boundary half is SEALED AS IS: a tie-breaking
+    convention (exact boundary fails, or a tolerance) would change the semantics of
+    every band in the battery, and no evidence exists today that either direction is
+    right. What is no longer true is that a verdict flip has no identified cause -- the
+    BLAS-thread-count hypothesis is falsified and knife-edge comparisons are the
+    explanation.
+
+  within_block_correlation_is_unjudged: >-
+    governance/retrofit-register.md RFR-14, sealed as scope rather than closed.
+    ah.eval.reference computes a `correlation` statistic only for factor pairs drawn
+    from two DIFFERENT blocks, so equity_mkt~hy_spread (both `global`) has no reference
+    band, and cross_block_corr_matrix_distance covers cross-block pairs only -- which is
+    why it carries that scope in its name. A GENERATOR COULD GET EVERY CROSS-BLOCK
+    CORRELATION RIGHT AND EVERY WITHIN-BLOCK ONE WRONG and nothing here would notice.
+    Adding a within-block pairwise statistic is a structural change to the reference
+    layer, not a rename, and it would change what this file seals.
+
+  a_direct_run_battery_call_can_desync_its_reference: >-
+    governance/retrofit-register.md RFR-16, sealed as a stated caller contract. Every
+    production path goes through ah.eval.battery.run_full_battery, which computes the
+    reference, registers the suites against it and passes the same object to
+    run_battery -- it cannot desync by construction. A caller invoking the lower-level
+    run_battery directly with a `reference=` that does not match what the registered
+    specs closed over gets no error and no warning. The seal does not defend against
+    that; the reference-identity guard that would is a change to MetricSpec's signature.
+
+  the_economics_tier_reduces_to_two_audits: >-
+    On the sealed campaign vintage the `economic` tier has ELEVEN registered metrics and
+    exactly TWO that can produce a number. Six `implied_sharpe_*` names are structurally
+    unavailable (no regime label can be attached to a generated path). `term_premium`
+    (mean of ust_10y - policy_rate), `equity_risk_premium` (mean of equity_mkt -
+    cash_tr_1m, and cash_tr_1m derives from policy_rate) and `policy_anchor_deviation`
+    (a Taylor-type anchor evaluated at policy_rate) all need `policy_rate`, which has no
+    train+validation data (reference_run.missing_factors) and is therefore absent from
+    bootstrap_v1.factor_set -- so all three are NaN for every ensemble this campaign can
+    produce. What remains is `money_pump_violations` and `floor_violations`: two hard
+    structural audits with `max: 0`. They are genuine and they are `enforce`, but
+    G2-EVIDENCE.md must not present a clean economics tier as evidence that DN-1.1
+    Sec.II.6's economic row was checked. It was checked in the two places it could be.
+
+  the_10yr_tier_is_unavailable_not_passing: >-
+    16 of the 22 metrics in DN-1.1 Sec.II.6's 10yr tier (73%) are structurally
+    unavailable -- 14 ergodicity_gap instances plus both ten_year_return_vs_valuation_*
+    names. nc2-shuffled is DESIGNATED to this tier and produces zero substantive
+    failures in it. G2-EVIDENCE.md MUST NOT cite a 10yr-tier pass; the tier is
+    unavailable, not passing. See conventions.ten_year_tier_coverage and
+    governance/retrofit-register.md RFR-37/RFR-42.
+
+  named_estimator_substitutions: >-
+    Four sealed estimators depart from their normative source, and are sealed with the
+    departure stated rather than silently. (1) lost_decade_frequency is NOMINAL, not
+    CPI-deflated -- a materially more permissive definition in an inflationary era; a
+    joint equity+CPI reference computation is what a real one needs (RFR-21). (2)
+    policy_anchor_deviation substitutes TAYLOR_PI_TARGET = 2.0 for DN-1.1's latent,
+    deliberately-drifting pi*_t and drops the phi_c*c_t cycle term entirely for want of
+    a generator-visible proxy (RFR-28). (3) money_pump_violations audits only whether a
+    SINGLE zero-cost leg never loses money, never a weighted COMBINATION of two or more
+    -- DN-1.1's own economic row names the combination case, and no search over
+    combinations is performed (RFR-29). (4) The Kupiec/Christoffersen backtest family
+    runs at the 95% level ONLY; at 99% the per-path exceedance count (~1.2 over 120
+    months) leaves the Christoffersen transition matrix essentially empty at ANY
+    ensemble size, and running Kupiec/elicitability at 99% while the four Christoffersen
+    names could not follow would split one sealed family across two levels (RFR-23). A
+    coverage-band reformulation of the Kupiec statistic (judging p_hat directly against
+    a binomial band rather than routing it through a chi-square tail) was considered per
+    RFR-24 and NOT adopted: it is a new statistic, not a rescaling, and adopting it here
+    would have meant sealing a name whose behaviour no run in this repository has ever
+    observed.
+
+  band_exceedance_gate_mc_error_is_not_trustworthy_for_sizing: >-
+    governance/retrofit-register.md RFR-44. The three gates' Monte-Carlo error bars come
+    from the uniform path-subsampling estimator, and subsampling paths changes the
+    metric VALUES the fraction is computed from -- so the subsample estimate is not an
+    estimate of the same quantity at full path count. The reported error bar on those
+    three names must not be used to size a band. The bounds sealed for them are not
+    sized from it: they are a majority rule over a family, derived from `level`. This is
+    a limitation on the DIAGNOSTIC, not on the bound.
+
+# --------------------------------------------------------------------------- #
+# live_options -- recorded, deliberately NOT implemented at seal time.
+#
+# Both would strengthen a gate this file seals. Neither is built, because each is a new
+# statistic and a new threshold-authoring decision, and WP2.3's job was to seal what
+# exists rather than to invent under time pressure. Recorded so a later work package
+# finds a considered option rather than reinventing it -- and, in the second case,
+# finds the trap that comes with it.
+# --------------------------------------------------------------------------- #
+live_options:
+  baseline_relative_memorization_bound: >-
+    Judge near_duplicate_fraction (or nn_distance_p05/p50) against a MATCHED-BLOCK-
+    LENGTH resampler's own score rather than an absolute bound. WP2.2b rejected this on
+    the ground that it "inherits the phase blindness" of the then-fixed-grid search;
+    that reasoning is STALE, because WP2.2c Item 2 made the near-duplicate search
+    phase-blind (sliding-window, all offsets), so a relative bound no longer inherits
+    the confound it was rejected for. It has real power the absolute bound lacks:
+    separating a literal copier from a matched-block resampler, which on an absolute
+    scale can score similarly once block length reaches the 24-month memorization
+    window. It bears directly on bootstrap_v1's sealed mean block length -- a relative
+    bound would make that choice much less load-bearing. See
+    governance/retrofit-register.md RFR-46.
+  per_factor_tail_gate: >-
+    Replace the tail family's majority rule with a per-factor combination (max-over-
+    factors of within-factor exceedance, or a Simes/min-p combination across the active
+    factors), with the bound derived from `level` and the family size. This is the
+    return-bearing-scoped gate limitations.the_tail_gate_cannot_fire calls for, and it
+    has power against a failure concentrated in a few units -- exactly nc1's shape. THE
+    TRAP, stated so it travels with the option: choosing a construction BECAUSE it
+    separates nc1 would repeat exactly the design-independence problem
+    limitations.three_gates_were_designed_against_the_controls discloses. Whoever builds
+    it must derive the bound from `level` and family size alone; if any candidate is
+    validated against nc1 during that work, the same caveat must be recorded again
+    rather than the catch cited as independent evidence. See
+    governance/retrofit-register.md RFR-43/RFR-47.
+
+# --------------------------------------------------------------------------- #
+# bootstrap_v1 -- the frozen benchmark's FULL specification (STEP2-GENERATOR-PLAN
+# Sec.WP2.3: "the bootstrap benchmark's full spec (block-length distribution,
+# stationary form, stratification = Step-1 regime ruleset version)").
+#
+# WP2.4 implements this; it does not choose it. Everything below that is a number was
+# either derived analytically or MEASURED on the sealed campaign vintage with a
+# throwaway prototype resampler, at 200 paths x 120 months, 3 seeds, against the
+# already-sealed gate bounds -- the GENERATOR spec was chosen to clear FIXED
+# thresholds, and no threshold was moved to accommodate it. That direction matters and
+# is the reason this block exists at all: leaving the block length to WP2.4 would have
+# meant discovering during the bake-off that the benchmark fails an enforce gate.
+# --------------------------------------------------------------------------- #
+bootstrap_v1:
+  generator_id: bootstrap-v1
+  form: stationary_block_bootstrap
+  form_statement: >-
+    Politis-Romano stationary bootstrap. Draw a uniform start index in [0, T); at each
+    subsequent month, with probability p = 1/mean_block_months draw a fresh uniform
+    start, otherwise advance the current index by one, WRAPPING CIRCULARLY (index T
+    maps to 0). Block lengths are therefore Geometric(p) with mean
+    mean_block_months, which is what makes the resampled series stationary -- a
+    fixed-length block bootstrap is not. The circular wrap is part of the definition,
+    not an implementation convenience: without it, late-sample rows are under-sampled.
+  block_length_distribution: geometric
+  mean_block_months: 6
+
+  block_length_derivation: >-
+    THE CHOICE IS BOUNDED FROM BOTH SIDES BY GATES THIS FILE ALREADY SEALS, and 6 is
+    the middle of the resulting window.
+    LOWER BOUND -- dependence_band_exceedance_fraction (enforce, max 0.5). Short blocks
+    destroy serial dependence. Measured on the sealed vintage: mean block 3 scores
+    0.515 and FAILS the gate outright; 5 scores 0.404 (worst of 3 seeds 0.424); 6
+    scores 0.354 (worst 0.364); 8 scores 0.313; 12 scores 0.253; 18 scores 0.182.
+    UPPER BOUND -- the memorization surface. A stationary bootstrap emits a VERBATIM
+    24-month historical window whenever no block restart falls inside it, which happens
+    with probability (1 - 1/L)^23: 1.5% at L=6, 5.0% at L=8, 8.8% at L=10, 13.5% at
+    L=12, 38.3% at L=24. Two consequences. (a) near_duplicate_fraction (enforce, max
+    0.5) rises with L -- measured 0.064 at L=6, 0.099 at L=8, 0.187 at L=12, 0.284 at
+    L=18, 0.361 at L=24 -- and clears 0.5 at every L tested, so this gate is NOT the
+    binding constraint, contrary to what a reading of RFR-40 alone would suggest (that
+    row measured nc5, a FIXED-24-month-block stitch, at ~0.93; geometric lengths are a
+    different object and the fixed-block number does not transfer). (b)
+    nn_distance_p05 is the 5th percentile of the generated blocks' nearest-neighbour
+    distance, so it collapses to EXACTLY 0.0 as soon as the verbatim rate exceeds 5% --
+    measured 0.715 at L=6, 0.512 at L=8, 0.073 at L=10, 0.000 at L>=12, exactly as
+    (1 - 1/L)^23 predicts. The upper bound is therefore STRUCTURAL (a verbatim rate
+    below the metric's own 5th percentile), not a function of the numeric floor this
+    file seals for that metric: at L=6 the measured 0.715 clears that floor (0.027) by
+    a factor of 26, so the choice is nowhere near knife-edge on a number WP2.3 itself
+    authored.
+    THE WINDOW is thus roughly 4 <= L <= 8, and 6 is its middle. RECORDED SO IT IS NOT
+    MISREAD AS A FREE CHOICE: there is no L that both maximizes dependence fidelity and
+    minimizes verbatim reproduction; the two gates pull in opposite directions and the
+    benchmark sits between them by construction.
+
+  moment_gate_risk_measured: >-
+    THE THIRD RISK, RAISED IN ADVANCE AND MEASURED RATHER THAN ASSUMED. The moment
+    family's `std` bands are length-matched: every replicate is a SINGLE CONTIGUOUS
+    120-month window of history, so any ERA-MIXING generator converges toward
+    full-sample dispersion, which for a persistent level sits above a typical single-era
+    window's -- and a stationary bootstrap with mean block 6 mixes eras aggressively by
+    construction. The concern is real (nc5-condition-ignoring, an undistorted resample
+    of real history on the synthetic control panel, fails `std` on 6 of 13 factors for
+    this reason alone) and it applies to an ENFORCE gate, so it had to be checked before
+    sealing rather than discovered in WP2.4. MEASURED ON THE SEALED CAMPAIGN VINTAGE:
+    `moment_band_exceedance_fraction` is 0.091 -- 2 of 22 comparisons -- at EVERY mean
+    block length tested from 3 to 24, against a bound of 0.5. It does not vary with L at
+    all, which is itself informative: the two failures come from the block_draw_span's
+    1990-2020 window differing from each factor's own full history, not from era mixing
+    inside a path. The gate is therefore NOT binding for bootstrap-v1 and the risk is
+    closed -- but note the number is not zero, and note also that this is exactly the
+    comparison limitations.every_negative_control_number_is_from_a_synthetic_fixture
+    warns about in the other direction: nc5's 6-of-13 is a synthetic-panel number and
+    does not transfer to the campaign vintage, as this measurement shows.
+
+  block_draw_span_rule: >-
+    The maximal contiguous train+validation span over which EVERY factor in
+    factor_set (below) is simultaneously observed. Multivariate blocks mean one shared
+    row index across all factors (never per-factor resampling), so a block can only be
+    drawn where the whole panel exists.
+  block_draw_span: {start: "1990-01-01", end: "2020-12-01", months: 372}
+  block_draw_span_consequence: >-
+    THE BENCHMARK'S LARGEST SINGLE DEFECT, stated here rather than discovered in WP2.4.
+    equity_vol (fred.VIX) begins 1990-01, funding_spread (TED) 1986-01 and hqm_curve
+    1984-01, while equity_mkt/smb/hml/mom reach back to 1926 and cpi to 1913 -- so
+    requiring all eleven available factors simultaneously collapses a 108-year panel to
+    a 31-year one. bootstrap-v1 CANNOT REACH ANY PRE-1990 EPISODE: not the 1970s
+    stagflation, not 1973-74, not 1987, not the Depression. Two direct consequences.
+    (1) The severe test STEP2-GENERATOR-PLAN Sec.WP2.11 pins -- exclude the 1970s,
+    regenerate from the 1965 climate state, compare 1966-84 -- IS NOT POSABLE for the
+    benchmark at all, and G2-EVIDENCE.md must say so rather than report a benchmark
+    severe-test result that does not exist. (2) The benchmark's tail statistics are
+    drawn from a window whose worst equity drawdowns are 2000-02, 2008-09 and 2020;
+    every sealed reference band it is judged against, by contrast, is computed on each
+    factor's OWN full history, which for the equity factors is 1926 onward. The
+    benchmark is therefore judged against bands wider and older than the data it can
+    resample -- conservative for a pass, but it means a bootstrap-v1 pass is weaker
+    evidence than it looks.
+    THE THREE ROUTES OUT, none taken here because each is a WP2.4-or-later change:
+    apply the registered ah.data.splice proxy rules and refresh to a vintage in which
+    policy_rate and hy_spread carry long history (a campaign restart); drop the
+    short-history factors from factor_set and resample a longer span with fewer
+    factors; or build a ragged-panel bootstrap that draws blocks over the long span and
+    admits factor-dependent availability (a genuinely new estimator). Any of the three
+    is a dated amendment.
+
+  factor_set: [cpi, equity_mkt, equity_vol, funding_spread, hml, hqm_curve, ig_spread,
+               mom, smb, ust_10y, ust_2y]
+  factor_set_rule: >-
+    Every active factor with train+validation data on the sealed campaign vintage --
+    i.e. manifest.active_factors() minus reference_run.missing_factors. Eleven of the
+    fourteen declared. bootstrap-v1 emits exactly these and no others. This is also
+    what makes the two economics audits reachable rather than NaN-forced
+    (governance/retrofit-register.md RFR-30): the set contains smb/hml/mom (so
+    money_pump_violations has zero-cost legs to audit) and ust_2y/ust_10y/hqm_curve
+    plus ig_spread/funding_spread (so floor_violations has rate and spread factors to
+    audit). WP2.4 must also populate ah.gen.base.EnsembleMeta.active_blocks and
+    validate it against the manifest (RFR-4).
+
+  stratification: regime_ruleset_v1
+  stratification_statement: >-
+    Blocks are drawn stratified by the Step-1 regime label of their START month, using
+    ah.data.derive.label_regime at ruleset version regime_ruleset_v1 with thresholds
+    cpi_high=4.0, growth_weak=0.0, growth_slow=1.5, drawdown_crisis=-0.2, hy_crisis=8.0
+    -- restated here so the stratification is reconstructible from this file alone.
+    Six labels: EXP, SLOW, REC, CRI, STAG, REF. UNCONDITIONAL sampling draws the start
+    regime from the historical frequency of the six labels over block_draw_span.
+    CONDITIONED sampling (a WorldSpec naming a regime sequence) pins the stratification
+    path: the start regime of each block is the requested regime for that month.
+    KNOWN GAP IN THE LABELS THEMSELVES: label_regime's CRI branch is
+    `usrec AND (drawdown <= -0.2 OR hy_oas >= 8.0)`, and hy_oas has no train+validation
+    data on the sealed vintage (reference_run.missing_factors), so over block_draw_span
+    the CRI label rests on the drawdown disjunct ALONE. Every episode in 1990-2020 that
+    should be CRI (2000-02, 2008-09, 2020) clears the -20% drawdown test, so no label
+    is lost in practice -- but the rule is running one-legged and that must not be
+    rediscovered as a surprise.
+
+  conditioning_statement: >-
+    bootstrap-v1 honours a WorldSpec's regime sequence (via stratification) and nothing
+    else. It has NO mechanism for factor_conditions -- an inflation average, a rate
+    endpoint, a crisis severity -- and will not acquire one. Its failure on the
+    conditional tier is therefore EXPECTED AND IS THE POINT: STEP2-GENERATOR-PLAN
+    Sec.WP2.2 says the bootstrap runs the conditional suite so that "its structural
+    inability to honor novel conditions becomes measured evidence, not an aside". A
+    conditional-tier failure by bootstrap-v1 is not a defect to fix and must not be
+    reported as one.
+
+  determinism: >-
+    All randomness flows from one integer seed through
+    numpy.random.Generator(PCG64(seed)); ensemble seeds are base_seed + 7919*k
+    (CLAUDE.md's invariant). The same seed against the sealed vintage gives a
+    digest-identical ensemble.
+
+  what_wp24_must_report: >-
+    Three numbers this file cannot supply and WP2.4 must, whatever they say. (1) The
+    measured per-comparison band exceedance rate, which is the FIRST empirical
+    observation of the null the three gates' 0.10 premise assumes (see
+    limitations.null_exceedance_rate_is_unverified). (2) Its own three
+    *_band_exceedance_fraction values at the sealed criterion ensemble size -- the
+    numbers above are from a 200-path prototype, not a criterion-bearing run. (3)
+    Whether the sealed mean_block_months of 6 still sits inside the window at 1000
+    paths; the window's edges were measured at 200.
+
+# --------------------------------------------------------------------------- #
+# ablation_systems -- the five systems evaluated on identical seeds, splits and the
+# frozen campaign vintage (STEP2-GENERATOR-PLAN Sec.WP2.10). Frozen here so the
+# ablation cannot grow an extra arm after results are seen.
+# --------------------------------------------------------------------------- #
+ablation_systems:
+  A: {id: structure-only, description: "L1 climate + L2 regimes + Gaussian residuals", neural: false}
+  B: {id: neural-rollout, description: "L3 chained directly, no waypoints, no L1 anchor", neural: true}
+  C: {id: neural-only, description: "L3 blocks + naive chaining, no L1", neural: true}
+  D: {id: full-hierarchy, description: "the complete four-layer hierarchy; two samplers, hier-diffusion-v1 and hier-flow-v1", neural: true}
+  E: {id: bootstrap-v1, description: "the frozen benchmark specified above", neural: false}
+ablation_rule: >-
+  Exactly these five, no more. Neural systems (B, C, D) run >= 3 TRAINING seeds each;
+  deterministic systems (A, E) run >= 3 SAMPLING seeds each. Every system is evaluated
+  on the identical splits, the identical campaign vintage, and the sealed criterion
+  ensemble size. ABLATION.md is generated, not hand-assembled, and shows cross-seed
+  dispersion per metric. Adding a sixth arm after any result is seen is a dated,
+  post-hoc-flagged amendment and must be reported as one.
+
+# --------------------------------------------------------------------------- #
+# tuning_protocol -- the forking-paths record (STEP2-GENERATOR-PLAN Sec.WP2.8).
+# --------------------------------------------------------------------------- #
+tuning_protocol:
+  search_surface: validation_folds_only
+  trial_budget_per_system: 40
+  trial_budget_statement: >-
+    40 configurations per neural system per sampler, counted as distinct config hashes
+    logged to the experiment store, INCLUDING every abandoned or crashed run. The
+    budget is a cap on the search, so a trial that was started counts whether or not it
+    finished -- otherwise "restart it and don't count it" is an unbounded search. A
+    system that exhausts its budget without a satisfactory config is reported as such;
+    it does not receive more budget without a dated amendment.
+  logging: >-
+    Every trial logs config hash, git SHA, seed, and per-fold validation scores to
+    experiments/<exp_id>/. The log must be complete and within budget before the final
+    config is selected; an incomplete log invalidates the selection.
+  selection_criterion: >-
+    The final config is the one minimizing the MEAN validation-fold score of the
+    generative objective plus the D4 tail elicitability auxiliary at the config's own
+    sealed lambda, ties broken by the lower sampling cost (NFE). Stated in advance, in
+    words, so the selection cannot be rationalized after the fact.
+  prohibitions: >-
+    No tuning of anything on the holdout, ever -- the holdout is reachable only through
+    a FinalEvaluationToken minted in ah/eval/g2.py and is spent exactly once by WP2.11.
+    No tuning against the negative-control suite. No tuning against any enforce-tier
+    metric's threshold value (the acceptance filter in WP2.7 is separately barred from
+    touching enforce-tier metrics at all, asserted by test against this manifest).
+
+# --------------------------------------------------------------------------- #
+# severe_test_protocol -- pinned BEFORE the test is run (STEP2-GENERATOR-PLAN
+# Sec.WP2.11). The point of pinning it is that a failure cannot be reinterpreted as a
+# tuning opportunity afterwards.
+# --------------------------------------------------------------------------- #
+severe_test_protocol:
+  design: >-
+    Exclude the 1970s (1970-01-01 to 1979-12-31 inclusive) from the fitting sample.
+    Refit L1 and L2 and RETRAIN L3 with the FROZEN architectures and hyperparameters of
+    the primary runs -- refit/retrain only, NO fresh hyperparameter search on the
+    reduced sample, no architecture change, no early-stopping-criterion change.
+    Regenerate from the 1965 climate state and compare 1966-1984 behaviour through the
+    horizon tier.
+  reporting: >-
+    The result is written up in G2-EVIDENCE.md EITHER WAY. A failure is a finding about
+    the generator's ability to extrapolate to an era it never saw, which is the whole
+    question the test asks; it is not grounds for re-tuning.
+  benchmark_exception: >-
+    bootstrap-v1 CANNOT RUN THIS TEST. Its block_draw_span is 1990-2020 (see
+    bootstrap_v1.block_draw_span_consequence), which contains neither the excluded
+    decade nor the 1965 start state, so "exclude the 1970s" is vacuous for it and
+    "regenerate from 1965" is impossible. G2-EVIDENCE.md must record the benchmark's
+    severe-test row as NOT POSABLE, with this reason, rather than as a pass, a fail, or
+    an omission.
+
+# --------------------------------------------------------------------------- #
+# multi_seed_decision_rule -- the G2 promotion rule, IN WORDS, sealed before any
+# training run (STEP2-GENERATOR-PLAN Sec.WP2.3).
+#
+# WP2.11 implements it in ah/eval/g2.py, which today contains only the sanctioned
+# holdout-token mint and no decision logic at all. That is stated rather than glossed:
+# what is frozen here is the RULE, in words, before any evidence exists -- which is the
+# whole point of pre-registering it. g2.py is already inside the seal, so when WP2.11
+# writes the executable form it cannot diverge from these words without a dated
+# amendment and a re-seal, and this block is what it will be read against.
+# --------------------------------------------------------------------------- #
+multi_seed_decision_rule:
+  minimum_seeds: 3
+  rule: >-
+    PROMOTE the challenger over bootstrap-v1 only if ALL FOUR of the following hold.
+    (1) TAIL SUPERIORITY: the challenger beats bootstrap-v1 on the tail tier in EVERY
+    seed; or, pooled across seeds, beats it by MORE THAN the cross-seed dispersion of
+    the difference. (2) NO ENFORCE-TIER REGRESSION on the monthly or 1_5yr tiers
+    relative to bootstrap-v1. (3) MEMORIZATION BELOW FLOOR: every memorization-tier
+    enforce threshold passes, in every seed. (4) ZERO CONSTRAINT VIOLATIONS:
+    money_pump_violations and floor_violations are exactly 0 in every seed.
+    Otherwise SHIP-BENCHMARK: bootstrap-v1 remains the default generator_id and
+    G2-EVIDENCE.md says so plainly. A SHIP-BENCHMARK verdict is a successful outcome of
+    Step 2, not a failure of it.
+  conditional_tier_is_not_gating: >-
+    Conditional-tier results are REPORTED alongside the verdict and DO NOT GATE
+    promotion. Sealed rationale, verbatim from the plan's reasoning: the platform's
+    purpose weighs conditioning, but historical tail fidelity remains the falsifiable
+    criterion, so conditioning is evidence rather than a gate at G2. Revisit at G3.
+    This is also the sealed basis of decisions.S2-NC5-EXEMPTION -- the same rule that
+    keeps conditioning non-gating is what exempts NC5 from the enforce criterion, and
+    the two cannot be separated.
+  criterion_bearing_runs_only: >-
+    Every number entering this rule must come from a run at the sealed ensemble_size,
+    against the sealed campaign_vintage_id, with a verified pre-registration and a
+    matching lock. ah.eval.battery already records `criterion_bearing` on every report
+    (and prints it in bold when false); WP2.11's ah/eval/g2.py MUST refuse a report
+    where it is false. That refusal does not exist yet -- g2.py contains only the
+    holdout-token mint today -- so this sentence is a sealed REQUIREMENT on WP2.11, not
+    a description of a check already in place.

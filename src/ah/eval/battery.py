@@ -1,8 +1,9 @@
 """The validation battery orchestrator (WP2.2 Task 1).
 
-Replaces Step 0's skeleton (``ah.battery.report``, which stays in place -- see its
-module docstring and ``governance/retrofit-register.md`` for its fate, a WP2.3
-decision, not this module's). This is the Step-2 battery: it runs every metric suite
+Replaces Step 0's skeleton (``ah.battery.report``, which stays in place; WP2.3 decided
+its fate by sealing both it and its ``thresholds.yaml`` data -- see
+``pre-registration.yaml``'s ``seal_scope:`` block). This is the Step-2 battery: it runs
+every metric suite
 registered in :data:`SUITES` over a generator :class:`~ah.gen.base.Ensemble`, attaches
 a Monte-Carlo error bar to every result, looks each metric up against the train+
 validation :class:`~ah.eval.reference.ReferenceStats` bands and
@@ -592,6 +593,15 @@ def _result_dict(r: MetricResult) -> dict[str, Any]:
     }
 
 
+def _criterion_bearing_label(value: bool | None) -> str:
+    """Report wording for :attr:`BatteryReport.criterion_bearing`, stated not implied."""
+    if value is None:
+        return "n/a (pre-registration unsealed; no criterion size exists)"
+    if value:
+        return "yes"
+    return "**NO -- diagnostic run, may not be cited as G2 evidence**"
+
+
 @dataclass(frozen=True)
 class BatteryReport:
     """The battery's output: version, prereg digest, system/vintage identity, results.
@@ -624,6 +634,23 @@ class BatteryReport:
     missing_no_data: tuple[str, ...] = ()
     coverage: Mapping[str, FactorCoverage] = MappingProxyType({})
     prereg_verified: bool = False
+    # WP2.3. Whether this run's ensemble is the sealed criterion size
+    # (`pre-registration.yaml`'s `ensemble_size:` block). `None` while the
+    # pre-registration is unsealed and no criterion size exists.
+    #
+    # WHY IT IS A REPORT FIELD AND NOT A HARD ERROR. Every acceptance band in the
+    # sealed file is the sampling distribution of a statistic on ONE length-matched
+    # series, while the ensemble side reports an average over `n_paths` paths. The
+    # direction is conservative -- the ensemble estimator is tighter than the band's
+    # null, so a bound sealed at one size is never *violated* by running larger -- but
+    # the gates' POWER rises without limit in `n_paths`, so `max: 0.5` at 16 paths is
+    # not the same criterion as `max: 0.5` at 1000. Small-ensemble runs are legitimate
+    # and necessary (the negative-control suite, CI smoke tests, cheap diagnostics), so
+    # the battery does not refuse them; it records, on the artifact, whether the run may
+    # be cited as evidence at all. `ah/eval/g2.py` is where a non-criterion-bearing run
+    # must be rejected outright, and `pre-registration.yaml`'s `ensemble_size:` block
+    # states that rule.
+    criterion_bearing: bool | None = None
 
     @property
     def enforce_failures(self) -> tuple[MetricResult, ...]:
@@ -662,6 +689,7 @@ class BatteryReport:
             "passed": self.passed,
             "enforce_failures": [r.name for r in self.enforce_failures],
             "prereg_verified": self.prereg_verified,
+            "criterion_bearing": self.criterion_bearing,
             "missing_factors": {
                 "declared_unavailable": list(self.missing_declared),
                 "no_data": list(self.missing_no_data),
@@ -693,6 +721,7 @@ class BatteryReport:
             f"- seed: {self.seed}",
             f"- prereg digest: {self.prereg_digest}",
             f"- prereg verified: {'yes' if self.prereg_verified else 'no (unsealed)'}",
+            f"- criterion-bearing ensemble size: {_criterion_bearing_label(self.criterion_bearing)}",
             f"- **verdict: {'PASS' if self.passed else 'FAIL'}** "
             f"({len(self.enforce_failures)} enforce failure(s))",
             "",
@@ -803,20 +832,38 @@ def run_battery(
     ``manifest`` supplies ``active_blocks`` for the report header, and is the manifest
     the pre-registration is verified against.
 
-    **Verification.** STEP2-GENERATOR-PLAN Sec.WP2.3 requires
-    :func:`ah.eval.prereg.verify` to run "at every battery/G2 invocation". It is called
-    here whenever ``prereg.sealed`` is true, and skipped (with ``prereg_verified:
-    false`` recorded on the report, so the skip is visible rather than assumed) while
-    the pre-registration is still provisional -- today's ``pre-registration.yaml``
-    carries placeholder thresholds and ``sealed: false``, and cannot satisfy every
-    check yet.
-    TODO(WP2.3): once ``sealed: true`` lands, this guard becomes dead weight -- drop it
-    and verify unconditionally, and pass the ``lock_path`` so the digest check runs too.
+    **Verification (WP2.3).** STEP2-GENERATOR-PLAN Sec.WP2.3 requires
+    :func:`ah.eval.prereg.verify` to run "at every battery/G2 invocation". The real
+    ``pre-registration.yaml`` is now ``sealed: true``, so every production invocation
+    verifies -- **including the lock**: ``pre-registration.lock`` is looked for beside
+    ``prereg.source_path`` and, when present, the sealed digest is recomputed from the
+    files on disk and compared. A modified YAML, or a modified enforce-metric
+    implementation, therefore stops every battery run rather than quietly judging with
+    code the seal never saw.
+
+    The call remains guarded on ``prereg.sealed`` (with ``prereg_verified: false``
+    recorded on the report, so a skip is visible rather than assumed) because the
+    minimal synthetic pre-registrations this project's tests verify against are drafts,
+    not sealed documents, and the sealed-document checks (``splits``,
+    ``reference_run``, ``structurally_unavailable_statistics``, ``ensemble_size``)
+    would demand four prose blocks of every one of them to buy nothing. An unsealed
+    pre-registration is, by construction, not a production path.
+
+    The ensemble's own size is compared against the sealed criterion size and recorded
+    as :attr:`BatteryReport.criterion_bearing` rather than raised on -- see that
+    field's own comment for why a small diagnostic run must stay runnable.
     """
     prereg_verified = False
+    criterion_bearing: bool | None = None
     if prereg.sealed:
-        prereg_mod.verify(prereg, manifest)
+        lock_path = prereg.source_path.with_suffix(".lock")
+        prereg_mod.verify(prereg, manifest, lock_path=lock_path)
         prereg_verified = True
+        sealed_size = prereg.raw.get("ensemble_size")
+        if isinstance(sealed_size, dict):
+            criterion_bearing = ensemble.n_paths == sealed_size.get(
+                "n_paths"
+            ) and ensemble.months == sealed_size.get("months")
 
     results = _run_suites(ensemble, reference=reference, prereg=prereg, seed=seed)
     results_filtered = None
@@ -842,6 +889,7 @@ def run_battery(
         missing_no_data=reference.missing_no_data,
         coverage=reference.coverage,
         prereg_verified=prereg_verified,
+        criterion_bearing=criterion_bearing,
     )
 
 

@@ -5,10 +5,12 @@ WP2.3 seals the pre-registration: thresholds **and the code that judges them** a
 hashed together before any training run, and after that every change is a dated,
 post-hoc-flagged amendment logged in ``governance/amendment-log.yaml``. This module
 builds that machinery -- with the block structure from Task 1 (``ah.factors``) already
-wired through it -- so the seal freezes the right shape. **Nothing in WP2.1b actually
-seals**: ``pre-registration.yaml``'s ``sealed`` flag stays ``false`` here; a dry-run
-``seal()`` + ``verify()`` is the acceptance bar (Instructions/WP2.1b-PRE-SEAL-PATCH.md
-Definition of done, item 4). WP2.3 is the one PR allowed to flip ``sealed: true``.
+wired through it -- so the seal freezes the right shape. WP2.1b itself sealed nothing;
+**WP2.3 did**, on 2026-07-26. ``pre-registration.yaml`` now carries ``sealed: true`` and
+``pre-registration.lock`` is committed beside it, so :func:`verify` runs its full
+sealed-document check set -- and the lock digest -- on every battery invocation. The
+post-seal procedure (amend, edit, re-seal, commit all three together) is stated once, in
+``pre-registration.yaml``'s header.
 
 Layout
 ------
@@ -89,9 +91,10 @@ in ``reference.py`` -- requires a dated amendment in
 
 Considered and excluded
 ~~~~~~~~~~~~~~~~~~~~~~~~
-Two modules can influence a pass/fail verdict and are deliberately **not** in
-:data:`_REQUIRED_JUDGED_SOURCES`; the reasoning is recorded here rather than left to be
-rediscovered:
+WP2.3 settled the two questions WP2.1b left open here; ``pre-registration.yaml``'s
+``seal_scope:`` block is the sealed record, and ``governance/decision-register.md`` row
+``S2-SEAL-SCOPE-2`` / ``governance/retrofit-register.md`` RFR-50 carry the same account.
+What remains deliberately **outside** the seal, and why:
 
 - ``ah/gen/base.py`` -- ``Ensemble.factor()`` resolves every D4 strategy leg (the
   lookup a strategy's ``weights``/``params`` series names go through at evaluation
@@ -100,23 +103,26 @@ rediscovered:
   change (a new block, a new factor, a bugfix inside ``Ensemble``) into a dated
   amendment, which inverts the seal's purpose: it exists to freeze the judge, not to
   freeze the thing being judged.
-- ``src/ah/battery/thresholds.yaml`` -- Step-0 legacy threshold data, every entry
-  ``status: todo`` (never blocking today), judged by the sealed ``ah/battery/report.py``
-  but not itself sealed. Its fate is a WP2.3 decision, not one this patch makes for it:
-  WP2.3 must either seal it explicitly, or state that ``pre-registration.yaml``'s
-  thresholds supersede it and it is inert. Left as an open obligation, not a silent
-  omission -- see ``governance/retrofit-register.md``.
-- ``ah/data/derive.py`` and ``ah/data/splice.py`` -- **not excluded on principle, just
-  not yet decided.** ``derive.py`` supplies every ``kind: derived`` factor's transform
-  (``add`` for ``equity_mkt``, ``difference`` for ``ig_spread``, ``funding_stress`` for
-  ``funding_spread``) and ``assemble_panel``; ``splice.py`` supplies the ``PROXY_RULES``
-  that backfill ``policy_rate`` (pre-1954) and ``hy_spread`` (pre-1996). Both move
-  sealed band values. :data:`ah.eval.panel._DERIVED_EXPRS` -- which *is* sealed, via
-  ``panel.py`` -- pins which helper each factor uses and what its units algebra is, so
-  the binding is inside the hash even though the helper bodies are not. Sealing the
-  modules themselves would turn every future Step-1 change into a dated amendment.
-  WP2.3 decides; recorded as ``governance/retrofit-register.md`` RFR-10 rather than
-  left to be rediscovered.
+- ``ah/data/splice.py`` -- **excluded on evidence, not on principle.** Its
+  ``PROXY_RULES`` would backfill ``policy_rate`` (pre-1954) and ``hy_spread``
+  (pre-1996), but ``ah.data.refresh`` does not apply them and
+  :func:`ah.eval.panel.read_factor_frames` never calls this module at all, so no sealed
+  band is a function of its code. The sealed reference run *demonstrates* that rather
+  than assuming it: both factors appear in ``reference_run.missing_factors`` precisely
+  because the backfills are absent from the frozen campaign vintage -- which is also the
+  answer to RFR-10's standing question about which backfills the vintage contains
+  (neither). What the vintage holds is pinned by the sealed ``campaign_vintage_id``, not
+  by this module. If a later work package applies either rule, that produces a new
+  vintage -- a campaign restart and a dated amendment regardless -- and ``splice.py``
+  joins the seal at that point, because it will then be on the read path.
+
+Two entries WP2.1b listed here are now **inside** the seal, each named in
+:data:`_REQUIRED_JUDGED_SOURCES` / :data:`_REQUIRED_JUDGED_DATA` with its own reasoning:
+``ah/data/derive.py`` (it *is* on the read path -- :data:`ah.eval.panel._DERIVED_EXPRS`
+calls it at panel-read time for ``equity_mkt``/``ig_spread``/``funding_spread``, so
+sealing only the binding was not enough) and ``src/ah/battery/thresholds.yaml`` (read by
+the already-sealed ``ah/battery/report.py``; a sealed estimator over an unsealed input
+is exactly the failure :data:`_REQUIRED_JUDGED_FIXTURE_GLOBS` exists to prevent).
 
 Independent verifiability (why paths in the lock are relative)
 ---------------------------------------------------------------
@@ -190,6 +196,7 @@ from ah.eval.reference import (
     VARIANCE_RATIO_HORIZONS,
 )
 from ah.factors import FactorManifest
+from ah.splits import SPLITS
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 _DEFAULT_PREREG_PATH = _REPO_ROOT / "pre-registration.yaml"
@@ -242,7 +249,30 @@ _REQUIRED_JUDGED_SOURCES = (
     # detects badness at all. A version of that record produced by unsealed code would
     # be exactly the "seal appears stronger than it is" failure this list prevents.
     ("src", "ah", "eval", "negative_controls.py"),
+    # WP2.3, closing governance/retrofit-register.md RFR-10's first half. `derive.py`
+    # is ON THE READ PATH: `ah.eval.panel._DERIVED_EXPRS` calls `derive.add`,
+    # `derive.difference` and `derive.funding_stress` at panel-read time for
+    # `equity_mkt`, `ig_spread` and `funding_spread` respectively, so every band for
+    # those three factors -- and every cross-block band involving them -- is a function
+    # of these helper bodies, computed fresh on each read rather than stored in the
+    # vintage. Sealing the BINDING (which helper, which units algebra) via `panel.py`
+    # was not enough: an edit to `add`'s body would change what a sealed band is a band
+    # OF, with no lock violation. RFR-10's other half, `ah/data/splice.py`, is
+    # deliberately NOT here -- see `pre-registration.yaml`'s `seal_scope:` block for
+    # the argument (its PROXY_RULES are registered but not applied by
+    # `ah.data.refresh`, and `read_factor_frames` never calls it, so it cannot move a
+    # band; what the frozen vintage contains is pinned by the sealed
+    # `campaign_vintage_id`, not by that module).
+    ("src", "ah", "data", "derive.py"),
 )
+
+# Sealed threshold DATA read by a sealed judging module. `ah/battery/report.py`
+# (already sealed above) reads `ah/battery/thresholds.yaml` through `load_thresholds()`,
+# so before WP2.3 a sealed estimator was defined over an unsealed input -- the exact
+# failure mode `_REQUIRED_JUDGED_FIXTURE_GLOBS` was introduced to close for the
+# authored conditional worlds. Every entry in it is `status: todo` and blocks nothing
+# today; that makes sealing it cheap, not unnecessary.
+_REQUIRED_JUDGED_DATA = (("src", "ah", "battery", "thresholds.yaml"),)
 
 # Sealed input DATA (not code) that an estimator is defined over: `(directory parts,
 # glob)` pairs. See the module docstring's "sealed input data an estimator is defined
@@ -863,6 +893,225 @@ def _check_strategy_threshold_key(key: str, raw: Mapping[str, Any], errors: list
         )
 
 
+def _stat_of(key: str) -> str:
+    """The statistic name a threshold key ends in.
+
+    ``"equity_mkt.skew"`` -> ``"skew"``; ``"a~b.correlation"`` -> ``"correlation"``;
+    a bare panel key is its own statistic. Key SHAPE is validated by the four
+    ``_check_*_threshold_key`` functions above; this one only splits, so a malformed
+    key reaches it harmlessly (it is reported by those checks, not by this one).
+    """
+    return key.rsplit(".", 1)[-1]
+
+
+def _factors_of(key: str) -> tuple[str, ...]:
+    """The factor id(s) a block/cross-block threshold key is keyed to (``()`` for others)."""
+    if "." not in key:
+        return ()
+    head = key.rsplit(".", 1)[0]
+    if "~" in head:
+        return tuple(head.split("~"))
+    return (head,)
+
+
+def _check_splits(raw: Mapping[str, Any], errors: list[str]) -> None:
+    """The sealed ``splits:`` block must equal :data:`ah.splits.SPLITS`, exactly.
+
+    ``governance/retrofit-register.md`` RFR-6. ``ah/splits.py`` is inside the seal, so
+    a change to a boundary already invalidates the lock -- but a lock violation says
+    "some hashed file changed", not "the reference span moved". This check makes the
+    two representations of the same fact, the sealed document and the code, provably
+    identical: the document is the normative statement (the seal's self-containment
+    rule), and the code is checked against it, never the other way round.
+    """
+    splits_doc = raw.get("splits")
+    if not isinstance(splits_doc, dict):
+        errors.append(
+            "pre-registration is missing the 'splits' block (the sealed train/"
+            "validation/holdout boundaries -- see governance/retrofit-register.md RFR-6)"
+        )
+        return
+    expected = {name: {"start": split.start, "end": split.end} for name, split in SPLITS.items()}
+    declared = {
+        name: {
+            "start": entry.get("start"),
+            "end": entry.get("end"),
+        }
+        for name, entry in splits_doc.items()
+        if isinstance(entry, dict)
+    }
+    if declared != expected:
+        errors.append(
+            f"splits block {declared} does not match ah.splits.SPLITS {expected}; the "
+            f"sealed span boundaries and the code that reads them must be identical "
+            f"(the sealed document is normative)"
+        )
+
+
+def _check_structurally_unavailable(
+    prereg: PreRegistration, raw: Mapping[str, Any], errors: list[str]
+) -> None:
+    """No ``enforce`` threshold may name a ``structurally_unavailable`` statistic.
+
+    Such a statistic is NaN on every ensemble, always, until a missing input exists
+    (see :data:`ah.eval.battery.STRUCTURALLY_UNAVAILABLE`), and under THE ONE NaN RULE
+    a NaN ``enforce`` metric FAILS -- so an ``enforce`` band on one of these names
+    fails **every run forever**, which reads in the artifact as a real generator defect
+    rather than as a platform gap. Before WP2.3 the status was *visible* on the metric
+    but not *enforced* on the threshold; this closes that.
+
+    The list is read from the sealed document itself (``structurally_unavailable_
+    statistics:``) rather than imported from :mod:`ah.eval.battery`, for two reasons:
+    the suites cannot be imported here (they import :mod:`ah.eval.battery`, which
+    imports this module), and the sealed file must be reconstructible on its own -- a
+    reader must be able to see which names were known-unavailable at seal time without
+    running the code. ``tests/test_prereg.py`` asserts the sealed list equals the set a
+    real suite registration actually marks, in both directions.
+    """
+    entries = raw.get("structurally_unavailable_statistics")
+    if not isinstance(entries, dict) or not entries:
+        errors.append(
+            "pre-registration is missing a non-empty 'structurally_unavailable_"
+            "statistics' block; without it an enforce threshold could be sealed on a "
+            "statistic that is NaN on every ensemble forever"
+        )
+        return
+    unavailable = set(entries)
+    labelled: list[tuple[str, str]] = []
+    for block, block_entries in prereg.block_thresholds.items():
+        labelled += [(f"thresholds.blocks.{block}.{k}", k) for k in block_entries]
+    for pair, pair_entries in prereg.cross_block_thresholds.items():
+        labelled += [(f"thresholds.cross_blocks.{pair[0]}|{pair[1]}.{k}", k) for k in pair_entries]
+    labelled += [(f"thresholds.panel.{k}", k) for k in prereg.panel_thresholds]
+    labelled += [(f"thresholds.strategies.{k}", k) for k in prereg.strategy_thresholds]
+    for label, key in labelled:
+        threshold = _lookup_any(prereg, key)
+        if threshold is None or threshold.severity != "enforce":
+            continue
+        if _stat_of(key) in unavailable:
+            errors.append(
+                f"{label}: severity 'enforce' on statistic '{_stat_of(key)}', which "
+                f"this document declares structurally_unavailable -- a NaN enforce "
+                f"metric fails every run forever (THE ONE NaN RULE). Seal it 'report' "
+                f"or omit it."
+            )
+
+
+def _lookup_any(prereg: PreRegistration, key: str) -> Threshold | None:
+    for entries in prereg.block_thresholds.values():
+        if key in entries:
+            return entries[key]
+    for entries in prereg.cross_block_thresholds.values():
+        if key in entries:
+            return entries[key]
+    if key in prereg.panel_thresholds:
+        return prereg.panel_thresholds[key]
+    return prereg.strategy_thresholds.get(key)
+
+
+def _check_threshold_data_availability(
+    prereg: PreRegistration, raw: Mapping[str, Any], errors: list[str]
+) -> None:
+    """No threshold may be keyed to a factor (or D4 strategy) with no computable statistic.
+
+    ``governance/retrofit-register.md`` RFR-5: :func:`verify` already checks that a key
+    names a real factor of the right block and a registered statistic, but not that the
+    factor has *data*. On the sealed campaign vintage three active factors have none
+    (``commodities`` is declared unavailable; ``policy_rate`` and ``hy_spread`` have no
+    train+validation observations), so a threshold keyed to one of them judges nothing
+    -- silently, forever -- exactly the failure the key checks exist to stop.
+
+    The unavailable sets are read from the sealed ``reference_run:`` block (the run that
+    produced every band in this file), not recomputed: the check must hold in a checkout
+    with no catalog, and the sealed document must be self-contained.
+    """
+    run = raw.get("reference_run")
+    if not isinstance(run, dict):
+        errors.append(
+            "pre-registration is missing the 'reference_run' block (the run every "
+            "sealed band was derived from)"
+        )
+        return
+    missing_raw = run.get("missing_factors")
+    missing = set(missing_raw) if isinstance(missing_raw, list) else set()
+    uncomputable_raw = run.get("uncomputable_d4_strategies")
+    uncomputable = set(uncomputable_raw) if isinstance(uncomputable_raw, list) else set()
+
+    for block, entries in prereg.block_thresholds.items():
+        for key in entries:
+            hit = sorted(set(_factors_of(key)) & missing)
+            if hit:
+                errors.append(
+                    f"thresholds.blocks.{block}.{key!r}: factor(s) {hit} have no "
+                    f"computable reference statistic on the sealed campaign vintage "
+                    f"(reference_run.missing_factors), so this threshold judges nothing"
+                )
+    for pair, entries in prereg.cross_block_thresholds.items():
+        for key in entries:
+            hit = sorted(set(_factors_of(key)) & missing)
+            if hit:
+                errors.append(
+                    f"thresholds.cross_blocks.{pair[0]}|{pair[1]}.{key!r}: factor(s) "
+                    f"{hit} have no computable reference statistic on the sealed "
+                    f"campaign vintage (reference_run.missing_factors)"
+                )
+    for key in prereg.strategy_thresholds:
+        strategy_id = key.rsplit(".", 1)[0]
+        if strategy_id in uncomputable:
+            errors.append(
+                f"thresholds.strategies.{key!r}: D4 strategy '{strategy_id}' has at "
+                f"least one leg with no data on the sealed campaign vintage "
+                f"(reference_run.uncomputable_d4_strategies), so this threshold judges "
+                f"nothing"
+            )
+
+
+def _check_ensemble_size(
+    raw: Mapping[str, Any],
+    n_paths: int | None,
+    months: int | None,
+    errors: list[str],
+) -> None:
+    """The sealed ``ensemble_size:`` block, and (when given) the run's own size.
+
+    The acceptance bands in this file are the sampling distribution of a statistic on
+    ONE length-matched series, while the ensemble side reports an average over
+    ``n_paths`` paths. The direction is conservative -- the ensemble estimator is
+    tighter than the band's null, so the bound is safe at any size -- but the gates'
+    POWER rises without limit in ``n_paths``, so ``max: 0.5`` calibrated at one
+    ensemble size is not the same criterion at another. The size is therefore sealed,
+    and a criterion-bearing run at a different size needs a dated amendment.
+    """
+    size = raw.get("ensemble_size")
+    if not isinstance(size, dict):
+        errors.append(
+            "pre-registration is missing the 'ensemble_size' block (the sealed "
+            "n_paths/months the gate bounds are calibrated at)"
+        )
+        return
+    sealed_paths = size.get("n_paths")
+    sealed_months = size.get("months")
+    if not isinstance(sealed_paths, int) or isinstance(sealed_paths, bool) or sealed_paths < 1:
+        errors.append(f"ensemble_size.n_paths must be a positive integer, got {sealed_paths!r}")
+        return
+    if not isinstance(sealed_months, int) or isinstance(sealed_months, bool) or sealed_months < 1:
+        errors.append(f"ensemble_size.months must be a positive integer, got {sealed_months!r}")
+        return
+    if n_paths is not None and n_paths != sealed_paths:
+        errors.append(
+            f"ensemble has {n_paths} paths but the sealed criterion size is "
+            f"{sealed_paths}; the gate bounds are calibrated at the sealed size and "
+            f"mean something different at any other, so a criterion-bearing run at "
+            f"{n_paths} paths requires a dated amendment"
+        )
+    if months is not None and months != sealed_months:
+        errors.append(
+            f"ensemble paths are {months} months but the sealed criterion length is "
+            f"{sealed_months}; every length-matched band in this file was drawn at "
+            f"{sealed_months}"
+        )
+
+
 def _canonical_key(resolved: Path, doc_root: Path) -> str:
     """The path's stable, checkout-independent identity: a relative posix path.
 
@@ -1008,7 +1257,12 @@ def _verify_lock(lock_path: Path, prereg: PreRegistration, errors: list[str]) ->
 
 
 def verify(
-    prereg: PreRegistration, manifest: FactorManifest, *, lock_path: Path | None = None
+    prereg: PreRegistration,
+    manifest: FactorManifest,
+    *,
+    lock_path: Path | None = None,
+    ensemble_n_paths: int | None = None,
+    ensemble_months: int | None = None,
 ) -> None:
     """Check ``prereg`` against ``manifest``; raise :class:`PreRegError` listing every failure.
 
@@ -1041,6 +1295,29 @@ def verify(
     - if ``lock_path`` is given and exists, the lock was sealed for *this*
       pre-registration (``prereg.source_path``) and the digest recomputed from its
       ``hashed_files`` (read fresh from disk) matches the digest it recorded.
+
+    **Sealed-document checks (WP2.3), applied only when ``prereg.sealed``.** A draft
+    need not carry the full sealed apparatus -- the synthetic, minimal
+    pre-registrations this project's tests verify all over the suite would otherwise
+    have to grow four prose blocks each to buy nothing -- but a document claiming
+    ``sealed: true`` must:
+
+    - carry a ``splits:`` block equal to :data:`ah.splits.SPLITS` (RFR-6);
+    - carry a ``reference_run:`` block, and seal no threshold keyed to a factor listed
+      in its ``missing_factors`` or a D4 strategy listed in its
+      ``uncomputable_d4_strategies`` (RFR-5);
+    - carry a ``structurally_unavailable_statistics:`` block, and seal no ``enforce``
+      threshold on any statistic named in it (a NaN ``enforce`` metric fails every run
+      forever);
+    - carry an ``ensemble_size:`` block naming the ``n_paths``/``months`` the gate
+      bounds are calibrated at.
+
+    ``ensemble_n_paths``/``ensemble_months``, when given, are checked against that
+    sealed size. They are optional because a diagnostic or negative-control run at a
+    small ensemble is legitimate and must not be blocked; what must not happen is a
+    *criterion-bearing* run at an unsealed size, which is why
+    :attr:`ah.eval.battery.BatteryReport.criterion_bearing` records the comparison on
+    every report and ``ah/eval/g2.py`` is where the hard gate belongs.
 
     Every failure is collected and reported together -- no section returns early on
     another section's fault.
@@ -1106,6 +1383,12 @@ def verify(
         _check_threshold_sanity(th, f"thresholds.strategies.{key}", errors)
         _check_strategy_threshold_key(key, prereg.raw, errors)
 
+    if prereg.sealed:
+        _check_splits(prereg.raw, errors)
+        _check_threshold_data_availability(prereg, prereg.raw, errors)
+        _check_structurally_unavailable(prereg, prereg.raw, errors)
+        _check_ensemble_size(prereg.raw, ensemble_n_paths, ensemble_months, errors)
+
     if lock_path is not None and lock_path.exists():
         _verify_lock(lock_path, prereg, errors)
 
@@ -1139,7 +1422,9 @@ def _default_judged_sources() -> tuple[Path, ...]:
         _REPO_ROOT / "src" / "ah" / "eval" / "metrics" / f"{name}.py"
         for name in _METRIC_SUITE_NAMES
     ]
-    required = [_REPO_ROOT.joinpath(*parts) for parts in _REQUIRED_JUDGED_SOURCES]
+    required = [
+        _REPO_ROOT.joinpath(*parts) for parts in (*_REQUIRED_JUDGED_SOURCES, *_REQUIRED_JUDGED_DATA)
+    ]
     absent = [str(p) for p in required if not p.exists()]
     if absent:
         raise PreRegError(

@@ -7,6 +7,88 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.3 — the pre-registration seal. This is the one-way door.** `pre-registration.yaml`
+  is `sealed: true` and `pre-registration.lock` is committed, hashing 32 files: the
+  document, `factors.yaml`, all eight metric suites, `reference.py`, `battery.py`,
+  `panel.py`, `prereg.py` itself, `g2.py`, `splits.py`, `strategies.py`, `factors.py`,
+  `negative_controls.py`, `_pooling.py`, both battery report modules, and the eight
+  authored conditional worlds. `run_battery` now verifies the document **and the lock**
+  on every invocation, so a modified YAML or a modified enforce-metric implementation
+  stops the battery. From here, every change to any of those files is a dated,
+  post-hoc-flagged amendment in `governance/amendment-log.yaml`.
+
+  - **Every band comes from one reference run on this commit.** RFR-25 required it: six
+    metric names changed *meaning* and two changed *value* during WP2.2's fix passes, so
+    no pre-WP2.2c number survives. `scripts/compute_campaign_reference.py` is the
+    provenance script; its constants are asserted equal to the sealed `reference_run:`
+    block (vintage `2026-07-24`, seed 20260726, 1000 resamples, level 0.9, block length
+    120, replicate length 120).
+  - **The reference run found a live defect (RFR-5, closed).** Three of fourteen declared
+    active factors have no train+validation data on the frozen vintage — `commodities`
+    (declared unavailable), `policy_rate` (the vintage predates `fred.FEDFUNDS`'s
+    registration) and `hy_spread` (its ~3 licensed years all fall inside the holdout).
+    `policy_rate.excess_kurtosis` was sealed at **enforce**; under THE ONE NaN RULE it
+    would have failed every run forever. Removed, and `verify()` now rejects any
+    threshold keyed to a factor or D4 strategy with no computable statistic. Corollary:
+    **three** of five D4 strategies are unevaluable, not the two
+    `rationale.d4_commodities_consequence` named.
+  - **The ensemble size is sealed** (`n_paths: 1000`, `months: 120`), on the owner's
+    direction, because the gates' power rises without limit in ensemble size while their
+    bounds do not move: `max: 0.5` at 16 paths is not the same criterion at 1000.
+    Justified by a measured MC-error/band-width analysis (worst ratio 0.039 at n≈1024
+    against 0.149 at n=64). Any other size is recorded `criterion_bearing: false` on the
+    report and may not be cited at G2. **WP2.4 and WP2.8–2.10 must use it or amend.**
+  - **`bootstrap-v1`'s full spec is frozen, and both of its enforce risks are measured.**
+    Politis–Romano stationary bootstrap, **geometric blocks with mean 6 months**,
+    regime-stratified on `regime_ruleset_v1`, over the eleven factors with data. The
+    block length is bounded *below* by `dependence_band_exceedance_fraction` (mean block
+    3 measures 0.515 and fails the 0.5 gate) and *above* by the memorization surface
+    (`nn_distance_p05` collapses to 0.0 once the verbatim-window rate `(1-1/L)^23`
+    exceeds its own 5th percentile, at L≈8); 6 is the middle. `near_duplicate_fraction`
+    clears at every length tested — RFR-40's ~0.93 was a *fixed*-24-block number and does
+    not transfer to geometric lengths. The length-matched `std` risk was checked too:
+    `moment_band_exceedance_fraction` is 0.091 at every L from 3 to 24.
+  - **New finding: the benchmark cannot run the severe test.** A multivariate block
+    bootstrap over every factor with data can only draw from **1990-01 to 2020-12** —
+    `equity_vol` (VIX) starts 1990 — so `bootstrap-v1` reaches no pre-1990 episode, and
+    WP2.11's "exclude the 1970s, regenerate from 1965" test is *not posable* for it.
+    Sealed as the benchmark's largest single defect, with the three routes out named.
+    (RFR-56.)
+  - **What the seal does not establish**, now inside the hash as a `limitations:` block:
+    the gates' null exceedance rate is **unverified** (0.10 per comparison is the band's
+    definition, not a measurement, and metric correlation breaks the independence the
+    analytic rate assumes); the three band-exceedance gates were **designed against** the
+    negative controls, so "catches 4 of 5" is not independent validation of their design;
+    and **every** negative-control magnitude comes from a synthetic 16-path fixture, not
+    the campaign vintage. Nine further sealed limitations cover the pooled-vs-per-path
+    band mismatch, the tail gate's inability to fire at enforce, knife-edge comparisons,
+    unjudged within-block correlation, and four named estimator substitutions.
+  - **Owner decisions recorded, not disclaimed.** `S2-NC5-EXEMPTION` (the plan
+    contradicts itself at lines 89 vs 93; line 93 governs, the conditional tier stays
+    non-gating, NC5's exemption is a named narrow exception — and the pinning test now
+    asserts **which** gate blocks NC5, not merely that something does);
+    `S2-SPREAD-FLOOR` (RFR-41 ratified on measured evidence: 54.0% of `ig_spread` and
+    86.9% of `funding_spread` observations sit below the old 100bp floor, none below
+    0.0); `S2-NUMERAIRE-BIAS` (RFR-12 sealed as a stated bias — the `cash_tr_1m` residual
+    leg was *impossible*, since it derives from the dataless `policy_rate`);
+    `S2-SEAL-SCOPE-2` (`derive.py` sealed because it is on the read path, `splice.py` not
+    because its proxy rules are registered but unapplied — and neither backfill is in the
+    campaign vintage, which answers RFR-10's standing question).
+  - **New `verify()` checks, all running on every battery invocation:** the sealed
+    `splits:` block must equal `ah.splits.SPLITS` (RFR-6); no threshold may name a factor
+    or strategy with no data (RFR-5); no `enforce` threshold may name a
+    `structurally_unavailable` statistic (twelve names, 25 metric instances, each with
+    the work package that restores it); and the sealed `ensemble_size` is checkable
+    against a run's own size.
+  - **The human gate is discharged by pre-authorization.** `AM-2026-07-26-001`
+    (`post_hoc: false`) is the amendment log's first entry and names exactly what is
+    provisional and what the D6 workshop must ratify. `AM-2026-07-26-002` corrects an
+    omission in it — the plan requires a "capped trial budget stated in
+    pre-registration" and none existed, so WP2.3 authored one
+    (`tuning_protocol.trial_budget_per_system: 40`) and the first entry failed to list
+    it as authored. The log is append-only, so the correction is a second entry that
+    names the omission, which is also the first exercise of the amendment machinery
+    against the real file.
 - **WP2.2c — battery hardening: the battery can now reject a known-bad generator.**
   WP2.2b registered five deliberately broken generators and the battery passed all five;
   absent one accidental `floor_violations` failure that fired identically for every

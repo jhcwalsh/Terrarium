@@ -765,10 +765,24 @@ def test_register_monthly_suite_appears_in_run_battery_without_editing_it(
     u1 = rng.normal(0.0, 0.03, size=(n_paths, months))
     ensemble = _two_factor_ensemble(g1, u1, names=("g1", "u1"))
 
+    import dataclasses
+
     from ah.eval import prereg as prereg_mod
 
+    # The real document's thresholds, as a DRAFT. This test runs over a synthetic
+    # two-factor manifest (g1/u1), and WP2.3's sealed pre-registration is verified on
+    # every run_battery invocation against the manifest it is handed -- which the real
+    # document can never satisfy for a toy manifest, since `conventions` must classify
+    # exactly the active factor set. Skipping verification here is the same behaviour
+    # this test had while the real file was unsealed, now stated rather than incidental;
+    # see tests/test_eval_battery.py::_real_prereg for the full argument and for where
+    # the sealed path IS covered.
     report = run_battery(
-        ensemble, reference=reference, prereg=prereg_mod.load(), manifest=manifest, seed=0
+        ensemble,
+        reference=reference,
+        prereg=dataclasses.replace(prereg_mod.load(), sealed=False),
+        manifest=manifest,
+        seed=0,
     )
     names = {r.name for r in report.results if r.suite == "monthly"}
     assert "g1.skew" in names

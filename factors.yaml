@@ -22,6 +22,14 @@
 # total-return series exists -- the honest candidates are licensed), recorded in
 # governance/retrofit-register.md RFR-8. RFR-1 originally assigned it to WP2.2; RFR-8
 # supersedes that assignment, since WP2.2 Task 1 was citing RFR-1 as its own reason.
+#
+# WP2.3 DECIDED (2026-07-26): option (b) -- seal with `commodities` absent, as a named
+# limitation. And it is not the only one: the sealed reference run found that
+# `policy_rate` and `hy_spread` ALSO produced no train+validation data on the frozen
+# campaign vintage (the vintage predates fred.FEDFUNDS's registration; fred.HY_OAS's
+# ~3 licensed years all fall inside the holdout). `pre-registration.yaml`'s
+# `reference_run.missing_factors` is the sealed list of all three, and
+# `ah.eval.prereg.verify()` now REJECTS any threshold keyed to one of them.
 
 factor_blocks:
   global:  [equity_mkt, smb, hml, mom, equity_vol, commodities, ig_spread, hy_spread]
@@ -35,8 +43,9 @@ active_blocks: [global, us]
 # The one genuinely blocking gap WP2.1b left open: until this section existed, no
 # mapping anywhere in the repository bound a factor id to a catalog series, so no
 # reference statistic (ah.eval.reference) or generator-facing panel (ah.eval.panel)
-# could honestly be computed. Still unsealed (WP2.3 seals it alongside the rest of
-# this file); ah.factors.load_manifest() validates coverage (below) but this section
+# could honestly be computed. SEALED as of WP2.3 (2026-07-26): this whole file is
+# hashed into pre-registration.lock, so an edit to any mapping below is a dated
+# amendment. ah.factors.load_manifest() validates coverage (below) but this section
 # itself carries no acceptance thresholds.
 #
 # One entry per factor in EVERY block declared above, including inactive `uk` (which
@@ -164,9 +173,12 @@ factor_sources:
       NOT YET APPLIED: this rule is not run by ah.data.refresh today, so the panel
       this factor sources from does not yet contain the spliced pre-1996-12
       observations or any is_proxy flag -- read_factor_frames reads fred.HY_OAS
-      directly, unextended. Applying the rule (and confirming which the sealed
-      campaign vintage actually contains) is WP2.3's decision; see
-      governance/retrofit-register.md RFR-10.
+      directly, unextended. WP2.3 CONFIRMED (2026-07-26) which the sealed campaign
+      vintage contains: NEITHER backfill. The rule stays unapplied, ah/data/splice.py
+      stays outside the seal for that reason (pre-registration.yaml's `seal_scope:`),
+      and `hy_spread` is in reference_run.missing_factors -- its ~3 years of licensed
+      fred.HY_OAS history all fall inside the HOLDOUT span, so its train+validation
+      sample is EMPTY, not merely short. See governance/retrofit-register.md RFR-48/50.
     notes: >-
       ICE BofA US High Yield OAS via FRED (BAMLH0A0HYM2). requirements.yaml notes FRED
       serves only ~3 years of history for this series under ICE licensing terms, so it
@@ -188,9 +200,13 @@ factor_sources:
       1954-1990 overlap). REGISTERED BUT NOT YET APPLIED: this rule is not run by
       ah.data.refresh today, so the panel this factor sources from does not yet
       contain the spliced pre-1954-07 observations or any is_proxy flag --
-      read_factor_frames reads fred.FEDFUNDS directly, unextended. Applying the rule
-      (and confirming which the sealed campaign vintage actually contains) is
-      WP2.3's decision; see governance/retrofit-register.md RFR-10.
+      read_factor_frames reads fred.FEDFUNDS directly, unextended. WP2.3 CONFIRMED
+      (2026-07-26) which the sealed campaign vintage contains: NEITHER backfill -- and,
+      worse for this factor, the 2026-07-24 vintage PREDATES fred.FEDFUNDS's own
+      registration, so it holds no fred.FEDFUNDS parquet at all. `policy_rate` is
+      therefore in reference_run.missing_factors, which makes `cash_tr_1m`, `carry`,
+      `term_premium`, `equity_risk_premium` and `policy_anchor_deviation` all
+      uncomputable on this campaign. See governance/retrofit-register.md RFR-48/50/51.
     notes: >-
       Effective federal funds rate -- the ADMINISTERED US policy rate. Registered in
       requirements.yaml by WP2.2 Task 1 under the WP1.9 emergent-requirements rule

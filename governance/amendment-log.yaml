@@ -64,3 +64,103 @@
 # block_addition's `block` / `block_thresholds` / `cross_block_thresholds`).
 
 amendments:
+- amendment_id: AM-2026-07-26-001
+  date: '2026-07-26'
+  payload:
+    ratifying_body: D6 workshop
+    sealed_at: '2026-07-26'
+    what_D6_must_ratify:
+    - ensemble_size.n_paths
+    - bootstrap_v1.mean_block_months
+    - the nn_distance_* margin factor
+    - the elicitability_score bound
+    - the var_95/es_95 three-fold width
+    - K = 4 for the per-name absurdity bounds
+    what_is_NOT_provisional:
+    - the three *_band_exceedance_fraction bounds (0.5 is a majority rule derived
+      from the sealed band level, not an empirical quantity)
+    - money_pump_violations and floor_violations max 0 (a definition, not an estimate)
+    - near_duplicate_fraction max 0.5 (the same majority rule)
+    - the splits, the campaign vintage id, the seal scope, and every protocol block
+      (tuning, severe test, multi-seed decision rule) -- these are decisions, not
+      estimates, and D6 may revise them only by a further amendment
+    what_is_provisional:
+      bootstrap_v1.mean_block_months: 6. Bounded below by dependence_band_exceedance_fraction
+        (mean block 3 measures 0.515 and fails the 0.5 gate) and above by the memorization
+        surface (the verbatim-window rate (1-1/L)^23 exceeds nn_distance_p05's own
+        5th percentile beyond L~8). 6 is the middle of that window. Measured with
+        a throwaway prototype at 200 paths, not at the sealed criterion size; WP2.4
+        must confirm the window's edges at 1000 paths.
+      ensemble_size.n_paths: 1000. Derived from a measured MC-error/band-width analysis
+        on the sealed campaign vintage (worst ratio 0.039 at n=1024, on equity_mkt/cpi/ust_10y
+        monthly statistics; 0.149 at n=64), so it satisfies the plan's 'MC error much
+        less than band width' rule -- but the choice of HOW MUCH less is a judgment
+        D6 should ratify, because the gates' power rises without limit in n_paths.
+      per_name_absurdity_bounds: K = 4 band half-widths, all severity report. K is
+        derived from a family-wise error argument under a normal approximation (~6.6
+        sigma per comparison, ~3e-8 over ~570 comparisons); the normal approximation
+        is the provisional part, and it is why none of these bounds is enforce.
+      thresholds.panel.nn_distance_p05 / nn_distance_p50: 0.0274 / 1.0830 -- exactly
+        HALF the measured historical pooled leave-one-out nearest-neighbour null (0.0548
+        / 2.1660, n=339 over 11 factors). The null is measured; the factor of two
+        is a stated margin, not a computed quantity. Both are severity report for
+        that reason.
+      thresholds.strategies.*.elicitability_score: max 5.0 for both sixty_forty and
+        momentum. THE ONE VALUE IN THE SEALED THRESHOLDS BLOCK NOT DERIVED FROM A
+        RUN -- retained from the pre-seal draft as a loose upper bound because no
+        band exists for a STRATEGY_STATS entry and no generator exists to measure
+        one. Named here rather than dressed up. WP2.4 must report bootstrap-v1's measured
+        value so a derived bound replaces it.
+      thresholds.strategies.*.var_95 / es_95: '[historical/3, historical*3] for sixty_forty
+        and momentum. The historical values are measured on the sealed run; the three-fold
+        width is a stated order-of-magnitude choice, not a sampling band.'
+  post_hoc: false
+  rationale: 'PRE-AUTHORIZATION OF PROVISIONAL VALUES, per STEP2-GENERATOR-PLAN Sec.WP2.3''s
+    human gate: ''merges only after the D6 workshop ratifies (or with provisional
+    values pre-authorized in the amendment log).'' The project owner has taken the
+    second branch. pre-registration.yaml is sealed now, before any training run, with
+    the values named in this entry''s payload marked provisional and awaiting D6 ratification.
+    This entry is what makes that pre-authorization a record rather than an assertion,
+    and it is the FIRST entry in this log by design: everything sealed on 2026-07-26
+    was sealed under it. post_hoc is FALSE -- no training run, no generator, and no
+    G2 evidence exists at the time of this entry; the earliest thing that could have
+    been fitted to (bootstrap-v1) is WP2.4''s and does not exist yet.'
+  type: protocol_change
+- amendment_id: AM-2026-07-26-002
+  date: '2026-07-26'
+  payload:
+    additional_provisional_values:
+      tuning_protocol.selection_criterion: Mean validation-fold score of the generative
+        objective plus the D4 tail elicitability auxiliary at the config's sealed
+        lambda, ties broken by lower sampling cost (NFE). The SHAPE is the plan's
+        ('final config selected by a pre-stated criterion'); the specific tie-break
+        is authored here.
+      tuning_protocol.trial_budget_per_system: 40 configurations per neural system
+        per sampler, counting every started trial including abandoned and crashed
+        runs. NOT DERIVED FROM ANYTHING -- no prior tuning campaign exists in this
+        repository to size it against, and the plan states only that a cap must exist,
+        not what it should be. It is a judgment about how much search a forking-paths
+        record can absorb before the selected configuration stops being credible.
+        D6 must ratify it; a system that exhausts it is reported as such and does
+        not receive more budget without a further amendment.
+    amends: AM-2026-07-26-001
+    not_authored_here:
+    - severe_test_protocol's excluded decade (1970-1979) and 1965 start state -- both
+      verbatim from STEP2-GENERATOR-PLAN Sec.WP2.11
+    - ablation_systems A-E and the >=3-seed rule -- both verbatim from Sec.WP2.10
+    - multi_seed_decision_rule's four clauses -- verbatim from Sec.WP2.3
+    ratifying_body: D6 workshop
+    sealed_at: '2026-07-26'
+  post_hoc: false
+  rationale: 'COMPLETES THE PRE-AUTHORIZATION IN AM-2026-07-26-001, which omitted
+    one authored number. STEP2-GENERATOR-PLAN Sec.WP2.3 requires a ''capped trial
+    budget stated in pre-registration'' and no such cap existed anywhere in the repository,
+    so WP2.3 authored one -- tuning_protocol.trial_budget_per_system = 40 -- and then
+    failed to list it among the provisional values the first entry enumerates. That
+    is exactly the failure a pre-authorization exists to prevent: an authored number
+    sealed without being named as authored. The log is append-only, so the correction
+    is this entry rather than an edit to the first one. post_hoc is FALSE for the
+    same reason it was in AM-2026-07-26-001: no training run, no tuning trial and
+    no generator exists at the time of writing, so there is nothing the budget could
+    have been fitted to.'
+  type: protocol_change

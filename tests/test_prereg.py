@@ -96,13 +96,26 @@ def test_load_and_verify_real_file_passes() -> None:
 
 def test_load_real_file_explicit_path() -> None:
     loaded = prereg.load(REAL_PREREG_PATH)
-    assert loaded.sealed is False
+    # WP2.3 flipped this. It was `False` through WP2.1b-WP2.2c; the assertion is updated
+    # to the new truth rather than relaxed, because "is the real file sealed" is exactly
+    # the fact this test exists to pin, and a sealed file that reads unsealed would be
+    # the most consequential regression this repository could have.
+    assert loaded.sealed is True
     assert loaded.active_blocks == ("global", "us")
     assert set(loaded.block_thresholds) == {"global", "us"}
     assert set(loaded.cross_block_thresholds) == {("global", "us")}
-    assert set(loaded.decisions) == {"R5", "J3"}
+    assert set(loaded.decisions) == {
+        "R5",
+        "J3",
+        # WP2.3's three sealed decisions -- see pre-registration.yaml's `decisions:` and
+        # governance/decision-register.md's Step 2 section.
+        "S2-NC5-EXEMPTION",
+        "S2-SPREAD-FLOOR",
+        "S2-NUMERAIRE-BIAS",
+    }
     assert loaded.decisions["R5"].status == "CLOSED-deferred"
     assert loaded.decisions["J3"].status == "CLOSED-deferred"
+    assert loaded.decisions["S2-SPREAD-FLOOR"].status == "RATIFIED"
 
 
 def test_decision_consequence_text_is_verbatim() -> None:
@@ -731,8 +744,38 @@ def test_real_amendment_log_documents_block_addition_property() -> None:
     assert "additive" in text
     assert "byte-identical" in text
     assert "not a re-seal" in text
-    doc = yaml.safe_load(text)
-    assert doc.get("amendments") in (None, [])
+
+
+def test_the_real_amendment_log_opens_with_the_d6_pre_authorization() -> None:
+    """WP2.3's human gate, discharged in the log rather than asserted in prose.
+
+    STEP2-GENERATOR-PLAN Sec.WP2.3: "merges only after the D6 workshop ratifies (or with
+    provisional values pre-authorized in the amendment log)". The project owner took the
+    second branch, so the log's FIRST entry must be that pre-authorization -- everything
+    sealed on 2026-07-26 was sealed under it, and an entry appended later could not
+    cover a seal that already happened. It must also be `post_hoc: false`: at the time
+    it was written no generator, no training run and no G2 evidence existed, so there
+    was nothing it could have been fitted to.
+
+    This test also IS the amendment-log round-trip acceptance for the real file
+    (Sec.WP2.3: "amendment log round-trips") -- the entry is read back through
+    ``load_amendments`` from the committed bytes, payload and all.
+    """
+    amendments = load_amendments(REAL_AMENDMENT_LOG_PATH)
+    assert amendments, "the sealed pre-registration must be covered by a pre-authorization"
+    first = amendments[0]
+    assert first.amendment_id == "AM-2026-07-26-001"
+    assert first.type == "protocol_change"
+    assert first.date == "2026-07-26"
+    assert first.post_hoc is False
+    assert "PRE-AUTHORIZATION OF PROVISIONAL VALUES" in first.rationale
+    assert first.payload["ratifying_body"] == "D6 workshop"
+    # It must NAME what is provisional -- a pre-authorization that does not say what it
+    # authorizes authorizes everything.
+    provisional = first.payload["what_is_provisional"]
+    assert "ensemble_size.n_paths" in provisional
+    assert "bootstrap_v1.mean_block_months" in provisional
+    assert first.payload["what_D6_must_ratify"]
 
 
 def test_append_amendment_leaves_prior_entries_byte_identical(tmp_path: Path) -> None:
@@ -1150,9 +1193,33 @@ def _thresholds_for_every_monthly_metric(manifest: Any) -> dict[str, Any]:
     return {"blocks": blocks, "cross_blocks": cross, "panel": panel}
 
 
+def _assume_every_factor_has_data(doc: dict[str, Any]) -> dict[str, Any]:
+    """Blank ``reference_run``'s availability lists in a SYNTHETIC verification document.
+
+    WP2.3 added a sealed-document check (governance/retrofit-register.md RFR-5) that
+    rejects a threshold keyed to a factor or D4 strategy with no computable reference
+    statistic on the campaign vintage -- three factors and three strategies, today.
+    The two tests below assert a DIFFERENT property: that every metric name a suite
+    emits is a well-formed, registered threshold KEY. They build a document carrying one
+    entry per emitted metric name, which necessarily includes the unavailable factors'
+    names, so without this the availability rule would mask the naming rule and neither
+    would be tested cleanly.
+
+    This is not a weakening: the availability rule has its own dedicated tests
+    (``test_verify_rejects_a_threshold_on_a_factor_with_no_data`` and its strategy
+    sibling), and the real ``pre-registration.yaml`` is verified with the real lists by
+    ``test_load_and_verify_real_file_passes``.
+    """
+    run = dict(doc["reference_run"])
+    run["missing_factors"] = []
+    run["uncomputable_d4_strategies"] = []
+    doc["reference_run"] = run
+    return doc
+
+
 def test_every_monthly_metric_name_can_carry_a_sealed_threshold(tmp_path: Path) -> None:
     manifest = load_manifest()
-    doc = _load_real_doc()
+    doc = _assume_every_factor_has_data(_load_real_doc())
     doc["thresholds"] = _thresholds_for_every_monthly_metric(manifest)
     prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
 
@@ -1284,7 +1351,7 @@ def _thresholds_for_every_horizon_metric(manifest: Any) -> dict[str, Any]:
 
 def test_every_horizon_metric_name_can_carry_a_sealed_threshold(tmp_path: Path) -> None:
     manifest = load_manifest()
-    doc = _load_real_doc()
+    doc = _assume_every_factor_has_data(_load_real_doc())
     doc["thresholds"] = _thresholds_for_every_horizon_metric(manifest)
     prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
 
@@ -1650,3 +1717,277 @@ def test_estimator_convention_table_names_no_statistic_that_does_not_exist() -> 
     registered = {*SINGLE_FACTOR_STATS, *CROSS_BLOCK_STATS, *PANEL_STATS, *STRATEGY_STATS}
     stale = sorted(set(prereg.ESTIMATOR_CONVENTION_KEYS) - registered)
     assert not stale, f"ESTIMATOR_CONVENTION_KEYS names unregistered statistic(s): {stale}"
+
+
+# --------------------------------------------------------------------------- #
+# WP2.3 -- the seal itself.
+#
+# STEP2-GENERATOR-PLAN Sec.WP2.3's acceptance is two sentences: "modified YAML or
+# modified enforce-metric code with a stale lock fails loudly; amendment log
+# round-trips." Both halves are asserted here (the log's round trip against the real
+# committed file is `test_the_real_amendment_log_opens_with_the_d6_pre_authorization`
+# above), together with the four sealed-document checks WP2.3 added to `verify()`.
+# --------------------------------------------------------------------------- #
+
+REAL_LOCK_PATH = ROOT / "pre-registration.lock"
+
+
+def test_the_committed_lock_verifies_against_the_committed_tree() -> None:
+    """The seal is real: the lock in the repository matches the files in the repository.
+
+    This is the test that fails the moment ANY hashed file changes without a re-seal --
+    every metric suite, ``reference.py``, ``battery.py``, ``prereg.py`` itself,
+    ``splits.py``, ``strategies.py``, ``factors.py``, ``derive.py``, the battery report
+    modules, the authored conditional worlds, ``factors.yaml``, and
+    ``pre-registration.yaml``. That is the one-way door working, not a brittle test: the
+    remedy is an amendment plus a re-seal, and the procedure is stated in
+    ``pre-registration.yaml``'s header.
+    """
+    loaded = prereg.load(REAL_PREREG_PATH)
+    prereg.verify(loaded, load_manifest(), lock_path=REAL_LOCK_PATH)  # must not raise
+
+
+def test_the_lock_records_what_it_hashed() -> None:
+    lock = json.loads(REAL_LOCK_PATH.read_text(encoding="utf-8"))
+    assert lock["digest"].startswith("sha256:")
+    assert lock["prereg_path"] == "pre-registration.yaml"
+    hashed = set(lock["hashed_files"])
+    # The document, the factor namespace, the judging code, and the sealed input data.
+    assert "pre-registration.yaml" in hashed
+    assert "factors.yaml" in hashed
+    assert "src/ah/eval/g2.py" in hashed
+    assert "src/ah/eval/reference.py" in hashed
+    assert "src/ah/eval/prereg.py" in hashed
+    assert "src/ah/splits.py" in hashed
+    assert "src/ah/eval/metrics/monthly.py" in hashed
+    # WP2.3's two seal-scope decisions (pre-registration.yaml's `seal_scope:` block).
+    assert "src/ah/data/derive.py" in hashed
+    assert "src/ah/battery/thresholds.yaml" in hashed
+    assert "src/ah/data/splice.py" not in hashed
+    assert any(p.startswith("fixtures/worlds/conditional/") for p in hashed)
+
+
+def _sealed_copy(tmp_path: Path) -> tuple[Path, Path, Path]:
+    """A tmp copy of the real pre-registration/factors, with a freshly written lock."""
+    prereg_path, factors_path = _copy_real_prereg_and_factors(tmp_path)
+    lock_path = tmp_path / "pre-registration.lock"
+    prereg.seal(prereg_path, out_path=lock_path, sealed_at="2026-07-26")
+    return prereg_path, factors_path, lock_path
+
+
+def test_a_modified_yaml_with_a_stale_lock_fails_loudly(tmp_path: Path) -> None:
+    """Acceptance, half one: MODIFIED YAML + stale lock must fail.
+
+    The edit is a real one a threshold author might make -- widening an enforce bound --
+    not a whitespace change, so this proves the digest is over content that matters.
+    """
+    prereg_path, factors_path, lock_path = _sealed_copy(tmp_path)
+    loaded = prereg.load(prereg_path)
+    prereg.verify(loaded, load_manifest(factors_path), lock_path=lock_path)  # baseline
+
+    doc = yaml.safe_load(prereg_path.read_text(encoding="utf-8"))
+    doc["thresholds"]["panel"]["moment_band_exceedance_fraction"]["max"] = 0.9
+    prereg_path.write_text(yaml.safe_dump(doc, sort_keys=False), encoding="utf-8")
+
+    reloaded = prereg.load(prereg_path)
+    with pytest.raises(PreRegError, match="does not match sealed digest"):
+        prereg.verify(reloaded, load_manifest(factors_path), lock_path=lock_path)
+
+
+def test_modified_enforce_metric_code_with_a_stale_lock_fails_loudly(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Acceptance, half two, and THE HALF THAT IS EASY TO GET WRONG.
+
+    A seal over thresholds alone is worthless: the same YAML judged by different code is
+    a different criterion. STEP2-GENERATOR-PLAN Sec.WP2.3 therefore requires the
+    ENFORCE-METRIC IMPLEMENTATIONS inside the digest, and CLAUDE.md states the invariant
+    as "thresholds AND the code that judges them".
+
+    So this test seals over a COPIED source tree, edits the module that implements the
+    three ``*_band_exceedance_fraction`` enforce gates -- ``ah/eval/metrics/monthly.py``,
+    real judging code, not a stand-in -- and asserts verification then fails. Nothing
+    about the YAML changes.
+    """
+    repo = tmp_path / "repo"
+    shutil.copytree(ROOT / "src", repo / "src")
+    shutil.copytree(ROOT / "fixtures", repo / "fixtures")
+    shutil.copy(REAL_PREREG_PATH, repo / "pre-registration.yaml")
+    shutil.copy(REAL_FACTORS_PATH, repo / "factors.yaml")
+    monkeypatch.setattr(prereg, "_REPO_ROOT", repo)
+
+    prereg_path = repo / "pre-registration.yaml"
+    lock_path = repo / "pre-registration.lock"
+    prereg.seal(prereg_path, out_path=lock_path, sealed_at="2026-07-26")
+    loaded = prereg.load(prereg_path)
+    prereg.verify(loaded, load_manifest(repo / "factors.yaml"), lock_path=lock_path)
+
+    gate_module = repo / "src" / "ah" / "eval" / "metrics" / "monthly.py"
+    assert "band_exceedance" in gate_module.read_text(encoding="utf-8")
+    gate_module.write_text(
+        gate_module.read_text(encoding="utf-8") + "\n# an edit to enforce-metric code\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(PreRegError, match="does not match sealed digest"):
+        prereg.verify(loaded, load_manifest(repo / "factors.yaml"), lock_path=lock_path)
+
+
+def test_sealed_splits_match_the_code(tmp_path: Path) -> None:
+    """RFR-6. The sealed boundaries and ``ah.splits`` must be identical, and a
+    divergence must name itself rather than surfacing as an opaque lock violation."""
+    from ah.splits import SPLITS
+
+    doc = _load_real_doc()
+    assert {name: (s["start"], s["end"]) for name, s in doc["splits"].items()} == {
+        name: (s.start, s.end) for name, s in SPLITS.items()
+    }
+
+    doc["splits"]["validation"]["end"] = "2022-01-01"
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    with pytest.raises(PreRegError, match=r"does not match ah\.splits\.SPLITS"):
+        prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
+
+
+def test_verify_rejects_a_threshold_on_a_factor_with_no_data(tmp_path: Path) -> None:
+    """RFR-5, closed. ``policy_rate`` has no train+validation data on the sealed
+    campaign vintage; the pre-seal file carried ``policy_rate.excess_kurtosis`` at
+    ENFORCE, which under THE ONE NaN RULE would have failed every run forever."""
+    doc = _load_real_doc()
+    doc["thresholds"]["blocks"]["us"]["policy_rate.excess_kurtosis"] = {
+        "min": -2.0,
+        "max": 50.0,
+        "severity": "enforce",
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    with pytest.raises(PreRegError, match="no computable reference statistic"):
+        prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
+
+
+def test_verify_rejects_a_threshold_on_an_uncomputable_d4_strategy(tmp_path: Path) -> None:
+    """The strategy-scoped half of RFR-5. ``carry``'s funding leg is derived from
+    ``policy_rate``, so it has no historical return path on the sealed vintage."""
+    doc = _load_real_doc()
+    doc["thresholds"]["strategies"]["carry.var_95"] = {
+        "min": 0.0,
+        "max": 1.0,
+        "severity": "report",
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    with pytest.raises(PreRegError, match="uncomputable_d4_strategies"):
+        prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
+
+
+def test_verify_rejects_enforce_on_a_structurally_unavailable_statistic(tmp_path: Path) -> None:
+    """A NaN ``enforce`` metric fails EVERY run forever. The status was visible on the
+    MetricSpec before WP2.3, but nothing stopped a threshold being sealed on it."""
+    doc = _load_real_doc()
+    doc["thresholds"]["blocks"]["global"]["equity_mkt.ergodicity_gap"] = {
+        "min": None,
+        "max": 1.0,
+        "severity": "enforce",
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    with pytest.raises(PreRegError, match="structurally_unavailable"):
+        prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
+
+
+def test_verify_allows_report_on_a_structurally_unavailable_statistic(tmp_path: Path) -> None:
+    """The rule is about ENFORCE, not about the name: an unavailable statistic may still
+    carry a reported bound, and sealing the name is what makes it amendable later."""
+    doc = _load_real_doc()
+    doc["thresholds"]["blocks"]["global"]["equity_mkt.ergodicity_gap"] = {
+        "min": None,
+        "max": 1.0,
+        "severity": "report",
+    }
+    prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
+    prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))  # must not raise
+
+
+def test_the_sealed_unavailable_list_matches_what_the_suites_actually_mark() -> None:
+    """Both directions, against a REAL suite registration.
+
+    ``verify()`` reads the sealed list rather than importing the suites (it cannot --
+    they import ``ah.eval.battery``, which imports ``prereg``), and the sealed file must
+    be reconstructible on its own. That makes this test the only thing tying the sealed
+    list to reality: a statistic the platform marks unavailable but the file omits could
+    then be sealed at enforce, and a name in the file the platform actually computes
+    would bar an enforce bound for no reason.
+    """
+    from ah.eval import battery as battery_mod
+    from ah.eval.reference import ReferenceStats
+
+    manifest = load_manifest()
+    reference = ReferenceStats(
+        blocks={},
+        cross_blocks={},
+        active_blocks=manifest.active_blocks,
+        vintage_id="v",
+        n_resamples=1,
+        seed=0,
+        missing_factors=(),
+    )
+    marked: set[str] = set()
+    for module_name, builder_name in battery_mod._REFERENCE_DEPENDENT_SUITE_BUILDERS.values():
+        module = __import__(module_name, fromlist=[builder_name])
+        for spec in getattr(module, builder_name)(manifest, reference):
+            if spec.status == battery_mod.STRUCTURALLY_UNAVAILABLE:
+                marked.add(spec.name.rsplit(".", 1)[-1])
+
+    sealed = set(_load_real_doc()["structurally_unavailable_statistics"])
+    assert marked == sealed, (
+        f"marked-but-unsealed: {sorted(marked - sealed)}; "
+        f"sealed-but-not-marked: {sorted(sealed - marked)}"
+    )
+
+
+def test_verify_checks_the_sealed_ensemble_size() -> None:
+    """The owner's decision: the gate bounds are calibrated at ONE ensemble size, and a
+    criterion-bearing run at any other size means something different by an amount
+    nobody has measured. The check is OPTIONAL by design -- a small diagnostic run must
+    stay runnable (the negative-control suite runs at 16 paths) -- so
+    ``BatteryReport.criterion_bearing`` and ``ah/eval/g2.py`` are the hard gate, and
+    this is the check they call."""
+    loaded = prereg.load(REAL_PREREG_PATH)
+    manifest = load_manifest()
+    size = loaded.raw["ensemble_size"]
+    prereg.verify(
+        loaded,
+        manifest,
+        ensemble_n_paths=size["n_paths"],
+        ensemble_months=size["months"],
+    )  # must not raise
+    with pytest.raises(PreRegError, match="the sealed criterion size"):
+        prereg.verify(loaded, manifest, ensemble_n_paths=16)
+    with pytest.raises(PreRegError, match="sealed criterion length"):
+        prereg.verify(loaded, manifest, ensemble_months=60)
+
+
+def test_the_reference_run_script_agrees_with_the_sealed_parameters() -> None:
+    """Every historical band in the sealed file came from ONE run of
+    ``scripts/compute_campaign_reference.py``. If that script's defaults and the sealed
+    ``reference_run:`` block drift apart, "reproduce with this command" stops being
+    true -- and ``data/`` is gitignored, so that command is the only reproduction path a
+    reader without the catalog has."""
+    import importlib.util
+
+    spec = importlib.util.spec_from_file_location(
+        "_campaign_reference", ROOT / "scripts" / "compute_campaign_reference.py"
+    )
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    doc = _load_real_doc()
+    run = doc["reference_run"]
+    assert run["vintage_id"] == module.CAMPAIGN_VINTAGE_ID
+    assert run["seed"] == module.REFERENCE_SEED
+    assert run["n_resamples"] == module.N_RESAMPLES
+    assert run["level"] == module.LEVEL
+    assert run["block_length"] == module.BLOCK_LENGTH
+    assert run["resample_length"] == module.RESAMPLE_LENGTH
+    # The replicate length IS the sealed criterion path length -- that equality is what
+    # makes every length-matched band comparable to the ensemble it judges.
+    assert doc["ensemble_size"]["months"] == module.RESAMPLE_LENGTH
+    assert run["vintage_id"] == doc["campaign_vintage_id"]

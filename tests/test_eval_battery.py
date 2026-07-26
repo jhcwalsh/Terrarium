@@ -11,6 +11,7 @@ one's.
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from collections.abc import Iterator
 from dataclasses import FrozenInstanceError
@@ -77,7 +78,28 @@ def _empty_reference() -> ReferenceStats:
 
 
 def _real_prereg() -> prereg_mod.PreRegistration:
-    return prereg_mod.load()
+    """The real ``pre-registration.yaml``'s thresholds, **as a draft** (``sealed=False``).
+
+    Every caller below runs ``run_battery`` over a SYNTHETIC two-factor manifest
+    (``global: [g1]``, ``us: [u1]``) while wanting the real document's realistic
+    threshold values attached to the results. Those two things are incompatible with
+    verification: ``verify()`` checks that ``conventions`` classifies exactly the
+    manifest's active factor set and that every threshold key names a factor of the
+    block it sits under, and the real document is authored against the real manifest --
+    so verifying it against ``g1``/``u1`` is not a check that could ever pass, and
+    passing it would mean the check had stopped working.
+
+    WP2.3 sealed the real file, and ``run_battery`` verifies any pre-registration
+    claiming ``sealed: true`` on every invocation. Handing these tests a draft copy is
+    therefore not a weakening -- it restores exactly the behaviour they had while the
+    real file was unsealed (verification skipped, ``prereg_verified: false`` recorded on
+    the report), with the reason now explicit instead of incidental. The genuine
+    sealed-document path is covered against the REAL manifest by
+    ``tests/test_prereg.py`` (``test_the_committed_lock_verifies_against_the_committed_tree``,
+    ``test_load_and_verify_real_file_passes``) and, end to end through ``run_battery``,
+    by ``tests/test_negative_controls.py``, which uses the real manifest throughout.
+    """
+    return dataclasses.replace(prereg_mod.load(), sealed=False)
 
 
 # --------------------------------------------------------------------------- #
@@ -1050,7 +1072,7 @@ def test_run_full_battery_returns_a_non_empty_metric_set() -> None:
         ensemble,
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1096,7 +1118,7 @@ def test_run_full_battery_returns_tails_and_utility_metrics_by_name() -> None:
         ensemble,
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1151,7 +1173,7 @@ def test_run_full_battery_returns_memorization_economics_calibration_metrics_by_
         ensemble,
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1212,7 +1234,7 @@ def test_run_full_battery_returns_conditional_metrics_by_name() -> None:
         ensemble,
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1273,7 +1295,7 @@ def test_run_full_battery_orchestration_fixture_fails_on_the_money_pump_and_floo
         ensemble,
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1301,7 +1323,7 @@ def test_run_full_battery_attaches_real_reference_bands_and_coverage() -> None:
         ensemble,
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1337,7 +1359,7 @@ def test_run_full_battery_is_repeatable_without_a_duplicate_registration_error()
     kwargs: dict[str, Any] = dict(
         access=_orchestration_access(),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1372,7 +1394,7 @@ def test_run_full_battery_judges_against_the_reference_the_second_call_actually_
         ensemble,
         access=_orchestration_access(seed=77),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,
@@ -1382,7 +1404,7 @@ def test_run_full_battery_judges_against_the_reference_the_second_call_actually_
         ensemble,
         access=_orchestration_access(seed=4242),
         manifest=manifest,
-        prereg=prereg_mod.load(),
+        prereg=_real_prereg(),
         seed=0,
         reference_seed=11,
         n_resamples=8,

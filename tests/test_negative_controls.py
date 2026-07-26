@@ -389,10 +389,25 @@ def test_nc5_is_the_only_control_not_caught_at_enforce_and_only_by_sealed_design
     conditional metrics fire). WP2.2c does not change that severity: the brief is
     explicit that the sealed decision rule stands.
 
+    WP2.3 seals this as the project owner's decision, not an implementer's disclaimer:
+    ``pre-registration.yaml``'s ``decisions.S2-NC5-EXEMPTION`` records that the plan
+    contradicts ITSELF here -- Sec.WP2.2b demands every control fail its designated tier
+    at enforce, Sec.WP2.3 makes the conditional tier non-gating, and NC5's designated
+    tier IS conditional -- and that Sec.WP2.3 governs.
+
     What this test pins is that the exemption is the sealed one and not a hole: NC5 must
     still be caught substantively in its designated cell, and it must still be blocked
-    somewhere (it is -- it emits verbatim 24-month historical windows and fails
-    ``near_duplicate_fraction``)."""
+    **by a named gate**.
+
+    WHY THE GATE IS NAMED (WP2.3). The previous version of this test asserted only
+    ``not outcome.battery_passed``, which would keep passing if the
+    ``near_duplicate_fraction`` block were replaced by an unrelated NaN-driven enforce
+    failure -- i.e. if NC5 stopped being blocked for the reason claimed and started
+    being blocked because something could not be computed. That is precisely the
+    substantive-vs-NaN distinction this whole suite exists to keep visible, so the claim
+    is now asserted at the resolution it is made at: NC5 is blocked BY
+    ``near_duplicate_fraction``, because a 24-month-block resampler emits verbatim
+    historical windows."""
     outcome = report.outcome(NC5_CONDITION_IGNORING)
     designated = outcome.designated_cells
     assert designated
@@ -403,6 +418,10 @@ def test_nc5_is_the_only_control_not_caught_at_enforce_and_only_by_sealed_design
     conditional = outcome.suite_metrics("conditional")
     assert conditional
     assert not outcome.battery_passed
+    assert "near_duplicate_fraction" in outcome.enforce_failures, (
+        "NC5's exemption is only defensible while it is still BLOCKED by the named gate; "
+        f"its enforce failures are {outcome.enforce_failures}"
+    )
 
 
 def test_nc1_kills_tails_and_clustering_on_the_named_stylized_facts(
