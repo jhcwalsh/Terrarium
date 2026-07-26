@@ -113,9 +113,39 @@ space with floors (i >= -1%, spread >= 100bp)". Applied to the two disjoint grou
 these floors literally name: :data:`RATE_FLOOR_FACTORS` (``policy_rate``, ``ust_2y``,
 ``ust_10y``, ``hqm_curve``) each floored at :data:`RATE_FLOOR_PCT` (-1.0, i.e. -1%);
 :data:`SPREAD_FLOOR_FACTORS` (``ig_spread``, ``hy_spread``, ``funding_spread``) each
-floored at :data:`SPREAD_FLOOR_PCT` (1.0, i.e. 100bp). ``cpi`` (an index level, not a
-rate or a spread) and ``equity_vol`` (a volatility index) carry no DN-1.1-stated floor
-and are excluded. WP2.8's ``constraints.py`` will make these structurally impossible by
+floored at :data:`SPREAD_FLOOR_PCT`. ``cpi`` (an index level, not a rate or a spread)
+and ``equity_vol`` (a volatility index) carry no DN-1.1-stated floor and are excluded.
+
+**The spread floor is 0.0, not DN-1.1's literal 100bp (WP2.2c Item 4), and the
+departure is deliberate.** WP2.2b found that ``floor_violations`` was the ONLY
+``enforce`` gate in the whole battery that fired, that it fired identically for all five
+negative controls -- *including the three that replay real historical values verbatim* --
+and that absent that one accident every one of the five deliberately-broken generators
+would have been recorded as PASSING. The gate was not detecting anything: it was
+reporting that a realistic funding spread sits below 100 basis points. It does. The TED
+spread spent most of 2010-2020 between 15 and 40bp; a BAA-AAA investment-grade spread
+runs 70-90bp in calm periods. A floor that rejects the historical record is not a floor,
+and an ``enforce`` gate that fires for history cannot be evidence about a generator --
+worse, it masks the gates that would be evidence, because ``passed`` is already False
+before they are read.
+
+What the constraint is actually about survives the correction. DN-1.1's floors are a
+*generative* device -- the softplus parameterization Sec.II.4 describes exists so the
+model cannot emit a negative rate or a negative spread -- and 100bp is a plausible
+softplus offset for a spread process, not an empirical bound on what spreads do. The
+economically meaningful, falsifiable statement is the one that survives: **a credit or
+funding spread is a difference between a riskier yield and a safer one and cannot be
+negative.** ``0.0`` is that statement, it is violated by no historical observation of
+any of the three factors, and it still catches exactly the failure the gate exists for
+(a generator emitting negative spreads -- ``nc1-iid-gaussian`` does, and now fires this
+gate alone among the five, which is a detection rather than a constant).
+
+Recorded as a deviation from DN-1.1's literal text rather than a silent reinterpretation:
+``governance/retrofit-register.md`` RFR-41, and ``pre-registration.yaml``'s
+``floor_violations_estimator``. WP2.3 must ratify it -- the alternative it should
+consider, and which this correction deliberately does NOT take, is deriving the floor
+from the train+validation panel's own observed minimum per factor, which would make the
+gate data-dependent and therefore a different kind of object (a band, not a constraint). WP2.8's ``constraints.py`` will make these structurally impossible by
 construction (generating in softplus space); this metric is the check that the
 constraint actually held, for a generator built before that lands. POOLED count of
 ``(factor, path, month)`` observations below their factor's floor.
@@ -266,7 +296,11 @@ TAYLOR_PHI_PI = 0.5
 RATE_FLOOR_FACTORS = frozenset({"policy_rate", "ust_2y", "ust_10y", "hqm_curve"})
 SPREAD_FLOOR_FACTORS = frozenset({"ig_spread", "hy_spread", "funding_spread"})
 RATE_FLOOR_PCT = -1.0
-SPREAD_FLOOR_PCT = 1.0
+# WP2.2c Item 4: 0.0, NOT DN-1.1's literal 100bp. See the module docstring's
+# "5. floor_violations" for the full reasoning -- in short, a 100bp floor on
+# funding_spread/ig_spread rejects the historical record itself, and an enforce gate
+# that rejects history is not evidence about a generator.
+SPREAD_FLOOR_PCT = 0.0
 
 # See the module docstring's "Anti-gaming floor".
 ECONOMICS_MIN_OBS = 60

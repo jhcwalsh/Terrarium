@@ -127,6 +127,47 @@ generic historical regime match (two different decades that happen to look simil
 not, by construction, within this epsilon; a genuine near-verbatim reproduction is.
 POOLED (not per-path) across every qualifying factor's generated blocks.
 
+Phase blindness (WP2.2c Item 2) -- what the generated side is searched AGAINST
+--------------------------------------------------------------------------------
+**The train side is searched at every offset; only the generated side is chopped on a
+grid.** Before WP2.2c both sides were chopped into non-overlapping 24-month blocks
+anchored at index 0, so a generated block was compared against ~35 fixed historical
+windows rather than the ~830 that exist. That made all three metrics a measurement of
+block PHASE rather than of copying: WP2.2b measured a literal, zero-noise verbatim copy
+of a training decade at ``near_duplicate_fraction = 0.2423``, indistinguishable from a
+plain block bootstrap's 0.2394, while the identical copy snapped to the suite's own grid
+scored 0.8875. A memorizer displaced by 12 months evaded the metric completely -- and
+"start the replay on an odd month" is not a defence against the charge of memorizing.
+
+So :func:`_sliding_blocks` supplies the candidate set (every offset of the TRAIN split,
+stride 1) for :func:`_nearest_neighbor_distance`, and ``near_duplicate_fraction``'s
+epsilon is recalibrated on that SAME search (:func:`_sliding_leave_one_out_epsilon`).
+Recalibrating is not optional: the epsilon is the null distribution of "how close does a
+genuinely independent historical trajectory get", and a minimum over ~830 candidates is
+systematically smaller than a minimum over 34. Enlarging the search without moving the
+epsilon would have inflated every generator's score, which is a false-positive machine,
+not a fix. Both moved together; the module's four numbers stay mutually consistent
+because they still come from the one :func:`_pooled_memorization_signals` pass.
+
+Three consequences, stated rather than left to be found:
+
+- ``nn_distance_p05``/``nn_distance_p50`` fall for EVERY generator (a minimum over a
+  larger candidate set is smaller), so their sealed floors in ``pre-registration.yaml``
+  are not comparable to pre-WP2.2c values. WP2.3 must derive them from a post-WP2.2c
+  run; the WP2.2c report states both.
+- ``membership_inference_auc`` is unchanged: its query populations are the TRAIN and
+  VALIDATION blocks themselves (the distinct real trajectories whose membership is being
+  inferred), searched against the GENERATED pool, and neither side of that comparison is
+  a historical grid. Sliding the real side would have compared 830 overlapping,
+  near-duplicate queries against 200 generated candidates and measured overlap, not
+  membership.
+- A bootstrap whose block length reaches the 24-month window now scores near 1.0 --
+  correctly: it IS emitting verbatim historical windows. The metric no longer conflates
+  that with phase luck, but it cannot make it innocent. See
+  ``tests/test_memorization.py``'s
+  ``test_near_duplicate_fraction_reports_a_long_block_bootstrap_as_copying`` and the
+  WP2.4 note in ``governance/retrofit-register.md``.
+
 Two anti-gaming floors: :data:`MEMORIZATION_MIN_TRAIN_BLOCKS`
 ------------------------------------------------------------------
 A factor whose TRAIN split carries fewer than :data:`MEMORIZATION_MIN_TRAIN_BLOCKS`
@@ -313,9 +354,19 @@ def _nearest_neighbor_distance(query: np.ndarray, candidates: np.ndarray) -> flo
 
 
 def _leave_one_out_epsilon(blocks: np.ndarray, percentile: float) -> float:
-    """The data-driven epsilon for ``near_duplicate_fraction`` -- see the module
-    docstring. ``NaN`` if fewer than 2 blocks (a leave-one-out distance needs at least
-    one OTHER block to compare against)."""
+    """The FIXED-GRID leave-one-out epsilon -- the pre-WP2.2c calibration, retained as
+    the stated baseline the sliding-window one replaced (see
+    :func:`_sliding_leave_one_out_epsilon`, which is the production path).
+
+    Every train block against every OTHER non-overlapping train block. ``NaN`` if fewer
+    than 2 blocks (a leave-one-out distance needs at least one OTHER block to compare
+    against). No longer used to judge anything: calibrating the epsilon on a grid of 35
+    candidates while searching a generated block against ~830 sliding ones would compare
+    a minimum over 830 draws against the null distribution of a minimum over 34, and
+    every generator would read as a near-duplicator. Kept because it is the number the
+    WP2.2c report's before/after table is stated against, and because
+    ``tests/test_memorization.py`` measures both.
+    """
     n = blocks.shape[0]
     if n < 2:
         return float("nan")
@@ -324,6 +375,60 @@ def _leave_one_out_epsilon(blocks: np.ndarray, percentile: float) -> float:
         others = np.delete(blocks, i, axis=0)
         distances[i] = _nearest_neighbor_distance(blocks[i], others)
     return float(np.percentile(distances, percentile))
+
+
+def _sliding_blocks(x: np.ndarray, *, block_months: int, mean: float, std: float) -> np.ndarray:
+    """EVERY offset's standardized ``block_months``-window of ``x`` (stride 1) -- shape
+    ``(n - block_months + 1, block_months)``, row ``i`` starting at index ``i``.
+
+    The phase-blind counterpart of :func:`_raw_blocks`. See the module docstring's
+    "Phase blindness".
+    """
+    xs = _standardize(np.asarray(x, dtype=np.float64).reshape(-1), mean=mean, std=std)
+    if xs.shape[0] < block_months:
+        return np.empty((0, block_months), dtype=np.float64)
+    return np.lib.stride_tricks.sliding_window_view(xs, block_months).copy()
+
+
+def _sliding_leave_one_out_epsilon(
+    candidates: np.ndarray, *, block_months: int, percentile: float
+) -> float:
+    """The epsilon for ``near_duplicate_fraction``, calibrated on the SAME search the
+    generated side gets -- see the module docstring's "Phase blindness".
+
+    ``candidates`` is :func:`_sliding_blocks`' output, so row ``i`` is the window
+    starting at index ``i``. For each non-overlapping train block (start
+    ``i * block_months``, the same distinct historical trajectories the fixed-grid
+    epsilon used as queries), its nearest neighbour is taken over every sliding window
+    that does NOT overlap it -- i.e. over exactly the same ~830-candidate search a
+    generated block gets, minus the query's own 24 months of history. Epsilon is the
+    ``percentile``-th percentile of those distances.
+
+    Excluding only the query's own overlap, rather than its whole 24-month grid cell, is
+    deliberate: a window offset by one month from a train block shares 23 of 24 values
+    with it and is not an independent trajectory, so counting it would drive epsilon to
+    nearly zero and no generator could ever register as a duplicator.
+
+    ``NaN`` when there are fewer than 2 windows or no query has any non-overlapping
+    candidate.
+    """
+    n_candidates = candidates.shape[0]
+    if n_candidates < 2:
+        return float("nan")
+    starts = np.arange(n_candidates)
+    n_blocks = (n_candidates + block_months - 1) // block_months
+    distances: list[float] = []
+    for i in range(n_blocks):
+        s = i * block_months
+        if s >= n_candidates:
+            break
+        keep = np.abs(starts - s) >= block_months
+        if not bool(np.any(keep)):
+            continue
+        distances.append(_nearest_neighbor_distance(candidates[s], candidates[keep]))
+    if not distances:
+        return float("nan")
+    return float(np.percentile(np.asarray(distances, dtype=np.float64), percentile))
 
 
 # --------------------------------------------------------------------------- #
@@ -407,9 +512,20 @@ class _FactorMemorizationInputs:
             mean=mean,
             std=std,
         )
+        # The SEARCH set: every offset, not the index-0 grid. See "Phase blindness".
+        self.train_candidates = _sliding_blocks(
+            train_series.to_numpy(dtype=np.float64),
+            block_months=MEMORIZATION_BLOCK_MONTHS,
+            mean=mean,
+            std=std,
+        )
         self.qualifies = self.train_blocks.shape[0] >= MEMORIZATION_MIN_TRAIN_BLOCKS
         self.epsilon = (
-            _leave_one_out_epsilon(self.train_blocks, MEMORIZATION_EPSILON_PERCENTILE)
+            _sliding_leave_one_out_epsilon(
+                self.train_candidates,
+                block_months=MEMORIZATION_BLOCK_MONTHS,
+                percentile=MEMORIZATION_EPSILON_PERCENTILE,
+            )
             if self.qualifies
             else float("nan")
         )
@@ -447,7 +563,7 @@ def _pooled_memorization_signals(
             continue
 
         for g in generated:
-            d = _nearest_neighbor_distance(g, inputs.train_blocks)
+            d = _nearest_neighbor_distance(g, inputs.train_candidates)
             nn_distances.append(d)
             near_dup_hits.append(d < inputs.epsilon)
 

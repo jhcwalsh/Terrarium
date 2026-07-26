@@ -1454,6 +1454,55 @@ ACF_R_MAX_LAG = 5
 ACF_ABS_MAX_LAG = 24
 AGG_GAUSSIANITY_HORIZONS: tuple[tuple[int, str], ...] = ((3, "3m"), (12, "12m"))
 
+
+def acf_r_sum(x: np.ndarray, max_lag: int = ACF_R_MAX_LAG) -> float:
+    """``sum_{k=1..max_lag} rho_r(k)`` -- the cumulative serial correlation of the raw
+    series over exactly the lags ``acf_r_lag{k}`` reports individually.
+
+    **Why a joint statistic exists beside the per-lag family it sums** (WP2.2c Item 3).
+    A per-lag band at the ensemble's own 120-month path length is genuinely wide -- a
+    lag-24 autocorrelation estimated from 120 observations has a standard error around
+    0.09 -- so each individual comparison has little power, and an aggregate over the
+    per-lag *comparisons* inherits that: WP2.2c measured a control that destroys serial
+    dependence outright (iid draws matched to the panel's covariance) leaving only 37%
+    of its 403 per-lag comparisons outside their bands, indistinguishable from a bound
+    any honest false-positive argument would set. Summing the *values* first and banding
+    the sum -- the Box-Pierce construction, without the ``n`` scaling that turns it into
+    a test statistic -- pools the signal instead of the noise: 24 lags of a persistent
+    series each contribute in the same direction, while their estimation errors partly
+    cancel. The same total destruction moves the sum many band widths.
+
+    This is a summary, and reads as one: it is compared only against the identical
+    estimator applied to reference replicates of the same length over the same fixed lag
+    window, exactly as :func:`acf_abs_decay` is. The per-lag information is not lost --
+    every ``acf_r_lag{k}`` remains separately registered, banded and reported -- and the
+    sum is not a substitute for reading them, it is the statistic with enough power to
+    carry an ``enforce`` gate.
+
+    NaN if any lag in the window is NaN (a degenerate or too-short series), never a
+    partial sum over whichever lags happened to be computable: a sum over a
+    silently-varying number of terms is not comparable to its own band.
+    """
+    values = np.array([_acf_r_at_lag(x, k) for k in range(1, max_lag + 1)], dtype=np.float64)
+    if values.size == 0 or bool(np.any(np.isnan(values))):
+        return float("nan")
+    return float(np.sum(values))
+
+
+def acf_abs_sum(x: np.ndarray, max_lag: int = ACF_ABS_MAX_LAG) -> float:
+    """``sum_{k=1..max_lag} rho_|r|(k)`` -- the cumulative volatility-clustering
+    profile, over exactly the lags ``acf_abs_lag{k}`` reports individually.
+
+    :func:`acf_r_sum`'s construction applied to ``|x - mean(x)|``; see that function for
+    why the sum is banded rather than only its terms. This is the joint form of DN-1.1
+    Sec.II.6's named monthly stylized fact ("ACF |r|").
+    """
+    values = np.array([_acf_abs_at_lag(x, k) for k in range(1, max_lag + 1)], dtype=np.float64)
+    if values.size == 0 or bool(np.any(np.isnan(values))):
+        return float("nan")
+    return float(np.sum(values))
+
+
 # The longest lag any registered statistic reads (acf_abs_lag24, and acf_abs_decay's
 # own 24-lag fit window).
 MAX_REGISTERED_LAG = ACF_ABS_MAX_LAG
@@ -1505,6 +1554,11 @@ SINGLE_FACTOR_STATS: dict[str, RegisteredStat] = {
         for lag in range(1, ACF_ABS_MAX_LAG + 1)
     },
     "acf_abs_decay": RegisteredStat(fn=acf_abs_decay, tier="monthly"),
+    # WP2.2c Item 3 -- the JOINT forms of the two ACF families above. See acf_r_sum's
+    # docstring for why a sum of the values carries an enforce gate where an aggregate
+    # over the per-lag comparisons cannot.
+    "acf_r_sum": RegisteredStat(fn=acf_r_sum, tier="monthly"),
+    "acf_abs_sum": RegisteredStat(fn=acf_abs_sum, tier="monthly"),
     "hill_tail_index_5pct": RegisteredStat(fn=_tail_fraction_stat(0.05), tier="monthly"),
     "hill_tail_index_1pct": RegisteredStat(fn=_tail_fraction_stat(0.01), tier="monthly"),
     **{
@@ -1754,6 +1808,18 @@ class RegisteredPanelStat:
 
 PANEL_STATS: dict[str, RegisteredPanelStat] = {
     "cross_block_corr_matrix_distance": RegisteredPanelStat(tier="monthly"),
+    # WP2.2c Item 3 -- ah.eval.metrics.monthly's three band-exceedance gates: the
+    # fraction of one FAMILY of per-factor band comparisons that fell outside its own
+    # train+validation band. No `fn`/band, for the same reason
+    # cross_block_corr_matrix_distance has none and one of its own: it is a statistic
+    # OF the comparison between an ensemble and the reference, so it has no
+    # single-argument historical analog to bootstrap (its value on history is
+    # identically the band's own miss rate, not a quantity a resample estimates).
+    # See ah.eval.metrics.monthly.BAND_EXCEEDANCE_FAMILIES and that module's docstring
+    # for why the gate is an aggregate over a family rather than a per-name band gate.
+    "moment_band_exceedance_fraction": RegisteredPanelStat(tier="monthly"),
+    "tail_band_exceedance_fraction": RegisteredPanelStat(tier="monthly"),
+    "dependence_band_exceedance_fraction": RegisteredPanelStat(tier="monthly"),
     # WP2.2 Task 3 -- structural gaps, always NaN on any ensemble today (see this
     # class's docstring and ah.eval.metrics.horizon's module docstring).
     "regime_duration_mean": RegisteredPanelStat(tier="1_5yr"),

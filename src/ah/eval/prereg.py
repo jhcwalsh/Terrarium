@@ -391,6 +391,13 @@ ESTIMATOR_CONVENTION_KEYS: Mapping[str, str] = MappingProxyType(
         **{f"acf_r_lag{lag}": "acf_estimator" for lag in range(1, ACF_R_MAX_LAG + 1)},
         **{f"acf_abs_lag{lag}": "acf_estimator" for lag in range(1, ACF_ABS_MAX_LAG + 1)},
         "acf_abs_decay": "acf_abs_decay_estimator",
+        # WP2.2c Item 3: the joint (cumulative) ACF statistics, and the three
+        # band-exceedance gates built over families of per-factor band comparisons.
+        "acf_r_sum": "acf_sum_estimator",
+        "acf_abs_sum": "acf_sum_estimator",
+        "moment_band_exceedance_fraction": "band_exceedance_gate_estimator",
+        "tail_band_exceedance_fraction": "band_exceedance_gate_estimator",
+        "dependence_band_exceedance_fraction": "band_exceedance_gate_estimator",
         "hill_tail_index_5pct": "hill_tail_index_estimator",
         "hill_tail_index_1pct": "hill_tail_index_estimator",
         **{

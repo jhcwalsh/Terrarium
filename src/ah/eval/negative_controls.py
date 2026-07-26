@@ -10,6 +10,38 @@ generator (conditional tier must fail it). A test asserts each control fails at 
 its designated tier at enforce level. This suite is the battery's own validation record
 and is cited in ``G2-EVIDENCE.md``."
 
+What WP2.2c changed, and what it did not (read this before the findings below)
+---------------------------------------------------------------------------------
+This module was written under WP2.2b, when the battery caught none of these five
+controls at ``enforce`` level. **WP2.2c hardened the battery against exactly the gaps
+this suite found**, and the findings sections further down are kept because they are the
+evidence that the hardening was needed -- not because they are all still true. The
+current state, re-measured after WP2.2c:
+
+===========================  ==========================================================
+control                      caught at ``enforce`` in its designated cell by
+===========================  ==========================================================
+``nc1-iid-gaussian``         ``dependence_band_exceedance_fraction`` (0.615 vs 0.5)
+``nc2-shuffled``             ``dependence_band_exceedance_fraction`` (0.718 vs 0.5)
+``nc3-shifted-bootstrap``    ``moment_band_exceedance_fraction`` (0.654 vs 0.5)
+``nc4-memorizer``            ``near_duplicate_fraction`` (0.710 vs 0.5)
+``nc5-condition-ignoring``   **nothing, by sealed design** -- see below
+===========================  ==========================================================
+
+``shared_enforce_failures`` is now empty (no gate fires for everything), and
+:attr:`NegativeControlReport.discriminating_enforce_failures` is non-empty for every
+control. NC5 is the one residual: it is designated to the ``conditional`` suite, whose
+thresholds are ``severity: report`` because STEP2-GENERATOR-PLAN Sec.WP2.3's sealed
+decision rule makes the conditional tier non-gating, and WP2.2c did not change that. It
+is detected decisively there (14 of 16 conditional metrics fire) and blocked elsewhere.
+
+Two findings are NOT closed and are disclaimed rather than fixed: the ``10yr`` tier is
+still 73% structurally unavailable and still catches nothing (``conventions
+.ten_year_tier_coverage`` in the sealed file; ``governance/retrofit-register.md``
+RFR-42), and ``tail_band_exceedance_fraction`` is deliberately ``report`` because a
+majority rule over a 13-factor family cannot fire on a tail failure confined to the 4
+return-bearing ones (RFR-43).
+
 Why this module exists
 -----------------------
 WP2.2 built eight metric suites computing ~120 registered metrics. Every one of them was
@@ -270,6 +302,7 @@ from ah.eval.battery import (
     TIERS,
     BatteryReport,
     MetricResult,
+    outside_band,
     register_reference_dependent_suites,
     run_battery,
 )
@@ -913,22 +946,22 @@ def _is_finite(value: float) -> bool:
 def _outside_band(result: MetricResult) -> bool:
     """``value`` outside ``[band.lo, band.hi]``, for a metric that HAS a usable band.
 
-    ``False`` when there is no band, when the band's bounds are not both finite (a band
-    resting on zero valid resamples says nothing -- see
-    :attr:`ah.eval.reference.StatBand.n_valid_resamples`), or when the value is not
-    finite (a NaN value is accounted for separately; see the module docstring's
-    "Substantive vs. NaN-driven rejection"). This function judges nothing: it is the
-    DN-1.1 Sec.II.6 band criterion rendered for the report table, and no battery verdict
-    reads it.
+    ``False`` when the band is unusable (:func:`ah.eval.battery.band_is_usable`: no
+    band, non-finite bounds -- a band resting on zero valid resamples says nothing, see
+    :attr:`ah.eval.reference.StatBand.n_valid_resamples` -- or, since WP2.2c Item 6, a
+    degenerate zero-width band), or when the value is not finite (a NaN value is
+    accounted for separately; see the module docstring's "Substantive vs. NaN-driven
+    rejection", which is why the finite guard stays HERE rather than being inherited
+    from :func:`ah.eval.battery.outside_band`, whose own rule is that NaN is outside).
+
+    The comparison itself is :func:`ah.eval.battery.outside_band`, not a second copy of
+    it: since WP2.2c the same predicate decides a band-exceedance GATE, and a report that
+    said "outside its band" about a comparison the gate scored as inside would be worse
+    than no report at all.
     """
-    band = result.band
-    if band is None:
-        return False
-    if not (_is_finite(band.lo) and _is_finite(band.hi)):
-        return False
     if not _is_finite(result.value):
         return False
-    return not (band.lo <= result.value <= band.hi)
+    return outside_band(result.value, result.band)
 
 
 @dataclass(frozen=True)

@@ -21,6 +21,7 @@ import pandas as pd
 import pytest
 from numpy.random import PCG64, Generator
 
+from ah.eval import prereg as prereg_mod
 from ah.eval.metrics.memorization import (
     MEMORIZATION_BLOCK_MONTHS,
     MEMORIZATION_EPSILON_PERCENTILE,
@@ -305,6 +306,19 @@ def test_literal_replayer_scores_as_memorized() -> None:
 
 
 def test_independent_draw_scores_as_not_memorized() -> None:
+    """WP2.2c Item 2 changed the last assertion's bound, and the reason is the point of
+    the fix rather than a concession to it.
+
+    ``near_duplicate_fraction``'s epsilon is the ``MEMORIZATION_EPSILON_PERCENTILE``-th
+    percentile of the null "how close do two independent historical trajectories get"
+    distribution, so a generator drawing genuinely independent blocks from that same
+    population scores the NOMINAL 5%, not 0. Before the sliding-window fix it scored a
+    structural 0.0 -- an independent draw could not land on the suite's fixed 24-month
+    grid, and neither could a verbatim copy (which is the defect). ``< 0.05`` was
+    therefore pinning the artifact, not the behaviour. The bound is now stated as a
+    multiple of the metric's own null so it cannot silently drift away from it, and the
+    non-memorization claim is carried by the 20x separation from a copier's ~1.0 (see
+    ``test_near_duplicate_fraction_is_phase_blind_and_separates_copying_from_resampling``)."""
     rng = Generator(PCG64(20))
     manifest, reference = _panel(rng, train_months=600, val_months=200)
     ensemble = _independent_ensemble(n_paths=6, months=240, seed=21)
@@ -318,7 +332,7 @@ def test_independent_draw_scores_as_not_memorized() -> None:
     assert nn_p05 > 0.5, nn_p05
     assert nn_p50 > 0.5, nn_p50
     assert auc == pytest.approx(0.5, abs=0.15), auc
-    assert dup_frac < 0.05, dup_frac
+    assert dup_frac <= 3.0 * MEMORIZATION_EPSILON_PERCENTILE / 100.0, dup_frac
 
 
 def test_memorization_nan_when_generated_side_is_too_small_even_with_ample_train() -> None:
@@ -381,6 +395,147 @@ def test_memorization_nan_when_no_factor_has_enough_train_blocks() -> None:
         "near_duplicate_fraction",
     ):
         assert math.isnan(specs[name].fn(ensemble))
+
+
+# --------------------------------------------------------------------------- #
+# 5a. WP2.2c Item 2 -- near_duplicate_fraction must measure COPYING, not block phase
+#
+# WP2.2b's `test_finding_near_duplicate_fraction_is_dominated_by_block_phase_not_copying`
+# established that the metric, as built, chopped BOTH sides into non-overlapping
+# 24-month blocks anchored at index 0, so a copy that happened to start off that grid
+# was never near any train block: a literal zero-noise verbatim copy scored 0.2423,
+# statistically indistinguishable from a plain block bootstrap's 0.2394, while the same
+# copy snapped to the grid scored 0.8875. The three assertions below are WP2.2c's
+# deliverable for that item.
+# --------------------------------------------------------------------------- #
+
+
+def _verbatim_replayer_ensemble(
+    reference: ReferenceStats, n_paths: int, months: int, seed: int, *, phase: int
+) -> Ensemble:
+    """A LITERAL, zero-noise verbatim copier: each path replays a contiguous run of
+    TRAIN rows starting at ``k * MEMORIZATION_BLOCK_MONTHS + phase``.
+
+    ``phase=0`` puts every generated block exactly on the suite's own 24-month grid;
+    ``phase=12`` puts every generated block exactly half a block off it. Nothing else
+    differs -- same rows, same length, same count, no noise at all. Any difference in
+    ``near_duplicate_fraction`` between the two is a difference in block PHASE and
+    nothing else."""
+    rng = Generator(PCG64(seed))
+    factors = ("g1", "u1")
+    trains = {}
+    for f in factors:
+        train, _ = _train_validation_series(reference.historical_series[f])
+        trains[f] = train.to_numpy(dtype=np.float64)
+    n_train = min(v.shape[0] for v in trains.values())
+    n_grid = max(1, (n_train - months - phase) // MEMORIZATION_BLOCK_MONTHS)
+    starts = rng.integers(0, n_grid, size=n_paths) * MEMORIZATION_BLOCK_MONTHS + phase
+    stacks = [np.stack([trains[f][s : s + months] for s in starts]) for f in factors]
+    paths = np.stack(stacks, axis=-1)
+    return Ensemble(paths=paths, factor_names=list(factors), meta=_meta(n_paths, months))
+
+
+def _stationary_bootstrap_ensemble(
+    reference: ReferenceStats,
+    n_paths: int,
+    months: int,
+    seed: int,
+    *,
+    mean_block_months: int,
+) -> Ensemble:
+    """A plain stationary block bootstrap of TRAIN: geometric block lengths with mean
+    ``mean_block_months``, blocks drawn with replacement, block boundaries COMMON across
+    factors (never a per-factor resampling). This is the shape of the WP2.4 benchmark
+    generator, and it memorized nothing -- it recombines history."""
+    rng = Generator(PCG64(seed))
+    factors = ("g1", "u1")
+    trains = {}
+    for f in factors:
+        train, _ = _train_validation_series(reference.historical_series[f])
+        trains[f] = train.to_numpy(dtype=np.float64)
+    n_train = min(v.shape[0] for v in trains.values())
+    p = 1.0 / mean_block_months
+
+    def one_path() -> np.ndarray:
+        idx: list[int] = []
+        while len(idx) < months:
+            start = int(rng.integers(0, n_train))
+            length = int(rng.geometric(p))
+            idx.extend(int((start + j) % n_train) for j in range(length))
+        return np.asarray(idx[:months], dtype=np.int64)
+
+    index = np.stack([one_path() for _ in range(n_paths)])
+    paths = np.stack([trains[f][index] for f in factors], axis=-1)
+    return Ensemble(paths=paths, factor_names=list(factors), meta=_meta(n_paths, months))
+
+
+def _near_duplicate_fraction(
+    manifest: FactorManifest, reference: ReferenceStats, ensemble: Ensemble
+) -> float:
+    specs = {s.name: s for s in build_memorization_suite(manifest, reference)}
+    return specs["near_duplicate_fraction"].fn(ensemble)
+
+
+def test_near_duplicate_fraction_is_phase_blind_and_separates_copying_from_resampling() -> None:
+    """WP2.2c Item 2's deliverable, all three assertions in one place.
+
+    1. a literal zero-noise verbatim copy scores near 1.0;
+    2. the SAME copy displaced by half a block (12 months) scores comparably -- the
+       metric no longer reads block phase;
+    3. a plain stationary block bootstrap, which recombines history rather than copying
+       it, scores materially lower than either.
+
+    Assertion 2 is the one that fails against the pre-WP2.2c implementation."""
+    rng = Generator(PCG64(60))
+    manifest, reference = _panel(rng, train_months=600, val_months=200)
+
+    on_grid = _verbatim_replayer_ensemble(reference, 6, 120, 61, phase=0)
+    off_grid = _verbatim_replayer_ensemble(reference, 6, 120, 61, phase=12)
+    resampler = _stationary_bootstrap_ensemble(reference, 6, 120, 62, mean_block_months=6)
+
+    on_grid_value = _near_duplicate_fraction(manifest, reference, on_grid)
+    off_grid_value = _near_duplicate_fraction(manifest, reference, off_grid)
+    resampler_value = _near_duplicate_fraction(manifest, reference, resampler)
+
+    assert on_grid_value > 0.95, on_grid_value
+    assert off_grid_value > 0.95, (off_grid_value, on_grid_value)
+    assert abs(off_grid_value - on_grid_value) < 0.05, (off_grid_value, on_grid_value)
+    assert resampler_value < 0.5 * min(on_grid_value, off_grid_value), (
+        resampler_value,
+        on_grid_value,
+        off_grid_value,
+    )
+    # And the separation is on the two sides of the SEALED gate, not merely an ordering:
+    # the bound is read from pre-registration.yaml rather than restated here, so this
+    # test fails if WP2.3 ever moves it to a value that stops separating the two.
+    bound = prereg_mod.load().panel_thresholds["near_duplicate_fraction"].max
+    assert bound is not None
+    assert resampler_value <= bound < min(on_grid_value, off_grid_value), (
+        resampler_value,
+        bound,
+        on_grid_value,
+        off_grid_value,
+    )
+
+
+def test_near_duplicate_fraction_reports_a_long_block_bootstrap_as_copying() -> None:
+    """The honest converse of the test above, recorded rather than left to be
+    discovered by WP2.4.
+
+    Once the candidate set is every offset, a bootstrap whose block length equals or
+    exceeds the 24-month memorization window emits literal verbatim historical windows,
+    and the metric says so. That is a true statement about such a generator, not a
+    defect of the metric -- and it is the WP2.2b Finding 3 conflict restated precisely:
+    the memorization gate cannot be satisfied by a long-block resampler, so WP2.4's
+    benchmark must use blocks materially shorter than 24 months, or carry a recorded
+    exemption. The separation the test above proves is between copying and recombining
+    at a scale FINER than the window, which is the only separation there is."""
+    rng = Generator(PCG64(63))
+    manifest, reference = _panel(rng, train_months=600, val_months=200)
+    long_blocks = _stationary_bootstrap_ensemble(
+        reference, 6, 120, 64, mean_block_months=MEMORIZATION_BLOCK_MONTHS * 2
+    )
+    assert _near_duplicate_fraction(manifest, reference, long_blocks) > 0.5
 
 
 def test_memorization_block_months_is_a_positive_constant() -> None:

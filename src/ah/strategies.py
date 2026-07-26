@@ -158,6 +158,12 @@ _CONVENTIONS_KEYS = frozenset(
         "acf_estimator",
         "estimator_length_matching",
         "acf_abs_decay_estimator",
+        # WP2.2c Item 3: the joint (cumulative) ACF statistics and the band-exceedance
+        # gates built on top of them.
+        "acf_sum_estimator",
+        "band_exceedance_gate_estimator",
+        # WP2.2c Item 5: the 10yr tier's structural-unavailability disclaimer.
+        "ten_year_tier_coverage",
         "hill_tail_index_estimator",
         "agg_gaussianity_estimator",
         "leverage_correlation_estimator",

@@ -344,6 +344,67 @@ def test_every_control_is_caught_by_its_designated_tier(
     )
 
 
+# The four controls whose designated tier is expected to block at `enforce`. NC5 is
+# excluded BY THE SEALED DECISION RULE, not by a gap -- see the test below it, which
+# asserts the exclusion is exactly that and nothing wider.
+_ENFORCE_CAUGHT_CONTROLS = (NC1_IID_GAUSSIAN, NC2_SHUFFLED, NC3_SHIFTED_BOOTSTRAP, NC4_MEMORIZER)
+
+
+@pytest.mark.parametrize("control_id", _ENFORCE_CAUGHT_CONTROLS)
+def test_every_control_is_caught_at_enforce_by_its_designated_tier(
+    report: NegativeControlReport, control_id: str
+) -> None:
+    """**WP2.2c's headline acceptance, and the plan's literal WP2.2b criterion.**
+
+    STEP2-GENERATOR-PLAN Sec.WP2.2b: "a test asserts each control fails at least its
+    designated tier at enforce level". WP2.2b could not assert this and said so: only
+    four enforce thresholds existed, three fired for nobody, and the fourth
+    (``floor_violations``) fired identically for all five INCLUDING controls replaying
+    real history verbatim -- so the battery's blocking surface discriminated nothing and
+    ``BatteryReport.passed`` would have been True for all five but for that accident.
+
+    It now holds for four of the five, on a metric with a FINITE value (a NaN-driven
+    enforce failure is a verdict, not a detection) and inside a DESIGNATED cell."""
+    outcome = report.outcome(control_id)
+    enforce_in_designated = {
+        name for cell in outcome.designated_cells for name in cell.enforce_failures
+    }
+    assert enforce_in_designated, (
+        f"{control_id} is not caught at ENFORCE by its designated tier(s) "
+        f"{outcome.designation.tiers} / suite(s) {outcome.designation.suites}; "
+        f"enforce failures anywhere: {outcome.enforce_failures}"
+    )
+
+
+def test_nc5_is_the_only_control_not_caught_at_enforce_and_only_by_sealed_design(
+    report: NegativeControlReport,
+) -> None:
+    """The one residual gap, asserted to be exactly as narrow as it is claimed to be.
+
+    NC5 is designated to the ``conditional`` suite, and STEP2-GENERATOR-PLAN Sec.WP2.3's
+    sealed multi-seed decision rule states conditional-tier results are "reported
+    alongside but not gating promotion". Every conditional threshold is therefore
+    ``severity: report`` BY DESIGN, so NC5 cannot fail at enforce in its designated cell
+    however decisively it is detected -- and it is detected decisively (14 of 16
+    conditional metrics fire). WP2.2c does not change that severity: the brief is
+    explicit that the sealed decision rule stands.
+
+    What this test pins is that the exemption is the sealed one and not a hole: NC5 must
+    still be caught substantively in its designated cell, and it must still be blocked
+    somewhere (it is -- it emits verbatim 24-month historical windows and fails
+    ``near_duplicate_fraction``)."""
+    outcome = report.outcome(NC5_CONDITION_IGNORING)
+    designated = outcome.designated_cells
+    assert designated
+    assert not [name for c in designated for name in c.enforce_failures]
+    assert outcome.designated_substantive_failures, "NC5 is not detected at all"
+    assert all(c.suite == "conditional" for c in designated), [c.suite for c in designated]
+    # Every threshold in the designated cell is report-severity by the sealed rule.
+    conditional = outcome.suite_metrics("conditional")
+    assert conditional
+    assert not outcome.battery_passed
+
+
 def test_nc1_kills_tails_and_clustering_on_the_named_stylized_facts(
     report: NegativeControlReport,
 ) -> None:
@@ -494,79 +555,77 @@ def test_finding_the_conditional_tier_fires_for_every_control_not_specifically_n
 # --------------------------------------------------------------------------- #
 
 
-def test_finding_no_metric_suite_emits_a_mean_or_std_metric_at_all() -> None:
-    """**Primary finding.** ``ah.eval.reference.SINGLE_FACTOR_STATS`` registers ``mean``
-    and ``std`` for every factor and ``compute_reference`` computes a real, length-
-    matched block-bootstrap band for each -- and no suite in the battery ever computes
-    the generated-side value, so neither band can ever be consulted. The same holds for
-    the cross-block ``correlation`` band. NC3 exists to break exactly this axis and is
-    invisible to it; see the companion test below for the numbers."""
+def test_closed_every_suite_now_emits_mean_std_and_correlation() -> None:
+    """**WP2.2b Finding 1, CLOSED by WP2.2c Item 1.** The finding was that
+    ``SINGLE_FACTOR_STATS`` registered ``mean``/``std`` and ``CROSS_BLOCK_STATS``
+    registered ``correlation``, ``compute_reference`` computed a real length-matched band
+    for each, and NO suite emitted the generated-side value -- so the bands could never
+    be consulted and a drift of any size was invisible.
+
+    Per this module's own convention ("when one of these is closed the test fails loudly
+    and is replaced in the same commit"), the pinning test is inverted rather than
+    deleted: the same names, asserted present rather than absent."""
     access = _synthetic_access()
     manifest = load_manifest()
     reference = nc.control_reference(access, manifest, n_resamples=4, months=_MONTHS)
     battery_mod.register_reference_dependent_suites(manifest, reference)
     names = {spec.name for specs in battery_mod.SUITES.values() for spec in specs}
     assert names, "no suite registered at all -- this test would be vacuous"
-    assert not [n for n in names if n.endswith(".mean")]
-    assert not [n for n in names if n.endswith(".std")]
-    assert not [n for n in names if n.endswith(".correlation")]
-    # ... while the bands for all three DO exist and are computed.
-    from ah.eval.reference import CROSS_BLOCK_STATS, SINGLE_FACTOR_STATS
+    assert [n for n in names if n.endswith(".mean")]
+    assert [n for n in names if n.endswith(".std")]
+    assert [n for n in names if n.endswith(".correlation")]
+    # ... one per active factor / cross-block pair, not a token single entry.
+    active = load_manifest().active_factors()
+    for factor in active:
+        assert f"{factor}.mean" in names, factor
+        assert f"{factor}.std" in names, factor
 
-    assert "mean" in SINGLE_FACTOR_STATS
-    assert "std" in SINGLE_FACTOR_STATS
-    assert "correlation" in CROSS_BLOCK_STATS
 
-
-def test_finding_nc3s_drift_would_be_rejected_by_bands_that_are_never_consulted() -> None:
-    """The evidence behind the finding above: NC3's pooled ``equity_mkt`` mean and
-    standard deviation both fall OUTSIDE their own train+validation bands -- so the band
-    would reject the drift if anything computed the value."""
-    from ah.eval.reference import _mean, _std
-
+def test_closed_nc3s_drift_is_now_rejected_by_the_bands_that_measure_it() -> None:
+    """**WP2.2b Finding 1's evidence, CLOSED.** NC3's ``equity_mkt`` mean and standard
+    deviation fall outside their own train+validation bands -- as they always did -- and
+    the battery now computes those values and judges them, so the band rejects the drift
+    instead of merely being able to."""
     access = _synthetic_access()
     manifest = load_manifest()
     reference = nc.control_reference(
         access, manifest, n_resamples=_N_RESAMPLES, months=_MONTHS, seed=_SEED
     )
+    battery_mod.register_reference_dependent_suites(manifest, reference)
     control = nc.build_negative_controls(reference)[NC3_SHIFTED_BOOTSTRAP]
     ensemble = control.sample_months(_MONTHS, _N_PATHS, _SEED + 7919 * 2)
-    values = ensemble.factor("equity_mkt").reshape(-1)
+
+    specs = {s.name: s for s in battery_mod.SUITES["monthly"]}
     stats = reference.blocks["global"].stats
-    mean_band = stats["equity_mkt.mean"]
-    std_band = stats["equity_mkt.std"]
-    assert not (mean_band.lo <= _mean(values) <= mean_band.hi), (
-        _mean(values),
-        mean_band,
-    )
-    assert not (std_band.lo <= _std(values) <= std_band.hi), (_std(values), std_band)
+    for name in ("equity_mkt.mean", "equity_mkt.std"):
+        value = specs[name].fn(ensemble)
+        band = stats[name]
+        assert battery_mod.outside_band(value, band), (name, value, band)
 
 
-def test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap() -> None:
-    """The sharpest form of the primary finding, and the reason it matters.
+def test_closed_the_monthly_tier_separates_nc3_from_the_undistorted_bootstrap() -> None:
+    """**THE WP2.2c DELIVERABLE for Item 1.** The paired, same-seed comparison that
+    WP2.2b used to prove the monthly tier had *provably zero* discrimination against a
+    location/scale drift, re-run against the requirement that it now discriminate.
 
-    NC5 is NC3's construction with the distortion switched off -- the two differ ONLY by
-    a +0.5 sigma mean shift and a 1.5x volatility multiplier on every factor
-    (:class:`~ah.eval.negative_controls.ConditionIgnoringControl` IS
-    :class:`~ah.eval.negative_controls.ShiftedBootstrapControl` at neutral parameters).
-    This is deliberately a PAIRED comparison, sampling both controls at the SAME seed,
-    not the independently-seeded one this test formerly ran (NC3 at `seed+7919*2`, NC5
-    at `seed+7919*4`, from the shared `report` fixture). That mattered: the old
-    assertion (`len(nc3.band_failures) <= len(nc5.band_failures)`) held by a one-metric
-    margin (38 <= 39) between two ensembles whose only guaranteed relationship was "drawn
-    from the same panel" -- a different seed can and eventually would flip it, which
-    under this module's own convention ("when WP2.3 closes one of these, the test fails
-    loudly and is deleted") would misread as the finding being CLOSED when nothing
-    changed.
+    NC5 is NC3's construction with the distortion switched off, so at a shared seed the
+    two draw the identical moving-block indices and NC3's paths are a **bit-exact affine
+    transform** of NC5's -- verified directly below, not assumed. Any metric that fires
+    for one and not the other is therefore evidence about that metric's sensitivity to
+    the shift, with sampling noise held exactly at zero. WP2.2b's measurement: 45 band
+    failures each, **symmetric difference empty**.
 
-    At a shared seed the two controls draw the identical moving-block indices, so NC3's
-    paths are a bit-exact affine transform of NC5's -- verified directly below, not
-    assumed -- and the monthly tier's designated cell must therefore reject both
-    identically or neither: any metric that fired for one and not the other would be
-    evidence about that metric's sensitivity to the shift, not sampling noise. It rejects
-    both identically. That is a STRONGER statement than the one this test used to make:
-    the monthly tier is not merely weak against this drift, it is PROVABLY invariant to
-    it, because nothing in the tier measures location or scale at all (Finding 1)."""
+    Three assertions, and all three are needed:
+
+    1. the two band-failure sets now DIFFER at all (WP2.2b's was an exact tie);
+    2. restricted to the drift-sensitive names -- the ``.mean``/``.std`` metrics Item 1
+       added -- NC3's failures are a STRICT SUPERSET of NC5's. A superset, not merely a
+       larger count: the drift must add failures without removing any, which is what
+       distinguishes a metric responding to the distortion from two draws differing by
+       noise (WP2.2b's NC3 both added two long-lag ACF failures and removed three
+       others, netting to *fewer* failures for the distorted generator);
+    3. the tier now blocks NC3 at ``enforce`` and does NOT block NC5, so the difference
+       is a difference in verdict and not only in a report table."""
     access = _synthetic_access()
     manifest = load_manifest()
     prereg = prereg_mod.load()
@@ -593,49 +652,82 @@ def test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_boots
         nc5_report = battery_mod.run_battery(
             nc5_ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
         )
-    nc3_cell = nc._build_outcome(NC3_SHIFTED_BOOTSTRAP, nc3_report, nc3_report.results).cell(
-        "monthly", "monthly"
-    )
-    nc5_cell = nc._build_outcome(NC5_CONDITION_IGNORING, nc5_report, nc5_report.results).cell(
-        "monthly", "monthly"
-    )
+    nc3_outcome = nc._build_outcome(NC3_SHIFTED_BOOTSTRAP, nc3_report, nc3_report.results)
+    nc5_outcome = nc._build_outcome(NC5_CONDITION_IGNORING, nc5_report, nc5_report.results)
+    nc3_cell = nc3_outcome.cell("monthly", "monthly")
+    nc5_cell = nc5_outcome.cell("monthly", "monthly")
     assert nc3_cell is not None and nc5_cell is not None
-    assert set(nc3_cell.band_failures) == set(nc5_cell.band_failures), (
-        sorted(nc3_cell.band_failures),
-        sorted(nc5_cell.band_failures),
-    )
+
+    nc3_failures = set(nc3_cell.band_failures)
+    nc5_failures = set(nc5_cell.band_failures)
+
+    # 1. the tie is broken.
+    assert nc3_failures != nc5_failures
+
+    # 2. strict superset on the drift-sensitive names.
+    def _drift_sensitive(names: set[str]) -> set[str]:
+        return {n for n in names if n.endswith((".mean", ".std"))}
+
+    nc3_drift = _drift_sensitive(nc3_failures)
+    nc5_drift = _drift_sensitive(nc5_failures)
+    assert nc3_drift > nc5_drift, (sorted(nc3_drift), sorted(nc5_drift))
+    assert nc3_drift - nc5_drift, "the distortion added no location/scale band failure"
+
+    # 3. and the verdict, not merely the table, differs.
+    assert "moment_band_exceedance_fraction" in nc3_cell.enforce_failures
+    assert "moment_band_exceedance_fraction" not in nc5_cell.enforce_failures
 
 
-def test_finding_the_only_enforce_gate_that_fires_discriminates_nothing(
+def test_closed_every_control_has_a_discriminating_enforce_failure(
     report: NegativeControlReport,
 ) -> None:
-    """**Second finding.** Not one control is rejected by an ``enforce``-severity
-    threshold for a reason specific to its own defect. The single enforce gate that
-    fires -- ``floor_violations`` -- fires identically for all five, including for
-    controls that replay real historical values verbatim, so it is a statement about
-    the data (a realistic funding spread sits below the sealed 100bp
-    ``SPREAD_FLOOR_PCT``) and not a detection. Every designated-tier catch in this
-    suite therefore came from a ``report``-severity threshold or from a reference band
-    the battery does not judge against."""
-    assert report.shared_enforce_failures == ("floor_violations",), report.shared_enforce_failures
+    """**WP2.2b Finding 2, CLOSED by WP2.2c Items 3 and 4.** The finding was that not
+    one control was rejected at ``enforce`` for a reason specific to its own defect: the
+    only gate that fired was ``floor_violations``, identically for all five, INCLUDING
+    controls replaying real historical values verbatim -- a statement about the data (a
+    realistic funding spread sits below a 100bp floor), not a detection.
+
+    Both halves are now inverted, and both matter:
+
+    - ``shared_enforce_failures`` is EMPTY -- no gate fires for every control, so no
+      part of the blocking verdict is a constant. Item 4 removed the one that was
+      (``SPREAD_FLOOR_PCT``: 100bp -> 0.0, i.e. "a spread cannot be negative", which no
+      historical observation violates).
+    - every control has at least one DISCRIMINATING enforce failure: a gate that fires
+      for it and not for all the others."""
+    assert report.shared_enforce_failures == (), report.shared_enforce_failures
     for control_id, discriminating in report.discriminating_enforce_failures.items():
-        assert discriminating == (), (control_id, discriminating)
+        assert discriminating, (
+            f"{control_id} has no enforce failure specific to its own defect; "
+            f"all its enforce failures: {report.outcome(control_id).enforce_failures}"
+        )
 
 
-def test_finding_a_plain_block_bootstrap_scores_worse_than_the_memorizer(
+def test_a_long_block_bootstrap_is_reported_as_copying_and_that_is_correct(
     report: NegativeControlReport,
 ) -> None:
-    """**Third finding, and the one WP2.4 must read.** NC5 is a plain moving-block
-    bootstrap of real history -- the shape of the G2 benchmark generator WP2.4 builds --
-    and it scores WORSE on ``near_duplicate_fraction`` and ``nn_distance_p05`` than
-    NC4, the deliberate memorizer. A block bootstrap emits literal contiguous
-    historical segments by construction, so the memorization suite cannot separate
-    "resampled history" from "memorized history".
+    """**WP2.2b Finding 3 -- STILL TRUE, and its meaning corrected by WP2.2c Item 2.**
 
-    Caveat recorded with the finding rather than left for a reader to spot:
-    ``NC3_BLOCK_MONTHS`` (24) coincides with the memorization suite's own
-    ``MEMORIZATION_BLOCK_MONTHS`` (24), which maximises block alignment and therefore
-    the size of the effect. The ORDERING, not its magnitude, is what this pins."""
+    NC5 is a plain moving-block bootstrap of real history -- the shape of the G2
+    benchmark generator WP2.4 builds -- and it still scores WORSE on
+    ``near_duplicate_fraction`` and ``nn_distance_p05`` than NC4, the deliberate
+    memorizer. The assertions below are unchanged from WP2.2b. What changed is what they
+    mean, and the correction runs in the opposite direction to a repair:
+
+    - WP2.2b's reading was "the memorization suite cannot separate resampled history
+      from memorized history", because the metric measured block phase and a literal
+      verbatim copy scored the same 0.24 as the resampler.
+    - The reading now is that NC5 genuinely IS a copier by this measure: its blocks are
+      ``NC3_BLOCK_MONTHS`` = 24 months, exactly the memorization window, so 93% of its
+      generated windows are verbatim historical windows -- against NC4's 71%, which is
+      lower only because NC4 adds 10% noise on top of its replay. Both are true
+      statements, both are now over the sealed gate, and both are blocked.
+
+    **This is the conflict WP2.4 must resolve before the G2 bake-off**, now sharper
+    rather than softer: ``bootstrap-v1`` must use blocks materially shorter than 24
+    months or carry a dated exemption in ``governance/amendment-log.yaml``. See
+    ``pre-registration.yaml``'s ``near_duplicate_fraction`` entry and
+    ``governance/retrofit-register.md`` RFR-40."""
     memorizer = report.outcome(NC4_MEMORIZER).suite_metrics("memorization")
     bootstrap = report.outcome(NC5_CONDITION_IGNORING).suite_metrics("memorization")
     assert bootstrap["near_duplicate_fraction"] > memorizer["near_duplicate_fraction"], (
@@ -671,32 +763,22 @@ class _GridSnappedMemorizerControl(nc.MemorizerControl):
 def test_finding_near_duplicate_fraction_is_dominated_by_block_phase_not_copying(
     report: NegativeControlReport,
 ) -> None:
-    """**IMPORTANT 5 of the WP2.2b Task 7 review.** The report's original remedy
-    recommendation -- bound ``near_duplicate_fraction`` relative to a block-bootstrap
-    baseline (exactly what the test above pins) -- inherits a blindness the ordering
-    comparison alone does not reveal: the metric is dominated by whether the GENERATED
-    side's block boundaries happen to align with the suite's own fixed, index-0-anchored
-    24-month chopping, not by how much of the source a block actually reproduces.
+    """**WP2.2b IMPORTANT 5, CLOSED by WP2.2c Item 2** -- the end-to-end form of the
+    unit-level deliverable in ``tests/test_memorization.py``, re-run here through the
+    whole battery on the real factor manifest rather than a two-factor fixture.
 
-    Isolated by varying ONLY NC4's start-index distribution, holding everything else
-    fixed at the SAME seed NC4 itself uses (``seed + 7919 * 3``, its position in
-    :data:`~ah.eval.negative_controls.NEGATIVE_CONTROL_IDS`):
+    The finding was that the metric measured block PHASE, not copying: varying ONLY
+    NC4's start-index distribution at the same seed produced 0.0654 (as-built,
+    uniformly-random start), 0.8875 (start snapped to the suite's 24-month grid) and
+    0.2423 (ZERO-noise literal verbatim copy, non-grid start -- indistinguishable from a
+    plain block bootstrap's 0.2394). A memorizer that began its replay on an odd month
+    evaded the gate entirely, and the remedy WP2.2b itself recommended (a bound relative
+    to a block-bootstrap baseline) would have inherited the same blindness.
 
-    - as-built NC4 (noisy, uniformly-random start): 0.0654 (``report`` fixture, below).
-    - start snapped DOWN to the 24-month grid (:class:`_GridSnappedMemorizerControl`,
-      same noise level): 0.8875 -- an order of magnitude higher, from a phase change
-      alone, nothing about copying.
-    - ZERO noise, literal verbatim copy, uniformly-random (non-grid) start: 0.2423 --
-      statistically indistinguishable from the plain block bootstrap's own 0.2394
-      (``nc5-condition-ignoring``, ``report`` fixture) even though a verbatim copy is as
-      memorized as a block can possibly be.
-
-    **Consequence for the remedy**: a bound relative to a block-bootstrap baseline
-    compares two constructions that share the SAME fixed-grid blindness, so it would not
-    separate a literal copier from a resampler either. The suite would need to compare
-    the generated side against ALL offsets (sliding windows), not the fixed grid it
-    chops both sides on today. Not fixed here (``ah.eval.metrics.memorization`` is
-    untouched by this WP) -- see ``governance/retrofit-register.md``."""
+    With the train side searched at every offset, phase no longer carries information:
+    the grid-snapped and non-grid variants must now score comparably, and a literal
+    zero-noise copy must score near 1.0 whatever its phase. Both are asserted directly,
+    at the same seed, holding everything but the start distribution fixed."""
     access = _synthetic_access()
     manifest = load_manifest()
     prereg = prereg_mod.load()
@@ -737,23 +819,42 @@ def test_finding_near_duplicate_fraction_is_dominated_by_block_phase_not_copying
     bootstrap_baseline = report.outcome(NC5_CONDITION_IGNORING).suite_metrics("memorization")[
         "near_duplicate_fraction"
     ]
-    assert nc4_baseline == pytest.approx(0.0654, abs=1e-4)
-    assert bootstrap_baseline == pytest.approx(0.2394, abs=1e-4)
-    assert grid_value == pytest.approx(0.8875)
-    assert zero_noise_value == pytest.approx(0.2423076923076923)
+    # 1. A literal zero-noise verbatim copy scores near 1.0 DESPITE its uniformly-random,
+    #    off-grid start -- the case that scored 0.2423 before Item 2.
+    assert zero_noise_value > 0.95, zero_noise_value
 
-    # The comparisons the finding rests on: phase alone swamps the as-built NC4's own
-    # noise-driven signal, and a literal verbatim copy is indistinguishable from a plain
-    # resampler once phase is held equal (both are uniformly-random, non-grid starts).
-    assert grid_value > 10 * nc4_baseline, (grid_value, nc4_baseline)
-    assert zero_noise_value == pytest.approx(bootstrap_baseline, abs=0.01), (
-        zero_noise_value,
-        bootstrap_baseline,
-    )
+    # 2. Phase carries no information any more: the grid-snapped memorizer and the
+    #    as-built one differ ONLY in start distribution, and now score comparably. Before
+    #    Item 2 the ratio was 13.6x (0.8875 vs 0.0654).
+    assert grid_value == pytest.approx(nc4_baseline, abs=0.15), (grid_value, nc4_baseline)
+
+    # 3. And the as-built memorizer is now over the sealed gate rather than 31% past a
+    #    placeholder that a legitimate resampler also failed.
+    bound = prereg_mod.load().panel_thresholds["near_duplicate_fraction"].max
+    assert bound is not None and nc4_baseline > bound, (nc4_baseline, bound)
+
+    # The plain block bootstrap ALSO scores high (0.926) -- see
+    # `test_a_long_block_bootstrap_is_reported_as_copying_and_that_is_correct` below;
+    # its blocks are 24 months, so it emits literal verbatim historical windows. That is
+    # now a true reading rather than a phase artifact, and is the WP2.4 conflict.
+    assert bootstrap_baseline > bound
 
 
 def test_finding_the_10yr_tier_catches_nothing(report: NegativeControlReport) -> None:
-    """**Fourth finding.** The ``10yr`` tier produced no substantive failure for any of
+    """**Fourth finding -- NOT closed by WP2.2c, DISCLAIMED instead (Item 5).**
+
+    The three causes are all missing INPUTS, not missing code: no valuation (CAPE)
+    factor in ``factors.yaml``, no recession/growth indicator, and an
+    ``ergodicity_gap`` that needs a single multi-century path no generator emits. None
+    can be closed without inventing a factor, which the WP2.2c brief forbids and which
+    would be worse than the gap. The disclaimer is written into the sealed file
+    (``pre-registration.yaml``'s ``conventions.ten_year_tier_coverage``, pinned by
+    ``test_the_10yr_tier_unavailability_is_disclaimed_in_the_sealed_file`` below) and
+    names the work packages that close each cause. This test stays as it is: the tier
+    still catches nothing, and that must keep failing loudly if anyone believes
+    otherwise.
+
+    The ``10yr`` tier produced no substantive failure for any of
     the five controls, and the remainder did not move enough to leave their own very
     wide decade bands. NC2 in particular -- whose dynamics are destroyed outright -- is
     designated to this tier and is not caught by it.
@@ -820,6 +921,27 @@ def test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metric
     )
 
 
+def test_the_10yr_tier_unavailability_is_disclaimed_in_the_sealed_file() -> None:
+    """**WP2.2c Item 5's deliverable.** The brief's instruction was explicit: wire what
+    is genuinely available, or state plainly in the SEALED file that the tier is 73%
+    unavailable, that NC2 is consequently uncaught there, and which work package closes
+    it -- "an honest disclaimer is acceptable; silence is not."
+
+    This pins the disclaimer's presence and its load-bearing claims, so it cannot be
+    quietly dropped or softened while the gap remains: a reader of ``G2-EVIDENCE.md``
+    must not be able to read the 10yr tier's zero failures as a tier that passed."""
+    raw = prereg_mod.load().raw
+    statement = raw["conventions"]["ten_year_tier_coverage"]
+    assert isinstance(statement, str)
+    lowered = statement.lower()
+    assert "73%" in statement
+    assert "nc2-shuffled" in lowered
+    assert "caught nothing" in lowered
+    # names a cause and an owner for each of the three blockers
+    for token in ("valuation", "ergodicity_gap", "wp2.6", "wp2.3"):
+        assert token in lowered, token
+
+
 def test_finding_the_battery_has_knife_edge_band_comparisons() -> None:
     """**CRITICAL 3 of the WP2.2b Task 7 review.** Pins the structural fact that a
     previously-stated "leading hypothesis" (threaded-OpenBLAS last-bit variation, see
@@ -860,11 +982,71 @@ def test_finding_the_battery_has_knife_edge_band_comparisons() -> None:
                     if r.band.lo == 0.0 and r.band.hi == 0.0:
                         degenerate_zero_band.append((control_id, r.name))
 
-    assert finite_banded == 3035, finite_banded
+    # 3035 before WP2.2c; the 470 additional comparisons are Item 1's and Item 3's new
+    # banded metrics (13 factors x {mean, std, acf_r_sum, acf_abs_sum} plus the
+    # cross-block `correlation` pairs, over five controls). The knife-edge and
+    # degenerate counts are UNCHANGED -- none of the new metrics contributes one.
+    assert finite_banded == 3505, finite_banded
     assert len(knife_edge) == 148, len(knife_edge)
     assert len(degenerate_zero_band) == 33, sorted(degenerate_zero_band)
     # The example named in the sealed text.
     assert (NC1_IID_GAUSSIAN, "hy_spread~ust_2y.tail_dependence_upper") in degenerate_zero_band
+
+
+def test_knife_edge_comparisons_are_now_visible_and_degenerate_bands_do_not_gate() -> None:
+    """**WP2.2c Item 6.** The knife-edge comparisons above still exist -- an exactly-zero
+    margin is a property of the data, not a bug to be removed -- so the response is to
+    make them VISIBLE in the sealed artifact and to keep the ones that cannot be
+    satisfied out of the verdict.
+
+    1. every banded result in the JSON now carries ``band_distance`` (the signed margin,
+       positive inside, negative outside, ``0.0`` exactly on an edge) and
+       ``band_degenerate``, so "passed by three band widths" and "passed by nothing" are
+       distinguishable to a reader of the artifact -- which they were not when WP2.2b's
+       battery verdict moved under machine load with no identifiable cause;
+    2. a zero-width band is judged by nothing: ``band_is_usable`` is False for it, so it
+       leaves both the numerator and the denominator of every band-exceedance gate. A
+       band that can be satisfied only by exact floating-point equality is not an
+       acceptance interval, and 33 of them exist."""
+    from ah.eval.battery import band_distance, band_is_usable
+    from ah.eval.reference import StatBand
+
+    access = _synthetic_access()
+    manifest = load_manifest()
+    prereg = prereg_mod.load()
+    reference = nc.control_reference(
+        access, manifest, n_resamples=_N_RESAMPLES, months=_MONTHS, seed=_SEED
+    )
+    battery_mod.register_reference_dependent_suites(manifest, reference)
+    control = nc.build_negative_controls(reference)[NC1_IID_GAUSSIAN]
+    with nc.negative_control_registry(reference):
+        ensemble = control.sample_months(_MONTHS, _N_PATHS, _SEED)
+        rep = battery_mod.run_battery(
+            ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
+        )
+
+    doc = json.loads(rep.to_json())
+    banded = [
+        r for tier in doc["unfiltered"]["tiers"].values() for r in tier if r["band"] is not None
+    ]
+    assert banded
+    for r in banded:
+        assert "band_distance" in r["band"], r["name"]
+        assert "band_degenerate" in r["band"], r["name"]
+    degenerate = [r for r in banded if r["band"]["band_degenerate"]]
+    assert degenerate, "no degenerate band in this run -- the assertion below is vacuous"
+
+    # The margin is a real number for a real comparison, and its sign says which side.
+    inside = StatBand(point=0.0, lo=-1.0, hi=1.0, n_resamples=10, level=0.9, tier="monthly")
+    assert band_distance(0.25, inside) == pytest.approx(0.75)
+    assert band_distance(1.5, inside) == pytest.approx(-0.5)
+    assert band_distance(1.0, inside) == 0.0  # exactly on the edge: zero margin
+
+    # A zero-width band is reported but never gated on.
+    zero_width = StatBand(point=0.0, lo=0.0, hi=0.0, n_resamples=10, level=0.9, tier="monthly")
+    assert not band_is_usable(zero_width)
+    assert band_is_usable(inside)
+    assert band_distance(0.3, zero_width) == pytest.approx(-0.3)  # still measured
 
 
 # --------------------------------------------------------------------------- #

@@ -7,6 +7,77 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.2c — battery hardening: the battery can now reject a known-bad generator.**
+  WP2.2b registered five deliberately broken generators and the battery passed all five;
+  absent one accidental `floor_violations` failure that fired identically for every
+  control (including those replaying real history verbatim), `BatteryReport.passed` would
+  have been `True` for all five. Four of the five are now caught at **`enforce`** level by
+  a **discriminating** gate inside their **designated** cell, and `shared_enforce_failures`
+  is empty — no gate fires for everything.
+
+  - **Item 1 — the three statistics whose bands existed and were never consulted.**
+    `ah.eval.metrics.monthly` now emits `<factor>.mean`, `<factor>.std` and
+    `<a>~<b>.correlation`. `reference.py` had registered all three and computed a real
+    length-matched band for each since WP2.2; no suite ever computed the generated-side
+    value, so a location/scale drift of any size was invisible. `mean`/`std` use the
+    **per-path-then-averaged** convention (the reference band is the sampling
+    distribution of the same single-series functional, so pooling would fold
+    between-path mean dispersion into `std`); `correlation` is pooled, matching its
+    `crisis_corr_lift` sibling. Deliverable:
+    `test_closed_the_monthly_tier_separates_nc3_from_the_undistorted_bootstrap` — at a
+    shared seed, where NC3's paths are a bit-exact affine transform of NC5's, the two
+    band-failure sets were previously *identical* and NC3's are now a strict superset on
+    the drift-sensitive names.
+  - **Item 2 — `near_duplicate_fraction` measures copying, not block phase.**
+    `ah.eval.metrics.memorization` searches each generated block against **every offset**
+    of the TRAIN split (stride 1) instead of an index-0-anchored 24-month grid, with the
+    epsilon recalibrated on the same search (a minimum over ~830 candidates is
+    systematically smaller than one over 34; enlarging the search alone would have been a
+    false-positive machine). A literal zero-noise verbatim copy went **0.2423 → ~1.0**;
+    the same copy snapped to the grid **0.8875 → ~1.0**, i.e. phase now carries no
+    information; NC4 **0.0654 → 0.7096**. A short-block resampler scores ~0.05–0.33.
+  - **Item 3 — the `enforce` set chosen on evidence.** Three new `PANEL_STATS` gates
+    (`moment_`/`tail_`/`dependence_band_exceedance_fraction`) make DN-1.1 §II.6's band
+    criterion blocking *as an aggregate over a family*, because a per-name band gate at
+    ~570 comparisons and a 10% miss rate would reject a perfect generator. The bound
+    (0.5) is derived from the sealed band `level` and a majority rule (Markov: ≤0.2
+    false-positive under arbitrary dependence; Hoeffding over ~13 factor units gives the
+    same 0.5 at α=0.01) — no control's value was consulted. Two supporting statistics
+    were added, `acf_r_sum`/`acf_abs_sum` (Box–Pierce without the `n` scaling): the
+    first version of the dependence gate aggregated all 403 per-lag comparisons and
+    scored NC1 at 0.367, because a 120-month per-lag band is wide; summing the *values*
+    and banding the sum moves NC1 to 0.615. **The bound did not move; the statistic did.**
+    `near_duplicate_fraction` was promoted to `enforce` at a bound **10× looser** than
+    the one it replaced (0.05 → 0.5, since 0.05 is the metric's own null by construction).
+  - **Item 4 — `SPREAD_FLOOR_PCT` 100bp → 0.0.** A 100bp floor rejects the historical
+    record (TED sat at 15–40bp for most of 2010–2020), which is why it fired for all five
+    controls and detected nothing. DN-1.1 §II.4's floors are a *generative* softplus
+    device; the falsifiable audit that survives is that a spread cannot be negative. It
+    now fires for `nc1-iid-gaussian` alone. Recorded as a stated deviation from DN-1.1's
+    literal number (`governance/retrofit-register.md` RFR-41), for WP2.3 to ratify.
+  - **Item 5 — the 10yr tier is disclaimed, not fixed.** 73% structurally unavailable;
+    all three causes are missing *inputs* (no CAPE/valuation factor, no recession/growth
+    indicator, an `ergodicity_gap` needing a path no generator emits) and none can be
+    closed without inventing a factor. `conventions.ten_year_tier_coverage` states the
+    count, that NC2 is designated there and caught nothing, and that `G2-EVIDENCE.md`
+    must not cite a 10yr pass (RFR-42).
+  - **Item 6 — knife-edge comparisons made visible.** Every banded result carries
+    `band_distance` (signed margin; `0.0` = exactly on an edge) and `band_degenerate` in
+    the JSON, plus a `band dist` markdown column. A zero-width band is **reported but
+    never gated on** (`battery.band_is_usable`): it can be satisfied only by exact
+    floating-point equality, and 33 exist.
+
+  **Not closed, disclaimed:** `nc5-condition-ignoring` is not caught at `enforce` in its
+  designated cell, because the conditional tier is non-gating by
+  STEP2-GENERATOR-PLAN §WP2.3's sealed decision rule, which this work package was
+  directed not to change (it is detected there on 14 of 16 metrics, and blocked
+  elsewhere). `tail_band_exceedance_fraction` stays `report`: a majority rule cannot fire
+  on a tail failure confined to the 4 return-bearing factors of 13, so NC1 is blocked by
+  the dependence gate rather than by the tail machinery that correctly detects it
+  (RFR-43). A block bootstrap with blocks ≥ 24 months now fails the memorization gate —
+  correctly, but WP2.4's `bootstrap-v1` must use shorter blocks or carry an amendment
+  (RFR-40). No negative control was weakened and no threshold was tuned to make one fire.
+
 - **WP2.2b Task 7 review fix pass — evidence-integrity findings in the negative-control
   suite.** Three claims in the sealed, `G2-EVIDENCE.md`-cited text asserted more than the
   evidence supported; corrected without touching any control's construction or any

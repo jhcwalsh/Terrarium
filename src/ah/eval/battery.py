@@ -359,6 +359,88 @@ def _lookup_threshold(name: str, prereg: PreRegistration) -> Threshold | None:
     return prereg.strategy_thresholds.get(name)
 
 
+# --------------------------------------------------------------------------- #
+# the band criterion, defined once (WP2.2c Item 6)
+# --------------------------------------------------------------------------- #
+
+
+def band_is_usable(band: StatBand | None) -> bool:
+    """Whether ``band`` can be compared against at all.
+
+    ``False`` for no band, for non-finite bounds (a band resting on zero valid
+    resamples says nothing -- see :attr:`ah.eval.reference.StatBand.n_valid_resamples`),
+    and for a **degenerate zero-width band** (``lo == hi``).
+
+    **What a zero-width band means, decided here rather than left implicit (WP2.2c Item
+    6).** ``lo == hi`` says every bootstrap replicate returned the identical value, so
+    the band is a point mass, not an acceptance interval: it can be satisfied only by
+    exact floating-point equality, which no generator carrying sampling noise can
+    achieve, and it is one ULP away from flipping in either direction. A band that
+    cannot be satisfied is not a band. WP2.2b counted 33 such comparisons across the
+    five controls, all on statistics (upper/lower tail dependence, most often) whose
+    historical value is exactly 0.
+
+    It is excluded from *gating* -- :func:`ah.eval.metrics.monthly`'s band-exceedance
+    gates neither count it as a failure nor as a judged comparison -- and NOT from the
+    report: :class:`MetricResult` still carries the band, and ``to_dict`` marks it
+    ``band_degenerate: true`` beside its ``band_distance``, so the evidence that a
+    generator moved a statistic history never moved is preserved for a reader while
+    being kept out of a pass/fail verdict it cannot fairly decide.
+    """
+    if band is None:
+        return False
+    if not (bool(np.isfinite(band.lo)) and bool(np.isfinite(band.hi))):
+        return False
+    return band.lo != band.hi
+
+
+def outside_band(value: float, band: StatBand | None) -> bool:
+    """``value`` outside a usable ``[band.lo, band.hi]``. **A NaN value is OUTSIDE.**
+
+    The band criterion DN-1.1 Sec.II.6 states for the monthly and 1-5yr tiers ("within
+    block-bootstrap 90% bands of history"), defined once here so the report
+    (:mod:`ah.eval.negative_controls`) and the judging path
+    (:mod:`ah.eval.metrics.monthly`'s band-exceedance gates) cannot diverge.
+
+    NaN is treated as outside, matching THE ONE NaN RULE in :func:`_passed`: a metric
+    that could not be computed has not demonstrated that it lies inside its band. Note
+    that :func:`ah.eval.negative_controls._outside_band` deliberately does NOT inherit
+    that half -- it splits NaN failures out as separate evidence rather than merging
+    them into the substantive ones -- so it calls this function only for finite values.
+    """
+    if not band_is_usable(band):
+        return False
+    assert band is not None  # narrowed by band_is_usable
+    if np.isnan(value):
+        return True
+    return not (band.lo <= value <= band.hi)
+
+
+def band_distance(value: float, band: StatBand | None) -> float:
+    """Signed distance from ``value`` to the nearer edge of ``band``: positive inside
+    (the margin by which it passed), negative outside, ``0.0`` exactly on an edge.
+
+    WP2.2c Item 6: recorded on every banded result so a knife-edge comparison is
+    VISIBLE in the sealed artifact. WP2.2b found 148 of 3035 finite banded comparisons
+    sitting at exactly zero distance from an edge -- any perturbation flips those, and a
+    battery verdict that moved under machine load with no identified cause is exactly
+    what a zero-margin comparison looks like from the outside. A report that carries only
+    pass/fail cannot show the difference between a comparison that passed by three band
+    widths and one that passed by nothing.
+
+    ``NaN`` when there is no band at all, when its bounds are non-finite, or when
+    ``value`` is NaN. A degenerate band DOES get a distance (it is real evidence, and
+    ``band_degenerate`` marks it) even though :func:`band_is_usable` bars it from gating.
+    """
+    if band is None:
+        return float("nan")
+    if not (bool(np.isfinite(band.lo)) and bool(np.isfinite(band.hi))):
+        return float("nan")
+    if np.isnan(value):
+        return float("nan")
+    return float(min(value - band.lo, band.hi - value))
+
+
 def _passed(value: float, threshold: Threshold) -> bool:
     """``value in [threshold.min, threshold.max]``. **A NaN value FAILS.**
 
@@ -489,6 +571,13 @@ def _result_dict(r: MetricResult) -> dict[str, Any]:
             # statistic is uncomputable". The count is what tells the two apart in the
             # sealed artifact -- see StatBand.n_valid_resamples.
             "n_valid_resamples": r.band.n_valid_resamples,
+            # WP2.2c Item 6 -- see band_distance()/band_is_usable(). `band_distance` is
+            # the margin (positive inside, negative outside, 0.0 exactly on an edge);
+            # `band_degenerate` marks a zero-width band, which is reported but never
+            # gated on.
+            "band_distance": band_distance(r.value, r.band),
+            "band_degenerate": bool(r.band.lo == r.band.hi),
+            "band_outside": outside_band(r.value, r.band),
         },
         "severity": r.severity,
         "passed": r.passed,
@@ -635,12 +724,27 @@ class BatteryReport:
                 lines.append("")
                 lines.append(
                     "| metric | suite | value | mc_error | band lo | band hi | "
-                    "resample_length | severity | passed | status | notes |"
+                    "band dist | resample_length | severity | passed | status | notes |"
                 )
-                lines.append("| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |")
+                lines.append(
+                    "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |"
+                )
                 for r in grouped[tier]:
                     lo = "" if r.band is None else f"{r.band.lo:.6g}"
                     hi = "" if r.band is None else f"{r.band.hi:.6g}"
+                    # WP2.2c Item 6: the MARGIN, so a comparison that passed by nothing
+                    # is distinguishable from one that passed by three band widths.
+                    # "degenerate" replaces the number on a zero-width band -- reported,
+                    # never gated (see band_is_usable).
+                    dist = (
+                        ""
+                        if r.band is None
+                        else (
+                            "degenerate"
+                            if r.band.lo == r.band.hi
+                            else f"{band_distance(r.value, r.band):.3g}"
+                        )
+                    )
                     mc = "" if r.mc_error is None else f"{r.mc_error:.6g}"
                     # None means "full historical sample, never length-matched" (see
                     # StatBand.resample_length): rendered as an explicit "full", not an
@@ -661,8 +765,8 @@ class BatteryReport:
                     notes = "; ".join(f"{k}={v}" for k, v in r.metadata)
                     lines.append(
                         f"| {r.name} | {r.suite} | {r.value:.6g} | {mc} | {lo} | {hi} | "
-                        f"{resample_length} | {r.severity} | {passed_str} | {r.status} | "
-                        f"{notes} |"
+                        f"{dist} | {resample_length} | {r.severity} | {passed_str} | "
+                        f"{r.status} | {notes} |"
                     )
                 lines.append("")
 

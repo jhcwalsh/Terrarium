@@ -53,6 +53,119 @@ of the ensemble's path length, so the ensemble side must apply the same single-s
 functional or the two are not comparable (see "Length matching" below). The metric's job
 is comparison against history, not estimation of a physical constant.
 
+The three statistics that measure location, scale and co-movement (WP2.2c Item 1)
+-----------------------------------------------------------------------------------
+``<factor>.mean``, ``<factor>.std`` and ``<a>~<b>.correlation`` are emitted here.
+Before WP2.2c they were not emitted anywhere, by any suite -- while
+:mod:`ah.eval.reference` registered all three, computed a real length-matched
+block-bootstrap band for each, and the battery report rendered those bands. WP2.2b
+proved the consequence: NC3 (a bootstrap with a +0.5 sigma mean shift and 1.5x
+volatility) and NC5 (the identical bootstrap with the distortion switched off) produced
+**bit-identical band-failure sets** at a shared seed, because every other statistic in
+this tier is invariant to ``x -> mu + c*(x - mu) + d`` by construction. The battery
+could not detect a drift of any size in the first two moments of any factor.
+
+**Estimator convention: per-path, then averaged, for ``mean`` and ``std``.** Not the
+pooled convention their order-independence would otherwise suggest, and the reason is
+the one this docstring already gives for ``acf_abs_decay``: the reference band is the
+sampling distribution of the statistic applied to ONE series of the ensemble's own path
+length, so the ensemble side must apply the same single-series functional or the two are
+not comparable. Pooling would fold the between-path dispersion of the path means into
+``std``, a quantity no reference replicate contains an analogue of -- a generator with
+correctly-calibrated within-path volatility but heterogeneous path means would read as
+too volatile. (``mean`` is numerically identical under both conventions at equal path
+lengths; it follows the per-path one anyway so the pair cannot drift apart.) Both are
+therefore also **exempt from the pooled-statistic length-matching residual** recorded
+below: they are matched to their band in sample size and in bias.
+
+``correlation`` is **pooled**, matching its sibling ``crisis_corr_lift`` in the same
+:data:`~ah.eval.reference.CROSS_BLOCK_STATS` registry -- a contemporaneous joint-marginal
+statistic, not a serial one, so it references no previous observation and pooling
+legitimately enlarges the sample. It inherits the pooled residual accordingly.
+
+Note what ``correlation`` can and cannot catch, since its band now judges: a
+correlation is invariant to a positive affine transform of either factor, so it is
+**blind to NC3's drift by construction** and adds nothing to that catch. It exists to
+catch a generator that breaks cross-block co-movement, which is a different defect and
+one nothing else in this tier measures per-pair (``cross_block_corr_matrix_distance``
+aggregates every pair into one Frobenius number, where two offsetting errors cancel).
+
+The band-exceedance gates: how a band becomes blocking (WP2.2c Item 3)
+------------------------------------------------------------------------
+DN-1.1 Sec.II.6 states this tier's acceptance criterion as "within block-bootstrap 90%
+bands of history", and the battery computed those bands from WP2.2 onward -- but judged
+nothing against them: :attr:`~ah.eval.battery.BatteryReport.passed` reads sealed
+thresholds only. WP2.2b's consequence was stark: **every substantive catch of all five
+negative controls came from a band the battery does not consult**, and had one
+accidental ``floor_violations`` failure not fired for unrelated reasons, all five
+deliberately-broken generators would have been recorded as PASSING.
+
+This suite therefore emits three gates -- :data:`BAND_EXCEEDANCE_FAMILIES` --
+``moment_``/``tail_``/``dependence_band_exceedance_fraction``, each the fraction of one
+family of per-factor band comparisons that fell outside its own train+validation band.
+
+**Why an aggregate and not a per-name band gate.** A 90% band has a 10% miss rate by
+construction, and this tier makes ~570 comparisons. Gating each name individually at
+``enforce`` would reject a *perfect* generator with probability indistinguishable from
+1 -- statistically illiterate, and it would have made the seal worse, not better. The
+gate is over a family so that the multiple-comparison structure is inside the metric
+rather than ignored by it.
+
+**Where the bound comes from, and why it is not tuned to the controls.** Each gate's
+sealed bound is ``0.5``: more than half of a family's comparisons outside their own
+bands. This is derived, not fitted:
+
+- under the null (a generator matching history), each comparison exceeds with
+  probability at most ``1 - level`` = 0.10 by the definition of the percentile band;
+- so ``E[fraction] <= 0.10``, and by Markov's inequality ``P(fraction > 0.5) <= 0.2``
+  under *arbitrary* dependence between the comparisons -- the worst case, assuming
+  nothing about the factor panel's correlation structure;
+- under anything approaching independence the same probability is astronomically small
+  (``P(Binom(26, 0.1) > 13) ~ 1e-8`` for the moment family alone).
+
+The bound is a function of the sealed band ``level`` and of a majority rule, and of
+nothing else. No control's measured value was consulted to choose it, and the observed
+margins are not knife-edge: the drifted control sits near 1.0 and the undistorted one
+near 0.1 against a bound of 0.5.
+
+**Degenerate and unusable bands drop out of both numerator and denominator**
+(:func:`ah.eval.battery.band_is_usable`); a NaN metric value with a usable band counts
+as an exceedance (THE ONE NaN RULE -- an omitted factor is a failure, not an
+abstention). A family with no usable band at all reports NaN rather than a favourable 0.
+
+**Why the dependence gate is over the joint statistics, not the 31 per-lag ones.**
+The first version of this gate aggregated every ``acf_r_lag{k}``/``acf_abs_lag{k}``
+comparison -- 403 of them across 13 factors -- and it does not work, which is worth
+recording because it is the non-obvious half of the design. A control that destroys
+serial dependence outright (``nc1-iid-gaussian``) left only **0.367** of those
+comparisons outside their bands, and ``nc2-shuffled`` 0.377, against a plain block
+bootstrap's 0.082: a real 4.5x separation, but nowhere near a majority, and no honest
+false-positive argument puts the bound below ~0.5. A per-lag band at the ensemble's own
+120-month path length is simply wide (a lag-24 autocorrelation from 120 observations
+carries a standard error around 0.09), so each comparison individually has little power
+and aggregating the *comparisons* aggregates the noise with the signal. A two-stage
+"majority of factors, each by a majority of its own lags" variant was measured too and
+is strictly worse -- 0.077 for both ``nc1`` and ``nc5``, i.e. no separation at all.
+
+Summing the ACF *values* first and banding the sum (:func:`ah.eval.reference.acf_r_sum`
+/ :func:`~ah.eval.reference.acf_abs_sum`, the Box-Pierce construction without its ``n``
+scaling) pools the signal instead: the same controls then score **0.615** and **0.718**
+against 0.077-0.128 for the three that preserve dependence. The bound did not move; the
+statistic did.
+
+**What each gate can and cannot see**, stated so a reader does not over-read a pass:
+
+- ``moment_`` is the only thing in the battery that measures location or scale at all.
+- ``dependence_`` reads the two cumulative ACF profiles and the fitted decay rate; a
+  generator breaking a *single* lag while preserving the profile would not move it.
+- ``tail_`` is the weakest of the three: a tail failure confined to a few factors (which
+  is what a fat-tail failure usually looks like when 9 of 13 active factors are levels)
+  cannot reach a majority however severe it is -- ``nc1-iid-gaussian``, which replaces
+  every fat tail in the panel with a Gaussian one, scores 0.234. WP2.2c therefore leaves
+  it ``severity: report`` rather than sealing a gate that cannot fire; see
+  ``pre-registration.yaml``'s entry, which records the per-metric decision and the
+  consequence.
+
 Length matching, and the residual it does not cover
 ------------------------------------------------------
 :func:`ah.eval.reference.compute_reference` draws its bootstrap replicates at the judged
@@ -158,12 +271,22 @@ returned a vacuously passing, metric-free report.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+import weakref
+from collections.abc import Callable, Iterable
 from dataclasses import dataclass
 
 import numpy as np
 
-from ah.eval.battery import MetricFn, MetricSpec, register_suite
+from ah.eval.battery import (
+    MetricFn,
+    MetricSpec,
+    band_is_usable,
+    outside_band,
+    register_suite,
+)
+from ah.eval.battery import (
+    _lookup_band as lookup_band,
+)
 from ah.eval.metrics._pooling import mean_over_paths, pooled
 from ah.eval.reference import (
     ACF_ABS_MAX_LAG,
@@ -192,10 +315,22 @@ from ah.eval.reference import (
     _excess_kurtosis as reference_excess_kurtosis,
 )
 from ah.eval.reference import (
+    _mean as reference_mean,
+)
+from ah.eval.reference import (
     _skew as reference_skew,
 )
 from ah.eval.reference import (
+    _std as reference_std,
+)
+from ah.eval.reference import (
     acf_abs_decay as reference_acf_abs_decay,
+)
+from ah.eval.reference import (
+    acf_abs_sum as reference_acf_abs_sum,
+)
+from ah.eval.reference import (
+    acf_r_sum as reference_acf_r_sum,
 )
 from ah.eval.reference import (
     corr_matrix_distance as reference_corr_matrix_distance,
@@ -400,6 +535,103 @@ def _spec(name: str, fn: MetricFn) -> MetricSpec:
     return MetricSpec(name=name, tier=TIER, fn=fn, suite=SUITE)
 
 
+# --------------------------------------------------------------------------- #
+# band-exceedance gates (WP2.2c Item 3) -- see the module docstring
+# --------------------------------------------------------------------------- #
+
+# metric name -> the SINGLE_FACTOR_STATS keys whose per-factor band comparisons it
+# aggregates. Grouped by what the statistic measures, following DN-1.1 Sec.II.6's own
+# monthly row ("tail index, ACF |r|, skew, corr matrix"), NOT by which control each
+# group happens to catch. Insertion order is the report order.
+BAND_EXCEEDANCE_FAMILIES: dict[str, tuple[str, ...]] = {
+    "moment_band_exceedance_fraction": ("mean", "std"),
+    "tail_band_exceedance_fraction": (
+        "skew",
+        "excess_kurtosis",
+        "hill_tail_index_5pct",
+        "hill_tail_index_1pct",
+        *(f"agg_gaussianity_{suffix}" for _, suffix in AGG_GAUSSIANITY_HORIZONS),
+    ),
+    # The JOINT serial-dependence statistics, deliberately NOT the 31 per-lag ones --
+    # see the module docstring's "Why the dependence gate is over the joint statistics".
+    "dependence_band_exceedance_fraction": ("acf_r_sum", "acf_abs_sum", "acf_abs_decay"),
+}
+
+
+def _family_of(stat: str) -> str | None:
+    for family, stats in BAND_EXCEEDANCE_FAMILIES.items():
+        if stat in stats:
+            return family
+    return None
+
+
+def _band_exceedance_counts(
+    specs: Iterable[MetricSpec], reference: ReferenceStats, ensemble: Ensemble
+) -> dict[str, tuple[int, int]]:
+    """``family -> (n_outside, n_judged)`` over every per-factor spec in that family.
+
+    One pass, shared by all three gate closures (see :func:`_cached_band_exceedances`):
+    the three gates must be consistent with each other and with the per-name results the
+    same report carries, so they read the SAME spec functions rather than restating any
+    estimator.
+
+    A comparison is *judged* only where :func:`ah.eval.battery.band_is_usable` holds --
+    no band, non-finite bounds, or a degenerate zero-width band all drop out of BOTH the
+    numerator and the denominator (Item 6). A NaN metric value with a usable band counts
+    as an exceedance, per THE ONE NaN RULE and the same "generating less must never
+    improve a metric" discipline every other WP2.2 suite states: a factor the ensemble
+    simply omits reads as a failure, not as an abstention.
+    """
+    counts: dict[str, list[int]] = {family: [0, 0] for family in BAND_EXCEEDANCE_FAMILIES}
+    for spec in specs:
+        if "." not in spec.name or "~" in spec.name:
+            continue
+        family = _family_of(spec.name.split(".", 1)[1])
+        if family is None:
+            continue
+        band = lookup_band(spec.name, reference)
+        if not band_is_usable(band):
+            continue
+        counts[family][1] += 1
+        if outside_band(float(spec.fn(ensemble)), band):
+            counts[family][0] += 1
+    return {family: (n_out, n_judged) for family, (n_out, n_judged) in counts.items()}
+
+
+def _cached_band_exceedances(
+    specs: tuple[MetricSpec, ...], reference: ReferenceStats
+) -> Callable[[Ensemble], dict[str, tuple[int, int]]]:
+    """A single-slot, identity-keyed cache of :func:`_band_exceedance_counts`, so the
+    three gates cost one extra pass over the family statistics per ensemble rather than
+    three. Same construction (and same weakref-verified ``id()`` key, for the same
+    reason) as :func:`ah.eval.metrics.memorization._cached_pooled_signals`."""
+    cache: dict[int, tuple[weakref.ReferenceType[Ensemble], dict[str, tuple[int, int]]]] = {}
+
+    def get(ensemble: Ensemble) -> dict[str, tuple[int, int]]:
+        key = id(ensemble)
+        hit = cache.get(key)
+        if hit is not None and hit[0]() is ensemble:
+            return hit[1]
+        result = _band_exceedance_counts(specs, reference, ensemble)
+        cache.clear()
+        cache[key] = (weakref.ref(ensemble), result)
+        return result
+
+    return get
+
+
+def _band_exceedance_metric(
+    counts: Callable[[Ensemble], dict[str, tuple[int, int]]], family: str
+) -> MetricFn:
+    def fn(ensemble: Ensemble) -> float:
+        n_outside, n_judged = counts(ensemble)[family]
+        if n_judged == 0:
+            return float("nan")
+        return n_outside / n_judged
+
+    return fn
+
+
 def _pooled_metric(factor: str, stat: Callable[[np.ndarray], float]) -> MetricFn:
     """``stat`` applied to ``factor``'s pooled population; NaN if ``factor`` is absent
     from a given ensemble (see module docstring's NaN-on-absent-factor rule)."""
@@ -458,6 +690,10 @@ def _acf_abs_decay_metric(factor: str) -> MetricFn:
 def _single_factor_specs(factor: str) -> list[MetricSpec]:
     """Every per-factor spec, each named for its ``SINGLE_FACTOR_STATS`` key."""
     specs = [
+        # WP2.2c Item 1 -- location and scale, per-path then averaged. See the module
+        # docstring's "The two statistics that measure location and scale".
+        _spec(f"{factor}.mean", _per_path_metric(factor, reference_mean)),
+        _spec(f"{factor}.std", _per_path_metric(factor, reference_std)),
         _spec(f"{factor}.excess_kurtosis", _pooled_metric(factor, reference_excess_kurtosis)),
         _spec(f"{factor}.skew", _pooled_metric(factor, reference_skew)),
     ]
@@ -483,6 +719,10 @@ def _single_factor_specs(factor: str) -> list[MetricSpec]:
             )
         )
     specs.append(_spec(f"{factor}.acf_abs_decay", _acf_abs_decay_metric(factor)))
+    # WP2.2c Item 3 -- the joint ACF statistics, per path then averaged like every other
+    # time-ordered statistic in this suite.
+    specs.append(_spec(f"{factor}.acf_r_sum", _per_path_metric(factor, reference_acf_r_sum)))
+    specs.append(_spec(f"{factor}.acf_abs_sum", _per_path_metric(factor, reference_acf_abs_sum)))
     for horizon, suffix in AGG_GAUSSIANITY_HORIZONS:
         specs.append(
             _spec(f"{factor}.agg_gaussianity_{suffix}", _agg_gaussianity_metric(factor, horizon))
@@ -517,6 +757,12 @@ def build_monthly_suite(
                 seen_pairs.add((fa, fb))
                 specs.append(
                     _spec(
+                        f"{fa}~{fb}.correlation",
+                        _cross_factor_metric(fa, fb, reference_correlation),
+                    )
+                )
+                specs.append(
+                    _spec(
                         f"{fa}~{fb}.crisis_corr_lift",
                         _cross_factor_metric(fa, fb, reference_crisis_corr_lift),
                     )
@@ -525,6 +771,12 @@ def build_monthly_suite(
     specs.append(
         _spec(CORR_MATRIX_DISTANCE_METRIC, _make_corr_matrix_distance_metric(reference, active))
     )
+
+    # The band-exceedance gates close over the per-factor specs built above, so they
+    # aggregate exactly the comparisons this same suite reports one by one.
+    counts = _cached_band_exceedances(tuple(specs), reference)
+    for family in BAND_EXCEEDANCE_FAMILIES:
+        specs.append(_spec(family, _band_exceedance_metric(counts, family)))
 
     return tuple(specs)
 

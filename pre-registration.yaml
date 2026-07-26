@@ -551,17 +551,95 @@ conventions:
   elementary_moment_estimators: >-
     POPULATION (not sample-corrected) moments throughout, computed with numpy on the
     pooled or per-path array the metric suite hands over. `mean` = sum(x)/n; `std` =
-    sqrt(sum((x - xbar)^2)/n), the n-denominator form (numpy's default ddof=0), NOT the
-    (n-1) sample standard deviation; `skew` = m3 / m2^1.5 and `excess_kurtosis` =
+    sqrt(sum((x - xbar)^2)/(n-1)), the (n-1) SAMPLE standard deviation (numpy ddof=1),
+    NaN for n < 2. CORRECTION, WP2.2c Item 1: this sentence previously read
+    "sqrt(sum((x - xbar)^2)/n), the n-denominator form (numpy's default ddof=0), NOT the
+    (n-1) sample standard deviation" -- which is not, and never was, what
+    ah.eval.reference._std computes (it has passed ddof=1 since WP2.2 Task 2). The text
+    was wrong, not the code; both the reference band and the metric call that one
+    function, so no number moves, but the sealed statement described an estimator the
+    platform does not use. It went unnoticed for as long as it did precisely because no
+    metric suite emitted `std` -- the statement judged nothing. Item 1 makes it
+    load-bearing, so it is corrected here rather than sealed wrong.
+    `skew` = m3 / m2^1.5 and `excess_kurtosis` =
     m4 / m2^2 - 3 with m_k = (1/n) * sum((x - xbar)^k) -- the population definitions, so
     neither carries the Fisher-Pearson small-sample correction that scipy.stats applies
     by default and the two must never be compared against a scipy-computed figure.
     `correlation` (cross-block) is the ordinary Pearson product-moment correlation,
     NaN when either leg has fewer than 2 observations or zero standard deviation.
-    NOTE ON ddof, stated because it is not uniform across this file: the two variances
-    inside `variance_ratio` DO use ddof=1 (see its own block); the elementary moments
-    here do not. Both are stated rather than assumed because a band computed under one
-    convention is not comparable to a value computed under the other.
+    NOTE ON ddof, stated because it is not uniform across this file: `std` and the two
+    variances inside `variance_ratio` use ddof=1; `skew`/`excess_kurtosis` use the
+    population (ddof=0-equivalent) central moments. Both are stated rather than assumed
+    because a band computed under one convention is not comparable to a value computed
+    under the other.
+    ENSEMBLE-SIDE POOLING FOR THE THREE STATISTICS EMITTED BY WP2.2c ITEM 1, stated
+    because the choice is not the one order-independence alone would suggest.
+    `<factor>.mean` and `<factor>.std` are computed PER PATH and averaged over paths,
+    not over the pooled (path, month) population. The reference band for each is the
+    sampling distribution of the statistic applied to ONE series of the ensemble's own
+    path length, so the ensemble side must apply the same single-series functional --
+    the identical rule acf_abs_decay_estimator already states. Pooling would fold the
+    between-path dispersion of the path means into `std`, a quantity no reference
+    replicate contains an analogue of, so a generator with correct within-path
+    volatility but heterogeneous path means would read as too volatile. (`mean` is
+    numerically identical under both conventions at equal path lengths; it follows the
+    per-path one so the pair cannot drift apart.) Consequence: both are exempt from the
+    pooled-statistic residual estimator_length_matching records -- they are matched to
+    their bands in sample size AND in bias. `<a>~<b>.correlation` is POOLED, matching
+    its sibling crisis_corr_lift in the same CROSS_BLOCK_STATS registry: a
+    contemporaneous joint-marginal statistic references no previous observation, so
+    pooling legitimately enlarges the sample, and it inherits the pooled residual.
+    WHAT correlation CAN AND CANNOT CATCH: a Pearson correlation is invariant to a
+    positive affine transform of either leg, so it is blind BY CONSTRUCTION to a
+    location/scale drift and contributes nothing to that detection; it exists to catch a
+    generator that breaks cross-block co-movement, which `cross_block_corr_matrix_distance`
+    aggregates into one Frobenius number in which two offsetting per-pair errors cancel.
+  acf_sum_estimator: >-
+    CUMULATIVE ACF OVER A FIXED LAG WINDOW -- the Box-Pierce construction WITHOUT its n
+    scaling, so it is a summary statistic and not a test statistic. acf_r_sum =
+    sum_{k=1..5} rho_r(k); acf_abs_sum = sum_{k=1..24} rho_|r|(k), with rho computed by
+    acf_estimator's convention (overall mean, n-denominator) over exactly the lags the
+    acf_r_lag{k}/acf_abs_lag{k} statistics report individually. Per path, then averaged
+    over paths, like every other time-ordered statistic in the monthly suite. NaN if ANY
+    lag in the window is NaN -- never a partial sum over whichever lags happened to be
+    computable, because a sum over a silently-varying number of terms is not comparable
+    to its own band. length_matched=True: the per-lag estimator is length-biased, so the
+    sum is too, and both sides must be evaluated at the same length.
+    WHY THESE EXIST BESIDE THE PER-LAG FAMILY THEY SUM (WP2.2c Item 3): a per-lag band
+    at a 120-month path length is wide (a lag-24 autocorrelation from 120 observations
+    has SE ~0.09), so each comparison individually has little power and an aggregate
+    over the COMPARISONS aggregates the noise with the signal -- measured, a control
+    that destroys serial dependence outright left only 0.367 of 403 per-lag comparisons
+    outside their bands. Summing the VALUES first pools the signal (24 lags of a
+    persistent series contribute in one direction while their estimation errors partly
+    cancel) and moves the same control to 0.615. The per-lag statistics remain
+    separately registered, banded and reported; the sums are what carry a gate.
+  band_exceedance_gate_estimator: >-
+    THE FRACTION OF ONE FAMILY OF PER-FACTOR BAND COMPARISONS THAT FELL OUTSIDE ITS OWN
+    TRAIN+VALIDATION BAND. Three families, defined in
+    ah.eval.metrics.monthly.BAND_EXCEEDANCE_FAMILIES: moment (mean, std), tail (skew,
+    excess_kurtosis, hill_tail_index_5pct/1pct, agg_gaussianity_3m/12m), dependence
+    (acf_r_sum, acf_abs_sum, acf_abs_decay). For every active factor and every statistic
+    in the family, the metric value THIS SAME SUITE reports is compared against the same
+    StatBand the report renders beside it -- no estimator is restated and no second
+    lookup path exists. A comparison is judged only where the band is USABLE
+    (ah.eval.battery.band_is_usable: a band exists, its bounds are finite, and it is not
+    zero-width); unusable bands leave both the numerator and the denominator. A NaN
+    metric value with a usable band COUNTS AS AN EXCEEDANCE, per nan_metric_rule: a
+    factor the ensemble simply omits is a failure, not an abstention, and "generating
+    less" must never improve a metric. A family with no usable band at all is NaN, never
+    a favourable 0.
+    WHY AN AGGREGATE AND NOT A PER-NAME BAND GATE: a level-0.9 band has a 10% miss rate
+    by construction and this tier makes ~570 comparisons, so gating each name at enforce
+    rejects a PERFECT generator with probability indistinguishable from 1. The
+    multiple-comparison structure belongs inside the metric, not ignored by it.
+    THE BOUND (0.5, all three) is derived from this file's own sealed band `level` and a
+    majority rule, and from nothing else: under the null E[fraction] <= 1 - level = 0.10,
+    so Markov gives P(fraction > 0.5) <= 0.2 under ARBITRARY dependence between the
+    comparisons, and Hoeffding over the ~13 effectively-independent factor units gives
+    the same 0.5 at a 1% family-wise error rate. No control's measured value was
+    consulted to choose it. See each threshold entry for the per-metric severity
+    decision and its evidence.
   crisis_corr_lift_estimator: >-
     corr(a[crisis], b[crisis]) - corr(a, b), where `a` is the block-A factor, the
     threshold is the 10th PERCENTILE of `a` over the aligned sample, and the crisis
@@ -739,6 +817,37 @@ conventions:
     registered in requirements.yaml. NaN and MARKED `status: structurally_unavailable`;
     the estimator itself is built and tested against synthetic ground truth so it is
     ready the day a valuation factor lands.
+  ten_year_tier_coverage: >-
+    THE 10yr TIER IS 73% STRUCTURALLY UNAVAILABLE, AND THIS IS A DISCLAIMER, NOT A
+    RESULT (WP2.2c Item 5). 16 of its 22 metrics carry status
+    STRUCTURALLY_UNAVAILABLE and are NaN for every generator, always: 14
+    `<factor>.ergodicity_gap` (one per active factor) and
+    `ten_year_return_vs_valuation_{slope,r2}`. The three causes are all missing INPUTS,
+    not missing code, and none can be closed by anything in this work package:
+    (a) no valuation factor -- factors.yaml maps no CAPE / cyclically-adjusted earnings
+    series, so the DN-1.1 Sec.II.6 "10y return vs starting valuation" row cannot be
+    posed at all; (b) no recession or growth indicator (`usrec`, `growth_yoy`) for the
+    regime-duration mapping; (c) `ergodicity_gap` compares one LONG path against the
+    ensemble's cross-sectional moments and no generator in the platform emits a path
+    longer than its horizon, so the statistic has no historical analog either
+    (has_historical_analog=False -- its band is NaN by construction).
+    CONSEQUENCE, STATED SO IT IS NOT READ AS A PASS: `nc2-shuffled`, whose time ordering
+    is destroyed outright and which is DESIGNATED to this tier among others, produces
+    ZERO substantive failures in it. The 10yr tier caught nothing in WP2.2b and catches
+    nothing in WP2.2c. Every 10yr row in a battery report is either a NaN or one of the
+    two decade-FREQUENCY statistics (lost_decade_frequency,
+    long_inflation_era_frequency), which measure how often a decade-shaped event occurs
+    and not decade DYNAMICS. NC2 is caught at enforce by the monthly tier instead; a
+    generator whose decade-scale behaviour was wrong while its monthly behaviour was
+    right would NOT be caught anywhere.
+    WHO CLOSES IT: a valuation factor is a Step-1 data addition (a new
+    requirements.yaml series plus a factors.yaml mapping, hence a block/factor amendment
+    once sealed) -- recorded as governance/retrofit-register.md RFR-42, unowned today
+    and NOT owned by WP2.3; the regime-duration inputs arrive with WP2.6, which fits the
+    semi-Markov regime skeleton on Step-1 labels; `ergodicity_gap` needs a generator
+    capability (emit a single multi-century path) that WP2.5's climate model could
+    supply and no current generator does. WP2.3 must seal this tier as UNAVAILABLE
+    rather than as a tier that passed, and G2-EVIDENCE.md must not cite a 10yr pass.
   mc_error_is_not_the_small_n_band: >-
     THE MONTE-CARLO ERROR AND THE REFERENCE BAND ANSWER DIFFERENT QUESTIONS, and only
     one of them is DN-1.1's n ~ 14. `ah.eval.battery.mc_error` is the batch-means
@@ -1112,11 +1221,24 @@ conventions:
 
   # WP2.2 Task 5 -- memorization tier (ah.eval.metrics.memorization).
   memorization_nn_distance_estimator: >-
-    NEAREST-NEIGHBOUR DISTANCE FROM EACH GENERATED BLOCK TO THE NEAREST TRAIN BLOCK.
-    A "block" is a non-overlapping MEMORIZATION_BLOCK_MONTHS=24-month window of ONE
-    factor's own path (never spanning a path boundary on the generated side, never
-    crossing the TRAIN/VALIDATION boundary on the real side; 24 is reused from
-    UTILITY_WINDOW_MONTHS, not a second arbitrary window length). Each block is the
+    NEAREST-NEIGHBOUR DISTANCE FROM EACH GENERATED BLOCK TO THE NEAREST TRAIN WINDOW.
+    A GENERATED "block" is a non-overlapping MEMORIZATION_BLOCK_MONTHS=24-month window
+    of ONE factor's own path (never spanning a path boundary; 24 is reused from
+    UTILITY_WINDOW_MONTHS, not a second arbitrary window length). The TRAIN-side
+    CANDIDATE SET it is searched against is EVERY OFFSET (sliding windows, stride 1)
+    of that factor's TRAIN split -- not the index-0-anchored grid of non-overlapping
+    blocks used before WP2.2c Item 2. THE REASON, because it changes every value this
+    metric family reports: chopping BOTH sides on one fixed grid made all three metrics
+    a measurement of block PHASE rather than of copying. WP2.2b measured a literal,
+    zero-noise verbatim replay of a training decade at near_duplicate_fraction = 0.2423,
+    statistically indistinguishable from a plain block bootstrap's 0.2394, while the
+    identical copy snapped to the grid scored 0.8875 -- i.e. a memorizer that began its
+    replay on an odd month evaded the gate entirely. Windows crossing the
+    TRAIN/VALIDATION boundary are still never formed on the real side. CONSEQUENCE:
+    every nearest-neighbour distance is now a minimum over ~830 candidates rather than
+    ~35 and so FALLS for every generator; nn_distance_p05/p50 values are not comparable
+    across the WP2.2c boundary and WP2.3 must derive their floors from a post-WP2.2c
+    run. Each block/window is the
     RAW 24-dimensional vector of monthly values over the window, standardized by that
     SAME factor's own TRAIN-split mean/std (never train+validation combined -- train is
     the population this metric checks copying against). Distance between two blocks of
@@ -1159,16 +1281,30 @@ conventions:
     FRACTION OF GENERATED BLOCKS WITHIN A DATA-DRIVEN EPSILON OF A TRAIN BLOCK. Reuses
     the SAME per-generated-block nearest-train-neighbour distance
     memorization_nn_distance_estimator pools. Epsilon, per factor: the 5th percentile
-    (MEMORIZATION_EPSILON_PERCENTILE) of that SAME factor's TRAIN split's own
-    LEAVE-ONE-OUT nearest-neighbour distance (every train block against every OTHER
-    train block of the same factor) -- self-calibrated to how close two genuinely
+    (MEMORIZATION_EPSILON_PERCENTILE) of the distances obtained by taking each
+    non-overlapping TRAIN block as a query and searching it against every SLIDING TRAIN
+    WINDOW THAT DOES NOT OVERLAP IT -- self-calibrated to how close two genuinely
     INDEPENDENT historical trajectories of the factor ever naturally sit, so only a
     generated block sitting closer to some training example than all but the tightest
     5% of distinct historical examples ever sit to each other counts as a duplicate.
+    THE CALIBRATION MOVES WITH THE SEARCH (WP2.2c Item 2), and must: a minimum over ~830
+    candidates is systematically smaller than a minimum over 34, so enlarging the
+    generated side's search while leaving the epsilon on the old grid would have raised
+    every generator's score -- a false-positive machine, not a fix. Excluding only the
+    query's own 24 months of overlap, rather than its whole grid cell, is likewise
+    deliberate: a window offset by one month shares 23 of 24 values with the query and
+    is not an independent trajectory, so counting it would drive epsilon to nearly zero
+    and no generator could ever register as a duplicator.
     near_duplicate_fraction is the fraction of pooled generated blocks (pooled across
     every qualifying factor) whose nearest-train distance is below that factor's own
     epsilon. NaN if no factor's TRAIN split clears the 5-block floor (a leave-one-out
     epsilon needs >= 2 blocks to be defined at all).
+    THE NULL VALUE IS 0.05, NOT 0, AND THE SEALED BOUND MUST RESPECT THAT: epsilon is by
+    construction the 5th percentile of the independent-trajectory distance distribution,
+    so a perfectly non-memorizing generator drawn from the same population scores ~0.05.
+    Before Item 2 an independent draw scored a structural 0.0 only because it, like a
+    verbatim copy, could not land on the fixed grid. See the threshold entry for the
+    derivation of the 0.5 majority bound that replaced the old max of 0.05.
 
   # WP2.2 Task 5 -- calibration tier (ah.eval.metrics.calibration).
   pit_ks_stat_estimator: >-
@@ -1285,7 +1421,29 @@ conventions:
     space with floors, i >= -1%, spread >= 100bp"). severity: enforce, max: 0. Two
     disjoint groups: RATE_FLOOR_FACTORS (policy_rate, ust_2y, ust_10y, hqm_curve) each
     floored at -1.0 (percentage points); SPREAD_FLOOR_FACTORS (ig_spread, hy_spread,
-    funding_spread) each floored at 1.0 (100bp). cpi (an index level) and equity_vol (a
+    funding_spread) each floored at 0.0.
+    THE SPREAD FLOOR IS 0.0, NOT DN-1.1's LITERAL 100bp (WP2.2c Item 4). WP2.2b found
+    this was the ONLY enforce gate in the battery that fired, that it fired identically
+    for all five negative controls INCLUDING the three that replay real historical
+    values verbatim, and that absent that one accident all five deliberately-broken
+    generators would have been recorded as PASSING. It was not detecting anything: it
+    was reporting that a realistic funding spread sits below 100bp. It does -- the TED
+    spread spent most of 2010-2020 between 15 and 40bp. A floor that rejects the
+    historical record is not a floor, and an enforce gate that fires for history cannot
+    be evidence about a generator; worse, it masks the gates that are, because `passed`
+    is already False before they are read. DN-1.1's floors are a GENERATIVE device (the
+    softplus parameterization exists so the model cannot emit a negative spread) and
+    100bp is a plausible softplus offset, not an empirical bound. The falsifiable
+    statement that survives is that a credit or funding spread is a difference between a
+    riskier yield and a safer one and cannot be negative. 0.0 is violated by no
+    historical observation of any of the three factors and still catches the failure the
+    gate exists for: nc1-iid-gaussian emits negative spreads and now fires this gate
+    ALONE among the five, which is a detection rather than a constant. Recorded as a
+    deviation from DN-1.1's literal text: governance/retrofit-register.md RFR-41, for
+    WP2.3 to ratify. The alternative deliberately NOT taken -- deriving the floor from
+    the train+validation panel's own observed minimum per factor -- would make this a
+    band rather than a constraint, which is a different kind of object.
+    cpi (an index level) and equity_vol (a
     volatility index) carry no DN-1.1-stated floor and are excluded. floor_violations is
     the POOLED count of (factor, path, month) observations below their factor's own
     floor, summed over every qualifying factor present in the ensemble. NaN if no
@@ -1768,6 +1926,89 @@ thresholds:
     # `correlation` for (within-block pairs have no registered reference statistic to be
     # a distance TO -- governance/retrofit-register.md RFR-14).
     "cross_block_corr_matrix_distance": {min: 0.0, max: 10.0, severity: report}
+    # ----------------------------------------------------------------------- #
+    # WP2.2c Item 3 -- the band-exceedance gates. THE ONLY THRESHOLDS IN THIS FILE
+    # THAT ARE NOT PROVISIONAL PLACEHOLDERS awaiting a real run, because their value is
+    # not an empirical quantity: 0.5 is a majority rule, and the null it is judged
+    # against is fixed by this file's own sealed band `level` (0.9), not by data.
+    # Derivation, in full, once, for all three (see also
+    # band_exceedance_gate_estimator in the conventions block and
+    # ah.eval.metrics.monthly's module docstring):
+    #   - a `level`-percentile band has miss rate (1 - level) = 0.10 BY CONSTRUCTION, so
+    #     under the null (a generator matching history) E[fraction] <= 0.10;
+    #   - Markov: P(fraction > 0.5) <= 0.10/0.5 = 0.2 under ARBITRARY dependence between
+    #     the comparisons -- i.e. assuming nothing at all about the factor panel's
+    #     correlation structure. Under anything near independence the same probability
+    #     is ~1e-8 (moment family) to ~1e-30 (dependence family).
+    # A per-NAME band gate was rejected and the rejection is the reason these exist: at
+    # ~570 monthly comparisons, gating each name at enforce rejects a PERFECT generator
+    # with probability indistinguishable from 1.
+    #
+    # Per-metric severity decisions, on WP2.2b's control table as evidence, recorded
+    # per the WP2.2c brief's Item 3:
+    #
+    # moment_band_exceedance_fraction -- ENFORCE. Location and scale are first-order:
+    # a generator whose marginals have drifted is wrong in a way no amount of correct
+    # higher-moment behaviour excuses, and nothing else in the battery measures them
+    # (that was WP2.2b's primary finding). Measured: nc3-shifted-bootstrap 0.654
+    # (17 of 26 comparisons) against nc5-condition-ignoring -- the SAME bootstrap with
+    # the distortion switched off -- at 0.231, nc1/nc2 at 0.308 and nc4 at 0.000.
+    # THE MARGIN IS THE SMALLEST OF THE THREE GATES AND IS STATED RATHER THAN GLOSSED:
+    # nc3 clears 0.5 by 4 comparisons out of 26. The reason it is not larger is
+    # instructive -- for a persistent LEVEL factor the length-matched band on a
+    # 120-month mean is enormous (the mean of a decade of a near-random-walk moves a
+    # long way), so a 0.5-sigma shift measured in FULL-sample sigma sits inside it;
+    # nc3's exceedances are concentrated in the return-bearing factors, where the band
+    # is tight and the shift is 3+ half-widths out. WP2.3 should expect this gate's
+    # power to be carried by the return factors and should NOT read a pass as evidence
+    # that a level factor's drift was checked.
+    # Note also that 0.231-0.308 for the three UNDISTORTED controls is not a measured
+    # false-positive rate: none of them is a known-good generator (iid, shuffled and
+    # 24-month-block-stitched series all genuinely have the wrong local dispersion at a
+    # 120-month scale). The null rate cannot be measured at all until WP2.4 supplies a
+    # generator that is meant to match history; the 0.10-per-comparison premise above is
+    # the band's own definition, not an empirical claim, and WP2.3 must check it against
+    # bootstrap-v1 before sealing.
+    #
+    # dependence_band_exceedance_fraction -- ENFORCE, over the JOINT statistics
+    # (acf_r_sum, acf_abs_sum, acf_abs_decay), not the 31 per-lag ones. Serial
+    # dependence is DN-1.1's named monthly stylized fact ("ACF |r|") and destroying it
+    # is what makes a generated path not a history. Measured: nc1-iid-gaussian 0.615,
+    # nc2-shuffled 0.718 (both destroy it outright) against nc3 0.077, nc4 0.128,
+    # nc5 0.128 (all three preserve it), bound 0.5.
+    # RECORDED BECAUSE IT IS THE NON-OBVIOUS HALF OF THE DESIGN: the first version of
+    # this gate aggregated all 403 per-lag comparisons and scored nc1 at 0.367 and nc2
+    # at 0.377 -- a real 4.5x separation from a block bootstrap's 0.082, but nowhere
+    # near a majority, and no honest false-positive argument puts the bound below ~0.5.
+    # A 120-month per-lag band is wide (SE ~0.09 at lag 24), so aggregating the
+    # COMPARISONS aggregates the noise with the signal; summing the ACF VALUES and
+    # banding the sum pools the signal. A two-stage "majority of factors, each by a
+    # majority of its lags" variant was measured and is strictly worse (0.077 for both
+    # nc1 and nc5 -- no separation). The BOUND did not move; the STATISTIC did. That
+    # distinction is the whole difference between deriving a gate and fitting one.
+    # STATED LIMIT: a generator breaking a single lag while preserving the cumulative
+    # profile would not move this gate.
+    #
+    # tail_band_exceedance_fraction -- REPORT, deliberately, and this is the honest
+    # half of the decision. A tail failure is usually confined to the return-bearing
+    # factors (4 of 13 active factors today), so it cannot reach a majority of the
+    # family however severe it is: nc1-iid-gaussian, which replaces every fat tail in
+    # the panel with a Gaussian one, scores 0.234. Sealing this at enforce would
+    # be a gate that cannot fire, which reads in the artifact as a check that passed.
+    # CONSEQUENCE, stated rather than hidden: nc1-iid-gaussian is NOT blocked by the
+    # tail machinery that correctly detects it (11 substantive tail band failures,
+    # exactly on the excess_kurtosis / hill_tail_index statistics DN-1.1 names) -- it is
+    # blocked by the dependence gate, for a different, also real defect. A generator
+    # that got the dynamics right and the tails wrong would therefore pass at enforce
+    # today. Closing that needs a per-family gate scoped to
+    # the return-bearing factors, or a sealed absolute band on the tail statistics
+    # derived from a real run; both are WP2.3's, and the gap is recorded in
+    # governance/retrofit-register.md rather than papered over with a bound chosen to
+    # make one control fire.
+    # ----------------------------------------------------------------------- #
+    "moment_band_exceedance_fraction": {min: null, max: 0.5, severity: enforce}
+    "dependence_band_exceedance_fraction": {min: null, max: 0.5, severity: enforce}
+    "tail_band_exceedance_fraction": {min: null, max: 0.5, severity: report}
     # WP2.2 Task 5. money_pump_violations/floor_violations are audits of a HARD
     # structural constraint that should never fire on a well-behaved generator (DN-1.1
     # Sec.II.4's own floors; WP2.8's constraints.py makes them structurally impossible
@@ -1795,10 +2036,47 @@ thresholds:
     "interval_coverage_90_1y": {min: 0.6, max: 0.99, severity: report}
     "interval_coverage_50_5y": {min: 0.2, max: 0.8, severity: report}
     "interval_coverage_90_5y": {min: 0.6, max: 0.99, severity: report}
+    # PROVISIONAL placeholders -- and NOT comparable to their pre-WP2.2c values: Item 2
+    # replaced the fixed 24-month train grid with a sliding-window (all-offsets) search,
+    # so a nearest-neighbour distance is now a minimum over ~830 candidates rather than
+    # ~35 and falls for EVERY generator. WP2.3 must derive both floors from a
+    # post-WP2.2c run; the old numbers would now reject a well-behaved generator.
     "nn_distance_p05": {min: 0.05, max: null, severity: report}
     "nn_distance_p50": {min: 0.1, max: null, severity: report}
     "membership_inference_auc": {min: null, max: 0.75, severity: report}
-    "near_duplicate_fraction": {min: null, max: 0.05, severity: report}
+    # WP2.2c Item 2 + Item 3. severity: enforce, max: 0.5 -- a LOOSENED bound at a
+    # RAISED severity, and both halves are deliberate.
+    #
+    # The bound. `near_duplicate_fraction`'s null value is not 0: epsilon is the
+    # MEMORIZATION_EPSILON_PERCENTILE-th (5th) percentile of the distribution of "how
+    # close does a genuinely independent historical trajectory get", so a perfectly
+    # non-memorizing generator drawn from the same population scores ~0.05 BY
+    # CONSTRUCTION. The previous max of 0.05 therefore sat exactly ON the null and, at
+    # enforce, would have rejected roughly half of all well-behaved generators. 0.5 is
+    # the majority rule this file's band_gates block derives once and applies uniformly:
+    # "more than half the generated blocks sit closer to some training window than 95%
+    # of independent historical windows ever sit to each other". Under the null that is
+    # Binomial(n_blocks, 0.05) exceeding n_blocks/2 -- below 1e-20 at any realistic
+    # block count. It is 10x looser than the value it replaces.
+    #
+    # The severity. WP2.2b showed the metric could not separate a literal verbatim copy
+    # (0.2423) from a plain block bootstrap (0.2394) because it measured block phase;
+    # post-Item-2 a copy scores ~1.0 and a short-block resampler ~0.05-0.33. NC4 fails
+    # this gate at ~1.0 against a bound TEN TIMES LOOSER than the one it previously
+    # cleared by 31% -- which is the evidence that the promotion is not a threshold
+    # tuned to make a control fire. Memorization is also a hard, non-statistical
+    # failure: STEP2-GENERATOR-PLAN Sec.WP2.3's own decision rule names "memorization
+    # below floor" as a promotion gate, not as a reported diagnostic.
+    #
+    # CONSEQUENCE FOR WP2.4, recorded here rather than discovered there
+    # (governance/retrofit-register.md RFR-40): a stationary block bootstrap whose block
+    # length reaches the sealed 24-month memorization window emits literal verbatim
+    # historical windows and scores ~1.0 on this metric, so it FAILS this enforce gate.
+    # That is the metric reporting a true fact about such a generator, not a defect --
+    # but it means `bootstrap-v1` must either use blocks materially shorter than 24
+    # months or carry a dated exemption in governance/amendment-log.yaml. WP2.3 must
+    # ratify one of the two before sealing.
+    "near_duplicate_fraction": {min: null, max: 0.5, severity: enforce}
     # WP2.2 Task 6. ALL "report" -- STEP2-GENERATOR-PLAN Sec.WP2.3's sealed decision
     # rule states conditional-tier results are reported alongside G2 but do not gate
     # promotion. PROVISIONAL placeholders (not derived from a real run), same as every

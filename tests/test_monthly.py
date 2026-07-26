@@ -37,6 +37,9 @@ from ah.eval.reference import (
     _excess_kurtosis,
     _skew,
 )
+from ah.eval.reference import (
+    _correlation as reference_correlation,
+)
 from ah.factors import FactorManifest, FactorSource
 from ah.gen.base import Ensemble, EnsembleMeta
 
@@ -635,6 +638,84 @@ def test_build_monthly_suite_names_and_tiers() -> None:
     assert all(s.suite == "monthly" for s in specs)
     # no accidental duplicate names (register_suite would reject this anyway)
     assert len(names) == len(specs)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2c Item 1 -- the three statistics whose bands existed and were never consulted
+# --------------------------------------------------------------------------- #
+
+
+def test_mean_std_and_correlation_are_emitted_as_metrics() -> None:
+    """WP2.2b's primary finding: ``reference.SINGLE_FACTOR_STATS`` registers ``mean``
+    and ``std`` and ``CROSS_BLOCK_STATS`` registers ``correlation``, ``compute_reference``
+    computes a real length-matched band for each, and NO suite emitted the generated-side
+    value -- so a location/scale drift of any size was invisible to the whole battery."""
+    specs = build_monthly_suite(_simple_manifest(), _empty_reference())
+    names = {s.name for s in specs}
+    assert "g1.mean" in names
+    assert "g1.std" in names
+    assert "u1.mean" in names
+    assert "u1.std" in names
+    assert "g1~u1.correlation" in names
+
+
+def test_mean_and_std_use_the_single_series_functional_path_by_path() -> None:
+    """The estimator convention, pinned against the alternative it was chosen over.
+
+    The reference band for ``std`` is the sampling distribution of the standard
+    deviation of ONE series of the ensemble's own path length, so the ensemble side must
+    apply that same single-series functional per path and average -- the rule
+    ``acf_abs_decay`` already follows and this module's docstring already states. POOLING
+    every ``(path, month)`` observation would instead add the BETWEEN-path dispersion of
+    the path means into the number, which the reference replicate contains no analogue of.
+
+    Two paths with deliberately different means and identical within-path spread make the
+    two conventions numerically different, so this test distinguishes them rather than
+    restating one of them."""
+    paths = np.array([[0.0, 2.0, 0.0, 2.0], [10.0, 12.0, 10.0, 12.0]], dtype=np.float64)
+    ensemble = _one_factor_ensemble(paths, factor="g1")
+    specs = build_monthly_suite(_simple_manifest(), _empty_reference())
+
+    per_path_std = float(np.mean([np.std(p, ddof=1) for p in paths]))
+    pooled_std = float(np.std(paths.reshape(-1), ddof=1))
+    assert not np.isclose(per_path_std, pooled_std), "fixture does not separate the two"
+
+    assert _find_spec(specs, "g1.std").fn(ensemble) == pytest.approx(per_path_std)
+    # `mean` is numerically identical under both conventions at equal path lengths; it
+    # follows the per-path one anyway so the pair cannot drift apart.
+    assert _find_spec(specs, "g1.mean").fn(ensemble) == pytest.approx(float(np.mean(paths)))
+
+
+def test_mean_and_std_detect_a_location_and_scale_shift() -> None:
+    """The whole point of Item 1, in miniature: an affine drift moves these two and
+    nothing else in the tier. Every other monthly statistic is invariant to
+    ``x -> mu + c*(x - mu) + d`` by construction, which is why WP2.2b's NC3 and NC5
+    produced identical band-failure sets."""
+    rng = Generator(PCG64(77))
+    base = rng.normal(0.0, 0.04, size=(8, 120))
+    drifted = base.mean() + 1.5 * (base - base.mean()) + 0.5 * base.std()
+    specs = build_monthly_suite(_simple_manifest(), _empty_reference())
+    mean_fn = _find_spec(specs, "g1.mean").fn
+    std_fn = _find_spec(specs, "g1.std").fn
+    skew_fn = _find_spec(specs, "g1.skew").fn
+
+    base_e = _one_factor_ensemble(base, factor="g1")
+    drift_e = _one_factor_ensemble(drifted, factor="g1")
+    assert drift_e is not None
+    assert mean_fn(drift_e) > mean_fn(base_e) + 0.4 * base.std()
+    assert std_fn(drift_e) == pytest.approx(1.5 * std_fn(base_e), rel=1e-9)
+    # ... and the tier's existing statistics genuinely cannot see it.
+    assert skew_fn(drift_e) == pytest.approx(skew_fn(base_e), abs=1e-9)
+
+
+def test_correlation_metric_equals_the_reference_definition_on_pooled_observations() -> None:
+    rng = Generator(PCG64(78))
+    a = rng.normal(0.0, 0.03, size=(6, 40))
+    b = 0.7 * a + rng.normal(0.0, 0.02, size=(6, 40))
+    ensemble = _two_factor_ensemble(a, b, names=("g1", "u1"))
+    specs = build_monthly_suite(_simple_manifest(), _empty_reference())
+    value = _find_spec(specs, "g1~u1.correlation").fn(ensemble)
+    assert value == pytest.approx(reference_correlation(a.reshape(-1), b.reshape(-1)))
 
 
 def test_metric_returns_nan_when_factor_absent_from_ensemble() -> None:
