@@ -49,6 +49,15 @@ All notable changes to this project are documented here. The project follows
     sealed campaign vintage `2026-07-26.1` (offline, catalog-read, deterministic).
   - 61 new tests (`test_climate_model/fit/simulate.py`); no seal amendment needed
     (new files under `ah/gen/climate/` only — no judged source touched).
+  - **Real-panel fit accepted** (`climate-fit-report.md`, artifact
+    `sha256:98bdb68f…`, config `cfg:f7d4119c7101fd08`, seed 20260726, 133 min,
+    4 chains x 750 draws): **0 divergences, max R-hat 1.0014, min ESS 1346**;
+    PPC 90% coverage 0.88–1.00 across all ten channels. Slow states plausible:
+    pi* half-life median 9.6y (prior rationale 8–20y), mu_r 0.88% +/- 0.67,
+    phi_pi 0.62 (Taylor principle held, not imposed), b_val 6.3 (10y
+    predictability slope). Recorded weak identifications: `delta_L` (credit-norm
+    cycle link) is data-dominated-by-prior, and `sigma_g`'s lower tail touches 0
+    — both flagged for WP2.6/WP2.7 rather than tightened away.
 - **The sealed-claims sweep — every checkable sentence audited against the code, and
   the audit made standing. `pre-registration.lock` is now
   `sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585`** (supersedes
