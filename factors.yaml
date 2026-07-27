@@ -24,12 +24,24 @@
 # supersedes that assignment, since WP2.2 Task 1 was citing RFR-1 as its own reason.
 #
 # WP2.3 DECIDED (2026-07-26): option (b) -- seal with `commodities` absent, as a named
-# limitation. And it is not the only one: the sealed reference run found that
-# `policy_rate` and `hy_spread` ALSO produced no train+validation data on the frozen
-# campaign vintage (the vintage predates fred.FEDFUNDS's registration; fred.HY_OAS's
-# ~3 licensed years all fall inside the holdout). `pre-registration.yaml`'s
-# `reference_run.missing_factors` is the sealed list of all three, and
-# `ah.eval.prereg.verify()` now REJECTS any threshold keyed to one of them.
+# limitation. And it is not the only one: `hy_spread` ALSO produces no train+validation
+# data on the frozen campaign vintage, because fred.HY_OAS's ~3 licensed years all fall
+# inside the holdout. `pre-registration.yaml`'s `reference_run.missing_factors` is the
+# sealed list of BOTH -- [commodities, hy_spread] -- and `ah.eval.prereg.verify()` now
+# REJECTS any threshold keyed to either.
+#
+# CLAIMS-SWEEP CORRECTION (2026-07-26, after the re-seal): this paragraph read
+# "`policy_rate` and `hy_spread` ALSO produced no train+validation data ... the sealed
+# list of all three". That was true of campaign vintage 2026-07-24 and FALSE from the
+# moment vintage 2026-07-26.1 was sealed: `policy_rate` carries 798 train+validation
+# months (1954-07..2020-12) on the sealed vintage, is NOT in `missing_factors`, and is
+# in `bootstrap_v1.factor_set`. The correct wording was carried into this file's own
+# `factor_sources.policy_rate.proxy_for` entry below and into `pre-registration.yaml`,
+# but not into this header -- the THIRD surviving instance of one wrong sentence, after
+# `seal_scope.splice_py_reason` and `ah.eval.prereg._check_threshold_data_availability`'s
+# docstring. Nothing downstream rested on it: the sealed `missing_factors` list itself
+# was always [commodities, hy_spread], and it is the list, never this prose, that
+# `verify()` reads.
 
 factor_blocks:
   global:  [equity_mkt, smb, hml, mom, equity_vol, commodities, ig_spread, hy_spread]

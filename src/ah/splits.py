@@ -7,8 +7,12 @@ modules never import ``ah.eval.g2``. Reference statistics (WP2.2) and normalizat
 (WP2.5/2.8) are computed on train+validation only; this module is the single door to
 the data by split.
 
-Split dates here are **provisional** and are sealed in ``pre-registration.yaml``
-(WP2.3); the holdout is the final ~5 years and is spent exactly once (WP2.11).
+Split dates here are **sealed**, not provisional: WP2.3 froze them in
+``pre-registration.yaml``'s ``splits:`` block on 2026-07-26, that document is normative
+if the two ever disagree, and ``ah.eval.prereg.verify`` compares this module's
+:data:`SPLITS` against it on every battery invocation (RFR-6). Moving a boundary is a
+dated amendment plus a re-seal, not an edit. The holdout is the final ~5 years and is
+spent exactly once (WP2.11).
 """
 
 from __future__ import annotations
@@ -26,7 +30,9 @@ class Split:
     end: str  # exclusive, YYYY-MM-DD
 
 
-# Provisional campaign splits (sealed for real in WP2.3). Holdout = final ~5 years.
+# The sealed campaign splits (pre-registration.yaml `splits:`, WP2.3, 2026-07-26).
+# Holdout = final ~5 years. Claims-sweep correction: this comment read "Provisional
+# campaign splits (sealed for real in WP2.3)" after WP2.3 had sealed them.
 TRAIN = Split("train", "1871-01-01", "2011-01-01")
 VALIDATION = Split("validation", "2011-01-01", "2021-01-01")
 HOLDOUT = Split("holdout", "2021-01-01", "2026-08-01")

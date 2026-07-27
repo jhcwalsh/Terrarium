@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b",
+  "digest": "sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585",
   "hashed_files": [
     "factors.yaml",
     "fixtures/worlds/conditional/crisis_severity_mild.worldspec.json",

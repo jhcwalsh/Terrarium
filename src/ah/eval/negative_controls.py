@@ -212,7 +212,13 @@ What the first run of this suite found (WP2.2b Task 7)
 Recorded here rather than only in a report, because this module is the evidence artifact
 ``G2-EVIDENCE.md`` cites and a reader of the table needs to know how to read it. Each
 finding is pinned by a named ``test_finding_*`` in ``tests/test_negative_controls.py``;
-when WP2.3 closes one, that test fails loudly and is deleted in the same commit.
+when a later work package closes one, that test fails loudly and is REPLACED, in the
+same commit, by a ``test_closed_*`` asserting the new behaviour -- so the record of what
+was once true survives beside the proof that it no longer is. (Claims-sweep correction,
+2026-07-26: this read "is deleted in the same commit", which is not what the suite does
+and is not what was done to finding 1 below -- and the citation in that finding still
+named the deleted ``test_finding_*``, a test that no longer exists. Descriptions of the
+repository's own practice are claims too.)
 
 **Every number below is exactly what this module's own synthetic-fixture run produces**
 (``tests/test_negative_controls.py``'s ``_SEED``/``_N_PATHS``/``_MONTHS``/
@@ -228,10 +234,15 @@ unverifiable production run.
    ``equity_mkt`` pooled mean and standard deviation both sit well outside their own
    train+validation bands, and in its own designated cell NC3's band-failure SET is
    IDENTICAL to ``nc5-condition-ignoring``'s -- the identical construction with the
-   distortion switched off -- when the two are sampled at the same seed (see
-   ``tests/test_negative_controls.py::
-   test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap``
-   for the exact, paired comparison this claim now rests on).
+   distortion switched off -- when the two are sampled at the same seed.
+   **CLOSED by WP2.2c Item 1**, and the citation here was stale: it named
+   ``test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap``,
+   which was replaced when the finding closed and does not exist. The live pair is
+   ``tests/test_negative_controls.py::test_closed_every_suite_now_emits_mean_std_and_correlation``
+   (all three statistics are emitted now) and
+   ``::test_closed_the_monthly_tier_separates_nc3_from_the_undistorted_bootstrap`` (the
+   exact, paired, same-seed comparison, now showing separation). The finding itself is
+   left standing as the historical record it is.
 2. **The battery's blocking surface is currently blind to all five controls.** Only four
    ``enforce``-severity thresholds exist; three fired for nobody, and the fourth
    (``floor_violations``) fired identically for all five, including for controls that

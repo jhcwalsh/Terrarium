@@ -573,15 +573,20 @@ def test_no_gen_module_imports_ah_eval() -> None:
 # --------------------------------------------------------------------------- #
 # the schema alias (WP2.4b)
 # --------------------------------------------------------------------------- #
+#
+# These assert the REGISTRATION, never `registry.resolve`. Resolving runs the factory,
+# which opens the real catalog under `data/` -- and `data/` is gitignored, so a test
+# that resolves cannot pass on a fresh clone and collides with any concurrent process
+# holding `catalog.duckdb`. The alias is a registry fact; check it as one.
 
 
-def test_an_authored_world_resolves_to_the_benchmark() -> None:
-    """A checked-in WorldSpec naming the schema's id must reach the generator.
+def test_an_authored_world_names_a_registered_generator() -> None:
+    """A checked-in WorldSpec's generator_id must be reachable.
 
-    Before the alias this raised ``UnknownGeneratorError``: ``schemas/``'s
-    ``generator_id`` enum offers ``bootstrap-stratified``, WP2.4 registered
-    ``bootstrap-v1``, and every authored world under ``fixtures/worlds/conditional/``
-    names the former. The schema is read-only vendored truth, so the code carries both.
+    Before the alias this world validated against the schema and then failed
+    ``resolve_for_world`` with ``UnknownGeneratorError``: ``schemas/``'s enum offers
+    ``bootstrap-stratified``, WP2.4 registered ``bootstrap-v1``, and every authored
+    world under ``fixtures/worlds/conditional/`` names the former.
     """
     import json
 
@@ -593,17 +598,19 @@ def test_an_authored_world_resolves_to_the_benchmark() -> None:
             ROOT / "fixtures" / "worlds" / "conditional" / "crisis_severity_mild.worldspec.json"
         ).read_text(encoding="utf-8")
     )
-    generator = registry.resolve_for_world(load_worldspec(doc))
-    assert generator.generator_id == bs.GENERATOR_ID
+    world = load_worldspec(doc)
+    named = world.engine_defaults.generator_id
+    assert named == bs.SCHEMA_GENERATOR_ID
+    assert named in registry.registered()
 
 
-def test_both_ids_resolve_to_the_same_generator() -> None:
+def test_both_ids_are_registered_to_the_same_factory() -> None:
     """The alias is a second name, not a second generator."""
     from ah.gen import registry
 
-    assert registry.resolve(bs.GENERATOR_ID).generator_id == bs.GENERATOR_ID
-    assert registry.resolve(bs.SCHEMA_GENERATOR_ID).generator_id == bs.GENERATOR_ID
-    assert registry.snapshot()[bs.SCHEMA_GENERATOR_ID] is bs.bootstrap_v1_factory
+    snapshot = registry.snapshot()
+    assert snapshot[bs.GENERATOR_ID] is bs.bootstrap_v1_factory
+    assert snapshot[bs.SCHEMA_GENERATOR_ID] is bs.bootstrap_v1_factory
 
 
 def test_the_alias_is_the_id_the_schema_actually_permits() -> None:
