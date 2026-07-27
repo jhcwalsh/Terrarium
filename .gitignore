@@ -64,3 +64,14 @@ experiments/
 !/artifacts/wp24/
 /artifacts/wp24/*
 !/artifacts/wp24/summary.json
+# WP2.7 battery evidence, same reasoning: the per-seed reports (~700 KB JSON +
+# markdown) reproduce bit-for-bit from scripts/run_joinery_battery.py against the
+# sealed vintage and the pinned L1/L2 artifacts; the summary (verdict, enforce
+# gates, support/reconciliation distributions) and the assembly report (the
+# waypoint-tolerance record and the complete acceptance-filter rejection log --
+# the WP2.7 evidence the sealed battery report has no line for) are what later
+# PRs diff against, and no sealed document quotes those numbers.
+!/artifacts/wp27/
+/artifacts/wp27/*
+!/artifacts/wp27/summary.json
+!/artifacts/wp27/joinery-assembly-report.md

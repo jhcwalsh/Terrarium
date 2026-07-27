@@ -1,0 +1,151 @@
+{
+  "acceptance_filter": {
+    "enabled": true,
+    "factors": [
+      "equity_mkt",
+      "smb",
+      "hml",
+      "mom"
+    ],
+    "max_reject_fraction": 0.1,
+    "metrics": [
+      "skew",
+      "excess_kurtosis",
+      "hill_tail_index_5pct"
+    ],
+    "n_rejected": 102
+  },
+  "criterion_bearing": true,
+  "filtered": {
+    "enforce_failures": [],
+    "enforce_results": [
+      {
+        "name": "dependence_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.4722222222222222
+      },
+      {
+        "name": "floor_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "moment_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.125
+      },
+      {
+        "name": "money_pump_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "near_duplicate_fraction",
+        "passed": true,
+        "value": 0.04449869791666667
+      }
+    ],
+    "n_enforce": 5,
+    "n_enforce_failures": 0
+  },
+  "layer_artifacts": {
+    "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+    "regimes_pins_climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+    "regimes_sha256": "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
+  },
+  "months": 120,
+  "n_paths": 1024,
+  "n_rejections": 102,
+  "passed_unfiltered": true,
+  "prereg_digest": "sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585",
+  "prereg_verified": true,
+  "reconciliation_unfiltered": {
+    "n_decades": 1024,
+    "per_factor": {
+      "cpi": {
+        "mean_abs_adjustment_max": 1.8857041286268026,
+        "mean_abs_adjustment_p50": 0.1674546968997035,
+        "mean_abs_adjustment_p90": 0.5699345631826247,
+        "n_flagged_decades": 839,
+        "variant": "proportional_via_log"
+      },
+      "equity_mkt": {
+        "mean_abs_adjustment_max": 0.04282036537955111,
+        "mean_abs_adjustment_p50": 0.011100420410387616,
+        "mean_abs_adjustment_p90": 0.018378898153395475,
+        "n_flagged_decades": 120,
+        "variant": "additive_log_returns"
+      },
+      "ig_spread": {
+        "mean_abs_adjustment_max": 0.40658158877885225,
+        "mean_abs_adjustment_p50": 0.023312935443210236,
+        "mean_abs_adjustment_p90": 0.14020192530291067,
+        "n_flagged_decades": 0,
+        "variant": "additive_band"
+      },
+      "policy_rate": {
+        "mean_abs_adjustment_max": 14.919885440928416,
+        "mean_abs_adjustment_p50": 2.867368179489974,
+        "mean_abs_adjustment_p90": 5.1077129130316035,
+        "n_flagged_decades": 1023,
+        "variant": "additive"
+      }
+    }
+  },
+  "seed": 20260727,
+  "support_unfiltered": {
+    "extrapolation_share_max": 1.0,
+    "extrapolation_share_mean": 0.879931640625,
+    "n_flagged_off_support": 1009,
+    "quantile": 0.99,
+    "regime_freq_tv_mean": 0.33568686263567926,
+    "regime_frequencies_pooled": {
+      "CRI": 0.07887369791666667,
+      "EXP": 0.41878255208333337,
+      "REC": 0.26889648437499997,
+      "REF": 0.1038330078125,
+      "SLOW": 0.09308268229166666,
+      "STAG": 0.03653157552083333
+    }
+  },
+  "system": "joinery-bootstrap-v0",
+  "unfiltered": {
+    "enforce_failures": [],
+    "enforce_results": [
+      {
+        "name": "dependence_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.4722222222222222
+      },
+      {
+        "name": "floor_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "moment_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.125
+      },
+      {
+        "name": "money_pump_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "near_duplicate_fraction",
+        "passed": true,
+        "value": 0.04552408854166667
+      }
+    ],
+    "n_enforce": 5,
+    "n_enforce_failures": 0
+  },
+  "vintage_id": "2026-07-26.1",
+  "waypoint_tolerance_unfiltered": {
+    "all_ok": true,
+    "floor_clamped_cells": 25994,
+    "n_decades_ok": 1024,
+    "n_floor_bound_years": 4918
+  }
+}
