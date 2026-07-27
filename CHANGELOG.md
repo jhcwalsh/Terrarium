@@ -7,6 +7,520 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.3 final pass — four review findings closed, and a fresh seal.
+  `pre-registration.lock` is now
+  `sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b`** (supersedes
+  `sha256:42db2026…`; 32 hashed files, unchanged set), amendment `AM-2026-07-26-005`,
+  `post_hoc: false`. **Not one threshold, band, gate, floor, split boundary, ensemble
+  size or block length moved** — nothing in this pass is a re-measurement. The digest
+  moves because two *judged sources* changed.
+
+  - **A sealed scope justification rested on a false premise.**
+    `seal_scope.splice_py_reason` claimed `policy_rate` and `hy_spread` are both in
+    `reference_run.missing_factors` "precisely BECAUSE the backfills are absent".
+    `missing_factors` is `[commodities, hy_spread]`: `policy_rate` is **present** on
+    vintage `2026-07-26.1`, and what demonstrates `fedfunds_pre1954` is unapplied is its
+    **start date** — `fred.FEDFUNDS`'s own 1954-07 rather than `fred.TB3MS`'s 1934-01.
+    The correct wording already existed in `ah/eval/prereg.py`, `factors.yaml` and
+    `S2-SEAL-SCOPE-2`, and was simply never carried into the sealed block. The
+    *conclusion* — `splice.py` stays outside the seal — is unchanged and independently
+    demonstrated per rule. RFR-70, which also carries `verify()`'s docstring ("if
+    `lock_path` is given **and exists**"), describing behaviour that the previous re-seal
+    itself removed.
+  - **`criterion_bearing` claimed a check it did not perform, and the hazard was live.**
+    `multi_seed_decision_rule.criterion_bearing_runs_only` names three conditions —
+    sealed `ensemble_size`, sealed `campaign_vintage_id`, verified prereg + lock — and
+    points at `BatteryReport.criterion_bearing` as recording them. The code compared
+    `n_paths` and `months` and **nothing else**; `ensemble.meta.vintage_id` was carried
+    onto every report and never compared. Two **incomplete** predecessor vintages remain
+    on disk and reachable through the catalog's append-only pointer history —
+    `2026-07-24` has no `fred.FEDFUNDS`, `2026-07-26` has no `fred.TEDRATE`, and
+    `asof('2026-07-25')` / `asof('2026-07-26')` both resolve to `2026-07-24` — so a
+    1024×120 run against either was stamped `criterion_bearing: true`. **The code was
+    extended to meet the sealed sentence** (`ah.eval.battery.criterion_bearing_for`),
+    rather than the sentence weakened to describe the code: that makes the sealed claim
+    true and closes the hazard at the only place it can bite. RFR-71. WP2.11 still owes
+    the hard refusal in `ah/eval/g2.py`; that half remains a requirement, and the file
+    still says so.
+  - **`beats_definition` clause (ii) is structurally empty for one of its two families —
+    now disclosed.** The clause is scoped to usable *reference* bands, and
+    `RegisteredStrategyStat` carries no `fn` by construction, so **no band exists or can
+    exist** for any of the eleven strategy statistics. Clause (ii) is therefore evaluated
+    entirely over the cross-block `tail_dependence_{lower,upper}` family (**63 usable
+    bands**) and touches **zero** strategy-level metrics — it never covers
+    `var_95`/`es_95`/`es_99`, which "NO TAIL-BAND REGRESSION over comparison-set metrics"
+    read as if it did. **Disclosure only**: the clause is unchanged and still
+    deterministic. The alternative — writing it against the sealed
+    `thresholds.strategies` instead, which *would* cover them — is named in the sealed
+    text and deliberately **not taken**, because adopting it with WP2.4's numbers already
+    in hand is post-hoc; it is available as a dated amendment before any challenger is
+    evaluated. RFR-72.
+  - **The λ invariance argument does not survive incommensurable objectives.**
+    `selection_lambda` **stays 1.0** and is not re-fitted; the stated *reason* was what
+    overreached. `generative_objective` is a different quantity per arm — ablation system
+    D runs two samplers, `hier-diffusion-v1` (an ELBO, a bound) and `hier-flow-v1` (an
+    exact log-likelihood), separately selected because the trial budget is per system
+    *per sampler* — so a fixed λ gives the D4 auxiliary a different **effective weight**
+    per arm. Invariance is invariance of the **rule**, not of the weight, and no constant
+    repairs it (a scale-aware value would have to be read off the trials, which the
+    protocol forbids). **Binding on WP2.8:** report both terms of `S` separately, per
+    system and per sampler, with their scales. RFR-73.
+  - **WP2.4's evidence was re-measured against the final seal.**
+    `scripts/run_bootstrap_battery.py` re-run at the sealed 1024×120 on campaign vintage
+    `2026-07-26.1`, three seeds: **`criterion_bearing: true`, `prereg_verified: true`,
+    verdict PASS, zero enforce failures — unchanged**, now carrying the new digest.
+    Every reported number is identical to the pre-re-seal run: the band-exceedance rate
+    (127/628 = 0.2022, then 126/628 = 0.2006 twice), the three gate values, the
+    memorization surface, every `elicitability_score`, and the full enforce set.
+  - **One artifact-integrity wart found by the re-run, and fixed.**
+    `scripts/run_bootstrap_battery.py`'s `_results()` iterated the report document's own
+    tier keys, and `BatteryReport.to_json` writes with `sort_keys=True` — so a document
+    read back from disk yields `10yr, 1_5yr, economic, monthly` while an in-memory one
+    yields `TIERS` order. A direct run and an `--analyse-only` re-derive therefore wrote
+    `band_exceedance_census.outside_comparisons` in **two different orders**, with every
+    value, count and rate identical. No number was ever affected, but a provenance
+    script whose committed output depends on which mode produced it undermines the one
+    claim it exists to make. The iteration order is now pinned to `TIERS`, so both modes
+    agree. Not a judged source — no re-seal.
+
+- **WP2.4 — `bootstrap-v1`, the frozen benchmark, and the battery's first false-positive
+  measurement.** `src/ah/gen/bootstrap.py` implements the sealed `bootstrap_v1` spec and
+  registers it in `ah.gen.registry`; it is the platform's first real generator and the
+  standing comparison for every later PR. Nothing sealed was changed to produce these
+  numbers — no threshold, no band, no gate, no negative control, and no line of
+  `pre-registration.yaml`. `pre-registration.lock` verifies unchanged on every run.
+
+  - **What was built, against the seal.** Politis-Romano stationary bootstrap, restart
+    probability `p = 1/6` with a **circular** wrap, **multivariate blocks** (one shared
+    row index across all twelve factors — tested exactly, on a source whose every column
+    is an injective function of the row index, not statistically), stratified by the
+    `regime_ruleset_v1` label of each block's **start month**. The draw span is *derived*
+    from the panel and then checked against the seal: it comes back
+    **1990-01…2020-12, 372 months**, over exactly the sealed twelve-factor `factor_set`,
+    on campaign vintage `2026-07-26.1`. `EnsembleMeta.active_blocks` now has a producer
+    (RFR-4), validated against `load_manifest().active_blocks` rather than trusted.
+  - **THE HEADLINE: `bootstrap-v1` PASSES its own battery at the sealed criterion size**
+    (1024×120, `criterion_bearing: true`, `prereg_verified: true`), with **0 enforce
+    failures of 5** enforce comparisons, in **all three sampling seeds**.
+  - **The sealed 200-path derivation reproduces exactly at 1024 paths.**
+    `dependence_band_exceedance_fraction` **0.3611** (sealed prototype: 0.361, bound 0.5),
+    `moment_band_exceedance_fraction` **0.0833** (sealed: 0.0833),
+    `tail_band_exceedance_fraction` **0.1364** (sealed: 0.1364),
+    `near_duplicate_fraction` **0.0644** (sealed at L=6: 0.065, bound 0.5),
+    `nn_distance_p05` **0.694** (sealed: 0.693; floor 0.0279, cleared 25×). The three
+    band-exceedance gates do not move with `n_paths` **at all** —
+    `moment_band_exceedance_fraction`'s Monte-Carlo error is 3e-18 — because they are
+    fractions over a *fixed* family of comparisons and more paths only sharpen each
+    statistic without flipping any comparison. That is the mechanism behind RFR-44's
+    warning that batch-means MC error is not the right sizing quantity for those gates,
+    now observed rather than argued. **`mean_block_months: 6` behaves as sealed.**
+  - **THE NUMBER THIS WORK PACKAGE EXISTS TO PRODUCE: the per-comparison band exceedance
+    rate is 0.2022** (0.2006 in the other two seeds) — 127 of 628 usable banded
+    comparisons — against the **0.10** the
+    three gates' premise assumes (`limitations.null_exceedance_rate_is_unverified`). A
+    plain resample of real history falls outside its own 90% reference bands at **twice**
+    the nominal rate. Nothing was adjusted in response; the number is the finding. It
+    does not move any verdict (the gates aggregate per family and all three pass), but it
+    says the bands are not 90% bands *for a generator*, and WP2.5+ inherits that.
+  - **Where the exceedances are, because the pattern is diagnostic.** 102 of 127 are in
+    the `monthly` suite and almost all are one thing: every **level** factor's
+    `acf_r_lag*`/`acf_r_sum` sits *below* its band (`policy_rate` 2.565 vs [3.755, 4.790],
+    `ust_2y` 2.548 vs [3.726, 4.743], `cpi`, `ust_10y`, `hqm_curve`, `ig_spread`,
+    `equity_vol`). A mean-6 block bootstrap cannot reproduce the near-unit-root
+    persistence of a level series — a real, structural generator limitation, and the one
+    the dependence gate is built to catch, which it registers at 0.361 against 0.5. The
+    18 `horizon` exceedances (`variance_ratio_12m`, `mean_reversion_halflife`, every level
+    factor) are the same defect seen through a second lens.
+  - **The two `moment` failures are the two the seal predicted**, and both are era-scale,
+    not era-mixing: `cpi.std` (36.85 vs [0.902, 16.81]) and `hqm_curve.std` (1.736 vs
+    [0.633, 1.285]) — a level's dispersion over the 1990-2020 draw span against bands
+    computed on that factor's own much longer, much lower-level history.
+    `moment_gate_risk_measured`'s worry that era mixing would break `std` **did not
+    materialise**: 2 of 24, exactly as sealed, unchanged at criterion size.
+  - **Report-severity failures, none blocking:** `policy_anchor_deviation` 15.58 (a soft
+    derived regularity a resample has no mechanism to hit), `ust_10y.acf_r_lag1` 0.7862
+    (the only per-factor autocorrelation threshold sealed at all — the same mean-6
+    persistence limit), `carry.var_95` 0.1379 / `carry.es_95` 0.2994, and thirteen
+    `conditional`-suite metrics that are expected by sealed design.
+  - **The five numbers `what_wp24_must_report` demanded are all supplied**, including the
+    measured `elicitability_score` for every computable D4 strategy (`sixty_forty`
+    **-2.540**, `momentum` **-2.391**, `carry` **-1.745**; `eqw_factors` and
+    `endowment_proxy` NaN as sealed) and `term_premium` **1.573** /
+    `equity_risk_premium` **0.00720**, both previously un-derived.
+  - **The conditional suite ran, and its failure is the measurement the plan asked for.**
+    Adherence errors: inflation 5.38pp (p90 10.32), rate 3.40pp (p90 5.50), crisis timing
+    14.13 quarters (p90 28.0), crisis severity 10.46pp (p90 19.29). Off-support pass rate
+    falls **0.531 → 0.031 → 0.000 → 0.000** across `typical`/`p95`/`p99`/`beyond`. The
+    generator honours a regime *sequence* and nothing else, by sealed design; this is
+    `conditioning_statement` measured, not a defect.
+  - **`SEVERE_TEST_POSABLE = False`, in code.** The derived span starts 1990-01, so
+    WP2.11's "exclude the 1970s, regenerate from 1965" is not posable for the benchmark
+    and `G2-EVIDENCE.md` must record that row as NOT POSABLE.
+  - **Two choices the seal did not make, recorded rather than buried.** (a) The WorldSpec
+    schema enumerates eight regime names against the ruleset's six, so
+    `recovery → EXP` and `deflation_boom → EXP` had to be chosen; the mapping is stated,
+    exhaustiveness is tested, and every conditioned ensemble records its
+    `requested_regimes`. (b) The plan's "(+slow-state-bucket)" stratification is **not
+    implemented** — no slow-state model exists before WP2.5, and the sealed
+    `stratification_statement` (which is the binding, self-contained definition) names
+    only the start-month regime label.
+  - **A second factor-resolution path, closed by a machine check.** `ah.gen` may not
+    import `ah.eval`, and `ah.eval.panel` is a sealed judged source that cannot be
+    refactored into a shared home without an amendment — so `bootstrap.py` carries its own
+    `read_factor_frames`, and a test asserts it returns frames identical to
+    `ah.eval.panel`'s for the real manifest.
+  - `scripts/run_bootstrap_battery.py` is the provenance script (`--analyse-only`
+    re-derives every number above from the committed `artifacts/wp24/battery-seed*.json`
+    with no catalog); `tests/test_bootstrap.py` adds 31 tests (suite 1068 → 1099), every
+    sealed constant asserted against `pre-registration.yaml` itself rather than restated.
+    The per-seed battery reports are gitignored on the same reasoning as the other
+    provenance-script outputs; `artifacts/wp24/summary.json` is committed because nothing
+    else in the repository would hold these numbers.
+
+- **WP2.3 re-seal — a new campaign vintage, and six defects in what was sealed.** The
+  first seal froze campaign vintage `2026-07-24`, a snapshot taken *before*
+  `fred.FEDFUNDS` was registered — so `policy_rate` had no data for reasons that had
+  nothing to do with the data existing, and the seal made that permanent. A live refresh
+  restored it (864 monthly observations, 1954-07 → 2026-06), the campaign vintage moved
+  to **`2026-07-26.1`**, and every band, floor, strategy statistic and measured claim was
+  re-derived. `pre-registration.lock` is fresh. Amendments `AM-2026-07-26-003` (the
+  vintage move) and `-004` (the document defects), both `post_hoc: false` — no generator
+  has been fitted, so nothing could be fitted to.
+
+  - **What the vintage move restored.** `policy_rate` joins `reference_run.coverage`
+    (1954-07→2020-12, n=798) and `bootstrap_v1.factor_set` (eleven factors → **twelve**);
+    the **`carry`** D4 strategy becomes computable and gains sealed thresholds
+    (`var_95` [0.0116, 0.1045], `es_95` [0.0173, 0.1561], from a measured VaR95 of
+    0.03482 / ES95 of 0.05203 over 708 months); `term_premium`, `equity_risk_premium`
+    and `policy_anchor_deviation` stop being NaN on every possible ensemble;
+    `policy_rate.excess_kurtosis` is **restored** (at `report`, max 7.6079 — the first
+    seal removed it, the pre-seal draft had it at `enforce`). Uncomputable D4 strategies
+    go from three to two. **The check that the move touched only what depended on it:**
+    every pre-existing per-factor band, and `sixty_forty`/`momentum`'s D4 statistics,
+    came back **bit-identical**.
+  - **What it did not fix, stated so it is not assumed.** `hy_spread` is still dead — 37
+    observations, all inside the holdout; that is an ICE licensing limit on what FRED
+    serves, not a stale snapshot, and no refresh will ever fix it. `commodities` is still
+    unsourced, so `eqw_factors` and `endowment_proxy` stay uncomputable.
+    `bootstrap_v1.block_draw_span` is still **1990-2020** because `equity_vol` (VIX)
+    binds it, not `policy_rate` — now sealed as a machine-measured
+    `block_draw_span_binding_factor` rather than asserted.
+  - **The block-length window was re-measured and it MOVED.** Both edges are functions of
+    the factor count. At twelve factors: L=3 fails the dependence gate at 0.537 (worst
+    seed 0.556); **L=4's worst seed lands on exactly 0.500** against a `max` of 0.5 and is
+    excluded on the knife-edge principle; `nn_distance_p05` now collapses to 0.0 at
+    **L=10** rather than L=12, and L=8's margin falls 0.512 → 0.394. The window is
+    roughly **5 ≤ L ≤ 9**, up from 4 ≤ L ≤ 8. `mean_block_months` stays **6**, now one
+    step from the lower edge rather than mid-window — stated, not smoothed.
+    `moment_band_exceedance_fraction` is 0.0833 (2 of 24) at every L, unchanged in
+    substance. `scripts/measure_block_length_window.py` is the new provenance script; the
+    first seal's numbers came from an uncommitted prototype.
+  - **`ensemble_size.n_paths` 1000 → 1024, and its evidence moved inside the seal.** Two
+    defects in one value: 1000 was a round number standing in for the 1024 the MC-error
+    grid was actually measured at, and the grid itself lived in the *unsealed*
+    `governance/decision-register.md`, editable with no amendment and no lock violation.
+    The grid is now `ensemble_size.mc_error_grid`, re-measured on the new vintage at the
+    sealed `mean_block_months`, with `scripts/measure_mc_error_grid.py` as its provenance
+    script. **WP2.4 and WP2.8–2.10 must produce criterion-bearing ensembles at 1024×120.**
+  - **The promotion rule's gating clause was unexecutable.** It said "beats bootstrap-v1
+    on **the tail tier**" — but `battery.TIERS` has no tail tier and every tails-suite
+    metric is registered `tier="monthly"`, so WP2.11 would have had to invent the
+    definition *after seeing results*. `multi_seed_decision_rule.tail_tier_definition`
+    now defines it as the `tails` **suite** with its two metric families named, and
+    `beats_definition` states the objective (strictly lower mean `elicitability_score`),
+    the no-tail-band-regression condition, the NaN direction, and the pooled arm as an
+    exact inequality on the cross-seed mean and sd. Pinned by test against a live suite
+    registration.
+  - **The head-to-head is biased toward promotion, and it is now sealed.**
+    `bootstrap-v1` resamples 1990-2020 only, while a challenger fitted on the full span
+    has seen 1929-33, 1937, 1973-74 and 1987 — and both are scored against the *same*
+    realizations. `multi_seed_decision_rule.benchmark_draw_span_bias` records it and
+    obliges `G2-EVIDENCE.md` to report the comparison restricted to the common window
+    alongside any PROMOTE.
+  - **`tuning_protocol.selection_lambda: 1.0`.** The first seal said "at the config's own
+    sealed lambda" and sealed no lambda anywhere — which pinned nothing and would have let
+    each trial carry its own weighting. Authored, not derived, and named as such; the
+    load-bearing property is invariance across systems, samplers and seeds, and it may
+    never be selected from the trials.
+  - **RFR-12 re-taken on measured evidence; RFR-9 finally answered.** With `policy_rate`
+    present the `cash_tr_1m` residual leg is buildable, so the numeraire decision was
+    re-taken rather than inherited from an impossibility argument that no longer holds.
+    Still option (b): adding the leg truncates `momentum`'s sample 1134 → 798 months
+    (ES99 0.15597 → 0.12923) while changing VaR95/ES95/VaR99/ES99 by **nothing at five
+    decimals** on that same span — it corrects a mean-level bias invisible to every
+    statistic sealed for `momentum`, at the cost of the worst tail in the record. Re-entry
+    is now concrete (the `fedfunds_pre1954` splice from `fred.TB3MS`, 1934-01). RFR-9 —
+    open since WP2.2 and assigned to WP2.3 — is closed as `S2-ENDOWMENT-WEIGHTS`:
+    `endowment_proxy`'s `credit_xs_hy` 0.15 is a **risk budget**, not a capital share.
+  - **`verify()` no longer tolerates a missing lock.** It skipped the lock check entirely
+    when the file was absent, so `rm pre-registration.lock` made every battery run verify
+    clean and silent — and a test *asserted* that behaviour. Naming a `lock_path` for a
+    sealed document now asserts the lock is there. An unsealed document (the pre-seal
+    state `seal()` is called from) is unaffected.
+  - **Memorization floors re-derived**: the pooled historical null moved from p05 0.0548
+    / p50 2.1660 (n=339, 11 factors) to **0.0557 / 2.0742** (n=367, 12 factors), so the
+    sealed floors move to **0.0279 / 1.0371**. `scripts/measure_seal_evidence.py` is the
+    new provenance script and calls the battery's own private helpers rather than
+    reimplementing the search.
+  - Count corrections: `structurally_unavailable_statistics` said "eleven names" for a
+    twelve-name list; `d4_commodities_consequence` attributed both uncomputable D4
+    strategies to `commodities` alone (`endowment_proxy` is independently blocked by
+    `hy_spread`). New retrofit rows **RFR-61…RFR-69**.
+
+### Fixed
+- **`ah.data.refresh` silently dropped every fresh series from each new vintage.** A
+  vintage is documented as a complete as-of snapshot and every read pins exactly one, but
+  `plan` only fetches series that are *missing or stale* — so the first refresh after the
+  initial build wrote only the due series and every fresh one vanished from pinned reads,
+  reporting 0% coverage in `GAPS.md` while its observations sat on disk under the older
+  vintage. `fred.TEDRATE` (retired 2022-01, therefore never stale under its 9999-day SLA)
+  fell out of the `2026-07-26` vintage, taking `funding_spread` with it. `Catalog.
+  latest_vintage_with()` plus `refresh._carry_forward()` now re-stamp every already-held,
+  not-refetched series into the new vintage; immutability is untouched (a new
+  `(vintage, series)` key, the older vintage byte-identical) and carried rows are not
+  re-submitted to QC, because re-judging unchanged history against a later as-of date
+  would quarantine a vintage for the sole reason that a retired series is still retired.
+  `ah data refresh` reports the carried count. This is why the campaign vintage is
+  `2026-07-26.1` and not `2026-07-26`. (RFR-62.)
+
+- **WP2.3 — the pre-registration seal. This is the one-way door.** `pre-registration.yaml`
+  is `sealed: true` and `pre-registration.lock` is committed, hashing 32 files: the
+  document, `factors.yaml`, all eight metric suites, `reference.py`, `battery.py`,
+  `panel.py`, `prereg.py` itself, `g2.py`, `splits.py`, `strategies.py`, `factors.py`,
+  `negative_controls.py`, `_pooling.py`, both battery report modules, and the eight
+  authored conditional worlds. `run_battery` now verifies the document **and the lock**
+  on every invocation, so a modified YAML or a modified enforce-metric implementation
+  stops the battery. From here, every change to any of those files is a dated,
+  post-hoc-flagged amendment in `governance/amendment-log.yaml`.
+
+  - **Every band comes from one reference run on this commit.** RFR-25 required it: six
+    metric names changed *meaning* and two changed *value* during WP2.2's fix passes, so
+    no pre-WP2.2c number survives. `scripts/compute_campaign_reference.py` is the
+    provenance script; its constants are asserted equal to the sealed `reference_run:`
+    block (vintage `2026-07-24`, seed 20260726, 1000 resamples, level 0.9, block length
+    120, replicate length 120).
+  - **The reference run found a live defect (RFR-5, closed).** Three of fourteen declared
+    active factors have no train+validation data on the frozen vintage — `commodities`
+    (declared unavailable), `policy_rate` (the vintage predates `fred.FEDFUNDS`'s
+    registration) and `hy_spread` (its ~3 licensed years all fall inside the holdout).
+    `policy_rate.excess_kurtosis` was sealed at **enforce**; under THE ONE NaN RULE it
+    would have failed every run forever. Removed, and `verify()` now rejects any
+    threshold keyed to a factor or D4 strategy with no computable statistic. Corollary:
+    **three** of five D4 strategies are unevaluable, not the two
+    `rationale.d4_commodities_consequence` named.
+  - **The ensemble size is sealed** (`n_paths: 1000`, `months: 120`), on the owner's
+    direction, because the gates' power rises without limit in ensemble size while their
+    bounds do not move: `max: 0.5` at 16 paths is not the same criterion at 1000.
+    Justified by a measured MC-error/band-width analysis (worst ratio 0.039 at n≈1024
+    against 0.149 at n=64). Any other size is recorded `criterion_bearing: false` on the
+    report and may not be cited at G2. **WP2.4 and WP2.8–2.10 must use it or amend.**
+  - **`bootstrap-v1`'s full spec is frozen, and both of its enforce risks are measured.**
+    Politis–Romano stationary bootstrap, **geometric blocks with mean 6 months**,
+    regime-stratified on `regime_ruleset_v1`, over the eleven factors with data. The
+    block length is bounded *below* by `dependence_band_exceedance_fraction` (mean block
+    3 measures 0.515 and fails the 0.5 gate) and *above* by the memorization surface
+    (`nn_distance_p05` collapses to 0.0 once the verbatim-window rate `(1-1/L)^23`
+    exceeds its own 5th percentile, at L≈8); 6 is the middle. `near_duplicate_fraction`
+    clears at every length tested — RFR-40's ~0.93 was a *fixed*-24-block number and does
+    not transfer to geometric lengths. The length-matched `std` risk was checked too:
+    `moment_band_exceedance_fraction` is 0.091 at every L from 3 to 24.
+  - **New finding: the benchmark cannot run the severe test.** A multivariate block
+    bootstrap over every factor with data can only draw from **1990-01 to 2020-12** —
+    `equity_vol` (VIX) starts 1990 — so `bootstrap-v1` reaches no pre-1990 episode, and
+    WP2.11's "exclude the 1970s, regenerate from 1965" test is *not posable* for it.
+    Sealed as the benchmark's largest single defect, with the three routes out named.
+    (RFR-56.)
+  - **What the seal does not establish**, now inside the hash as a `limitations:` block:
+    the gates' null exceedance rate is **unverified** (0.10 per comparison is the band's
+    definition, not a measurement, and metric correlation breaks the independence the
+    analytic rate assumes); the three band-exceedance gates were **designed against** the
+    negative controls, so "catches 4 of 5" is not independent validation of their design;
+    and **every** negative-control magnitude comes from a synthetic 16-path fixture, not
+    the campaign vintage. Nine further sealed limitations cover the pooled-vs-per-path
+    band mismatch, the tail gate's inability to fire at enforce, knife-edge comparisons,
+    unjudged within-block correlation, and four named estimator substitutions.
+  - **Owner decisions recorded, not disclaimed.** `S2-NC5-EXEMPTION` (the plan
+    contradicts itself at lines 89 vs 93; line 93 governs, the conditional tier stays
+    non-gating, NC5's exemption is a named narrow exception — and the pinning test now
+    asserts **which** gate blocks NC5, not merely that something does);
+    `S2-SPREAD-FLOOR` (RFR-41 ratified on measured evidence: 54.0% of `ig_spread` and
+    86.9% of `funding_spread` observations sit below the old 100bp floor, none below
+    0.0); `S2-NUMERAIRE-BIAS` (RFR-12 sealed as a stated bias — the `cash_tr_1m` residual
+    leg was *impossible*, since it derives from the dataless `policy_rate`);
+    `S2-SEAL-SCOPE-2` (`derive.py` sealed because it is on the read path, `splice.py` not
+    because its proxy rules are registered but unapplied — and neither backfill is in the
+    campaign vintage, which answers RFR-10's standing question).
+  - **New `verify()` checks, all running on every battery invocation:** the sealed
+    `splits:` block must equal `ah.splits.SPLITS` (RFR-6); no threshold may name a factor
+    or strategy with no data (RFR-5); no `enforce` threshold may name a
+    `structurally_unavailable` statistic (twelve names, 25 metric instances, each with
+    the work package that restores it); and the sealed `ensemble_size` is checkable
+    against a run's own size.
+  - **The human gate is discharged by pre-authorization.** `AM-2026-07-26-001`
+    (`post_hoc: false`) is the amendment log's first entry and names exactly what is
+    provisional and what the D6 workshop must ratify. `AM-2026-07-26-002` corrects an
+    omission in it — the plan requires a "capped trial budget stated in
+    pre-registration" and none existed, so WP2.3 authored one
+    (`tuning_protocol.trial_budget_per_system: 40`) and the first entry failed to list
+    it as authored. The log is append-only, so the correction is a second entry that
+    names the omission, which is also the first exercise of the amendment machinery
+    against the real file.
+- **WP2.2c — battery hardening: the battery can now reject a known-bad generator.**
+  WP2.2b registered five deliberately broken generators and the battery passed all five;
+  absent one accidental `floor_violations` failure that fired identically for every
+  control (including those replaying real history verbatim), `BatteryReport.passed` would
+  have been `True` for all five. Four of the five are now caught at **`enforce`** level by
+  a **discriminating** gate inside their **designated** cell, and `shared_enforce_failures`
+  is empty — no gate fires for everything.
+
+  - **Item 1 — the three statistics whose bands existed and were never consulted.**
+    `ah.eval.metrics.monthly` now emits `<factor>.mean`, `<factor>.std` and
+    `<a>~<b>.correlation`. `reference.py` had registered all three and computed a real
+    length-matched band for each since WP2.2; no suite ever computed the generated-side
+    value, so a location/scale drift of any size was invisible. `mean`/`std` use the
+    **per-path-then-averaged** convention (the reference band is the sampling
+    distribution of the same single-series functional, so pooling would fold
+    between-path mean dispersion into `std`); `correlation` is pooled, matching its
+    `crisis_corr_lift` sibling. Deliverable:
+    `test_closed_the_monthly_tier_separates_nc3_from_the_undistorted_bootstrap` — at a
+    shared seed, where NC3's paths are a bit-exact affine transform of NC5's, the two
+    band-failure sets were previously *identical* and NC3's are now a strict superset on
+    the drift-sensitive names.
+  - **Item 2 — `near_duplicate_fraction` measures copying, not block phase.**
+    `ah.eval.metrics.memorization` searches each generated block against **every offset**
+    of the TRAIN split (stride 1) instead of an index-0-anchored 24-month grid, with the
+    epsilon recalibrated on the same search (a minimum over ~830 candidates is
+    systematically smaller than one over 34; enlarging the search alone would have been a
+    false-positive machine). A literal zero-noise verbatim copy went **0.2423 → ~1.0**;
+    the same copy snapped to the grid **0.8875 → ~1.0**, i.e. phase now carries no
+    information; NC4 **0.0654 → 0.7096**. A short-block resampler scores ~0.05–0.33.
+  - **Item 3 — the `enforce` set chosen on evidence.** Three new `PANEL_STATS` gates
+    (`moment_`/`tail_`/`dependence_band_exceedance_fraction`) make DN-1.1 §II.6's band
+    criterion blocking *as an aggregate over a family*, because a per-name band gate at
+    ~570 comparisons and a 10% miss rate would reject a perfect generator. The bound
+    (0.5) is derived from the sealed band `level` and a majority rule (Markov: ≤0.2
+    false-positive under arbitrary dependence; Hoeffding over ~13 factor units gives the
+    same 0.5 at α=0.01) — no control's value was consulted. Two supporting statistics
+    were added, `acf_r_sum`/`acf_abs_sum` (Box–Pierce without the `n` scaling): the
+    first version of the dependence gate aggregated all 403 per-lag comparisons and
+    scored NC1 at 0.367, because a 120-month per-lag band is wide; summing the *values*
+    and banding the sum moves NC1 to 0.615. **The bound did not move; the statistic did.**
+    `near_duplicate_fraction` was promoted to `enforce` at a bound **10× looser** than
+    the one it replaced (0.05 → 0.5, since 0.05 is the metric's own null by construction).
+  - **Item 4 — `SPREAD_FLOOR_PCT` 100bp → 0.0.** A 100bp floor rejects the historical
+    record (TED sat at 15–40bp for most of 2010–2020), which is why it fired for all five
+    controls and detected nothing. DN-1.1 §II.4's floors are a *generative* softplus
+    device; the falsifiable audit that survives is that a spread cannot be negative. It
+    now fires for `nc1-iid-gaussian` alone. Recorded as a stated deviation from DN-1.1's
+    literal number (`governance/retrofit-register.md` RFR-41), for WP2.3 to ratify.
+  - **Item 5 — the 10yr tier is disclaimed, not fixed.** 73% structurally unavailable;
+    all three causes are missing *inputs* (no CAPE/valuation factor, no recession/growth
+    indicator, an `ergodicity_gap` needing a path no generator emits) and none can be
+    closed without inventing a factor. `conventions.ten_year_tier_coverage` states the
+    count, that NC2 is designated there and caught nothing, and that `G2-EVIDENCE.md`
+    must not cite a 10yr pass (RFR-42).
+  - **Item 6 — knife-edge comparisons made visible.** Every banded result carries
+    `band_distance` (signed margin; `0.0` = exactly on an edge) and `band_degenerate` in
+    the JSON, plus a `band dist` markdown column: a zero-width band can be satisfied
+    only by exact floating-point equality, and 33 exist in the synthetic-fixture run
+    (35 in a real run against `factors.yaml`). This carries two DIFFERENT consequences,
+    corrected here to distinguish them (WP2.2c honesty fix pass): the raw
+    `band_distance`/`band_degenerate` values are unconditionally preserved in
+    `MetricResult`/its JSON for every metric, degenerate or not (`battery.band_is_usable`
+    only ever gates the *aggregate* `*_band_exceedance_fraction` metrics, never the raw
+    report) — but `ah.eval.negative_controls`'s own `band_failures` list, which the
+    negative-control report table uses as per-control evidence, calls
+    `battery.outside_band` (itself gated by `band_is_usable`), so a degenerate-band
+    comparison no longer counts there either. In the real run, 2 of the 35 degenerate
+    comparisons (both `nc1-iid-gaussian`) were previously reported `band_failures` and
+    are not anymore — a real, if small, evidentiary change, not merely a cosmetic one.
+
+  **Not closed, disclaimed:** `nc5-condition-ignoring` is not caught at `enforce` in its
+  designated cell, because the conditional tier is non-gating by
+  STEP2-GENERATOR-PLAN §WP2.3's sealed decision rule, which this work package was
+  directed not to change (it is detected there on 14 of 16 metrics, and blocked
+  elsewhere). `tail_band_exceedance_fraction` stays `report`: a majority rule cannot fire
+  on a tail failure confined to the 4 return-bearing factors of 13, so NC1 is blocked by
+  the dependence gate rather than by the tail machinery that correctly detects it
+  (RFR-43). A block bootstrap with blocks ≥ 24 months now fails the memorization gate —
+  correctly, but WP2.4's `bootstrap-v1` must use shorter blocks or carry an amendment
+  (RFR-40). No negative control was weakened and no threshold was tuned to make one fire.
+
+- **WP2.2c honesty fix pass — disclosure findings inside the text WP2.3 is about to
+  hash.** No threshold moved and no control was weakened; every change below is text and
+  disclosure, plus one public-name promotion. **Critical 1**: `BAND_EXCEEDANCE_FAMILIES`'s
+  moment/tail split is an undisclosed, outcome-determining degree of freedom, not a
+  DN-1.1 mandate — DN-1.1 Sec.II.6's monthly row names no `mean`/`std` at all, and its
+  citation was doing more work than it can bear. `skew` is affine-invariant like
+  `mean`/`std`; moving it into the moment family flips `nc3-shifted-bootstrap`'s
+  `moment_band_exceedance_fraction` 0.654 (FAIL) → 0.487 (PASS) at a real run against
+  `factors.yaml`. Now recorded in full in `pre-registration.yaml`'s
+  `band_exceedance_gate_estimator` convention and `ah.eval.metrics.monthly`'s
+  `BAND_EXCEEDANCE_FAMILIES` comment, including that a reader may reasonably disagree
+  with the taxonomy shipped. **Critical 2**: `ah.eval.metrics.monthly`'s module docstring
+  claimed the moment gate's margins were "not knife-edge... drifted control near 1.0,
+  undistorted near 0.1" — the measured values are 0.654 and 0.231, and
+  `pre-registration.yaml` already said so; the docstring is corrected to match.
+  **Important 3**: the three `*_band_exceedance_fraction` gates' design (summed ACF over
+  per-lag aggregation) was chosen by measuring three candidates against the five negative
+  controls — for these three gates the controls are therefore no longer independent
+  design evidence, only evidence the sealed 0.5 bound isn't trivially satisfied.
+  Recorded in `pre-registration.yaml` and `governance/retrofit-register.md` (RFR-45);
+  `bootstrap-v1` (WP2.4) is named as the first genuinely independent test. **Important
+  4**: `near_duplicate_fraction` at `enforce` is named as the eleventh instance of this
+  work package's dominant failure mode and the first inside the blocking surface —
+  `nc1-iid-gaussian` scores a perfect `0.0` on it, which is structural (nothing shares
+  block structure with an iid series) and plan-grounded, not a defect, but a reader must
+  not read the pass as fidelity evidence. **Minor**: four wrong numbers corrected —
+  `near_duplicate_fraction`'s NC4 score (~1.0 → 0.7096) and its "cleared the old bound by
+  31%" claim (was actually a *failure* of the old 0.05 bound by 31%); the dependence
+  family's Binomial tail probability (~1e-30 → 1.0e-10, a 20-order-of-magnitude
+  correction); the Hoeffding family-wise error rate (1% → 1.56%,
+  `exp(-2·13·0.4²)`); and the claim that a degenerate band "is not removed from the
+  report" — true for the raw `MetricResult`/JSON, but `ah.eval.negative_controls`'s own
+  `band_failures` list (via `outside_band` → `band_is_usable`) does drop degenerate-band
+  comparisons, 2 of which (both `nc1-iid-gaussian`) were previously reported failures.
+  Two stale passages reconciled: `negative_controls.py`'s "bands... gate nothing" claim,
+  overtaken by Item 3's aggregate gates; and the private `battery._lookup_band` import
+  from a second sealed module, promoted to public `battery.lookup_band`. Two live,
+  not-implemented options recorded for WP2.3 in `governance/retrofit-register.md`: a
+  baseline-relative memorization bound (RFR-46, no longer blind now that Item 2 fixed
+  phase-blindness) and a per-factor tail-gate combination (RFR-47, with the caveat that
+  validating it on NC1 would repeat the Important-3 problem).
+
+- **WP2.2b Task 7 review fix pass — evidence-integrity findings in the negative-control
+  suite.** Three claims in the sealed, `G2-EVIDENCE.md`-cited text asserted more than the
+  evidence supported; corrected without touching any control's construction or any
+  `pre-registration.yaml` threshold (the red result stands). **Critical 1**: the paired
+  NC3-vs-NC5 monthly-tier comparison (`tests/test_negative_controls.py`) compared two
+  INDEPENDENTLY seeded ensembles (`seed+7919*2` vs `seed+7919*4`) via `<=`, which held by
+  a one-metric margin and would flip on a different seed; replaced with a same-seed
+  comparison verified bit-exact-affine (`np.array_equal`) and an exact
+  `set(nc3.band_failures) == set(nc5.band_failures)`. **Critical 2**: NC5's conditional-
+  suite rejection was described as "unambiguously about conditioning" -- false, since
+  every control ignores `factor_conditions` and the tier fires for all five (NC1 alone
+  fires 12 of NC5's 14 designated conditional metrics and is ~10x worse on
+  `condition_adherence_error_inflation`); corrected, and the missing condition-honouring
+  control recorded (`governance/retrofit-register.md` RFR-39). **Critical 3**: a
+  threaded-OpenBLAS hypothesis for the suite's rare battery-verdict non-reproducibility
+  is FALSIFIED (the 4340-value metric digest is bit-identical at
+  `OPENBLAS_NUM_THREADS`/`OMP_NUM_THREADS` = 1, 8, and default) and downgraded to
+  unexplained; the real, measured, sufficient explanation -- 148 of 3035 finite banded
+  comparisons sit at exactly zero distance from a band edge, 33 on a fully degenerate
+  `[0.0, 0.0]` band -- is now recorded (RFR-38). Also: `ah.eval.negative_controls`'s "13
+  of the 10yr tier's 22 metrics are structurally NaN" corrected to the true figure, 16 of
+  22 (73%, not 59% -- three carry `band=None` and never land in the report's own NaN
+  buckets), and `regime_duration_*` confirmed to sit at the `1_5yr` tier, not `10yr`
+  (RFR-37); `near_duplicate_fraction` shown to be dominated by block-PHASE alignment
+  rather than by copying, which changes the shape of remedy WP2.3 should consider
+  (RFR-36); a `caught_at_criterion` column added to `NegativeControlReport` alongside the
+  renamed `caught_on_any_surface`, so a reader can no longer misread `criterion: enforce`
+  next to a "caught" cell as an enforce-level catch (RFR-35); `run_negative_controls` now
+  restores `ah.eval.battery.SUITES` symmetrically with its existing `gen_registry`
+  restore; `ah.gen.registry` gained public `snapshot()`/`restore()` so
+  `negative_control_registry` no longer reaches into `_REGISTRY` directly. Six new rows
+  in `governance/retrofit-register.md` (RFR-34..RFR-39) carry every finding this fix pass
+  could not itself close.
 - **WP1.10 — Refresh orchestration, scheduling, CLI.** `refresh.py`: `plan`
   (manifest ∩ due-by-SLA ∩ source, auto-intake only) → provider fetch/parse → QC →
   vintage commit or quarantine → reports; idempotent (re-running a vintage id is a
@@ -86,7 +600,194 @@ All notable changes to this project are documented here. The project follows
 
 ## [Unreleased] — Step 2 (generator layer)
 
+### Fixed
+- **WP2.2 Task 3 review fix pass 1 — two sealable bands that could not do their job.**
+  - *The two decade-frequency statistics had a Bernoulli band, i.e. no band at all.*
+    `lost_decade_frequency` and `long_inflation_era_frequency` were a single 0.0/1.0
+    indicator over the whole input, so every bootstrap replicate returned 0 or 1 and the
+    percentile band could only be `[0, 1]` (admits every possible value) or
+    `[0,0]`/`[1,1]` (fails every generator with a non-zero rate) — and the historical
+    frequency, the *mean* of that resample distribution, was never formed anywhere
+    (`block_bootstrap_band` takes percentiles, not a mean). Both are now genuine
+    frequencies: the fraction of the input's own **overlapping 120-month windows**
+    satisfying the property. Stated consequence: a 120-month replicate holds exactly one
+    window, so both are registered `length_matched=False` (`RegisteredStat`) and their
+    replicates are drawn at the **full train+validation length**, recorded as
+    `resample_length: null` on the band — the correct reading of
+    `conventions.estimator_length_matching` (which exists because the ACF estimator is
+    length-biased) rather than an exception to it. The band is consequently wide,
+    reflecting history's ~9-14 independent decades, which is DN-1.1 §II.6's "honestly
+    reported (n≈14)" for this tier. Non-degeneracy (`0 < lo < hi < 1`) is now asserted on
+    a century-long `compute_reference` run.
+  - *`ergodicity_gap` was algebraically `|variance_ratio_120m − 1|`.* At production path
+    length the pooled variance ratio at k=months yields one sum per path, making the old
+    gap the same number under a second sealed name — the duplication this file already
+    refused when it dropped `agg_gaussianity` horizon 1 for being `excess_kurtosis`. Its
+    `Var(pooled)/months` null was also iid-within-path, under which a *correct* generator
+    of a persistent factor (φ=0.9 AR(1) → ≈18) read as catastrophically non-ergodic.
+    Redefined as DN-1.1's actual metric — long-path time average vs ensemble
+    cross-sectional average, in units of pooled dispersion, with no iid null in it — and
+    marked `structurally_unavailable` because `run_battery` is handed no long path
+    (RFR-20). The estimator is built and tested against ergodic, persistent-ergodic and
+    genuinely non-ergodic processes, ready to wire.
+  - *Drawdown metrics could be gamed by generating less, twice over.* Added
+    `DRAWDOWN_MIN_EPISODES = 10` (shared by the reference and ensemble sides), and an
+    overflowed path — `wealth/cummax = inf/inf = nan`, and `nan < 0.0` is `False`, so it
+    was silently recorded as having **no drawdowns**, the favourable answer, then dropped
+    from the pooled concatenation — now NaNs the metric. Same fix for
+    `lost_decade_frequency`'s overflowing product.
+  - *Guards and markers.* The 10yr MC-error guard is now exercised **through**
+    `run_battery` (no code path could trigger it before); `MetricSpec` gains `status`
+    (`structurally_unavailable`) and `metadata`, both surfaced in `to_dict()` and the
+    markdown, so a platform gap is distinguishable from a generator failure and
+    `REGIME_RULESET_VERSION` finally reaches the report; `StatBand` gains
+    `n_valid_resamples`, making RFR-19's NaN-band degeneracy visible in the artifact.
+  - *Governance.* Ten new `conventions.<stat>_estimator` blocks in
+    `pre-registration.yaml` (plus `elementary_moment_estimators`,
+    `crisis_corr_lift_estimator` and `mc_error_is_not_the_small_n_band`), with
+    `prereg.ESTIMATOR_CONVENTION_KEYS` + a two-way machine check so no statistic can be
+    registered without a sealed definition; the two ensemble pooling conventions moved to
+    `ah/eval/metrics/_pooling.py` (and added to the sealed judged-source set); RFR-20
+    (ergodicity), RFR-21 (the nominal-not-real lost-decade row `reference.py` claimed
+    existed but did not), RFR-22 (§WP1.9 considered and inapplicable to RFR-17/18).
+- **WP2.2 Task 1 review fix pass — the mapping is now actually read, the policy rate is
+  a policy rate, and there is one numeraire.**
+  - *The mapping was not wired in.* `compute_reference` took a `series_id_for` callable
+    defaulting to identity and nothing ever passed it the manifest, so every factor id
+    went to the catalog verbatim, every factor landed in `missing_factors`, and the
+    reference came back **empty with no error** — while `build_panel`, which did read
+    the mapping, had zero production callers. The two surfaces were also structurally
+    incompatible (`FactorManifest.series_id_for` *raises* for `kind: derived`). Fixed by
+    extracting `ah.eval.panel.read_factor_frames` as the single factor-id → series
+    resolution surface; `build_panel` assembles on top of it and `compute_reference`
+    computes statistics on top of it, so the panel a generator is fitted against and the
+    bands WP2.3 seals can never resolve a factor differently.
+  - *`policy_rate` → `fred.TB3MS` (a 3-month bill) replaced by `fred.FEDFUNDS`*, the
+    administered rate, registered in `requirements.yaml` under the §WP1.9
+    emergent-requirements rule with a `fedfunds_pre1954` splice rule backfilling
+    pre-1954-07 history from `fred.TB3MS` (`is_proxy`) and an offline connector fixture.
+    The bill was wrong twice over: it is a market yield that decouples from the funds
+    rate in exactly the crisis months the tail/severe tiers judge, and it is also the
+    short leg of `funding_spread`'s TED — so the two factors would have shared a
+    construction-driven stress component and the cross-block correlation and
+    crisis-correlation-lift bands would have been sealed over an artifact of the mapping.
+  - *One numeraire.* `equity_mkt` mapped to Fama-French `Mkt-RF` (an **excess** return)
+    while `govt_tr_10y` is a **total** return, and `sixty_forty`/`endowment_proxy`
+    weighted them together. `equity_mkt` is now `kind: derived`,
+    `add(french.mkt_rf, french.rf)` — a genuine total return. `conventions.numeraire:
+    total_return` is sealed data, and `ah.strategies` now rejects a D4 strategy whose
+    legs do not all resolve to it (or to an explicitly declared, self-financing
+    `zero_cost` overlay: `smb`/`hml`/`mom`/`credit_xs_hy`). `FactorSource` gains
+    `numeraire`, and `proxy`/`proxy_for` so a splice-backed backfill is machine-visible
+    rather than free text in `notes`.
+  - *One NaN rule.* `ah/battery/report.py::evaluate` treated a NaN metric as PASS while
+    `ah/eval/battery.py::_passed` treated it as FAIL — two rules, both inside the seal.
+    Now **NaN = FAIL** in both, stated in both modules and in
+    `conventions.nan_metric_rule`. This is a deliberate behaviour change to Step 0's
+    battery: an uncomputable metric has not demonstrated compliance.
+  - *`mc_error` sub-ensembles no longer lie about their size* (`dataclasses.replace(
+    meta, n_paths=len(idx))`); `Panel`/`ReferenceStats` split `missing_declared` from
+    `missing_no_data`; `ReferenceStats.coverage` records each factor's train+validation
+    span and observation count; `BatteryReport` gains missing-factor accounting,
+    per-factor coverage, `enforce_failures` and an aggregate `.passed`; `run_battery`
+    calls `prereg.verify()` whenever the pre-registration is sealed (TODO(WP2.3): drop
+    the guard); derived factors' declared `units` are checked against their inputs'
+    registered units; `seal()`'s `out_path` is optional for a dry run.
+- **`.gitignore`: `data/` → `/data/`.** The unanchored pattern matched any directory
+  named `data` at any depth, so the **entire `src/ah/data/` package** (all of Step 1's
+  data layer), every synthetic connector fixture under `tests/fixtures/data/`, and
+  `docs/data/` were untracked — a fresh clone could not run the test suite. 54 files
+  added. `ruff` respects `.gitignore` by default, so those sources had never been
+  linted; 13 pre-existing lint findings surfaced and are fixed here. See
+  `governance/retrofit-register.md` RFR-11.
+- **WP2.2 Task 1 review fix pass 2 — the numeraire defect survives at portfolio level;
+  three documentation gaps closed; one defence-in-depth hole closed.** All
+  documentation-only except the last item.
+  - *The `zero_cost` leg taxonomy is sound at leg level but the sealed claim is
+    portfolio-level.* Under `conventions.numeraire: total_return` with no cash leg, a
+    strategy carrying uncommitted zero-cost notional, or flat under its own rule,
+    realizes **zero** on that capital rather than the cash rate — three of five D4
+    strategies are affected (`eqw_factors` at 0.6, `endowment_proxy` at 0.15, and
+    `momentum` in its warm-up and every flat month, broken by this task's own numeraire
+    switch and not previously recorded). `_validate_numeraires` cannot see this: it
+    checks declared leg numeraires, not implied cash positions. Recorded as
+    `governance/retrofit-register.md` RFR-12 (widens RFR-9) and a new paragraph in
+    `pre-registration.yaml`'s `conventions.numeraire_statement`; WP2.3 must choose
+    between an explicit `cash_tr_1m` residual leg or sealing the bias as-is. No code
+    change — the fix is documenting the gap accurately before WP2.3 decides.
+  - *`factors.yaml`'s `hy_spread`/`policy_rate` `proxy_for` entries overstated what
+    `read_factor_frames` actually reads.* They read `fred.HY_OAS`/`fred.FEDFUNDS`
+    directly, unextended; neither splice rule is applied by `ah.data.refresh` today
+    (RFR-10, already known, but the manifest text implied otherwise). Reworded both
+    `proxy_for` entries and their `notes` to say REGISTERED BUT NOT YET APPLIED, name
+    WP2.3 as the owner, and cross-reference RFR-10; the same overstatement in
+    `pre-registration.yaml`'s `units_of_level_factors` is corrected too.
+  - *The RFR-1 circularity was only half-broken.* `factors.yaml`'s header already
+    pointed at RFR-8, but `factor_sources.commodities.reason` and
+    `pre-registration.yaml`'s `units_of_return_bearing_factors` still cited RFR-1
+    directly. Both now point at RFR-8.
+  - *`ah.eval.panel._compute_derived` validated input frames' columns but not its own
+    output.* `_read_series` checks every input for `date`/`value`; the derived expr's
+    return value went straight to `set_index("date")["value"]` with no check at all.
+    Safe today only because every registered `_DERIVED_EXPRS` entry happens to return
+    `ah.data.derive._frame()`'s exact two columns — a future transform need not. Now
+    checked the same way, raising `PanelError` instead of a bare `KeyError` several
+    frames inside pandas. New test
+    `test_derived_expr_output_missing_columns_raises_panel_error` (monkeypatches a
+    broken entry into `_DERIVED_EXPRS`; confirmed red — `KeyError: 'value'` — before
+    the fix).
+  - *`src/ah/data/cli.py` had two pre-existing lint violations, newly visible after the
+    `.gitignore` fix.* Line 8's `from __future__ import annotations` violated
+    `CLAUDE.md`'s documented rule for that exact file (Typer resolves parameter hints
+    at runtime). Verified `ah data --help`, `ah data refresh --help` and `ah data
+    status` all behave identically with and without it, then removed it — the file was
+    simply never checked against the rule until the gitignore fix made it visible to
+    `ruff`/review. Line 100's em dash in a CLI-echoed string (cp1252-safe today, but
+    against the ASCII rule) replaced with `--`.
+
 ### Added
+- **WP2.2b Task 7 — `eval/negative_controls.py`, the negative-control suite.** Five
+  deliberately broken generators registered through `ah.gen.registry` exactly like a
+  real one, so the battery cannot tell them apart: `nc1-iid-gaussian` (iid draws from
+  the joint panel's own mean vector and full covariance — means/stdevs/contemporaneous
+  correlations preserved, all tails/ACF/clustering destroyed); `nc2-shuffled` (real
+  train+validation rows in a random order, one permutation per path **common across
+  factors**, so marginals and contemporaneous structure are exact and only time
+  ordering dies); `nc3-shifted-bootstrap` (moving-block bootstrap, block 24m, then
+  `x' = mu + 1.5*(x-mu) + 0.5*sigma` per factor — both constants derived from band
+  geometry, not tuned); `nc4-memorizer` (verbatim replay of a uniformly-drawn
+  contiguous TRAIN window per path plus iid noise at `NC4_NOISE_FRACTION = 0.10` of
+  each factor's own sigma — derived from the memorization suite's own 24-dimensional
+  block geometry: a copy sits at `sqrt(24)*0.1 ≈ 0.49` from its source against
+  `sqrt(48) ≈ 6.9` for two independent historical decades); `nc5-condition-ignoring`
+  (NC3 with the distortion switched off, i.e. a plain block bootstrap, whose only
+  defect is that it never reads `world.factor_conditions`). All randomness flows from
+  one `PCG64(seed)`; all real data flows through `ReferenceStats.historical_series`,
+  never a fresh catalog read and never the holdout (AST guard on `ah.eval.g2`, plus a
+  guard that no control object retains a `DataAccess`). `run_negative_controls` emits a
+  `NegativeControlReport` (JSON + markdown, `BatteryReport` conventions) with a row per
+  control and a column per tier, naming every metric that fired, splitting failures by
+  rejection surface (`enforce` / `report` threshold vs. reference band) and separating
+  **substantive** (finite-valued) failures from NaN-driven ones — a control rejected by
+  a metric that is NaN for every generator has not been caught. `negative_controls.py`
+  joins `prereg._REQUIRED_JUDGED_SOURCES`.
+- **WP2.2b Task 7 — what the controls found.** All five are rejected and all five are
+  caught by their designated tier, but **not one is caught by an `enforce`-severity
+  threshold for a reason specific to its own defect**. Four findings, each pinned by a
+  named test in `tests/test_negative_controls.py` rather than papered over:
+  (1) *no metric suite in the battery emits a `<factor>.mean`, `<factor>.std` or
+  `<a>~<b>.correlation` metric at all*, although `reference.SINGLE_FACTOR_STATS` /
+  `CROSS_BLOCK_STATS` register all three and `compute_reference` computes a real
+  length-matched band for each — so NC3's drift (`equity_mkt` pooled mean 0.0233 against
+  a band of `[-0.0016, 0.0101]`; std 0.0653 against `[0.0210, 0.0541]`) is invisible to
+  the battery on exactly the axis it was built to break; (2) the only enforce gate that
+  fires anywhere is `floor_violations`, and it fires identically for all five including
+  controls replaying real values verbatim (a realistic funding spread sits below the
+  sealed 100bp `SPREAD_FLOOR_PCT`), so it discriminates nothing; (3) a plain block
+  bootstrap — the shape of WP2.4's own G2 benchmark — scores *worse* on
+  `near_duplicate_fraction` (0.239) and `nn_distance_p05` (0.069) than the deliberate
+  memorizer (0.065 / 0.649); (4) the `10yr` tier produced no substantive failure for
+  any control (13 of its 22 metrics are structurally NaN for every generator).
 - **WP2.1 — Experiment infra, splits, leakage guards, registry.** `splits.py`:
   train/validation/holdout spans with a `DataAccess` guard — the holdout is reachable
   only via a `FinalEvaluationToken` minted solely in `ah.eval.g2`, proven by an
@@ -488,6 +1189,709 @@ All notable changes to this project are documented here. The project follows
   stricter validation and the widened judged-source set; `pre-registration.yaml` stays
   `sealed: false`. Full suite green (three new tests, two fixtures strengthened, none
   weakened), ruff/pyright clean.
+- **WP2.2 Task 1 — Factor-source mapping, the reference panel reader, the battery
+  orchestrator.** Closes the one genuinely blocking gap WP2.1b left open: no mapping
+  anywhere in the repository bound a factor id (`equity_mkt`, `ust_10y`, ...) to a
+  Step-1 catalog series, so reference statistics could not honestly be computed and
+  `ah.eval.reference`'s `series_id_for` parameter had nothing real to supply. `factors.
+  yaml` gains a `factor_sources:` section, one entry per factor in every block
+  (including inactive `uk`): `kind: series` (one `requirements.yaml` series id,
+  direct), `kind: derived` (one `ah.data.derive` helper over one or more series ids —
+  `ig_spread` = `difference(fred.BAA, fred.AAA)`, `funding_spread` =
+  `funding_stress(fred.TEDRATE)`, no SOFR-basis extension since no such series is
+  registered), or `kind: unavailable` with a required `reason` (`commodities`, per
+  `governance/retrofit-register.md` RFR-1; every `uk` factor, per decision J3 and
+  `Instructions/WP1.12-UK-CONNECTORS.md`'s not-yet-landed connectors — never a
+  fabricated proxy for either). `policy_rate` maps to `fred.TB3MS` (the 3-month T-bill;
+  no FEDFUNDS/effective-funds-rate series is registered, and TB3MS is a real,
+  registered series, not an invented one). `ah.factors.FactorManifest` gains
+  `sources`, `series_id_for()`, and `is_available()`; `load_manifest()` now validates
+  that every declared factor (every block) has exactly one entry and every entry names
+  a real factor. `pre-registration.yaml`'s `conventions` prose is corrected now that
+  the mapping is a fact rather than an assumption — `equity_mkt` is confirmed Mkt-RF,
+  an *excess* return, not a total return, and every level factor's series is named
+  explicitly instead of listed as "candidate". A new test
+  (`test_factor_sources_units_agree_with_prereg_return_level_classification`) asserts
+  `factor_sources`' units and `pre-registration.yaml`'s `return_bearing_factors`/
+  `level_factors` classification can never disagree — a return-bearing factor's units
+  must be exactly `ret`, a level factor's must never be — because these two files are
+  sealed together and a divergence between them is exactly the defect class this
+  project keeps finding; a second test cross-checks every `kind: series` entry's units
+  against `requirements.yaml` itself.
+  `src/ah/eval/panel.py` (new): `build_panel(access, manifest, *, split_reader=...)`
+  turns a `FactorManifest` into one date-indexed `Panel` (`.frame`, `.missing`) over
+  every available active factor, reusing `ah.data.derive`'s existing helpers (never
+  reimplementing a transform) and `ah.data.derive.assemble_panel` for the join. Never
+  reads the holdout — `split_reader` defaults to `DataAccess.train_val`, and the same
+  recording-reader leakage test `tests/test_reference.py` uses (record at `frame()`,
+  not `train_val()`) proves no holdout-era date reaches it.
+  `src/ah/eval/battery.py` (new): the Step-2 battery orchestrator Tasks 2-6 register
+  metric suites into. `MetricSpec`/`MetricResult` (frozen); `SUITES`, a module-level
+  registry populated only via `register_suite()` — adding a suite never requires
+  editing `run_battery()` (proved by a test that registers a throwaway suite and shows
+  it in the next report). `mc_error(fn, ensemble, *, seed, n_subsamples)`: every
+  ensemble-level metric's Monte-Carlo error bar, via disjoint path-subsampling from a
+  fresh `PCG64(seed)` — the batch-means estimator recovers the standard error of a
+  sample-mean metric to the right order of magnitude (tested against a known-variance
+  synthetic ensemble) and is bit-identical for a fixed seed. `run_battery(ensemble, *,
+  reference, prereg, manifest, seed, filtered=None)` looks up each metric's train+
+  validation band (`ReferenceStats`) and sealed/provisional threshold
+  (`PreRegistration`) by name, decides `severity`/`passed`, and emits a `BatteryReport`
+  in both JSON and markdown carrying battery version, a dry-run prereg digest
+  (`prereg.seal(dry_run=True)`), system/vintage ids, `active_blocks`, and per-tier
+  (`monthly`/`1_5yr`/`10yr`/`economic`/`severe`, DN-1.1 §II.6) tables; a `filtered`
+  ensemble's results are reported alongside the unfiltered ones, never replacing them
+  (the acceptance filter may not teach to the exam). Runs end to end on the Step-0 toy
+  engine's output with a throwaway test suite — the plan's own WP2.2 acceptance
+  criterion; the real eight metric suites are Tasks 2-6's scope.
+  Seal bookkeeping: `eval/battery.py` and `eval/panel.py` are judging code created
+  outside `eval/metrics/`, so both join `ah.eval.prereg._REQUIRED_JUDGED_SOURCES` (and
+  its docstring, and `pre-registration.yaml`'s mirrored header prose) in this same
+  commit, with `tests/test_prereg.py`'s pinned judged-source set updated to match.
+  Existing direct `FactorManifest(...)` constructions and hand-written `factors.yaml`
+  fixtures across `tests/test_reference.py`, `tests/test_prereg.py` and
+  `tests/test_battery.py` gained a `factor_sources`/`sources=` entry each (now
+  required); no assertion in any of them was weakened. Full suite green (599 tests, up
+  from 544 at branch start), ruff/pyright clean, coverage gate unaffected;
+  `pre-registration.yaml` stays `sealed: false`.
+- **WP2.2 Task 2 review fix pass 2 — closing the last findings before WP2.3 seals.**
+  Everything here lands in files WP2.3 hashes, so it is cheap now and a dated
+  post-hoc amendment afterwards.
+  *Important 1, the panel metric could be gamed by omission.*
+  `_paired_corr_matrices` intersected the reference's covered factor axis with
+  `ensemble.factor_names`, so a generator that simply omitted a covered factor got a
+  *smaller* matrix and a *smaller* (easier-to-pass) `cross_block_corr_matrix_distance`
+  — generating less made an absolute-bound threshold easier to pass, exactly the
+  instability the docstring already refused to tolerate for a degenerate factor
+  (correctly NaN'd). An omitted covered factor now NaNs the metric identically to a
+  degenerate one, never shrinks it. Tested: an ensemble that omits a covered factor
+  from otherwise-identical draws must NaN, not merely differ.
+  *Important 2, `resample_length` was dropped from the report.* `StatBand.
+  resample_length` is load-bearing per `conventions.estimator_length_matching` (a
+  length-matched band's `point` is not expected to lie inside `[lo, hi]`), but
+  `_result_dict` and the markdown table emitted `point/lo/hi/n_resamples/level/tier`
+  only — the battery JSON, the G2 evidence artifact, could not distinguish a
+  length-matched band from an unmatched one. Now emitted in both, with an unmatched
+  band rendering as `full` rather than an empty cell.
+  *Minor 3, a threshold key with no producing metric was still uncaught.* `verify()`
+  validates a threshold's `<stat>` against the *reference* registries, not against
+  what any metric suite actually emits: `policy_rate.std` (enforce) and
+  `equity_mkt~ust_10y.correlation` (report) were registered reference statistics with
+  no producing monthly metric, so each would judge nothing, silently, at `enforce`
+  or not. New converse test (every real threshold key must be produced by a
+  registered metric) plus the mirror already in place (every metric name must be
+  sealable). Repointed at metrics that exist: `policy_rate.excess_kurtosis`,
+  `equity_mkt~ust_10y.crisis_corr_lift`.
+  *Minor 4, the idempotent-replacement property was under-tested.* The existing
+  repeatability test ran the same reference twice, proving only that no
+  `BatteryError` is raised — it would pass under a regression to
+  `SUITES.setdefault`. New test runs `run_full_battery` against two genuinely
+  different references and asserts `cross_block_corr_matrix_distance` differs.
+  The related `run_battery(reference=X)`-vs-what-the-specs-closed-over identity gap
+  is recorded as `governance/retrofit-register.md` RFR-16 (WP2.3 to decide) rather
+  than fixed here — it needs a `MetricSpec`/`register_suite` signature change.
+  *Minor 5, a short-history factor could produce a silent zero-width band.*
+  `_draw_moving_block_indices` now raises when `block_length >= t`: `max_start` would
+  be forced to `0`, so every replicate is the identical whole-sample block (`lo ==
+  hi`). Not reachable at today's 120-month paths and 1996+ shortest series, but
+  reachable once a judged path length exceeds a factor's own history.
+  *Minor 6, sealed numeric constants were unpinned.* New equality tests pin
+  `_DECAY_RATE_MIN/_MAX`, `_DECAY_GRID_POINTS`, `_DECAY_GOLDEN_TOL`,
+  `_DECAY_MAX_ITERATIONS`, `AGG_GAUSSIANITY_MIN_SUMS` and `DEFAULT_BLOCK_LENGTH`
+  against the values `pre-registration.yaml`'s prose states, so pre-seal drift trips
+  a test instead of a green suite hiding it.
+  *Minor 7, a corrected false claim survived in an earlier report section.*
+  Annotated in place in the WP2.2 Task 2 scratchpad report rather than only at the
+  fix-pass section further down.
+  *Minor 8, the block-length rule's actual scope was unstated.* At production
+  defaults (`block_length=120`, `resample_length=ensemble.months <= 120`),
+  `ceil(L/b) = 1`: every replicate is a single contiguous window, so the `(b-k)/b`
+  seam-shrinkage argument that justifies `DEFAULT_BLOCK_LENGTH=120` does not bind on
+  the length-matched production path at all — it governs only the unmatched
+  (full-history) path. Also documented: `acf_abs_decay` is censored at the search
+  bounds (a true rate above 5.0 returns `~5.0`, not NaN); both sides censor
+  identically so it is not a correctness bug, but it belongs in the sealed
+  definition. Both stated in `reference.py`'s docstrings and
+  `pre-registration.yaml`'s sealed conventions, with a new test pinning the
+  censoring behaviour.
+  Full suite green (716 tests, up from 705), ruff/pyright clean, `ah.core` coverage
+  96.54%; `pre-registration.yaml` stays `sealed: false`.
+- **WP2.2 Task 2 review fix pass — the monthly panel becomes runnable and sealable.**
+  The review returned Spec: FAIL with two Criticals, both blocking WP2.3.
+  *Critical 1, the battery never ran.* No production code path called any
+  `register_*_suite()`, so `battery.SUITES` was empty in every non-test run:
+  `run_battery` computed zero metrics and returned a report whose `passed` was
+  vacuously `True`. `ah.eval.battery.run_full_battery` is the orchestration step that
+  was missing — compute the train+validation reference from the catalog, register every
+  reference-dependent suite against it (`register_reference_dependent_suites`,
+  idempotent by replacement so a second run is judged against its own reference), run
+  the battery — with tests asserting a **non-empty** metric set, real bands and real
+  coverage come back from an actual run. `battery.py`'s docstring no longer states an
+  "at import time" registration rule that no code follows, since `battery.py` is a
+  sealed judged source and a rule stated only in the seal is worse than none. The
+  residual (no CLI/G2 caller yet; only `monthly` of the eight suites exists, so a real
+  run's verdict is monthly-tier-only) is `governance/retrofit-register.md` RFR-13 plus
+  a `TODO(WP2.2 Tasks 3-6)` at `SUITES`.
+  *Critical 2, 34 of 37 monthly metric names were structurally un-sealable.*
+  `prereg`'s threshold-key checker validates `<stat>` against `reference.py`'s
+  registries, and once `sealed: true` lands `run_battery` calls `verify()`
+  unconditionally — so a threshold under an unregistered name would not merely fail the
+  seal, it would break every battery run. Every monthly statistic (Hill tail index at
+  5%/1%, ACF of returns to lag 5, ACF of |deviation| to lag 24, the fitted decay,
+  aggregational Gaussianity, leverage correlation) is now **defined in
+  `ah.eval.reference` and registered in `SINGLE_FACTOR_STATS`**; `metrics/monthly.py`
+  imports the estimators and contributes only the ensemble pooling conventions. The
+  whole-panel `cross_block_corr_matrix_distance` belongs to no factor and no pair, so
+  it gets a third registry (`PANEL_STATS`), a `thresholds.panel` section in
+  `pre-registration.yaml`, a `_check_panel_threshold_key` in `verify()` and a
+  `_lookup_threshold` branch — a deliberate extension of the checker, tested, not a
+  key-shape workaround. The prior handoff's claim that WP2.3 could "seal a threshold
+  under these exact names directly (thresholds don't require a `reference.py` band)"
+  was **false** and is corrected here; there was exactly one path and this is it.
+  *Estimator conventions, all now sealed in `pre-registration.yaml`.* The ACF estimator
+  is length-dependent and the reference is a different length: the n-denominator
+  shrinkage alone is ~20% at lag 24 on a 120-month path against ~2% on ~1100 months, so
+  a generator reproducing history exactly would sit outside its own band at long lags.
+  `compute_reference` gained `resample_length` and `run_full_battery` passes the
+  ensemble's own path length, so both sides carry the same bias (the `(n-k)`-denominator
+  alternative was rejected: it would have to change `_acf1` too and corrects only the
+  shrinkage term). A test builds a near-deterministic 24-month volatility cycle and
+  shows a generator reproducing it lands inside its length-matched band at lags 12 and
+  24 while history's own full-sample estimate does not. Consequence stated on
+  `StatBand`: a length-matched band's `point` is not expected to lie inside `[lo, hi]`.
+  The residual for *pooled* statistics (matched in neither sample size nor bias) is
+  RFR-15. Separately discovered and fixed: a moving-block bootstrap keeps only the
+  `(b-k)/b` share of lag-k pairs, so at the old default block length of 24 every
+  long-lag band was a resampling artifact — `DEFAULT_BLOCK_LENGTH` is now 120, with a
+  test pinning both the rule and the artifact.
+  `acf_abs_decay` is refitted **in levels** by profiled least squares (closed-form
+  amplitude, 241-point grid then golden section, deterministic, no scipy) instead of OLS
+  in log space over the positive values only: dropping non-positive ACF values was a
+  one-sided selection that lifted the fitted tail and biased the rate downward. The
+  levels fit consumes every lag whatever its sign, so no selection happens at all. The
+  exponential form is kept over the canonically hyperbolic power law, with the
+  justification now stated rather than assumed (comparative summary at a fixed lag
+  window; a log-log fit is equally misspecified and weights low lags harder; every
+  `acf_abs_lag{k}` is separately banded, so long memory is discriminated lag by lag).
+  It is also now computed per path and averaged, like every other time-ordered
+  statistic — a more biased estimator of the true rate, deliberately, because it is the
+  one the reference band is built from.
+  `agg_gaussianity_1m` is gone: at h=1 the aggregation is the identity, so it was
+  bit-identical to `excess_kurtosis` — two sealed names, one number. `acf_1`/`acf_abs_1`
+  became `acf_r_lag1`/`acf_abs_lag1` for the same reason (free while `sealed: false`;
+  a dated amendment afterwards), resolving the naming question the prior task left open.
+  `corr_matrix_distance` is renamed `cross_block_corr_matrix_distance` (it covers
+  cross-block pairs only; the missing within-block pairwise correlation statistic is
+  RFR-14), and `_paired_corr_matrices` returns an explicit mask so the two matrices —
+  which carry 0.0 wherever the reference has no entry — cannot be misread as correlation
+  matrices. `agg_gaussianity`'s `sums.size < 4` guard became a 30-sum floor (a
+  fourth-moment statistic's standard error is `~sqrt(24/n)`: 2.4 at n=4). A judged-source
+  pinning test now asserts every metric-suite module on disk resolves *into* the sealed
+  set, not merely that its name is in `_METRIC_SUITE_NAMES`; the `acf_abs_lag1`
+  agreement test calls `reference._acf_abs_1` instead of retyping it; `acf_abs_decay`
+  gains an end-to-end numeric pin against `-ln(phi)` on a constructed AR(1)-volatility
+  path; the Hill registration test checks its fixture's known `alpha=2.0`; and the
+  global-`SUITES` mutation in `tests/test_monthly.py` uses a snapshot/restore fixture
+  rather than a `finally`-pop. Full suite green (705 tests, up from 669), ruff/pyright
+  clean, `ah.core` coverage 96.54%.
+- **WP2.2 Task 2 — `eval/metrics/monthly.py`, the monthly-tier stylized-fact panel.**
+  All nine STEP2-GENERATOR-PLAN §WP2.2 statistics (excess kurtosis, skew, Hill tail
+  index at 5%/1%, ACF of returns lags 1-5, ACF of |deviation| lags 1-24 plus a fitted
+  exponential-decay rate, aggregational Gaussianity at 1/3/12-month horizons, leverage
+  correlation, correlation-matrix distance, crisis-conditional correlation lift), each
+  unit-tested against a closed-form or simulated ground truth with a commented,
+  justified tolerance. Reuses `ah.eval.reference`'s existing `_skew`,
+  `_excess_kurtosis`, `_acf1`-generalization, `_correlation` and `_crisis_corr_lift`
+  definitions verbatim rather than restating any of them (this project has already
+  produced one sign-inverted, independently-restated metric defect); every reused
+  definition has a test asserting numeric agreement with `reference.py` on the same
+  input, not just a docstring claim. New statistics (Hill, ACF beyond lag 1,
+  aggregational Gaussianity, leverage correlation, the decay fit, correlation-matrix
+  distance) are each defined exactly once. Two pooling conventions, stated once in the
+  module docstring and never mixed: pooled path×month observations for
+  marginal-distribution statistics (kurtosis, skew, Hill, corr-matrix distance, crisis
+  lift), and per-path-then-averaged for time-order-dependent ones (ACF, leverage,
+  decay) — concatenating paths end to end before an ACF would manufacture a spurious
+  correlation at every path seam. A factor absent from a given ensemble (e.g.
+  `commodities`, `kind: unavailable`) returns NaN rather than raising, so one
+  inapplicable metric cannot crash a whole battery run.
+  Naming deviates from the brief's suggested identifiers in two stated, deliberate
+  ways: `crisis_corr_lift` (not `crisis_conditional_corr_lift`) to match
+  `CROSS_BLOCK_STATS`'s existing key exactly, so the historical band shows up next to
+  the generated value automatically in every report; `acf_r_lag1`/`acf_abs_lag1` are
+  **not** aliased to `reference.py`'s `acf_1`/`acf_abs_1` (uniform lag-1..N naming
+  preferred over an asymmetric special case) — recorded as an open naming question for
+  WP2.3, with numeric agreement still asserted by test regardless of the name.
+  `corr_matrix_distance` (Frobenius norm of the difference, documented against the
+  alternative Herdin et al. similarity measure) is scoped to the cross-block factor
+  pairs `reference.py` actually computes a correlation for — `reference.py` has no
+  within-block pairwise-correlation statistic yet, a gap recorded here, not silently
+  worked around.
+  Registration is a builder, `build_monthly_suite(manifest, reference) ->
+  tuple[MetricSpec, ...]`, plus `register_monthly_suite(manifest, reference)` calling
+  `register_suite("monthly", ...)` — a deliberate deviation from the "register at
+  import" pattern `ah.eval.battery`'s docstring describes, because `corr_matrix_distance`
+  structurally needs a computed `ReferenceStats` (unavailable at plain import, which has
+  no live `DataAccess`) to even construct its specs; splitting the suite across two
+  registration paths was rejected in favour of one uniform builder. No caller wires
+  this into a real battery run yet (no CLI/G2 orchestration step exists to compute a
+  real `ReferenceStats` and call `register_monthly_suite` — that wiring is a later
+  task's job); `ah.eval.prereg._METRIC_SUITE_NAMES` already listed `"monthly"` (Task 1
+  landed it defensively), so no seal-list edit was needed. Full suite green (669
+  tests, up from 637 at task start — 32 new), ruff/pyright clean.
+- **WP2.2 Task 3 — `eval/metrics/horizon.py`, the 1-5yr and 10yr tiers.** Eight DN-1.1
+  §II.6-normative statistics, tier-tagged exactly as the design note's table states
+  (`1_5yr`: `variance_ratio_{12,36,60,120}m`, `mean_reversion_halflife`,
+  `drawdown_median_depth`/`_median_duration`/`_depth_duration_rank_corr`,
+  `regime_duration_{mean,p50,p90}`; `10yr`: `lost_decade_frequency`,
+  `long_inflation_era_frequency`, `ten_year_return_vs_valuation_{slope,r2}`,
+  `ergodicity_gap`), each registered by name+tier into `ah.eval.reference`'s
+  `SINGLE_FACTOR_STATS`/`PANEL_STATS` from the start (Task 2's structural lesson
+  applied up front, not fixed in afterward) and wired into
+  `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` in the same commit, with a passing
+  `run_full_battery` acceptance test that fails without the wiring. Per-metric
+  per-path/pooled convention stated in the module docstring (RFR-15's residual bites
+  every pooled one, recorded rather than left to be discovered).
+  Two structural gaps made honestly NaN rather than faked: `regime_duration_*` (the
+  Step-1 regime ruleset needs `usrec`/`growth_yoy`, neither a `factors.yaml` factor —
+  RFR-17) and `ten_year_return_vs_valuation_*` (no CAPE/valuation factor exists —
+  RFR-18); both recorded in `governance/retrofit-register.md` with an owner and a
+  consequence, exactly as the `commodities` gap (RFR-8) already is. `variance_ratio`
+  reuses `nonoverlapping_sums` (no second windowing scheme); `mean_reversion_halflife`
+  reuses the registered lag-1 ACF estimator directly (the population lag-1
+  autocorrelation of an AR(1) process IS phi); `drawdown_episodes` and
+  `long_inflation_era_frequency`/`lost_decade_frequency` reuse
+  `ah.data.derive.drawdown_state`/`yoy`/`regime_thresholds` verbatim rather than
+  reimplementing them. `battery._require_mc_error_reported` makes "10yr metrics carry
+  a Monte-Carlo error, or the battery rejects them" structural (rejects `error is
+  None`, not `NaN` — an honestly-uncomputable 10yr metric must not crash every real
+  battery run). Discovered and fixed in the same commit: `drawdown_state`/`lost_decade
+  _frequency`'s compounding step can overflow on adversarial/extreme-magnitude input
+  (this repo's `filterwarnings = ["error"]` would otherwise turn that into a hard
+  crash) — now settles at `+/-inf` under `np.errstate` instead of raising, since the
+  WP2.2b negative-control suite's entire purpose is running the battery against
+  broken generators. `block_bootstrap_band`'s `np.percentile` step is not NaN-robust
+  for a statistic that can be undefined on a short resample (`drawdown_depth_duration
+  _rank_corr`) — recorded as RFR-19, not fixed here (shared, sealed infrastructure).
+  Full suite green (758 tests, up from 716 at task start — 42 new), ruff/pyright
+  clean.
+- **WP2.2 Task 4 — `eval/metrics/tails.py` completed, `eval/metrics/utility.py` added.**
+  Both wired into `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` and
+  `prereg._METRIC_SUITE_NAMES` (the latter already listed `utility`), with
+  `run_full_battery` acceptance tests that fail without the wiring, exactly as Task 3
+  set the precedent.
+  `tails.py` (tier `monthly`, on the frozen D4 strategy set): `elicitability_score`,
+  the Fissler-Ziegel (2016) strictly consistent joint (VaR, ES) scoring rule at level
+  0.95 — lower is better, minimized in expectation exactly at the true (VaR, ES) pair
+  (a first-order-conditions derivation is in the docstring and empirically checked: a
+  mis-specified pair scores strictly worse on a fixed sample, not merely "finite").
+  `kupiec_pof`/`christoffersen_independence`/`christoffersen_conditional_coverage`:
+  the standard proportion-of-failures and Markov-chain independence LR backtests,
+  df-1/df-2 chi-square p-values via a closed-form `_chi2_sf` (no scipy; verified
+  against the textbook 3.841/5.991 critical values). All three score the GENERATED
+  ensemble's realized exceedances against the HISTORICAL (train+validation) VaR
+  forecast for that same D4 strategy — never the generated sample's own statistics,
+  which would trivially optimize and prove nothing about tail fidelity.
+  `_historical_strategy_returns` builds that historical series by inner-joining
+  exactly one strategy's own legs from the new `ReferenceStats.historical_series`
+  field (never a fresh catalog read) and wrapping them as a single-path `Ensemble`, so
+  the SAME `strategy_returns` function evaluates history and the generator — no second
+  route to the arithmetic. `tail_dependence_lower`/`_upper` (cross-block factor pairs,
+  not D4 strategies — DN-1.1's own scoping): a nonparametric rank-based estimator at
+  the sealed 5% tail fraction (matching `hill_tail_index`'s own convention), defined
+  in `ah.eval.reference` (a real `CROSS_BLOCK_STATS` entry, so the existing
+  block-bootstrap machinery gives it a genuine historical band for free) and
+  re-exported into `tails.py` under the same name, exactly as `monthly.py` already
+  does for `hill_tail_index`/`corr_matrix_distance`.
+  A new small registry, `ah.eval.reference.STRATEGY_STATS` (11 names — the four
+  `var_95`/`es_95`/`var_99`/`es_99` plus the seven backtest outputs), because a D4
+  strategy is sealed *data*, not a `FactorManifest` factor/pair/panel axis; a new
+  `pre-registration.yaml` `thresholds.strategies` section (`"<strategy_id>.<stat>"`,
+  strategy id checked against *that document's own* `d4_strategies:` block, never a
+  fresh `ah.strategies.load_d4_strategies()` read, mirroring how `_check_conventions`
+  already avoids that trap) and `ah.eval.prereg._check_strategy_threshold_key`.
+  `utility.py` (tier `monthly`, three whole-panel `PANEL_STATS` entries):
+  `discriminative_score` (logistic regression, numpy gradient descent, on pooled
+  `[mean, std]` window features of real vs. generated factor dynamics —
+  `|test accuracy - 0.5|`), `predictive_score` (train-on-synthetic-test-on-real
+  one-step-ahead linear-model MSE), `tstr_degradation` (`MSE_tstr / MSE_trtr` against
+  a train-on-real-test-on-real baseline fit the same way). No sklearn/scipy. Every
+  fit's only randomness (which examples are selected/split) flows from
+  `numpy.random.Generator(PCG64(UTILITY_FIT_SEED))` — a sealed module constant, not
+  the battery's own run seed, so re-running the battery at a different seed reports a
+  bit-identical utility tier for an unchanged ensemble (asserted directly, both
+  directions: identical seed bit-identical, different seed different). Real data
+  read exclusively through `ReferenceStats.historical_series`; an AST guard proves
+  neither module imports `ah.eval.g2`, in the style of `test_reference.py`'s own.
+  Full suite green (850 tests, up from 776 at task start — 74 new), ruff/pyright
+  clean.
+- **WP2.2 Task 4 fix pass 1 — metrics that improved when the generator produced less.**
+  Four findings shared one root and are fixed as a family, with
+  `test_generating_less_never_improves_a_backtest_metric` extended from the one case
+  that was already safe (omit a leg → NaN) to all four.
+  **`elicitability_score`'s arguments were inverted (Critical).** The metric froze
+  `(V, E)` at history's values and varied the *generated* losses, collapsing the score
+  to `c1·mean((L−V)⁺) + c2` with `c1 > 0` — monotone increasing in generated tail
+  heaviness, with a generator emitting **identically zero** as its global optimum
+  (measured: −3.139 for zero output vs −2.856 for matching history). DN-1.1 line 95
+  makes this WP2.8's auxiliary loss, so shipping it would have trained toward zero
+  volatility. Now the Tail-GAN direction: `(VaR, ES)` estimated from the **generated**
+  ensemble, scored against **real** realizations — coercive as ES→0 and minimized
+  exactly when generated `(VaR, ES)` matches history's. The scoring rule itself is
+  unchanged and its consistency test passes under either wiring, so the deliverable is
+  the new test that varies the *sample* rather than the *forecast*.
+  **`discriminative_score` measured class imbalance, not fidelity (Critical).** Real
+  and generated windows were pooled unbalanced (~100:1 at production scale) and scored
+  by raw accuracy, which the majority-class predictor maximizes: with the two
+  distributions held identical the score read 0.008 at 1:1 but 0.493 at 150:1, and
+  *improved* as the ensemble shrank. Now a class-stratified split, inverse-class-
+  frequency weights in the fit, and **balanced** accuracy (exactly 0.5 for any constant
+  predictor at any ratio).
+  **The backtest statistics scaled with `n_paths`.** `LR = 2·T·KL(p̂‖α)` with
+  `T = months × n_paths` meant halving the ensemble halved the statistic and raised the
+  p-value. The pooled sample size is now fixed in the sealed definition at **one path**
+  (`months`, or `months−1` transitions): pooling still sharpens `p̂`, but the reported
+  statistic is what a single reference-length path with that rate would have produced —
+  an effect size on a p-value scale, stated as such in the new
+  `conventions.backtest_reference_sample_size`.
+  **`christoffersen_independence` was perfect on zero exceedances** (every count 0 ⇒
+  `LR = 0`, `p = 1.0` at every `T`); now a `BACKTEST_MIN_EXCEEDANCES = 10` floor → NaN,
+  in the shape of `DRAWDOWN_MIN_EPISODES`. Kupiec is deliberately *not* floored.
+  Also: `RegisteredCrossStat` gains `length_matched` (mirroring `RegisteredStat`) and
+  both `tail_dependence_*` entries set it `False` — at the production `resample_length`
+  of 120 their 5% tail held 6 observations, below the estimator's own floor, so every
+  replicate was NaN and the band was empty; the three places claiming a "band for free"
+  are corrected. `_fit_gd` gains a Lipschitz-bounded step (`min(0.1, 1/L)`) and a
+  gradient-norm stopping criterion — it previously ran a fixed 200 epochs at `lr=0.1`
+  and diverged to `inf`/`nan` on a design ~4.5× real volatility. `_historical_strategy
+  _returns` now asserts its inner join is a contiguous run of months (adjacent rows are
+  read as consecutive months and multiplied by a duration of 8.5). Historical VaR/ES is
+  memoized per `(strategy_id, level)` (~735 redundant pandas joins per battery run).
+  Both LR builders normalize `-0.0`. RFR-23's premise is corrected in place: the ~1.2
+  expected exceedances at 99% is the *per-path* count and Kupiec pools, so the real
+  constraint is Christoffersen's per-path transition counts. `conventions.warm_up`
+  records the momentum warm-up asymmetry (a perfect generator's expected exceedance
+  rate is ~4.57%, not 5%) and why the reference-sample-size fix bounds its consequence
+  to `LR ≈ 0.049` from `≈ 49`. Full suite green (862 tests, up from 850 — 12 new),
+  ruff/pyright clean.
+- **WP2.2 Task 4 fix pass 2 — the reference sample size was still gameable, one axis
+  over.** Fix pass 1 pinned the Kupiec/Christoffersen reference sample size against the
+  `n_paths` axis but read it off the judged ensemble's own `months` — so `LR ~ months`
+  survived: a 60-month ensemble reported half the statistic (tail 0.05 → 0.17) a
+  120-month ensemble with the identical exceedance rate reported. **The dominant "the
+  metric improves when the generator produces less" failure mode had moved, not
+  closed.** Fixed by pinning a new constant, `BACKTEST_REFERENCE_MONTHS = 120`, as
+  `reference_n` unconditionally. The six backtest names are renamed
+  `..._stat`/`..._pvalue` → `..._lr_1path`/`..._chi2_tail_1path` — the sealed
+  `backtest_reference_sample_size` convention explicitly disclaims the significance-level
+  reading `_pvalue` implied, so the scope is now in the name (the same fix
+  `corr_matrix_distance` → `cross_block_corr_matrix_distance` made pre-seal, RFR-14).
+  `conventions.warm_up`'s "LR_pof ~ 0.049, i.e. nothing" is corrected: the normalization
+  rescales every departure uniformly, so a genuine coverage defect of the same magnitude
+  reads identically — the honest statement is that the warm-up bias sets a *floor* on
+  the smallest real coverage error this family can detect, which WP2.3 must accept or
+  close, not wave away. Also: `discriminative_score`'s ~0.05–0.10 noise floor (binomial
+  SE at ~60 held-out real windows) is now stated in both the sealed prose and the
+  function docstring; the three public LR functions now say they differ from the
+  registered (reference-scaled) metrics; `estimator_length_matching`'s blanket claim is
+  now "by default", with the three departures named; `_HistoricalCache` is warmed inside
+  `build_tails_suite` so a non-contiguous historical join raises at registration, not
+  mid-battery-run. `governance/retrofit-register.md` gains three rows (RFR-24: a
+  coverage-band alternative for WP2.3 to weigh; RFR-25: every threshold must be derived
+  from post-fix runs; RFR-26: extends RFR-15's pooled-length mismatch to
+  `tail_dependence_*`'s three-way version, which RFR-15's remedy doesn't reach). Full
+  suite green (864 tests, up from 862 — 2 new), ruff/pyright clean.
+- **WP2.2 Task 5 — `eval/metrics/memorization.py`, `eval/metrics/economics.py`,
+  `eval/metrics/calibration.py`.** Three smaller suites, wired into
+  `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS` and `prereg._METRIC_SUITE_NAMES`
+  (already listed there) exactly as Task 3/4's suites were.
+  - *`memorization.py` (tier `monthly`)* — `nn_distance_{p05,p50}`,
+    `membership_inference_auc`, `near_duplicate_fraction`, the suite that makes "the
+    generator did not memorize its training data" falsifiable for WP2.2b's NC4. A
+    "block" is a non-overlapping 24-month window (`UTILITY_WINDOW_MONTHS`, reused, not
+    restated) of one factor's own path, standardized by that factor's own TRAIN
+    mean/std; distance is Euclidean, within one factor only. `nn_distance` is the
+    pooled nearest-TRAIN-neighbour distance of every generated block;
+    `membership_inference_auc` is a distance-to-nearest-synthetic-sample
+    membership-inference attack (Mann-Whitney AUC, via `ah.eval.reference._rank`'s
+    tie-averaging, reused not restated) distinguishing TRAIN from VALIDATION by
+    proximity to the generated output; `near_duplicate_fraction` uses a data-driven
+    epsilon (the 5th percentile of TRAIN's own leave-one-out nearest-neighbour
+    distance). TRAIN/VALIDATION are split from `ReferenceStats.historical_series`
+    (already train+validation combined) by the SEALED `ah.splits.TRAIN`/`VALIDATION`
+    date boundaries, never a second `DataAccess` read — the only reference-dependent
+    suite builder that needed this trick, since `register_reference_dependent_suites`'s
+    `(manifest, reference)` call shape carries no live catalog access and the task
+    brief asked not to touch it. Both directions tested: a literal
+    training-decade replayer (with 1e-6 noise) scores `nn_distance < 1e-3`,
+    `membership_inference_auc > 0.9`, `near_duplicate_fraction > 0.9`; an independent
+    seeded draw scores `nn_distance > 0.5`, AUC `≈ 0.5`, fraction `< 0.05`.
+  - *`economics.py` (tier `economic`)* — DN-1.1 §II.6's Economic row
+    ("Implied Sharpe ratios, term premium, ERP by regime; no-money-pump audit;
+    policy-anchor sanity — Defensible ranges, documented") judged as absolute
+    literature-range bounds, never a bootstrap band, matching that row's own
+    reference-data column. `implied_sharpe_{EXP,SLOW,REC,CRI,STAG,REF}` is a
+    structural gap (RFR-27, mirroring RFR-17/18/20/22): `label_regime` needs `usrec`/
+    `growth_yoy`, neither mapped in `factors.yaml`. `term_premium` =
+    `mean(ust_10y - policy_rate)` (levels, no numeraire question); `equity_risk_premium`
+    = `mean(equity_mkt - cash_tr_1m)`, subtracting the ALREADY-SEALED `cash_tr_1m`
+    derived series (not a second, independently invented cash-rate decision — the
+    exact numeraire trap RFR-12 already documents). `money_pump_violations` (enforce,
+    max 0) audits every `conventions.numeraire_zero_cost_legs` leg per path for
+    "never negative, sometimes positive" (a costless free lunch); a deliberately
+    always-positive `smb` fixture proves a non-zero count, the deliverable Task 5's
+    brief demanded. `floor_violations` (enforce, max 0) checks DN-1.1 §II.4's stated
+    floors (`i >= -1%`, `spread >= 100bp`) directly against generated values, ahead of
+    WP2.8's `constraints.py` making them structurally impossible. `policy_anchor_deviation`
+    substitutes a stated, simplified Taylor rule (`TAYLOR_R_STAR`/`TAYLOR_PHI_PI` from
+    DN-1.1 §II.2's own prior means; `TAYLOR_PI_TARGET` from the literature, since DN-1.1
+    deliberately leaves π* undetermined) for the latent r*/π*/cycle-term anchor DN-1.1
+    actually specifies, which no generated factor can supply. Every computable metric
+    NaNs (poisons, never drops) below `ECONOMICS_MIN_OBS = 60` pooled observations or on
+    any non-finite value — closing the "generate fewer months to dodge the audit" vector
+    a raw count would otherwise open.
+  - *`calibration.py` (tier `monthly`)* — `pit_ks_stat_{1y,5y}`,
+    `interval_coverage_{50,90}_{1y,5y}`. Rolling-origin protocol stated in full: the
+    predictive distribution is the generated ensemble's own pooled non-overlapping
+    12/60-month sums (deliberately unconditional — no history-conditioned forecast
+    exists below Step 3); the real side is every OVERLAPPING 1-month-spaced window of
+    train+validation, fixed by history alone. PIT uses a mid-rank empirical CDF;
+    `pit_ks_stat` is a closed-form one-sample Kolmogorov-Smirnov statistic against
+    Uniform(0,1) (no scipy — verified against the hand-derivable `D = 1/(2n)` closed
+    form for an evenly spaced sample, and cross-checked against the textbook sup-norm
+    definition on a fine grid). Interval coverage brackets the nominal rate on BOTH
+    sides (over-coverage is exactly as much a failure as under-coverage). Both floors
+    (`CALIBRATION_MIN_GENERATED_SUMS`/`CALIBRATION_MIN_ORIGINS = 30`) NaN rather than
+    report a small-sample-lucky number. A correctly-specified seeded forecast scores
+    `pit_ks_stat < 0.08` and coverage within 0.08 of nominal; a deliberately
+    over-confident (10x-too-narrow) forecast scores `pit_ks_stat > 0.2` and coverage
+    more than 0.15 below nominal.
+  - *Registration.* All three registered in `ah.eval.reference.PANEL_STATS` (no `fn` —
+    every metric compares the generated ensemble against real data or a stated rule
+    directly, the same shape `discriminative_score` already uses), eleven new
+    `conventions.<name>_estimator` blocks in `pre-registration.yaml` (plus the
+    `_CONVENTIONS_KEYS` allow-list entries in `ah/strategies.py` so the file still
+    loads), `money_pump_violations`/`floor_violations` sealed `enforce, max: 0` in
+    `thresholds.panel` (not a placeholder — the definition itself), and
+    `test_every_real_threshold_key_is_produced_by_a_registered_metric` widened to union
+    four of the seven reference-dependent suites' produced names (`monthly`,
+    `memorization`, `economics`, `calibration`) rather than `monthly`'s alone (a
+    pre-existing scope gap the new panel entries were the first to expose). Full suite
+    green (934 tests, up from 864 — 70 new), ruff/pyright clean.
+- **WP2.2 Task 5 review fix pass — the eighth "generator produces less" instance, two
+  missing generated-side floors, and an unstated NaN-driven verdict.**
+  - *Critical 1 — `policy_anchor_deviation` rewarded a degenerate generator.* A
+    `policy_rate` path DETERMINISTICALLY equal to the simplified anchor every month
+    scored exactly 0.0 — the numerically best value — under the old one-sided
+    `{min: null, max: 10.0}` band, despite being LESS realistic than a generator with
+    genuine idiosyncratic variation (real policy rates deviate from a Taylor-type
+    anchor by ~1-2pp RMS). `pre-registration.yaml`'s threshold is now TWO-SIDED
+    (`min: 0.3`), mirroring `interval_coverage`'s own "neither direction is free"
+    precedent; `economics.py`'s module docstring and the `policy_anchor_deviation_estimator`
+    convention state the caveat explicitly. `tests/test_economics.py` gains the
+    deliverable: `test_policy_anchor_deviation_near_zero_is_not_automatically_good`
+    shows the degenerate generator scoring strictly better than a realistic one, and
+    `test_policy_anchor_deviation_degenerate_generator_fails_the_sealed_two_sided_band`
+    shows the sealed band now catches it.
+  - *Important 2 — `money_pump_violations` narrowed to a per-leg check.* DN-1.1's audit
+    names a strictly dominating COMBINATION of factors; the implementation checks only
+    single legs, with no search over weighted combinations. Stated in `economics.py`'s
+    docstring and `pre-registration.yaml`'s `money_pump_estimator`, and recorded as
+    `governance/retrofit-register.md` RFR-29.
+  - *Important 3 — `memorization.py` had no generated-side floor.* Both sibling suites
+    floor the generated side (`ECONOMICS_MIN_OBS`, `CALIBRATION_MIN_GENERATED_SUMS`);
+    memorization only floored TRAIN. A one-path, 24-month ensemble collapsed
+    `nn_distance_p05/p50` to a single observation and drifted
+    `membership_inference_auc` toward its favourable 0.5 — "the generator produces
+    less" reading as a pass. New `MEMORIZATION_MIN_GENERATED_BLOCKS = 30` (matching
+    `CALIBRATION_MIN_GENERATED_SUMS`'s shape) NaNs all four names together below the
+    floor; `test_memorization_nan_when_generated_side_is_too_small_even_with_ample_train`
+    is the deliverable (TRAIN clears its own floor easily; the generated side does not).
+  - *Important 4 — calibration tested only the under-confidence direction.* The
+    over-wide (under-confident) direction — the likelier gaming route, a lazy
+    huge-variance generator earning near-perfect coverage for free — was untested.
+    `test_underconfident_forecast_shows_high_coverage_and_a_large_ks_statistic` adds it.
+  - *Important 5 — `MEMORIZATION_BLOCK_MONTHS` silently followed `UTILITY_WINDOW_MONTHS`.*
+    The sealed estimator states 24 as a literal; the code now raises `AssertionError`
+    at import time if the two ever diverge, and a new test pins the value directly.
+  - *Important 6 — `TAYLOR_PI_TARGET`'s literature substitution had no retrofit-register
+    row.* RFR-27 covered only `implied_sharpe_*`'s structural gap. New RFR-28 records
+    the substitution and the dropped `phi_c*c_t` term as the durable artifact WP2.3
+    reads (an implementer's report is not).
+  - *Important 7 — two new enforce gates changed the battery verdict, unstated.* On the
+    `run_full_battery` orchestration fixture, `money_pump_violations`/`floor_violations`
+    are both NaN (the fixture emits none of the audited factors), which FAILS both
+    enforce thresholds under THE ONE NaN RULE — `report.passed` is `False`, previously
+    unasserted anywhere. Decided explicitly rather than softened: NaN continues to fail
+    (consistent with the platform's one uniform NaN rule; an ensemble that omits the
+    audited factors has produced less, exactly the failure mode these gates exist to
+    catch). `test_run_full_battery_orchestration_fixture_fails_on_the_money_pump_and_floor_gates`
+    pins the verdict; `governance/retrofit-register.md` RFR-30 records the decision and
+    its consequence for WP2.4 (the bootstrap generator must emit at least one audited
+    factor from each set).
+  - *Minor.* The three stray `np.random.default_rng(...)` call sites (two in
+    `test_economics.py`, one in `test_calibration.py`) converted to
+    `Generator(PCG64(seed))`, the repo's one seeded-RNG convention.
+    `test_economics.py` gains the `ah.eval.g2`-import AST guard its two siblings
+    already had. `test_every_real_threshold_key_is_produced_by_a_registered_metric`
+    widened from four of the seven reference-dependent suites' produced names to all
+    seven (adding `horizon`/`tails`/`utility`). `_pooled_memorization_signals` is now
+    computed once per ensemble and cached (identity-keyed via a weak reference) across
+    all four memorization metric closures, instead of four times. `pit_ks_stat_5y`/
+    `interval_coverage_{50,90}_5y` re-tiered from `monthly` to `1_5yr` (DN-1.1's own
+    tier for a 60-month horizon), reconsidered and corrected before the pre-registration
+    seal rather than carried forward as a known-wrong assignment.
+  - Full suite green, ruff/pyright clean.
+- **WP2.2 Task 6 — `eval/metrics/conditional.py`, condition adherence + off-support
+  degradation.** The last WP2.2 suite, and the only one whose metrics REGENERATE
+  ensembles rather than reading the judged one: every metric resolves
+  `ensemble.meta.generator_id` via `ah.gen.registry.resolve` and calls that SAME
+  generator's `.sample(world, n_paths, seed)` fresh, once per authored/swept
+  `NumericWorld` — "the bootstrap runs this suite too" is meaningful because the
+  generator under test is re-invoked against conditions it may never have seen, not
+  read off a stashed unconditional ensemble. Registered tier `monthly` (DN-1.1 names no
+  "conditional" row); every threshold sealed `report`, never `enforce` — nothing here
+  gates G2 (STEP2-GENERATOR-PLAN §WP2.3's own sealed rationale).
+  - *Part A — condition adherence.* Four condition types mapped to
+    `factor_conditions` (`inflation.average_pct`, `policy_rate.{start_pct,end_pct}`,
+    `crisis_windows[0].{start_quarter,length_quarters}`,
+    `crisis_windows[0].severity`), each backed by two checked-in authored worlds
+    (mild/severe) under new `fixtures/worlds/conditional/*.json` (validated against the
+    schema by both production code and a dedicated test). Two metrics per type —
+    `condition_adherence_error_{type}` (pooled mean of every per-path error, across
+    every path of every world of that type) and `condition_adherence_error_p90_{type}`
+    (the pooled 90th percentile of the identical array), so a generator "usually right,
+    occasionally wildly wrong" cannot hide behind a mean. `crisis_severity`'s target
+    magnitude uses a stated, simplified linear map from the schema's own "1 =
+    2008-scale" anchor (Q4 2008 S&P 500 TR ≈ -21.9%, `CRISIS_SEVERITY_REFERENCE_
+    QUARTERLY_SHOCK_PCT = 22.0`) — the identical kind of substitution
+    `economics.py`'s `TAYLOR_*` constants make, for the identical reason.
+  - *Part B — off-support degradation.* Swept over `inflation`/`rate` only (the two
+    condition types with a real train+validation quantity to define "distance from
+    support" against — `crisis_timing`/`crisis_severity` have no real-valued analog
+    under this simple definition; **WP2.7's `support.py` supersedes this placeholder
+    for every condition type**). Distance is an ordinary z-score against
+    `ReferenceStats.historical_series`; four levels (`typical` z=0, `p95`/`p99` the
+    standard-normal quantiles, `beyond` z=4) construct the swept target
+    `mean+z*std`, clipped to the schema's bounds. `off_support_adherence_at_{level}`
+    (pooled mean error) and `off_support_pass_rate_at_{level}` (fraction within a
+    stated 2pp tolerance) — "battery" here names this suite's own pooled checks, not
+    the full cross-suite battery (that is WP2.9/WP2.11's severe-test-shaped
+    evaluation).
+  - *Anti-gaming, this work package's dominant failure mode, addressed from the
+    start rather than by a fix pass.* Every pooled metric NaNs the WHOLE aggregate
+    (never drops silently to a smaller surviving sample) on any single world's
+    unresolvable `generator_id`, a generator exception during `.sample()`, an absent
+    conditioned factor, or a non-finite value — `CONDITIONAL_MIN_OBS=20` is an
+    additional floor. Tests prove both directions per condition type (a hand-built
+    exact-tracking generator scores ~0; one mirroring WP2.2b's NC5 — ignores
+    `factor_conditions` entirely — scores clearly worse), the p90-catches-a-tail case
+    (88%-exact/12%-wildly-off generator: mean stays small, p90 does not), monotonic
+    off-support degradation and a typical-vs-beyond pass-rate gap (both against a
+    generator whose fidelity is a stated, known function of distance), and that
+    omitting the conditioned factor NaNs rather than reading as a smaller error than a
+    generator that emits it and adheres badly.
+  - *Registration.* 16 names in `ah.eval.reference.PANEL_STATS` (no `fn`/band, the
+    `economics`/`memorization`/`utility` shape — every metric compares a freshly
+    generated ensemble to a WorldSpec's stated target, never a single-argument
+    historical point estimate); `battery._REFERENCE_DEPENDENT_SUITE_BUILDERS["conditional"]`
+    (a test asserts a real `run_full_battery` call returns all 16 by name, confirmed to
+    fail before the row was added); five new `conventions.<x>_estimator` blocks in
+    `pre-registration.yaml` (one per condition type covering its mean/p90 pair, one
+    shared across all eight off-support names), plus their five keys added to
+    `ah.strategies._CONVENTIONS_KEYS`'s allow-list (missed the first pass — the sealed
+    document otherwise fails to load at all). `ah.eval.metrics.economics._cpi_yoy`
+    renamed to public `cpi_yoy_from_level` so `conditional.py` reuses the identical
+    trailing-12m YoY transform rather than restating it.
+  - *`mc_error` is honestly `0.0`, not NaN, for every metric here* — every metric
+    ignores the passed ensemble's own paths (only `generator_id`/`seed` carry into the
+    regeneration), so `ah.eval.battery.mc_error`'s subsampling recomputes the identical
+    value on every subsample by construction. Stated in the module docstring and pinned
+    by a test rather than left to be discovered. *(Superseded by the fix pass below:
+    correct arithmetic, misleading number.)*
+  - Full suite green, ruff/pyright clean.
+- **WP2.2 Task 6 review fix pass 1 — two Criticals, and the seal widened to cover
+  sealed input data.**
+  - *Critical 1 — partial support silently shrank the off-support pool.* When
+    `_support_mean_std` returned `None` for one of the two swept types, the level was
+    built from the surviving type alone and reported under
+    `off_support_adherence_at_{level}`, whose sealed definition says "across **both**
+    swept types". Now all-or-nothing: if any `OFF_SUPPORT_TYPES` member lacks support,
+    every level is empty and every Part B metric NaNs. The pre-existing guard tested
+    only the both-absent case — holding fixed the exact axis the defect lived on; the
+    one-present/one-absent case is now parametrized over both directions.
+  - *Critical 2 — the off-support monotonicity test's inflation arm was inert.* The
+    `cpi` test fixture was deterministic geometric growth, so its trailing-12m YoY was a
+    **constant** and `std(ddof=1)` ≈ 1e-14: every swept inflation target collapsed onto
+    the historical mean and the arm contributed ~zero error at every level (measured:
+    `[1.32e-13, 1.20e-13, 1.13e-13, 9.37e-14]` — flat, and *decreasing*). The whole
+    monotone trend came from `policy_rate`; the test would have passed with the
+    inflation sweep deleted. `cpi` is now a log random walk with real YoY dispersion,
+    degradation is asserted **per swept arm** (a pooled assertion is what let one dead
+    arm hide), the pooled assertion is strict (it previously read `later >= earlier -
+    1e-9` under a comment claiming "strictly increasing"), and a separate test pins that
+    both support distributions have real dispersion so a future fixture edit cannot
+    silence an arm again.
+  - *`mc_error` now measured over regeneration seeds (Important 7).* Reporting `0.0`
+    beside a value carrying real Monte-Carlo uncertainty is worse than reporting
+    nothing — it is the exact number a WP2.3 threshold author reads to size a band.
+    New `conditional_mc_error` recomputes each metric at
+    `CONDITIONAL_MC_ERROR_REPLICATES = 8` further regeneration seeds and reports
+    `std(replicates, ddof=1)` (no `/sqrt(k)`: each replicate is an independent re-draw
+    of the whole statistic, and the reported value is one such draw). Wired through a
+    new **additive** `ah.eval.battery.MetricSpec.mc_error_fn` hook — default `None`
+    keeps the uniform path-subsampling estimator for every other suite.
+  - *Regeneration memo (Important 8, closes RFR-31 via RFR-32).* `_regenerate` is now
+    memoized on the world **document** (canonical JSON), `generator_id`, `n_paths` and
+    `seed` — keyed on the document rather than `world_id` because Part B's sweep worlds
+    reuse one id per (type, level) while their target is a function of the reference, so
+    an id-keyed memo would serve a second battery run the first run's ensemble. Cleared
+    on every `build_conditional_suite`, so it never outlives one registry state. A full
+    evaluation drops from ~670 `.sample()` calls to ~144 — fewer calls than before, now
+    buying a real error bar instead of a tautological zero.
+  - *The authored worlds are now inside the seal (Important 5, RFR-33).*
+    `conventions.condition_adherence_*_estimator` defines each statistic as "pooled
+    across every checked-in `fixtures/worlds/conditional/*.json` world tagged X", but
+    `prereg._default_judged_sources()` hashed only `.py` files plus two YAMLs — so
+    editing a world's `average_pct` changed every inflation metric with no lock
+    violation and no amendment. New `_REQUIRED_JUDGED_FIXTURE_GLOBS` seals the directory
+    as input data, exactly as `factors.yaml` is; a test edits a world and asserts the
+    digest changes.
+  - *Two exception paths no longer abort the whole battery (Important 3).*
+    `gen_registry.resolve` invokes the registered **factory** (WP2.4's bootstrap will
+    load and fit in its factory) and `load_worldspec(doc)` sat outside the `try`, so a
+    factory raising during construction, or a swept world failing schema/pydantic
+    validation, propagated out of `spec.fn` and lost every other suite's results. Both
+    are inside one guarded region now, with a test each.
+  - *Schema bounds derived, not restated (Important 4).* `_off_support_bounds()` reads
+    `factor_conditions.{inflation.average_pct, policy_rate.end_pct}`'s `minimum`/
+    `maximum` from `schemas/worldspec-v1.0.schema.json`; a new test validates every
+    **programmatically swept** world against the schema (the existing fixture test
+    globbed `FIXTURES_DIR` only).
+  - *Tag↔field consistency validated at load time (Important 6).* A world tagged
+    `inflation` whose `factor_conditions` lacked an `inflation` block raised a raw
+    `KeyError` at metric-evaluation time → battery abort, not NaN.
+  - *Missing tests added.* A determinism pair (same seed ⇒ bit-identical, different seed
+    ⇒ different — using the only test double that consumes `seed`), and the min-obs NaN
+    branch, which was never exercised: the test carrying that name asserted
+    `errors.size >= CONDITIONAL_MIN_OBS`, the **opposite** of its claim. It is renamed
+    to what it actually checks and a real boundary test added (one short ⇒ NaN, exactly
+    at the floor ⇒ reported), for the mean, the p90, and Part B.
+  - *Minors.* Fixed a misattributed citation ("DN-1.1 §WP2.3" → STEP2-GENERATOR-PLAN
+    §WP2.3) in a sealed source; `import copy` hoisted to module level; conditioning
+    targets read off the `NumericWorld` projection the generator was handed rather than
+    the raw JSON dict (`load_worldspec` now runs once per regeneration, not twice); the
+    regeneration index `k` is globally unique instead of restarting per condition type
+    (the docstring's `base_seed + 7919*k` claim is now true); `off_support_pass_rate_at_
+    beyond`'s `min: 0.0` — a threshold on a `[0,1]` rate that can never be violated —
+    raised to a non-vacuous provisional `0.05`; `tests/test_conditional.py` gained an
+    autouse fixture restoring `ah.gen.registry`'s global table (seven registrations
+    previously leaked into every later test module); and `rate_endpoints_mild`'s
+    endpoints widened from 2.0→3.0 to 5.0→2.0, because a 3.0 endpoint was nearly free
+    against the condition-ignoring generator's flat-3.0 output — the discrimination
+    assertion is now a per-type margin scaled to each type's own fixture spread rather
+    than a single flat `+1.0`.
+  - 995 tests pass (was 972); ruff/pyright clean; coverage gate 96.54%.
 
 ## [v0.1.0-g0] — 2026-07-24
 

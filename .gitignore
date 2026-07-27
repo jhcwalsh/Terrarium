@@ -1,5 +1,10 @@
-# Data (never committed — see CLAUDE.md / STEP1 licensing discipline)
-data/
+# The licensed vintage store at the repository root (never committed — see CLAUDE.md /
+# STEP1 licensing discipline). ANCHORED with a leading slash: the unanchored `data/`
+# this line used to read matched ANY directory named `data` at any depth, which silently
+# excluded the entire `src/ah/data/` package (all of Step 1's data layer), every
+# synthetic connector fixture under `tests/fixtures/data/`, and `docs/data/`. Those are
+# source, tests and documentation, not licensed data, and they must be committed.
+/data/
 
 # Python
 __pycache__/
@@ -36,3 +41,26 @@ Thumbs.db
 # Step 2 experiments (local-first; manifests may be kept manually)
 experiments/
 .superpowers/
+
+# Provenance-script outputs (scripts/compute_campaign_reference.py,
+# measure_seal_evidence.py, measure_block_length_window.py, measure_mc_error_grid.py).
+# Large, derived, and reproducible bit-for-bit from the sealed parameters against the
+# sealed campaign vintage -- which is the point: `pre-registration.yaml` seals the
+# parameters and quotes the numbers, so the JSON is a local check, not an artifact.
+/reference-run*.json
+/seal-evidence.json
+/block-length-window.json
+/mc-error-grid.json
+
+# WP2.4 battery evidence. The per-seed battery reports are large (~650 KB of JSON and
+# ~110 KB of markdown each, three seeds) and reproduce bit-for-bit from
+# `scripts/run_bootstrap_battery.py` against the sealed campaign vintage -- the same
+# reasoning as the provenance-script outputs above. `artifacts/wp24/summary.json` IS
+# committed and is the exception: it carries the verdict, every enforce gate, the
+# per-comparison band-exceedance census and the conditional suite, it is what every later
+# PR diffs `bootstrap-v1` against, and -- unlike the provenance outputs above -- no sealed
+# document quotes those numbers, so nothing else in the repository would hold them.
+/artifacts/*
+!/artifacts/wp24/
+/artifacts/wp24/*
+!/artifacts/wp24/summary.json

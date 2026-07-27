@@ -1,0 +1,11 @@
+# Regime-labelling thresholds, ruleset version regime_ruleset_v1 (STEP1-DATA-PLAN §WP1.6b).
+# A rule-based D2 placeholder to ratify or replace. All values are the monthly
+# feature scales: CPI yoy (%), INDPRO yoy (%), equity drawdown (fraction, <=0),
+# HY OAS (percent, i.e. 8.0 == 800bps).
+
+version: regime_ruleset_v1
+cpi_high: 4.0          # inflationary regimes at/above this CPI yoy
+growth_weak: 0.0       # INDPRO yoy at/below this is contraction
+growth_slow: 1.5       # below this (but positive) is a slowdown
+drawdown_crisis: -0.20 # equity drawdown at/below this is crisis-scale
+hy_crisis: 8.0         # HY OAS at/above this (percent) is crisis-scale

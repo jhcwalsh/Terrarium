@@ -64,3 +64,397 @@
 # block_addition's `block` / `block_thresholds` / `cross_block_thresholds`).
 
 amendments:
+- amendment_id: AM-2026-07-26-001
+  date: '2026-07-26'
+  payload:
+    ratifying_body: D6 workshop
+    sealed_at: '2026-07-26'
+    what_D6_must_ratify:
+    - ensemble_size.n_paths
+    - bootstrap_v1.mean_block_months
+    - the nn_distance_* margin factor
+    - the elicitability_score bound
+    - the var_95/es_95 three-fold width
+    - K = 4 for the per-name absurdity bounds
+    what_is_NOT_provisional:
+    - the three *_band_exceedance_fraction bounds (0.5 is a majority rule derived
+      from the sealed band level, not an empirical quantity)
+    - money_pump_violations and floor_violations max 0 (a definition, not an estimate)
+    - near_duplicate_fraction max 0.5 (the same majority rule)
+    - the splits, the campaign vintage id, the seal scope, and every protocol block
+      (tuning, severe test, multi-seed decision rule) -- these are decisions, not
+      estimates, and D6 may revise them only by a further amendment
+    what_is_provisional:
+      bootstrap_v1.mean_block_months: 6. Bounded below by dependence_band_exceedance_fraction
+        (mean block 3 measures 0.515 and fails the 0.5 gate) and above by the memorization
+        surface (the verbatim-window rate (1-1/L)^23 exceeds nn_distance_p05's own
+        5th percentile beyond L~8). 6 is the middle of that window. Measured with
+        a throwaway prototype at 200 paths, not at the sealed criterion size; WP2.4
+        must confirm the window's edges at 1000 paths.
+      ensemble_size.n_paths: 1000. Derived from a measured MC-error/band-width analysis
+        on the sealed campaign vintage (worst ratio 0.039 at n=1024, on equity_mkt/cpi/ust_10y
+        monthly statistics; 0.149 at n=64), so it satisfies the plan's 'MC error much
+        less than band width' rule -- but the choice of HOW MUCH less is a judgment
+        D6 should ratify, because the gates' power rises without limit in n_paths.
+      per_name_absurdity_bounds: K = 4 band half-widths, all severity report. K is
+        derived from a family-wise error argument under a normal approximation (~6.6
+        sigma per comparison, ~3e-8 over ~570 comparisons); the normal approximation
+        is the provisional part, and it is why none of these bounds is enforce.
+      thresholds.panel.nn_distance_p05 / nn_distance_p50: 0.0274 / 1.0830 -- exactly
+        HALF the measured historical pooled leave-one-out nearest-neighbour null (0.0548
+        / 2.1660, n=339 over 11 factors). The null is measured; the factor of two
+        is a stated margin, not a computed quantity. Both are severity report for
+        that reason.
+      thresholds.strategies.*.elicitability_score: max 5.0 for both sixty_forty and
+        momentum. THE ONE VALUE IN THE SEALED THRESHOLDS BLOCK NOT DERIVED FROM A
+        RUN -- retained from the pre-seal draft as a loose upper bound because no
+        band exists for a STRATEGY_STATS entry and no generator exists to measure
+        one. Named here rather than dressed up. WP2.4 must report bootstrap-v1's measured
+        value so a derived bound replaces it.
+      thresholds.strategies.*.var_95 / es_95: '[historical/3, historical*3] for sixty_forty
+        and momentum. The historical values are measured on the sealed run; the three-fold
+        width is a stated order-of-magnitude choice, not a sampling band.'
+  post_hoc: false
+  rationale: 'PRE-AUTHORIZATION OF PROVISIONAL VALUES, per STEP2-GENERATOR-PLAN Sec.WP2.3''s
+    human gate: ''merges only after the D6 workshop ratifies (or with provisional
+    values pre-authorized in the amendment log).'' The project owner has taken the
+    second branch. pre-registration.yaml is sealed now, before any training run, with
+    the values named in this entry''s payload marked provisional and awaiting D6 ratification.
+    This entry is what makes that pre-authorization a record rather than an assertion,
+    and it is the FIRST entry in this log by design: everything sealed on 2026-07-26
+    was sealed under it. post_hoc is FALSE -- no training run, no generator, and no
+    G2 evidence exists at the time of this entry; the earliest thing that could have
+    been fitted to (bootstrap-v1) is WP2.4''s and does not exist yet.'
+  type: protocol_change
+- amendment_id: AM-2026-07-26-002
+  date: '2026-07-26'
+  payload:
+    additional_provisional_values:
+      tuning_protocol.selection_criterion: Mean validation-fold score of the generative
+        objective plus the D4 tail elicitability auxiliary at the config's sealed
+        lambda, ties broken by lower sampling cost (NFE). The SHAPE is the plan's
+        ('final config selected by a pre-stated criterion'); the specific tie-break
+        is authored here.
+      tuning_protocol.trial_budget_per_system: 40 configurations per neural system
+        per sampler, counting every started trial including abandoned and crashed
+        runs. NOT DERIVED FROM ANYTHING -- no prior tuning campaign exists in this
+        repository to size it against, and the plan states only that a cap must exist,
+        not what it should be. It is a judgment about how much search a forking-paths
+        record can absorb before the selected configuration stops being credible.
+        D6 must ratify it; a system that exhausts it is reported as such and does
+        not receive more budget without a further amendment.
+    amends: AM-2026-07-26-001
+    not_authored_here:
+    - severe_test_protocol's excluded decade (1970-1979) and 1965 start state -- both
+      verbatim from STEP2-GENERATOR-PLAN Sec.WP2.11
+    - ablation_systems A-E and the >=3-seed rule -- both verbatim from Sec.WP2.10
+    - multi_seed_decision_rule's four clauses -- verbatim from Sec.WP2.3
+    ratifying_body: D6 workshop
+    sealed_at: '2026-07-26'
+  post_hoc: false
+  rationale: 'COMPLETES THE PRE-AUTHORIZATION IN AM-2026-07-26-001, which omitted
+    one authored number. STEP2-GENERATOR-PLAN Sec.WP2.3 requires a ''capped trial
+    budget stated in pre-registration'' and no such cap existed anywhere in the repository,
+    so WP2.3 authored one -- tuning_protocol.trial_budget_per_system = 40 -- and then
+    failed to list it among the provisional values the first entry enumerates. That
+    is exactly the failure a pre-authorization exists to prevent: an authored number
+    sealed without being named as authored. The log is append-only, so the correction
+    is this entry rather than an edit to the first one. post_hoc is FALSE for the
+    same reason it was in AM-2026-07-26-001: no training run, no tuning trial and
+    no generator exists at the time of writing, so there is nothing the budget could
+    have been fitted to.'
+  type: protocol_change
+- amendment_id: AM-2026-07-26-003
+  date: '2026-07-26'
+  payload:
+    campaign_vintage_id:
+      from: '2026-07-24'
+      to: 2026-07-26.1
+    re_derived_values:
+      bootstrap_v1.block_length_derivation: 'RE-MEASURED at twelve factors and THE
+        WINDOW MOVED: roughly 4<=L<=8 becomes roughly 5<=L<=9. Lower edge: L=3 fails
+        at 0.537 [worst seed 0.556]; L=4''s worst seed lands on EXACTLY 0.500 against
+        the 0.5 bound and is excluded on the knife-edge principle. Upper edge: nn_distance_p05
+        now collapses to 0.000 at L=10 rather than L=12, and L=8''s margin falls 0.512
+        -> 0.394. mean_block_months stays 6, now one step from the lower edge rather
+        than mid-window.'
+      bootstrap_v1.factor_set: eleven names -> twelve; policy_rate added. The set
+        is defined by subtraction (active factors minus missing), so this follows.
+      bootstrap_v1.moment_gate_risk_measured: 0.091 (2 of 22) -> 0.0833 (2 of 24)
+        at every L from 3 to 24. The same two comparisons fail; policy_rate's mean
+        and std both land inside their bands over the 1990-2020 draw span.
+      reference_run.coverage: policy_rate added; the other eleven unchanged.
+      thresholds.blocks.us.policy_rate.excess_kurtosis: max 7.6079, from band [-1.455738,
+        2.169716] at K=4; min null (clips below excess kurtosis's structural -2).
+        New name, severity report.
+      thresholds.panel.nn_distance_p05: 0.0274 -> 0.0279. Half the measured historical
+        pooled leave-one-out nearest-neighbour null, which moved from p05 0.0548 (n=339,
+        11 factors) to 0.0557 (n=367, 12 factors).
+      thresholds.panel.nn_distance_p50: 1.0830 -> 1.0371. Half the pooled null p50,
+        which moved from 2.1660 to 2.0742 -- policy_rate's own p50 (1.053) sits below
+        the pool's.
+      thresholds.strategies.carry.elicitability_score: 'NEW: max 5.0, the same authored
+        bound the other two carry. Still the one family of thresholds in this file
+        derived from no run.'
+      thresholds.strategies.carry.es_95: 'NEW: [0.0173, 0.1561], same rule on a measured
+        ES95 of 0.05203.'
+      thresholds.strategies.carry.kupiec_pof_chi2_tail_1path: 'NEW: min 0.01, the
+        derived chi-square(1) 1% point, identical to the other two strategies''.'
+      thresholds.strategies.carry.var_95: 'NEW: [0.0116, 0.1045], the sealed [historical/3,
+        historical*3] rule on a measured VaR95 of 0.03482 over 708 months (1962-2020).'
+    restored_by_the_move:
+    - policy_rate joins reference_run.coverage (1954-07..2020-12, n=798) and bootstrap_v1.factor_set
+      (eleven factors -> twelve)
+    - the `carry` D4 strategy becomes computable; reference_run.uncomputable_d4_strategies
+      goes from three names to two
+    - term_premium, equity_risk_premium and policy_anchor_deviation stop being NaN
+      on every possible ensemble
+    - thresholds.blocks.us.policy_rate.excess_kurtosis is RESTORED, at severity report
+      (the first seal removed it; the pre-seal draft had it at enforce)
+    sealed_at: '2026-07-26'
+    still_broken_after_the_refresh:
+    - 'hy_spread: 37 observations, 2023-07..2026-07, all inside the holdout. ICE licensing
+      limits what FRED serves; no refresh fixes it. The registered ah.data.splice
+      hy_oas_pre1996 rule is the only route and applying it is another campaign restart.'
+    - 'commodities: no free, already-connectored total-return series exists (RFR-8).
+      eqw_factors and endowment_proxy stay uncomputable.'
+    - 'bootstrap_v1.block_draw_span: still 1990-2020, bound by equity_vol (VIX), so
+      bootstrap-v1 still cannot pose WP2.11''s severe test.'
+    superseded_lock_digest: sha256:a714783a7349808a95d63516dd92d737c21739a8a76a189863cc53b483e99bf7
+    unchanged_and_checked:
+    - all ten pre-existing per-name absurdity bounds -- bit-identical bands, so bit-identical
+      K=4 bounds
+    - sixty_forty and momentum D4 statistics -- identical to every digit
+    - the spread-floor evidence behind S2-SPREAD-FLOOR -- 54.0% of ig_spread (n=1224,
+      min 0.32) and 86.9% of funding_spread (n=420, min 0.118) below 100bp, none below
+      0.0
+    - bootstrap_v1.block_draw_span -- 1990-01..2020-12, 372 months; equity_vol binds
+      it and policy_rate does not
+    - the twelve structurally_unavailable_statistics -- all blocked by a missing factors.yaml
+      mapping or an unimplemented generator capability, neither of which a refresh
+      touches
+  post_hoc: false
+  rationale: 'CAMPAIGN VINTAGE MOVE AND FULL RE-DERIVATION. The first seal (pre-registration.lock
+    digest sha256:a714783a...) froze campaign vintage 2026-07-24, a snapshot taken
+    BEFORE fred.FEDFUNDS was registered in requirements.yaml by WP2.2 Task 1. As a
+    result the factor `policy_rate` -- declared active in factors.yaml, and an input
+    to five sealed estimators -- had no train+validation data, for reasons that had
+    nothing to do with the data existing. It is a free, connectored FRED series serving
+    864 monthly observations from 1954-07. That took `cash_tr_1m`, the `carry` D4
+    strategy, `term_premium`, `equity_risk_premium` and `policy_anchor_deviation`
+    out of the Step-2 campaign entirely, and the seal made that permanent. A live
+    `ah data refresh --live` restored the series and the campaign vintage moves to
+    2026-07-26.1. EVERY band, floor, strategy statistic and measured claim in pre-registration.yaml
+    was re-derived on the new vintage from scratch; nothing was carried over. THE
+    CHECK THAT THE MOVE TOUCHED ONLY WHAT DEPENDED ON IT: every per-factor band for
+    the eleven factors that were already present came back BIT-IDENTICAL, as did sixty_forty''s
+    and momentum''s D4 statistics. post_hoc is FALSE: no generator has been fitted,
+    no training run has happened and no G2 evidence exists, so there is nothing the
+    new numbers could have been fitted to -- which is also why a campaign restart
+    is free at this point and would not have been later. WHAT THE REFRESH DID NOT
+    FIX, stated so it is not assumed: `hy_spread` is still absent (FRED serves ~3
+    years of BAMLH0A0HYM2 under ICE licensing, all of it inside the holdout -- a licensing
+    limit, not a stale snapshot), `commodities` is still unsourced, and bootstrap_v1.block_draw_span
+    is still 1990-2020 because `equity_vol` (VIX) binds it, not `policy_rate`.'
+  type: protocol_change
+- amendment_id: AM-2026-07-26-004
+  date: '2026-07-26'
+  payload:
+    amends:
+    - AM-2026-07-26-001
+    - AM-2026-07-26-002
+    changed_values:
+      decisions.S2-ENDOWMENT-WEIGHTS: NEW, closing RFR-9. endowment_proxy's credit_xs_hy
+        0.15 is a notional/risk budget, not a capital share; 0.15 of capital is uninvested.
+        The duration-matched-government-leg alternative was rejected because it authors
+        a new sealed derived series with no evidence for a strategy with no computable
+        historical path.
+      decisions.S2-NUMERAIRE-BIAS: RE-TAKEN on measured evidence. Still option (b).
+        Option (a) truncates momentum's sample 1134 -> 798 months (ES99 0.15597 ->
+        0.12923) while changing VaR95/ES95/VaR99/ES99 by nothing at five decimals
+        on that same span -- it corrects a mean-level bias invisible to every statistic
+        sealed for momentum, at the cost of the worst tail in the record.
+      ensemble_size.mc_error_grid: 'NEW, and moved INTO the seal from governance/decision-register.md,
+        where it was editable with no amendment and no lock violation while a sealed
+        value rested on it. Re-measured on campaign vintage 2026-07-26.1 at the sealed
+        mean_block_months. Provenance script: scripts/measure_mc_error_grid.py.'
+      ensemble_size.n_paths: '1000 -> 1024. Sealed because 1024 is a MEASURED point
+        of ensemble_size.mc_error_grid; 1000 never was. Downstream: WP2.4 and WP2.8-2.10
+        must produce criterion-bearing ensembles at 1024 x 120.'
+      multi_seed_decision_rule.beats_definition: NEW. See rationale item (2).
+      multi_seed_decision_rule.benchmark_draw_span_bias: NEW. See rationale item (3).
+      multi_seed_decision_rule.tail_tier_definition: NEW. See rationale item (2).
+      tuning_protocol.selection_lambda: 1.0, NEW. AUTHORED, not derived -- no generator
+        exists, so no evidence about the two objective terms' relative scale exists.
+        The load-bearing property is INVARIANCE (the same lambda for every system,
+        sampler, seed and trial), not level. It may NEVER be selected from the trials.
+    code_changes_inside_the_seal:
+    - 'ah/eval/prereg.py: verify() now ERRORS when the pre-registration is sealed
+      and a named lock_path is absent. It previously skipped the lock check entirely,
+      so deleting pre-registration.lock made every battery run verify clean and silent.
+      Docstring corrected on which backfills the vintage demonstrates are unapplied.'
+    - 'factors.yaml: factor_sources.policy_rate.proxy_for corrected -- the series
+      is present on the new vintage, and its 1954-07 start (fred.FEDFUNDS''s own first
+      observation, not fred.TB3MS''s 1934-01) is now the direct demonstration that
+      the splice rule is unapplied.'
+    code_changes_outside_the_seal:
+    - 'ah/data/catalog.py + ah/data/refresh.py: refresh now CARRIES FORWARD every
+      already-held series it did not refetch. Without it a vintage was not the complete
+      as-of snapshot every pinned read assumes: fred.TEDRATE (retired, never stale)
+      silently dropped out of the first refresh, taking funding_spread with it. This
+      is why the campaign vintage is 2026-07-26.1 and not 2026-07-26. See governance/retrofit-register.md
+      RFR-62.'
+    corrections:
+    - 'structurally_unavailable_statistics header: ''All eleven names'' -> twelve.
+      The LIST was always twelve and is machine-checked in both directions; only the
+      count of it was wrong.'
+    - 'rationale.d4_commodities_consequence: two of five D4 strategies are uncomputable,
+      but not ''on the strength of commodities alone'' -- endowment_proxy is independently
+      blocked by hy_spread via credit_xs_hy.'
+    - limitations.the_campaign_vintage_is_missing_three_of_fourteen_factors -> ..._two_of_fourteen_factors.
+    - 'limitations.the_economics_tier_reduces_to_two_audits -> ..._to_five_of_eleven:
+      three names are restored by the vintage move, but the tier''s ENFORCE surface
+      is still exactly two audits.'
+    - governance/decision-register.md's S2-ENSEMBLE-SIZE claimed a non-criterion-bearing
+      run 'is rejected by ah/eval/g2.py'. It is not -- g2.py contains only the holdout-token
+      mint, and that refusal is a sealed requirement on WP2.11, not an existing check.
+      The sealed file already said so; the register did not.
+    ratifying_body: D6 workshop
+    sealed_at: '2026-07-26'
+    what_is_provisional_and_added_here:
+      bootstrap_v1.mean_block_months: still 6, but the window it sits in was RE-MEASURED
+        and MOVED (roughly 4<=L<=8 -> 5<=L<=9), which is direct evidence that this
+        window is a property of the factor set and not of the method. 6 is now one
+        step from the lower edge. WP2.4 must re-confirm at the sealed 1024 paths.
+      ensemble_size.n_paths: 1024. The MC-error grid is measured, but HOW MUCH smaller
+        than a band the Monte-Carlo error must be is a judgment, and the gates' power
+        rises without limit in n_paths. D6 ratifies.
+      thresholds.strategies.carry.*: carry's var_95/es_95 inherit the same three-fold
+        order-of-magnitude width, and its elicitability_score bound the same un-derived
+        5.0, as the other two strategies. Provisional on exactly the same terms.
+      tuning_protocol.selection_lambda: 1.0, authored with no evidence. Same standing
+        as tuning_protocol.trial_budget_per_system (AM-2026-07-26-002).
+  post_hoc: false
+  rationale: 'THE RE-SEAL''S OWN CHANGES, separate from the vintage move (AM-2026-07-26-003)
+    so the two are auditable apart: a value that moved because the DATA changed and
+    a value that moved because the DOCUMENT was wrong are different kinds of amendment.
+    Six items, each a defect in what was sealed on 2026-07-26 rather than a consequence
+    of the new vintage. (1) ensemble_size.n_paths was 1000 while the MC-error grid
+    justifying it was measured at 1024 -- a round number standing in for a measured
+    one; 1024 is now sealed, and the grid itself has moved from the UNSEALED governance/decision-register.md
+    into ensemble_size.mc_error_grid, inside the hash. (2) multi_seed_decision_rule''s
+    first clause said ''beats bootstrap-v1 on the tail tier'' and NOTHING RESOLVED
+    IT: ah.eval.battery.TIERS has no tail tier and every tails-suite metric is registered
+    tier=monthly, so WP2.11 would have had to invent the gating definition after seeing
+    results. tail_tier_definition and beats_definition now state both exactly. (3)
+    The benchmark''s 1990-2020 draw span biases the head-to-head TOWARD promotion
+    -- sealed as benchmark_draw_span_bias, with a reporting obligation on WP2.11.
+    (4) tuning_protocol referred to ''the config''s own sealed lambda'' and sealed
+    no lambda anywhere; selection_lambda: 1.0 is now pinned, and it is AUTHORED, not
+    derived. (5) RFR-12''s option (a) became buildable on the new vintage, so the
+    numeraire decision was re-taken on measured evidence rather than inherited from
+    an impossibility argument that no longer holds; it stays option (b). (6) RFR-9
+    -- whether endowment_proxy''s weights are capital shares or a risk budget -- was
+    assigned to WP2.3 and never answered; it is now sealed as a risk budget. Two count
+    corrections travel with them (the structurally-unavailable header said eleven
+    for a twelve-name list; d4_commodities_consequence attributed both uncomputable
+    strategies to commodities alone). post_hoc is FALSE for the same reason as the
+    first three entries: no generator, no trial, no G2 evidence exists, so nothing
+    here could have been fitted to a result.'
+  type: protocol_change
+- amendment_id: AM-2026-07-26-005
+  date: '2026-07-26'
+  payload:
+    amends:
+    - AM-2026-07-26-003
+    - AM-2026-07-26-004
+    code_changes_inside_the_seal:
+    - 'ah/eval/battery.py: criterion_bearing now compares THE VINTAGE as well as the
+      size (new ah.eval.battery.criterion_bearing_for). multi_seed_decision_rule.criterion_bearing_runs_only
+      names three conditions -- sealed ensemble_size, sealed campaign_vintage_id,
+      verified prereg+lock -- and points at BatteryReport.criterion_bearing as recording
+      them; the code compared n_paths and months and nothing else, and ensemble.meta.vintage_id
+      was carried onto the report and never checked. THE HAZARD WAS LIVE: incomplete
+      predecessor vintages 2026-07-24 (no fred.FEDFUNDS) and 2026-07-26 (no fred.TEDRATE)
+      remain on disk and reachable through the catalog''s append-only pointer history
+      (asof(''2026-07-25'') and asof(''2026-07-26'') both resolve to 2026-07-24),
+      so a 1024x120 run against either was stamped criterion_bearing: true. The SENTENCE
+      was the requirement and the CODE was extended to meet it, rather than the sentence
+      weakened to describe the code. RFR-71.'
+    corrections:
+    - 'seal_scope.splice_py_reason: the premise was false. It read ''policy_rate and
+      hy_spread appear in reference_run.missing_factors precisely BECAUSE the backfills
+      are absent''. missing_factors is [commodities, hy_spread]; policy_rate is PRESENT
+      on vintage 2026-07-26.1, and what demonstrates its fedfunds_pre1954 backfill
+      is unapplied is its START DATE -- fred.FEDFUNDS''s own 1954-07 rather than fred.TB3MS''s
+      1934-01. The correct wording already existed in ah/eval/prereg.py''s docstring,
+      factors.yaml and decision-register S2-SEAL-SCOPE-2, and was simply never carried
+      into the sealed block. The CONCLUSION (splice.py stays outside the seal) is
+      unchanged and is independently demonstrated per rule. governance/retrofit-register.md
+      RFR-70.'
+    - 'ah/eval/prereg.py verify() docstring: still said ''if lock_path is given AND
+      EXISTS'', which describes the pre-RFR-67 behaviour that the same re-seal removed.
+      A named lock that is absent is an error whenever the document is sealed. Inside
+      the hash, so it travelled with this seal. RFR-70.'
+    disclosures_no_behaviour_change:
+    - 'multi_seed_decision_rule.beats_definition clause (ii): it is scoped to usable
+      REFERENCE bands, and ah.eval.reference.RegisteredStrategyStat carries no `fn`
+      by construction, so NO band exists or can exist for any of the eleven strategy
+      statistics. Clause (ii) is therefore evaluated ENTIRELY over the cross-block
+      tail_dependence_lower/upper family (63 usable bands on this vintage) and touches
+      ZERO strategy-level metrics -- it does not cover var_95/es_95/es_99, which ''NO
+      TAIL-BAND REGRESSION over comparison-set metrics'' read as if it did. The clause
+      is UNCHANGED and remains deterministic. THE ALTERNATIVE IS NAMED AND NOT TAKEN:
+      writing clause (ii) against the sealed thresholds.strategies rather than against
+      reference bands would have covered the strategy statistics; adopting it now,
+      with WP2.4''s benchmark numbers in hand, would be post-hoc. A later work package
+      may propose it as a dated protocol_change amendment, before any challenger is
+      evaluated. RFR-72.'
+    - 'tuning_protocol.selection_criterion: the invariance argument overreached. selection_lambda
+      STAYS 1.0 and is not re-fitted. What is invariant is the RULE, not the effective
+      weight: generative_objective is a different quantity per arm -- ablation system
+      D runs two samplers, hier-diffusion-v1 (an ELBO, a bound) and hier-flow-v1 (an
+      exact log-likelihood), separately selected because the trial budget is per system
+      per sampler -- so a fixed lambda gives the D4 tail auxiliary a different EFFECTIVE
+      weight per arm. No constant repairs this, because any scale-aware value would
+      have to be read off the trials, which the protocol forbids. BINDING ON WP2.8:
+      report both terms of S separately, per system and per sampler, with their scales.
+      RFR-73.'
+    new_lock_digest: sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary or decision changed value in this pass. Every
+      item below is either a correction to sealed PROSE that described something untrue,
+      a DISCLOSURE of what an unchanged clause actually ranges over, or a CODE change
+      that makes an existing sealed sentence true. The digest moves because ah/eval/battery.py
+      and ah/eval/prereg.py are hashed judged sources.
+    sealed_at: '2026-07-26'
+    superseded_lock_digest: sha256:42db20268d7292111fa54b34e8f37f7387057b6e46de6fcd7edf5a7f7ee59bc9
+    wp24_evidence_re_measured_against_this_seal: 'scripts/run_bootstrap_battery.py
+      was re-run after this seal so WP2.4''s committed artifacts are judged by the
+      final digest rather than the superseded one. The three-seed result is unchanged:
+      criterion_bearing true, zero enforce failures, at the sealed 1024 x 120 against
+      the sealed campaign vintage.'
+  post_hoc: false
+  rationale: 'THE RE-SEAL''S CLOSING PASS: four findings from the independent review
+    of AM-2026-07-26-003/-004, plus one free correction inside the hash. NO THRESHOLD,
+    BAND OR GATE MOVED -- nothing here is a re-measurement, and the review''s verdict
+    was explicitly that the gap was one re-seal rather than another cut. (1) A sealed
+    scope justification rested on a false premise (seal_scope.splice_py_reason claimed
+    policy_rate is in missing_factors; it is not, and its 1954-07 start is the real
+    demonstration). (2) criterion_bearing claimed a check it did not perform: the
+    sealed sentence names the campaign vintage and the code compared only the ensemble
+    size, while two incomplete predecessor vintages remain reachable through pointer
+    history -- fixed in code, not documented around, because that is the only place
+    the hazard can bite. (3) beats_definition clause (ii) is structurally empty for
+    the strategy family, since RegisteredStrategyStat has no fn and therefore no band;
+    disclosed, with the threshold-based alternative named and deliberately not taken
+    now that WP2.4''s numbers exist. (4) The lambda invariance argument does not survive
+    incommensurable objectives across arm D''s two samplers; the value stays 1.0 and
+    the reason is corrected, with a reporting obligation on WP2.8. Plus verify()''s
+    docstring, which still described the lock behaviour that AM-2026-07-26-004 itself
+    removed. post_hoc is FALSE for the same reason as all four prior entries: no generator
+    has been fitted, no training run has happened and no G2 evidence exists. WP2.4''s
+    bootstrap-v1 landed entirely within the previous seal and required no amendment;
+    its artifacts are re-measured against this digest, and nothing in this pass could
+    have been fitted to them because nothing in this pass is a number.'
+  type: protocol_change

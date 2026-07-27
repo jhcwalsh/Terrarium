@@ -86,6 +86,18 @@ Metric suites (each unit-tested against closed-form or simulated ground truth):
 *Acceptance:* all metric unit tests pass; battery runs on the Step-0 toy engine end-to-end in CI.
 
 ### WP2.2b — Negative controls: validating the battery itself
+**2026-07-26 note (WP2.3):** the sentence below ("a test asserts each control fails at
+least its designated tier at enforce level") **contradicts §WP2.3's** sealed decision
+rule, which states conditional-tier results are non-gating. NC5's designated tier *is*
+`conditional`, so both cannot hold. The project owner has ruled that **§WP2.3 governs**:
+the conditional tier stays non-gating, every conditional threshold stays
+`severity: report`, and NC5's exemption from the enforce criterion is a named,
+narrowly-scoped exception covering exactly one control and exactly its designated cell.
+It is not a hole — NC5 is still detected substantively there and is still blocked, by
+`near_duplicate_fraction` at enforce, and the pinning test now asserts *which* gate
+blocks it. Recorded as `governance/decision-register.md` row `S2-NC5-EXEMPTION` and,
+verbatim, in `pre-registration.yaml`'s `decisions:` block.
+
 `negative_controls.py` registers deliberately broken generators: **NC1** iid Gaussian with matched means/covariance (kills tails/clustering — monthly tier must fail it); **NC2** temporally shuffled real data (kills dynamics — ACF/horizon tiers must fail it); **NC3** mean/vol-shifted bootstrap (drifted marginals — bands must fail it); **NC4** memorizer replaying training decades with noise (memorization tier must fail it); **NC5** condition-ignoring generator (conditional tier must fail it). A test asserts each control fails at least its designated tier at enforce level. This suite is the battery's own validation record and is cited in `G2-EVIDENCE.md`.
 *Acceptance:* all five controls rejected; a report table shows which tier caught which control.
 
@@ -94,6 +106,28 @@ Populate `pre-registration.yaml` from WP2.2's train+val reference statistics: pe
 `prereg.seal()` hashes the YAML **plus the source of every enforce-tier metric plus `g2.py`, plus every other module that can move a pass/fail verdict** (`reference.py`, `prereg.py` itself, `strategies.py`, `factors.py`, `battery/report.py`, `battery/stylized.py`) into `pre-registration.lock`; `prereg.verify()` runs at every battery/G2 invocation. Amendments only via the machine-checked log. **2026-07-25 note (WP2.1b):** this sentence originally read narrower -- "the YAML plus the source of every enforce-tier metric plus `g2.py`" -- which would have left `reference.py`, `strategies.py`, `prereg.py` itself, and the battery-report modules outside the seal. The project owner ruled, in WP2.1b, that CLAUDE.md's stated invariant ("thresholds **and the code that judges them** are hashed together") governs over this plan's narrower wording, so the seal scope widened to match; see `governance/decision-register.md`'s Step 2 section, row `S2-SEAL`, and `src/ah/eval/prereg.py`'s module docstring ("What the seal covers") for the full accounting.
 *Acceptance:* modified YAML or modified enforce-metric code with a stale lock fails loudly; amendment log round-trips.
 *Human gate:* merges only after the D6 workshop ratifies (or with provisional values pre-authorized in the amendment log).
+
+**2026-07-26 note — DONE. The seal is closed.** `pre-registration.yaml` carries
+`sealed: true`, `pre-registration.lock` (32 hashed files) is committed, and
+`run_battery` verifies both on every invocation. The human gate was discharged via the
+**pre-authorization** branch: `governance/amendment-log.yaml`'s first entry
+`AM-2026-07-26-001` (`post_hoc: false`) names exactly what is provisional and what D6
+must ratify. Four things a later reader should know, because they are not obvious from
+this section's wording. (1) The **ensemble size is sealed** (`n_paths: 1000`,
+`months: 120`) on the owner's direction — the gates' power rises without limit in
+ensemble size while their bounds do not move, so **WP2.4 and WP2.8–2.10 must run at that
+size or amend**. (2) The sealed reference run found **three** of fourteen active factors
+with no train+validation data on the campaign vintage (`commodities`, `policy_rate`,
+`hy_spread`), which makes **three** of five D4 strategies unevaluable and removed a live
+`enforce` threshold that would otherwise have failed every run forever. (3) The frozen
+benchmark's spec is sealed with **geometric blocks of mean 6 months**, bounded below by
+the dependence gate (mean block 3 measures 0.515 against a 0.5 bound) and above by the
+memorization surface — both measured, no bound moved. (4) **`bootstrap-v1` cannot run
+§WP2.11's severe test**: a multivariate block bootstrap over every factor with data can
+only draw from 1990–2020, so `G2-EVIDENCE.md` must record that row as NOT POSABLE. See
+`pre-registration.yaml`'s `limitations:`, `seal_scope:`, `bootstrap_v1:` and
+`structurally_unavailable_statistics:` blocks, and `governance/retrofit-register.md`
+rows RFR-48…RFR-60.
 
 ### WP2.4 — The benchmark: regime-stratified stationary block bootstrap
 Per the sealed spec: multivariate blocks (never per-factor resampling), geometric lengths, regime(+slow-state-bucket) stratification, WorldSpec conditioning (sequence pins the stratification path; unconditional samples historical regime frequencies). Register `bootstrap-v1`.

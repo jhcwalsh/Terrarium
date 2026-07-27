@@ -91,6 +91,42 @@ def test_refresh_is_idempotent(cat: Catalog) -> None:
     assert second.written == []
 
 
+def test_refresh_carries_forward_series_it_did_not_fetch(cat: Catalog) -> None:
+    """A vintage is a complete snapshot: a fresh, non-due series must not vanish.
+
+    ``plan`` only fetches missing-or-stale series, and every read pins one vintage, so
+    without carry-forward the second refresh drops everything the first one made fresh.
+    """
+    frames = {
+        "fred.DGS10": _monthly([2.0, 2.1], start="2026-05-01"),
+        "fred.GS10": _monthly([3.0, 3.1], start="2026-05-01"),
+    }
+    first = refresh(
+        cat,
+        REQ,
+        vintage="v1",
+        asof=ASOF,
+        provider=_provider(frames),
+        created_at=NOW,
+        sources=["fred"],
+    )
+    assert {"fred.DGS10", "fred.GS10"} <= set(first.written)
+
+    # Second refresh: both are present and fresh, so neither is due and the provider
+    # offers nothing at all. They must still be readable from the new vintage.
+    second = refresh(
+        cat, REQ, vintage="v2", asof=ASOF, provider=_provider({}), created_at=NOW, sources=["fred"]
+    )
+    assert "fred.DGS10" not in second.written
+    assert {"fred.DGS10", "fred.GS10"} <= set(second.carried_forward)
+    carried = cat.read_observations("v2", "fred.DGS10")
+    original = cat.read_observations("v1", "fred.DGS10")
+    assert len(carried) == len(original)
+    assert list(carried["value"]) == list(original["value"])
+    assert set(carried["vintage"]) == {"v2"}  # re-stamped, not a rewrite of v1
+    assert set(original["vintage"]) == {"v1"}  # the older vintage is untouched
+
+
 def test_refresh_dry_run_writes_nothing(cat: Catalog) -> None:
     result = refresh(
         cat, REQ, vintage="v1", asof=ASOF, provider=_provider({}), created_at=NOW, dry_run=True

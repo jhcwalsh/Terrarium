@@ -29,18 +29,24 @@ import pandas as pd
 import pytest
 
 import ah.splits
+from ah.eval import panel as panel_mod
 from ah.eval import reference as reference_mod
 from ah.eval.reference import (
     CROSS_BLOCK_STATS,
     SINGLE_FACTOR_STATS,
+    STRATEGY_STATS,
+    TAIL_DEPENDENCE_MIN_TAIL_OBS,
     ReferenceComputationError,
     RegisteredCrossStat,
     RegisteredStat,
+    RegisteredStrategyStat,
     _draw_moving_block_indices,
     block_bootstrap_band,
     compute_reference,
+    tail_dependence_lower,
+    tail_dependence_upper,
 )
-from ah.factors import FactorManifest, load_manifest
+from ah.factors import FactorManifest, FactorSource, load_manifest
 from ah.splits import HOLDOUT, DataAccess, FinalEvaluationToken, Reader
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -131,10 +137,23 @@ class _RecordingAccess(DataAccess):
 
 
 def _small_manifest() -> FactorManifest:
-    """A fast two-block, four-factor manifest for tests that don't need the real one."""
+    """A fast two-block, four-factor manifest for tests that don't need the real one.
+
+    Fix pass 1 (Critical 1): every factor now declares a real ``kind: series`` source
+    whose ``series_id`` happens to equal the factor name, because ``compute_reference``
+    resolves factor ids through ``factor_sources`` rather than through an identity
+    ``series_id_for`` default. The fixture's readers are keyed by those same names, so
+    the data these tests see is unchanged -- what changed is that the mapping is now
+    declared rather than assumed. ``kind: unavailable`` (the previous value) would now
+    correctly mean "no data for this factor at all".
+    """
     return FactorManifest(
         blocks={"global": ("g1", "g2"), "us": ("u1", "u2")},
         active_blocks=("global", "us"),
+        sources={
+            name: FactorSource(kind="series", series_id=name, units="ret")
+            for name in ("g1", "g2", "u1", "u2")
+        },
     )
 
 
@@ -174,17 +193,22 @@ def test_leakage_guard_catches_the_review_mutation(monkeypatch: pytest.MonkeyPat
     reader = _make_reader({"g1": 1, "g2": 2, "u1": 3, "u2": 4})
     access = _RecordingAccess(reader)
 
-    real_read_train_val = reference_mod._read_train_val
+    real_read_series = panel_mod._read_series
 
-    def leaky_read_train_val(
-        access_arg: DataAccess, factor: str, series_id_for
-    ) -> pd.Series | None:
+    def leaky_read_series(
+        access_arg: DataAccess, series_id: str, split_reader, *, factor: str
+    ) -> pd.DataFrame | None:
         # The exact mutation quoted in the review, applied alongside the real read.
         token = ah.splits.FinalEvaluationToken(purpose="x")
-        access_arg.frame(series_id_for(factor), "holdout", token=token)
-        return real_read_train_val(access_arg, factor, series_id_for)
+        access_arg.frame(series_id, "holdout", token=token)
+        return real_read_series(access_arg, series_id, split_reader, factor=factor)
 
-    monkeypatch.setattr(reference_mod, "_read_train_val", leaky_read_train_val)
+    # Fix pass 1 (Critical 1): compute_reference no longer owns the per-factor read --
+    # ah.eval.panel.read_factor_frames does, for compute_reference and build_panel
+    # alike. The mutation therefore targets that shared read path, which is the code
+    # a real leak would have to live in; the guard being exercised (recording at
+    # frame(), not train_val()) is unchanged.
+    monkeypatch.setattr(panel_mod, "_read_series", leaky_read_series)
 
     compute_reference(
         access, manifest, vintage_id="v-leak-mut", seed=0, n_resamples=5, block_length=6
@@ -218,7 +242,12 @@ def test_same_seed_gives_bit_identical_bands() -> None:
 
     # Minor 10: compare the whole ReferenceStats, not just .blocks/.cross_blocks --
     # this also covers active_blocks/vintage_id/n_resamples/seed/missing_factors.
-    assert ref_a == ref_b
+    # WP2.2 Task 3: `ergodicity_gap`'s reference-side fn is ALWAYS NaN (no historical
+    # analog -- see `_ergodicity_gap_reference_stub`), and a plain dataclass `==` on
+    # two NaN floats is False even when they are the "same" NaN. Compare via `.to_dict()`
+    # (still the whole object, field for field) with `np.testing.assert_equal`, which
+    # treats matching NaNs as equal -- what "bit-identical" actually means here.
+    np.testing.assert_equal(ref_a.to_dict(), ref_b.to_dict())
 
 
 def test_different_seed_gives_different_bands() -> None:
@@ -286,9 +315,76 @@ def test_acf1_recovers_known_ar1_phi() -> None:
     for t in range(1, n):
         x[t] = phi * x[t - 1] + eps[t]
 
-    estimate = SINGLE_FACTOR_STATS["acf_1"].fn(x)
+    estimate = SINGLE_FACTOR_STATS["acf_r_lag1"].fn(x)
     # SE(phi_hat) ~ sqrt((1-phi^2)/n) ~ 0.0057 at n=20000, phi=0.6; 0.03 is > 5x that.
     assert estimate == pytest.approx(phi, abs=0.03)
+
+
+def test_tail_dependence_near_zero_for_independent_factors() -> None:
+    """Independent legs: at the sealed 5% tail fraction, the TRUE tail-dependence
+    coefficient is 0.05 (the fraction itself, not exactly 0 -- see the estimator's own
+    docstring for why), so a small, bounded-below-0.15 value at n=20000 is the
+    expected, honest outcome (0.15 comfortably covers the estimator's own sampling
+    noise at this n: the tail itself holds ~1000 observations, so the joint-exceedance
+    count's relative standard error is a few percent of 0.05)."""
+    rng = np.random.Generator(np.random.PCG64(41))
+    n = 20_000
+    a = rng.normal(size=n)
+    b = rng.normal(size=n)  # independent of a
+    assert tail_dependence_lower(a, b) < 0.15
+    assert tail_dependence_upper(a, b) < 0.15
+
+
+def test_tail_dependence_near_one_for_a_comonotone_pair() -> None:
+    """A == B exactly: every rank exceedance coincides, so the coefficient is exactly
+    1.0 at any tail fraction -- both directions."""
+    rng = np.random.Generator(np.random.PCG64(42))
+    a = rng.normal(size=2000)
+    b = a.copy()
+    assert tail_dependence_lower(a, b) == pytest.approx(1.0)
+    assert tail_dependence_upper(a, b) == pytest.approx(1.0)
+
+
+def test_tail_dependence_nan_below_the_minimum_tail_observation_floor() -> None:
+    rng = np.random.Generator(np.random.PCG64(3))
+    n = TAIL_DEPENDENCE_MIN_TAIL_OBS * 2  # n * 0.05 < TAIL_DEPENDENCE_MIN_TAIL_OBS
+    a = rng.normal(size=n)
+    b = rng.normal(size=n)
+    assert np.isnan(tail_dependence_lower(a, b))
+    assert np.isnan(tail_dependence_upper(a, b))
+
+
+def test_tail_dependence_nan_on_mismatched_lengths() -> None:
+    assert np.isnan(tail_dependence_lower(np.zeros(500), np.zeros(400)))
+
+
+def test_tail_dependence_registered_in_cross_block_stats() -> None:
+    assert CROSS_BLOCK_STATS["tail_dependence_lower"].fn is tail_dependence_lower
+    assert CROSS_BLOCK_STATS["tail_dependence_upper"].fn is tail_dependence_upper
+    assert CROSS_BLOCK_STATS["tail_dependence_lower"].tier == "monthly"
+
+
+def test_strategy_stats_registry_has_the_eleven_wp22_task4_names() -> None:
+    """RegisteredStrategyStat carries no `fn` (see the registry's own docstring) --
+    this only proves the eleven names and their tier exist, the same shape
+    ``test_mean_and_std_closed_form`` proves for SINGLE_FACTOR_STATS's `fn`."""
+    expected = {
+        "var_95",
+        "es_95",
+        "var_99",
+        "es_99",
+        "elicitability_score",
+        "kupiec_pof_lr_1path",
+        "kupiec_pof_chi2_tail_1path",
+        "christoffersen_independence_lr_1path",
+        "christoffersen_independence_chi2_tail_1path",
+        "christoffersen_conditional_coverage_lr_1path",
+        "christoffersen_conditional_coverage_chi2_tail_1path",
+    }
+    assert set(STRATEGY_STATS) == expected
+    for registered in STRATEGY_STATS.values():
+        assert isinstance(registered, RegisteredStrategyStat)
+        assert registered.tier == "monthly"
 
 
 def test_excess_kurtosis_normal_near_zero_student_t_clearly_positive() -> None:
@@ -339,7 +435,7 @@ def test_acf_abs_1_known_by_construction() -> None:
     band -- this is what "known by construction" means here.
     """
     x = np.array([1.0, 5.0, 2.0, 6.0, 1.0, 7.0])
-    assert SINGLE_FACTOR_STATS["acf_abs_1"].fn(x) == pytest.approx(0.25, abs=1e-9)
+    assert SINGLE_FACTOR_STATS["acf_abs_lag1"].fn(x) == pytest.approx(0.25, abs=1e-9)
 
 
 # --------------------------------------------------------------------------- #
@@ -352,19 +448,68 @@ def test_band_brackets_point_estimate_for_every_stat() -> None:
     seeds = {"g1": 1, "g2": 2, "u1": 3, "u2": 4}
     access = DataAccess(_make_reader(seeds, start="1950-01-01", end="2026-06-01"))
 
+    # block_length must comfortably exceed the longest registered lag: a moving-block
+    # bootstrap keeps only the (b - k) / b share of lag-k pairs that fall inside one
+    # block, so at b = 24 the lag-18..24 resample statistics are shrunk toward zero and
+    # a full-sample point estimate genuinely falls outside its own band. That is a real
+    # property of the estimator, not slack in this assertion -- see
+    # `reference.DEFAULT_BLOCK_LENGTH` and
+    # `test_short_blocks_shrink_a_long_lag_band_toward_zero` below, which pins it.
     ref = compute_reference(
-        access, manifest, vintage_id="v", seed=5, n_resamples=200, block_length=24
+        access,
+        manifest,
+        vintage_id="v",
+        seed=5,
+        n_resamples=200,
+        block_length=reference_mod.DEFAULT_BLOCK_LENGTH,
     )
 
+    # WP2.2 Task 3: a stat CAN be legitimately, honestly NaN on this fixture's ~76
+    # years of history -- exactly the same "by construction" outcome
+    # `hill_tail_index` already documents for a level factor, generalized. Any NaN
+    # among point/lo/hi means no bracket claim can honestly be made, so those are
+    # collected rather than asserted against -- and then the collected SET is asserted
+    # to be exactly the expected one (WP2.2 Task 3 fix pass 1, Important 2). Skipping
+    # unconditionally, as the first version of this test did, would silently green-light
+    # any future all-NaN statistic: the generic invariant would still "pass" while
+    # measuring nothing.
     checked = 0
+    nan_stats: set[str] = set()
     for block_ref in ref.blocks.values():
         for name, band in block_ref.stats.items():
-            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
             checked += 1
+            if np.isnan(band.point) or np.isnan(band.lo) or np.isnan(band.hi):
+                nan_stats.add(name.split(".", 1)[1])
+                continue
+            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
     for pair_ref in ref.cross_blocks.values():
         for name, band in pair_ref.stats.items():
-            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
             checked += 1
+            if np.isnan(band.point) or np.isnan(band.lo) or np.isnan(band.hi):
+                nan_stats.add(name.split(".", 1)[1])
+                continue
+            assert band.lo <= band.point <= band.hi, f"{name}: {band}"
+
+    # Each of these is a NAMED, understood case, not a blanket exemption:
+    #  - `ergodicity_gap` has no historical analog at all (history is one realization
+    #    and there is no historical ENSEMBLE to compare it against), so its registered
+    #    reference-side fn is always NaN by construction;
+    #  - `variance_ratio_120m` needs >= VARIANCE_RATIO_MIN_SUMS (10) non-overlapping
+    #    120-month sums, i.e. >= 1200 months (100 years) of history, more than this
+    #    fixture's 76-year span provides -- NaN point AND NaN band;
+    #  - the three `drawdown_*` statistics can have a REAL point (the full sample has
+    #    plenty of episodes) but a NaN band: `block_bootstrap_band` draws length-matched
+    #    (120-month) resamples, and a resample carrying fewer than
+    #    DRAWDOWN_MIN_EPISODES pooled episodes legitimately returns NaN for THAT
+    #    resample; `np.percentile` then propagates the single NaN into `lo`/`hi`
+    #    (governance/retrofit-register.md RFR-19, shared sealed infrastructure).
+    assert nan_stats == {
+        "ergodicity_gap",
+        "variance_ratio_120m",
+        "drawdown_median_depth",
+        "drawdown_median_duration",
+        "drawdown_depth_duration_rank_corr",
+    }
 
     # Minor 7: derive the expected count from the fixture instead of hardcoding two
     # coincidentally-equal "4"s (one counted factor instances, the other cross-factor
@@ -428,6 +573,49 @@ def test_malformed_frame_raises_named_error() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# WP2.2 Task 4: historical_series is populated, unaligned, train+val only
+# --------------------------------------------------------------------------- #
+
+
+def test_historical_series_is_populated_per_present_factor() -> None:
+    """ah.eval.metrics.tails/utility both read ReferenceStats.historical_series
+    (never a fresh catalog read) -- this is the field that makes that possible."""
+    manifest = _small_manifest()
+    seeds = {"g1": 1, "g2": 2, "u1": 3, "u2": 4}
+    access = DataAccess(_make_reader(seeds, start="1950-01-01", end="2026-06-01"))
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert set(ref.historical_series) == {"g1", "g2", "u1", "u2"}
+    # Train+validation only (never the full synthetic series, which extends into the
+    # holdout era) -- compare against access.train_val() itself, the sanctioned
+    # surface, not the raw (longer) synthetic frame.
+    expected_g1 = access.train_val("g1")
+    np.testing.assert_allclose(
+        ref.historical_series["g1"].to_numpy(), expected_g1["value"].to_numpy()
+    )
+    # Sidesteps pandas-stubs' overly broad DatetimeIndex.max() return type: a plain
+    # Python list of Timestamps, maxed with the builtin, is unambiguously typed.
+    holdout_start = pd.Timestamp(HOLDOUT.start)
+    g1_dates: list[pd.Timestamp] = list(ref.historical_series["g1"].index)
+    assert max(g1_dates) < holdout_start
+
+
+def test_historical_series_omits_a_factor_with_no_data() -> None:
+    manifest = _small_manifest()
+    seeds = {"g1": 1, "u1": 3, "u2": 4}  # g2's reader raises KeyError (no data at all)
+    access = DataAccess(_make_reader(seeds, start="1950-01-01", end="2026-06-01"))
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+    assert "g2" not in ref.historical_series
+    assert "g2" in ref.missing_no_data
+
+
+# --------------------------------------------------------------------------- #
 # 10. to_dict() JSON round-trip
 # --------------------------------------------------------------------------- #
 
@@ -448,7 +636,16 @@ def test_to_dict_round_trips_through_json() -> None:
     assert set(decoded["blocks"]) == {"global", "us"}
     assert "global|us" in decoded["cross_blocks"]
     sample_band = decoded["blocks"]["global"]["g1.mean"]
-    assert set(sample_band) == {"point", "lo", "hi", "n_resamples", "level", "tier"}
+    assert set(sample_band) == {
+        "point",
+        "lo",
+        "hi",
+        "n_resamples",
+        "level",
+        "tier",
+        "resample_length",
+        "n_valid_resamples",
+    }
     # No zero-overlap pairs in this uniform-range fixture.
     assert decoded["zero_overlap_pairs"] == {}
 
@@ -876,3 +1073,547 @@ def test_draw_moving_block_indices_rejects_nonpositive_block_length() -> None:
     for bad_block_length in (0, -3):
         with pytest.raises(ValueError, match="block_length"):
             _draw_moving_block_indices(10, seed=1, n_resamples=5, block_length=bad_block_length)
+
+
+# --------------------------------------------------------------------------- #
+# 17b. Minor 5 (WP2.2 Task 2 fix pass 2): a block_length covering the whole panel
+#      leaves no block-start freedom -- every replicate is the identical whole-sample
+#      block, a zero-width band that would fail nearly any threshold with no warning.
+#      Not reachable at today's 120-month paths and 1996+ shortest series, but reachable
+#      as soon as a judged path length exceeds a short-history factor's own history.
+# --------------------------------------------------------------------------- #
+
+
+def test_draw_moving_block_indices_rejects_block_length_covering_the_whole_panel() -> None:
+    with pytest.raises(ValueError, match="no block-start freedom"):
+        _draw_moving_block_indices(10, seed=1, n_resamples=5, block_length=10)
+    with pytest.raises(ValueError, match="no block-start freedom"):
+        _draw_moving_block_indices(10, seed=1, n_resamples=5, block_length=20)
+
+
+def test_block_bootstrap_band_rejects_block_length_covering_the_whole_panel() -> None:
+    panel = np.arange(10, dtype=np.float64).reshape(-1, 1)
+    with pytest.raises(ValueError, match="no block-start freedom"):
+        block_bootstrap_band(
+            lambda arr: float(np.mean(arr[:, 0])),
+            panel,
+            seed=1,
+            n_resamples=5,
+            level=0.9,
+            block_length=10,
+        )
+
+
+# --------------------------------------------------------------------------- #
+# 18. WP2.2 Task 1 fix pass, Critical 1: compute_reference resolves factor ids
+#     through the manifest's factor_sources mapping.
+#
+# Before this fix compute_reference took a `series_id_for` callable defaulting to
+# identity and nothing ever passed it the manifest, so it asked the catalog for
+# "equity_mkt"/"policy_rate"/... -- not series ids -- and EVERY factor landed in
+# missing_factors with an empty reference and no error. This is the test that would
+# have caught it: a reader keyed by the manifest's own declared series ids must
+# produce a populated reference, and a factor that is genuinely available must NOT
+# appear in missing_factors.
+# --------------------------------------------------------------------------- #
+
+
+def _series_ids_of(manifest: FactorManifest) -> set[str]:
+    needed: set[str] = set()
+    for factor in manifest.active_factors():
+        source = manifest.sources[factor]
+        if source.kind == "series":
+            assert source.series_id is not None
+            needed.add(source.series_id)
+        elif source.kind == "derived":
+            needed.update(source.inputs)
+    return needed
+
+
+def test_compute_reference_resolves_real_manifest_series_ids() -> None:
+    manifest = load_manifest()
+    needed = _series_ids_of(manifest)
+    reader = _make_reader(
+        {sid: i for i, sid in enumerate(sorted(needed))}, start="1980-01-01", end="2026-06-01"
+    )
+    access = DataAccess(reader)
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v-map", seed=1, n_resamples=5, block_length=12
+    )
+
+    # commodities is the one declared-unavailable active factor; everything else has a
+    # declared source and real data, so nothing else may be missing.
+    assert ref.missing_factors == ("commodities",)
+    for factor in manifest.active_factors():
+        if factor == "commodities":
+            continue
+        block = manifest.block_of(factor)
+        assert f"{factor}.mean" in ref.blocks[block].stats, (
+            f"factor '{factor}' has a declared factor_sources entry and real data, but "
+            f"compute_reference produced no statistic for it"
+        )
+
+
+def test_compute_reference_computes_derived_factors_not_only_series_factors() -> None:
+    """A `kind: derived` factor (ig_spread = fred.BAA - fred.AAA) must resolve too.
+
+    ``FactorManifest.series_id_for`` *raises* for a derived factor, so a wiring that
+    passed that method straight through as ``series_id_for=`` would crash here rather
+    than compute anything -- the structural incompatibility the review flagged.
+    """
+    manifest = load_manifest()
+    needed = _series_ids_of(manifest)
+    reader = _make_reader(
+        {sid: i for i, sid in enumerate(sorted(needed))}, start="1980-01-01", end="2026-06-01"
+    )
+    access = DataAccess(reader)
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v-derived", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert "ig_spread.mean" in ref.blocks["global"].stats
+    assert "funding_spread.mean" in ref.blocks["us"].stats
+
+
+def test_reference_records_per_factor_coverage() -> None:
+    """I4: per-factor effective sample varies roughly fourfold and was recorded nowhere.
+
+    `min_start` across the mapped series runs 1913 (fred.CPI) to 1996 (fred.HY_OAS), so
+    a sealed `equity_vol` band rests on ~30 years of history and a sealed `equity_mkt`
+    band on ~95. A band that does not say how much history it rests on is not
+    auditable, which is the whole point of the mapping this module now reads.
+    """
+    manifest = _small_manifest()
+    specs = {
+        "g1": (1, "1950-01-01", "2020-01-01"),
+        "g2": (2, "1950-01-01", "2020-01-01"),
+        "u1": (3, "1950-01-01", "2020-01-01"),
+        "u2": (4, "2000-01-01", "2020-01-01"),  # deliberately much shorter
+    }
+    access = DataAccess(_make_reader_with_ranges(specs))
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v-cov", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert set(ref.coverage) == {"g1", "g2", "u1", "u2"}
+    assert ref.coverage["g1"].first_date == "1950-01-01"
+    assert ref.coverage["u2"].first_date == "2000-01-01"
+    # train+validation ends before the holdout, so no factor's last date reaches it
+    assert ref.coverage["g1"].last_date < HOLDOUT.start
+    # the short factor really is short -- the fourfold-spread case, made visible
+    assert ref.coverage["u2"].n_obs * 3 < ref.coverage["g1"].n_obs
+    assert json.loads(json.dumps(ref.to_dict()))["coverage"]["u2"]["n_obs"] == (
+        ref.coverage["u2"].n_obs
+    )
+
+
+def test_reference_splits_missing_declared_from_missing_no_data() -> None:
+    """I3, from the reference side."""
+    manifest = load_manifest()
+    needed = _series_ids_of(manifest)
+    # drop one real series id: hy_spread becomes "declared available, no data"
+    hy_series = manifest.sources["hy_spread"].series_id
+    assert hy_series is not None
+    reader = _make_reader(
+        {sid: i for i, sid in enumerate(sorted(needed - {hy_series}))},
+        start="1980-01-01",
+        end="2026-06-01",
+    )
+    access = DataAccess(reader)
+
+    ref = compute_reference(
+        access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
+    )
+
+    assert ref.missing_declared == ("commodities",)
+    assert ref.missing_no_data == ("hy_spread",)
+    assert set(ref.missing_factors) == {"commodities", "hy_spread"}
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass -- Critical 2: the monthly statistics are registered here
+#
+# `ah.eval.prereg` validates a threshold key's `<stat>` against these registries, and
+# `ah.eval.battery.lookup_band` matches a metric to its historical band by the same
+# name. A monthly metric whose statistic is not registered here can therefore neither
+# carry a sealed threshold nor be shown against history.
+# --------------------------------------------------------------------------- #
+
+
+_EXPECTED_NEW_SINGLE_FACTOR_STATS = (
+    "hill_tail_index_5pct",
+    "hill_tail_index_1pct",
+    *[f"acf_r_lag{k}" for k in range(1, 6)],
+    *[f"acf_abs_lag{k}" for k in range(1, 25)],
+    "acf_abs_decay",
+    "agg_gaussianity_3m",
+    "agg_gaussianity_12m",
+    "leverage_correlation",
+)
+
+
+def test_monthly_statistics_are_registered_as_single_factor_stats() -> None:
+    for name in _EXPECTED_NEW_SINGLE_FACTOR_STATS:
+        assert name in SINGLE_FACTOR_STATS, name
+        assert SINGLE_FACTOR_STATS[name].tier == "monthly", name
+
+
+def test_panel_statistics_registry_carries_the_corr_matrix_distance() -> None:
+    from ah.eval.reference import PANEL_STATS
+
+    assert "cross_block_corr_matrix_distance" in PANEL_STATS
+    assert PANEL_STATS["cross_block_corr_matrix_distance"].tier == "monthly"
+
+
+def test_no_two_registered_statistics_are_the_same_quantity() -> None:
+    """Two registered names computing one number is a seal hazard: WP2.3 would author
+    two bands and two thresholds on a single quantity. `acf_1`/`acf_abs_1` (lag 1) and
+    `agg_gaussianity_1m` (the identity aggregation, i.e. `excess_kurtosis`) were
+    exactly that; the lag-indexed names replace the former and the latter is not
+    registered at all.
+    """
+    rng = np.random.Generator(np.random.PCG64(4242))
+    x = rng.standard_t(df=5, size=800)
+    values: dict[str, float] = {}
+    for name, registered in SINGLE_FACTOR_STATS.items():
+        value = registered.fn(x)
+        if np.isnan(value):
+            continue
+        for other, other_value in values.items():
+            assert value != pytest.approx(other_value, rel=0, abs=1e-12), (
+                f"'{name}' and '{other}' are the same quantity ({value})"
+            )
+        values[name] = value
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 2 fix pass -- Important 3: length-matched reference resampling
+#
+# Every per-path statistic uses the n-denominator Box-Jenkins ACF estimator, whose
+# finite-sample bias is a function of the series length. History is ~1100 months; a
+# generated path is a fraction of that. Reference replicates are therefore drawn at the
+# ensemble's own path length so both sides carry the same estimator bias.
+# --------------------------------------------------------------------------- #
+
+
+def test_draw_moving_block_indices_honours_resample_length() -> None:
+    idx = _draw_moving_block_indices(
+        100, seed=0, n_resamples=5, block_length=10, resample_length=30
+    )
+    assert idx.shape == (5, 30)
+    assert idx.min() >= 0
+    assert idx.max() < 100
+
+
+def test_block_bootstrap_band_records_the_resample_length() -> None:
+    rng = np.random.Generator(np.random.PCG64(17))
+    panel = rng.normal(size=(400, 1))
+    band = block_bootstrap_band(
+        lambda a: float(np.mean(a[:, 0])),
+        panel,
+        seed=3,
+        n_resamples=50,
+        level=0.9,
+        block_length=24,
+        resample_length=60,
+    )
+    assert band.resample_length == 60
+
+
+def test_resample_length_widens_a_length_sensitive_band() -> None:
+    """A shorter replicate is a noisier estimate, so its percentile band is wider.
+    This is the property that makes the band comparable to a short generated path."""
+    rng = np.random.Generator(np.random.PCG64(18))
+    panel = rng.normal(size=(1200, 1))
+    stat = lambda a: SINGLE_FACTOR_STATS["acf_abs_lag24"].fn(a[:, 0])  # noqa: E731
+    kw = dict(seed=3, n_resamples=200, level=0.9, block_length=120)
+    full = block_bootstrap_band(stat, panel, **kw)  # type: ignore[arg-type]
+    short = block_bootstrap_band(stat, panel, resample_length=120, **kw)  # type: ignore[arg-type]
+    assert (short.hi - short.lo) > 2.0 * (full.hi - full.lo)
+
+
+def test_compute_reference_stamps_the_resample_length_on_every_band() -> None:
+    manifest = _small_manifest()
+    access = DataAccess(_make_reader({"g1": 1, "g2": 2, "u1": 3, "u2": 4}, start="1950-01-01"))
+    ref = compute_reference(
+        access,
+        manifest,
+        vintage_id="v",
+        seed=0,
+        n_resamples=5,
+        block_length=12,
+        resample_length=120,
+    )
+    # Every band records the length its own replicates were drawn at, and the field is
+    # now per STATISTIC rather than uniform (WP2.2 Task 3 fix pass 1, Critical 1): a
+    # statistic registered `length_matched=False` is drawn at the full sample length,
+    # recorded as None, and the two decade-frequency statistics are exactly those. The
+    # assertion is over the split, not over a blanket "everything is 120", so that a
+    # future statistic silently opting out of length matching fails this test.
+    unmatched = {"lost_decade_frequency", "long_inflation_era_frequency"}
+    by_stat = {
+        name.split(".", 1)[1]: band
+        for block in ref.blocks.values()
+        for name, band in block.stats.items()
+    }
+    assert by_stat
+    for stat, band in by_stat.items():
+        expected = None if stat in unmatched else 120
+        assert band.resample_length == expected, stat
+
+
+def test_default_block_length_exceeds_the_longest_registered_lag() -> None:
+    """A moving-block bootstrap keeps only the ``(b - k) / b`` share of lag-k pairs
+    that fall inside one block, so a block length near the longest judged lag makes
+    every long-lag band an artifact of the resampling rather than a statement about
+    history. The default must leave real headroom over
+    ``reference.MAX_REGISTERED_LAG``."""
+    assert reference_mod.MAX_REGISTERED_LAG == 24
+    assert reference_mod.DEFAULT_BLOCK_LENGTH >= 4 * reference_mod.MAX_REGISTERED_LAG
+
+
+# --------------------------------------------------------------------------- #
+# Minor 6 (WP2.2 Task 2 fix pass 2): sealed numeric constants pinned exactly.
+#
+# pre-registration.yaml's conventions.acf_abs_decay_estimator, conventions.
+# agg_gaussianity_estimator and conventions.estimator_length_matching all describe
+# these module constants BY VALUE (241 grid points, rate range [-1.0, 5.0], tolerance
+# 1e-10, at most 200 iterations, the 30-sum floor, DEFAULT_BLOCK_LENGTH=120). Nothing
+# previously asserted the exact values against the code -- only bracket-style
+# properties (e.g. the block-length-vs-lag test above). Pre-seal, a divergence between
+# the sealed prose and the code is a silent drift with a green suite; post-seal it
+# trips the lock. Pinned here so a divergence trips a test instead, on either side.
+# --------------------------------------------------------------------------- #
+
+
+def test_sealed_decay_estimator_constants_match_the_pre_registration() -> None:
+    """pre-registration.yaml's conventions.acf_abs_decay_estimator: '241 equally spaced
+    grid points across rate in [-1.0, 5.0], then golden-section search ... to an
+    interval width of 1e-10 (at most 200 iterations)'."""
+    assert reference_mod._DECAY_RATE_MIN == -1.0
+    assert reference_mod._DECAY_RATE_MAX == 5.0
+    assert reference_mod._DECAY_GRID_POINTS == 241
+    assert reference_mod._DECAY_GOLDEN_TOL == 1e-10
+    assert reference_mod._DECAY_MAX_ITERATIONS == 200
+
+
+def test_sealed_agg_gaussianity_floor_matches_the_pre_registration() -> None:
+    """pre-registration.yaml's conventions.agg_gaussianity_estimator: 'NaN below 30
+    pooled sums'."""
+    assert reference_mod.AGG_GAUSSIANITY_MIN_SUMS == 30
+
+
+def test_sealed_default_block_length_matches_the_pre_registration() -> None:
+    """pre-registration.yaml's conventions.estimator_length_matching: 'The sealed
+    default is 120 months (ah.eval.reference.DEFAULT_BLOCK_LENGTH)'."""
+    assert reference_mod.DEFAULT_BLOCK_LENGTH == 120
+
+
+def test_short_blocks_shrink_a_long_lag_band_toward_zero() -> None:
+    """The artifact the default block length exists to avoid, pinned so it cannot be
+    rediscovered as a surprise while authoring sealed bands: with blocks no longer
+    than the lag being measured, the resample distribution of a lag-k autocorrelation
+    collapses toward zero however strong the dependence in the data actually is."""
+    n = 1200
+    t = np.arange(n)
+    # a deterministic period-24 cycle: lag-24 autocorrelation is ~1 by construction
+    panel = np.cos(2.0 * np.pi * t / 24.0).reshape(-1, 1)
+    stat = SINGLE_FACTOR_STATS["acf_abs_lag24"].fn
+    kw: dict[str, object] = dict(seed=1, n_resamples=200, level=0.9)
+    short = block_bootstrap_band(lambda a: stat(a[:, 0]), panel, block_length=24, **kw)  # type: ignore[arg-type]
+    long = block_bootstrap_band(
+        lambda a: stat(a[:, 0]),
+        panel,
+        block_length=reference_mod.DEFAULT_BLOCK_LENGTH,
+        **kw,  # type: ignore[arg-type]
+    )
+    assert short.point == pytest.approx(long.point)  # same full-sample estimate
+    assert abs(short.hi) < 0.5 * abs(long.point), "short blocks must destroy the lag-24 signal"
+    # Blocks five times the lag keep most of it. (Not all: every block seam still
+    # breaks the lag-24 pairs that straddle it, which is why even here the band sits
+    # below the full-sample point -- a second reason a band and its point estimate are
+    # not interchangeable.)
+    assert long.lo > 0.7 * long.point
+
+
+def test_new_statistics_recover_known_ground_truths() -> None:
+    """Each newly registered estimator against a closed-form or constructed target,
+    at the registry surface `ah.eval.prereg` and `ah.eval.battery` actually consume."""
+    rng = np.random.Generator(np.random.PCG64(909))
+
+    # Hill: 1 + Lomax(alpha) is Pareto-I with shape alpha; returns are -losses.
+    losses = 1.0 + rng.pareto(2.5, size=40_000)
+    assert SINGLE_FACTOR_STATS["hill_tail_index_5pct"].fn(-losses) == pytest.approx(2.5, rel=0.1)
+
+    # acf_r_lag2 of an AR(1) is phi**2.
+    phi = 0.6
+    eps = rng.normal(0.0, 1.0, size=40_000)
+    x = np.empty(eps.size)
+    x[0] = eps[0]
+    for i in range(1, eps.size):
+        x[i] = phi * x[i - 1] + eps[i]
+    assert SINGLE_FACTOR_STATS["acf_r_lag2"].fn(x) == pytest.approx(phi**2, abs=0.03)
+
+    # agg_gaussianity: a normal sample's aggregates stay ~mesokurtic.
+    normal_sample = rng.normal(size=40_000)
+    assert SINGLE_FACTOR_STATS["agg_gaussianity_3m"].fn(normal_sample) == pytest.approx(
+        0.0, abs=0.2
+    )
+
+    # leverage_correlation: ~0 for a symmetric iid series.
+    assert SINGLE_FACTOR_STATS["leverage_correlation"].fn(normal_sample) == pytest.approx(
+        0.0, abs=0.05
+    )
+
+    # acf_abs_decay recovers -ln(phi) on a series whose |deviation| is an AR(1).
+    v = np.empty(20_000)
+    v[0] = 5.0
+    noise = rng.normal(0.0, 0.5, size=v.size)
+    for i in range(1, v.size):
+        v[i] = 5.0 + 0.9 * (v[i - 1] - 5.0) + noise[i]
+    signed = v * np.where(np.arange(v.size) % 2 == 0, 1.0, -1.0)
+    assert SINGLE_FACTOR_STATS["acf_abs_decay"].fn(signed) == pytest.approx(
+        -float(np.log(0.9)), abs=0.02
+    )
+
+
+def test_agg_gaussianity_is_nan_below_its_sample_floor() -> None:
+    x = np.arange(60.0)
+    # 60 monthly observations give 5 non-overlapping 12-month sums: far below the
+    # floor at which a fourth-moment statistic carries information.
+    assert np.isnan(reference_mod.agg_gaussianity(x, 12))
+    assert not np.isnan(reference_mod.agg_gaussianity(x, 1))
+
+
+def test_hill_tail_index_is_nan_for_an_all_positive_level_series() -> None:
+    """A rate/spread/index level has no losses, so its Hill tail index is NaN by
+    construction rather than a number computed from the wrong side."""
+    assert np.isnan(SINGLE_FACTOR_STATS["hill_tail_index_5pct"].fn(np.linspace(1.0, 9.0, 500)))
+
+
+# --------------------------------------------------------------------------- #
+# 13. the decade-frequency statistics get a USABLE band (WP2.2 Task 3 fix pass 1)
+# --------------------------------------------------------------------------- #
+
+
+def _returns_frame(seed: int, start: str, end: str, *, drift: float, sd: float) -> pd.DataFrame:
+    """Deterministic iid monthly returns: low drift, equity-like volatility.
+
+    Low enough drift that a 10-year compounded return is genuinely a coin flip -- the
+    regime in which a lost-decade frequency band is most informative, and the one that
+    makes this test a statement about the estimator rather than about the fixture.
+    """
+    dates = pd.date_range(start, end, freq="MS")
+    rng = np.random.Generator(np.random.PCG64(seed))
+    return pd.DataFrame({"date": dates, "value": rng.normal(drift, sd, size=len(dates))})
+
+
+def _cpi_level_frame(start: str, end: str, *, era_months: int) -> pd.DataFrame:
+    """A CPI index level alternating between ~7.4%/yr and ~1.9%/yr eras.
+
+    Deterministic (no RNG at all). Alternating eras mean some decade windows contain a
+    sustained high-inflation run and some do not, so the historical frequency is a
+    genuine interior fraction rather than a saturated 0 or 1.
+    """
+    dates = pd.date_range(start, end, freq="MS")
+    hot = (np.arange(len(dates)) // era_months) % 2 == 0
+    rates = np.where(hot, 0.006, 0.0016)
+    level = 100.0 * np.cumprod(1.0 + rates)
+    return pd.DataFrame({"date": dates, "value": level})
+
+
+def _frequency_reference() -> reference_mod.ReferenceStats:
+    """``compute_reference`` at PRODUCTION settings (length-matched to a 120-month
+    ensemble) over a century of returns and a century of CPI levels."""
+    manifest = FactorManifest(
+        blocks={"global": ("g1",), "us": ("u1",)},
+        active_blocks=("global", "us"),
+        sources={
+            "g1": FactorSource(kind="series", series_id="g1", units="ret"),
+            "u1": FactorSource(kind="series", series_id="u1", units="index"),
+        },
+    )
+    frames = {
+        "g1": _returns_frame(11, "1900-01-01", "2026-06-01", drift=0.0015, sd=0.05),
+        "u1": _cpi_level_frame("1900-01-01", "2026-06-01", era_months=72),
+    }
+
+    def reader(series_id: str) -> pd.DataFrame:
+        return frames[series_id]
+
+    return compute_reference(
+        DataAccess(reader),
+        manifest,
+        vintage_id="v",
+        seed=17,
+        n_resamples=300,
+        block_length=reference_mod.DEFAULT_BLOCK_LENGTH,
+        resample_length=120,
+    )
+
+
+def test_decade_frequency_bands_are_non_degenerate() -> None:
+    """CRITICAL 1. Both frequency statistics used to be a single 0/1 indicator over the
+    whole input, so every bootstrap replicate returned 0.0 or 1.0 and the percentile
+    band could only ever be [0, 1] (admits every possible ensemble value) or [0, 0] /
+    [1, 1] (fails every generator with a non-zero rate). With internal decade windowing
+    the point estimate is a real fraction and the band is a real interval."""
+    ref = _frequency_reference()
+    lost = ref.blocks["global"].stats["g1.lost_decade_frequency"]
+    era = ref.blocks["us"].stats["u1.long_inflation_era_frequency"]
+    for name, band in (("lost_decade_frequency", lost), ("long_inflation_era_frequency", era)):
+        assert 0.0 < band.point < 1.0, f"{name} point: {band}"
+        assert band.lo < band.hi, f"{name} band is degenerate: {band}"
+        assert band.lo > 0.0, f"{name} lo is not strictly inside [0, 1]: {band}"
+        assert band.hi < 1.0, f"{name} hi is not strictly inside [0, 1]: {band}"
+
+
+def test_decade_frequency_bands_are_drawn_at_the_full_sample_length() -> None:
+    """The length-matching CONSEQUENCE of the fix, made explicit rather than implied.
+
+    A decade-frequency replicate must be long enough to contain many decade windows, so
+    these two statistics are drawn at the full train+validation length while every
+    length-sensitive per-path statistic stays matched to the ensemble's own 120-month
+    path length. Both facts are recorded on the band itself, so the report says which
+    each is."""
+    ref = _frequency_reference()
+    stats = ref.blocks["global"].stats
+    assert stats["g1.lost_decade_frequency"].resample_length is None
+    assert stats["g1.acf_r_lag1"].resample_length == 120
+    assert stats["g1.variance_ratio_12m"].resample_length == 120
+
+
+def test_tail_dependence_bands_are_drawn_at_the_full_sample_length() -> None:
+    """IMPORTANT 3. ``TAIL_DEPENDENCE_MIN_TAIL_OBS = 10`` at a 5% tail fraction needs
+    ``n >= 200``, but a length-matched replicate is drawn at the ensemble's own path
+    length (120 at production settings), so EVERY replicate returned NaN and the band
+    was ``(nan, nan)`` with ``n_valid_resamples = 0`` -- an empty band on a registered,
+    sealable statistic whose "real historical band for free" was the stated reason for
+    registering it here at all. ``RegisteredCrossStat`` now carries the same
+    ``length_matched`` flag ``RegisteredStat`` does, and these two are the entries that
+    set it False."""
+    ref = _frequency_reference()
+    stats = ref.cross_blocks[("global", "us")].stats
+    for stat in ("tail_dependence_lower", "tail_dependence_upper"):
+        band = stats[f"g1~u1.{stat}"]
+        assert band.resample_length is None, stat
+        assert band.n_valid_resamples == band.n_resamples, stat
+        assert np.isfinite(band.lo) and np.isfinite(band.hi), (stat, band)
+    # The length-sensitive cross-block statistics stay matched -- the assertion is over
+    # the split, so a future statistic silently opting out fails this test.
+    assert stats["g1~u1.correlation"].resample_length == 120
+    assert stats["g1~u1.crisis_corr_lift"].resample_length == 120
+
+
+def test_band_records_how_many_resamples_were_valid() -> None:
+    """RFR-19 stays deferred, but its degeneracy must be VISIBLE in the artifact: a
+    single NaN among the resamples destroys both bounds today, and without this field
+    that is indistinguishable from a statistic that is simply undefined."""
+    ref = _frequency_reference()
+    band = ref.blocks["global"].stats["g1.acf_r_lag1"]
+    assert band.n_valid_resamples == band.n_resamples
+    nan_band = ref.blocks["global"].stats["g1.ergodicity_gap"]
+    assert nan_band.n_valid_resamples == 0

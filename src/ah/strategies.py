@@ -61,7 +61,7 @@ from typing import Any
 
 import yaml
 
-from ah.factors import load_manifest
+from ah.factors import FactorManifest, load_manifest
 
 _DEFAULT_PATH = Path(__file__).resolve().parents[2] / "pre-registration.yaml"
 
@@ -104,13 +104,24 @@ _VALID_KINDS = ("static_weights", "rule")
 _STRATEGY_KEYS = frozenset(
     {"kind", "rebalance", "lookback", "rule", "weights", "params", "notes", "proxy_mapping"}
 )
-_DERIVED_KEYS = frozenset({"from", "transform", "params", "formula", "notes"})
+_DERIVED_KEYS = frozenset({"from", "transform", "params", "formula", "notes", "numeraire"})
 _PROXY_SLEEVE_KEYS = frozenset({"weight", "factor", "reason"})
 
 # `params` keys ending in this suffix name a series the rule reads; their values are
 # validated against the active factors plus the declared derived series. See
 # `conventions.series_parameters` in pre-registration.yaml.
 _SERIES_PARAM_SUFFIX = "_series"
+
+# The numeraire a fully-invested D4 portfolio may be quoted on. `zero_cost` is not in
+# this set: it is not a portfolio numeraire, it is the property of a self-financing
+# overlay leg that makes the leg numeraire-neutral (see _validate_numeraires).
+_PORTFOLIO_NUMERAIRES = frozenset({"total_return", "excess_return"})
+
+# Every numeraire a single leg may declare, portfolio numeraires plus `zero_cost`. Kept
+# identical to ah.factors._NUMERAIRES -- a test asserts the two agree, so the factor
+# side and the derived-series side of a D4 leg can never drift into different
+# vocabularies.
+_LEG_NUMERAIRES = frozenset({"total_return", "excess_return", "zero_cost"})
 
 # `lookback` is declared once, in the strategy's own field. Rejected inside `params`.
 _FORBIDDEN_PARAM_KEYS = frozenset({"lookback_months"})
@@ -133,6 +144,95 @@ _CONVENTIONS_KEYS = frozenset(
         "rebalance_cadences",
         "rebalance_convention",
         "static_weights_composition",
+        "numeraire",
+        "numeraire_zero_cost_legs",
+        "numeraire_statement",
+        "nan_metric_rule",
+        # WP2.2 Task 2 fix pass: the sealed metric-estimator statements. Prose-only to
+        # this module (D4 strategy loading does not read them), but they must be
+        # ALLOWED here or the whole pre-registration fails to load -- and they belong
+        # in the sealed file rather than only in a docstring, because a band is
+        # meaningless without the estimator that produced it. `ah.eval.reference` is
+        # the implementation they describe and is itself a hashed judged source, so
+        # the two cannot drift without a lock violation.
+        "acf_estimator",
+        "estimator_length_matching",
+        "acf_abs_decay_estimator",
+        # WP2.2c Item 3: the joint (cumulative) ACF statistics and the band-exceedance
+        # gates built on top of them.
+        "acf_sum_estimator",
+        "band_exceedance_gate_estimator",
+        # WP2.2c Item 5: the 10yr tier's structural-unavailability disclaimer.
+        "ten_year_tier_coverage",
+        "hill_tail_index_estimator",
+        "agg_gaussianity_estimator",
+        "leverage_correlation_estimator",
+        "cross_block_corr_matrix_distance_estimator",
+        # WP2.2 Task 3 and its fix pass: the horizon-tier estimators, plus the two
+        # cross-cutting statements that had no home before (the elementary population
+        # moments every other definition builds on, and why a Monte-Carlo error over
+        # 1000 generated paths is NOT the small-n historical uncertainty DN-1.1 asks to
+        # be reported). `ah.eval.prereg.ESTIMATOR_CONVENTION_KEYS` maps every registered
+        # statistic to the block that defines it, and a test asserts the mapping is
+        # total in both directions -- so this list cannot fall behind the registry
+        # silently.
+        "elementary_moment_estimators",
+        "crisis_corr_lift_estimator",
+        "variance_ratio_estimator",
+        "mean_reversion_halflife_estimator",
+        "drawdown_episode_estimator",
+        "lost_decade_frequency_estimator",
+        "long_inflation_era_frequency_estimator",
+        "ergodicity_gap_estimator",
+        "regime_duration_estimator",
+        "ten_year_return_vs_valuation_estimator",
+        "mc_error_is_not_the_small_n_band",
+        # WP2.2 Task 4: tails.py's remaining estimators, utility.py's three metrics, and
+        # the D4-strategy-level backtest estimators. Same reasoning as the block above --
+        # prose-only to this module, but must be ALLOWED here or the whole
+        # pre-registration fails to load.
+        "tail_dependence_estimator",
+        "discriminative_score_estimator",
+        "predictive_score_estimator",
+        "tstr_degradation_estimator",
+        "d4_var_es_estimator",
+        "elicitability_score_estimator",
+        "kupiec_pof_estimator",
+        "christoffersen_independence_estimator",
+        "christoffersen_conditional_coverage_estimator",
+        # WP2.2 Task 4 fix pass: one cross-cutting statement shared by all six
+        # Kupiec/Christoffersen names (why the pooled sample size is fixed in the
+        # definition rather than chosen by the generator), stated once rather than three
+        # times. Not an `<x>_estimator` block and therefore not in
+        # `ah.eval.prereg.ESTIMATOR_CONVENTION_KEYS`, which maps registered statistics
+        # to the block that DEFINES them -- the three estimator blocks above still do.
+        "backtest_reference_sample_size",
+        # WP2.2 Task 4 fix pass: the one gradient-descent fitting procedure the whole
+        # utility tier shares (step size, stopping criterion, penalty, weighting),
+        # stated once instead of three times inside the three utility estimator blocks.
+        "gradient_descent_fit_estimator",
+        # WP2.2 Task 5: memorization.py, calibration.py and economics.py's estimators.
+        # Same reasoning as every block above -- prose-only to this module, but must be
+        # ALLOWED here or the whole pre-registration fails to load.
+        "memorization_nn_distance_estimator",
+        "membership_inference_auc_estimator",
+        "near_duplicate_fraction_estimator",
+        "pit_ks_stat_estimator",
+        "interval_coverage_estimator",
+        "implied_sharpe_estimator",
+        "term_premium_estimator",
+        "equity_risk_premium_estimator",
+        "money_pump_estimator",
+        "floor_violations_estimator",
+        "policy_anchor_deviation_estimator",
+        # WP2.2 Task 6: conditional.py's estimators. Same reasoning as every block
+        # above -- prose-only to this module, but must be ALLOWED here or the whole
+        # pre-registration fails to load.
+        "condition_adherence_inflation_estimator",
+        "condition_adherence_rate_estimator",
+        "condition_adherence_crisis_timing_estimator",
+        "condition_adherence_crisis_severity_estimator",
+        "off_support_estimator",
     }
 )
 
@@ -193,6 +293,7 @@ class DerivedSeries:
     params: Mapping[str, float]
     formula: str
     notes: str
+    numeraire: str = ""
 
 
 @dataclass(frozen=True)
@@ -217,6 +318,8 @@ class Conventions:
     level_factors: frozenset[str]
     rebalance_cadences: frozenset[str]
     static_weights_composition: str
+    numeraire: str = ""
+    zero_cost_legs: frozenset[str] = frozenset()
 
 
 @dataclass(frozen=True)
@@ -336,6 +439,15 @@ def _validate_derived_series(
     if not isinstance(notes, str):
         raise StrategyError(f"{source}: derived_series.{series_id}.notes must be a string")
 
+    numeraire = entry_map.get("numeraire", "")
+    if not isinstance(numeraire, str):
+        raise StrategyError(f"{source}: derived_series.{series_id}.numeraire must be a string")
+    if numeraire and numeraire not in _LEG_NUMERAIRES:
+        raise StrategyError(
+            f"{source}: derived_series.{series_id}.numeraire must be one of "
+            f"{sorted(_LEG_NUMERAIRES)}, got {numeraire!r}"
+        )
+
     return DerivedSeries(
         series_id=series_id,
         source_factor=source_factor,
@@ -343,6 +455,7 @@ def _validate_derived_series(
         params=MappingProxyType(params),
         formula=formula,
         notes=notes,
+        numeraire=numeraire,
     )
 
 
@@ -379,6 +492,8 @@ _DEFAULT_CONVENTIONS = Conventions(
     level_factors=frozenset(),
     rebalance_cadences=frozenset(),
     static_weights_composition="",
+    numeraire="",
+    zero_cost_legs=frozenset(),
 )
 
 
@@ -432,6 +547,29 @@ def _validate_conventions(raw: object, active_factors: frozenset[str], source: P
         source,
     )
 
+    # The sealed numeraire (WP2.2 Task 1 fix pass, Critical 3). Optional at the block
+    # level so the many hand-written fixtures that predate it keep loading unchanged;
+    # once declared it is fully enforced, and ah.eval.prereg.verify() requires the real
+    # pre-registration to declare it, so the sealed document can never silently drop it.
+    numeraire = entry_map.get("numeraire")
+    if numeraire is None:
+        numeraire_value = ""
+        zero_cost_legs: frozenset[str] = frozenset()
+    else:
+        numeraire_value = _require_text(numeraire, "conventions.numeraire", source)
+        if numeraire_value not in _PORTFOLIO_NUMERAIRES:
+            raise StrategyError(
+                f"{source}: conventions.numeraire must be one of "
+                f"{sorted(_PORTFOLIO_NUMERAIRES)}, got {numeraire_value!r}"
+            )
+        zero_cost_legs = _require_string_set(
+            entry_map.get("numeraire_zero_cost_legs") or ["__none__"],
+            "conventions.numeraire_zero_cost_legs",
+            source,
+        )
+        if zero_cost_legs == frozenset({"__none__"}):
+            zero_cost_legs = frozenset()
+
     return Conventions(
         percent_to_decimal=percent_to_decimal,
         months_per_year=months_per_year,
@@ -439,6 +577,8 @@ def _validate_conventions(raw: object, active_factors: frozenset[str], source: P
         level_factors=level_factors,
         rebalance_cadences=rebalance_cadences,
         static_weights_composition=static_weights_composition,
+        numeraire=numeraire_value,
+        zero_cost_legs=zero_cost_legs,
     )
 
 
@@ -745,20 +885,129 @@ def load_conventions(path: Path | None = None) -> Conventions:
     return _load_conventions_cached(resolved)
 
 
+def strategy_legs(strategy: Strategy) -> tuple[str, ...]:
+    """Every series a strategy actually holds, in a stable order.
+
+    A ``static_weights`` strategy's legs are its ``weights`` keys; a ``rule``
+    strategy's are the values of every ``params`` key ending in ``_series`` (the sealed
+    ``conventions.series_parameters`` rule -- a rule's target series is data in the
+    pre-registration, never a constant in code). Deduplicated, first-seen order
+    preserved, so a caller iterating legs gets a reproducible sequence.
+    """
+    legs: list[str] = list(strategy.weights)
+    for key, value in strategy.params.items():
+        if key.endswith(_SERIES_PARAM_SUFFIX) and isinstance(value, str):
+            legs.append(value)
+    seen: set[str] = set()
+    ordered: list[str] = []
+    for leg in legs:
+        if leg not in seen:
+            seen.add(leg)
+            ordered.append(leg)
+    return tuple(ordered)
+
+
+def _validate_numeraires(
+    strategies: tuple[Strategy, ...],
+    derived: Mapping[str, DerivedSeries],
+    conventions: Conventions,
+    manifest: FactorManifest,
+    source: Path,
+) -> None:
+    """Every D4 strategy leg must be on ONE numeraire (WP2.2 Task 1 fix pass, Critical 3).
+
+    Before this check, ``equity_mkt`` mapped to Fama-French ``Mkt-RF`` -- an EXCESS
+    return -- while ``govt_tr_10y`` is a long-government TOTAL return, and
+    ``sixty_forty`` (0.6/0.4) and ``endowment_proxy`` weighted the two together. A
+    fully-invested portfolio that sums an excess-return leg with a total-return leg is
+    mis-specified by the risk-free rate on the excess leg, and the prose claiming all
+    five strategies "inherit the excess-return interpretation" contradicted the sibling
+    ``govt_tr_10y`` note. It was about to be sealed.
+
+    The rule, stated once in ``conventions.numeraire`` and enforced here:
+
+    - every leg must **declare** a numeraire -- a factor via ``factors.yaml``'s
+      ``factor_sources.<factor>.numeraire``, a derived series via its own
+      ``numeraire:`` field. An undeclared leg is rejected, so adding a leg silently
+      cannot bypass the rule;
+    - a leg is either ``conventions.numeraire`` (``total_return``) or ``zero_cost``.
+      An ``excess_return`` leg -- capital-committing but quoted net of a rate -- is
+      exactly the error and is rejected;
+    - a ``zero_cost`` leg is a self-financing, long-short overlay (``smb``, ``hml``,
+      ``mom``; ``credit_xs_hy``, the duration-hedged high-yield leg). It commits no
+      capital, so it is numeraire-neutral and may be combined with total-return legs,
+      and its weight is a notional/risk budget rather than a capital share. Because
+      that is a real economic claim rather than an escape hatch, every zero-cost leg
+      must ALSO be named in ``conventions.numeraire_zero_cost_legs``, and every entry
+      of that list must be a leg that actually declares ``zero_cost`` -- no silent
+      additions, no dead entries.
+
+    Skipped entirely when ``conventions.numeraire`` is undeclared (the permissive
+    default for minimal hand-written fixtures that predate the block).
+    ``ah.eval.prereg.verify()`` requires the real pre-registration to declare it.
+    """
+    if not conventions.numeraire:
+        return
+
+    declared_zero_cost: set[str] = set()
+    for strategy in strategies:
+        for leg in strategy_legs(strategy):
+            if leg in derived:
+                leg_numeraire = derived[leg].numeraire
+                where = f"derived_series.{leg}.numeraire"
+            else:
+                leg_numeraire = manifest.sources[leg].numeraire or ""
+                where = f"factors.yaml factor_sources.{leg}.numeraire"
+            if not leg_numeraire:
+                raise StrategyError(
+                    f"{source}: d4_strategies.{strategy.strategy_id} leg '{leg}' declares "
+                    f"no numeraire ({where} is unset); conventions.numeraire is "
+                    f"'{conventions.numeraire}', so every leg must state which numeraire "
+                    f"it is on"
+                )
+            if leg_numeraire == "zero_cost":
+                declared_zero_cost.add(leg)
+                if leg not in conventions.zero_cost_legs:
+                    raise StrategyError(
+                        f"{source}: d4_strategies.{strategy.strategy_id} leg '{leg}' is "
+                        f"'zero_cost' but is not listed in "
+                        f"conventions.numeraire_zero_cost_legs; a self-financing overlay "
+                        f"combined with total-return legs must be declared, not merely tagged"
+                    )
+            elif leg_numeraire != conventions.numeraire:
+                raise StrategyError(
+                    f"{source}: d4_strategies.{strategy.strategy_id} leg '{leg}' is on "
+                    f"numeraire '{leg_numeraire}', but conventions.numeraire is "
+                    f"'{conventions.numeraire}'; a fully-invested portfolio may not sum "
+                    f"legs quoted on different numeraires ({where})"
+                )
+
+    dead = sorted(set(conventions.zero_cost_legs) - declared_zero_cost)
+    if dead:
+        raise StrategyError(
+            f"{source}: conventions.numeraire_zero_cost_legs names {dead}, which no D4 "
+            f"strategy leg declares as 'zero_cost'; the list must name exactly the "
+            f"zero-cost legs actually held"
+        )
+
+
 @lru_cache
 def _load_d4_strategies_cached(resolved_path: Path) -> tuple[Strategy, ...]:
     raw = _read_doc(resolved_path).get("d4_strategies")
     if not isinstance(raw, dict) or not raw:
         raise StrategyError(f"{resolved_path}: 'd4_strategies' must be a non-empty mapping")
 
-    active_factors = frozenset(load_manifest().active_factors())
+    manifest = load_manifest()
+    active_factors = frozenset(manifest.active_factors())
     derived = _load_derived_series_cached(resolved_path)
     known_series = active_factors | frozenset(derived)
     conventions = _load_conventions_cached(resolved_path)
-    return tuple(
+    strategies = tuple(
         _validate_strategy(entry, strategy_id, known_series, conventions, resolved_path)
         for strategy_id, entry in raw.items()
     )
+    _validate_numeraires(strategies, derived, conventions, manifest, resolved_path)
+    return strategies
 
 
 def load_d4_strategies(path: Path | None = None) -> tuple[Strategy, ...]:

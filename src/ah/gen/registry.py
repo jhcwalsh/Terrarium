@@ -28,6 +28,23 @@ def registered() -> list[str]:
     return sorted(_REGISTRY)
 
 
+def snapshot() -> dict[str, GeneratorFactory]:
+    """A shallow copy of the registry's current contents.
+
+    For a caller that registers generators temporarily (a negative-control suite, a
+    test fixture) and must put the registry back exactly as found: pair with
+    :func:`restore`. Public so such a caller need not reach into :data:`_REGISTRY`
+    directly.
+    """
+    return dict(_REGISTRY)
+
+
+def restore(saved: dict[str, GeneratorFactory]) -> None:
+    """Replace the registry's contents with ``saved`` (see :func:`snapshot`)."""
+    _REGISTRY.clear()
+    _REGISTRY.update(saved)
+
+
 def resolve(generator_id: str) -> Generator:
     if generator_id not in _REGISTRY:
         raise UnknownGeneratorError(

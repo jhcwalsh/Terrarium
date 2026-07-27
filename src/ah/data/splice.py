@@ -1,0 +1,171 @@
+"""Splice & proxy framework — gap-filling that never lies (STEP1-DATA-PLAN §WP1.5).
+
+A :class:`ProxyRule` extends a target series backward using a donor series through a
+transform (level map, regression on the overlap, ratio link, or a documented fixed
+scale). The result is a **new** series ``<target>__extended`` carrying a per-obs
+``is_proxy`` flag and the rule id. Two invariants: on the overlap the transformed
+donor tracks the actual target within fit tolerance, and **no proxy observation ever
+overwrites an actual one** (proxies fill only pre-history the target does not cover).
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+
+import numpy as np
+import pandas as pd
+
+Transform = str  # "regression" | "level_map" | "ratio" | "scale"
+
+
+@dataclass(frozen=True)
+class ProxyRule:
+    rule_id: str
+    target: str
+    donor: str
+    transform: Transform
+    overlap_start: str | None = None
+    overlap_end: str | None = None
+    factor: float | None = None  # for "scale"
+    doc: str = ""
+
+
+@dataclass
+class SpliceFit:
+    transform: Transform
+    a: float = 0.0  # intercept / offset
+    b: float = 1.0  # slope / ratio / scale
+
+
+@dataclass
+class SpliceResult:
+    series_id: str
+    frame: pd.DataFrame  # date, value, is_proxy, rule_id
+    fit: SpliceFit
+
+
+def _align(target: pd.DataFrame, donor: pd.DataFrame, lo: str | None, hi: str | None):
+    t = target.assign(date=pd.to_datetime(target["date"])).set_index("date")["value"].astype(float)
+    d = donor.assign(date=pd.to_datetime(donor["date"])).set_index("date")["value"].astype(float)
+    common = t.index.intersection(d.index)
+    if lo is not None:
+        common = common[common >= pd.Timestamp(lo)]
+    if hi is not None:
+        common = common[common <= pd.Timestamp(hi)]
+    return t, d, common
+
+
+def fit_transform(rule: ProxyRule, target: pd.DataFrame, donor: pd.DataFrame) -> SpliceFit:
+    if rule.transform == "scale":
+        return SpliceFit("scale", a=0.0, b=float(rule.factor if rule.factor is not None else 1.0))
+
+    t, d, common = _align(target, donor, rule.overlap_start, rule.overlap_end)
+    if len(common) < 2:
+        raise ValueError(f"rule {rule.rule_id}: <2 overlapping points to fit")
+    y = t.loc[common].to_numpy()
+    x = d.loc[common].to_numpy()
+
+    if rule.transform == "regression":
+        b = float(np.cov(x, y, bias=True)[0, 1] / np.var(x))
+        a = float(y.mean() - b * x.mean())
+        return SpliceFit("regression", a=a, b=b)
+    if rule.transform == "level_map":
+        return SpliceFit("level_map", a=float((y - x).mean()), b=1.0)
+    if rule.transform == "ratio":
+        return SpliceFit("ratio", a=0.0, b=float((y / x).mean()))
+    raise ValueError(f"unknown transform {rule.transform}")
+
+
+def apply_fit(fit: SpliceFit, donor_values: np.ndarray) -> np.ndarray:
+    if fit.transform in ("regression", "level_map"):
+        return fit.a + fit.b * donor_values
+    return fit.b * donor_values  # ratio / scale
+
+
+def splice(rule: ProxyRule, target: pd.DataFrame, donor: pd.DataFrame) -> SpliceResult:
+    """Extend ``target`` backward with transformed ``donor``; actuals are never touched."""
+    fit = fit_transform(rule, target, donor)
+
+    t = target.assign(date=pd.to_datetime(target["date"]))
+    d = donor.assign(date=pd.to_datetime(donor["date"]))
+    target_min = t["date"].min()
+
+    actual = t[["date", "value"]].copy()
+    actual["is_proxy"] = False
+
+    pre = d[d["date"] < target_min].copy()
+    pre["value"] = apply_fit(fit, pd.to_numeric(pre["value"]).to_numpy())
+    proxy = pre[["date", "value"]].copy()
+    proxy["is_proxy"] = True
+
+    out = pd.concat([proxy, actual], ignore_index=True).sort_values(by="date", ignore_index=True)
+    out["rule_id"] = rule.rule_id
+    return SpliceResult(f"{rule.target}__extended", out, fit)
+
+
+def overlap_error(rule: ProxyRule, target: pd.DataFrame, donor: pd.DataFrame) -> float:
+    """RMSE of the transformed donor vs the actual target on the overlap window."""
+    fit = fit_transform(rule, target, donor)
+    t, d, common = _align(target, donor, rule.overlap_start, rule.overlap_end)
+    pred = apply_fit(fit, d.loc[common].to_numpy())
+    resid = t.loc[common].to_numpy() - pred
+    return float(np.sqrt(np.mean(resid**2)))
+
+
+# --------------------------------------------------------------------------- #
+# register rules (STEP1-DATA-PLAN §WP1.5 / data-requirements-register)
+# --------------------------------------------------------------------------- #
+
+PROXY_RULES: dict[str, ProxyRule] = {
+    "hy_oas_pre1996": ProxyRule(
+        rule_id="hy_oas_pre1996",
+        target="fred.HY_OAS",
+        donor="derived.baa_aaa_spread",
+        transform="regression",
+        overlap_start="1996-12-01",
+        overlap_end="2005-12-01",
+        doc="HY OAS before 1996 regressed on the Baa-Aaa spread over the 1996-2005 overlap.",
+    ),
+    "fedfunds_pre1954": ProxyRule(
+        rule_id="fedfunds_pre1954",
+        target="fred.FEDFUNDS",
+        donor="fred.TB3MS",
+        transform="regression",
+        overlap_start="1954-07-01",
+        overlap_end="1990-01-01",
+        doc=(
+            "Effective federal funds rate before 1954-07 (FRED's first observation) "
+            "regressed on the 3-month Treasury bill rate over the 1954-1990 overlap. "
+            "The funds rate is the administered policy rate the `policy_rate` factor "
+            "is defined as; the bill is a market yield carrying term premium and "
+            "policy expectations, so it is a documented PROXY for the pre-1954 "
+            "pre-history only and every spliced observation is flagged is_proxy."
+        ),
+    ),
+    "long_tsy_tr_pre1973": ProxyRule(
+        rule_id="long_tsy_tr_pre1973",
+        target="derived.long_tsy_tr",
+        donor="derived.long_tsy_tr_from_yield",
+        transform="regression",
+        overlap_start="1973-01-01",
+        overlap_end="1990-01-01",
+        doc="Long-Treasury total return before 1973 constructed from yields (duration approx).",
+    ),
+    "private_credit_pre2004": ProxyRule(
+        rule_id="private_credit_pre2004",
+        target="cliffwater.cdli_ret_q",
+        donor="derived.bdc_hy_blend",
+        transform="regression",
+        overlap_start="2004-09-01",
+        overlap_end="2010-12-01",
+        doc="Private credit before 2004 from a BDC/HY blend (donor prepared in derive).",
+    ),
+    "nareit_delevered_re": ProxyRule(
+        rule_id="nareit_delevered_re",
+        target="derived.re_delevered",
+        donor="nareit.all_equity_tr",
+        transform="scale",
+        factor=0.6,
+        doc="Nareit-derived de-levered RE proxy (cross-check); documented leverage haircut.",
+    ),
+}

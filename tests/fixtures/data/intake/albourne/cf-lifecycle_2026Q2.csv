@@ -1,0 +1,3 @@
+strategy,fund_age,metric,mean,p25,p75
+buyout,1,call_rate,0.25,0.15,0.35
+buyout,2,call_rate,0.30,0.20,0.40

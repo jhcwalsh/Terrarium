@@ -27,7 +27,49 @@ def test_register_rules_present() -> None:
         "long_tsy_tr_pre1973",
         "private_credit_pre2004",
         "nareit_delevered_re",
+        "fedfunds_pre1954",
     }
+
+
+def test_fedfunds_pre1954_rule_extends_the_policy_rate_from_bills() -> None:
+    """WP2.2 Task 1 fix pass, Critical 2: `policy_rate` maps to the effective federal
+    funds rate (fred.FEDFUNDS), which FRED serves only from 1954-07. The pre-1954
+    campaign window is covered by splicing the 3-month bill (fred.TB3MS, from 1934)
+    backward through this rule -- flagged `is_proxy`, never overwriting an actual.
+    """
+    rule = PROXY_RULES["fedfunds_pre1954"]
+    assert rule.target == "fred.FEDFUNDS"
+    assert rule.donor == "fred.TB3MS"
+    assert rule.transform == "regression"
+    assert rule.overlap_start is not None and rule.overlap_end is not None
+    assert rule.doc
+
+
+def test_fedfunds_pre1954_backfill_flags_proxy_and_preserves_actuals() -> None:
+    # donor (bills) runs 1950-1959; target (funds rate) starts 1954-07, as FRED serves it.
+    donor = _series([1.0 + 0.01 * i for i in range(120)], start="1950-01-01")
+    target = _series([1.4 + 0.012 * i for i in range(66)], start="1954-07-01")
+    rule = PROXY_RULES["fedfunds_pre1954"]
+    result = splice(
+        ProxyRule(
+            rule.rule_id,
+            rule.target,
+            rule.donor,
+            rule.transform,
+            overlap_start="1954-07-01",
+            overlap_end="1959-12-01",
+            doc=rule.doc,
+        ),
+        target,
+        donor,
+    )
+
+    proxies = result.frame[result.frame["is_proxy"]]
+    actuals = result.frame[~result.frame["is_proxy"]]
+    assert proxies["date"].max() < pd.Timestamp("1954-07-01")
+    assert actuals["date"].min() == pd.Timestamp("1954-07-01")
+    assert len(actuals) == 66
+    assert (result.frame["rule_id"] == "fedfunds_pre1954").all()
 
 
 def test_regression_recovers_linear_relationship() -> None:

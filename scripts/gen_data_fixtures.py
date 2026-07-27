@@ -64,6 +64,24 @@ def build() -> None:
         ),
     )
 
+    # Effective federal funds rate: the administered policy rate `policy_rate` maps to
+    # (WP2.2 Task 1). FRED's first observation is 1954-07; the pre-1954 campaign
+    # pre-history is spliced from fred.TB3MS via ah.data.splice's `fedfunds_pre1954`
+    # rule, flagged is_proxy. The three values below are the real FRED FEDFUNDS
+    # observations for 1954-07..09, so the fixture is format- *and* value-faithful.
+    _write(
+        FX / "fred" / "fedfunds.json",
+        json.dumps(
+            {
+                "observations": [
+                    {"date": "1954-07-01", "value": "0.80"},
+                    {"date": "1954-08-01", "value": "1.22"},
+                    {"date": "1954-09-01", "value": "1.07"},
+                ]
+            }
+        ),
+    )
+
     # --- Ken French research factors + momentum (CSV) ---
     _write(
         FX / "french" / "factors.csv",

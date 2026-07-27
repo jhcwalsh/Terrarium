@@ -33,6 +33,7 @@ from ah.strategies import (
     load_conventions,
     load_d4_strategies,
     load_derived_series,
+    strategy_legs,
 )
 
 _EXPECTED_IDS = {"eqw_factors", "sixty_forty", "endowment_proxy", "momentum", "carry"}
@@ -889,3 +890,108 @@ def test_conventions_states_static_weights_composition() -> None:
 def test_derived_series_notes_do_not_name_test_functions() -> None:
     for series in load_derived_series().values():
         assert "test_" not in series.notes, series.series_id
+
+
+# --------------------------------------------------------------------------- #
+# WP2.2 Task 1 fix pass, Critical 3: ONE numeraire across every D4 strategy leg.
+#
+# `equity_mkt` used to map to french.mkt_rf -- Mkt-RF, an EXCESS return -- while
+# `govt_tr_10y` is a long-government TOTAL return. `sixty_forty` weighted the two
+# together, as did `endowment_proxy`, so two of the five sealed strategies summed an
+# excess-return leg with a total-return leg inside a fully-invested portfolio. The
+# decision (sealed in conventions.numeraire) is TOTAL RETURN, with self-financing
+# zero-cost overlays declared explicitly; the loader now enforces it.
+# --------------------------------------------------------------------------- #
+
+
+def test_sealed_numeraire_is_declared_and_is_total_return() -> None:
+    conventions = load_conventions()
+    assert conventions.numeraire == "total_return"
+    assert conventions.zero_cost_legs
+
+
+def test_every_d4_strategy_leg_resolves_to_the_sealed_numeraire() -> None:
+    """The guard the review asked for, applied to every leg of every strategy.
+
+    A leg is either the sealed numeraire (total return) or an explicitly declared
+    zero-cost, self-financing overlay -- never a capital-committing leg quoted net of
+    a rate. Resolution goes through the same tables the loader uses, so this test and
+    the loader can never disagree about what a leg's numeraire is.
+    """
+    manifest = load_manifest()
+    conventions = load_conventions()
+    derived = load_derived_series()
+
+    checked = 0
+    for strategy in load_d4_strategies():
+        for leg in strategy_legs(strategy):
+            declared = derived[leg].numeraire if leg in derived else manifest.sources[leg].numeraire
+            assert declared, f"{strategy.strategy_id}: leg '{leg}' declares no numeraire"
+            assert declared in (conventions.numeraire, "zero_cost"), (
+                f"{strategy.strategy_id}: leg '{leg}' is '{declared}', neither the sealed "
+                f"numeraire '{conventions.numeraire}' nor a zero-cost overlay"
+            )
+            if declared == "zero_cost":
+                assert leg in conventions.zero_cost_legs, (
+                    f"leg '{leg}' is zero-cost but is not declared in "
+                    f"conventions.numeraire_zero_cost_legs"
+                )
+            checked += 1
+    assert checked >= 10
+
+
+def test_loader_rejects_an_excess_return_leg(tmp_path: Path) -> None:
+    """The failure mode the sealed rule exists to stop, exercised end to end.
+
+    ``factor_sources`` is the real repo-root ``factors.yaml`` (``load_manifest()``
+    always reads it), so the fixture cannot declare a bad factor directly -- it
+    declares a *derived series* on the excess-return numeraire and weights it, which
+    is the same violation from the other side.
+    """
+    body = (
+        _CONVENTIONS_BLOCK
+        + "  numeraire: total_return\n"
+        + "  numeraire_zero_cost_legs: [smb, hml, mom]\n"
+        + "derived_series:\n"
+        + "  bad_leg:\n"
+        + "    from: ust_10y\n"
+        + "    transform: bond_total_return\n"
+        + "    params: {duration_years: 8.5}\n"
+        + '    formula: "r_t = 0.01 * ( y_{t-1}/12 - D*(y_t - y_{t-1}) )"\n'
+        + "    numeraire: excess_return\n"
+        + "    notes: fixture\n"
+        + "d4_strategies:\n"
+        + "  mixed:\n"
+        + "    kind: static_weights\n"
+        + "    rebalance: monthly\n"
+        + "    lookback: null\n"
+        + "    rule: null\n"
+        + "    weights: {equity_mkt: 0.6, bad_leg: 0.4}\n"
+        + "    params: {}\n"
+    )
+    path = _write(tmp_path, body)
+    with pytest.raises(StrategyError, match="numeraire"):
+        load_d4_strategies(path)
+
+
+def test_loader_rejects_an_undeclared_zero_cost_leg(tmp_path: Path) -> None:
+    """A zero-cost overlay must be *declared* in conventions, not merely tagged."""
+    body = (
+        _CONVENTIONS_BLOCK
+        + "  numeraire: total_return\n"
+        + "  numeraire_zero_cost_legs: [hml, mom]\n"  # smb deliberately omitted
+        + _DERIVED_BLOCK.replace(
+            "    notes: fixture\n", "    numeraire: total_return\n    notes: fixture\n"
+        )
+        + "d4_strategies:\n"
+        + "  overlay:\n"
+        + "    kind: static_weights\n"
+        + "    rebalance: monthly\n"
+        + "    lookback: null\n"
+        + "    rule: null\n"
+        + "    weights: {equity_mkt: 0.5, smb: 0.5}\n"
+        + "    params: {}\n"
+    )
+    path = _write(tmp_path, body)
+    with pytest.raises(StrategyError, match="numeraire_zero_cost_legs"):
+        load_d4_strategies(path)

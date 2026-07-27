@@ -1,0 +1,9 @@
+This file was created by CMPT_ME_BEME_RETS using the 202412 CRSP database.
+
+,Mkt-RF,SMB,HML,RF
+202001, 2.00, -1.00,  0.50, 0.10
+202002,-3.00,  1.50, -0.25, 0.10
+
+  Annual Factors: January-December
+,Mkt-RF,SMB,HML,RF
+2020, 5.00, 1.00, 2.00, 1.20

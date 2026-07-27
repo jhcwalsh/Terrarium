@@ -1,0 +1,41 @@
+{
+  "spec_version": "1.0.0",
+  "world_id": "conditional-rate-endpoints-severe-v1",
+  "status": "validated",
+
+  "provenance": {
+    "created_at": "2026-07-24T00:00:00Z",
+    "author": "sso:wp22-task6",
+    "source": { "kind": "manual" }
+  },
+
+  "narrative": {
+    "language": "en",
+    "title": "Severe rate-endpoint adherence probe",
+    "tagline": "An aggressive hiking cycle",
+    "summary": "A minimal authored world whose only purpose is to probe condition adherence: policy_rate is pinned to a severe start/end pair and nothing else is stressed.",
+    "lesson": "Not a scenario for a user -- a WP2.2 Task 6 battery fixture exercising the rate condition type at a severe intensity.",
+    "dispatches": [
+      { "date": "2027", "headline": "Policy rate begins near 1%", "detail": "A near-zero starting point." },
+      { "date": "2030", "headline": "Rates rise sharply", "detail": "No forced crisis window, only the rate path itself." },
+      { "date": "2033", "headline": "Policy rate settles near 9%", "detail": "The severe half of the endpoint pair." }
+    ]
+  },
+
+  "horizon": { "start": "2027-Q1", "quarters": 40 },
+
+  "regimes": { "mode": "unconditional" },
+
+  "factor_conditions": {
+    "policy_rate": { "start_pct": 1.0, "end_pct": 9.0, "path_shape": "front_loaded" }
+  },
+
+  "structural": { "parameter_vintage": "historical_average" },
+
+  "engine_defaults": {
+    "generator_id": "bootstrap-stratified",
+    "n_paths": 1000
+  },
+
+  "extensions": { "x_condition_type": "rate", "x_intensity": "severe" }
+}
