@@ -596,7 +596,7 @@ def _result_dict(r: MetricResult) -> dict[str, Any]:
 def _criterion_bearing_label(value: bool | None) -> str:
     """Report wording for :attr:`BatteryReport.criterion_bearing`, stated not implied."""
     if value is None:
-        return "n/a (pre-registration unsealed; no criterion size exists)"
+        return "n/a (pre-registration unsealed; no criterion size or vintage exists)"
     if value:
         return "yes"
     return "**NO -- diagnostic run, may not be cited as G2 evidence**"
@@ -634,9 +634,21 @@ class BatteryReport:
     missing_no_data: tuple[str, ...] = ()
     coverage: Mapping[str, FactorCoverage] = MappingProxyType({})
     prereg_verified: bool = False
-    # WP2.3. Whether this run's ensemble is the sealed criterion size
-    # (`pre-registration.yaml`'s `ensemble_size:` block). `None` while the
-    # pre-registration is unsealed and no criterion size exists.
+    # WP2.3. Whether this run may be cited as G2 evidence at all: the ensemble is the
+    # sealed criterion size (`pre-registration.yaml`'s `ensemble_size:` block) AND was
+    # generated from the sealed `campaign_vintage_id`. `None` while the
+    # pre-registration is unsealed, where neither sealed value exists. `True` also
+    # implies a verified pre-registration and a matching lock, because this field is
+    # only computed on the branch where `ah.eval.prereg.verify()` has already returned
+    # without raising -- which is the third condition
+    # `multi_seed_decision_rule.criterion_bearing_runs_only` names.
+    #
+    # THE VINTAGE HALF IS NOT DECORATIVE. Superseded vintages remain on disk and stay
+    # reachable through the catalog's append-only pointer history, and a predecessor of
+    # the campaign vintage can be INCOMPLETE in ways that are invisible to a caller
+    # (`ah.data.refresh` only refetched due series before RFR-62, so an earlier vintage
+    # may simply lack a factor's series). A full-size run against one of those is a run
+    # against different data, judged by bands derived from the sealed one.
     #
     # WHY IT IS A REPORT FIELD AND NOT A HARD ERROR. Every acceptance band in the
     # sealed file is the sampling distribution of a statistic on ONE length-matched
@@ -721,7 +733,8 @@ class BatteryReport:
             f"- seed: {self.seed}",
             f"- prereg digest: {self.prereg_digest}",
             f"- prereg verified: {'yes' if self.prereg_verified else 'no (unsealed)'}",
-            f"- criterion-bearing ensemble size: {_criterion_bearing_label(self.criterion_bearing)}",
+            f"- criterion-bearing run (sealed ensemble size AND sealed campaign vintage): "
+            f"{_criterion_bearing_label(self.criterion_bearing)}",
             f"- **verdict: {'PASS' if self.passed else 'FAIL'}** "
             f"({len(self.enforce_failures)} enforce failure(s))",
             "",
@@ -812,6 +825,46 @@ class BatteryReport:
         return "\n".join(lines) + "\n"
 
 
+def criterion_bearing_for(ensemble: Ensemble, prereg: PreRegistration) -> bool | None:
+    """Whether ``ensemble`` may be cited as G2 evidence against ``prereg``.
+
+    ``pre-registration.yaml``'s ``multi_seed_decision_rule.criterion_bearing_runs_only``
+    names three conditions -- the sealed ``ensemble_size``, the sealed
+    ``campaign_vintage_id``, and a verified pre-registration with a matching lock -- and
+    points at :attr:`BatteryReport.criterion_bearing` as recording them.
+
+    This function compares the first two. The third is the caller's: :func:`run_battery`
+    calls this only after :func:`ah.eval.prereg.verify` has returned without raising, so
+    a ``True`` from here always sits behind a verified document and lock.
+
+    **The vintage half is the WP2.3 final-pass fix.** Until then only the size was
+    compared: an ensemble's ``meta.vintage_id`` was carried onto the report and never
+    checked against the sealed campaign, so a full-size run against a *superseded*
+    vintage -- still reachable through the catalog's append-only pointer history, and
+    possibly an incomplete snapshot (``governance/retrofit-register.md`` RFR-62) -- was
+    stamped criterion-bearing. The sealed sentence was the requirement; the code is what
+    moved to meet it.
+
+    Returns ``None`` when the pre-registration is unsealed or seals no ``ensemble_size``
+    block, because then no criterion size exists to compare against and "not
+    criterion-bearing" would be a false negative rather than a fact. A *sealed* document
+    with no ``campaign_vintage_id`` returns ``False``: the campaign it seals cannot be
+    identified, so nothing can be shown to have run against it.
+    """
+    if not prereg.sealed:
+        return None
+    sealed_size = prereg.raw.get("ensemble_size")
+    if not isinstance(sealed_size, dict):
+        return None
+    sealed_vintage = prereg.raw.get("campaign_vintage_id")
+    return (
+        ensemble.n_paths == sealed_size.get("n_paths")
+        and ensemble.months == sealed_size.get("months")
+        and isinstance(sealed_vintage, str)
+        and ensemble.meta.vintage_id == sealed_vintage
+    )
+
+
 def run_battery(
     ensemble: Ensemble,
     *,
@@ -849,9 +902,10 @@ def run_battery(
     would demand four prose blocks of every one of them to buy nothing. An unsealed
     pre-registration is, by construction, not a production path.
 
-    The ensemble's own size is compared against the sealed criterion size and recorded
-    as :attr:`BatteryReport.criterion_bearing` rather than raised on -- see that
-    field's own comment for why a small diagnostic run must stay runnable.
+    The ensemble's own size **and its vintage** are compared against the sealed
+    criterion size and the sealed ``campaign_vintage_id``, and recorded as
+    :attr:`BatteryReport.criterion_bearing` rather than raised on -- see that field's
+    own comment for why a small diagnostic run must stay runnable.
     """
     prereg_verified = False
     criterion_bearing: bool | None = None
@@ -859,11 +913,7 @@ def run_battery(
         lock_path = prereg.source_path.with_suffix(".lock")
         prereg_mod.verify(prereg, manifest, lock_path=lock_path)
         prereg_verified = True
-        sealed_size = prereg.raw.get("ensemble_size")
-        if isinstance(sealed_size, dict):
-            criterion_bearing = ensemble.n_paths == sealed_size.get(
-                "n_paths"
-            ) and ensemble.months == sealed_size.get("months")
+        criterion_bearing = criterion_bearing_for(ensemble, prereg)
 
     results = _run_suites(ensemble, reference=reference, prereg=prereg, seed=seed)
     results_filtered = None

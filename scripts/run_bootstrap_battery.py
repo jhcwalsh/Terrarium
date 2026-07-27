@@ -29,7 +29,7 @@ import pandas as pd
 
 from ah.data.catalog import Catalog
 from ah.eval import prereg as prereg_mod
-from ah.eval.battery import run_full_battery
+from ah.eval.battery import TIERS, run_full_battery
 from ah.factors import load_manifest
 from ah.gen.bootstrap import (
     BLOCK_DRAW_SPAN_START,
@@ -89,8 +89,23 @@ _WP24_REPORTABLE: tuple[str, ...] = (
 
 
 def _results(doc: dict[str, Any]) -> list[dict[str, Any]]:
-    """Every unfiltered metric result of a :meth:`BatteryReport.to_dict` document."""
-    return [row for tier in doc["unfiltered"]["tiers"].values() for row in tier]
+    """Every unfiltered metric result of a :meth:`BatteryReport.to_dict` document.
+
+    Iterated in ``ah.eval.battery.TIERS`` order, ALWAYS -- which is not the same as the
+    document's own key order, and that difference used to leak into the committed
+    artifact. ``BatteryReport.to_dict`` builds ``tiers`` in ``TIERS`` order, but
+    ``to_json`` writes with ``sort_keys=True``, so a document read back from disk yields
+    ``10yr, 1_5yr, economic, monthly``. A direct run and an ``--analyse-only`` re-derive
+    therefore produced ``band_exceedance_census.outside_comparisons`` in two different
+    orders -- every value, count and rate identical, only the list order differing. A
+    provenance script whose output depends on which mode produced it undermines the one
+    claim it exists to make, so the order is pinned here rather than inherited.
+    """
+    tiers = doc["unfiltered"]["tiers"]
+    known = [row for tier in TIERS if tier in tiers for row in tiers[tier]]
+    # Defensive: a tier the battery gains later must not silently vanish from the census.
+    extra = [row for tier in sorted(set(tiers) - set(TIERS)) for row in tiers[tier]]
+    return known + extra
 
 
 def _band_exceedance_census(doc: dict[str, Any]) -> dict[str, Any]:

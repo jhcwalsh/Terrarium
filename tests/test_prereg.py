@@ -2224,3 +2224,121 @@ def test_the_block_length_window_script_agrees_with_the_sealed_vintage() -> None
     assert doc["campaign_vintage_id"] == module.CAMPAIGN_VINTAGE_ID
     assert doc["reference_run"]["seed"] == module.REFERENCE_SEED
     assert doc["bootstrap_v1"]["mean_block_months"] in module.BLOCK_LENGTHS
+
+
+# --------------------------------------------------------------------------- #
+# WP2.3 final pass -- the four sealed-text fixes closing the re-seal review
+# --------------------------------------------------------------------------- #
+
+
+def test_the_sealed_splice_scope_rests_on_the_true_premise() -> None:
+    """The seal keeps ``ah/data/splice.py`` OUTSIDE the hash, and that conclusion is
+    unchanged and independently demonstrated -- but the sealed justification used to
+    rest on a premise that the campaign-vintage move made false.
+
+    It read "policy_rate and hy_spread appear in reference_run.missing_factors precisely
+    BECAUSE the backfills are absent". ``policy_rate`` is NOT in ``missing_factors`` on
+    vintage 2026-07-26.1: it is present, and what demonstrates its backfill is unapplied
+    is its START DATE (``fred.FEDFUNDS``'s own 1954-07, not ``fred.TB3MS``'s 1934-01).
+    The correct wording already existed in ``ah/eval/prereg.py`` and ``factors.yaml``;
+    this pins it into the sealed block too, in both directions.
+    """
+    doc = _load_real_doc()
+    missing = doc["reference_run"]["missing_factors"]
+    assert "policy_rate" not in missing
+    assert "hy_spread" in missing
+
+    reason = doc["seal_scope"]["splice_py_reason"]
+    assert doc["seal_scope"]["splice_py"] == "NOT-SEALED"
+    # The false premise survives ONLY as a quoted, labelled correction -- never as a
+    # claim. One occurrence, and it is the one inside the correction note.
+    assert reason.count("policy_rate and hy_spread appear in") == 1
+    assert 'previously read "policy_rate and hy_spread appear in' in reason
+    assert "policy_rate is NOT in missing_factors" in reason
+    # Each rule is demonstrated unapplied on its OWN evidence.
+    assert "hy_oas_pre1996" in reason and "missing_factors" in reason
+    assert "fedfunds_pre1954" in reason and "1954-07" in reason and "1934-01" in reason
+    assert "NEITHER backfill" in reason
+
+
+def test_the_sealed_beats_clause_two_discloses_that_no_strategy_band_exists() -> None:
+    """Clause (ii) is scoped to usable REFERENCE bands, and no strategy statistic has
+    one -- ``RegisteredStrategyStat`` carries no ``fn``, by construction. So clause (ii)
+    can only ever count the cross-block tail-dependence family, and "NO TAIL-BAND
+    REGRESSION over comparison-set metrics" must not be read as covering
+    ``var_95``/``es_95``/``es_99``. Disclosure, not a behaviour change: the clause is
+    unchanged and still deterministic.
+    """
+    import dataclasses as _dc
+
+    from ah.eval.reference import STRATEGY_STATS
+
+    # The structural fact the disclosure rests on, asserted rather than described.
+    assert STRATEGY_STATS
+    for name, registered in STRATEGY_STATS.items():
+        assert not hasattr(registered, "fn"), name
+    assert {f.name for f in _dc.fields(next(iter(STRATEGY_STATS.values())))} == {"tier"}
+
+    beats = _load_real_doc()["multi_seed_decision_rule"]["beats_definition"]
+    assert "tail_dependence_lower/upper" in beats
+    assert "ZERO strategy-level metrics" in beats
+    # The alternative is named for the record, and named as NOT taken.
+    assert "thresholds.strategies" in beats
+
+
+def test_the_sealed_lambda_invariance_argument_states_its_own_limit() -> None:
+    """``selection_lambda`` stays 1.0 and is never re-fitted. What changed is the
+    REASON: the objectives are incommensurable across arms (D runs an ELBO sampler and
+    an exact-likelihood sampler), so a fixed lambda gives the D4 auxiliary a different
+    EFFECTIVE weight per arm. Invariance is invariance of the RULE, not of the weight.
+    """
+    doc = _load_real_doc()
+    tuning = doc["tuning_protocol"]
+    assert tuning["selection_lambda"] == 1.0  # unchanged; this pass re-words, not re-fits
+    criterion = tuning["selection_criterion"]
+    assert "DIFFERENT QUANTITY" in criterion
+    assert "EFFECTIVE" in criterion
+    # The two samplers whose objectives are not on one scale are a sealed fact.
+    assert "hier-diffusion-v1" in doc["ablation_systems"]["D"]["description"]
+    assert "hier-flow-v1" in doc["ablation_systems"]["D"]["description"]
+    # The obligation this puts on WP2.8.
+    assert "WP2.8" in criterion
+
+
+def test_the_sealed_criterion_bearing_sentence_describes_a_check_that_exists() -> None:
+    """A sealed file must not claim a check it does not have. The sentence named three
+    conditions -- sealed size, sealed campaign_vintage_id, verified prereg+lock -- and
+    ``ah.eval.battery`` compared only the size. The code was extended rather than the
+    sentence weakened; this asserts both halves against the live implementation.
+    """
+    from ah.eval.battery import criterion_bearing_for
+
+    doc = _load_real_doc()
+    sentence = doc["multi_seed_decision_rule"]["criterion_bearing_runs_only"]
+    assert "campaign_vintage_id" in sentence
+    assert "ensemble.meta.vintage_id" in sentence
+    # The g2.py refusal is still a REQUIREMENT, not a description -- unchanged.
+    assert "does not exist yet" in sentence
+
+    loaded = prereg.load(REAL_PREREG_PATH)
+    size = loaded.raw["ensemble_size"]
+
+    def _ensemble(vintage_id: str) -> Any:
+        import numpy as np
+
+        from ah.gen.base import Ensemble, EnsembleMeta
+
+        return Ensemble(
+            paths=np.zeros((size["n_paths"], size["months"], 1)),
+            factor_names=["g1"],
+            meta=EnsembleMeta(
+                generator_id="test",
+                vintage_id=vintage_id,
+                seed=0,
+                n_paths=size["n_paths"],
+                months=size["months"],
+            ),
+        )
+
+    assert criterion_bearing_for(_ensemble(loaded.raw["campaign_vintage_id"]), loaded) is True
+    assert criterion_bearing_for(_ensemble("2026-07-24"), loaded) is False

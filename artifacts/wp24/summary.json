@@ -44,132 +44,6 @@
         },
         "outside_comparisons": [
           {
-            "hi": 0.2512315270935961,
-            "lo": 0.002955665024630542,
-            "name": "hml.lost_decade_frequency",
-            "suite": "horizon",
-            "value": 0.466796875
-          },
-          {
-            "hi": 0.6687765505522514,
-            "lo": 0.2259983007646559,
-            "name": "cpi.long_inflation_era_frequency",
-            "suite": "horizon",
-            "value": 0.0263671875
-          },
-          {
-            "hi": 9.40841029444888,
-            "lo": 6.237069049266442,
-            "name": "equity_vol.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 4.538181038288406
-          },
-          {
-            "hi": 5.268494170480015,
-            "lo": 1.9935851573665033,
-            "name": "equity_vol.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 1.74952629147184
-          },
-          {
-            "hi": 12.549065839410956,
-            "lo": 7.801720544368716,
-            "name": "ig_spread.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 5.498152140070679
-          },
-          {
-            "hi": 27.754193869830004,
-            "lo": 6.079942573154635,
-            "name": "ig_spread.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.014784397983033
-          },
-          {
-            "hi": 12.61709731113791,
-            "lo": 9.531267648575259,
-            "name": "policy_rate.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.258912793484525
-          },
-          {
-            "hi": 90.97401175347842,
-            "lo": 8.193327453206996,
-            "name": "policy_rate.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.382219101999379
-          },
-          {
-            "hi": 12.651924801956667,
-            "lo": 9.97991803283913,
-            "name": "ust_2y.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.2472871269465085
-          },
-          {
-            "hi": 58.535641596015076,
-            "lo": 10.411515695204098,
-            "name": "ust_2y.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.329907243630265
-          },
-          {
-            "hi": 12.379611556141215,
-            "lo": 9.412197268861929,
-            "name": "ust_10y.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.158631602609153
-          },
-          {
-            "hi": 27.7645087210046,
-            "lo": 8.436188793433786,
-            "name": "ust_10y.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.2590301015775536
-          },
-          {
-            "hi": 13.099225887208764,
-            "lo": 11.348462236367675,
-            "name": "cpi.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.360081782133185
-          },
-          {
-            "hi": 47.168011515203816,
-            "lo": 13.356449439352357,
-            "name": "cpi.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.4208610023176886
-          },
-          {
-            "hi": 12.262840377510924,
-            "lo": 8.906364051757622,
-            "name": "hqm_curve.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.06918144982475
-          },
-          {
-            "hi": 27.452089648276132,
-            "lo": 8.231238705108478,
-            "name": "hqm_curve.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.2065683577835022
-          },
-          {
-            "hi": 10.676388224415982,
-            "lo": 5.2104578308573855,
-            "name": "funding_spread.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 4.854528922592748
-          },
-          {
-            "hi": 6.9164038951519204,
-            "lo": 2.545274559302202,
-            "name": "funding_spread.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 2.0333567975018627
-          },
-          {
             "hi": 0.8767226615848968,
             "lo": 0.7063186662723008,
             "name": "equity_vol.acf_r_lag1",
@@ -931,6 +805,132 @@
             "name": "mom~cpi.tail_dependence_upper",
             "suite": "tails",
             "value": 0.20328776041666666
+          },
+          {
+            "hi": 9.40841029444888,
+            "lo": 6.237069049266442,
+            "name": "equity_vol.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 4.538181038288406
+          },
+          {
+            "hi": 5.268494170480015,
+            "lo": 1.9935851573665033,
+            "name": "equity_vol.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 1.74952629147184
+          },
+          {
+            "hi": 12.549065839410956,
+            "lo": 7.801720544368716,
+            "name": "ig_spread.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 5.498152140070679
+          },
+          {
+            "hi": 27.754193869830004,
+            "lo": 6.079942573154635,
+            "name": "ig_spread.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.014784397983033
+          },
+          {
+            "hi": 12.61709731113791,
+            "lo": 9.531267648575259,
+            "name": "policy_rate.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.258912793484525
+          },
+          {
+            "hi": 90.97401175347842,
+            "lo": 8.193327453206996,
+            "name": "policy_rate.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.382219101999379
+          },
+          {
+            "hi": 12.651924801956667,
+            "lo": 9.97991803283913,
+            "name": "ust_2y.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.2472871269465085
+          },
+          {
+            "hi": 58.535641596015076,
+            "lo": 10.411515695204098,
+            "name": "ust_2y.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.329907243630265
+          },
+          {
+            "hi": 12.379611556141215,
+            "lo": 9.412197268861929,
+            "name": "ust_10y.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.158631602609153
+          },
+          {
+            "hi": 27.7645087210046,
+            "lo": 8.436188793433786,
+            "name": "ust_10y.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.2590301015775536
+          },
+          {
+            "hi": 13.099225887208764,
+            "lo": 11.348462236367675,
+            "name": "cpi.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.360081782133185
+          },
+          {
+            "hi": 47.168011515203816,
+            "lo": 13.356449439352357,
+            "name": "cpi.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.4208610023176886
+          },
+          {
+            "hi": 12.262840377510924,
+            "lo": 8.906364051757622,
+            "name": "hqm_curve.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.06918144982475
+          },
+          {
+            "hi": 27.452089648276132,
+            "lo": 8.231238705108478,
+            "name": "hqm_curve.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.2065683577835022
+          },
+          {
+            "hi": 10.676388224415982,
+            "lo": 5.2104578308573855,
+            "name": "funding_spread.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 4.854528922592748
+          },
+          {
+            "hi": 6.9164038951519204,
+            "lo": 2.545274559302202,
+            "name": "funding_spread.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 2.0333567975018627
+          },
+          {
+            "hi": 0.2512315270935961,
+            "lo": 0.002955665024630542,
+            "name": "hml.lost_decade_frequency",
+            "suite": "horizon",
+            "value": 0.466796875
+          },
+          {
+            "hi": 0.6687765505522514,
+            "lo": 0.2259983007646559,
+            "name": "cpi.long_inflation_era_frequency",
+            "suite": "horizon",
+            "value": 0.0263671875
           }
         ],
         "rate": 0.20222929936305734,
@@ -1054,14 +1054,9 @@
       "n_enforce": 5,
       "n_metrics": 975,
       "passed": true,
-      "prereg_digest": "sha256:42db20268d7292111fa54b34e8f37f7387057b6e46de6fcd7edf5a7f7ee59bc9",
+      "prereg_digest": "sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b",
       "prereg_verified": true,
       "report_severity_failures": [
-        {
-          "name": "policy_anchor_deviation",
-          "suite": "economics",
-          "value": 15.581024124615059
-        },
         {
           "name": "condition_adherence_error_inflation",
           "suite": "conditional",
@@ -1136,6 +1131,11 @@
           "name": "carry.es_95",
           "suite": "tails",
           "value": 0.2994149885025299
+        },
+        {
+          "name": "policy_anchor_deviation",
+          "suite": "economics",
+          "value": 15.581024124615059
         }
       ],
       "seed": 20260726,
@@ -1244,132 +1244,6 @@
           "tails": 7
         },
         "outside_comparisons": [
-          {
-            "hi": 0.2512315270935961,
-            "lo": 0.002955665024630542,
-            "name": "hml.lost_decade_frequency",
-            "suite": "horizon",
-            "value": 0.517578125
-          },
-          {
-            "hi": 0.6687765505522514,
-            "lo": 0.2259983007646559,
-            "name": "cpi.long_inflation_era_frequency",
-            "suite": "horizon",
-            "value": 0.021484375
-          },
-          {
-            "hi": 9.40841029444888,
-            "lo": 6.237069049266442,
-            "name": "equity_vol.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 4.500304073662108
-          },
-          {
-            "hi": 5.268494170480015,
-            "lo": 1.9935851573665033,
-            "name": "equity_vol.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 1.753076751797679
-          },
-          {
-            "hi": 12.549065839410956,
-            "lo": 7.801720544368716,
-            "name": "ig_spread.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 5.331635466156873
-          },
-          {
-            "hi": 27.754193869830004,
-            "lo": 6.079942573154635,
-            "name": "ig_spread.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 2.9686445958659258
-          },
-          {
-            "hi": 12.61709731113791,
-            "lo": 9.531267648575259,
-            "name": "policy_rate.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.2397584497842935
-          },
-          {
-            "hi": 90.97401175347842,
-            "lo": 8.193327453206996,
-            "name": "policy_rate.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.429633890701397
-          },
-          {
-            "hi": 12.651924801956667,
-            "lo": 9.97991803283913,
-            "name": "ust_2y.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.24487202815156
-          },
-          {
-            "hi": 58.535641596015076,
-            "lo": 10.411515695204098,
-            "name": "ust_2y.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.387193099780619
-          },
-          {
-            "hi": 12.379611556141215,
-            "lo": 9.412197268861929,
-            "name": "ust_10y.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.179755165747267
-          },
-          {
-            "hi": 27.7645087210046,
-            "lo": 8.436188793433786,
-            "name": "ust_10y.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.28906040421745
-          },
-          {
-            "hi": 13.099225887208764,
-            "lo": 11.348462236367675,
-            "name": "cpi.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.384160540417964
-          },
-          {
-            "hi": 47.168011515203816,
-            "lo": 13.356449439352357,
-            "name": "cpi.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.393082273591423
-          },
-          {
-            "hi": 12.262840377510924,
-            "lo": 8.906364051757622,
-            "name": "hqm_curve.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.087384213394514
-          },
-          {
-            "hi": 27.452089648276132,
-            "lo": 8.231238705108478,
-            "name": "hqm_curve.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.2232632272723007
-          },
-          {
-            "hi": 10.676388224415982,
-            "lo": 5.2104578308573855,
-            "name": "funding_spread.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 4.8263979520585
-          },
-          {
-            "hi": 6.9164038951519204,
-            "lo": 2.545274559302202,
-            "name": "funding_spread.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 2.0577044818626913
-          },
           {
             "hi": 0.8767226615848968,
             "lo": 0.7063186662723008,
@@ -2125,6 +1999,132 @@
             "name": "equity_vol~cpi.tail_dependence_upper",
             "suite": "tails",
             "value": 0.21744791666666666
+          },
+          {
+            "hi": 9.40841029444888,
+            "lo": 6.237069049266442,
+            "name": "equity_vol.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 4.500304073662108
+          },
+          {
+            "hi": 5.268494170480015,
+            "lo": 1.9935851573665033,
+            "name": "equity_vol.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 1.753076751797679
+          },
+          {
+            "hi": 12.549065839410956,
+            "lo": 7.801720544368716,
+            "name": "ig_spread.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 5.331635466156873
+          },
+          {
+            "hi": 27.754193869830004,
+            "lo": 6.079942573154635,
+            "name": "ig_spread.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 2.9686445958659258
+          },
+          {
+            "hi": 12.61709731113791,
+            "lo": 9.531267648575259,
+            "name": "policy_rate.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.2397584497842935
+          },
+          {
+            "hi": 90.97401175347842,
+            "lo": 8.193327453206996,
+            "name": "policy_rate.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.429633890701397
+          },
+          {
+            "hi": 12.651924801956667,
+            "lo": 9.97991803283913,
+            "name": "ust_2y.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.24487202815156
+          },
+          {
+            "hi": 58.535641596015076,
+            "lo": 10.411515695204098,
+            "name": "ust_2y.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.387193099780619
+          },
+          {
+            "hi": 12.379611556141215,
+            "lo": 9.412197268861929,
+            "name": "ust_10y.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.179755165747267
+          },
+          {
+            "hi": 27.7645087210046,
+            "lo": 8.436188793433786,
+            "name": "ust_10y.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.28906040421745
+          },
+          {
+            "hi": 13.099225887208764,
+            "lo": 11.348462236367675,
+            "name": "cpi.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.384160540417964
+          },
+          {
+            "hi": 47.168011515203816,
+            "lo": 13.356449439352357,
+            "name": "cpi.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.393082273591423
+          },
+          {
+            "hi": 12.262840377510924,
+            "lo": 8.906364051757622,
+            "name": "hqm_curve.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.087384213394514
+          },
+          {
+            "hi": 27.452089648276132,
+            "lo": 8.231238705108478,
+            "name": "hqm_curve.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.2232632272723007
+          },
+          {
+            "hi": 10.676388224415982,
+            "lo": 5.2104578308573855,
+            "name": "funding_spread.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 4.8263979520585
+          },
+          {
+            "hi": 6.9164038951519204,
+            "lo": 2.545274559302202,
+            "name": "funding_spread.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 2.0577044818626913
+          },
+          {
+            "hi": 0.2512315270935961,
+            "lo": 0.002955665024630542,
+            "name": "hml.lost_decade_frequency",
+            "suite": "horizon",
+            "value": 0.517578125
+          },
+          {
+            "hi": 0.6687765505522514,
+            "lo": 0.2259983007646559,
+            "name": "cpi.long_inflation_era_frequency",
+            "suite": "horizon",
+            "value": 0.021484375
           }
         ],
         "rate": 0.20063694267515925,
@@ -2248,14 +2248,9 @@
       "n_enforce": 5,
       "n_metrics": 975,
       "passed": true,
-      "prereg_digest": "sha256:42db20268d7292111fa54b34e8f37f7387057b6e46de6fcd7edf5a7f7ee59bc9",
+      "prereg_digest": "sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b",
       "prereg_verified": true,
       "report_severity_failures": [
-        {
-          "name": "policy_anchor_deviation",
-          "suite": "economics",
-          "value": 15.547951112651528
-        },
         {
           "name": "condition_adherence_error_inflation",
           "suite": "conditional",
@@ -2340,6 +2335,11 @@
           "name": "carry.es_95",
           "suite": "tails",
           "value": 0.29950613040584356
+        },
+        {
+          "name": "policy_anchor_deviation",
+          "suite": "economics",
+          "value": 15.547951112651528
         }
       ],
       "seed": 20268645,
@@ -2448,132 +2448,6 @@
           "tails": 6
         },
         "outside_comparisons": [
-          {
-            "hi": 0.2512315270935961,
-            "lo": 0.002955665024630542,
-            "name": "hml.lost_decade_frequency",
-            "suite": "horizon",
-            "value": 0.4716796875
-          },
-          {
-            "hi": 0.6687765505522514,
-            "lo": 0.2259983007646559,
-            "name": "cpi.long_inflation_era_frequency",
-            "suite": "horizon",
-            "value": 0.0302734375
-          },
-          {
-            "hi": 9.40841029444888,
-            "lo": 6.237069049266442,
-            "name": "equity_vol.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 4.477712921359906
-          },
-          {
-            "hi": 5.268494170480015,
-            "lo": 1.9935851573665033,
-            "name": "equity_vol.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 1.7420804497092937
-          },
-          {
-            "hi": 12.549065839410956,
-            "lo": 7.801720544368716,
-            "name": "ig_spread.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 5.39679605080826
-          },
-          {
-            "hi": 27.754193869830004,
-            "lo": 6.079942573154635,
-            "name": "ig_spread.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.0020028975855526
-          },
-          {
-            "hi": 12.61709731113791,
-            "lo": 9.531267648575259,
-            "name": "policy_rate.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.152783842997703
-          },
-          {
-            "hi": 90.97401175347842,
-            "lo": 8.193327453206996,
-            "name": "policy_rate.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.329942799326976
-          },
-          {
-            "hi": 12.651924801956667,
-            "lo": 9.97991803283913,
-            "name": "ust_2y.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.151275526150953
-          },
-          {
-            "hi": 58.535641596015076,
-            "lo": 10.411515695204098,
-            "name": "ust_2y.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.305920069606565
-          },
-          {
-            "hi": 12.379611556141215,
-            "lo": 9.412197268861929,
-            "name": "ust_10y.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.141970683288128
-          },
-          {
-            "hi": 27.7645087210046,
-            "lo": 8.436188793433786,
-            "name": "ust_10y.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.261109328446689
-          },
-          {
-            "hi": 13.099225887208764,
-            "lo": 11.348462236367675,
-            "name": "cpi.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.3807077601794715
-          },
-          {
-            "hi": 47.168011515203816,
-            "lo": 13.356449439352357,
-            "name": "cpi.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.3825173273788645
-          },
-          {
-            "hi": 12.262840377510924,
-            "lo": 8.906364051757622,
-            "name": "hqm_curve.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 6.0949489674170065
-          },
-          {
-            "hi": 27.452089648276132,
-            "lo": 8.231238705108478,
-            "name": "hqm_curve.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 3.22172834331623
-          },
-          {
-            "hi": 10.676388224415982,
-            "lo": 5.2104578308573855,
-            "name": "funding_spread.variance_ratio_12m",
-            "suite": "horizon",
-            "value": 4.885637139612048
-          },
-          {
-            "hi": 6.9164038951519204,
-            "lo": 2.545274559302202,
-            "name": "funding_spread.mean_reversion_halflife",
-            "suite": "horizon",
-            "value": 2.0453757318109336
-          },
           {
             "hi": 0.8767226615848968,
             "lo": 0.7063186662723008,
@@ -3329,6 +3203,132 @@
             "name": "hml~hqm_curve.tail_dependence_lower",
             "suite": "tails",
             "value": 0.20768229166666666
+          },
+          {
+            "hi": 9.40841029444888,
+            "lo": 6.237069049266442,
+            "name": "equity_vol.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 4.477712921359906
+          },
+          {
+            "hi": 5.268494170480015,
+            "lo": 1.9935851573665033,
+            "name": "equity_vol.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 1.7420804497092937
+          },
+          {
+            "hi": 12.549065839410956,
+            "lo": 7.801720544368716,
+            "name": "ig_spread.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 5.39679605080826
+          },
+          {
+            "hi": 27.754193869830004,
+            "lo": 6.079942573154635,
+            "name": "ig_spread.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.0020028975855526
+          },
+          {
+            "hi": 12.61709731113791,
+            "lo": 9.531267648575259,
+            "name": "policy_rate.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.152783842997703
+          },
+          {
+            "hi": 90.97401175347842,
+            "lo": 8.193327453206996,
+            "name": "policy_rate.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.329942799326976
+          },
+          {
+            "hi": 12.651924801956667,
+            "lo": 9.97991803283913,
+            "name": "ust_2y.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.151275526150953
+          },
+          {
+            "hi": 58.535641596015076,
+            "lo": 10.411515695204098,
+            "name": "ust_2y.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.305920069606565
+          },
+          {
+            "hi": 12.379611556141215,
+            "lo": 9.412197268861929,
+            "name": "ust_10y.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.141970683288128
+          },
+          {
+            "hi": 27.7645087210046,
+            "lo": 8.436188793433786,
+            "name": "ust_10y.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.261109328446689
+          },
+          {
+            "hi": 13.099225887208764,
+            "lo": 11.348462236367675,
+            "name": "cpi.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.3807077601794715
+          },
+          {
+            "hi": 47.168011515203816,
+            "lo": 13.356449439352357,
+            "name": "cpi.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.3825173273788645
+          },
+          {
+            "hi": 12.262840377510924,
+            "lo": 8.906364051757622,
+            "name": "hqm_curve.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 6.0949489674170065
+          },
+          {
+            "hi": 27.452089648276132,
+            "lo": 8.231238705108478,
+            "name": "hqm_curve.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 3.22172834331623
+          },
+          {
+            "hi": 10.676388224415982,
+            "lo": 5.2104578308573855,
+            "name": "funding_spread.variance_ratio_12m",
+            "suite": "horizon",
+            "value": 4.885637139612048
+          },
+          {
+            "hi": 6.9164038951519204,
+            "lo": 2.545274559302202,
+            "name": "funding_spread.mean_reversion_halflife",
+            "suite": "horizon",
+            "value": 2.0453757318109336
+          },
+          {
+            "hi": 0.2512315270935961,
+            "lo": 0.002955665024630542,
+            "name": "hml.lost_decade_frequency",
+            "suite": "horizon",
+            "value": 0.4716796875
+          },
+          {
+            "hi": 0.6687765505522514,
+            "lo": 0.2259983007646559,
+            "name": "cpi.long_inflation_era_frequency",
+            "suite": "horizon",
+            "value": 0.0302734375
           }
         ],
         "rate": 0.20063694267515925,
@@ -3452,14 +3452,9 @@
       "n_enforce": 5,
       "n_metrics": 975,
       "passed": true,
-      "prereg_digest": "sha256:42db20268d7292111fa54b34e8f37f7387057b6e46de6fcd7edf5a7f7ee59bc9",
+      "prereg_digest": "sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b",
       "prereg_verified": true,
       "report_severity_failures": [
-        {
-          "name": "policy_anchor_deviation",
-          "suite": "economics",
-          "value": 15.7083868702758
-        },
         {
           "name": "condition_adherence_error_inflation",
           "suite": "conditional",
@@ -3539,6 +3534,11 @@
           "name": "carry.es_95",
           "suite": "tails",
           "value": 0.30139724929506073
+        },
+        {
+          "name": "policy_anchor_deviation",
+          "suite": "economics",
+          "value": 15.7083868702758
         }
       ],
       "seed": 20276564,

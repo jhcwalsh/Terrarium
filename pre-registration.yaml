@@ -295,9 +295,11 @@ reference_run:
 # and what does not, stated exactly -- a sealed file must not claim a check it does not
 # have. TODAY: ah.eval.prereg.verify(..., ensemble_n_paths=, ensemble_months=) rejects a
 # mismatch when it is asked, and ah.eval.battery.run_battery compares every run's own
-# size against this block and records `criterion_bearing` on the report, with the
-# markdown printing "NO -- diagnostic run, may not be cited as G2 evidence" in bold when
-# it is false. The battery does NOT refuse such a run, deliberately: small-ensemble runs
+# size against this block -- AND its ensemble's vintage against campaign_vintage_id, the
+# other half of `multi_seed_decision_rule.criterion_bearing_runs_only`; see that entry
+# for what the earlier seal checked and did not -- recording `criterion_bearing` on the
+# report, with the markdown printing "NO -- diagnostic run, may not be cited as G2
+# evidence" in bold when it is false. The battery does NOT refuse such a run, deliberately: small-ensemble runs
 # are legitimate and necessary (the negative-control suite runs at 16 paths, CI smoke
 # tests smaller). NOT YET: ah/eval/g2.py implements only the holdout-token mint; the
 # multi-seed rule and its refusal of a non-criterion-bearing report are WP2.11's to
@@ -2954,10 +2956,20 @@ seal_scope:
     PROXY_RULES (fedfunds_pre1954, hy_oas_pre1996) are REGISTERED but not applied by
     ah.data.refresh, and ah.eval.panel.read_factor_frames never calls that module at
     all, so no sealed band is a function of its code today -- which the reference run
-    demonstrates rather than assumes: policy_rate and hy_spread appear in
-    reference_run.missing_factors precisely BECAUSE the backfills are absent from the
-    sealed vintage. RFR-10 asked WP2.3 to "confirm which the campaign vintage actually
-    contains"; the answer is NEITHER backfill. What the vintage contains is pinned by
+    demonstrates rather than assumes, in TWO INDEPENDENT WAYS, one per rule. (1)
+    hy_spread appears in reference_run.missing_factors precisely BECAUSE its
+    hy_oas_pre1996 backfill is absent. (2) policy_rate is NOT in missing_factors -- that
+    list is [commodities, hy_spread] on this vintage -- it is PRESENT, and the
+    demonstration is its START DATE: it begins at 1954-07, fred.FEDFUNDS's own first
+    observation, rather than at fred.TB3MS's 1934-01, where the fedfunds_pre1954 rule
+    would have started it. (FINAL-PASS CORRECTION: this clause previously read
+    "policy_rate and hy_spread appear in missing_factors precisely BECAUSE the backfills
+    are absent", which was false of policy_rate from the moment vintage 2026-07-26.1 was
+    sealed -- the correct wording had been carried into ah/eval/prereg.py's docstring and
+    factors.yaml but not into this sealed block. The CONCLUSION is unchanged and was
+    never at risk: each rule is independently demonstrated unapplied.) RFR-10 asked WP2.3
+    to "confirm which the campaign vintage actually contains"; the answer is NEITHER
+    backfill. What the vintage contains is pinned by
     the sealed campaign_vintage_id, not by this module, so hashing it would freeze code
     that cannot move a verdict. CONSEQUENCE, stated so it is not a surprise: if a later
     work package applies either proxy rule, that produces a NEW vintage, which is a
@@ -3509,7 +3521,22 @@ tuning_protocol:
     load-bearing property is INVARIANCE, not level. The SAME selection_lambda applies to
     every ablation system, every sampler, every seed and every trial, so no arm is
     selected under a criterion another arm was not. Changing it is a dated
-    protocol_change amendment. It may NEVER be chosen from the trials: selecting lambda
+    protocol_change amendment.
+    THE LIMIT OF THAT ARGUMENT, stated because the first version of it overreached
+    (final-pass finding; the VALUE is unchanged and is not re-fitted): what is invariant
+    is the RULE, not the effective weight. `generative_objective` is a DIFFERENT QUANTITY
+    PER ARM and the arms are not on one scale -- ablation system D runs TWO SAMPLERS,
+    hier-diffusion-v1 and hier-flow-v1, whose objectives are an ELBO (a bound) and an
+    exact log-likelihood, and the trial budget is per system PER SAMPLER, so the two are
+    separately selected under this criterion -- so a fixed lambda gives the D4 tail
+    auxiliary a different EFFECTIVE weight in each. That is a real limitation of a fixed
+    lambda across
+    incommensurable objectives, and it cannot be repaired by choosing a different
+    constant, because no constant is scale-aware and any scale-aware value would have to
+    be read off the trials, which is forbidden two sentences down. CONSEQUENCE, binding
+    on WP2.8: report BOTH terms of S separately -- per system and per sampler, with
+    their scales -- so a reader can see what weight the auxiliary actually carried in
+    each rather than inferring it from lambda. It may NEVER be chosen from the trials: selecting lambda
     by looking at trial outcomes is tuning the selection criterion, which is precisely
     the forking path this protocol exists to close, and doing it would make every
     subsequent comparison uninterpretable.
@@ -3595,7 +3622,25 @@ multi_seed_decision_rule:
     REGRESSION: C's count of comparison-set metrics falling OUTSIDE their sealed
     reference band (ah.eval.battery.band_is_usable bands only; degenerate and NaN bands
     are excluded from the count for both sides alike) is LESS THAN OR EQUAL TO B's.
-    NaN RULE, in the same direction as conventions.nan_metric_rule: if either side's
+    WHAT CLAUSE (ii) ACTUALLY RANGES OVER, disclosed rather than left to be discovered
+    at WP2.11 (final-pass finding; this is DISCLOSURE, the clause itself is unchanged
+    and remains deterministic): clause (ii) is scoped to USABLE REFERENCE BANDS, and
+    ah.eval.reference.RegisteredStrategyStat carries NO `fn` -- by construction, since a
+    backtest statistic or a scoring-rule value has no "history's own value of the same
+    statistic" to band (see that registry's section header). So NO bootstrap band exists,
+    or can exist, for any of the eleven strategy statistics, and clause (ii) is evaluated
+    ENTIRELY over family (b), the cross-block tail_dependence_lower/upper comparisons
+    (63 usable bands on this vintage) -- ZERO strategy-level metrics enter it. It does
+    not touch var_95/es_95/es_99 for any strategy, and must not be read as covering them:
+    those enter the rule only through clause (i)'s elicitability_score, and through the
+    sealed thresholds.strategies bounds, which gate independently of this rule. THE
+    ALTERNATIVE, named for the record because it was available and was not taken: writing
+    clause (ii) against the sealed THRESHOLDS rather than against reference bands would
+    have covered the strategy statistics, since thresholds.strategies does bound them.
+    It is not adopted here because changing the clause after WP2.4's benchmark numbers
+    exist is exactly the post-hoc rewriting this file exists to prevent; a later work
+    package may propose it as a dated protocol_change amendment, before any challenger
+    is evaluated. NaN RULE, in the same direction as conventions.nan_metric_rule: if either side's
     elicitability_score is NaN for any strategy in the comparison set, the seed is NOT
     a beat -- not a tie, not an exclusion. THE POOLED ALTERNATIVE, stated as an exact
     inequality rather than a gesture: let d_s be (C - B)'s mean elicitability_score
@@ -3647,8 +3692,19 @@ multi_seed_decision_rule:
   criterion_bearing_runs_only: >-
     Every number entering this rule must come from a run at the sealed ensemble_size,
     against the sealed campaign_vintage_id, with a verified pre-registration and a
-    matching lock. ah.eval.battery already records `criterion_bearing` on every report
-    (and prints it in bold when false); WP2.11's ah/eval/g2.py MUST refuse a report
-    where it is false. That refusal does not exist yet -- g2.py contains only the
-    holdout-token mint today -- so this sentence is a sealed REQUIREMENT on WP2.11, not
+    matching lock. ah.eval.battery records `criterion_bearing` on every report (and
+    prints it in bold when false), and it records ALL THREE of those conditions:
+    ensemble.n_paths and ensemble.months against ensemble_size, ensemble.meta.vintage_id
+    against campaign_vintage_id, and -- implicitly but not weakly -- the verified
+    pre-registration and matching lock, because the field is only computed on the branch
+    where ah.eval.prereg.verify(..., lock_path=...) has already returned without
+    raising. FINAL-PASS CORRECTION: until this seal only the SIZE was compared. The
+    vintage was carried onto the report and never checked, so a full-size run against a
+    superseded vintage -- still reachable through the catalog's append-only pointer
+    history, and possibly incomplete (see governance/retrofit-register.md RFR-62) --
+    was stamped criterion_bearing: true. The sentence above was the sealed requirement
+    and the code did not meet it; the code was extended to meet it rather than the
+    sentence weakened to describe it. WP2.11's ah/eval/g2.py MUST refuse a report where
+    it is false. That refusal does not exist yet -- g2.py contains only the
+    holdout-token mint today -- so THAT part remains a sealed REQUIREMENT on WP2.11, not
     a description of a check already in place.

@@ -1297,9 +1297,13 @@ def verify(
       :data:`~ah.eval.reference.STRATEGY_STATS`;
     - every threshold's ``severity`` is ``enforce``/``report``, and ``min <= max``
       when both are given;
-    - if ``lock_path`` is given and exists, the lock was sealed for *this*
-      pre-registration (``prereg.source_path``) and the digest recomputed from its
-      ``hashed_files`` (read fresh from disk) matches the digest it recorded.
+    - if ``lock_path`` is given, the lock was sealed for *this* pre-registration
+      (``prereg.source_path``) and the digest recomputed from its ``hashed_files``
+      (read fresh from disk) matches the digest it recorded. A named lock that is
+      **absent** is an error whenever ``prereg.sealed`` -- it used to be silently
+      skipped, so ``rm pre-registration.lock`` disarmed every hashed-source check with
+      no error anywhere; while the document is unsealed an absent lock is still
+      tolerated, because that is the pre-seal state :func:`seal` is called from.
 
     **Sealed-document checks (WP2.3), applied only when ``prereg.sealed``.** A draft
     need not carry the full sealed apparatus -- the synthetic, minimal
@@ -1322,7 +1326,9 @@ def verify(
     small ensemble is legitimate and must not be blocked; what must not happen is a
     *criterion-bearing* run at an unsealed size, which is why
     :attr:`ah.eval.battery.BatteryReport.criterion_bearing` records the comparison on
-    every report and ``ah/eval/g2.py`` is where the hard gate belongs.
+    every report -- together with the ensemble's vintage against the sealed
+    ``campaign_vintage_id``, the other half of the same question -- and ``ah/eval/g2.py``
+    is where the hard gate belongs.
 
     Every failure is collected and reported together -- no section returns early on
     another section's fault.

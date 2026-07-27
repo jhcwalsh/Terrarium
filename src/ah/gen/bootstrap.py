@@ -178,7 +178,8 @@ FACTOR_SET: tuple[str, ...] = (
 STRATIFICATION = "regime_ruleset_v1"
 CAMPAIGN_VINTAGE_ID = "2026-07-26.1"
 
-#: The sealed criterion ensemble size. A run at any other size is diagnostic only --
+#: The sealed criterion ensemble size. A run at any other size -- or against any vintage
+#: other than `CAMPAIGN_VINTAGE_ID` -- is diagnostic only;
 #: `ah.eval.battery.BatteryReport.criterion_bearing` records which it was.
 CRITERION_N_PATHS = 1024
 CRITERION_MONTHS = 120

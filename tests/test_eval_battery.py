@@ -1003,6 +1003,93 @@ def test_dry_run_seal_needs_no_out_path() -> None:
 
 
 # --------------------------------------------------------------------------- #
+# WP2.3 final pass -- criterion_bearing checks the VINTAGE, not only the size
+# --------------------------------------------------------------------------- #
+
+
+def _sized_ensemble(*, n_paths: int, months: int, vintage_id: str) -> Ensemble:
+    """A minimal one-factor ensemble with the given size and vintage identity."""
+    return Ensemble(
+        paths=np.zeros((n_paths, months, 1)),
+        factor_names=["g1"],
+        meta=EnsembleMeta(
+            generator_id="test",
+            vintage_id=vintage_id,
+            seed=0,
+            n_paths=n_paths,
+            months=months,
+        ),
+    )
+
+
+def test_criterion_bearing_requires_the_sealed_vintage_not_only_the_sealed_size() -> None:
+    """``multi_seed_decision_rule.criterion_bearing_runs_only`` names three conditions;
+    ``criterion_bearing`` used to record ONE.
+
+    The size was compared and the vintage was not -- ``ensemble.meta.vintage_id`` was
+    carried onto the report and never checked -- so a full-size run against a superseded
+    vintage was stamped ``criterion_bearing: true``. That hazard was live: superseded
+    vintages stay on disk and stay reachable through the catalog's append-only pointer
+    history, and a predecessor of the campaign vintage can be an incomplete snapshot
+    (``governance/retrofit-register.md`` RFR-62). This pins the fix against the REAL
+    sealed document, so the sealed sentence and the code cannot drift apart.
+    """
+    sealed = prereg_mod.load()
+    assert sealed.sealed is True
+    size = sealed.raw["ensemble_size"]
+    vintage = sealed.raw["campaign_vintage_id"]
+
+    at_criterion = _sized_ensemble(
+        n_paths=size["n_paths"], months=size["months"], vintage_id=vintage
+    )
+    assert battery.criterion_bearing_for(at_criterion, sealed) is True
+
+    # The exact hazard: sealed size, WRONG vintage. `2026-07-24` is a real superseded
+    # vintage in this repo's catalog and is missing `fred.FEDFUNDS` entirely.
+    wrong_vintage = _sized_ensemble(
+        n_paths=size["n_paths"], months=size["months"], vintage_id="2026-07-24"
+    )
+    assert wrong_vintage.meta.vintage_id != vintage
+    assert battery.criterion_bearing_for(wrong_vintage, sealed) is False
+
+    # The size half still holds, both axes.
+    assert (
+        battery.criterion_bearing_for(
+            _sized_ensemble(n_paths=16, months=size["months"], vintage_id=vintage), sealed
+        )
+        is False
+    )
+    assert (
+        battery.criterion_bearing_for(
+            _sized_ensemble(n_paths=size["n_paths"], months=60, vintage_id=vintage), sealed
+        )
+        is False
+    )
+
+
+def test_criterion_bearing_is_none_while_unsealed_and_false_without_a_sealed_vintage() -> None:
+    """``None`` is "no criterion exists to compare against", which is not the same claim
+    as ``False`` ("this run is not citable"). A sealed document that names no campaign
+    vintage is the second case, not the first: the campaign cannot be identified, so
+    nothing can be shown to have run against it."""
+    draft = _real_prereg()  # the real document, sealed=False
+    ensemble = _sized_ensemble(n_paths=1024, months=120, vintage_id="anything")
+    assert battery.criterion_bearing_for(ensemble, draft) is None
+
+    sealed = prereg_mod.load()
+    raw = dict(sealed.raw)
+    del raw["campaign_vintage_id"]
+    no_vintage = dataclasses.replace(sealed, raw=raw)
+    assert battery.criterion_bearing_for(ensemble, no_vintage) is False
+
+    raw_no_size = dict(sealed.raw)
+    del raw_no_size["ensemble_size"]
+    assert battery.criterion_bearing_for(
+        ensemble, dataclasses.replace(sealed, raw=raw_no_size)
+    ) is (None)
+
+
+# --------------------------------------------------------------------------- #
 # WP2.2 Task 2 fix pass -- Critical 1: an orchestration step that actually runs
 #
 # Before this, no production code path called any `register_*_suite()`, so

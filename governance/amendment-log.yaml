@@ -362,3 +362,99 @@ amendments:
     first three entries: no generator, no trial, no G2 evidence exists, so nothing
     here could have been fitted to a result.'
   type: protocol_change
+- amendment_id: AM-2026-07-26-005
+  date: '2026-07-26'
+  payload:
+    amends:
+    - AM-2026-07-26-003
+    - AM-2026-07-26-004
+    code_changes_inside_the_seal:
+    - 'ah/eval/battery.py: criterion_bearing now compares THE VINTAGE as well as the
+      size (new ah.eval.battery.criterion_bearing_for). multi_seed_decision_rule.criterion_bearing_runs_only
+      names three conditions -- sealed ensemble_size, sealed campaign_vintage_id,
+      verified prereg+lock -- and points at BatteryReport.criterion_bearing as recording
+      them; the code compared n_paths and months and nothing else, and ensemble.meta.vintage_id
+      was carried onto the report and never checked. THE HAZARD WAS LIVE: incomplete
+      predecessor vintages 2026-07-24 (no fred.FEDFUNDS) and 2026-07-26 (no fred.TEDRATE)
+      remain on disk and reachable through the catalog''s append-only pointer history
+      (asof(''2026-07-25'') and asof(''2026-07-26'') both resolve to 2026-07-24),
+      so a 1024x120 run against either was stamped criterion_bearing: true. The SENTENCE
+      was the requirement and the CODE was extended to meet it, rather than the sentence
+      weakened to describe the code. RFR-71.'
+    corrections:
+    - 'seal_scope.splice_py_reason: the premise was false. It read ''policy_rate and
+      hy_spread appear in reference_run.missing_factors precisely BECAUSE the backfills
+      are absent''. missing_factors is [commodities, hy_spread]; policy_rate is PRESENT
+      on vintage 2026-07-26.1, and what demonstrates its fedfunds_pre1954 backfill
+      is unapplied is its START DATE -- fred.FEDFUNDS''s own 1954-07 rather than fred.TB3MS''s
+      1934-01. The correct wording already existed in ah/eval/prereg.py''s docstring,
+      factors.yaml and decision-register S2-SEAL-SCOPE-2, and was simply never carried
+      into the sealed block. The CONCLUSION (splice.py stays outside the seal) is
+      unchanged and is independently demonstrated per rule. governance/retrofit-register.md
+      RFR-70.'
+    - 'ah/eval/prereg.py verify() docstring: still said ''if lock_path is given AND
+      EXISTS'', which describes the pre-RFR-67 behaviour that the same re-seal removed.
+      A named lock that is absent is an error whenever the document is sealed. Inside
+      the hash, so it travelled with this seal. RFR-70.'
+    disclosures_no_behaviour_change:
+    - 'multi_seed_decision_rule.beats_definition clause (ii): it is scoped to usable
+      REFERENCE bands, and ah.eval.reference.RegisteredStrategyStat carries no `fn`
+      by construction, so NO band exists or can exist for any of the eleven strategy
+      statistics. Clause (ii) is therefore evaluated ENTIRELY over the cross-block
+      tail_dependence_lower/upper family (63 usable bands on this vintage) and touches
+      ZERO strategy-level metrics -- it does not cover var_95/es_95/es_99, which ''NO
+      TAIL-BAND REGRESSION over comparison-set metrics'' read as if it did. The clause
+      is UNCHANGED and remains deterministic. THE ALTERNATIVE IS NAMED AND NOT TAKEN:
+      writing clause (ii) against the sealed thresholds.strategies rather than against
+      reference bands would have covered the strategy statistics; adopting it now,
+      with WP2.4''s benchmark numbers in hand, would be post-hoc. A later work package
+      may propose it as a dated protocol_change amendment, before any challenger is
+      evaluated. RFR-72.'
+    - 'tuning_protocol.selection_criterion: the invariance argument overreached. selection_lambda
+      STAYS 1.0 and is not re-fitted. What is invariant is the RULE, not the effective
+      weight: generative_objective is a different quantity per arm -- ablation system
+      D runs two samplers, hier-diffusion-v1 (an ELBO, a bound) and hier-flow-v1 (an
+      exact log-likelihood), separately selected because the trial budget is per system
+      per sampler -- so a fixed lambda gives the D4 tail auxiliary a different EFFECTIVE
+      weight per arm. No constant repairs this, because any scale-aware value would
+      have to be read off the trials, which the protocol forbids. BINDING ON WP2.8:
+      report both terms of S separately, per system and per sampler, with their scales.
+      RFR-73.'
+    new_lock_digest: sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary or decision changed value in this pass. Every
+      item below is either a correction to sealed PROSE that described something untrue,
+      a DISCLOSURE of what an unchanged clause actually ranges over, or a CODE change
+      that makes an existing sealed sentence true. The digest moves because ah/eval/battery.py
+      and ah/eval/prereg.py are hashed judged sources.
+    sealed_at: '2026-07-26'
+    superseded_lock_digest: sha256:42db20268d7292111fa54b34e8f37f7387057b6e46de6fcd7edf5a7f7ee59bc9
+    wp24_evidence_re_measured_against_this_seal: 'scripts/run_bootstrap_battery.py
+      was re-run after this seal so WP2.4''s committed artifacts are judged by the
+      final digest rather than the superseded one. The three-seed result is unchanged:
+      criterion_bearing true, zero enforce failures, at the sealed 1024 x 120 against
+      the sealed campaign vintage.'
+  post_hoc: false
+  rationale: 'THE RE-SEAL''S CLOSING PASS: four findings from the independent review
+    of AM-2026-07-26-003/-004, plus one free correction inside the hash. NO THRESHOLD,
+    BAND OR GATE MOVED -- nothing here is a re-measurement, and the review''s verdict
+    was explicitly that the gap was one re-seal rather than another cut. (1) A sealed
+    scope justification rested on a false premise (seal_scope.splice_py_reason claimed
+    policy_rate is in missing_factors; it is not, and its 1954-07 start is the real
+    demonstration). (2) criterion_bearing claimed a check it did not perform: the
+    sealed sentence names the campaign vintage and the code compared only the ensemble
+    size, while two incomplete predecessor vintages remain reachable through pointer
+    history -- fixed in code, not documented around, because that is the only place
+    the hazard can bite. (3) beats_definition clause (ii) is structurally empty for
+    the strategy family, since RegisteredStrategyStat has no fn and therefore no band;
+    disclosed, with the threshold-based alternative named and deliberately not taken
+    now that WP2.4''s numbers exist. (4) The lambda invariance argument does not survive
+    incommensurable objectives across arm D''s two samplers; the value stays 1.0 and
+    the reason is corrected, with a reporting obligation on WP2.8. Plus verify()''s
+    docstring, which still described the lock behaviour that AM-2026-07-26-004 itself
+    removed. post_hoc is FALSE for the same reason as all four prior entries: no generator
+    has been fitted, no training run has happened and no G2 evidence exists. WP2.4''s
+    bootstrap-v1 landed entirely within the previous seal and required no amendment;
+    its artifacts are re-measured against this digest, and nothing in this pass could
+    have been fitted to them because nothing in this pass is a number.'
+  type: protocol_change

@@ -7,6 +7,82 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.3 final pass — four review findings closed, and a fresh seal.
+  `pre-registration.lock` is now
+  `sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b`** (supersedes
+  `sha256:42db2026…`; 32 hashed files, unchanged set), amendment `AM-2026-07-26-005`,
+  `post_hoc: false`. **Not one threshold, band, gate, floor, split boundary, ensemble
+  size or block length moved** — nothing in this pass is a re-measurement. The digest
+  moves because two *judged sources* changed.
+
+  - **A sealed scope justification rested on a false premise.**
+    `seal_scope.splice_py_reason` claimed `policy_rate` and `hy_spread` are both in
+    `reference_run.missing_factors` "precisely BECAUSE the backfills are absent".
+    `missing_factors` is `[commodities, hy_spread]`: `policy_rate` is **present** on
+    vintage `2026-07-26.1`, and what demonstrates `fedfunds_pre1954` is unapplied is its
+    **start date** — `fred.FEDFUNDS`'s own 1954-07 rather than `fred.TB3MS`'s 1934-01.
+    The correct wording already existed in `ah/eval/prereg.py`, `factors.yaml` and
+    `S2-SEAL-SCOPE-2`, and was simply never carried into the sealed block. The
+    *conclusion* — `splice.py` stays outside the seal — is unchanged and independently
+    demonstrated per rule. RFR-70, which also carries `verify()`'s docstring ("if
+    `lock_path` is given **and exists**"), describing behaviour that the previous re-seal
+    itself removed.
+  - **`criterion_bearing` claimed a check it did not perform, and the hazard was live.**
+    `multi_seed_decision_rule.criterion_bearing_runs_only` names three conditions —
+    sealed `ensemble_size`, sealed `campaign_vintage_id`, verified prereg + lock — and
+    points at `BatteryReport.criterion_bearing` as recording them. The code compared
+    `n_paths` and `months` and **nothing else**; `ensemble.meta.vintage_id` was carried
+    onto every report and never compared. Two **incomplete** predecessor vintages remain
+    on disk and reachable through the catalog's append-only pointer history —
+    `2026-07-24` has no `fred.FEDFUNDS`, `2026-07-26` has no `fred.TEDRATE`, and
+    `asof('2026-07-25')` / `asof('2026-07-26')` both resolve to `2026-07-24` — so a
+    1024×120 run against either was stamped `criterion_bearing: true`. **The code was
+    extended to meet the sealed sentence** (`ah.eval.battery.criterion_bearing_for`),
+    rather than the sentence weakened to describe the code: that makes the sealed claim
+    true and closes the hazard at the only place it can bite. RFR-71. WP2.11 still owes
+    the hard refusal in `ah/eval/g2.py`; that half remains a requirement, and the file
+    still says so.
+  - **`beats_definition` clause (ii) is structurally empty for one of its two families —
+    now disclosed.** The clause is scoped to usable *reference* bands, and
+    `RegisteredStrategyStat` carries no `fn` by construction, so **no band exists or can
+    exist** for any of the eleven strategy statistics. Clause (ii) is therefore evaluated
+    entirely over the cross-block `tail_dependence_{lower,upper}` family (**63 usable
+    bands**) and touches **zero** strategy-level metrics — it never covers
+    `var_95`/`es_95`/`es_99`, which "NO TAIL-BAND REGRESSION over comparison-set metrics"
+    read as if it did. **Disclosure only**: the clause is unchanged and still
+    deterministic. The alternative — writing it against the sealed
+    `thresholds.strategies` instead, which *would* cover them — is named in the sealed
+    text and deliberately **not taken**, because adopting it with WP2.4's numbers already
+    in hand is post-hoc; it is available as a dated amendment before any challenger is
+    evaluated. RFR-72.
+  - **The λ invariance argument does not survive incommensurable objectives.**
+    `selection_lambda` **stays 1.0** and is not re-fitted; the stated *reason* was what
+    overreached. `generative_objective` is a different quantity per arm — ablation system
+    D runs two samplers, `hier-diffusion-v1` (an ELBO, a bound) and `hier-flow-v1` (an
+    exact log-likelihood), separately selected because the trial budget is per system
+    *per sampler* — so a fixed λ gives the D4 auxiliary a different **effective weight**
+    per arm. Invariance is invariance of the **rule**, not of the weight, and no constant
+    repairs it (a scale-aware value would have to be read off the trials, which the
+    protocol forbids). **Binding on WP2.8:** report both terms of `S` separately, per
+    system and per sampler, with their scales. RFR-73.
+  - **WP2.4's evidence was re-measured against the final seal.**
+    `scripts/run_bootstrap_battery.py` re-run at the sealed 1024×120 on campaign vintage
+    `2026-07-26.1`, three seeds: **`criterion_bearing: true`, `prereg_verified: true`,
+    verdict PASS, zero enforce failures — unchanged**, now carrying the new digest.
+    Every reported number is identical to the pre-re-seal run: the band-exceedance rate
+    (127/628 = 0.2022, then 126/628 = 0.2006 twice), the three gate values, the
+    memorization surface, every `elicitability_score`, and the full enforce set.
+  - **One artifact-integrity wart found by the re-run, and fixed.**
+    `scripts/run_bootstrap_battery.py`'s `_results()` iterated the report document's own
+    tier keys, and `BatteryReport.to_json` writes with `sort_keys=True` — so a document
+    read back from disk yields `10yr, 1_5yr, economic, monthly` while an in-memory one
+    yields `TIERS` order. A direct run and an `--analyse-only` re-derive therefore wrote
+    `band_exceedance_census.outside_comparisons` in **two different orders**, with every
+    value, count and rate identical. No number was ever affected, but a provenance
+    script whose committed output depends on which mode produced it undermines the one
+    claim it exists to make. The iteration order is now pinned to `TIERS`, so both modes
+    agree. Not a judged source — no re-seal.
+
 - **WP2.4 — `bootstrap-v1`, the frozen benchmark, and the battery's first false-positive
   measurement.** `src/ah/gen/bootstrap.py` implements the sealed `bootstrap_v1` spec and
   registers it in `ah.gen.registry`; it is the platform's first real generator and the
