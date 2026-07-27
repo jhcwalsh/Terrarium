@@ -51,3 +51,16 @@ experiments/
 /seal-evidence.json
 /block-length-window.json
 /mc-error-grid.json
+
+# WP2.4 battery evidence. The per-seed battery reports are large (~650 KB of JSON and
+# ~110 KB of markdown each, three seeds) and reproduce bit-for-bit from
+# `scripts/run_bootstrap_battery.py` against the sealed campaign vintage -- the same
+# reasoning as the provenance-script outputs above. `artifacts/wp24/summary.json` IS
+# committed and is the exception: it carries the verdict, every enforce gate, the
+# per-comparison band-exceedance census and the conditional suite, it is what every later
+# PR diffs `bootstrap-v1` against, and -- unlike the provenance outputs above -- no sealed
+# document quotes those numbers, so nothing else in the repository would hold them.
+/artifacts/*
+!/artifacts/wp24/
+/artifacts/wp24/*
+!/artifacts/wp24/summary.json

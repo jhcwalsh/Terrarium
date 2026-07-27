@@ -7,6 +7,100 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.4 — `bootstrap-v1`, the frozen benchmark, and the battery's first false-positive
+  measurement.** `src/ah/gen/bootstrap.py` implements the sealed `bootstrap_v1` spec and
+  registers it in `ah.gen.registry`; it is the platform's first real generator and the
+  standing comparison for every later PR. Nothing sealed was changed to produce these
+  numbers — no threshold, no band, no gate, no negative control, and no line of
+  `pre-registration.yaml`. `pre-registration.lock` verifies unchanged on every run.
+
+  - **What was built, against the seal.** Politis-Romano stationary bootstrap, restart
+    probability `p = 1/6` with a **circular** wrap, **multivariate blocks** (one shared
+    row index across all twelve factors — tested exactly, on a source whose every column
+    is an injective function of the row index, not statistically), stratified by the
+    `regime_ruleset_v1` label of each block's **start month**. The draw span is *derived*
+    from the panel and then checked against the seal: it comes back
+    **1990-01…2020-12, 372 months**, over exactly the sealed twelve-factor `factor_set`,
+    on campaign vintage `2026-07-26.1`. `EnsembleMeta.active_blocks` now has a producer
+    (RFR-4), validated against `load_manifest().active_blocks` rather than trusted.
+  - **THE HEADLINE: `bootstrap-v1` PASSES its own battery at the sealed criterion size**
+    (1024×120, `criterion_bearing: true`, `prereg_verified: true`), with **0 enforce
+    failures of 5** enforce comparisons, in **all three sampling seeds**.
+  - **The sealed 200-path derivation reproduces exactly at 1024 paths.**
+    `dependence_band_exceedance_fraction` **0.3611** (sealed prototype: 0.361, bound 0.5),
+    `moment_band_exceedance_fraction` **0.0833** (sealed: 0.0833),
+    `tail_band_exceedance_fraction` **0.1364** (sealed: 0.1364),
+    `near_duplicate_fraction` **0.0644** (sealed at L=6: 0.065, bound 0.5),
+    `nn_distance_p05` **0.694** (sealed: 0.693; floor 0.0279, cleared 25×). The three
+    band-exceedance gates do not move with `n_paths` **at all** —
+    `moment_band_exceedance_fraction`'s Monte-Carlo error is 3e-18 — because they are
+    fractions over a *fixed* family of comparisons and more paths only sharpen each
+    statistic without flipping any comparison. That is the mechanism behind RFR-44's
+    warning that batch-means MC error is not the right sizing quantity for those gates,
+    now observed rather than argued. **`mean_block_months: 6` behaves as sealed.**
+  - **THE NUMBER THIS WORK PACKAGE EXISTS TO PRODUCE: the per-comparison band exceedance
+    rate is 0.2022** (0.2006 in the other two seeds) — 127 of 628 usable banded
+    comparisons — against the **0.10** the
+    three gates' premise assumes (`limitations.null_exceedance_rate_is_unverified`). A
+    plain resample of real history falls outside its own 90% reference bands at **twice**
+    the nominal rate. Nothing was adjusted in response; the number is the finding. It
+    does not move any verdict (the gates aggregate per family and all three pass), but it
+    says the bands are not 90% bands *for a generator*, and WP2.5+ inherits that.
+  - **Where the exceedances are, because the pattern is diagnostic.** 102 of 127 are in
+    the `monthly` suite and almost all are one thing: every **level** factor's
+    `acf_r_lag*`/`acf_r_sum` sits *below* its band (`policy_rate` 2.565 vs [3.755, 4.790],
+    `ust_2y` 2.548 vs [3.726, 4.743], `cpi`, `ust_10y`, `hqm_curve`, `ig_spread`,
+    `equity_vol`). A mean-6 block bootstrap cannot reproduce the near-unit-root
+    persistence of a level series — a real, structural generator limitation, and the one
+    the dependence gate is built to catch, which it registers at 0.361 against 0.5. The
+    18 `horizon` exceedances (`variance_ratio_12m`, `mean_reversion_halflife`, every level
+    factor) are the same defect seen through a second lens.
+  - **The two `moment` failures are the two the seal predicted**, and both are era-scale,
+    not era-mixing: `cpi.std` (36.85 vs [0.902, 16.81]) and `hqm_curve.std` (1.736 vs
+    [0.633, 1.285]) — a level's dispersion over the 1990-2020 draw span against bands
+    computed on that factor's own much longer, much lower-level history.
+    `moment_gate_risk_measured`'s worry that era mixing would break `std` **did not
+    materialise**: 2 of 24, exactly as sealed, unchanged at criterion size.
+  - **Report-severity failures, none blocking:** `policy_anchor_deviation` 15.58 (a soft
+    derived regularity a resample has no mechanism to hit), `ust_10y.acf_r_lag1` 0.7862
+    (the only per-factor autocorrelation threshold sealed at all — the same mean-6
+    persistence limit), `carry.var_95` 0.1379 / `carry.es_95` 0.2994, and thirteen
+    `conditional`-suite metrics that are expected by sealed design.
+  - **The five numbers `what_wp24_must_report` demanded are all supplied**, including the
+    measured `elicitability_score` for every computable D4 strategy (`sixty_forty`
+    **-2.540**, `momentum` **-2.391**, `carry` **-1.745**; `eqw_factors` and
+    `endowment_proxy` NaN as sealed) and `term_premium` **1.573** /
+    `equity_risk_premium` **0.00720**, both previously un-derived.
+  - **The conditional suite ran, and its failure is the measurement the plan asked for.**
+    Adherence errors: inflation 5.38pp (p90 10.32), rate 3.40pp (p90 5.50), crisis timing
+    14.13 quarters (p90 28.0), crisis severity 10.46pp (p90 19.29). Off-support pass rate
+    falls **0.531 → 0.031 → 0.000 → 0.000** across `typical`/`p95`/`p99`/`beyond`. The
+    generator honours a regime *sequence* and nothing else, by sealed design; this is
+    `conditioning_statement` measured, not a defect.
+  - **`SEVERE_TEST_POSABLE = False`, in code.** The derived span starts 1990-01, so
+    WP2.11's "exclude the 1970s, regenerate from 1965" is not posable for the benchmark
+    and `G2-EVIDENCE.md` must record that row as NOT POSABLE.
+  - **Two choices the seal did not make, recorded rather than buried.** (a) The WorldSpec
+    schema enumerates eight regime names against the ruleset's six, so
+    `recovery → EXP` and `deflation_boom → EXP` had to be chosen; the mapping is stated,
+    exhaustiveness is tested, and every conditioned ensemble records its
+    `requested_regimes`. (b) The plan's "(+slow-state-bucket)" stratification is **not
+    implemented** — no slow-state model exists before WP2.5, and the sealed
+    `stratification_statement` (which is the binding, self-contained definition) names
+    only the start-month regime label.
+  - **A second factor-resolution path, closed by a machine check.** `ah.gen` may not
+    import `ah.eval`, and `ah.eval.panel` is a sealed judged source that cannot be
+    refactored into a shared home without an amendment — so `bootstrap.py` carries its own
+    `read_factor_frames`, and a test asserts it returns frames identical to
+    `ah.eval.panel`'s for the real manifest.
+  - `scripts/run_bootstrap_battery.py` is the provenance script (`--analyse-only`
+    re-derives every number above from the committed `artifacts/wp24/battery-seed*.json`
+    with no catalog); `tests/test_bootstrap.py` adds 31 tests (suite 1068 → 1099), every
+    sealed constant asserted against `pre-registration.yaml` itself rather than restated.
+    The per-seed battery reports are gitignored on the same reasoning as the other
+    provenance-script outputs; `artifacts/wp24/summary.json` is committed because nothing
+    else in the repository would hold these numbers.
+
 - **WP2.3 re-seal — a new campaign vintage, and six defects in what was sealed.** The
   first seal froze campaign vintage `2026-07-24`, a snapshot taken *before*
   `fred.FEDFUNDS` was registered — so `policy_rate` had no data for reasons that had
