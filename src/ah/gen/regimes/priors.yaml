@@ -1,0 +1,93 @@
+# WP2.6 Layer-2 regime skeleton: default priors, covariate constants, fit and
+# acceptance settings (DN-1.1 SS II.3).
+#
+# This file is the single source of defaults: it is loaded into
+# ah.gen.regimes.semimarkov.RegimesConfig (pydantic), and the resulting config
+# dict is hashed into the experiment record, so any edit here changes the hash.
+#
+# Priors are weakly informative BY DESIGN: with ~60 sojourn spells and ~60
+# transitions over the 1926-2020 label history, several transition cells are
+# empty (the empirical count table in regime-fit-report.md makes the sparsity
+# visible). A Normal(0, scale) prior on every logit-scale parameter is the
+# regularization: an unobserved cell's posterior stays near its prior instead of
+# diverging, and no cell is forced to zero.
+
+priors:
+  alpha:   {loc: 0.0, scale: 1.5}   # sojourn logit-p intercepts per state, at z = 0
+  gamma:   {loc: 0.0, scale: 1.0}   # sojourn covariate loadings (standardized z)
+  log_r:   {loc: 1.0, scale: 1.0}   # NegBin dispersion r_k = exp(log_r); median e^1 ~ 2.7
+  trans_a: {loc: 0.0, scale: 2.0}   # transition intercepts (per-row reference pinned to 0)
+  trans_b: {loc: 0.0, scale: 1.0}   # destination covariate loadings (EXP column pinned to 0)
+
+# DN-1.1's z(s) third component is "pi* - target"; the note never defines the
+# target. Chosen: a configured constant 2.0 (the modern-era inflation-target
+# convention). A fitted constant would be absorbed into alpha_k anyway -- only
+# the centering of the covariate moves, and z is standardized after centering.
+pi_target: 2.0
+
+# Step-1 catalog series ids, all read through DataAccess.train_val (the
+# sanctioned surface). Curve slope = fred.GS10 - fred.TB3MS where both exist
+# (1953-04 on); before that, the annual JST long-short spread
+# (jst.usa_ltrate - jst.usa_stir) held constant within each year. Labels need
+# the cpi level, total equity returns (mkt_rf + rf), USREC and INDPRO --
+# exactly the ah.gen.bootstrap.regime_labels_for feature set.
+series:
+  gs10_monthly: "fred.GS10"
+  tb3ms_monthly: "fred.TB3MS"
+  jst_ltrate: "jst.usa_ltrate"
+  jst_stir: "jst.usa_stir"
+  cpi_monthly: "fred.CPI"
+  equity_mkt_rf: "french.mkt_rf"
+  equity_rf: "french.rf"
+  usrec_monthly: "fred.USREC"
+  indpro_monthly: "fred.INDPRO"
+
+# The regime_ruleset_v1b sensitivity variant (STEP2 SS WP2.6: "thresholds
+# perturbed ... defuses the label-circularity concern with evidence").
+# src/ah/data/regime_thresholds.yaml is NOT modified; this dict is passed via
+# the labeler's `thr` parameter. Each perturbation moves a boundary through a
+# dense part of the feature distribution, so labels genuinely change:
+#   cpi_high 4.0 -> 3.5        the 3.5-4.0% CPI band covers many 1970s/80s and
+#                              1946-51 months; REF/STAG grow at EXP/SLOW's expense
+#   growth_weak 0.0 -> 0.25    the near-zero INDPRO growth band is thick; more REC
+#   growth_slow 1.5 -> 1.75    widens SLOW at EXP's expense
+#   drawdown_crisis -0.20 -> -0.15  borderline bear markets (1957, 1990, 2020)
+#                              flip recession months from REC to CRI
+#   hy_crisis unchanged        the disjunct is dead on train+validation data
+#                              (hy_spread's licensed history is all holdout)
+sensitivity:
+  version: regime_ruleset_v1b
+  cpi_high: 3.5
+  growth_weak: 0.25
+  growth_slow: 1.75
+  drawdown_crisis: -0.15
+  hy_crisis: 8.0
+
+# NUTS settings. The posterior has ~62 free parameters over ~60 spells and ~60
+# transitions -- minutes on CPU, not hours.
+fit:
+  chains: 4
+  warmup: 1000
+  samples: 1000
+  target_accept: 0.9
+  max_tree_depth: 10
+  dense_mass: false
+  chain_method: "parallel"
+  artifact_draws: 1000
+
+# The acceptance evidence (generator-side, NOT a sealed battery metric): block
+# bootstrap of the historical train+validation label sequence -> bands on
+# per-regime sojourn quantiles and state frequencies; the fitted L2 simulated
+# over real-artifact L1 decades at the stated seed/size is compared band by
+# band. mean block 120 months: WP2.2's lesson (progress.md) is that short
+# blocks destroy the very persistence being measured (b=24 killed the lag-24
+# ACF); regime spells run 1-10 years, so the block must dominate the spell.
+acceptance:
+  n_boot: 1000
+  bootstrap_mean_block_months: 120
+  bootstrap_seed: 20260727
+  sim_n_decades: 512
+  sim_months: 120
+  sim_seed: 20260727
+  band_lo: 0.025
+  band_hi: 0.975

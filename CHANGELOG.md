@@ -7,6 +7,61 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.6 — Layer 2, the semi-Markov regime skeleton (`ah/gen/regimes/`):
+  DN-1.1 SS II.3 over the six Step-1 ruleset states, NegBin sojourns and
+  multinomial-logit transition rows both logit-linked to slow-state covariates,
+  fitted on `regime_ruleset_v1` labels (+NBER via USREC), with the
+  `regime_ruleset_v1b` sensitivity refit the plan demands.**
+  - `semimarkov.py` (generation side, numpy `PCG64` only): config (YAML →
+    pydantic, hashed), the hash-verified posterior artifact (same canonical
+    content-SHA-256 pattern as WP2.5's), and seeded simulation — decade k uses
+    `seed + 7919*k` and draws its own posterior index, so L2 parameter
+    uncertainty sits inside the ensemble exactly as L1's does. Recorded
+    conventions: `D = 1 + NegBin(r_k, p_k)` (failures-before-r-th-success;
+    higher p ⇒ shorter sojourn), `logit p_k = alpha_k + gamma_k'z`; transition
+    logits `a_kj + b_j'z` with destination loadings shared across origin rows
+    (identification: `b_EXP = 0`, one intercept per row).
+  - Covariates exactly DN-1.1's `z(s) = (curve slope, credit gap, pi* - target,
+    drawdown state)`; historical slope is GS10−TB3MS spliced with the annual JST
+    long-short spread pre-1953; credit gap and pi* come from the WP2.5
+    posterior-mean smoothed path (the consumed climate artifact's content
+    SHA-256 is recorded in the L2 artifact metadata); pi_target = 2.0
+    (configured constant). Simulation-side proxies recorded as limitations:
+    slope = psi0 − phi_c0·c(R_t), drawdown state = 1[R_t == CRI].
+  - **The c_t contract (WP2.5's docstring) fulfilled:** `RegimePaths.cycle` =
+    `cycle_by_regime[R_t]`, the per-regime train+val mean of L1's own fitting
+    proxy `1 − 2*USREC` — proxy-consistent by construction (CRI = −1 and
+    EXP/SLOW/STAG/REF = +1 exactly, by ruleset; REC lands between), values in
+    [−1, +1], accepted verbatim by `climate.simulate_decades` (tested).
+  - WorldSpec regime modes per `schemas/`: `sequence` pins R_t **exactly**
+    (tested; segments must tile, rule V10), `transition_matrix` honours the
+    authored quarterly matrix verbatim (rows validated, rule V11; regime names
+    map through the single `WORLDSPEC_REGIME_TO_LABEL` copy in `bootstrap.py`),
+    `unconditional` = iid draws at historical label frequencies.
+  - `fit.py`: label assembly mirrors `bootstrap.regime_labels_for` (same
+    features, same refusal on gaps, same dead `hy_oas` disjunct) but exposes the
+    labeler's `thr` parameter for the sensitivity variant — a test pins the two
+    paths to identical labels so they cannot drift. Spells: first left-truncated
+    (dropped), last right-censored (exact finite-sum survival term; JAX's
+    `betainc` has no gradient in `r`, so the CDF is an explicit pmf sum, tested
+    against `scipy.stats.nbinom`). NUTS diagnostics per flattened parameter,
+    generated `regime-fit-report.md` + `regime-sensitivity-report.md`
+    (repo-root copies), experiment-store record.
+  - **Acceptance evidence, generator-side by design:** the battery's
+    `regime_duration_*` names are sealed `structurally_unavailable`, so the
+    plan's "simulated duration/frequency distributions inside train+val
+    bootstrap bands" is implemented in the fit report — stationary-bootstrap
+    bands (mean block 120 months) on per-regime frequencies and sojourn
+    quantiles vs the fitted L2 simulated over real-artifact L1 decades (L1
+    starting states spread across the label era). No sealed file was touched.
+  - `regime_ruleset_v1b` (config-defined; `regime_thresholds.yaml` untouched):
+    cpi_high 4.0→3.5, growth_weak 0.0→0.25, growth_slow 1.5→1.75,
+    drawdown_crisis −0.20→−0.15; label agreement, composition/duration shifts,
+    hazard and transition-matrix deltas, and v1b acceptance bands all reported.
+  - `scripts/fit_regimes.py`: the provenance script (offline, catalog-read,
+    campaign vintage `2026-07-26.1`, pinned L1 artifact, deterministic).
+  - 67 new tests (`test_regimes_semimarkov/fit.py`); no seal amendment needed
+    (new files under `ah/gen/regimes/` + script + tests only).
 - **WP2.5 — Layer 1, the climate model (`ah/gen/climate/`): DN-1.1 SS II.2 as a
   marginalized linear-Gaussian state space, NUTS over ~35 structural parameters,
   FFBS state draws, deterministic posterior artifact, decade simulator.**
