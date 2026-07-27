@@ -568,3 +568,54 @@ def test_no_gen_module_imports_ah_eval() -> None:
         if _EVAL_IMPORT.search(path.read_text(encoding="utf-8"))
     ]
     assert not offenders, f"ah.gen must never import ah.eval: {offenders}"
+
+
+# --------------------------------------------------------------------------- #
+# the schema alias (WP2.4b)
+# --------------------------------------------------------------------------- #
+
+
+def test_an_authored_world_resolves_to_the_benchmark() -> None:
+    """A checked-in WorldSpec naming the schema's id must reach the generator.
+
+    Before the alias this raised ``UnknownGeneratorError``: ``schemas/``'s
+    ``generator_id`` enum offers ``bootstrap-stratified``, WP2.4 registered
+    ``bootstrap-v1``, and every authored world under ``fixtures/worlds/conditional/``
+    names the former. The schema is read-only vendored truth, so the code carries both.
+    """
+    import json
+
+    from ah.core.loader import load_worldspec
+    from ah.gen import registry
+
+    doc = json.loads(
+        (
+            ROOT / "fixtures" / "worlds" / "conditional" / "crisis_severity_mild.worldspec.json"
+        ).read_text(encoding="utf-8")
+    )
+    generator = registry.resolve_for_world(load_worldspec(doc))
+    assert generator.generator_id == bs.GENERATOR_ID
+
+
+def test_both_ids_resolve_to_the_same_generator() -> None:
+    """The alias is a second name, not a second generator."""
+    from ah.gen import registry
+
+    assert registry.resolve(bs.GENERATOR_ID).generator_id == bs.GENERATOR_ID
+    assert registry.resolve(bs.SCHEMA_GENERATOR_ID).generator_id == bs.GENERATOR_ID
+    assert registry.snapshot()[bs.SCHEMA_GENERATOR_ID] is bs.bootstrap_v1_factory
+
+
+def test_the_alias_is_the_id_the_schema_actually_permits() -> None:
+    """Pin the alias to ``schemas/``, so a schema bump cannot silently orphan it."""
+    import json
+
+    schema = json.loads(
+        (ROOT / "schemas" / "worldspec-v1.0.schema.json").read_text(encoding="utf-8")
+    )
+    allowed = schema["properties"]["engine_defaults"]["properties"]["generator_id"]["enum"]
+    assert bs.SCHEMA_GENERATOR_ID in allowed
+    assert bs.GENERATOR_ID not in allowed, (
+        "STEP2R Sec.WP2R.6 has bumped the schema to include bootstrap-v1; "
+        "the alias can now be retired and this test deleted."
+    )

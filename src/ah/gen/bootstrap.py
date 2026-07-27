@@ -840,4 +840,29 @@ def bootstrap_v1_factory() -> BootstrapV1:
     return BootstrapV1(campaign_source())
 
 
+# The id an authored WorldSpec may name for this generator.
+#
+# `schemas/worldspec-v1.0.schema.json` restricts `engine_defaults.generator_id` to
+# `[toy-v0, bootstrap-stratified, signature-mmd, conditional-diffusion]`. That enum
+# predates STEP2-GENERATOR-PLAN Sec.WP2.4's instruction to "Register `bootstrap-v1`",
+# so the plan's id and the schema's id for the same generator differ. `CLAUDE.md`
+# resolves that directly: schemas/ is read-only vendored truth and "wins for field
+# definitions" -- an enum's members are a field definition -- so the code is what
+# moves, not the contract.
+#
+# Without this alias the break is live, not theoretical: every authored world in
+# `fixtures/worlds/conditional/` names `bootstrap-stratified`, validates against the
+# schema, and then fails `resolve_for_world` with UnknownGeneratorError. Both ids
+# resolve to the SAME factory, so an ensemble is identical whichever name reached it.
+#
+# STEP2R-CONSOLIDATION-PLAN Sec.WP2R.6 bumps the schema to the resolved generator_id
+# namespace ("including whichever system G2 promoted -- or `bootstrap-v1` if the
+# benchmark shipped"), which is where the two names get reconciled. Until then this
+# alias is the whole fix, and it needs no amendment: `ah/gen/registry.py` and this
+# module are outside the pre-registration seal (no `gen/` file is a judged source --
+# `gen/base.py` is excluded by name as "the defendant whose output is judged, not the
+# judge itself").
+SCHEMA_GENERATOR_ID = "bootstrap-stratified"
+
 registry.register(GENERATOR_ID, bootstrap_v1_factory)
+registry.register(SCHEMA_GENERATOR_ID, bootstrap_v1_factory)
