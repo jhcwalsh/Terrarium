@@ -458,3 +458,187 @@ amendments:
     its artifacts are re-measured against this digest, and nothing in this pass could
     have been fitted to them because nothing in this pass is a number.'
   type: protocol_change
+- amendment_id: AM-2026-07-26-006
+  date: '2026-07-26'
+  payload:
+    findings:
+    - 'factors.yaml header: claimed policy_rate produced no train+validation data
+      and called reference_run.missing_factors ''the sealed list of all three''. It
+      is [commodities, hy_spread]; policy_rate carries 798 train+validation months
+      on vintage 2026-07-26.1. The THIRD surviving copy of the RFR-70 sentence.'
+    - 'ah/eval/prereg.py _check_threshold_data_availability docstring: the same false
+      sentence, FOURTH copy. The code was never affected -- it reads the sealed missing_factors
+      list, never this prose.'
+    - 'thresholds section header: ''cross_block_corr_matrix_distance is the one entry
+      today'' for the panel section. True when WP2.2 Task 4 wrote it; PANEL_STATS
+      holds 49 names today and this section seals 35.'
+    - 'conventions.estimator_length_matching: ''THREE REGISTERED STATISTICS DEPART
+      FROM IT'' followed by four names. Four registration records carry length_matched=False
+      (lost_decade_frequency, long_inflation_era_frequency, tail_dependence_lower,
+      tail_dependence_upper).'
+    - 'conventions.warm_up: ''about 0.95 * 5% = 4.57%'' does not multiply. The factor
+      is the DIFFERENTIAL warm-up fraction, generated minus historical: 1 - (12/120
+      - 12/~800) = 0.915. 4.57%, the 0.43pp offset, LR_pof ~ 0.049, p ~ 0.82 and the
+      ~49 at the pre-fix pooled size are all correct and unchanged.'
+    - 'thresholds.strategies kupiec_pof floor comment: the stated implied exceedance
+      interval [0.0042, 0.1125] (''fewer than about 0.5 or more than about 13.5 exceedances'')
+      is not the LR = 6.635 contour of the sealed statistic. Solving 2*T*KL(p_hat||0.05)
+      = 6.635 at T = 120 gives [0.008328, 0.108796], counts [1.00, 13.06]. The corrected
+      interval is NARROWER, i.e. the floor is slightly more demanding than the prose
+      claimed. The threshold min: 0.01 is unchanged.'
+    - 'ensemble_size.mc_error_grid.reading: attributed the ~3.8-fold 64->1024 reduction
+      to skew and acf_abs_sum. From the sealed table those are 4.52x and 5.60x; the
+      ~3.8-fold rows are ust_10y.acf_r_lag1 (3.75x) and equity_mkt.excess_kurtosis
+      (3.69x). The consistency conclusion is unchanged.'
+    - 'seal_scope: calls this file''s header and ah.eval.prereg''s module docstring
+      the full accounting of what is hashed, while src/ah/eval/metrics/_pooling.py
+      and src/ah/eval/negative_controls.py were named in neither. Both have always
+      been in _REQUIRED_JUDGED_SOURCES and in the lock -- the SEAL was never short,
+      the accounting of it was. Now named in both, and pinned by test against the
+      lock.'
+    - 'tuning_protocol.prohibitions: sealed WP2.7''s acceptance-filter bar in the
+      present tense (''asserted by test against this manifest''). No such test exists
+      or can yet exist -- WP2.7''s assemble.py is unwritten. Restated as a sealed
+      REQUIREMENT on WP2.7, in the same posture as criterion_bearing_runs_only''s
+      refusal requirement on WP2.11, and registered with status requirement_on_later_wp
+      and an empty pinned_by.'
+    - 'ah/splits.py (hashed, not the pre-registration): the module docstring and the
+      SPLITS comment still called the split dates ''provisional ... sealed for real
+      in WP2.3'' after WP2.3 sealed them and verify() began checking them on every
+      battery invocation.'
+    new_tests:
+    - tests/test_prereg.py::test_verify_rejects_active_blocks_that_disagree_with_the_manifest
+    - tests/test_prereg.py::test_the_sealed_seal_scope_accounts_for_every_hashed_file
+    - tests/test_prereg.py::test_the_sealed_length_matching_exception_count_is_the_registered_count
+    - tests/test_prereg.py::test_the_sealed_panel_section_states_its_own_size
+    - tests/test_strategies.py::test_loader_rejects_a_dead_zero_cost_leg_entry
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, factor list or decision changed value in
+      this pass. The only numbers that changed anywhere are three counts and two derived
+      quantities that were WRONG about data already sealed elsewhere in the same file,
+      each corrected to what that sealed data says and each labelled as a correction.
+    sealed_at: '2026-07-26'
+    standing_check: 'pre-registration.yaml claims_with_tests: 31 registered claims
+      covering all 63 claim-shaped lines the sealed detector flags, 4 declared not_a_code_claim
+      exemptions each with a reason, and 1 claim declared status: requirement_on_later_wp
+      with no test. Enforced by tests/test_prereg.py::test_every_sealed_claim_is_pinned_by_a_test_that_exists,
+      ::test_every_sealed_claim_anchor_still_matches_its_sentence and ::test_no_claim_shaped_sentence_is_unregistered.'
+    superseded_lock_digest: sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b
+    verified_and_correct: Recorded because a clean result is a result. Every K = 4
+      absurdity bound reconciles exactly with its own quoted band (11 of 11, both
+      sides, including every null-side structural clip); every thresholds.strategies
+      bound is exactly [historical/3, historical*3]; the five mc_error_grid band_widths
+      equal the quoted bands to six decimals; reference_run.coverage is internally
+      consistent month-for-month across all twelve factors; and scripts/measure_seal_evidence.py
+      reproduces the sealed D4 strategy statistics, the memorization null (n = 367
+      over 12 factors, p05 0.0557, p50 2.0742, floors 0.0279/1.0371), the spread-floor
+      evidence (ig_spread 54.0% of 1224 below 100bp, min 0.32; funding_spread 86.9%
+      of 420, min 0.118; neither below 0.0) and the RFR-12 momentum counterfactual
+      (336 months lost, ES99 0.15597 -> 0.12923, all four tail statistics identical
+      with and without the cash leg) to every digit. missing_factors is [commodities,
+      hy_spread]. momentum's flat-month fraction is 0.24603. The Markov, Hoeffding
+      (1.56%), binomial (2.99e-8 / 1.03e-10) and chi-square (exp(-5.991/2) = 0.0500)
+      derivations all check out. Every verify(), loader, run_battery and NaN-rule
+      behavioural claim holds against the implementation, and the enforce surface
+      is exactly the five names the file names.
+  post_hoc: false
+  rationale: 'THE SEALED-CLAIMS SWEEP. A general audit of every sentence in pre-registration.yaml
+    -- and in the hashed sources -- that asserts something checkable about the code
+    or the data, checked against the implementation and, where data-derived, against
+    the sealed campaign vintage. It exists because one defect class had escaped every
+    review so far at a 100% rate: a sealed sentence describing a check the code does
+    not perform. AM-2026-07-26-005 closed two instances (seal_scope.splice_py_reason,
+    multi_seed_decision_rule.criterion_bearing_runs_only), each with its own test,
+    and recorded explicitly that the general audit had not been done. NO THRESHOLD,
+    BAND, GATE, FLOOR, SPLIT, SIZE OR SEVERITY MOVED -- not one. Every item is a correction
+    to sealed PROSE that described something untrue, or a new test. The only code
+    changes are one docstring (ah/eval/prereg.py), two comments (ah/splits.py), and
+    test files; the digest moves because prereg.py, splits.py and factors.yaml are
+    hashed judged sources. SEVEN FALSE CLAIMS, plus two accounting/tense defects and
+    one stale hashed-source comment; the full accounting is in payload.findings and
+    in governance/retrofit-register.md RFR-74. MADE STANDING: pre-registration.yaml
+    now seals a claims_with_tests: registry mapping every claim-shaped line of the
+    document to the test that pins it, with a SEALED trigger-phrase detector -- so
+    blinding the check is itself a lock violation -- and three tests: that every pinned_by
+    resolves to a test that exists, that every anchor still matches the sentence it
+    locates, and that no claim-shaped line is unregistered. Its limits are sealed
+    beside it and are real: it is a keyword detector rather than a reader, it checks
+    that a named test EXISTS rather than that it asserts the claim, and it covers
+    this document only -- four of this pass''s findings were in hashed SOURCE prose,
+    which remains uncovered and is recorded as unowned. post_hoc is FALSE, for the
+    same reason as all five prior entries and with the same force: no generator has
+    been fitted beyond the frozen benchmark, no training run has happened, and no
+    G2 evidence exists. Nothing in this pass is a number, so nothing in it could have
+    been fitted to WP2.4''s artifacts -- which were re-run against this digest and
+    are unchanged.'
+  type: correction
+- amendment_id: AM-2026-07-26-007
+  date: '2026-07-26'
+  payload:
+    new_lock_digest: sha256:c21cd2fb527b4244f31fa419435aec9cb6e9f6a9ece2e8153005343da995b773
+    no_threshold_moved: Nothing moved. This entry changes no file other than the log
+      it is appended to.
+    records_digest_for: AM-2026-07-26-006
+    sealed_at: '2026-07-26'
+    superseded_lock_digest: sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b
+  post_hoc: false
+  rationale: 'BOOKKEEPING ONLY -- no edit to any sealed file, no change of any kind
+    to the pre-registration, and the lock digest below is the one AM-2026-07-26-006
+    already produced. This entry exists because the log is APPEND-ONLY BY CONSTRUCTION
+    and AM-2026-07-26-006 was appended in the correct order: the sealed procedure
+    is (1) append the amendment, (2) make the edit, (3) re-seal -- so the new digest
+    did not exist when that entry was written and could not be put in it. Earlier
+    entries carry a new_lock_digest field because they were assembled around a dry-run
+    seal; the claims sweep followed the stated order instead, and the honest way to
+    close the chain afterwards is a second, explicitly empty entry rather than editing
+    bytes the log guarantees are never rewritten. The chain now reads end to end:
+    AM-2026-07-26-005 new_lock_digest = sha256:df5db7c8..., AM-2026-07-26-006 superseded_lock_digest
+    = sha256:df5db7c8..., and this entry''s new_lock_digest = the digest in the committed
+    pre-registration.lock. Appending to this log does not move the digest -- governance/amendment-log.yaml
+    is deliberately not a hashed file -- so this entry is self-consistent rather than
+    circular. post_hoc: false, for the same reason as AM-2026-07-26-006.'
+  type: correction
+- amendment_id: AM-2026-07-26-008
+  date: '2026-07-26'
+  payload:
+    finding: ah/eval/negative_controls.py cites a test that does not exist (test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap,
+      replaced by two test_closed_* tests when WP2.2c Item 1 closed the finding),
+      and misstates the suite's own closed-finding convention as deletion rather than
+      replacement.
+    new_lock_digest: sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585
+    no_threshold_moved: Nothing moved. The only file changes are two docstring paragraphs
+      in ah/eval/negative_controls.py and two count sentences in pre-registration.yaml's
+      claims_with_tests header.
+    sealed_at: '2026-07-26'
+    superseded_lock_digest: sha256:c21cd2fb527b4244f31fa419435aec9cb6e9f6a9ece2e8153005343da995b773
+    supersedes_count_in: AM-2026-07-26-006 and RFR-74 (seven -> eleven total)
+  post_hoc: false
+  rationale: 'THE CLAIMS SWEEP, CONTINUED -- one further finding, found after AM-2026-07-26-006
+    was already appended, and appended separately because this log is append-only
+    by construction and prior bytes are never rewritten. That the sweep needed a third
+    entry is itself part of the record, not an embarrassment to be tidied away. THE
+    FINDING (governance/retrofit-register.md RFR-75). ah/eval/negative_controls.py''s
+    module docstring cites ''tests/test_negative_controls.py::test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap''
+    as the test the claim ''rests on''. THAT TEST DOES NOT EXIST: WP2.2c Item 1 closed
+    the finding and replaced it with test_closed_every_suite_now_emits_mean_std_and_correlation
+    and test_closed_the_monthly_tier_separates_nc3_from_the_undistorted_bootstrap,
+    and the citation was never updated. The same docstring states the suite''s own
+    convention as ''that test fails loudly and is DELETED in the same commit'', which
+    is not what the suite does -- a closed finding''s test is REPLACED by a test_closed_*,
+    so the record of what was once true survives beside the proof that it no longer
+    is. A description of the repository''s own practice is a claim too. Both corrected;
+    the historical finding itself is left standing as the record it is. IT WAS FOUND
+    BY A ONE-OFF SCRIPT, NOT BY THE NEW STANDING CHECK, and that is the point worth
+    carrying forward: claims_with_tests covers pre-registration.yaml only, this defect
+    sat in hashed SOURCE prose, and it is direct evidence that the uncovered surface
+    the new block names as its own limit (c) is not hypothetical. The mechanical form
+    of the missing check is now known and cheap -- for every hashed .py, resolve every
+    tests/<file>::<test_name> it names against that file''s AST -- and extending the
+    registry to hashed-source prose remains UNOWNED. THE SWEEP''S CORRECTED TOTAL
+    is ELEVEN findings: seven in pre-registration.yaml, four in hashed source prose.
+    The sealed claims_with_tests header and limit (c) are updated to say so, which
+    is the only change to pre-registration.yaml in this entry. NO THRESHOLD, BAND,
+    GATE, FLOOR, SPLIT, SIZE OR SEVERITY MOVED, here or in AM-2026-07-26-006. post_hoc:
+    false, for the same reason: nothing in this pass is a number, and no generator
+    has been fitted beyond the frozen benchmark.'
+  type: correction

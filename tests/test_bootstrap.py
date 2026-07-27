@@ -568,3 +568,61 @@ def test_no_gen_module_imports_ah_eval() -> None:
         if _EVAL_IMPORT.search(path.read_text(encoding="utf-8"))
     ]
     assert not offenders, f"ah.gen must never import ah.eval: {offenders}"
+
+
+# --------------------------------------------------------------------------- #
+# the schema alias (WP2.4b)
+# --------------------------------------------------------------------------- #
+#
+# These assert the REGISTRATION, never `registry.resolve`. Resolving runs the factory,
+# which opens the real catalog under `data/` -- and `data/` is gitignored, so a test
+# that resolves cannot pass on a fresh clone and collides with any concurrent process
+# holding `catalog.duckdb`. The alias is a registry fact; check it as one.
+
+
+def test_an_authored_world_names_a_registered_generator() -> None:
+    """A checked-in WorldSpec's generator_id must be reachable.
+
+    Before the alias this world validated against the schema and then failed
+    ``resolve_for_world`` with ``UnknownGeneratorError``: ``schemas/``'s enum offers
+    ``bootstrap-stratified``, WP2.4 registered ``bootstrap-v1``, and every authored
+    world under ``fixtures/worlds/conditional/`` names the former.
+    """
+    import json
+
+    from ah.core.loader import load_worldspec
+    from ah.gen import registry
+
+    doc = json.loads(
+        (
+            ROOT / "fixtures" / "worlds" / "conditional" / "crisis_severity_mild.worldspec.json"
+        ).read_text(encoding="utf-8")
+    )
+    world = load_worldspec(doc)
+    named = world.engine_defaults.generator_id
+    assert named == bs.SCHEMA_GENERATOR_ID
+    assert named in registry.registered()
+
+
+def test_both_ids_are_registered_to_the_same_factory() -> None:
+    """The alias is a second name, not a second generator."""
+    from ah.gen import registry
+
+    snapshot = registry.snapshot()
+    assert snapshot[bs.GENERATOR_ID] is bs.bootstrap_v1_factory
+    assert snapshot[bs.SCHEMA_GENERATOR_ID] is bs.bootstrap_v1_factory
+
+
+def test_the_alias_is_the_id_the_schema_actually_permits() -> None:
+    """Pin the alias to ``schemas/``, so a schema bump cannot silently orphan it."""
+    import json
+
+    schema = json.loads(
+        (ROOT / "schemas" / "worldspec-v1.0.schema.json").read_text(encoding="utf-8")
+    )
+    allowed = schema["properties"]["engine_defaults"]["properties"]["generator_id"]["enum"]
+    assert bs.SCHEMA_GENERATOR_ID in allowed
+    assert bs.GENERATOR_ID not in allowed, (
+        "STEP2R Sec.WP2R.6 has bumped the schema to include bootstrap-v1; "
+        "the alias can now be retired and this test deleted."
+    )

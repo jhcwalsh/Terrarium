@@ -16,8 +16,10 @@ log (tests 11-12), and the ``block_addition`` round trip (test 10).
 
 from __future__ import annotations
 
+import ast
 import dataclasses
 import json
+import re
 import shutil
 from pathlib import Path
 from types import MappingProxyType
@@ -2342,3 +2344,309 @@ def test_the_sealed_criterion_bearing_sentence_describes_a_check_that_exists() -
 
     assert criterion_bearing_for(_ensemble(loaded.raw["campaign_vintage_id"]), loaded) is True
     assert criterion_bearing_for(_ensemble("2026-07-24"), loaded) is False
+
+
+# --------------------------------------------------------------------------- #
+# The claims sweep (2026-07-26): `claims_with_tests` -- the standing check that makes
+# a sealed sentence describing a check answerable to the code.
+#
+# Background, because it is the whole reason these tests exist. Two sealed sentences
+# were false about the implementation and both survived multiple review passes:
+# `seal_scope.splice_py_reason` (asserted `policy_rate` is in `missing_factors`; it is
+# not) and `multi_seed_decision_rule.criterion_bearing_runs_only` (named three
+# conditions; `battery.py` compared two quantities and nothing else). Each was fixed
+# with its own test. The CLASS was not -- nothing made prose answerable to code in
+# general -- and the claims-sweep pass found seven more instances.
+# `claims_with_tests` is the registry; these three tests are what make it bind.
+# --------------------------------------------------------------------------- #
+
+_MIN_ANCHOR_CHARS = 40
+
+
+def _claims_registry() -> dict[str, Any]:
+    registry = _load_real_doc()["claims_with_tests"]
+    assert isinstance(registry, dict)
+    return registry
+
+
+def _prereg_lines() -> list[str]:
+    return REAL_PREREG_PATH.read_text(encoding="utf-8").splitlines()
+
+
+def _registry_region(lines: list[str]) -> set[int]:
+    """1-based line numbers of the ``claims_with_tests`` block *and its own banner*.
+
+    The registry quotes every anchor verbatim and its own prose necessarily contains
+    trigger phrases, so it is excluded from both the anchor search and the completeness
+    scan -- otherwise the registry would have to register itself and every anchor would
+    match twice by construction.
+    """
+    key = next(i for i, line in enumerate(lines, 1) if line.startswith("claims_with_tests:"))
+    start = key
+    while start - 2 >= 0 and lines[start - 2].startswith("#"):
+        start -= 1
+    end = next(i for i, line in enumerate(lines, 1) if i > key and re.match(r"^[a-z_]+:", line))
+    return set(range(start, end))
+
+
+def _defined_test_functions(path: Path) -> set[str]:
+    """Every ``def test_*`` defined at any level of ``path``, read by AST.
+
+    AST rather than import: this stays a cheap textual check that cannot be satisfied
+    by a name that only exists at runtime, and cannot fail because some unrelated
+    module-level import in the target file broke.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    return {
+        node.name
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.name.startswith("test_")
+    }
+
+
+def test_every_sealed_claim_is_pinned_by_a_test_that_exists() -> None:
+    """Guarantee (1) of ``claims_with_tests``: every ``pinned_by`` entry resolves.
+
+    A claim cannot be "pinned" by a test somebody renamed or deleted -- which is
+    exactly how a registry rots into decoration. This checks that the file exists and
+    the function is defined in it; it deliberately does NOT check that the test asserts
+    what the sentence says, and the sealed block states that limit as (b).
+
+    An empty ``pinned_by`` is legal only with a non-``pinned`` ``status``, so "this
+    claim has no test" is a sealed, visible declaration rather than an empty list
+    nobody notices.
+    """
+    registry = _claims_registry()
+    claims = registry["claims"]
+    assert claims, "claims_with_tests.claims must not be empty"
+
+    cache: dict[Path, set[str]] = {}
+    problems: list[str] = []
+    for claim_id, claim in claims.items():
+        for field in ("claim", "covers", "pinned_by", "status"):
+            assert field in claim, f"{claim_id}: missing '{field}'"
+        assert isinstance(claim["claim"], str) and claim["claim"].strip(), claim_id
+        assert claim["covers"], f"{claim_id}: must anchor at least one sealed line"
+        pinned = claim["pinned_by"] or []
+        status = claim["status"]
+        if not pinned:
+            if status == "pinned":
+                problems.append(f"{claim_id}: status 'pinned' with an empty pinned_by")
+            continue
+        if status != "pinned":
+            problems.append(f"{claim_id}: status {status!r} but names {len(pinned)} test(s)")
+        for ref in pinned:
+            if "::" not in ref:
+                problems.append(f"{claim_id}: '{ref}' is not '<file>::<test>'")
+                continue
+            rel, func = ref.split("::", 1)
+            path = ROOT / rel
+            if not path.exists():
+                problems.append(f"{claim_id}: '{ref}' names a file that does not exist")
+                continue
+            if path not in cache:
+                cache[path] = _defined_test_functions(path)
+            if func not in cache[path]:
+                problems.append(f"{claim_id}: '{ref}' names a test not defined in {rel}")
+    assert not problems, "claims_with_tests.pinned_by does not resolve:\n" + "\n".join(problems)
+
+
+def test_every_sealed_claim_anchor_still_matches_its_sentence() -> None:
+    """Guarantee (2): every ``covers`` / ``not_a_code_claim`` anchor still matches the
+    sealed text, on a line the detector flags, and is long enough not to be vague.
+
+    This is what makes re-wording a claim-bearing line BREAK the suite rather than
+    silently orphan its registration. Anchors need not be unique -- two sections
+    legitimately quote one test name verbatim -- but every line an anchor matches must
+    itself carry a trigger phrase, so a generic anchor cannot be stretched over
+    ordinary prose.
+    """
+    registry = _claims_registry()
+    lines = _prereg_lines()
+    region = _registry_region(lines)
+    triggers = registry["trigger_phrases"]
+    assert triggers, "the sealed detector must declare at least one trigger phrase"
+
+    anchors: list[tuple[str, str]] = [
+        (claim_id, anchor)
+        for claim_id, claim in registry["claims"].items()
+        for anchor in claim["covers"]
+    ]
+    anchors += [("<not_a_code_claim>", e["anchor"]) for e in registry["not_a_code_claim"]]
+
+    problems: list[str] = []
+    for owner, anchor in anchors:
+        if len(anchor) < _MIN_ANCHOR_CHARS:
+            problems.append(f"{owner}: anchor is under {_MIN_ANCHOR_CHARS} chars: {anchor!r}")
+        hits = [i for i, line in enumerate(lines, 1) if i not in region and anchor in line]
+        if not hits:
+            problems.append(f"{owner}: anchor no longer matches the sealed text: {anchor[:70]!r}")
+            continue
+        for hit in hits:
+            if not any(t in lines[hit - 1] for t in triggers):
+                problems.append(
+                    f"{owner}: anchor matches line {hit}, which carries no trigger phrase: "
+                    f"{anchor[:70]!r}"
+                )
+    assert not problems, "claims_with_tests anchors are stale:\n" + "\n".join(problems)
+
+
+def test_no_claim_shaped_sentence_is_unregistered() -> None:
+    """Guarantee (3), the completeness half -- the one that would have caught both prior
+    escapes at the moment they were written.
+
+    Every line of ``pre-registration.yaml`` carrying a sealed trigger phrase must be
+    covered by exactly one registered claim, or listed in ``not_a_code_claim`` with a
+    stated reason. A new sentence of the form "verify() rejects X" therefore fails this
+    test until someone either points it at a test or declares, inside the seal, that it
+    is not a claim about the code.
+
+    Its limit, restated here so a pass is not over-read: this is a KEYWORD detector,
+    not a reader. A claim phrased with none of the sealed trigger phrases is invisible
+    to it. ``trigger_phrases`` is itself sealed, so blinding the detector moves the lock
+    digest and needs a dated amendment.
+    """
+    registry = _claims_registry()
+    lines = _prereg_lines()
+    region = _registry_region(lines)
+    triggers = registry["trigger_phrases"]
+
+    owner_of: dict[int, list[str]] = {}
+    all_anchors = [
+        (claim_id, anchor)
+        for claim_id, claim in registry["claims"].items()
+        for anchor in claim["covers"]
+    ] + [("<not_a_code_claim>", e["anchor"]) for e in registry["not_a_code_claim"]]
+    for owner, anchor in all_anchors:
+        for i, line in enumerate(lines, 1):
+            if i not in region and anchor in line:
+                owner_of.setdefault(i, []).append(owner)
+
+    unregistered = [
+        f"  line {i}: {line.strip()[:120]}"
+        for i, line in enumerate(lines, 1)
+        if i not in region and any(t in line for t in triggers) and i not in owner_of
+    ]
+    assert not unregistered, (
+        "these sealed lines look like claims about the code but are not registered in "
+        "claims_with_tests -- point each at the test that pins it, or add it to "
+        "not_a_code_claim with a reason:\n" + "\n".join(unregistered)
+    )
+
+    doubly_owned = [
+        f"  line {i}: owned by {sorted(owners)}"
+        for i, owners in owner_of.items()
+        if len(owners) > 1
+    ]
+    assert not doubly_owned, (
+        "a claim-bearing line is registered by more than one claim, so which test pins "
+        "it is ambiguous:\n" + "\n".join(doubly_owned)
+    )
+
+    for entry in registry["not_a_code_claim"]:
+        assert isinstance(entry.get("reason"), str) and entry["reason"].strip(), (
+            f"not_a_code_claim entry {entry.get('anchor')!r} must state a reason"
+        )
+
+
+# --------------------------------------------------------------------------- #
+# The pin tests the claims sweep found missing -- each is named by a
+# `claims_with_tests` entry above.
+# --------------------------------------------------------------------------- #
+
+
+def test_verify_rejects_active_blocks_that_disagree_with_the_manifest(tmp_path: Path) -> None:
+    """``active_blocks``'s sealed comment says verify() "checks this exactly against the
+    live FactorManifest". Nothing asserted it: every existing coverage test moves the
+    THRESHOLDS, not the declared block list, so a document declaring
+    ``active_blocks: [global]`` against a two-block manifest was untested.
+    """
+    doc = _load_real_doc()
+    doc["active_blocks"] = ["global"]
+    prereg_path, _ = _write_doc_and_factors(tmp_path, doc)
+    loaded = prereg.load(prereg_path)
+    with pytest.raises(PreRegError, match="active_blocks"):
+        prereg.verify(loaded, load_manifest())
+
+
+def test_the_sealed_seal_scope_accounts_for_every_hashed_file() -> None:
+    """``seal_scope`` calls this file's header and ``ah.eval.prereg``'s module docstring
+    the full accounting of what is hashed. Two hashed files -- ``_pooling.py`` and
+    ``negative_controls.py`` -- were named in neither, so a reader could not reconstruct
+    the sealed set from the two documents that claim to state it. The SEAL was never
+    short (both are in ``_REQUIRED_JUDGED_SOURCES`` and in the lock); the accounting of
+    it was.
+    """
+    lock = json.loads((ROOT / "pre-registration.lock").read_text(encoding="utf-8"))
+    accounting = (
+        REAL_PREREG_PATH.read_text(encoding="utf-8")
+        + "\n"
+        + (ROOT / "src" / "ah" / "eval" / "prereg.py").read_text(encoding="utf-8")
+    )
+
+    suite_stems = set(prereg._METRIC_SUITE_NAMES)
+    unaccounted: list[str] = []
+    for rel in lock["hashed_files"]:
+        # The eight authored conditional worlds are accounted for as a directory glob,
+        # which is exactly how the sealed estimator names them too.
+        if rel.startswith("fixtures/worlds/conditional/"):
+            if "fixtures/worlds/conditional" not in accounting:
+                unaccounted.append(rel)
+            continue
+        # A metric SUITE is accounted for collectively: both accountings say "the
+        # metric suites under src/ah/eval/metrics/, and the fixed name list is
+        # ah.eval.prereg._METRIC_SUITE_NAMES", so membership of that tuple IS the
+        # accounting for it. Anything else under eval/metrics/ -- `_pooling.py` -- must
+        # be named outright, which is the whole point of the note that a helper beside
+        # the suites joins the seal only by being named.
+        if rel.startswith("src/ah/eval/metrics/") and Path(rel).stem in suite_stems:
+            continue
+        if Path(rel).name not in accounting:
+            unaccounted.append(rel)
+    assert not unaccounted, (
+        "pre-registration.lock hashes files that neither the sealed document's header "
+        f"nor ah.eval.prereg's module docstring names: {unaccounted}"
+    )
+
+
+def test_the_sealed_length_matching_exception_count_is_the_registered_count() -> None:
+    """``conventions.estimator_length_matching`` said THREE registered statistics depart
+    from length matching, and then named four. Four registration records carry the flag.
+    Counted against the live registries, in both directions.
+    """
+    from ah.eval.reference import CROSS_BLOCK_STATS, SINGLE_FACTOR_STATS
+
+    unmatched = {
+        name
+        for registry in (SINGLE_FACTOR_STATS, CROSS_BLOCK_STATS)
+        for name, stat in registry.items()
+        if not getattr(stat, "length_matched", True)
+    }
+    assert unmatched == {
+        "lost_decade_frequency",
+        "long_inflation_era_frequency",
+        "tail_dependence_lower",
+        "tail_dependence_upper",
+    }
+
+    text = " ".join(_load_real_doc()["conventions"]["estimator_length_matching"].split())
+    assert "FOUR REGISTERED STATISTICS DEPART FROM IT" in text
+    assert "THREE REGISTERED STATISTICS DEPART FROM IT" not in text
+    for name in unmatched:
+        assert name in text, name
+
+
+def test_the_sealed_panel_section_states_its_own_size() -> None:
+    """The thresholds header said ``cross_block_corr_matrix_distance`` "is the one entry
+    today" for the panel section. True when WP2.2 Task 4 wrote it, false by the time it
+    was sealed: Tasks 5 and 6 registered dozens more into ``PANEL_STATS``. The corrected
+    sentence states two counts; both are checked here rather than left to rot again.
+    """
+    from ah.eval.reference import PANEL_STATS
+
+    loaded = prereg.load(REAL_PREREG_PATH)
+    text = REAL_PREREG_PATH.read_text(encoding="utf-8")
+    assert f"PANEL_STATS, which today holds {len(PANEL_STATS)} names" in text
+    assert f"this section seals {len(loaded.panel_thresholds)}" in text
+    assert "cross_block_corr_matrix_distance" in loaded.panel_thresholds

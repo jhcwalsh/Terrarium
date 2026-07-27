@@ -995,3 +995,40 @@ def test_loader_rejects_an_undeclared_zero_cost_leg(tmp_path: Path) -> None:
     path = _write(tmp_path, body)
     with pytest.raises(StrategyError, match="numeraire_zero_cost_legs"):
         load_d4_strategies(path)
+
+
+def test_loader_rejects_a_dead_zero_cost_leg_entry(tmp_path: Path) -> None:
+    """The other half of the sealed sentence, which nothing asserted.
+
+    ``pre-registration.yaml``'s ``conventions.numeraire_zero_cost_legs`` comment reads:
+    "the loader rejects an undeclared zero-cost leg AND a dead entry here, so the
+    exception can never grow silently". The undeclared half is covered by the test
+    above; the DEAD-ENTRY half -- a name listed as a zero-cost overlay that no D4
+    strategy leg actually declares ``zero_cost`` -- was covered only by
+    ``_validate_numeraires``'s own code. Found by the claims sweep (2026-07-26).
+
+    Why a dead entry matters rather than being harmless clutter: the list is the sealed
+    statement of which legs are exempt from the one-numeraire rule, so a stale name in
+    it is a standing, unexercised exemption -- exactly what the sentence promises cannot
+    accumulate.
+    """
+    body = (
+        _CONVENTIONS_BLOCK
+        + "  numeraire: total_return\n"
+        # `mom` is declared zero-cost here but held by no strategy below.
+        + "  numeraire_zero_cost_legs: [smb, hml, mom]\n"
+        + _DERIVED_BLOCK.replace(
+            "    notes: fixture\n", "    numeraire: total_return\n    notes: fixture\n"
+        )
+        + "d4_strategies:\n"
+        + "  overlay:\n"
+        + "    kind: static_weights\n"
+        + "    rebalance: monthly\n"
+        + "    lookback: null\n"
+        + "    rule: null\n"
+        + "    weights: {equity_mkt: 0.4, smb: 0.3, hml: 0.3}\n"
+        + "    params: {}\n"
+    )
+    path = _write(tmp_path, body)
+    with pytest.raises(StrategyError, match="which no D4"):
+        load_d4_strategies(path)

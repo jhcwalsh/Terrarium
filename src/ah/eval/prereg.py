@@ -80,7 +80,19 @@ pass/fail verdict on their own. **The invariant governs**, so
   Task 1): ``ah/eval/battery.py`` and ``ah/eval/panel.py``. Both are judging code
   created outside ``src/ah/eval/metrics/``, so per the rule stated two paragraphs up
   they join this list in the same commit that adds them, rather than sitting outside
-  the hash until someone notices.
+  the hash until someone notices;
+- *the two hashed files this accounting used to omit* (claims-sweep addition,
+  2026-07-26): ``src/ah/eval/metrics/_pooling.py``, the shared ensemble-pooling
+  convention every suite calls -- it sits under ``eval/metrics/`` but is not a suite,
+  so ``_METRIC_SUITE_NAMES`` does not reach it -- and
+  ``src/ah/eval/negative_controls.py``, which defines what "the battery caught this
+  control" *means*. Both have been in :data:`_REQUIRED_JUDGED_SOURCES` and in the
+  lock's ``hashed_files`` since they were written, so the **seal** never had a hole --
+  but neither this list nor ``pre-registration.yaml``'s header named them, while
+  ``seal_scope:`` calls those two documents the full accounting of what is hashed. That
+  claim is now true, and
+  ``tests/test_prereg.py::test_the_sealed_seal_scope_accounts_for_every_hashed_file``
+  keeps it true.
 
 This module hashing its own source is intentional and non-circular: the digest lands in
 the lock file, never back inside ``prereg.py``. **Consequence, stated plainly so it is
@@ -1021,10 +1033,20 @@ def _check_threshold_data_availability(
 
     ``governance/retrofit-register.md`` RFR-5: :func:`verify` already checks that a key
     names a real factor of the right block and a registered statistic, but not that the
-    factor has *data*. On the sealed campaign vintage three active factors have none
-    (``commodities`` is declared unavailable; ``policy_rate`` and ``hy_spread`` have no
-    train+validation observations), so a threshold keyed to one of them judges nothing
-    -- silently, forever -- exactly the failure the key checks exist to stop.
+    factor has *data*. On the sealed campaign vintage ``2026-07-26.1`` **two** active
+    factors have none (``commodities`` is declared unavailable in ``factors.yaml``;
+    ``hy_spread``'s entire licensed fred.HY_OAS history falls inside the holdout), so a
+    threshold keyed to one of them judges nothing -- silently, forever -- exactly the
+    failure the key checks exist to stop.
+
+    *Claims-sweep correction (2026-07-26, after the re-seal).* This docstring read
+    "three active factors have none ... ``policy_rate`` and ``hy_spread`` have no
+    train+validation observations". True of the superseded ``2026-07-24`` vintage,
+    false of the sealed one: ``policy_rate`` carries 798 train+validation months and is
+    not in ``missing_factors``. It is the third place one wrong sentence survived, after
+    ``seal_scope.splice_py_reason`` and ``factors.yaml``'s header. The CODE was never
+    affected -- it reads the sealed ``reference_run.missing_factors`` list, never this
+    prose, and that list has been ``[commodities, hy_spread]`` since the re-seal.
 
     The unavailable sets are read from the sealed ``reference_run:`` block (the run that
     produced every band in this file), not recomputed: the check must hold in a checkout

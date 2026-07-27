@@ -7,6 +7,90 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **The sealed-claims sweep — every checkable sentence audited against the code, and
+  the audit made standing. `pre-registration.lock` is now
+  `sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585`** (supersedes
+  `sha256:df5db7c8…`; 32 hashed files, unchanged set), amendments `AM-2026-07-26-006`
+  (the sweep), `-007` (the digest note the append-only ordering made necessary) and
+  `-008` (an eleventh finding, found after `-006` was already appended), all
+  `post_hoc: false`. **Not one threshold, band, gate, floor, split, size or severity
+  moved.** The digest moves because `factors.yaml`, `ah/eval/prereg.py`, `ah/splits.py`
+  and `ah/eval/negative_controls.py` are hashed and their *prose* changed.
+
+  **Eleven findings: seven in `pre-registration.yaml`, four in hashed source prose.**
+
+  This closes a defect class rather than an incident. RFR-70 and RFR-71 were both
+  sealed sentences describing checks the code did not perform; both survived multiple
+  review passes; each was closed with its own single-purpose test and nothing
+  generalised. The sweep read `pre-registration.yaml` end to end and checked every
+  sentence asserting something about the code or the data against the implementation,
+  and — where data-derived — against the sealed campaign vintage.
+
+  - **Seven false claims, none of which moved a verdict.** (1) `factors.yaml`'s header
+    still said `policy_rate` produced no train+validation data and called
+    `missing_factors` "the sealed list of all three" — the **third** surviving copy of
+    RFR-70's sentence; (2) `ah.eval.prereg._check_threshold_data_availability`'s
+    docstring said the same — the **fourth**; (3) the thresholds header called
+    `cross_block_corr_matrix_distance` "the one entry today" for a section that seals
+    **35** of `PANEL_STATS`' **49** names; (4) `conventions.estimator_length_matching`
+    said **THREE** statistics carry `length_matched=False` and then named four (four
+    registration records carry it); (5) `conventions.warm_up`'s "about `0.95 * 5% =
+    4.57%`" does not multiply — the factor is the *differential* warm-up fraction,
+    `1 - (12/120 - 12/~800) = 0.915`, and 4.57% and everything downstream of it were
+    right; (6) the Kupiec floor's stated implied interval `[0.0042, 0.1125]` is not the
+    `LR = 6.635` contour, which is `[0.008328, 0.108796]` (counts `[1.00, 13.06]`) — the
+    corrected interval is *narrower*, so the floor is slightly more demanding than the
+    prose claimed; (7) `mc_error_grid.reading` attributed the ~3.8-fold 64→1024 reduction
+    to `skew` and `acf_abs_sum`, which the sealed table puts at 4.52× and 5.60× —
+    ~3.8× is `ust_10y.acf_r_lag1` (3.75×) and `excess_kurtosis` (3.69×).
+  - **Two accounting/tense defects.** `seal_scope` calls this file's header and
+    `ah.eval.prereg`'s docstring the full accounting of what is hashed, while
+    `src/ah/eval/metrics/_pooling.py` and `src/ah/eval/negative_controls.py` were named
+    in **neither** — both always hashed, so the *seal* was never short, only the
+    accounting of it. And `tuning_protocol.prohibitions` sealed WP2.7's filter bar in
+    the present tense ("asserted by test against this manifest") when no such test
+    exists or can yet exist; it is now a stated requirement on WP2.7, exactly as
+    `criterion_bearing_runs_only`'s refusal is on WP2.11. `ah/splits.py` also still
+    called the sealed split dates "provisional".
+  - **An eleventh finding, in a hashed source, found *after* the registry was drafted —
+    which is the evidence that the registry's stated blind spot is real.**
+    `ah/eval/negative_controls.py` cites
+    `test_finding_the_monthly_tier_cannot_separate_nc3_from_the_undistorted_bootstrap`
+    as the test its claim "rests on"; that test does not exist — WP2.2c Item 1 closed
+    the finding and replaced it with two `test_closed_*` tests, and the citation was
+    never updated. The same docstring also misstates the suite's own convention
+    ("that test … **is deleted** in the same commit"; closed findings are *replaced*,
+    not deleted). Caught by a one-off AST script, **not** by the new standing check,
+    which covers `pre-registration.yaml` only. RFR-75 records the mechanical form of
+    the missing check and leaves it explicitly unowned.
+  - **What the sweep did *not* find, recorded because a clean result is a result.**
+    Every `K = 4` absurdity bound reconciles exactly with its own quoted band (11 of 11,
+    both sides); every `thresholds.strategies` bound is exactly `[historical/3,
+    historical×3]`; the `mc_error_grid` band widths equal the quoted bands to six
+    decimals; `reference_run.coverage` is internally consistent month for month; and
+    `scripts/measure_seal_evidence.py` reproduces the D4 strategy statistics, the
+    memorization null (n = 367, p05 0.0557, p50 2.0742), the spread-floor evidence and
+    the RFR-12 momentum counterfactual **to every digit**. Every `verify()`, loader,
+    `run_battery` and NaN-rule behavioural claim holds.
+  - **Made standing: `pre-registration.yaml` now seals `claims_with_tests:`** — 31
+    claims mapping every claim-shaped line to the test that pins it, 4 declared
+    `not_a_code_claim` exemptions with reasons, and 1 claim with no test and an explicit
+    `status: requirement_on_later_wp`. The trigger-phrase detector is **sealed**, so
+    blinding the check is itself a lock violation. Three tests enforce it: every
+    `pinned_by` resolves to a test that exists, every anchor still matches the sentence
+    it locates, and **no claim-shaped line is unregistered**. Its limits are sealed
+    beside it: it is a keyword detector rather than a reader; it checks that a named
+    test *exists*, not that it asserts the claim; and it covers `pre-registration.yaml`
+    only — four of this pass's findings were in hashed *source* prose, which stays
+    uncovered and unowned. RFR-74.
+  - Five new pin tests (`test_verify_rejects_active_blocks_that_disagree_with_the_manifest`,
+    `test_the_sealed_seal_scope_accounts_for_every_hashed_file`,
+    `test_the_sealed_length_matching_exception_count_is_the_registered_count`,
+    `test_the_sealed_panel_section_states_its_own_size`,
+    `test_loader_rejects_a_dead_zero_cost_leg_entry` — the last covering the half of the
+    zero-cost-leg sentence nothing asserted). WP2.4's three-seed benchmark was re-run
+    against the new digest: `criterion_bearing: true`, zero enforce failures, every
+    gate value bit-identical.
 - **WP2.3 final pass — four review findings closed, and a fresh seal.
   `pre-registration.lock` is now
   `sha256:df5db7c88c504e9fc2add7d36a439f4a75f867246ca9a674b72574c61c27840b`** (supersedes

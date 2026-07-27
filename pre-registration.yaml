@@ -101,7 +101,22 @@
 #     reads the historical panel feeding ah.eval.reference in the first place (WP2.2
 #     Task 1): src/ah/eval/battery.py and src/ah/eval/panel.py -- judging code created
 #     outside src/ah/eval/metrics/, joined to this list in the same commit that added
-#     them.
+#     them;
+#   - CLAIMS-SWEEP ADDITION, and the reason it is an addition rather than a change: two
+#     hashed files were named nowhere in this accounting or in ah.eval.prereg's, so a
+#     reader could not reconstruct the sealed set from either of the two documents
+#     seal_scope: calls the full accounting. They were always hashed -- they are in
+#     _REQUIRED_JUDGED_SOURCES and in pre-registration.lock's hashed_files -- so the
+#     SEAL never had a hole; the accounting of it did. src/ah/eval/metrics/_pooling.py
+#     is the shared ensemble-pooling convention every suite calls, which sits under
+#     eval/metrics/ but is NOT a suite, so _METRIC_SUITE_NAMES does not reach it and it
+#     is exactly the "helper module beside the suites" case the note above warns joins
+#     only by being named; src/ah/eval/negative_controls.py defines what "the battery
+#     caught this control" MEANS (the substantive-vs-NaN split and the reference-band
+#     criterion the battery itself does not apply), and G2-EVIDENCE.md cites its table.
+#     tests/test_prereg.py::test_the_sealed_seal_scope_accounts_for_every_hashed_file
+#     now asserts this list against the lock, so the accounting cannot fall behind the
+#     hash again.
 # prereg.py hashing its own source is intentional and non-circular: the digest lands in
 # pre-registration.lock, never back inside prereg.py.
 # CONSEQUENCE, stated plainly so it is not a surprise during WP2.2: WP2.3 inherits this
@@ -396,7 +411,14 @@ ensemble_size:
       reading. At 1024 it is a twentieth. Every other name is under 0.021 at 1024. The
       ratios fall close to the 1/sqrt(n) a batch-means error should follow (a 16-fold
       path increase gives roughly a 3.8-fold reduction on skew and acf_abs_sum), which is
-      a consistency check on the estimator rather than a result.
+      a consistency check on the estimator rather than a result. (CLAIMS-SWEEP
+      CORRECTION: that parenthesis named the wrong two rows. Read off the table above,
+      64 -> 1024 gives 3.75x on ust_10y.acf_r_lag1 and 3.69x on
+      equity_mkt.excess_kurtosis -- those are the ~3.8-fold reductions -- against 4.52x
+      on skew and 5.60x on acf_abs_sum, which fall FASTER than 1/sqrt(n) rather than
+      close to it. The consistency conclusion is unchanged; the two names attached to
+      the number were wrong, and the table that falsifies them was already sealed
+      directly above.)
       WHAT THIS DOES NOT ESTABLISH: 1024 is where "MC error << band width" holds with
       margin, but HOW MUCH margin is required is a judgment, not a measurement, and the
       gates' POWER keeps rising in n_paths past the point where their noise stops
@@ -609,7 +631,13 @@ conventions:
     one long one: `momentum` (lookback 12) is structurally flat for 12/120 = 10% of a
     generated path but only 12/~800 = 1.5% of the historical series. A structurally flat
     month cannot produce an exceedance, so the exceedance rate a PERFECT generator would
-    exhibit against history's own VaR_95 is about 0.95 * 5% = 4.57%, not 5% -- a small
+    exhibit against history's own VaR_95 is about 0.915 * 5% = 4.57%, not 5% (CLAIMS-
+    SWEEP CORRECTION: the multiplier read "0.95", which does not multiply to 4.57 and is
+    not the quantity this paragraph derives. The factor is the DIFFERENTIAL warm-up
+    fraction, generated minus historical -- 1 - (12/120 - 12/~800) = 0.915 -- because
+    history's own flat months are already inside the VaR_95 estimate the generated side
+    is judged against. 4.57%, and therefore every number downstream of it in this
+    paragraph, is unchanged and correct) -- a small
     but real downward bias in Kupiec's p_hat for the rule-based strategies. It is NOT
     corrected by dropping warm-up months, because that would make the pooled sample of a
     metric differ from the pooled sample of the descriptive var_95/es_95 computed on the
@@ -734,9 +762,17 @@ conventions:
     each moving-block bootstrap replicate carries that many months, drawn from the full
     train+validation sample, so both sides carry the identical bias.
     THIS IS A DEFAULT, NOT A BLANKET RULE (WP2.2 Task 4 fix pass 2, MINOR 6 -- an
-    earlier version of this paragraph stated it as if it held everywhere). THREE
+    earlier version of this paragraph stated it as if it held everywhere). FOUR
     REGISTERED STATISTICS DEPART FROM IT (`length_matched=False` on their own
-    registration record): `lost_decade_frequency` and `long_inflation_era_frequency`
+    registration record; CLAIMS-SWEEP CORRECTION -- this count read "THREE" while the
+    sentence itself named four, and four registration records carry the flag:
+    `lost_decade_frequency`, `long_inflation_era_frequency`, `tail_dependence_lower`
+    and `tail_dependence_upper`. The list was never wrong; only this count of it was,
+    the identical defect the twelve-vs-eleven correction in
+    `structurally_unavailable_statistics` records. Counted, not estimated:
+    `tests/test_prereg.py::test_the_sealed_length_matching_exception_count_is_the_registered_count`
+    asserts it against the live registries in both directions):
+    `lost_decade_frequency` and `long_inflation_era_frequency`
     (see their own `..._estimator` blocks below for why a 120-month replicate would make
     every replicate value 0.0 or 1.0), and `tail_dependence_lower`/`tail_dependence_upper`
     (see `tail_dependence_estimator` below -- at the production `resample_length` of 120
@@ -2281,8 +2317,16 @@ d4_strategies:
 #                                   d4_strategies entry of THIS document, stat in
 #                                   ah.eval.reference.STRATEGY_STATS
 # A panel statistic is a property of the whole factor panel and belongs to no single
-# factor or pair, so it carries no prefix at all -- cross_block_corr_matrix_distance is
-# the one entry today. `severity` is `enforce` (an out-of-band value blocks the gate) or
+# factor or pair, so it carries no prefix at all. CLAIMS-SWEEP CORRECTION: this sentence
+# ended "-- cross_block_corr_matrix_distance is the one entry today", which was true when
+# WP2.2 Task 4 wrote it and false by the time it was sealed. Tasks 5 and 6 registered the
+# band-exceedance gates, the memorization, calibration, economics and conditional
+# statistics into PANEL_STATS, which today holds 49 names, of which this section seals 35
+# -- and cross_block_corr_matrix_distance is merely the first of them. Nothing about the
+# KEY SHAPE changed (a panel key is still a bare registered name, and verify() still
+# rejects a prefixed one); only the count was stale, and it was stale in the direction
+# that understates how much this section carries. `severity` is `enforce` (an
+# out-of-band value blocks the gate) or
 # `report` (recorded, non-blocking). ah.eval.prereg.verify() checks: every active block
 # has a thresholds.blocks entry; no entry names an inactive block; every active
 # cross-block pair (ah.factors.FactorManifest.cross_block_pairs(), currently just
@@ -2783,8 +2827,17 @@ thresholds:
     # count ~1000x larger. The 0.01 floor is now DERIVED rather than provisional: it is
     # the conventional 1% point of the chi-square(1) reference distribution, LR = 6.635,
     # which at T = 120 and a nominal 95% VaR level corresponds to a realized exceedance
-    # rate outside roughly [0.0042, 0.1125] -- i.e. fewer than about 0.5 or more than
-    # about 13.5 exceedances in 120 months against an expected 6. That interval is wide,
+    # rate outside roughly [0.0083, 0.1088] -- i.e. fewer than about 1 or more than
+    # about 13.1 exceedances in 120 months against an expected 6. CLAIMS-SWEEP
+    # CORRECTION: that interval was sealed as [0.0042, 0.1125] ("about 0.5 or more than
+    # about 13.5"), which is not the LR = 6.635 contour of the statistic this file
+    # defines -- it is the interval whose ENDPOINTS are half-integer exceedance counts,
+    # and at p_hat = 0.0042 the sealed statistic gives LR = 8.76, not 6.635. Solving
+    # 2 * T * KL(p_hat || 0.05) = 6.635 at T = 120 gives p_hat in [0.008328, 0.108796],
+    # counts [1.00, 13.06]. THE THRESHOLD IS UNCHANGED at min: 0.01 and no severity
+    # moved: what was wrong is the sentence describing what that floor implies, and the
+    # correct interval is NARROWER than the one stated, i.e. the floor is slightly more
+    # demanding than the sealed prose claimed, not less. That interval is wide,
     # and saying so is the point: at a 120-month reference length a Kupiec test simply
     # cannot resolve the size of miscalibration G2 would care about, which is why this
     # is `report` and why governance/retrofit-register.md RFR-24's coverage-band
@@ -2994,6 +3047,542 @@ seal_scope:
     sealed estimator is defined over either code, this file, factors.yaml, or catalog
     data pinned by campaign_vintage_id. tests/fixtures/** is test scaffolding that no
     sealed estimator names.
+
+# --------------------------------------------------------------------------- #
+# claims_with_tests -- THE SEALED SENTENCES THAT DESCRIBE A CHECK, AND THE TESTS
+# THAT PIN EACH ONE TO THE CODE.
+#
+# WHY THIS BLOCK EXISTS. This file's evidential value rests entirely on its sentences
+# being TRUE ABOUT THE CODE. Twice they were not, and both survived multiple review
+# passes:
+#   - seal_scope.splice_py_reason asserted that `policy_rate` and `hy_spread` are in
+#     reference_run.missing_factors "because the backfills are absent". The list is
+#     [commodities, hy_spread]; policy_rate has 798 train+validation months.
+#   - multi_seed_decision_rule.criterion_bearing_runs_only named three conditions and
+#     pointed at BatteryReport.criterion_bearing as recording them. The code compared
+#     n_paths and months and nothing else.
+# Both were fixed, each with a test. The general problem was not: a sentence asserting
+# a check is prose, and nothing made prose answerable to the implementation. The
+# claims-sweep pass (2026-07-26) audited every such sentence in this file and in the
+# hashed sources and found ELEVEN more: seven in this document, and four in hashed
+# SOURCE prose -- factors.yaml's header and ah/eval/prereg.py's docstring each carrying
+# a third and fourth copy of the same already-corrected false sentence, ah/splits.py
+# still calling the sealed splits "provisional", and ah/eval/negative_controls.py
+# citing a test that had been replaced when its finding closed. Recorded in
+# governance/amendment-log.yaml (AM-2026-07-26-006/-007/-008) and
+# governance/retrofit-register.md RFR-74/RFR-75. A defect class with a 100% escape rate
+# through ordinary review. This block converts the one-time audit into a standing
+# machine check, on the pattern ah.eval.prereg.ESTIMATOR_CONVENTION_KEYS already uses
+# to make it impossible to register a statistic with no sealed estimator definition.
+#
+# WHAT IT GUARANTEES, exactly:
+#   (1) EVERY `pinned_by` entry names a test function that really exists -- the file is
+#       present and the function is defined in it. A claim cannot be "pinned" by a test
+#       someone deleted or renamed.
+#   (2) EVERY `covers` anchor still MATCHES this document, and every line it matches is
+#       one a trigger phrase matched. Anchors must be at least 40 characters, so a vague
+#       one cannot be stretched to cover the file. (Anchors are not required to be
+#       unique: two sealed sections legitimately quote the same test name verbatim, and
+#       an anchor that matches both covers both.) An anchor therefore cannot silently
+#       detach from the sentence it locates, and re-wording a claim-bearing line breaks
+#       this check until the registry is updated -- which, this file being sealed, is a
+#       dated amendment.
+#   (3) COMPLETENESS, within the stated detector: every line of this document containing
+#       any `trigger_phrases` entry is covered by exactly one registered claim or is
+#       listed in `not_a_code_claim` with a reason. A new sentence saying "verify()
+#       rejects X" therefore fails the suite until someone either points it at a test or
+#       declares, in the seal, that it is not a code claim.
+#
+# WHAT IT DOES NOT GUARANTEE, stated plainly because a check that oversells itself is
+# worse than none:
+#   (a) IT IS A KEYWORD DETECTOR, NOT A READER. A claim phrased without any trigger
+#       phrase -- "the two can never diverge", "this is impossible by construction" --
+#       is not detected and can be sealed unregistered. `trigger_phrases` is sealed
+#       precisely so that WEAKENING the detector is itself a lock violation, but no list
+#       of phrases catches all of English.
+#   (b) IT DOES NOT CHECK THAT THE TEST TESTS THE CLAIM. It checks that the named test
+#       exists, not that it asserts what the sentence says. A test that passes
+#       vacuously satisfies this block. Only reading the test does that, and the
+#       `claim` field is written to make such a reading cheap.
+#   (c) IT COVERS THIS DOCUMENT ONLY, not the docstrings of the hashed sources. FOUR of
+#       this pass's eleven findings were in hashed source prose (factors.yaml's header,
+#       ah/eval/prereg.py's, ah/splits.py's and ah/eval/negative_controls.py's
+#       docstrings) -- and the last of those was found only AFTER this block was first
+#       drafted, which is itself the evidence that the uncovered surface is not
+#       hypothetical. Those four were corrected but are not machine-covered here, and a
+#       future one in that prose would escape this check. Extending the scan to the
+#       hashed sources is the obvious next step, is unowned, and is deliberately not
+#       built inside an audit pass.
+#   (d) A `pinned_by: []` entry is a claim WITH NO TEST. It is not an oversight and not a
+#       hole hidden by omission -- `status` says which it is, and `requirement_on_later_wp`
+#       means the sentence is a sealed obligation on a work package that has not run yet,
+#       so no test can exist. Those are the sentences to distrust first.
+# --------------------------------------------------------------------------- #
+claims_with_tests:
+  detector_version: 1
+
+  # The sealed detector. A line of this document containing any of these substrings is
+  # a candidate CODE CLAIM and must be registered below. Sealed, not hardcoded in the
+  # test, so that removing a phrase -- and thereby blinding the completeness check --
+  # moves the lock digest and needs a dated amendment.
+  trigger_phrases:
+    - "verify()"
+    - "run_battery"
+    - "loader rejects"
+    - "loader reads"
+    - "loader CHECKS"
+    - "machine-checked"
+    - "machine-enforced"
+    - "a test asserts"
+    - "tests/test_"
+    - "is the machine check"
+    - "REJECTS"
+    - "rejects a"
+    - "rejects one"
+    - "checks this exactly"
+    - "checked at load time"
+    - "asserted by test"
+    - "cannot drift"
+    - "records ALL THREE"
+    - "is checked against"
+    - "the code is checked"
+    - "enforces"
+
+  # Trigger hits that are NOT claims about this platform's code, each with the reason it
+  # is exempt. Every entry is an anchor exactly as in `covers`, and the same
+  # exactly-once rule applies -- an exemption cannot be widened by making it vague.
+  not_a_code_claim:
+    - anchor: "rejects a PERFECT generator with probability indistinguishable from 1. The"
+      reason: >-
+        A statement about the SAMPLING behaviour of a hypothetical per-name enforce
+        gate, not about any code: nothing in the platform implements per-name enforce
+        band gating, which is the point the sentence makes.
+    - anchor: "# gating each name at enforce against its own 90% band rejects a PERFECT generator with"
+      reason: >-
+        The same statistical argument, restated in the thresholds header. No code
+        performs the rejection being described.
+    - anchor: "# ~570 monthly comparisons, gating each name at enforce rejects a PERFECT generator"
+      reason: >-
+        The same statistical argument again, in the band-exceedance-gate derivation.
+    - anchor: "a_direct_run_battery_call_can_desync_its_reference: >-"
+      reason: >-
+        A YAML KEY, not a sentence. The claim it names is registered as
+        `run_full_battery_cannot_desync_its_reference` below.
+
+  claims:
+
+    run_battery_verifies_the_document_and_the_lock:
+      claim: >-
+        Once `sealed: true`, ah.eval.battery.run_battery calls ah.eval.prereg.verify()
+        -- including the lock digest recomputed from the files on disk -- on every
+        invocation, so a modified YAML or a modified judged source stops the battery.
+      covers:
+        - "# `ah.eval.battery.run_battery` verifies this document AND the lock on every"
+        - "# once `sealed: true` lands, ah.eval.battery.run_battery calls verify() on EVERY"
+      pinned_by:
+        - tests/test_eval_battery.py::test_run_battery_verifies_a_sealed_preregistration
+        - tests/test_prereg.py::test_a_modified_yaml_with_a_stale_lock_fails_loudly
+        - tests/test_prereg.py::test_modified_enforce_metric_code_with_a_stale_lock_fails_loudly
+        - tests/test_prereg.py::test_verify_fails_when_sealed_and_lock_file_is_missing
+      status: pinned
+
+    the_self_containment_rule_is_checked_by_tests:
+      claim: >-
+        The umbrella claim of the self-containment rule: where this document and the
+        code disagree the document wins, and the code is checked against it by tests.
+        This block IS that checking, so it pins itself to the registry's own two tests
+        rather than pretending a single test could carry the whole rule.
+      covers:
+        - "# the code is checked against it by tests. If the two ever disagree, this file wins."
+      pinned_by:
+        - tests/test_prereg.py::test_every_sealed_claim_is_pinned_by_a_test_that_exists
+        - tests/test_prereg.py::test_no_claim_shaped_sentence_is_unregistered
+      status: pinned
+
+    the_seal_scope_accounting_names_every_hashed_file:
+      claim: >-
+        This file's header and ah.eval.prereg's module docstring together account for
+        every file in pre-registration.lock's hashed_files -- the property seal_scope
+        asserts when it calls them the full accounting.
+      covers:
+        - "#     tests/test_prereg.py::test_the_sealed_seal_scope_accounts_for_every_hashed_file"
+      pinned_by:
+        - tests/test_prereg.py::test_the_sealed_seal_scope_accounts_for_every_hashed_file
+      status: pinned
+
+    active_blocks_equals_the_live_manifest:
+      claim: >-
+        verify() checks this document's `active_blocks` exactly against the live
+        FactorManifest, so the pre-registration cannot silently drift from the manifest
+        it was authored against.
+      covers:
+        - "# Must equal factors.yaml's active_blocks at seal time -- ah.eval.prereg.verify()"
+        - "# checks this exactly against the live FactorManifest, so the pre-registration can"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_rejects_active_blocks_that_disagree_with_the_manifest
+      status: pinned
+
+    the_sealed_splits_equal_the_code:
+      claim: >-
+        verify() checks ah.splits.SPLITS against the sealed `splits:` block exactly, on
+        every battery invocation, with the document normative (RFR-6).
+      covers:
+        - "# block is the normative statement; ah.eval.prereg.verify() checks ah.splits.SPLITS"
+      pinned_by:
+        - tests/test_prereg.py::test_sealed_splits_match_the_code
+      status: pinned
+
+    the_reference_run_script_cannot_drift_from_the_sealed_parameters:
+      claim: >-
+        scripts/compute_campaign_reference.py's module constants are asserted equal to
+        the sealed reference_run values, so the script that produced the bands and the
+        file that seals them cannot silently diverge.
+      covers:
+        - "# tests/test_prereg.py, so the script that produced the bands and the file that seals"
+      pinned_by:
+        - tests/test_prereg.py::test_the_reference_run_script_agrees_with_the_sealed_parameters
+      status: pinned
+
+    no_threshold_is_keyed_to_a_factor_or_strategy_with_no_data:
+      claim: >-
+        verify() reads reference_run.missing_factors and
+        reference_run.uncomputable_d4_strategies and rejects any threshold keyed to a
+        factor or D4 strategy named in them (RFR-5) -- a threshold that would judge
+        nothing, silently, forever.
+      covers:
+        - "# RFR-5). ah.eval.prereg.verify() reads the two lists below and REJECTS any threshold"
+        - "# failure the key checks exist to stop. This is the machine-checked half of the"
+        - "# thresholds.strategies entry is on one of those three, and verify() rejects one on"
+        - "ah.eval.prereg.verify() rejects a threshold keyed to them, so this is a machine-"
+        - "# judge nothing. ah.eval.prereg.verify() rejects one, reading"
+        - "threshold keyed to either factor is rejected by verify() rather than silently"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_rejects_a_threshold_on_a_factor_with_no_data
+        - tests/test_prereg.py::test_verify_rejects_a_threshold_on_an_uncomputable_d4_strategy
+      status: pinned
+
+    what_enforces_the_criterion_ensemble_size_today:
+      claim: >-
+        verify(..., ensemble_n_paths=, ensemble_months=) rejects a size mismatch when it
+        is asked, and run_battery compares every run's own size AND its ensemble's
+        vintage against this block, recording `criterion_bearing` on the report. The
+        battery deliberately does not refuse a small run.
+      covers:
+        - "# THE RULE. A run at any other size is NOT criterion-bearing. What enforces that today,"
+        - "# have. TODAY: ah.eval.prereg.verify(..., ensemble_n_paths=, ensemble_months=) rejects a"
+        - "# mismatch when it is asked, and ah.eval.battery.run_battery compares every run's own"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_checks_the_sealed_ensemble_size
+        - tests/test_prereg.py::test_the_sealed_criterion_bearing_sentence_describes_a_check_that_exists
+      status: pinned
+
+    the_mc_error_grid_the_script_and_the_sealed_size_cannot_drift:
+      claim: >-
+        The sealed ensemble size is a MEASURED row of the sealed MC-error grid, the
+        grid's sizes equal scripts/measure_mc_error_grid.py's, and the grid's
+        mean_block_months equals bootstrap_v1's.
+      covers:
+        - "# tests/test_prereg.py asserts the sealed size is a MEASURED row of the grid, that the"
+        - "# bootstrap_v1's -- so the table, the script and the sealed size cannot drift apart."
+      pinned_by:
+        - tests/test_prereg.py::test_the_mc_error_grid_is_sealed_and_brackets_the_sealed_ensemble_size
+        - tests/test_prereg.py::test_the_mc_error_grid_script_agrees_with_the_sealed_grid
+      status: pinned
+
+    no_enforce_threshold_on_a_structurally_unavailable_statistic:
+      claim: >-
+        verify() rejects `severity: enforce` on any statistic named in
+        structurally_unavailable_statistics, and that sealed list equals -- in both
+        directions -- the set a real suite registration actually marks.
+      covers:
+        - "#     `structurally_unavailable_statistics:` block, which verify() now enforces"
+        - "# ah.eval.prereg.verify() enforces it mechanically). On campaign vintage"
+        - "# ah.eval.prereg.verify() now REJECTS `severity: enforce` on any statistic named here,"
+        - "# tests/test_prereg.py asserts the list against what a real suite registration marks,"
+        - "# tests/test_prereg.py asserts this list equals, in BOTH directions, the set a real"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_rejects_enforce_on_a_structurally_unavailable_statistic
+        - tests/test_prereg.py::test_verify_allows_report_on_a_structurally_unavailable_statistic
+        - tests/test_prereg.py::test_the_sealed_unavailable_list_matches_what_the_suites_actually_mark
+      status: pinned
+
+    every_zero_cost_leg_is_declared_and_no_entry_is_dead:
+      claim: >-
+        ah.strategies rejects a D4 leg that declares `numeraire: zero_cost` without
+        being listed in conventions.numeraire_zero_cost_legs, rejects a listed leg that
+        no strategy declares zero-cost (a dead entry), and rejects an `excess_return`
+        leg outright.
+      covers:
+        - "# legs that declare `numeraire: zero_cost` -- the loader rejects an undeclared"
+        - "would -- it is capital-committing yet quoted net of a rate -- and the loader rejects"
+      pinned_by:
+        - tests/test_strategies.py::test_loader_rejects_an_undeclared_zero_cost_leg
+        - tests/test_strategies.py::test_loader_rejects_a_dead_zero_cost_leg_entry
+        - tests/test_strategies.py::test_loader_rejects_an_excess_return_leg
+        - tests/test_strategies.py::test_every_d4_strategy_leg_resolves_to_the_sealed_numeraire
+      status: pinned
+
+    the_return_level_classification_is_exhaustive_disjoint_and_barred_from_weights:
+      claim: >-
+        ah.strategies enforces that return_bearing_factors and level_factors classify
+        exactly the active factor set (exhaustive, disjoint, nothing extra) at load
+        time, and rejects a `d4_strategies.*.weights` entry naming a level factor.
+      covers:
+        - "# level_factors below. The loader (ah.strategies) enforces both exhaustiveness and"
+        - "# disjointness at load time, and rejects a `d4_strategies.*.weights` entry that"
+        - "below is the sealed, exhaustive, machine-checked version of this list."
+      pinned_by:
+        - tests/test_strategies.py::test_conventions_classification_is_exhaustive_and_disjoint_over_active_factors
+        - tests/test_strategies.py::test_conventions_classification_missing_a_factor_raises
+        - tests/test_strategies.py::test_conventions_classification_overlap_raises
+        - tests/test_strategies.py::test_level_factor_in_weights_raises_naming_it
+        - tests/test_strategies.py::test_level_factor_in_series_param_raises_naming_it
+      status: pinned
+
+    the_metric_suite_reads_the_sealed_unit_conversions:
+      claim: >-
+        percent_to_decimal and months_per_year are read from this file by
+        ah.eval.metrics.tails at import time rather than duplicated as module
+        constants, and a test asserts the module's constants equal these.
+      covers:
+        - "every transform's output, and a test asserts the module's constants equal these."
+      pinned_by:
+        - tests/test_strategies.py::test_tails_pct_to_decimal_and_months_per_year_match_sealed_conventions
+      status: pinned
+
+    the_length_matching_exception_count_is_the_registered_count:
+      claim: >-
+        Exactly four registered statistics carry `length_matched=False`, and they are
+        the four this document names.
+      covers:
+        - "`tests/test_prereg.py::test_the_sealed_length_matching_exception_count_is_the_registered_count`"
+      pinned_by:
+        - tests/test_prereg.py::test_the_sealed_length_matching_exception_count_is_the_registered_count
+      status: pinned
+
+    every_registered_statistic_has_a_sealed_estimator_definition:
+      claim: >-
+        No statistic can be registered in reference.py without a
+        `conventions.<name>_estimator` block here, and no block named in the estimator
+        table can name a statistic that does not exist.
+      covers:
+        - "# `tests/test_prereg.py::test_every_registered_statistic_has_an_estimator_definition`"
+        - "# is the machine check that no future statistic can be registered without one."
+      pinned_by:
+        - tests/test_prereg.py::test_every_registered_statistic_has_an_estimator_definition
+        - tests/test_prereg.py::test_estimator_convention_table_names_no_statistic_that_does_not_exist
+      status: pinned
+
+    the_elicitability_wiring_is_the_one_the_derivation_licenses:
+      claim: >-
+        (V, E) come from the GENERATED ensemble and the realizations from HISTORY; the
+        scoring rule is strictly consistent, and a test distinguishes this wiring from
+        the inverted one by varying the generated sample with history held fixed.
+      covers:
+        - "`tests/test_tails.py` checks by asserting a mis-specified (V, E) scores strictly"
+        - "fixed (tests/test_tails.py::test_elicitability_metric_is_minimized_by_matching_history);"
+      pinned_by:
+        - tests/test_tails.py::test_elicitability_score_is_minimized_at_the_true_var_es_pair
+        - tests/test_tails.py::test_elicitability_metric_is_minimized_by_matching_history
+      status: pinned
+
+    rebalance_is_stored_data_the_loader_reads:
+      claim: >-
+        Every D4 strategy's `rebalance` is checked at load time against
+        conventions.rebalance_cadences and a value outside that list is rejected.
+      covers:
+        - "time against that list, and the loader rejects any value not in it -- `rebalance`"
+        - "is stored data that the loader reads, not decorative metadata. `monthly` means"
+      pinned_by:
+        - tests/test_strategies.py::test_rebalance_outside_declared_cadences_raises
+        - tests/test_strategies.py::test_every_sealed_strategy_uses_a_declared_rebalance_cadence
+      status: pinned
+
+    the_proxy_mapping_rolls_up_to_the_flat_weights:
+      claim: >-
+        endowment_proxy's sleeve-level proxy_mapping is checked against its flat
+        series-keyed weights table to within 1e-9, and a disagreement fails the load.
+      covers:
+        - "# This is the flat, series-keyed table the loader reads. `proxy_mapping` below"
+        - "# (equity 0.45 + reits 0.20 = equity_mkt 0.65). The loader CHECKS that roll-up"
+      pinned_by:
+        - tests/test_strategies.py::test_proxy_mapping_rolls_up_to_the_flat_weights
+        - tests/test_strategies.py::test_proxy_mapping_that_does_not_roll_up_raises
+      status: pinned
+
+    lookback_is_declared_exactly_once:
+      claim: >-
+        A `lookback_months` key in a strategy's `params` is rejected, so an amendment
+        editing the `lookback` field alone can never be silently ignored.
+      covers:
+        - "`lookback_months` key and the loader rejects it if present, so an amendment"
+      pinned_by:
+        - tests/test_strategies.py::test_lookback_months_in_params_is_rejected
+        - tests/test_strategies.py::test_momentum_declares_lookback_in_the_field_not_in_params
+      status: pinned
+
+    the_panel_key_shape_and_the_size_of_this_section:
+      claim: >-
+        A panel threshold key must be a bare registered PANEL_STATS name -- verify()
+        rejects a prefixed one and an unregistered one -- and the count this section
+        states for itself matches the live registry and this document.
+      covers:
+        - "# KEY SHAPE changed (a panel key is still a bare registered name, and verify() still"
+        - "# rejects a prefixed one); only the count was stale, and it was stale in the direction"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_rejects_an_unregistered_panel_threshold_key
+        - tests/test_prereg.py::test_verify_rejects_a_factor_scoped_panel_threshold_key
+        - tests/test_prereg.py::test_the_sealed_panel_section_states_its_own_size
+      status: pinned
+
+    verify_checks_block_and_pair_coverage_and_threshold_sanity:
+      claim: >-
+        verify() checks that every active block has a thresholds.blocks entry, that no
+        entry names an inactive block, that every active cross-block pair has an entry,
+        that every severity is enforce/report, and that min <= max where both are given.
+      covers:
+        - "# `report` (recorded, non-blocking). ah.eval.prereg.verify() checks: every active block"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_fails_when_active_block_missing_thresholds
+        - tests/test_prereg.py::test_verify_fails_when_threshold_references_inactive_block
+        - tests/test_prereg.py::test_verify_fails_when_cross_block_entry_missing
+        - tests/test_prereg.py::test_verify_fails_when_cross_block_references_inactive_block
+        - tests/test_prereg.py::test_verify_fails_on_invalid_severity
+        - tests/test_prereg.py::test_verify_fails_when_min_greater_than_max
+      status: pinned
+
+    the_threshold_key_naming_rule_is_machine_checked:
+      claim: >-
+        verify() rejects a per-block key that is not "<factor>.<stat>" with the factor
+        in that block and the stat registered, a cross-block key whose factors are not
+        drawn in the pair's sorted order or whose stat is unregistered, and a strategy
+        key whose id is not in this document's own d4_strategies.
+      covers:
+        - "# The KEY NAMING RULE above is itself machine-checked, not merely stated: verify()"
+        - "# rejects a per-block key that is not exactly \"<factor>.<stat>\" with the factor in that"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_rejects_malformed_block_threshold_key
+        - tests/test_prereg.py::test_verify_rejects_block_threshold_naming_another_blocks_factor
+        - tests/test_prereg.py::test_verify_rejects_unknown_single_factor_stat
+        - tests/test_prereg.py::test_verify_rejects_cross_block_key_with_reversed_block_order
+        - tests/test_prereg.py::test_verify_rejects_unknown_cross_block_stat
+        - tests/test_prereg.py::test_verify_rejects_an_unregistered_strategy_stat
+        - tests/test_prereg.py::test_verify_rejects_a_strategy_id_not_in_this_documents_d4_strategies
+      status: pinned
+
+    nc5_is_blocked_by_a_named_gate:
+      claim: >-
+        NC5's exemption from the enforce criterion is narrow: it is still detected
+        substantively in the conditional tier and still BLOCKED, by
+        near_duplicate_fraction at enforce, and the test pins WHICH gate blocks it
+        rather than merely that something does.
+      covers:
+        - "consequence: \"STEP2-GENERATOR-PLAN contradicts itself: Sec.WP2.2b requires every negative control to fail its designated tier AT ENFORCE"
+      pinned_by:
+        - tests/test_negative_controls.py::test_nc5_is_the_only_control_not_caught_at_enforce_and_only_by_sealed_design
+        - tests/test_negative_controls.py::test_nc5_is_caught_by_the_conditional_suite
+      status: pinned
+
+    every_negative_control_magnitude_is_from_the_synthetic_fixture:
+      claim: >-
+        Every negative-control number quoted in this file comes from
+        tests/test_negative_controls.py's synthetic panel at 16 paths, not from the
+        sealed campaign vintage, so no control magnitude is a criterion-bearing
+        measurement.
+      covers:
+        - "16-of-22 10yr-tier count -- comes from tests/test_negative_controls.py's SYNTHETIC"
+      pinned_by:
+        - tests/test_negative_controls.py::test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metrics
+        - tests/test_negative_controls.py::test_the_10yr_tier_unavailability_is_disclaimed_in_the_sealed_file
+      status: pinned
+
+    run_full_battery_cannot_desync_its_reference:
+      claim: >-
+        run_full_battery computes the reference, registers the suites against it and
+        passes the same object to run_battery, so it cannot desync by construction; a
+        caller invoking run_battery directly with a mismatched `reference=` gets no
+        error, and the seal does not defend against that.
+      covers:
+        - "run_battery -- it cannot desync by construction. A caller invoking the lower-level"
+        - "run_battery directly with a `reference=` that does not match what the registered"
+      pinned_by:
+        - tests/test_eval_battery.py::test_run_full_battery_judges_against_the_reference_the_second_call_actually_built
+        - tests/test_eval_battery.py::test_run_full_battery_is_repeatable_without_a_duplicate_registration_error
+      status: pinned
+
+    ergodicity_gap_is_structurally_unavailable_because_run_battery_gets_no_long_path:
+      claim: >-
+        run_battery is handed one Ensemble of production-length paths and no long path,
+        so ergodicity_gap is NaN for every generator and is marked
+        status=structurally_unavailable.
+      covers:
+        - "ah.eval.battery.run_battery is handed one Ensemble of production-length paths and"
+        - "iid process and a genuinely non-ergodic regime mixture), but run_battery is"
+      pinned_by:
+        - tests/test_prereg.py::test_the_sealed_unavailable_list_matches_what_the_suites_actually_mark
+        - tests/test_negative_controls.py::test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metrics
+      status: pinned
+
+    the_10yr_tier_must_carry_a_reported_monte_carlo_error:
+      claim: >-
+        _require_mc_error_reported enforces "bands or it didn't happen" for the 10yr
+        tier -- it rejects a 10yr metric evaluated with no error estimate at all, and
+        deliberately allows an honestly-NaN one.
+      covers:
+        - "reference band, and `_require_mc_error_reported` (which enforces \"bands or it didn't"
+      pinned_by:
+        - tests/test_eval_battery.py::test_require_mc_error_reported_rejects_a_10yr_metric_with_no_error_at_all
+        - tests/test_eval_battery.py::test_require_mc_error_reported_allows_a_honestly_nan_10yr_error
+      status: pinned
+
+    mean_and_std_follow_the_same_per_path_functional:
+      claim: >-
+        `<factor>.mean` and `<factor>.std` are both computed per path and averaged, so
+        the pair cannot drift apart, and the pair detects a location/scale shift.
+      covers:
+        - "per-path one so the pair cannot drift apart.) Consequence: both are exempt from the"
+      pinned_by:
+        - tests/test_monthly.py::test_mean_and_std_use_the_single_series_functional_path_by_path
+        - tests/test_monthly.py::test_mean_and_std_detect_a_location_and_scale_shift
+      status: pinned
+
+    the_tail_tier_definition_matches_the_live_suite:
+      claim: >-
+        The sealed tail-tier definition (every MetricSpec with suite == "tails", the
+        eleven per-strategy names and the two per-pair ones) is machine-checked against
+        the live suite, with this document normative if they disagree.
+      covers:
+        - "against nothing is not a comparison. This definition is machine-checked against the"
+        - "live suite by tests/test_prereg.py; the document is normative if they disagree."
+      pinned_by:
+        - tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics
+        - tests/test_prereg.py::test_the_sealed_tail_tier_is_a_suite_because_no_tail_TIER_exists
+      status: pinned
+
+    criterion_bearing_records_all_three_conditions:
+      claim: >-
+        BatteryReport.criterion_bearing records the sealed ensemble size, the sealed
+        campaign_vintage_id, and -- via the branch it is computed on -- a verified
+        pre-registration and matching lock.
+      covers:
+        - "prints it in bold when false), and it records ALL THREE of those conditions:"
+      pinned_by:
+        - tests/test_prereg.py::test_the_sealed_criterion_bearing_sentence_describes_a_check_that_exists
+      status: pinned
+
+    the_wp27_acceptance_filter_bar_is_a_requirement_not_a_check:
+      claim: >-
+        WP2.7's acceptance filter must not touch enforce-tier metrics, asserted by test
+        against this manifest. NO SUCH TEST EXISTS: WP2.7's assemble.py has not been
+        written, so there is no filter-metric subset to check disjointness of. This is a
+        sealed obligation on WP2.7, in the same posture as
+        multi_seed_decision_rule.criterion_bearing_runs_only's refusal requirement on
+        WP2.11.
+      covers:
+        - "that bar to be asserted by test against this manifest. CLAIMS-SWEEP CORRECTION: that"
+        - "last clause was sealed in the present tense -- \"asserted by test against this"
+      pinned_by: []
+      status: requirement_on_later_wp
 
 # --------------------------------------------------------------------------- #
 # limitations -- WHAT THIS SEAL DOES NOT ESTABLISH.
@@ -3544,8 +4133,16 @@ tuning_protocol:
     No tuning of anything on the holdout, ever -- the holdout is reachable only through
     a FinalEvaluationToken minted in ah/eval/g2.py and is spent exactly once by WP2.11.
     No tuning against the negative-control suite. No tuning against any enforce-tier
-    metric's threshold value (the acceptance filter in WP2.7 is separately barred from
-    touching enforce-tier metrics at all, asserted by test against this manifest).
+    metric's threshold value. The acceptance filter in WP2.7 is separately barred from
+    touching enforce-tier metrics at all, and STEP2-GENERATOR-PLAN Sec.WP2.7 requires
+    that bar to be asserted by test against this manifest. CLAIMS-SWEEP CORRECTION: that
+    last clause was sealed in the present tense -- "asserted by test against this
+    manifest" -- as though the test existed. It does not, and cannot yet: WP2.7's
+    assemble.py has not been written, so there is no filter-metric subset for a test to
+    check disjointness of. This is a sealed REQUIREMENT ON WP2.7, in the same posture as
+    multi_seed_decision_rule.criterion_bearing_runs_only's refusal requirement on
+    WP2.11, and it is stated as one rather than described as a check already in place.
+    The PROHIBITION itself is unchanged and binds whether or not the test exists.
 
 # --------------------------------------------------------------------------- #
 # severe_test_protocol -- pinned BEFORE the test is run (STEP2-GENERATOR-PLAN
