@@ -7,6 +7,57 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.5 — Layer 1, the climate model (`ah/gen/climate/`): DN-1.1 SS II.2 as a
+  marginalized linear-Gaussian state space, NUTS over ~35 structural parameters,
+  FFBS state draws, deterministic posterior artifact, decade simulator.**
+  - `model.py`: the five-state contract `(pi_star, r_star, g, v, credit_gap)`
+    Euler-discretized monthly, plus two internal observation-model auxiliaries
+    (`credit_trend` for the 150-year secular credit deepening, LW-style trend/gap
+    split; `policy_dev` for persistent Taylor-anchor deviations — the ZLB decade
+    must not be forced into r*). Mixed-frequency masked Kalman filter fusing the
+    annual JST panel (1871–2020) with the monthly Step-1 panel (CPI YoY, spliced
+    FEDFUNDS, Shiller CAPE, quarterly BIS credit gap), exact marginal likelihood
+    tested against a brute-force joint-Gaussian computation at rel 1e-8; FFBS
+    smoother draws tested against exact posterior means. Priors are YAML → pydantic
+    (`priors.yaml`, DN-1.1 table rows marked; every gap-fill's rationale inline),
+    hashed into the experiment record. `jax_enable_x64` on at import (recorded
+    rationale: 7x7 covariance recursions over 1800 steps corrupt in float32).
+  - Two recorded DN-1.1 gap-fills: `g_t` (no dynamics equation in the note) is OU
+    toward `mu_g`; `L_bar(R_t)` (regimes don't exist until WP2.6) enters as
+    `delta_L * c_t` through the same exogenous cycle input the anchor consumes.
+  - **The c_t contract for WP2.6:** an exogenous array in [-1, +1], shape
+    `(months,)` or `(n_decades, months)`, consumed by the credit-gap norm and the
+    policy anchor (an observation equation, never a state) — so WP2.6 swaps its
+    regime-emitted c_t in at simulation time **without refitting L1**. Fitting on
+    history uses `c_t = 1 - 2*USREC` (full-span NBER; recorded choice).
+  - `fit.py`: panel assembly exclusively through `DataAccess.train_val`; **CAPE
+    demeaned on the TRAIN span only, recomputed here** — `assert_train_only_
+    normalization` refuses a full-sample demean, and tests prove (a) validation-era
+    CAPE cannot move the constant, (b) holdout rows cannot reach the fit data at
+    all (bit-identical panels either way). NUTS (dense mass, tree depth capped at
+    8 after measuring ~0.13 s/gradient on the real panel), R-hat/ESS/divergences,
+    posterior-predictive 90% coverage per channel, generated `climate-fit-report.md`,
+    posterior artifact (npz) with a canonical content SHA-256 verified on every
+    load, experiment-store record (config hash, git SHA, seed, vintage).
+  - `simulate.py` (numpy-only, JAX-free): each generated decade draws `(theta, s0)`
+    from the joint posterior — parameter uncertainty inside the ensemble, asserted
+    by a dispersion test against the pinned-theta counterfactual; decade k seeded
+    `base_seed + 7919*k`; `s0_date` selects any grid month (the WP2.11 severe test
+    starts from the 1965 climate state this way); same file + same seed ⇒
+    bit-identical paths (tested). `policy_anchor` helper for WP2.7 waypoints.
+  - `scripts/fit_climate.py`: the provenance script for the real-panel fit on the
+    sealed campaign vintage `2026-07-26.1` (offline, catalog-read, deterministic).
+  - 61 new tests (`test_climate_model/fit/simulate.py`); no seal amendment needed
+    (new files under `ah/gen/climate/` only — no judged source touched).
+  - **Real-panel fit accepted** (`climate-fit-report.md`, artifact
+    `sha256:98bdb68f…`, config `cfg:f7d4119c7101fd08`, seed 20260726, 133 min,
+    4 chains x 750 draws): **0 divergences, max R-hat 1.0014, min ESS 1346**;
+    PPC 90% coverage 0.88–1.00 across all ten channels. Slow states plausible:
+    pi* half-life median 9.6y (prior rationale 8–20y), mu_r 0.88% +/- 0.67,
+    phi_pi 0.62 (Taylor principle held, not imposed), b_val 6.3 (10y
+    predictability slope). Recorded weak identifications: `delta_L` (credit-norm
+    cycle link) is data-dominated-by-prior, and `sigma_g`'s lower tail touches 0
+    — both flagged for WP2.6/WP2.7 rather than tightened away.
 - **The sealed-claims sweep — every checkable sentence audited against the code, and
   the audit made standing. `pre-registration.lock` is now
   `sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585`** (supersedes

@@ -1,0 +1,113 @@
+# WP2.5 Layer-1 climate model: default priors and fit settings (DN-1.1 SS II.2).
+#
+# The DN-1.1 priors table rows are marked [DN-1.1]. Everything else fills a gap the
+# design note leaves open (g_t dynamics, the policy-deviation state, observation
+# noises); each such prior is weakly informative and its rationale is stated inline.
+# This file is the single source of prior defaults: it is loaded into
+# ah.gen.climate.model.ClimateConfig (pydantic), and the resulting config dict is
+# hashed into the experiment record, so any edit here changes the config hash.
+#
+# Units: rates/growth/inflation in percent per year; half-lives (hl_*) in years;
+# v in log units (demeaned log CAPE); credit_gap in BIS credit-to-GDP-gap
+# percentage points; credit_trend in 100*log(tloans/gdp) units.
+
+priors:
+  # --- pi* trend inflation ---
+  hl_pi:     {dist: lognormal_ci90, ci_lo: 8.0, ci_hi: 20.0}   # [DN-1.1] inflation eras persist ~decade scale
+  mu_pi:     {dist: normal, loc: 3.0, scale: 3.0}              # [DN-1.1 "diffuse"] the target itself can drift
+  sigma_pi:  {dist: halfcauchy, scale: 0.5}                    # [DN-1.1] let the century speak
+
+  # --- r* neutral real rate ---
+  hl_r:      {dist: lognormal_ci90, ci_lo: 5.0, ci_hi: 30.0}   # LW-style smoothness: r* moves over decades
+  mu_r:      {dist: normal, loc: 0.75, scale: 0.75}            # [DN-1.1] secular stagnation vs pre-2000 both supported
+  beta_g:    {dist: normal, loc: 1.0, scale: 0.5}              # theory: r* one-for-one with trend growth, uncertain
+  sigma_r:   {dist: halfcauchy, scale: 0.3}                    # smoothness prior, not point estimation
+
+  # --- g trend growth (dynamics unstated in DN-1.1; OU chosen, recorded) ---
+  hl_g:      {dist: lognormal_ci90, ci_lo: 10.0, ci_hi: 30.0}  # productivity eras persist decades
+  mu_g:      {dist: normal, loc: 2.0, scale: 1.0}              # long-run US real growth ~2%
+  sigma_g:   {dist: halfcauchy, scale: 0.3}
+
+  # --- v log equity valuation (CAPE-like, demeaned) ---
+  hl_v:      {dist: lognormal_ci90, ci_lo: 4.0, ci_hi: 20.0}   # CAPE mean reversion, decade scale
+  sigma_v:   {dist: halfcauchy, scale: 0.5}
+  a_val:     {dist: normal, loc: 6.0, scale: 2.0}              # long-run real equity return level (%)
+  # [DN-1.1] b "consistent with 10y R^2 ~ 0.2-0.4": with sd(v) ~ 0.4 log units and
+  # sd(10y ann. real return) ~ 4-5%, R^2 in [0.2, 0.4] implies b ~ 4.5-8; centered 6.
+  b_val:     {dist: normal, loc: 6.0, scale: 3.0}
+
+  # --- L credit/leverage gap ---
+  hl_L:      {dist: lognormal_ci90, ci_lo: 3.0, ci_hi: 15.0}   # financial cycle ~8-20yr period
+  delta_L:   {dist: normal, loc: 0.0, scale: 2.0}              # cycle-dependent norm L_bar = delta_L * c_t
+  sigma_L:   {dist: halfcauchy, scale: 1.0}
+
+  # --- credit_trend tau (observation-side auxiliary state, not exported) ---
+  mu_cr:     {dist: normal, loc: 1.0, scale: 1.0}              # secular credit-deepening drift, %/yr log units
+  sigma_tau: {dist: halfcauchy, scale: 0.5}                    # slow stochastic trend (LW-style trend/gap split)
+  lam_cr:    {dist: normal, loc: 0.7, scale: 0.3}              # log-pp per BIS-gap pp (ratio ~1.5 => ~1/1.5)
+
+  # --- policy_dev u (persistent Taylor-rule deviation; ZLB honesty) ---
+  hl_u:      {dist: lognormal_ci90, ci_lo: 0.5, ci_hi: 4.0}    # policy deviations persist quarters-to-years
+  sigma_u:   {dist: halfcauchy, scale: 0.5}
+
+  # --- policy anchor ---
+  phi_pi:    {dist: truncnormal, loc: 0.5, scale: 0.25, low: 0.0}  # [DN-1.1] Taylor principle favored, not imposed
+  phi_c:     {dist: normal, loc: 0.5, scale: 0.5}              # counter-cyclical reaction to the cycle term c_t
+  psi:       {dist: normal, loc: 1.5, scale: 1.0}              # long-rate term premium over r*+pi*
+  sigma_i:   {dist: halfcauchy, scale: 0.3}                    # iid monthly anchor residual (on top of u_t)
+
+  # --- observation noise sds (all halfcauchy: let the century speak) ---
+  s_m_pi:    {dist: halfcauchy, scale: 1.0}                    # monthly YoY inflation vs pi*
+  s_m_cape:  {dist: halfcauchy, scale: 0.2}                    # log CAPE vs v
+  s_q_bis:   {dist: halfcauchy, scale: 2.0}                    # BIS gap vs L
+  s_a_infl:  {dist: halfcauchy, scale: 1.0}                    # JST annual inflation vs pi*
+  s_a_stir:  {dist: halfcauchy, scale: 1.0}                    # JST short rate vs anchor
+  s_a_lt:    {dist: halfcauchy, scale: 1.0}                    # JST long rate vs r*+pi*+psi
+  s_a_g:     {dist: halfcauchy, scale: 1.5}                    # JST real GDP growth vs g
+  s_a_cr:    {dist: halfcauchy, scale: 3.0}                    # JST credit ratio vs tau + lam_cr*L
+  s_r10:     {dist: halfcauchy, scale: 3.0}                    # 10y forward real equity return vs a - b*v
+
+# Initial-state prior at the first month of the fit span (1871-01 by default).
+init_state:
+  pi_star:      {loc: 3.0,    scale: 3.0}
+  r_star:       {loc: 3.0,    scale: 2.0}
+  g:            {loc: 2.5,    scale: 1.5}
+  v:            {loc: 0.0,    scale: 0.5}
+  credit_gap:   {loc: 0.0,    scale: 5.0}
+  credit_trend: {loc: -160.0, scale: 50.0}   # 100*log(tloans/gdp) ~ -160 in 1880
+  policy_dev:   {loc: 0.0,    scale: 2.0}
+
+# The fit span: train+validation only (ah.splits), never the holdout. JST ends 2020.
+span:
+  start: "1871-01-01"
+  end: "2021-01-01"   # exclusive; == ah.splits.VALIDATION.end
+
+# Step-1 catalog series ids consumed through DataAccess.train_val (the sanctioned
+# surface). The CAPE demean span is TRAIN ONLY (ah.splits.TRAIN), tested explicitly.
+series:
+  cpi_monthly: "fred.CPI"
+  policy_rate_monthly: "fred.FEDFUNDS"
+  cape_monthly: "shiller.cape"
+  usrec_monthly: "fred.USREC"
+  bis_gap_quarterly: "bis.credit_gap_us"
+  jst_cpi: "jst.usa_cpi"
+  jst_stir: "jst.usa_stir"
+  jst_ltrate: "jst.usa_ltrate"
+  jst_gdp: "jst.usa_gdp"
+  jst_tloans: "jst.usa_tloans"
+  jst_eq_tr: "jst.usa_eq_tr"
+
+# NUTS settings tuned on the real panel: one gradient evaluation of the T=1800
+# marginalized filter costs ~0.13s on CPU, so tree depth is capped at 8 (256
+# leapfrogs worst-case ~35s/iter) and a dense mass matrix is used to keep trees
+# shallow across the 35 correlated parameters. Chains run in parallel processes.
+fit:
+  chains: 4
+  warmup: 800
+  samples: 750
+  target_accept: 0.85
+  max_tree_depth: 8
+  dense_mass: true
+  chain_method: "parallel"
+  artifact_draws: 1000     # posterior draws carried into the saved artifact
+  ppc_draws: 200           # draws used for posterior predictive coverage

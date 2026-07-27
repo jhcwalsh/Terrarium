@@ -20,6 +20,9 @@ dependencies = [
     "pyarrow>=16.0",          # parquet read/write for normalized series
     "openpyxl>=3.1",          # Shiller / Treasury HQM xlsx parsing
     "xlrd>=2.0",
+    # Step 2 generator layer, L1/L2 runtime (STEP2-GENERATOR-PLAN §1)
+    "jax>=0.4.30",            # CPU wheels work natively on Windows (verified; NUTS = CPU hours)
+    "numpyro>=0.15",          # L1 climate model + L2 semi-Markov skeleton
 ]
 
 [project.scripts]

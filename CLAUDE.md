@@ -145,4 +145,8 @@ and the `Ensemble` container (whose metadata pins generator/checkpoint/config/vi
 - **Fixtures are synthetic but format-faithful** (no network at build time). Real-world quirks
   they can't capture: FRED serves only ~3 years of `BAMLH0A0HYM2` (ICE licensing — the Baa−Aaa
   splice proxy covers it), and Shiller's free endpoint is a periodic snapshot (staleness warns).
-- L1/L2 (Step 2) need numpyro+JAX, which has no native Windows support — run those under WSL2.
+- L1/L2 (Step 2) run on numpyro+JAX. JAX ships native Windows **CPU** wheels (verified:
+  jax 0.11 + numpyro 0.21 install, import, and NUTS-sample correctly on this machine), and
+  L1/L2 are CPU workloads by plan — no WSL2 needed for them. WSL2 (not currently installed)
+  or another Linux/GPU host only becomes relevant for L3 training (WP2.8+), where GPU is
+  assumed.
