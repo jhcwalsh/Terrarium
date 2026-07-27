@@ -7,6 +7,100 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.7 — Layer 4, the joinery (`ah/gen/joinery/`): waypoints, bridging,
+  Denton reconciliation, conditioning-support monitoring — DN-1.1 §II.5's
+  7-step algorithm end to end, tested with bootstrap blocks as the stand-in
+  generator (ablation system C's machinery).**
+  - `waypoints.py`: per calendar year of each decade, from (L1 states, L2
+    regimes): annual means of the policy anchor (under L2's c_t) and pi*;
+    cumulative log equity drift via the stated mapping
+    `(a_val − b_val·v̄_y)/100 + π̄*_y/100 + Σ(μ_R − μ̄)` (valuation anchor +
+    expected inflation + regime texture from train+val regime-conditional
+    means); a year-end ig_spread level BAND
+    `μ_spread(R_yend) + β_L·credit_gap_yend ± σ_resid` (β_L/σ_resid from a
+    train+val regression on the L1 posterior-mean credit-gap path); and the
+    regime path itself. WorldSpec `factor_conditions` bind HERE as
+    overrides/tilts — every schema field implemented: policy start/end with all
+    four `path_shape`s (shapes stated in the docstring), inflation
+    average/peak/peak_quarter (exact average preservation with a placed peak),
+    equity drift (decade total pinned to the authored value) and vol
+    (pass-through target), correlation (pass-through — cannot bind a waypoint),
+    crisis_windows (overlaid as CRI months, moving the cycle, spread band and
+    block stratification). `credit.*` (binds `hy_spread`) and `commodities.*`
+    are recorded as explicit UNBOUND overrides — both factors are in the sealed
+    `missing_factors`, and remapping authored hy numbers onto `ig_spread` would
+    violate the schema's field definitions. Waypoints are floored
+    (rate −1.0 / spread 0.0 — restated from the sealed convention, pinned by
+    test to `ah.eval.metrics.economics`) so reconciliation targets stay
+    feasible.
+  - `bridge.py`: overlapping L=6-month blocks, stride 3, linear cross-fade on
+    overlaps in state space; **the frozen c_b conditioning contract** WP2.8/2.9
+    train against — `BlockConditioning` = [one-hot(R at block start) (6), s_t
+    snapshot (5), h_t trailing-12m summary (equity log-return sum, monthly sd,
+    spread level) (3), Δw waypoint-target increments (policy, log cpi, equity
+    cum-log, spread center) (4)], C_B_DIM=18, schema `cb-v1`, stable JSON
+    serialization + `contract_fingerprint()` (SHA-256 over the layout) for
+    checkpoint pinning; layout frozen by a golden test. `BlockSampler` protocol
+    (the L3 interface); `BootstrapBlockSampler` stand-in (regime-stratified
+    contiguous multivariate blocks, circular wrap, visible stratum fallbacks).
+    Guidance hook present and stubbed (`guidance=None` does nothing), per plan.
+    Recorded decision: `cpi` is CHAINED at block joins (blocks contribute
+    within-block inflation, rebased to continue the assembled level) — raw
+    level resampling would make the Denton diagnostic measure the draw-span's
+    price trend instead of generator-vs-structure disagreement.
+  - `reconcile.py`: Denton first-difference benchmarking (exact KKT solve) of
+    each waypoint-bearing factor to its annual aggregates, with a stated
+    per-factor variant table: policy_rate additive/flow (rates cross zero);
+    cpi proportional-via-log/stock (strictly positive index; additive-in-logs
+    IS proportional); equity_mkt additive on monthly log returns/flow; ig_spread
+    additive/stock to the NEAREST BAND EDGE (inside the band = untouched).
+    Hard floors re-applied after the solve; floor-BOUND years (target
+    infeasible at the floor, which wins by design) are exempted from the
+    tolerance check and counted separately. Adjustment magnitude per factor per
+    year returned as the monitored diagnostic, with per-factor "large" flags;
+    deliberately inconsistent waypoints produce large flagged adjustments and
+    consistent ones small unflagged ones (both tested, per the plan's
+    acceptance).
+  - `support.py`: Mahalanobis distance of each decade's conditioning vectors
+    (the 12 continuous c_b components; the one-hot is monitored via a separate
+    regime-frequency TV check) to the train+val conditioning distribution built
+    from the bootstrap source's historical blocks + L1 posterior-mean states.
+    Stated extrapolation quantile: **p99 of historical self-distances**;
+    per-decade extrapolation share logged into `EnsembleMeta.conditioning`;
+    off-support flag at share > 0.25. STAG thinness surfaces as zero/near-zero
+    reference frequency, not papered over. The sealed battery has no
+    ensemble-conditioning report line — the diagnostic lands in ensemble
+    metadata + the assembly report; recorded as a WP2.11 presentation item.
+  - `assemble.py`: `assemble_decades(...) -> Ensemble` — the 7-step algorithm.
+    Distinct per-layer base seeds (offsets 0 / 1_000_003 / 2_000_003, pairwise
+    non-congruent mod 7919, tested) fix WP2.6's seed-entanglement note;
+    one-pass ordering by default (the WP2.6-certified ordering), `two_pass`
+    config flag (off) re-runs L1 under L2's c_t — same draws, only the
+    credit-gap forcing changes (tested: equity untouched, spread channel
+    moves). Acceptance filter (step 6): metrics (skew, excess_kurtosis,
+    hill_tail_index_5pct — local numpy implementations, NOT ah.eval imports)
+    over the return factors; subset disjoint from every sealed
+    `severity: enforce` name (tested by parsing `pre-registration.yaml`) AND
+    from every statistic feeding an enforce band gate (ACF panel deliberately
+    excluded — recorded deviation from DN-1.1's parenthetical, forced by the
+    sealed dependence gate); ≤10% reject-and-resample-once, every rejection
+    logged (seeds + scores), `acceptance_filter=False` for
+    filtered-and-unfiltered battery reporting. Step 7 emits full lineage:
+    layer artifact SHAs (L1/L2 pinned), layer seeds, ruleset version, c_b
+    contract fingerprint, filter log, per-decade support + reconciliation
+    distributions, waypoint-tolerance record. Factor→strategy mappings
+    (DN-1.1's step-7 WS-C reference) recorded as Step-3 scope, deferred.
+    `joinery-bootstrap-v0` registered (schema enum gap shared with
+    `bootstrap-v1`, resolved at Step 2R).
+  - `scripts/run_joinery_battery.py`: the first end-to-end run of the whole
+    hierarchy at the sealed criterion size (1024×120, campaign vintage),
+    filtered AND unfiltered through `run_full_battery`, plus
+    `joinery-assembly-report.md` with the WP2.7 evidence
+    (`artifacts/wp27/summary.json` committed).
+  - Tests: `tests/test_joinery_{waypoints,bridge,reconcile,support,assemble}.py`
+    + `tests/joinery_common.py` (synthetic artifacts/sources; no catalog, no
+    network), including the plan's four acceptance tests and an import-graph
+    guard that no joinery module imports `ah.eval`.
 - **WP2.6 — Layer 2, the semi-Markov regime skeleton (`ah/gen/regimes/`):
   DN-1.1 SS II.3 over the six Step-1 ruleset states, NegBin sojourns and
   multinomial-logit transition rows both logit-linked to slow-state covariates,
