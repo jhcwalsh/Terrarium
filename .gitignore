@@ -97,3 +97,5 @@ experiments/
 !/artifacts/wp28/selection.json
 !/artifacts/wp28/neighborhood.md
 !/artifacts/wp28/neighborhood.json
+!/artifacts/wp28/ig-spread-diagnosis.md
+!/artifacts/wp28/ig-spread-diagnosis.json
