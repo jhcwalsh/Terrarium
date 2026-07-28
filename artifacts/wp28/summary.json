@@ -1,0 +1,137 @@
+{
+  "cb_contract_fingerprint": "f97e9112ee9925aceb41dbb0521071ce2be5ec3bfd3b13da159153b5741c6a5b",
+  "checkpoint_hash": "f0c79f000be659c8b443afba02a251ab8925d995fdebcf8e6e82195e8dd70c5a",
+  "config_hash": "cfg:505f9800900bd757",
+  "criterion_bearing": true,
+  "filtered": {
+    "enforce_results": [
+      {
+        "name": "dependence_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.2222222222222222
+      },
+      {
+        "name": "floor_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "moment_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.3333333333333333
+      },
+      {
+        "name": "money_pump_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "near_duplicate_fraction",
+        "passed": true,
+        "value": 0.07747395833333333
+      }
+    ],
+    "n_enforce": 5,
+    "n_enforce_failures": 0
+  },
+  "layer_artifacts": {
+    "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+    "regimes_pins_climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+    "regimes_sha256": "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
+  },
+  "months": 120,
+  "n_paths": 1024,
+  "n_rejections": 102,
+  "passed_unfiltered": true,
+  "prereg_digest": "sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585",
+  "prereg_verified": true,
+  "reconciliation_unfiltered": {
+    "n_decades": 1024,
+    "per_factor": {
+      "cpi": {
+        "mean_abs_adjustment_max": 0.574572648741171,
+        "mean_abs_adjustment_p50": 0.0952057194996391,
+        "mean_abs_adjustment_p90": 0.22842046068476535,
+        "n_flagged_decades": 677,
+        "variant": "proportional_via_log"
+      },
+      "equity_mkt": {
+        "mean_abs_adjustment_max": 0.047496658392070214,
+        "mean_abs_adjustment_p50": 0.01688477853385957,
+        "mean_abs_adjustment_p90": 0.02591824464698648,
+        "n_flagged_decades": 107,
+        "variant": "additive_log_returns"
+      },
+      "ig_spread": {
+        "mean_abs_adjustment_max": 1.1741418700190616,
+        "mean_abs_adjustment_p50": 0.1908876751323737,
+        "mean_abs_adjustment_p90": 0.5582929977977629,
+        "n_flagged_decades": 0,
+        "variant": "additive_band"
+      },
+      "policy_rate": {
+        "mean_abs_adjustment_max": 8.149537493361711,
+        "mean_abs_adjustment_p50": 1.4598738737837338,
+        "mean_abs_adjustment_p90": 2.5466584913960855,
+        "n_flagged_decades": 848,
+        "variant": "additive"
+      }
+    }
+  },
+  "sampler_fallbacks": {},
+  "seed": 20260727,
+  "support_unfiltered": {
+    "extrapolation_share_max": 1.0,
+    "extrapolation_share_mean": 0.87421875,
+    "n_flagged_off_support": 1006,
+    "quantile": 0.99,
+    "regime_freq_tv_mean": 0.33568686263567926,
+    "regime_frequencies_pooled": {
+      "CRI": 0.07887369791666667,
+      "EXP": 0.41878255208333337,
+      "REC": 0.26889648437499997,
+      "REF": 0.1038330078125,
+      "SLOW": 0.09308268229166666,
+      "STAG": 0.03653157552083333
+    }
+  },
+  "system": "hier-diffusion-v1",
+  "unfiltered": {
+    "enforce_results": [
+      {
+        "name": "dependence_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.2222222222222222
+      },
+      {
+        "name": "floor_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "moment_band_exceedance_fraction",
+        "passed": true,
+        "value": 0.3333333333333333
+      },
+      {
+        "name": "money_pump_violations",
+        "passed": true,
+        "value": 0.0
+      },
+      {
+        "name": "near_duplicate_fraction",
+        "passed": true,
+        "value": 0.07425130208333333
+      }
+    ],
+    "n_enforce": 5,
+    "n_enforce_failures": 0
+  },
+  "vintage_id": "2026-07-26.1",
+  "waypoint_tolerance_unfiltered": {
+    "all_ok": true,
+    "floor_clamped_cells": 23851,
+    "n_decades_ok": 1024,
+    "n_floor_bound_years": 4230
+  }
+}

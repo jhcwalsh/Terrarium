@@ -375,3 +375,161 @@ class TestAssembleDecadePath:
             rng=np.random.Generator(np.random.PCG64(0)),
         )
         np.testing.assert_array_equal(with_hook, without)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.8b: the batched (across-decades) assembly driver
+# --------------------------------------------------------------------------- #
+
+
+class _LoopBatchedSampler:
+    """A BatchedBlockSampler whose batched entry point is EXACTLY a loop.
+
+    The point of the fixture: ``sample_blocks`` is numerically identical to N
+    calls of ``sample_block`` BY CONSTRUCTION, so any difference between the
+    batched driver and the per-decade driver is a control-flow bug in the
+    bridge, never float noise from a batched matmul.
+    """
+
+    def __init__(self, inner) -> None:
+        self._inner = inner
+        self.factor_names = inner.factor_names
+        self.block_months = inner.block_months
+        self.batch_calls: list[tuple[int, int]] = []  # (start_month, batch size)
+
+    def sample_block(self, cond, rng) -> np.ndarray:
+        return self._inner.sample_block(cond, rng)
+
+    def sample_blocks(self, conds, rngs) -> np.ndarray:
+        starts = {c.start_month for c in conds}
+        assert len(starts) == 1, "a batch must be one block index across decades"
+        self.batch_calls.append((starts.pop(), len(conds)))
+        return np.stack([self._inner.sample_block(c, r) for c, r in zip(conds, rngs, strict=True)])
+
+
+def _decade_inputs(climate, source, stats, seeds, *, months=MONTHS):
+    """(DecadeAssembly list, per-decade kwargs list) driving the two code paths."""
+    decades, kwargs = [], []
+    for k, seed in enumerate(seeds):
+        sim = cs.simulate_decades(climate, 1, seed=seed, months=months, theta_index=0)
+        labels = np.full((1, months), CODE[("EXP", "REC", "CRI", "SLOW")[k % 4]], dtype=np.int64)
+        one = wp.build_waypoints(sim, make_regime_paths(labels), stats)[0]
+        targets = wp.monthly_targets(one, months)
+        decades.append(
+            bridge.DecadeAssembly(
+                waypoints=one,
+                targets=targets,
+                states_row=sim.states[0],
+                rng=np.random.Generator(np.random.PCG64(1000 + seed)),
+            )
+        )
+        kwargs.append(
+            dict(
+                months=months,
+                waypoints=one,
+                targets=targets,
+                states_row=sim.states[0],
+                stats=stats,
+                rng=np.random.Generator(np.random.PCG64(1000 + seed)),
+            )
+        )
+    return decades, kwargs
+
+
+class TestBatchedAssembly:
+    def test_bootstrap_sampler_does_not_advertise_the_batched_entry_point(self, source):
+        sampler = bridge.BootstrapBlockSampler(source, block_months=6)
+        assert isinstance(sampler, bridge.BlockSampler)
+        assert not isinstance(sampler, bridge.BatchedBlockSampler)
+
+    def test_fallback_path_is_bit_identical_to_the_per_decade_driver(self, climate, source, stats):
+        """A sampler with no batched entry point still goes decade by decade,
+        block by block — exactly the committed WP2.7/2.8 behaviour."""
+        decades, kwargs = _decade_inputs(climate, source, stats, [11, 12, 13])
+        sampler = bridge.BootstrapBlockSampler(source, block_months=6)
+        batched = bridge.assemble_decade_paths(
+            months=MONTHS, decades=decades, sampler=sampler, stats=stats
+        )
+        reference = bridge.BootstrapBlockSampler(source, block_months=6)
+        for (path, conds), kw in zip(batched, kwargs, strict=True):
+            ref_path, ref_conds = bridge.assemble_decade_path(sampler=reference, **kw)
+            np.testing.assert_array_equal(path, ref_path)
+            for a, b in zip(conds, ref_conds, strict=True):
+                np.testing.assert_array_equal(a.to_vector(), b.to_vector())
+                assert a.start_month == b.start_month
+
+    def test_batched_driver_is_bit_identical_to_the_per_decade_driver(self, climate, source, stats):
+        """THE acceptance test for the restructure: with a batched entry point
+        that is provably an exact loop, block-major assembly across decades
+        reproduces decade-major assembly bit for bit — every path, every c_b."""
+        decades, kwargs = _decade_inputs(climate, source, stats, [21, 22, 23, 24, 25])
+        sampler = _LoopBatchedSampler(bridge.BootstrapBlockSampler(source, block_months=6))
+        assert isinstance(sampler, bridge.BatchedBlockSampler)
+        batched = bridge.assemble_decade_paths(
+            months=MONTHS, decades=decades, sampler=sampler, stats=stats
+        )
+        reference = bridge.BootstrapBlockSampler(source, block_months=6)
+        for (path, conds), kw in zip(batched, kwargs, strict=True):
+            ref_path, ref_conds = bridge.assemble_decade_path(sampler=reference, **kw)
+            np.testing.assert_array_equal(path, ref_path)
+            for a, b in zip(conds, ref_conds, strict=True):
+                np.testing.assert_array_equal(a.to_vector(), b.to_vector())
+                assert a.start_month == b.start_month
+
+    def test_the_batch_axis_is_decades_and_the_block_axis_stays_sequential(
+        self, climate, source, stats
+    ):
+        """One sampler call per BLOCK INDEX carrying every decade — and the
+        block indices are still visited in order (h_t depends on them)."""
+        decades, _ = _decade_inputs(climate, source, stats, [31, 32, 33, 34], months=24)
+        sampler = _LoopBatchedSampler(bridge.BootstrapBlockSampler(source, block_months=6))
+        bridge.assemble_decade_paths(months=24, decades=decades, sampler=sampler, stats=stats)
+        assert sampler.batch_calls == [(start, 4) for start in range(0, 24, 3)]
+
+    def test_guidance_hook_is_applied_per_decade_in_the_batched_driver(
+        self, climate, source, stats
+    ):
+        decades, _ = _decade_inputs(climate, source, stats, [41, 42], months=12)
+        seen: list[tuple[int, int]] = []
+
+        class Hook:
+            def adjust(self, block, cond):
+                seen.append((cond.start_month, int(block.shape[0])))
+                return block * 0.0 + 1.0
+
+        sampler = _LoopBatchedSampler(bridge.BootstrapBlockSampler(source, block_months=6))
+        out = bridge.assemble_decade_paths(
+            months=12, decades=decades, sampler=sampler, stats=stats, guidance=Hook()
+        )
+        assert seen == [(0, 6), (0, 6), (3, 6), (3, 6), (6, 6), (6, 6), (9, 6), (9, 6)]
+        for path, _conds in out:
+            np.testing.assert_allclose(path[:, list(source.factor_names).index("equity_mkt")], 1.0)
+
+    def test_batched_sampler_returning_the_wrong_shape_raises(self, climate, source, stats):
+        decades, _ = _decade_inputs(climate, source, stats, [51, 52], months=12)
+
+        class Bad(_LoopBatchedSampler):
+            def sample_blocks(self, conds, rngs):
+                return np.zeros((len(conds), self.block_months + 1, len(self.factor_names)))
+
+        sampler = Bad(bridge.BootstrapBlockSampler(source, block_months=6))
+        with pytest.raises(wp.JoineryError, match="expected"):
+            bridge.assemble_decade_paths(months=12, decades=decades, sampler=sampler, stats=stats)
+
+    def test_empty_decade_list_is_a_no_op(self, source, stats):
+        sampler = bridge.BootstrapBlockSampler(source, block_months=6)
+        assert (
+            bridge.assemble_decade_paths(months=12, decades=[], sampler=sampler, stats=stats) == []
+        )
+
+    def test_malformed_inputs_are_rejected_in_the_batched_driver_too(self, climate, source, stats):
+        decades, _ = _decade_inputs(climate, source, stats, [61], months=12)
+        sampler = bridge.BootstrapBlockSampler(source, block_months=6)
+        bad = bridge.DecadeAssembly(
+            waypoints=decades[0].waypoints,
+            targets=decades[0].targets,
+            states_row=np.zeros((11, 5)),
+            rng=np.random.Generator(np.random.PCG64(0)),
+        )
+        with pytest.raises(wp.JoineryError, match="states_row"):
+            bridge.assemble_decade_paths(months=12, decades=[bad], sampler=sampler, stats=stats)

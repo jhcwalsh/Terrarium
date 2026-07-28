@@ -63,6 +63,7 @@ ensembles per seed (tested).
 
 from __future__ import annotations
 
+from collections.abc import Sequence
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any
@@ -294,6 +295,23 @@ class _DecadeResult:
     decade_index: int
 
 
+@dataclass
+class _DecadePrep:
+    """Steps 1-3 for one decade: the skeleton a block sampler then fills in.
+
+    Split out from :class:`_DecadeResult` so many decades can be prepared before
+    any of them is bridged — that is what lets the bridge batch the block
+    sampler across decades (WP2.8b). Nothing here consumes the block stream:
+    ``rng`` is decade ``m``'s untouched ``PCG64(seed + blocks_offset + 7919*m)``.
+    """
+
+    decade_index: int
+    sim: SimulatedClimate
+    waypoints: wp.DecadeWaypoints
+    targets: wp.MonthlyTargets
+    rng: np.random.Generator
+
+
 class _DecadeFactory:
     """Generates decade ``m`` reproducibly from the layer base seeds.
 
@@ -301,7 +319,9 @@ class _DecadeFactory:
     exactly the stream a batched call would give decade ``m`` — the platform
     seed rule makes per-decade generation and batched generation bit-identical,
     which is what lets the acceptance filter resample decade ``n+j`` without
-    re-running the whole ensemble.
+    re-running the whole ensemble. The block sampler preserves the same property
+    across its own batching (a fixed batch width, padded — see
+    :class:`ah.gen.blocks.diffusion.DiffusionBlockSampler`).
     """
 
     def __init__(
@@ -360,37 +380,66 @@ class _DecadeFactory:
             )
         return sim, regimes
 
-    def generate(self, m: int) -> _DecadeResult:
+    def prepare(self, m: int) -> _DecadePrep:
+        """Steps 1-3 for decade ``m`` (L1, L2, waypoints) — no block sampling yet."""
         sim, regimes = self._simulate_layers(m)
         conditions = None if self.world is None else self.world.factor_conditions
         waypoints = wp.build_waypoints(sim, regimes, self.stats, conditions=conditions)[0]
-        targets = wp.monthly_targets(waypoints, self.months)
-
-        rng = np.random.Generator(
-            np.random.PCG64(self.seed + LAYER_SEED_OFFSETS["blocks"] + SEED_STRIDE * m)
-        )
-        raw, conds = bridge.assemble_decade_path(
-            months=self.months,
+        return _DecadePrep(
+            decade_index=m,
+            sim=sim,
             waypoints=waypoints,
-            targets=targets,
-            states_row=sim.states[0],
+            targets=wp.monthly_targets(waypoints, self.months),
+            rng=np.random.Generator(
+                np.random.PCG64(self.seed + LAYER_SEED_OFFSETS["blocks"] + SEED_STRIDE * m)
+            ),
+        )
+
+    def assemble(self, preps: Sequence[_DecadePrep]) -> list[_DecadeResult]:
+        """Steps 4-5 for prepared decades: bridge them together, then reconcile.
+
+        The bridge sees every decade at once, so a batched sampler evaluates its
+        network once per block index instead of once per (decade, block). Steps
+        5 and 6 are untouched by that: reconciliation is per decade and per year
+        and still runs on a complete decade path, and the acceptance filter still
+        scores fully assembled, fully reconciled decades.
+        """
+        outputs = bridge.assemble_decade_paths(
+            months=self.months,
+            decades=[
+                bridge.DecadeAssembly(
+                    waypoints=p.waypoints,
+                    targets=p.targets,
+                    states_row=p.sim.states[0],
+                    rng=p.rng,
+                )
+                for p in preps
+            ],
             sampler=self.sampler,
             stats=self.stats,
-            rng=rng,
             stride=self.config.block_stride,
             guidance=self.guidance,
         )
-        reconciled, diagnostics = rc.reconcile_decade(
-            raw, tuple(self.sampler.factor_names), waypoints, self.config.reconcile
-        )
-        support = sp.decade_support(conds, waypoints.labels, self.support_ref)
-        return _DecadeResult(
-            path=reconciled,
-            waypoints=waypoints,
-            reconciliation=diagnostics,
-            support=support,
-            decade_index=m,
-        )
+        names = tuple(self.sampler.factor_names)
+        results: list[_DecadeResult] = []
+        for prep, (raw, conds) in zip(preps, outputs, strict=True):
+            reconciled, diagnostics = rc.reconcile_decade(
+                raw, names, prep.waypoints, self.config.reconcile
+            )
+            results.append(
+                _DecadeResult(
+                    path=reconciled,
+                    waypoints=prep.waypoints,
+                    reconciliation=diagnostics,
+                    support=sp.decade_support(conds, prep.waypoints.labels, self.support_ref),
+                    decade_index=prep.decade_index,
+                )
+            )
+        return results
+
+    def generate(self, m: int) -> _DecadeResult:
+        """One decade end to end (steps 1-5). Kept for single-decade callers."""
+        return self.assemble([self.prepare(m)])[0]
 
     def decade_seed(self, m: int, layer: str = "climate") -> int:
         return self.seed + LAYER_SEED_OFFSETS[layer] + SEED_STRIDE * m
@@ -449,7 +498,10 @@ def assemble_decades(
         guidance=guidance,
     )
 
-    results = [factory.generate(m) for m in range(n_decades)]
+    # Steps 1-5 for every decade. Prepared first, bridged together: a batched
+    # block sampler evaluates its network once per block index across all
+    # decades instead of once per (decade, block) — WP2.8b, throughput only.
+    results = factory.assemble([factory.prepare(m) for m in range(n_decades)])
 
     # -- step 6: the acceptance filter -------------------------------------- #
     paths = np.stack([r.path for r in results])
@@ -460,9 +512,15 @@ def assemble_decades(
         scores = scorer.scores(paths)
         # worst-decile indices, deterministic tie-break by decade index
         order = np.lexsort((np.arange(n_decades), -scores))
-        for j, idx in enumerate(int(i) for i in order[:n_reject]):
+        rejected = [int(i) for i in order[:n_reject]]
+        # Replacements are drawn from fresh decade indices n, n+1, ... on the
+        # same layer streams; they are independent of each other, so they are
+        # prepared and bridged as one batch too. Each still reopens exactly the
+        # stream its index names, and each is still accepted unconditionally.
+        replacements = factory.assemble([factory.prepare(n_decades + j) for j in range(n_reject)])
+        for j, idx in enumerate(rejected):
             replacement_index = n_decades + j
-            replacement = factory.generate(replacement_index)
+            replacement = replacements[j]
             replacement_score = float(scorer.scores(replacement.path[None, ...])[0])
             rejections.append(
                 {
@@ -526,6 +584,13 @@ def assemble_decades(
         "reconciliation": recon_summary,
         "waypoint_tolerance": tolerance,
         "block_sampler": type(sampler).__name__,
+        # WP2.8b: how many decades one network evaluation carried, and where it
+        # ran. Part of the lineage because a batched float32 GEMM is not
+        # batch-size invariant — two ensembles at the same seed and different
+        # widths agree to round-off, not bit for bit, and a reader must be able
+        # to see which width produced the numbers in front of them.
+        "block_sampler_batch": int(getattr(sampler, "block_batch", 1)),
+        "block_sampler_device": str(getattr(sampler, "device", "cpu")),
         "sampler_fallbacks": dict(fallback) if fallback else {},
         "factor_conditions_honoured": world is not None,
         "strategy_mapping": "deferred to Step 3 (WS-C mappings; DN-1.1 II.5 step 7 note)",

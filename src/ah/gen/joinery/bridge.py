@@ -37,12 +37,30 @@ posterior-sampling guidance is a WP2.9 evaluation item, not a WP2.7 behavior.
 
 Determinism: the sampler is driven by the caller's ``numpy.random.Generator``;
 this module opens no stream of its own.
+
+Batching across decades (WP2.8b)
+--------------------------------
+Blocks WITHIN a decade are irreducibly sequential: block b's ``h_t`` summarizes
+months earlier blocks produced. Blocks ACROSS decades at the same index are
+independent given their conditioning, and every decade's block b starts at the
+same month — so that is the axis a neural sampler can batch.
+:func:`assemble_decade_paths` drives N decades in lockstep, block-major: at each
+block index it builds all N conditioning vectors, hands them to the sampler in
+ONE call, and scatters the results back. Each decade keeps its own
+``numpy.random.Generator`` and the sampler draws from it at exactly the point the
+per-decade driver would have, so batching changes what work is grouped, never
+what any stream produces or when.
+
+A sampler opts in by implementing :class:`BatchedBlockSampler`'s
+``sample_blocks``; anything that does not (``BootstrapBlockSampler``) falls back
+to running :func:`assemble_decade_path` per decade, unchanged.
 """
 
 from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Protocol, runtime_checkable
 
@@ -64,11 +82,14 @@ __all__ = [
     "C_B_COMPONENTS",
     "C_B_DIM",
     "C_B_SCHEMA_VERSION",
+    "BatchedBlockSampler",
     "BlockConditioning",
     "BlockSampler",
     "BootstrapBlockSampler",
+    "DecadeAssembly",
     "GuidanceHook",
     "assemble_decade_path",
+    "assemble_decade_paths",
     "contract_fingerprint",
 ]
 
@@ -213,6 +234,34 @@ class BlockSampler(Protocol):
 
 
 @runtime_checkable
+class BatchedBlockSampler(Protocol):
+    """OPTIONAL throughput extension (WP2.8b): one call, many decades.
+
+    ``sample_blocks(conds, rngs)`` returns ``(len(conds), block_months,
+    len(factor_names))``. The i-th block must be exactly what
+    ``sample_block(conds[i], rngs[i])`` would have produced at that point in
+    ``rngs[i]``'s stream — same draws, same order, one per decade. What a batched
+    implementation may change is how the *network* evaluation is grouped; what it
+    may not change is the RNG.
+
+    Samplers that do not implement it keep working: :func:`assemble_decade_paths`
+    checks ``isinstance(sampler, BatchedBlockSampler)`` and otherwise runs the
+    per-decade :func:`assemble_decade_path` loop unchanged.
+    """
+
+    factor_names: tuple[str, ...]
+    block_months: int
+
+    def sample_block(self, cond: BlockConditioning, rng: np.random.Generator) -> np.ndarray: ...
+
+    def sample_blocks(
+        self,
+        conds: Sequence[BlockConditioning],
+        rngs: Sequence[np.random.Generator],
+    ) -> np.ndarray: ...
+
+
+@runtime_checkable
 class GuidanceHook(Protocol):
     """The stubbed inference-time guidance hook (DN-1.1 §II.5 design note (a))."""
 
@@ -298,6 +347,115 @@ def _waypoint_increments(
     )
 
 
+@dataclass(frozen=True)
+class DecadeAssembly:
+    """One decade's inputs to :func:`assemble_decade_paths`.
+
+    ``rng`` is that decade's own stream (``PCG64(base + 7919*k)`` upstream); the
+    driver never shares a generator between decades, batched or not.
+    """
+
+    waypoints: DecadeWaypoints
+    targets: MonthlyTargets | None
+    states_row: np.ndarray
+    rng: np.random.Generator
+
+
+class _PathBuilder:
+    """One decade's in-progress path: conditioning out, sampled blocks in.
+
+    Both drivers go through this, so the arithmetic of c_b construction, cpi
+    chaining and the cross-fade is written once and is identical whether the
+    network evaluation was batched or not.
+    """
+
+    def __init__(
+        self,
+        *,
+        months: int,
+        spec: DecadeAssembly,
+        names: list[str],
+        eq_col: int,
+        spread_col: int,
+        block_months: int,
+        stats: SourceStats,
+    ) -> None:
+        if months < 1:
+            raise JoineryError("months must be >= 1")
+        if spec.waypoints.months != months:
+            raise JoineryError(
+                f"waypoints cover {spec.waypoints.months} months; asked to assemble {months}"
+            )
+        states_row = np.asarray(spec.states_row, dtype=np.float64)
+        if states_row.shape != (months, 5):
+            raise JoineryError(f"states_row must be (months, 5); got {states_row.shape}")
+
+        self.months = months
+        self.spec = spec
+        self.states_row = states_row
+        self.names = names
+        self.eq_col = eq_col
+        self.spread_col = spread_col
+        self.block_months = block_months
+        self.stats = stats
+        self.assembled = np.zeros((months, len(names)), dtype=np.float64)
+        self.written = 0  # months [0, written) hold assembled values
+        self.conds: list[BlockConditioning] = []
+
+    def conditioning(self, start: int) -> BlockConditioning:
+        cond = BlockConditioning(
+            regime_onehot=np.eye(len(REGIME_LABELS))[int(self.spec.waypoints.labels[start])],
+            state_snapshot=self.states_row[start],
+            history_summary=_history_summary(
+                self.assembled, start, self.eq_col, self.spread_col, self.stats
+            ),
+            waypoint_increments=_waypoint_increments(
+                self.spec.targets, start, self.block_months, self.months
+            ),
+            start_month=start,
+        )
+        self.conds.append(cond)
+        return cond
+
+    def integrate(self, start: int, block: np.ndarray) -> None:
+        names, assembled = self.names, self.assembled
+        end = min(start + self.block_months, self.months)
+        overlap = max(0, self.written - start)
+
+        # Chain price-index levels at the join (see CHAINED_FACTORS).
+        if start > 0:
+            for name in CHAINED_FACTORS:
+                if name not in names:
+                    continue
+                col = names.index(name)
+                anchor = assembled[start if overlap > 0 else start - 1, col]
+                if block[0, col] <= 0 or anchor <= 0:
+                    raise JoineryError(
+                        f"chained factor '{name}' needs positive levels to rebase "
+                        f"(block starts at {block[0, col]}, path at {anchor})"
+                    )
+                block = block.copy()
+                block[:, col] *= anchor / block[0, col]
+        for i in range(end - start):
+            t = start + i
+            if i < overlap:
+                w = (i + 1) / (overlap + 1)
+                assembled[t] = (1.0 - w) * assembled[t] + w * block[i]
+            else:
+                assembled[t] = block[i]
+        self.written = max(self.written, end)
+
+
+def _factor_columns(sampler: BlockSampler) -> tuple[list[str], int, int]:
+    names = list(sampler.factor_names)
+    try:
+        return names, names.index("equity_mkt"), names.index("ig_spread")
+    except ValueError as exc:
+        raise JoineryError(
+            f"sampler must emit equity_mkt and ig_spread (h_t needs them); got {names}"
+        ) from exc
+
+
 def assemble_decade_path(
     *,
     months: int,
@@ -322,39 +480,21 @@ def assemble_decade_path(
     Returns the ``(months, n_factors)`` path and the per-block conditioning
     vectors in block order (support.py consumes them; WP2.8 trains against them).
     """
-    if months < 1:
-        raise JoineryError("months must be >= 1")
-    if waypoints.months != months:
-        raise JoineryError(f"waypoints cover {waypoints.months} months; asked to assemble {months}")
-    states_row = np.asarray(states_row, dtype=np.float64)
-    if states_row.shape != (months, 5):
-        raise JoineryError(f"states_row must be (months, 5); got {states_row.shape}")
-
-    names = list(sampler.factor_names)
-    try:
-        eq_col = names.index("equity_mkt")
-        spread_col = names.index("ig_spread")
-    except ValueError as exc:
-        raise JoineryError(
-            f"sampler must emit equity_mkt and ig_spread (h_t needs them); got {names}"
-        ) from exc
-
+    names, eq_col, spread_col = _factor_columns(sampler)
     n_factors = len(names)
     block_months = int(sampler.block_months)
-    assembled = np.zeros((months, n_factors), dtype=np.float64)
-    written = 0  # months [0, written) hold assembled values
-    conds: list[BlockConditioning] = []
+    builder = _PathBuilder(
+        months=months,
+        spec=DecadeAssembly(waypoints=waypoints, targets=targets, states_row=states_row, rng=rng),
+        names=names,
+        eq_col=eq_col,
+        spread_col=spread_col,
+        block_months=block_months,
+        stats=stats,
+    )
 
     for start in range(0, months, stride):
-        cond = BlockConditioning(
-            regime_onehot=np.eye(len(REGIME_LABELS))[int(waypoints.labels[start])],
-            state_snapshot=states_row[start],
-            history_summary=_history_summary(assembled, start, eq_col, spread_col, stats),
-            waypoint_increments=_waypoint_increments(targets, start, block_months, months),
-            start_month=start,
-        )
-        conds.append(cond)
-
+        cond = builder.conditioning(start)
         block = np.asarray(sampler.sample_block(cond, rng), dtype=np.float64)
         if block.shape != (block_months, n_factors):
             raise JoineryError(
@@ -362,31 +502,77 @@ def assemble_decade_path(
             )
         if guidance is not None:
             block = np.asarray(guidance.adjust(block, cond), dtype=np.float64)
+        builder.integrate(start, block)
 
-        end = min(start + block_months, months)
-        overlap = max(0, written - start)
+    return builder.assembled, builder.conds
 
-        # Chain price-index levels at the join (see CHAINED_FACTORS).
-        if start > 0:
-            for name in CHAINED_FACTORS:
-                if name not in names:
-                    continue
-                col = names.index(name)
-                anchor = assembled[start if overlap > 0 else start - 1, col]
-                if block[0, col] <= 0 or anchor <= 0:
-                    raise JoineryError(
-                        f"chained factor '{name}' needs positive levels to rebase "
-                        f"(block starts at {block[0, col]}, path at {anchor})"
-                    )
-                block = block.copy()
-                block[:, col] *= anchor / block[0, col]
-        for i in range(end - start):
-            t = start + i
-            if i < overlap:
-                w = (i + 1) / (overlap + 1)
-                assembled[t] = (1.0 - w) * assembled[t] + w * block[i]
-            else:
-                assembled[t] = block[i]
-        written = max(written, end)
 
-    return assembled, conds
+def assemble_decade_paths(
+    *,
+    months: int,
+    decades: Sequence[DecadeAssembly],
+    sampler: BlockSampler,
+    stats: SourceStats,
+    stride: int = BLOCK_STRIDE,
+    guidance: GuidanceHook | None = None,
+) -> list[tuple[np.ndarray, list[BlockConditioning]]]:
+    """Assemble many decades, batching the sampler ACROSS them where it can.
+
+    Returns one ``(path, conds)`` pair per entry of ``decades``, in order — the
+    same pairs :func:`assemble_decade_path` returns decade by decade.
+
+    Control flow: block-major. For each block index in turn (blocks stay strictly
+    sequential — ``h_t`` demands it) every decade's c_b is built from ITS OWN
+    partially assembled path, the whole slate goes to ``sampler.sample_blocks``
+    in one call with each decade's own generator, and the returned blocks are
+    cross-faded back into their own decades. A sampler without the batched entry
+    point takes the unchanged per-decade path instead.
+    """
+    if not decades:
+        return []
+    if not isinstance(sampler, BatchedBlockSampler):
+        return [
+            assemble_decade_path(
+                months=months,
+                waypoints=spec.waypoints,
+                targets=spec.targets,
+                states_row=spec.states_row,
+                sampler=sampler,
+                stats=stats,
+                rng=spec.rng,
+                stride=stride,
+                guidance=guidance,
+            )
+            for spec in decades
+        ]
+
+    names, eq_col, spread_col = _factor_columns(sampler)
+    n_factors = len(names)
+    block_months = int(sampler.block_months)
+    builders = [
+        _PathBuilder(
+            months=months,
+            spec=spec,
+            names=names,
+            eq_col=eq_col,
+            spread_col=spread_col,
+            block_months=block_months,
+            stats=stats,
+        )
+        for spec in decades
+    ]
+    rngs = [spec.rng for spec in decades]
+    expected = (len(decades), block_months, n_factors)
+    for start in range(0, months, stride):
+        conds = [builder.conditioning(start) for builder in builders]
+        blocks = np.asarray(sampler.sample_blocks(conds, rngs), dtype=np.float64)
+        if blocks.shape != expected:
+            raise JoineryError(
+                f"batched sampler returned shape {blocks.shape}, expected {expected}"
+            )
+        for builder, cond, block in zip(builders, conds, blocks, strict=True):
+            if guidance is not None:
+                block = np.asarray(guidance.adjust(block, cond), dtype=np.float64)
+            builder.integrate(start, block)
+
+    return [(builder.assembled, builder.conds) for builder in builders]

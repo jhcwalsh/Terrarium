@@ -1,0 +1,59 @@
+# WP2.8 hier-diffusion-v1 tuning search space — STATED IN ADVANCE, before any
+# trial runs (pre-registration tuning_protocol; this file's SHA-256 is recorded
+# in the tuning log's search_header before the first trial, so an after-the-fact
+# edit is visible in the log).
+#
+# The search is a deterministic random search (PCG64-seeded uniform independent
+# draws over the lists below, de-duplicated by config hash), capped at n_trials
+# <= the sealed budget of 40 distinct started configs. Scores are validation-
+# fold-only: the generative objective is the FIXED-sigma-grid EDM denoising
+# objective (ah.gen.blocks.losses.VAL_SIGMA_GRID, fixed noise seed — identical
+# ruler for every trial regardless of its training sigma distribution); the
+# auxiliary is the D4 tail elicitability (corrected direction) on blocks
+# generated from each fold's conditioning vectors with fixed per-fold noise
+# seeds. Selection: the SEALED closed form S = mean_folds(gen) + 1.0 *
+# mean_folds(aux), selection_lambda PINNED at 1.0 (NOT searched here — the
+# lambda_tail below is DN-1.1's TRAINING loss weight, a different quantity),
+# ties broken by lower eval NFE. A trial that crashes still spends budget.
+#
+# A strategy whose generated ES magnitude is non-positive contributes the
+# stated penalty 10.0 to the auxiliary (ah.gen.blocks.losses.
+# NONPOSITIVE_ES_PENALTY) — stated here, in advance, with the space.
+
+search_space:
+  # optimization
+  lr: [0.0001, 0.0003, 0.001]
+  batch_size: [32]
+  ema_decay: [0.999, 0.9995]
+  # architecture (width/depth; heads fixed — d_model must divide by heads)
+  d_model: [96, 128, 192]
+  n_layers: [2, 3, 4]
+  n_heads: [4]
+  dropout: [0.0, 0.1]
+  # EDM sigma-distribution (training-time; the validation grid is fixed)
+  p_mean: [-1.2, -0.8]
+  p_std: [1.2, 1.5]
+  # DN-1.1 lambda_tail — the TRAINING tail-auxiliary weight (searchable)
+  lambda_tail: [0.0, 0.1, 0.3, 1.0]
+  # conditioning-noise augmentation (data.py's recorded off-support decision)
+  cond_noise_std: [0.0, 0.05, 0.1]
+  # sampling cost at evaluation (the NFE the tie-break reads)
+  eval_nfe: [17, 31]
+
+# Budget parameters (NOT hyperparameters: identical for every trial; short caps
+# so the whole search fits comfortably in hours on the RTX 3080).
+trial_budget_params:
+  n_trials: 32          # <= sealed trial_budget_per_system 40; headroom recorded
+  trial_max_steps: 4000
+  trial_eval_every: 500
+  trial_patience: 3
+  n_rep_eval: 8
+  seed: 20260727
+
+# Final training of the selected config (budget, not searched).
+final:
+  max_steps: 40000
+  eval_every: 1000
+  patience: 8
+  n_rep_eval: 16
+  seed: 20260727
