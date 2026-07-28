@@ -55,6 +55,7 @@ from ah.strategies import (
 
 __all__ = [
     "VAL_SIGMA_GRID",
+    "VAL_TIME_GRID",
     "CompiledStrategy",
     "GenerativeObjective",
     "compile_block_strategies",
@@ -67,6 +68,16 @@ __all__ = [
 
 #: The fixed validation sigma grid (comparable across trials; see module docstring).
 VAL_SIGMA_GRID: tuple[float, ...] = tuple(float(s) for s in np.geomspace(0.05, 5.0, 8))
+
+#: The 3b analogue: the fixed validation TIME grid for the flow-matching
+#: velocity objective (WP2.9). Eight interior points of the interpolant path
+#: t in (0, 1), symmetric, endpoints excluded because the velocity target is
+#: degenerate there (at t=0 the input is pure noise and at t=1 it is pure data,
+#: so neither end discriminates between configs). Same purpose as
+#: :data:`VAL_SIGMA_GRID`: a trial may not choose the ruler it is measured with.
+#: It is NOT the same ruler as VAL_SIGMA_GRID and the two numbers are NOT
+#: comparable — see the sealed tuning_protocol.selection_criterion.
+VAL_TIME_GRID: tuple[float, ...] = tuple(float(t) for t in np.linspace(0.0, 1.0, 10)[1:-1])
 
 #: Sealed elicitability level (pre-registration ``elicitability_score_estimator``).
 TAIL_LEVEL = 0.95

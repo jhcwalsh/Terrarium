@@ -120,6 +120,14 @@ def main() -> None:
         help="cpu (default) or cuda; cuda needs CUBLAS_WORKSPACE_CONFIG=:4096:8 in the "
         "environment for torch.use_deterministic_algorithms(True) to accept cuBLAS",
     )
+    # WP2.9: the same harness drives either co-primary arm. Both resolve through
+    # the registry with their own pins, so naming one here changes which
+    # checkpoint is verified, never how it is judged.
+    parser.add_argument(
+        "--generator",
+        default=df.GENERATOR_ID,
+        help=f"registered generator id (default {df.GENERATOR_ID}; hier-flow-v1 for L3b)",
+    )
     args = parser.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -133,11 +141,17 @@ def main() -> None:
     torch.set_num_threads(1)
     torch.use_deterministic_algorithms(True)
 
-    df.DEFAULT_BLOCK_BATCH = int(args.block_batch)
-    df.DEFAULT_SAMPLER_DEVICE = str(args.sampler_device)
+    # Each L3 family owns its own module-level sampler defaults, so set both:
+    # the registry factory for whichever arm is named reads its OWN module, and
+    # setting the arm that is not running is inert.
+    from ah.gen.blocks import flow as fl
 
-    print(f"resolving {df.GENERATOR_ID} through the registry (pins verified)...")
-    system = registry.resolve(df.GENERATOR_ID)
+    for _mod in (df, fl):
+        _mod.DEFAULT_BLOCK_BATCH = int(args.block_batch)
+        _mod.DEFAULT_SAMPLER_DEVICE = str(args.sampler_device)
+
+    print(f"resolving {args.generator} through the registry (pins verified)...")
+    system = registry.resolve(args.generator)
     print(f"checkpoint {system.checkpoint_hash}")
     print(f"block batch {args.block_batch} on {args.sampler_device}")
 

@@ -287,10 +287,25 @@ class TestBatchedSampling:
 
     def test_a_fixed_width_is_invariant_to_batch_composition(self, dataset):
         """The property the whole design rests on (measured, then pinned): at a
-        FIXED batch width a row's output depends only on that row — not on its
-        position, its neighbours, or how much of the batch is zero padding."""
+        FIXED batch width a row's output depends only on that row and its ROW
+        INDEX — not on its neighbours and not on how much of the batch is zero
+        padding.
+
+        STRENGTHENED BY WP2.9. This test used to run on the module fixture,
+        whose output head is zero-initialized — a network emitting identically
+        zero, for which every composition claim is vacuously true. It now runs on
+        a network with weights, which is what turned up the correction recorded
+        in :class:`df.TorchBlockSampler`'s docstring: index-preserving
+        composition is EXACT, but moving a row to a different index is not (it
+        moves by float32 GEMM round-off). The index-preserving property is the
+        one ``sample_blocks``' chunking delivers and the one the acceptance
+        filter needs; see
+        ``test_a_decades_path_is_independent_of_how_many_decades_share_the_run``.
+        """
         torch.manual_seed(0)
         model = df.ConditionalDenoiser(SMALL)
+        with torch.no_grad():
+            model.out.weight.normal_(0.0, 0.1)  # a network that actually speaks
         wide = df.DiffusionBlockSampler(
             model,
             dataset.standardization,
@@ -308,12 +323,15 @@ class TestBatchedSampling:
             )
 
         full = draw(range(8))
-        # a short batch is zero-padded up to the width: the real rows are unchanged
+        # a short batch is zero-padded up to the width: the real rows, at the
+        # row indices they already occupied, are bit-for-bit unchanged
         np.testing.assert_array_equal(draw([0, 1, 2]), full[[0, 1, 2]])
-        # ...and so is a single row, wherever it sat before
-        np.testing.assert_array_equal(draw([5]), full[[5]])
-        # ...and reordering the batch just reorders the answers
-        np.testing.assert_array_equal(draw([7, 0, 3]), full[[7, 0, 3]])
+        np.testing.assert_array_equal(draw([0]), full[[0]])
+        # reordering DOES move the answer, and only by float32 round-off
+        moved = draw([7, 0, 3])
+        reference = full[[7, 0, 3]]
+        assert not np.array_equal(moved, reference)
+        assert float(np.abs(moved - reference).max()) < 1e-4
 
     def test_end_to_end_width_1_reproduces_the_unbatched_driver(self, dataset, tmp_path_factory):
         """The legacy-equivalence anchor: an ensemble assembled through the

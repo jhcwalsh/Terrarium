@@ -26,6 +26,15 @@
 
 The search space itself lives in a YAML file whose SHA-256 is recorded in the
 log before the first trial runs, so "stated in advance" is machine-checkable.
+
+PER SYSTEM **PER SAMPLER** (WP2.9). The sealed budget is 40 for each sampler
+family, so this module is parameterized by the family's config class
+(``config_cls``) and by the experiment directory, and nothing else: WP2.9's
+flow search runs the identical protocol code — the same budget accounting, the
+same log validation, the same closed-form selection with the same PINNED
+lambda — over its own log in its own experiment directory. That is deliberate:
+a second copy of this file is exactly how two "separately selected" arms end up
+under two subtly different criteria.
 """
 
 from __future__ import annotations
@@ -42,7 +51,7 @@ import yaml
 from ah.experiment import config_hash, git_sha
 from ah.gen.blocks import data as bd
 from ah.gen.blocks.diffusion import DiffusionConfig
-from ah.gen.blocks.train import SELECTION_LAMBDA, TrainResult, train_diffusion
+from ah.gen.blocks.train import SELECTION_LAMBDA, TrainResult, train_blocks
 
 __all__ = [
     "TRIAL_BUDGET",
@@ -65,32 +74,44 @@ class TuningError(RuntimeError):
     """A tuning-protocol violation — never caught and continued past."""
 
 
-def load_search_space(path: str | Path) -> tuple[dict[str, list[Any]], dict[str, Any], str]:
+def load_search_space(
+    path: str | Path, config_cls: type = DiffusionConfig
+) -> tuple[dict[str, list[Any]], dict[str, Any], str]:
     """Read the committed search-space YAML; returns (space, budget, file sha256).
 
-    ``search_space`` maps DiffusionConfig field -> list of candidate values;
+    ``search_space`` maps a ``config_cls`` field -> list of candidate values;
     ``budget`` carries the trial-cap parameters (max steps per trial etc.). The
     file's SHA-256 goes into the log header — the search space cannot be edited
-    after the fact without the log showing it.
+    after the fact without the log showing it. ``config_cls`` defaults to the 3a
+    :class:`~ah.gen.blocks.diffusion.DiffusionConfig`; WP2.9 passes its own.
     """
     path = Path(path)
     raw = path.read_bytes()
     doc = yaml.safe_load(raw)
     space = doc["search_space"]
     budget = doc["trial_budget_params"]
-    unknown = sorted(set(space) - set(DiffusionConfig.__dataclass_fields__))
+    unknown = sorted(set(space) - set(config_cls.__dataclass_fields__))
     if unknown:
-        raise TuningError(f"search space names unknown DiffusionConfig fields: {unknown}")
+        raise TuningError(f"search space names unknown {config_cls.__name__} fields: {unknown}")
     return space, budget, hashlib.sha256(raw).hexdigest()
 
 
 def sample_trial_configs(
-    space: dict[str, list[Any]], n_trials: int, seed: int
-) -> list[DiffusionConfig]:
-    """Deterministic random search: uniform independent draws, de-duplicated."""
+    space: dict[str, list[Any]],
+    n_trials: int,
+    seed: int,
+    config_cls: type = DiffusionConfig,
+) -> list[Any]:
+    """Deterministic random search: uniform independent draws, de-duplicated.
+
+    De-duplication is by CONFIG HASH, i.e. after the config class has normalized
+    itself. A family whose ``__post_init__`` collapses a degenerate combination
+    (WP2.9's ``guidance_scale`` is meaningless without ``cond_dropout``) therefore
+    spends one unit of the sealed budget on it, not several.
+    """
     rng = np.random.Generator(np.random.PCG64(seed))
     keys = sorted(space)
-    configs: list[DiffusionConfig] = []
+    configs: list[Any] = []
     seen: set[str] = set()
     attempts = 0
     while len(configs) < n_trials:
@@ -98,7 +119,7 @@ def sample_trial_configs(
         if attempts > 200 * n_trials:
             raise TuningError("search space too small to draw the requested distinct trials")
         choice = {k: space[k][int(rng.integers(len(space[k])))] for k in keys}
-        config = DiffusionConfig(**choice)
+        config = config_cls(**choice)
         h = config_hash(config.as_dict())
         if h in seen:
             continue
@@ -125,7 +146,7 @@ def distinct_started_hashes(entries: list[dict[str, Any]]) -> set[str]:
 
 def run_search(
     dataset: bd.BlockDataset,
-    configs: list[DiffusionConfig],
+    configs: list[Any],
     *,
     exp_dir: str | Path,
     seed: int,
@@ -195,7 +216,7 @@ def run_search(
         if log is not None:
             log(f"trial {i} start  {h}  (started so far: {len(started) + 1}/{TRIAL_BUDGET})")
         try:
-            result: TrainResult = train_diffusion(
+            result: TrainResult = train_blocks(
                 dataset,
                 config,
                 seed=trial_seed,
@@ -230,7 +251,13 @@ def run_search(
                 "gen_term": result.best_gen_term,
                 "aux_term": result.best_aux_term,
                 "s_value": result.best_s,
-                "eval_nfe": int(config.eval_nfe),
+                # The TRUE network-evaluation count per block, which is what the
+                # sealed tie-break means by "the lower sampling cost (NFE)".
+                # Classifier-free guidance costs two evaluations per step, so a
+                # family that offers it must report the doubled figure here or
+                # the tie-break would prefer a sampler that is twice as expensive.
+                "eval_nfe": int(getattr(config, "sampling_nfe", config.eval_nfe)),
+                "requested_nfe": int(config.eval_nfe),
                 "best_step": result.best_step,
                 "steps_run": result.steps_run,
                 "stopped_early": result.stopped_early,
