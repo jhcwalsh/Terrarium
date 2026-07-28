@@ -18,12 +18,15 @@ path + cycle) emit:
       mean) — the regime path contributes texture around the valuation anchor;
 (iii) a year-end spread level BAND, not a point — the stated mapping:
 
-          center_y = μ_spread(R_yend) + β_L·credit_gap_yend,   half-width = sigma_resid
+          center_y = μ_spread(R_yend) + β_L·credit_gap_yend,
+          half-width = sigma_resid(R_yend)
 
       with μ_spread(R) the train+validation mean ig_spread by regime, β_L the OLS
       loading of the regime-demeaned historical spread on the L1 posterior-mean
-      credit-gap path over the same months, and sigma_resid that regression's residual
-      sd (both from :func:`source_stats`, train+validation only);
+      credit-gap path over the same months, and sigma_resid(R) that regression's
+      REGIME-CONDITIONAL residual sd (all from :func:`source_stats`, train+validation
+      only; :func:`_spread_band_widths` states the estimator and WP2.7b records why
+      the single pooled width it replaced was refuted by the reference data itself);
 (iv)  the regime path itself (with WorldSpec ``crisis_windows`` overlaid as CRI).
 
 WorldSpec ``factor_conditions`` bind HERE, as overrides/tilts on w — the single
@@ -53,6 +56,8 @@ from ah.gen.climate.simulate import ClimateArtifact, SimulatedClimate, policy_an
 from ah.gen.regimes.semimarkov import REGIME_LABELS, RegimePaths
 
 __all__ = [
+    "BAND_PRIOR_DF",
+    "BAND_RHO_CLIP",
     "RATE_FLOOR_FACTORS",
     "RATE_FLOOR_PCT",
     "REGIME_LABELS",
@@ -97,6 +102,26 @@ _CRI = _LABEL_INDEX["CRI"]
 #: months always have USREC=1, i.e. c = -1 (see ah.gen.regimes.semimarkov).
 _CRI_CYCLE = -1.0
 
+# --------------------------------------------------------------------------- #
+# WP2.7b band-width estimator constants.
+#
+# Both are properties of the ESTIMATOR, chosen from the reference data alone and
+# never from any generator's score (see _spread_band_widths).
+# --------------------------------------------------------------------------- #
+
+#: Prior strength of the variance shrinkage, in degrees of freedom — one degree of
+#: freedom of prior information, the weakest proper shrinkage. The empirical-Bayes
+#: marginal MLE on the campaign vintage brackets it (nu0 = 1.25 with the prior
+#: centred on the pooled variance, 1.78 jointly), but that hyperparameter is not
+#: robustly identified from six groups — dropping CRI alone moves it from 1.4 to
+#: 17.8 — so the weak stated value is used and the fit is reported as corroboration.
+BAND_PRIOR_DF = 1.0
+
+#: The lag-1 autocorrelation entering the effective-sample-size correction is
+#: clipped to [0, BAND_RHO_CLIP]: the correction diverges as rho -> 1, and a
+#: negative estimate would claim MORE information than the month count.
+BAND_RHO_CLIP = 0.95
+
 #: The four factors waypoints bind, and the state-vector indices they read.
 WAYPOINT_FACTORS: tuple[str, ...] = ("policy_rate", "cpi", "equity_mkt", "ig_spread")
 _STATE_PI_STAR = 0
@@ -132,11 +157,144 @@ class SourceStats:
     equity_mean_log_overall: float
     spread_mean_by_regime: np.ndarray  # (6,) mean ig_spread level by label
     spread_beta_credit_gap: float
-    spread_resid_sd: float
+    spread_resid_sd: float  # POOLED residual sd: the absent-regime fallback, and the
+    # number WP2.7/WP2.8's published artifacts quote. NOT the band width any more.
+    spread_band_half_width_by_regime: np.ndarray  # (6,) the band half-width per label
+    spread_band_diagnostics: dict[str, Any]  # JSON-safe estimator report (see below)
     h0_equity_ret_12m: float  # unconditional trailing-12m log equity return
     h0_equity_vol_12m: float  # unconditional monthly log-return sd
     h0_spread_level: float  # unconditional ig_spread level
     absent_regimes: tuple[str, ...]
+
+
+def _contiguous_runs(mask: np.ndarray) -> list[tuple[int, int]]:
+    """[(start, stop), ...] for each maximal run of True in ``mask``."""
+    idx = np.flatnonzero(mask)
+    if idx.size == 0:
+        return []
+    breaks = np.flatnonzero(np.diff(idx) > 1)
+    starts = np.concatenate(([idx[0]], idx[breaks + 1]))
+    stops = np.concatenate((idx[breaks], [idx[-1]])) + 1
+    return [(int(a), int(b)) for a, b in zip(starts, stops, strict=True)]
+
+
+def _spread_band_widths(
+    resid: np.ndarray, codes: np.ndarray, pooled_sd: float
+) -> tuple[np.ndarray, dict[str, Any]]:
+    """The regime-conditional band half-width sigma_resid(R). WP2.7b.
+
+    ``resid`` is the spread residual the band is built on — historical ig_spread
+    minus its regime mean minus beta_L * credit_gap — and ``codes`` its regime
+    labels. Train+validation only: the caller has already sourced both through the
+    sanctioned surface.
+
+    WHY THIS IS NOT A SINGLE POOLED NUMBER. The pooled residual sd this replaces
+    was refuted by the reference data on its own terms, before any generator was
+    consulted: on the campaign vintage the six within-regime variances span a
+    201x range (a run-permutation test that preserves the serial structure gives
+    p = 0.003 against homoskedasticity), and the pooled width it implies is
+    simultaneously 1.2x-2.4x wider than the four quiet regimes support and far too
+    narrow for CRI — real 1990-2020 spreads sit OUTSIDE their own pooled CRI band
+    in 16 of 17 months (94.1%), while never leaving the STAG or REF band at all. A
+    width the reference itself cannot sit inside is not an estimate of the reference.
+
+    THE ESTIMATOR, stated in full:
+
+    1. Within each regime, s_R^2 is the residual variance about that regime's own
+       mean (ddof=1).
+    2. Months are serially dependent, so a regime's month count overstates its
+       information. rho_R is the lag-1 autocorrelation measured over CONTIGUOUS
+       month pairs inside the regime (a regime's months are not contiguous in
+       calendar time), clipped to [0, BAND_RHO_CLIP], and gives the two standard
+       AR(1) effective sizes: n_eff = n(1-rho)/(1+rho) for a MEAN and
+       n_eff_var = n(1-rho^2)/(1+rho^2) for a VARIANCE. On the campaign vintage
+       every regime has between 1.6 and 11.8 effective observations, EXP's 231
+       months included; the independent count of contiguous episodes agrees within
+       a factor of two, and both are reported.
+    3. s_R^2 is shrunk toward a typical within-regime variance s0^2 with
+       nu_R = n_eff_var - 1 degrees of freedom against BAND_PRIOR_DF, which is what
+       stops a thin regime's few months from asserting a near-zero width.
+    4. s0^2 is the INFORMATION-WEIGHTED GEOMETRIC MEAN of the group variances, not
+       the arithmetic pool: on the campaign vintage 51% of the pooled residual
+       variance comes from CRI's 17 months, so the arithmetic pool is a crisis
+       statistic and shrinking the quiet regimes toward it would re-import exactly
+       the contamination this estimator exists to remove.
+    5. The half-width is a PREDICTIVE sd: sigma_R * sqrt(1 + 1/n_eff_R). The band's
+       centre mu_spread(R) is itself estimated on n_eff_R observations, and a
+       year-end level deviates from the ESTIMATED centre by that much more. This
+       is why the centre is left alone (see build_waypoints): centre noise is
+       carried as width, not as a shift of the crisis target toward normal times.
+
+    Regimes with fewer than two months (an absent regime falls back to the
+    unconditional mean, visibly) fall back to ``pooled_sd`` and are flagged.
+    Everything is a deterministic function of the inputs — no RNG, no fitting to
+    any generated quantity.
+    """
+    n_lab = len(REGIME_LABELS)
+    n = np.array([int(np.count_nonzero(codes == c)) for c in range(n_lab)])
+    group_mean = np.array([float(resid[codes == c].mean()) if n[c] else 0.0 for c in range(n_lab)])
+    e = resid - group_mean[codes]
+
+    s2 = np.zeros(n_lab)
+    rho = np.zeros(n_lab)
+    n_runs = np.zeros(n_lab, dtype=np.int64)
+    for c in range(n_lab):
+        runs = _contiguous_runs(codes == c)
+        n_runs[c] = len(runs)
+        if n[c] < 2:
+            continue
+        ec = e[codes == c]
+        s2[c] = float(np.var(ec, ddof=1))
+        lag = [(e[a : b - 1], e[a + 1 : b]) for a, b in runs if b - a >= 2]
+        denom = float(ec @ ec)
+        if lag and denom > 0.0:
+            first = np.concatenate([p[0] for p in lag])
+            second = np.concatenate([p[1] for p in lag])
+            rho[c] = min(max(float(first @ second) / denom, 0.0), BAND_RHO_CLIP)
+
+    n_eff = np.maximum(n * (1.0 - rho) / (1.0 + rho), 1.0)
+    n_eff_var = np.maximum(n * (1.0 - rho**2) / (1.0 + rho**2), 2.0)
+    nu = n_eff_var - 1.0
+
+    usable = (n >= 2) & (s2 > 0.0)
+    if np.any(usable):
+        s0_2 = float(np.exp(np.sum(nu[usable] * np.log(s2[usable])) / np.sum(nu[usable])))
+    else:
+        s0_2 = float(pooled_sd**2)
+
+    sigma2 = (nu * s2 + BAND_PRIOR_DF * s0_2) / (nu + BAND_PRIOR_DF)
+    half = np.sqrt(sigma2) * np.sqrt(1.0 + 1.0 / n_eff)
+    fallback = n < 2
+    half = np.where(fallback, pooled_sd, half)
+    half = np.maximum(half, 1e-6)
+
+    diagnostics: dict[str, Any] = {
+        "estimator": (
+            "regime-conditional predictive residual sd: variance shrunk toward the "
+            "information-weighted geometric-mean within-regime variance with "
+            "BAND_PRIOR_DF degrees of prior freedom, then inflated by "
+            "sqrt(1 + 1/n_eff) for the band centre's own estimation error"
+        ),
+        "prior_df": float(BAND_PRIOR_DF),
+        "rho_clip": float(BAND_RHO_CLIP),
+        "typical_sd": float(np.sqrt(s0_2)),
+        "pooled_sd": float(pooled_sd),
+        "by_regime": {
+            REGIME_LABELS[c]: {
+                "n": int(n[c]),
+                "n_runs": int(n_runs[c]),
+                "rho": float(rho[c]),
+                "n_eff_mean": float(n_eff[c]),
+                "n_eff_var": float(n_eff_var[c]),
+                "raw_sd": float(np.sqrt(s2[c])),
+                "shrunk_sd": float(np.sqrt(sigma2[c])),
+                "half_width": float(half[c]),
+                "fallback": bool(fallback[c]),
+            }
+            for c in range(n_lab)
+        },
+    }
+    return half, diagnostics
 
 
 def _column(source: BootstrapSource, name: str) -> np.ndarray:
@@ -189,14 +347,18 @@ def source_stats(source: BootstrapSource, climate: ClimateArtifact) -> SourceSta
     resid = spread - sp_by[codes]
     var = float(np.var(credit_gap))
     beta = float(np.cov(resid, credit_gap)[0, 1] / var) if var > 1e-12 else 0.0
-    resid_sd = float(np.std(resid - beta * credit_gap, ddof=1)) if resid.size > 1 else 0.0
+    band_resid = resid - beta * credit_gap
+    resid_sd = max(float(np.std(band_resid, ddof=1)) if resid.size > 1 else 0.0, 1e-6)
+    band_half, band_diag = _spread_band_widths(band_resid, codes, resid_sd)
 
     return SourceStats(
         equity_mean_log_by_regime=eq_by,
         equity_mean_log_overall=eq_overall,
         spread_mean_by_regime=sp_by,
         spread_beta_credit_gap=beta,
-        spread_resid_sd=max(resid_sd, 1e-6),
+        spread_resid_sd=resid_sd,
+        spread_band_half_width_by_regime=band_half,
+        spread_band_diagnostics=band_diag,
         h0_equity_ret_12m=12.0 * eq_overall,
         h0_equity_vol_12m=float(np.std(eq_log, ddof=1)),
         h0_spread_level=sp_overall,
@@ -476,8 +638,14 @@ def build_waypoints(
             + stats.spread_beta_credit_gap * credit_gap[k, yends],
             SPREAD_FLOOR_PCT,
         )
-        lo = np.maximum(center - stats.spread_resid_sd, SPREAD_FLOOR_PCT)
-        hi = np.maximum(center + stats.spread_resid_sd, lo + 1e-9)
+        # WP2.7b: the half-width is the year-end REGIME's width. The centre is
+        # deliberately unchanged — mu_spread(R) is the estimand DN-1.1 II.5 names,
+        # it is unbiased, and shrinking it toward the unconditional mean would bias
+        # the crisis target toward normal-times levels. Its estimation error is
+        # carried in the width instead (the sqrt(1 + 1/n_eff) term).
+        half = stats.spread_band_half_width_by_regime[labels[yends]]
+        lo = np.maximum(center - half, SPREAD_FLOOR_PCT)
+        hi = np.maximum(center + half, lo + 1e-9)
 
         record: dict[str, Any] = {}
         if stats.absent_regimes:

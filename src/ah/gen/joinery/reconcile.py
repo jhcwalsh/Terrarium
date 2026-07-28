@@ -30,6 +30,13 @@ factor                  variant                 why
                                                 (floor 0.0), so additive.
 ======================  ======================  =====================================
 
+``ig_spread``'s adjustment is therefore a BAND-EXIT DETECTOR: it is exactly zero
+for a year-end inside the band, so its size measures how often and how far the
+generated year-ends leave it. Since WP2.7b the band's half-width is
+regime-conditional (``waypoints._spread_band_widths``), which is what makes that
+reading mean the same thing in every regime — under the pooled width it did not
+(the reference itself left its own CRI band in 16 of 17 months).
+
 The adjustment magnitude per factor per year is returned as a diagnostic — mean
 |x - z| over the year's months, in the working space of the variant (pct for
 levels, log for cpi, log-return for equity). Large means generator and structure

@@ -7,6 +7,48 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.7b — the `ig_spread` waypoint band half-width is REGIME-CONDITIONAL
+  (a WP2.7 correction; nothing sealed touched, no retraining, `beta_L` and
+  `cb-v1` unchanged).**
+  - `joinery/waypoints.py`: `sigma_resid` — one pooled residual sd for all six
+    regimes — is replaced by `sigma_resid(R)`, estimated from train+validation
+    history alone through the sanctioned surface. Per regime the residual
+    variance is shrunk toward the *information-weighted geometric mean* of the
+    six group variances with `BAND_PRIOR_DF = 1` degree of prior freedom, using
+    AR(1)-corrected degrees of freedom, and the result is inflated to a
+    PREDICTIVE sd by `sqrt(1 + 1/n_eff)` so the band centre's own estimation
+    error is carried as width. `SourceStats` gains
+    `spread_band_half_width_by_regime` and a JSON-safe
+    `spread_band_diagnostics` (per regime: months, episodes, rho, both effective
+    sample sizes, raw/shrunk sd, half-width, fallback flag); the pooled
+    `spread_resid_sd` is retained as the absent-regime fallback and as the number
+    the WP2.7/WP2.8 artifacts quote. The band CENTRE is deliberately unchanged.
+  - `joinery/assemble.py`: the estimator's per-regime widths and effective
+    sample sizes travel in every ensemble's lineage as
+    `conditioning.spread_band` — the reconciliation diagnostic cannot be read
+    without them.
+  - Why, from the reference and not from any generator: the six within-regime
+    residual variances span a 201x range (run-permutation test p = 0.0034), CRI
+    supplies 51% of the pooled residual variance from 4.6% of the months, and **real
+    1990-2020 spreads sit outside their own pooled CRI band in 16 of 17 months
+    (94.1%)** while never leaving the STAG or REF band. Per-regime half-widths
+    are now EXP 0.221, SLOW 0.177, REC 0.241, CRI 1.068, STAG 0.123, REF 0.119
+    against the old pooled 0.292 — a reallocation, not a loosening (the mean
+    width over generated year-ends moves only 0.292 -> 0.286).
+  - `scripts/measure_spread_band.py` (new): old-vs-new band measurement for both
+    samplers on one assembly (exact, because the band enters only the
+    reconciliation target while the block stream is conditioned on the unchanged
+    centre). `scripts/diagnose_ig_spread.py` now reads the regime-conditional
+    band and says so.
+  - **WP2.7's and WP2.8's published `ig_spread` reconciliation numbers are
+    SUPERSEDED.** Band-exit rate old -> new: history 15.1% -> 27.4%, bootstrap
+    20.7% -> 25.9%, diffusion 61.4% -> 69.1%; mean excursion 0.0445 -> 0.0295,
+    0.0595 -> 0.0380, 0.2615 -> 0.2608. CRI exit collapses for the benchmark
+    (86.7% -> 8.6%) and barely moves the trained sampler's total excursion: the
+    8x reconciliation gap was NOT mostly a band artifact. Full evidence in
+    `artifacts/wp27b/spread-band.md`; batteries re-run at n_paths=1024 (the
+    diffusion re-run declares block width 128 on CUDA against the committed
+    width-1 CPU baseline).
 - **WP2.8b — block sampling batched ACROSS DECADES (throughput only; the joinery
   and the L3a sampler, no sealed source touched).**
   - `joinery/bridge.py`: new optional `BatchedBlockSampler` protocol

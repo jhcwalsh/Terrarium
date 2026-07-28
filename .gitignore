@@ -99,3 +99,21 @@ experiments/
 !/artifacts/wp28/neighborhood.json
 !/artifacts/wp28/ig-spread-diagnosis.md
 !/artifacts/wp28/ig-spread-diagnosis.json
+# WP2.7b (regime-conditional ig_spread band) evidence, same reasoning as WP2.4 /
+# WP2.7 / WP2.8 above: the per-seed battery reports reproduce bit-for-bit from the
+# battery scripts against the sealed vintage and the pinned artifacts, so only the
+# things nothing else in the repository would hold are committed -- the two battery
+# summaries (the verdicts that SUPERSEDE WP2.7's and WP2.8's under the new band),
+# the estimator + old-vs-new re-measurement record, and its raw numbers.
+!/artifacts/wp27b/
+/artifacts/wp27b/*
+!/artifacts/wp27b/spread-band.md
+!/artifacts/wp27b/spread-band-remeasurement.json
+!/artifacts/wp27b/battery-joinery/
+/artifacts/wp27b/battery-joinery/*
+!/artifacts/wp27b/battery-joinery/summary.json
+!/artifacts/wp27b/battery-joinery/joinery-assembly-report.md
+!/artifacts/wp27b/battery-diffusion/
+/artifacts/wp27b/battery-diffusion/*
+!/artifacts/wp27b/battery-diffusion/summary.json
+!/artifacts/wp27b/battery-diffusion/wp28-battery-report.md
