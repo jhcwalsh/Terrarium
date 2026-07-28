@@ -107,6 +107,19 @@ def main() -> None:
     parser.add_argument("--n-paths", type=int, default=CRITERION_N_PATHS)
     parser.add_argument("--months", type=int, default=CRITERION_MONTHS)
     parser.add_argument("--baseline", type=Path, default=_REPO_ROOT / "artifacts" / "wp27")
+    # WP2.8b throughput controls. Defaults reproduce the WP2.8 run BIT FOR BIT
+    # (width 1 = one network evaluation per block per decade, on CPU). A wider
+    # width batches the network across decades and is ~10x (CPU) to ~100x (CUDA)
+    # faster, at the cost of float32 round-off differences that a batched GEMM
+    # makes unavoidable — see scripts/verify_block_batching.py for the evidence.
+    # Whatever is chosen is recorded in the ensemble lineage.
+    parser.add_argument("--block-batch", type=int, default=df.DEFAULT_BLOCK_BATCH)
+    parser.add_argument(
+        "--sampler-device",
+        default=df.DEFAULT_SAMPLER_DEVICE,
+        help="cpu (default) or cuda; cuda needs CUBLAS_WORKSPACE_CONFIG=:4096:8 in the "
+        "environment for torch.use_deterministic_algorithms(True) to accept cuBLAS",
+    )
     args = parser.parse_args()
     args.out_dir.mkdir(parents=True, exist_ok=True)
 
@@ -120,9 +133,13 @@ def main() -> None:
     torch.set_num_threads(1)
     torch.use_deterministic_algorithms(True)
 
+    df.DEFAULT_BLOCK_BATCH = int(args.block_batch)
+    df.DEFAULT_SAMPLER_DEVICE = str(args.sampler_device)
+
     print(f"resolving {df.GENERATOR_ID} through the registry (pins verified)...")
     system = registry.resolve(df.GENERATOR_ID)
     print(f"checkpoint {system.checkpoint_hash}")
+    print(f"block batch {args.block_batch} on {args.sampler_device}")
 
     with Catalog(args.catalog_root) as catalog:
         access = catalog_access(catalog, args.vintage)
@@ -179,6 +196,8 @@ def main() -> None:
         "reconciliation_unfiltered": meta_c["reconciliation"],
         "waypoint_tolerance_unfiltered": meta_c["waypoint_tolerance"],
         "sampler_fallbacks": meta_c["sampler_fallbacks"],
+        "block_sampler_batch": meta_c["block_sampler_batch"],
+        "block_sampler_device": meta_c["block_sampler_device"],
     }
     (args.out_dir / "summary.json").write_text(
         json.dumps(summary, indent=2, sort_keys=True) + "\n", "utf-8"

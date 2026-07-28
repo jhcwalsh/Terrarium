@@ -38,6 +38,7 @@ makes.
 from __future__ import annotations
 
 import math
+from collections.abc import Sequence
 from dataclasses import dataclass, replace
 from pathlib import Path
 from typing import Any
@@ -331,6 +332,27 @@ class DiffusionBlockSampler:
     generator; the model runs in float32 under ``no_grad`` and the result is
     mapped back through de-standardization and the constraint inverse — floors
     hold by construction for ANY model output.
+
+    BATCH WIDTH (WP2.8b). ``block_batch`` is how many decades' blocks one network
+    evaluation carries. It is a FIXED width, not "however many decades happen to
+    be in flight": :meth:`sample_blocks` chunks its input into ``block_batch``-row
+    batches and zero-pads the last one. Two properties come out of that, both
+    measured and both pinned by test:
+
+    * a row's output depends only on that row and on the width — never on its
+      position in the batch, its neighbours, or how much of the batch is padding.
+      So a decade's path is the same whether it is generated alone (as the
+      acceptance filter regenerates replacements) or inside a 1024-decade run;
+    * the ensemble is a deterministic function of (seed, width) alone.
+
+    ``block_batch=1`` reproduces the per-block WP2.8 path BIT FOR BIT. Wider
+    widths cannot: the float32 GEMM this network is built from is not batch-size
+    invariant on any backend measured (CPU oneDNN and CUDA cuBLAS both change a
+    row's denoiser output by ~1.5e-7 relative at batch 2 already, and no further
+    as the batch grows). That is float round-off, not a behaviour change, but it
+    is real and it is why the width is recorded in the ensemble lineage rather
+    than hidden. It is deliberately left at 1 by default so that no existing
+    result moves without someone asking for it.
     """
 
     def __init__(
@@ -342,6 +364,7 @@ class DiffusionBlockSampler:
         trained_fingerprint: str,
         nfe: int | None = None,
         device: str = "cpu",
+        block_batch: int = 1,
     ) -> None:
         runtime = bridge.contract_fingerprint()
         if trained_fingerprint != runtime:
@@ -354,19 +377,33 @@ class DiffusionBlockSampler:
             raise JoineryError(
                 f"model emits {model.config.n_factors} factors; got {len(factor_names)} names"
             )
+        if int(block_batch) < 1:
+            raise JoineryError(f"block_batch must be >= 1; got {block_batch}")
         self._model = model.to(device).eval()
         self._std = standardization
         self._device = device
+        self.device = str(device)
         self.factor_names = tuple(factor_names)
         self.block_months = int(model.config.block_months)
         self.nfe = int(model.config.eval_nfe if nfe is None else nfe)
-        # Traced inference graphs per batch size (assembly is millions of
-        # batch-1 calls; tracing removes the eager-dispatch overhead). The
-        # traced graph is the SAME computation — parity is asserted at trace
-        # time — and a fixed code path per batch size keeps bit-determinism.
+        self.block_batch = int(block_batch)
+        # Traced inference graph for the batch-1 path only (see _denoise).
         self._traced: dict[int, Any] = {}
 
     def _denoise(self, x: torch.Tensor, sigma: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
+        """The denoiser: traced at batch 1, eager above it.
+
+        Tracing exists to strip eager dispatch from a MILLION batch-1 calls, and
+        at batch 1 it roughly halves the cost. Above batch 1 the dispatch is
+        already amortized (measured: 7% left on CPU at width 128, 25% on CUDA at
+        width 1024) while ``optimize_for_inference`` starts substituting fused
+        reduced-precision kernels — measured divergence from the eager model of
+        5e-5 on CPU at width 64 and 4.6e-4 on CUDA at width 256, i.e. it stops
+        being the same computation. Trading a few percent for "the batched path
+        is the model" is the right side of that. Recorded WP2.8b decision.
+        """
+        if int(x.shape[0]) != 1:
+            return self._model.denoise(x, sigma, cond)
         key = int(x.shape[0])
         fn = self._traced.get(key)
         if fn is None:
@@ -402,7 +439,11 @@ class DiffusionBlockSampler:
         return fn(x, sigma, cond)
 
     def sample_batch(self, cond_vectors: np.ndarray, noise: np.ndarray) -> np.ndarray:
-        """Blocks in FACTOR UNITS for ``(B, 18)`` raw c_b vectors + given noise."""
+        """Blocks in FACTOR UNITS for ``(B, 18)`` raw c_b vectors + given noise.
+
+        ONE network evaluation of exactly ``B`` rows — no chunking, no padding.
+        :meth:`sample_blocks` is the entry point that imposes the fixed width.
+        """
         cond = torch.as_tensor(
             self._std.standardize_cond(cond_vectors), dtype=torch.float32, device=self._device
         )
@@ -412,9 +453,52 @@ class DiffusionBlockSampler:
         z_np = self._std.destandardize_x(z.double().cpu().numpy())
         return ct.panel_to_constrained(z_np, self.factor_names)
 
+    def _draw_noise(self, rng: np.random.Generator) -> np.ndarray:
+        """One block's sampling noise — the ONLY place this sampler touches an RNG."""
+        return rng.standard_normal((self.block_months, len(self.factor_names)))
+
     def sample_block(self, cond: bridge.BlockConditioning, rng: np.random.Generator) -> np.ndarray:
-        noise = rng.standard_normal((1, self.block_months, len(self.factor_names)))
-        return self.sample_batch(cond.to_vector()[None, :], noise)[0]
+        return self.sample_batch(cond.to_vector()[None, :], self._draw_noise(rng)[None, ...])[0]
+
+    def sample_blocks(
+        self,
+        conds: Sequence[bridge.BlockConditioning],
+        rngs: Sequence[np.random.Generator],
+    ) -> np.ndarray:
+        """The batched entry point (:class:`bridge.BatchedBlockSampler`).
+
+        Every decade's noise is drawn from ITS OWN generator, in decade order,
+        exactly as the per-decade driver would have drawn it at this block — the
+        RNG sees the identical call at the identical point in its stream. Only
+        the network evaluation is grouped, at the fixed ``block_batch`` width with
+        the tail zero-padded.
+        """
+        if len(conds) != len(rngs):
+            raise JoineryError(f"got {len(conds)} conditionings and {len(rngs)} generators")
+        n = len(conds)
+        n_factors = len(self.factor_names)
+        out = np.empty((n, self.block_months, n_factors), dtype=np.float64)
+        if n == 0:
+            return out
+        vectors = np.stack([cond.to_vector() for cond in conds])
+        noise = np.stack([self._draw_noise(rng) for rng in rngs])
+
+        width = self.block_batch
+        for lo in range(0, n, width):
+            hi = min(lo + width, n)
+            take = hi - lo
+            chunk_c, chunk_n = vectors[lo:hi], noise[lo:hi]
+            pad = width - take
+            if pad:
+                # Pad to the fixed width so the real rows see the same batch size
+                # in every call. Rows are independent through this network (no
+                # cross-row op anywhere: attention is within a block, LayerNorm
+                # and softmax are per row), so the padding cannot reach them —
+                # asserted by test, not assumed.
+                chunk_c = np.concatenate([chunk_c, np.zeros((pad, chunk_c.shape[1]))])
+                chunk_n = np.concatenate([chunk_n, np.zeros((pad, self.block_months, n_factors))])
+            out[lo:hi] = self.sample_batch(chunk_c, chunk_n)[:take]
+        return out
 
 
 # --------------------------------------------------------------------------- #
@@ -456,6 +540,15 @@ DEFAULT_CHECKPOINT = _REPO_ROOT / "experiments" / "l3a-diffusion-final" / "check
 PINNED_CHECKPOINT_SHA256: str | None = (
     "f0c79f000be659c8b443afba02a251ab8925d995fdebcf8e6e82195e8dd70c5a"
 )
+
+#: What :func:`hier_diffusion_v1_factory` builds its sampler with — the registry
+#: resolves by id and takes no arguments, so a caller that wants the WP2.8b
+#: batched path sets these BEFORE resolving (``scripts/run_diffusion_battery.py``
+#: exposes them as ``--block-batch`` / ``--sampler-device``). They default to the
+#: WP2.8 behaviour exactly: width 1, CPU. Both land in the ensemble's lineage
+#: record, so a batched ensemble always says so.
+DEFAULT_BLOCK_BATCH: int = 1
+DEFAULT_SAMPLER_DEVICE: str = "cpu"
 
 
 class HierDiffusionV1:
@@ -569,6 +662,8 @@ def hier_diffusion_v1_factory() -> HierDiffusionV1:
         std,
         tuple(source.factor_names),
         trained_fingerprint=meta["cb_fingerprint"],
+        device=DEFAULT_SAMPLER_DEVICE,
+        block_batch=DEFAULT_BLOCK_BATCH,
     )
     system = HierDiffusionV1(climate, regimes_artifact, source, sampler)
     system.checkpoint_hash = meta["checkpoint_hash"]

@@ -7,6 +7,59 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.8b — block sampling batched ACROSS DECADES (throughput only; the joinery
+  and the L3a sampler, no sealed source touched).**
+  - `joinery/bridge.py`: new optional `BatchedBlockSampler` protocol
+    (`sample_blocks(conds, rngs) -> (N, L, F)`) and a new driver
+    `assemble_decade_paths(months=..., decades=[DecadeAssembly, ...], ...)` that
+    runs N decades **block-major, in lockstep**: at each block index it builds
+    every decade's c_b from that decade's own partially assembled path, hands
+    the whole slate to the sampler in ONE call with each decade's own generator,
+    and cross-fades the results back per decade. Blocks stay strictly sequential
+    within a decade (h_t depends on months earlier blocks produced) — the batch
+    axis is decades, never blocks. The per-block arithmetic (c_b construction,
+    cpi chaining, the cross-fade) moved into one private `_PathBuilder` used by
+    both drivers, so the two paths cannot drift. A sampler that does not
+    advertise `sample_blocks` (`BootstrapBlockSampler`) falls back to the
+    unchanged per-decade `assemble_decade_path` loop.
+  - `joinery/assemble.py`: `_DecadeFactory` split into `prepare(m)` (steps 1-3:
+    L1, L2, waypoints — no block stream touched) and `assemble(preps)` (step 4
+    through the batched bridge, then step 5 per decade). `assemble_decades`
+    prepares all decades before bridging them; the acceptance filter's
+    replacement decades are likewise prepared and bridged as one batch. Steps 5
+    and 6 are untouched: reconciliation still runs per decade and per year on a
+    complete path, and the filter still scores fully reconciled decades. The
+    batch width and device are recorded in the ensemble lineage
+    (`block_sampler_batch`, `block_sampler_device`).
+  - `blocks/diffusion.py`: `DiffusionBlockSampler(block_batch=...)` implements
+    `sample_blocks` — it draws each decade's noise from that decade's own
+    generator, in decade order, exactly where the per-decade driver would have
+    drawn it, then evaluates the network at a **fixed width with the tail
+    zero-padded**. Padding is what buys composition invariance: a row's output
+    depends only on that row and the width, never on its position, its
+    neighbours, or how much of the batch is padding (measured, then pinned by
+    test) — so a decade's path is the same whether it is generated alone (as the
+    filter regenerates replacements) or inside a 1024-decade run, and the
+    ensemble is a deterministic function of (seed, width). The traced inference
+    graph is now used at batch 1 ONLY: above it the dispatch is already
+    amortized while `optimize_for_inference` starts substituting fused
+    reduced-precision kernels (measured divergence from the eager model of 5e-5
+    on CPU at width 64, 4.6e-4 on CUDA at width 256), so the batched path is the
+    eager model.
+  - `scripts/verify_block_batching.py`: the evidence harness — the same ensemble
+    at several widths, wall clock and `sha256(paths)` each, divergence against a
+    stored reference. `scripts/run_diffusion_battery.py` gains `--block-batch`
+    and `--sampler-device`, both defaulting to the WP2.8 behaviour.
+  - **BIT-IDENTITY, stated exactly.** Width 1 reproduces the committed WP2.8
+    code BIT FOR BIT (20x120 filtered, real checkpoint: `sha256(paths)`
+    `d43d4099…` before and after). Widths above 1 CANNOT: the float32 GEMM this
+    network is built from is not batch-size invariant on either backend measured
+    — a row's denoiser output moves by ~1.5e-7 relative (2 ULP) between batch 1
+    and batch **2**, on CPU (oneDNN) and CUDA (cuBLAS) alike, and no further as
+    the batch grows. That is hardware round-off, not a behaviour change, and no
+    test asserts cross-width equality; the width is therefore an explicit,
+    lineage-recorded parameter that **defaults to 1**, so no existing number
+    moves unless someone asks for it.
 - **WP2.8 — Layer 3a, the conditional diffusion block generator
   (`ah/gen/blocks/`) and the sealed tuning protocol — DN-1.1 §II.4 (a),
   registered as `hier-diffusion-v1`.**

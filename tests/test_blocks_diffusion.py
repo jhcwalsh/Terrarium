@@ -131,6 +131,7 @@ class TestSampler:
 
     def test_implements_the_frozen_block_sampler_protocol(self, sampler):
         assert isinstance(sampler, bridge.BlockSampler)
+        assert isinstance(sampler, bridge.BatchedBlockSampler)  # WP2.8b extension
         assert sampler.block_months == SMALL.block_months
         assert sampler.factor_names == FACTOR_SET
 
@@ -220,6 +221,229 @@ class TestFullJoinery:
             config=JoineryConfig(acceptance_filter=False),
         )
         np.testing.assert_array_equal(ensemble.paths, again.paths)
+
+
+class TestBatchedSampling:
+    """WP2.8b — batching the network evaluation ACROSS decades.
+
+    What is proved exactly here: the width-1 path reproduces the per-block path
+    bit for bit, the noise still comes off each decade's own stream in its own
+    order, and a fixed width is invariant to batch COMPOSITION (position,
+    neighbours, zero padding). What is NOT claimed anywhere — because the
+    float32 GEMM underneath is not batch-size invariant — is equality ACROSS
+    widths; the last test states the measured bound instead.
+    """
+
+    def _conds(self, n, seed=3):
+        rng = np.random.Generator(np.random.PCG64(seed))
+        return [
+            bridge.BlockConditioning(
+                regime_onehot=np.eye(6)[i % 6],
+                state_snapshot=rng.standard_normal(5),
+                history_summary=rng.standard_normal(3),
+                waypoint_increments=rng.standard_normal(4),
+                start_month=3 * i,
+            )
+            for i in range(n)
+        ]
+
+    def test_block_batch_must_be_positive(self, dataset):
+        torch.manual_seed(0)
+        model = df.ConditionalDenoiser(SMALL)
+        with pytest.raises(JoineryError, match="block_batch"):
+            df.DiffusionBlockSampler(
+                model,
+                dataset.standardization,
+                dataset.factor_names,
+                trained_fingerprint=bridge.contract_fingerprint(),
+                block_batch=0,
+            )
+
+    def test_width_1_sample_blocks_equals_the_per_block_path_bit_for_bit(self, sampler):
+        conds = self._conds(4)
+        seeds = [11, 12, 13, 14]
+        batched = sampler.sample_blocks(
+            conds, [np.random.Generator(np.random.PCG64(s)) for s in seeds]
+        )
+        one_by_one = np.stack(
+            [
+                sampler.sample_block(c, np.random.Generator(np.random.PCG64(s)))
+                for c, s in zip(conds, seeds, strict=True)
+            ]
+        )
+        np.testing.assert_array_equal(batched, one_by_one)
+
+    def test_each_decade_draws_from_its_own_stream_in_its_own_order(self, sampler):
+        """Batching must not change what any RNG produces, or when. Two blocks
+        drawn from ONE stream in sequence must match the same stream driven
+        through two successive sample_blocks calls."""
+        conds = self._conds(2)
+        rng_a = np.random.Generator(np.random.PCG64(99))
+        first = sampler.sample_blocks([conds[0]], [rng_a])[0]
+        second = sampler.sample_blocks([conds[1]], [rng_a])[0]
+        rng_b = np.random.Generator(np.random.PCG64(99))
+        np.testing.assert_array_equal(first, sampler.sample_block(conds[0], rng_b))
+        np.testing.assert_array_equal(second, sampler.sample_block(conds[1], rng_b))
+
+    def test_a_fixed_width_is_invariant_to_batch_composition(self, dataset):
+        """The property the whole design rests on (measured, then pinned): at a
+        FIXED batch width a row's output depends only on that row — not on its
+        position, its neighbours, or how much of the batch is zero padding."""
+        torch.manual_seed(0)
+        model = df.ConditionalDenoiser(SMALL)
+        wide = df.DiffusionBlockSampler(
+            model,
+            dataset.standardization,
+            dataset.factor_names,
+            trained_fingerprint=bridge.contract_fingerprint(),
+            block_batch=8,
+        )
+        conds = self._conds(8, seed=17)
+        seeds = list(range(50, 58))
+
+        def draw(subset):
+            return wide.sample_blocks(
+                [conds[i] for i in subset],
+                [np.random.Generator(np.random.PCG64(seeds[i])) for i in subset],
+            )
+
+        full = draw(range(8))
+        # a short batch is zero-padded up to the width: the real rows are unchanged
+        np.testing.assert_array_equal(draw([0, 1, 2]), full[[0, 1, 2]])
+        # ...and so is a single row, wherever it sat before
+        np.testing.assert_array_equal(draw([5]), full[[5]])
+        # ...and reordering the batch just reorders the answers
+        np.testing.assert_array_equal(draw([7, 0, 3]), full[[7, 0, 3]])
+
+    def test_end_to_end_width_1_reproduces_the_unbatched_driver(self, dataset, tmp_path_factory):
+        """The legacy-equivalence anchor: an ensemble assembled through the
+        batched driver at width 1 is bit-identical to one assembled by a sampler
+        that does not advertise sample_blocks at all (so the bridge falls back to
+        the committed per-decade, per-block loop)."""
+        from ah.gen.joinery.assemble import JoineryConfig, assemble_decades
+        from joinery_common import make_climate_artifact, make_regimes_artifact, make_source
+
+        torch.manual_seed(0)
+        model = df.ConditionalDenoiser(SMALL)
+        batched = df.DiffusionBlockSampler(
+            model,
+            dataset.standardization,
+            dataset.factor_names,
+            trained_fingerprint=bridge.contract_fingerprint(),
+            block_batch=1,
+        )
+
+        class _Unbatched:  # the WP2.8 interface, exactly: no sample_blocks
+            factor_names = batched.factor_names
+            block_months = batched.block_months
+
+            def sample_block(self, cond, rng):
+                return batched.sample_block(cond, rng)
+
+        legacy = _Unbatched()
+        assert not isinstance(legacy, bridge.BatchedBlockSampler)
+
+        base = tmp_path_factory.mktemp("width1")
+        climate = make_climate_artifact(base / "clim", t_months=480, state_noise=0.05)
+        regimes = make_regimes_artifact(base / "reg")
+        source = make_source(n_rows=240)
+        kw = dict(
+            climate=climate,
+            regimes_artifact=regimes,
+            source=source,
+            n_decades=3,
+            seed=4242,
+            months=24,
+            config=JoineryConfig(acceptance_filter=False),
+        )
+        a = assemble_decades(sampler=batched, **kw)  # type: ignore[arg-type]
+        b = assemble_decades(sampler=legacy, **kw)  # type: ignore[arg-type]
+        np.testing.assert_array_equal(a.paths, b.paths)
+
+    def test_cross_width_divergence_is_float32_round_off_not_identity(self, dataset):
+        """DELIBERATELY NOT an identity assertion. The float32 GEMM the denoiser
+        is built from is not batch-size invariant on any backend measured (CPU
+        and CUDA both change a row's output at batch 2 already), so widths cannot
+        agree bit for bit. This pins the SIZE of the disagreement — round-off,
+        not behaviour — so a regression that actually changes the model shows up.
+        """
+        torch.manual_seed(0)
+        model = df.ConditionalDenoiser(SMALL)
+        conds = self._conds(8, seed=23)
+        seeds = list(range(70, 78))
+
+        def draw(width):
+            s = df.DiffusionBlockSampler(
+                model,
+                dataset.standardization,
+                dataset.factor_names,
+                trained_fingerprint=bridge.contract_fingerprint(),
+                block_batch=width,
+            )
+            return s.sample_blocks(conds, [np.random.Generator(np.random.PCG64(k)) for k in seeds])
+
+        narrow, wide = draw(1), draw(8)
+        scale = np.maximum(np.abs(narrow), 1e-6)
+        assert float(np.max(np.abs(narrow - wide) / scale)) < 1e-3
+
+    def test_the_batch_width_is_recorded_in_the_ensemble_lineage(self, dataset, tmp_path_factory):
+        from ah.gen.joinery.assemble import JoineryConfig, assemble_decades
+        from joinery_common import make_climate_artifact, make_regimes_artifact, make_source
+
+        torch.manual_seed(0)
+        model = df.ConditionalDenoiser(SMALL)
+        s = df.DiffusionBlockSampler(
+            model,
+            dataset.standardization,
+            dataset.factor_names,
+            trained_fingerprint=bridge.contract_fingerprint(),
+            block_batch=4,
+        )
+        base = tmp_path_factory.mktemp("lineage")
+        ens = assemble_decades(
+            climate=make_climate_artifact(base / "clim", t_months=480, state_noise=0.05),
+            regimes_artifact=make_regimes_artifact(base / "reg"),
+            source=make_source(n_rows=240),
+            n_decades=2,
+            seed=7,
+            months=24,
+            sampler=s,
+            config=JoineryConfig(acceptance_filter=False),
+        )
+        assert ens.meta.conditioning["block_sampler_batch"] == 4
+        assert ens.meta.conditioning["block_sampler_device"] == "cpu"
+
+    def test_a_decades_path_is_independent_of_how_many_decades_share_the_run(
+        self, dataset, tmp_path_factory
+    ):
+        """What the acceptance filter needs: a replacement decade regenerated on
+        its own must be the decade the full ensemble would have produced. Padding
+        to a fixed width is what preserves that under batching."""
+        from ah.gen.joinery.assemble import JoineryConfig, assemble_decades
+        from joinery_common import make_climate_artifact, make_regimes_artifact, make_source
+
+        torch.manual_seed(0)
+        model = df.ConditionalDenoiser(SMALL)
+        s = df.DiffusionBlockSampler(
+            model,
+            dataset.standardization,
+            dataset.factor_names,
+            trained_fingerprint=bridge.contract_fingerprint(),
+            block_batch=4,
+        )
+        base = tmp_path_factory.mktemp("nindep")
+        kw = dict(
+            climate=make_climate_artifact(base / "clim", t_months=480, state_noise=0.05),
+            regimes_artifact=make_regimes_artifact(base / "reg"),
+            source=make_source(n_rows=240),
+            seed=31337,
+            months=24,
+            sampler=s,
+            config=JoineryConfig(acceptance_filter=False),
+        )
+        few = assemble_decades(n_decades=2, **kw)  # type: ignore[arg-type]
+        many = assemble_decades(n_decades=5, **kw)  # type: ignore[arg-type]
+        np.testing.assert_array_equal(few.paths, many.paths[:2])
 
 
 class TestRegistry:

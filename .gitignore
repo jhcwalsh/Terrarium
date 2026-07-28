@@ -49,6 +49,10 @@ experiments/
 # parameters and quotes the numbers, so the JSON is a local check, not an artifact.
 /reference-run*.json
 /seal-evidence.json
+# WP2.8b block-batching evidence (scripts/verify_block_batching.py): synthetic
+# artifacts + reference ensembles, reproducible from the script and the pinned
+# checkpoint, so the numbers are quoted in CHANGELOG/progress rather than stored.
+/.verify-block-batching/
 /block-length-window.json
 /mc-error-grid.json
 

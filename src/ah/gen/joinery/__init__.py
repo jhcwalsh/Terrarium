@@ -17,9 +17,13 @@ from ah.gen.joinery.assemble import GENERATOR_ID, JoineryConfig, assemble_decade
 from ah.gen.joinery.bridge import (
     C_B_COMPONENTS,
     C_B_DIM,
+    BatchedBlockSampler,
     BlockConditioning,
     BlockSampler,
     BootstrapBlockSampler,
+    DecadeAssembly,
+    assemble_decade_path,
+    assemble_decade_paths,
 )
 from ah.gen.joinery.reconcile import ReconcileConfig, reconcile_decade
 from ah.gen.joinery.support import SupportReference, build_support_reference, decade_support
@@ -36,15 +40,19 @@ __all__ = [
     "C_B_COMPONENTS",
     "C_B_DIM",
     "GENERATOR_ID",
+    "BatchedBlockSampler",
     "BlockConditioning",
     "BlockSampler",
     "BootstrapBlockSampler",
+    "DecadeAssembly",
     "DecadeWaypoints",
     "JoineryConfig",
     "JoineryError",
     "ReconcileConfig",
     "SourceStats",
     "SupportReference",
+    "assemble_decade_path",
+    "assemble_decade_paths",
     "assemble_decades",
     "build_support_reference",
     "build_waypoints",
