@@ -1,0 +1,110 @@
+# WP2.9 hier-flow-v1 tuning search space — STATED IN ADVANCE, before any trial
+# runs (pre-registration `tuning_protocol`; this file's SHA-256 is recorded in
+# the tuning log's search_header before the first trial, so an after-the-fact
+# edit is visible in the log).
+#
+# THE BUDGET IS 40 FOR THIS SAMPLER. The sealed trial_budget_per_system is
+# "per neural system PER SAMPLER" (tuning_protocol.selection_criterion, which
+# names hier-diffusion-v1 and hier-flow-v1 as separately selected arms of
+# system D). WP2.8 started 32 of its 40 and left 8 unspent; those 8 are NOT
+# available here and none of them is reused. This search draws its own 40.
+#
+# The search is a deterministic random search (PCG64-seeded uniform independent
+# draws over the lists below, de-duplicated by config hash), capped at n_trials
+# <= 40. Scores are validation-fold-only: the generative objective is the
+# FIXED-time-grid rectified-flow velocity objective
+# (ah.gen.blocks.losses.VAL_TIME_GRID, fixed noise seed — identical ruler for
+# every trial regardless of its training time distribution); the auxiliary is
+# the D4 tail elicitability (corrected direction) on blocks generated from each
+# fold's conditioning vectors with the SAME fixed per-fold noise seeds WP2.8
+# used. Selection: the SEALED closed form S = mean_folds(gen) + 1.0 *
+# mean_folds(aux), selection_lambda PINNED at 1.0 (NOT searched here — the
+# lambda_tail below is DN-1.1's TRAINING loss weight, a different quantity),
+# ties broken by lower TRUE sampling NFE (classifier-free guidance costs two
+# network evaluations per step and is logged as such). A trial that crashes
+# still spends budget.
+#
+# A strategy whose generated ES magnitude is non-positive contributes the
+# stated penalty 10.0 to the auxiliary (ah.gen.blocks.losses.
+# NONPOSITIVE_ES_PENALTY) — stated here, in advance, with the space, exactly as
+# WP2.8 stated it.
+#
+# WHY THESE AXES. Three groups.
+#
+# (1) SAMPLER-FAMILY AXES that have no 3a counterpart: `solver` (first- vs
+#     second-order deterministic integration), `eval_nfe` reaching down to 4
+#     (DN-1.1 §II.4 (b) names deterministic FEW-STEP sampling as the reason
+#     this family is co-primary, so the space must actually contain few-step
+#     configurations), and `time_dist` (uniform rectified-flow time vs the
+#     logit-normal reweighting that concentrates training where the velocity
+#     target is hardest).
+#
+# (2) CONDITIONING-STRENGTH AXES, chosen because of a MEASURED finding, not a
+#     hunch: artifacts/wp28/ig-spread-diagnosis.md §4 measured a GENERAL
+#     conditioning attenuation in the trained 3a model — every channel damped
+#     against its historical slope (dw_equity_cum_log 78%, state_pi_star 46%,
+#     dw_log_cpi 39%, h_spread_level_pct 19%, dw_spread_center_pct 14%, regime
+#     one-hot 2%). `cond_noise_std` (which WP2.8's own selection chose > 0),
+#     `cond_dropout` and `guidance_scale` are the three knobs that bear on it,
+#     and 0.0 is in the space for both of the first two so an UNJITTERED,
+#     UNDROPPED arm is reachable. This is a search within the sealed criterion:
+#     no auxiliary loss term is added, nothing outside
+#     `generative_objective + 1.0 * D4_aux` is optimized, and the
+#     conditioning-response table is MEASURED after selection rather than
+#     selected on.
+#
+# (3) SHARED AXES kept at WP2.8's values wherever the two families share a knob
+#     (lr, batch_size, ema_decay, d_model, n_layers, n_heads, dropout,
+#     lambda_tail), so a reader comparing the two search spaces is comparing
+#     like with like and any difference in outcome is not a difference in how
+#     hard each arm was searched.
+#
+# NOT SEARCHED, and why: `guidance_scale` is collapsed to 1.0 by FlowConfig
+# whenever `cond_dropout` is 0 (a null branch that was never trained must not be
+# sampled from), so those draws de-duplicate to a single config hash and spend
+# one unit of budget rather than three.
+
+search_space:
+  # optimization (identical to the WP2.8 space)
+  lr: [0.0001, 0.0003, 0.001]
+  batch_size: [32]
+  ema_decay: [0.999, 0.9995]
+  # architecture (identical to the WP2.8 space)
+  d_model: [96, 128, 192]
+  n_layers: [2, 3, 4]
+  n_heads: [4]
+  dropout: [0.0, 0.1]
+  # the flow family's own axes
+  solver: [euler, heun]
+  time_dist: [uniform, logit_normal]
+  # DN-1.1 lambda_tail — the TRAINING tail-auxiliary weight (searchable)
+  lambda_tail: [0.0, 0.1, 0.3, 1.0]
+  # conditioning strength (the WP2.8 attenuation finding)
+  cond_noise_std: [0.0, 0.05, 0.1]
+  cond_dropout: [0.0, 0.1, 0.2]
+  guidance_scale: [1.0, 1.5, 2.5]
+  # sampling cost at evaluation (the NFE the tie-break reads; even so that
+  # `heun` is expressible at every value)
+  eval_nfe: [4, 8, 16, 32]
+
+# Budget parameters (NOT hyperparameters: identical for every trial). WP2.8
+# measured that its final config converged by step 3,000 at ~42 effective
+# blocks/epoch and was flat after, and recorded that "a shorter final budget is
+# defensible for the flow variant"; the trial cap is nevertheless left at
+# WP2.8's 4,000 so neither arm is searched harder or shallower than the other.
+trial_budget_params:
+  n_trials: 40          # the full sealed trial_budget_per_system for this sampler
+  trial_max_steps: 4000
+  trial_eval_every: 500
+  trial_patience: 3
+  n_rep_eval: 8
+  seed: 20260728
+
+# Final training of the selected config (budget, not searched). Same shape as
+# WP2.8's; the seed differs from WP2.8's 20260727 because it is a different run.
+final:
+  max_steps: 40000
+  eval_every: 1000
+  patience: 8
+  n_rep_eval: 16
+  seed: 20260728

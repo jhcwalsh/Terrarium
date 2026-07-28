@@ -1,5 +1,17 @@
 """WP2.8 train — deterministic training, hashed checkpoints, early stopping on S.
 
+ONE TRAINER, TWO SAMPLER FAMILIES (WP2.9). §WP2.9 requires flow matching to
+share training with diffusion rather than fork it. The seam is two small
+structural protocols, :class:`BlockConfig` and :class:`BlockModel`: a config
+knows how to build its model, a model knows its generative objective and how to
+sample from itself. :func:`train_blocks` is written against those and nothing
+else; ``train_diffusion`` is kept as its 3a-named alias so every WP2.8 caller
+and test is untouched. What the two families share, therefore, is not "similar
+code" but the same code: the determinism block, the epoch sampler, the EMA, the
+conditioning-noise augmentation, the D4 auxiliary path, the sealed early-stopping
+metric, the checkpoint identity, and :func:`evaluate_fold_scores` — the single
+code path behind trial scoring, early stopping and the final report.
+
 Determinism (plan §1, verbatim): ``torch.manual_seed`` + numpy ``PCG64`` for
 data order + ``torch.use_deterministic_algorithms(True)`` + cuDNN flags
 (``deterministic=True``, ``benchmark=False``) + ``CUBLAS_WORKSPACE_CONFIG`` set
@@ -31,7 +43,7 @@ import os
 from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Protocol
 
 import numpy as np
 import torch
@@ -40,21 +52,18 @@ from ah.experiment import config_hash
 from ah.gen.blocks import constraints as ct
 from ah.gen.blocks import data as bd
 from ah.gen.blocks import losses as ls
-from ah.gen.blocks.diffusion import (
-    ConditionalDenoiser,
-    DiffusionConfig,
-    EdmObjective,
-    sample_heun,
-)
 from ah.gen.joinery import bridge
 
 __all__ = [
     "SELECTION_LAMBDA",
+    "BlockConfig",
+    "BlockModel",
     "TrainResult",
     "configure_determinism",
     "evaluate_fold_scores",
     "save_checkpoint",
     "state_dict_sha256",
+    "train_blocks",
     "train_diffusion",
 ]
 
@@ -65,6 +74,47 @@ __all__ = [
 SELECTION_LAMBDA = 1.0
 
 _EVAL_NOISE_SEED = 9_106_001  # fold-eval sampling noise: fixed across trials/evals
+
+
+class BlockModel(Protocol):
+    """What the trainer requires of an L3 network, whatever family it belongs to.
+
+    ``net_call`` is the single network entry the samplers trace and integrate;
+    ``sample`` is the family's DIFFERENTIABLE deterministic sampler (the tail
+    auxiliary backpropagates through it); ``objective_name`` names the
+    generative half of S in the checkpoint meta, because "the generative
+    objective" is a different quantity per family and the sealed protocol
+    requires that to be visible rather than implied.
+    """
+
+    config: Any
+    objective_name: str
+
+    def net_call(self, x: torch.Tensor, s: torch.Tensor, cond: torch.Tensor) -> torch.Tensor: ...
+
+    def make_objective(self) -> ls.GenerativeObjective: ...
+
+    def sample(self, cond: torch.Tensor, noise: torch.Tensor, nfe: int) -> torch.Tensor: ...
+
+
+class BlockConfig(Protocol):
+    """The hyperparameter surface the trainer reads, plus its model factory."""
+
+    block_months: int
+    n_factors: int
+    lr: float
+    weight_decay: float
+    batch_size: int
+    ema_decay: float
+    lambda_tail: float
+    aux_every: int
+    aux_nfe: int
+    cond_noise_std: float
+    eval_nfe: int
+
+    def as_dict(self) -> dict[str, Any]: ...
+
+    def build_model(self) -> Any: ...
 
 
 def configure_determinism(seed: int) -> np.random.Generator:
@@ -90,8 +140,8 @@ def state_dict_sha256(state_dict: dict[str, torch.Tensor]) -> str:
 
 @dataclass
 class TrainResult:
-    model: ConditionalDenoiser  # loaded with the best-S EMA weights
-    config: DiffusionConfig
+    model: Any  # BlockModel, loaded with the best-S EMA weights
+    config: Any  # BlockConfig
     checkpoint_hash: str
     config_hash: str
     best_step: int
@@ -129,26 +179,37 @@ def _units_torch(
 
 
 def evaluate_fold_scores(
-    model: ConditionalDenoiser,
+    model: Any,
     dataset: bd.BlockDataset,
     compiled: tuple[ls.CompiledStrategy, ...],
     *,
     n_rep: int = 8,
     nfe: int | None = None,
     device: str = "cpu",
+    sample_fn: Any = None,
 ) -> dict[str, Any]:
     """Both sealed S terms, per validation fold — ONE code path for early
-    stopping, trial scoring, and the final report.
+    stopping, trial scoring, and the final report, for EVERY sampler family.
 
-    The generative objective is the fixed-sigma-grid denoising objective
-    (:meth:`EdmObjective.validation_objective`); the auxiliary generates
-    ``n_rep`` blocks per fold conditioning vector with FIXED noise (PCG64 seeded
-    per fold, identical across trials and evaluations) and scores the generated
-    (VaR, ES) against the fold's REAL block realizations.
+    The generative objective is the family's own fixed-grid validation objective
+    (``model.make_objective().validation_objective``: the fixed-sigma-grid EDM
+    objective for 3a, the fixed-time-grid velocity objective for 3b — a
+    trial may not choose the ruler it is measured with, but the two FAMILIES'
+    rulers are different quantities and the sealed protocol says so); the
+    auxiliary generates ``n_rep`` blocks per fold conditioning vector with FIXED
+    noise (PCG64 seeded per fold, identical across trials, evaluations AND
+    families) and scores the generated (VaR, ES) against the fold's REAL block
+    realizations.
+
+    ``sample_fn`` overrides ``model.sample`` for the auxiliary's generation step.
+    Training and the sealed selection never pass it; WP2.9's bake-off does, so a
+    guidance-ablation arm is scored with the sampler it is actually reported at
+    instead of silently inheriting the selected arm's numbers.
     """
     model = model.to(device).eval()
     config = model.config
-    objective = EdmObjective(model, config)
+    objective = model.make_objective()
+    sample_fn = model.sample if sample_fn is None else sample_fn
     nfe = int(config.eval_nfe if nfe is None else nfe)
     std = dataset.standardization
 
@@ -167,9 +228,7 @@ def evaluate_fold_scores(
         noise = rng.standard_normal((n_rep * n_blocks, config.block_months, config.n_factors))
         cond_rep = cond.repeat(n_rep, 1)
         with torch.no_grad():
-            z = sample_heun(
-                model, cond_rep, torch.as_tensor(noise, dtype=torch.float32, device=device), nfe
-            )
+            z = sample_fn(cond_rep, torch.as_tensor(noise, dtype=torch.float32, device=device), nfe)
         gen_units = ct.panel_to_constrained(
             std.destandardize_x(z.double().cpu().numpy()), dataset.factor_names
         )
@@ -192,9 +251,9 @@ def evaluate_fold_scores(
     }
 
 
-def train_diffusion(
+def train_blocks(
     dataset: bd.BlockDataset,
-    config: DiffusionConfig,
+    config: Any,
     *,
     seed: int,
     max_steps: int,
@@ -204,17 +263,19 @@ def train_diffusion(
     n_rep_eval: int = 8,
     log: Callable[[str], None] | None = None,
 ) -> TrainResult:
-    """Train one 3a model deterministically; early-stop on validation S.
+    """Train one L3 model of ANY sampler family deterministically; early-stop on S.
 
     See the module docstring for the determinism and early-stopping contracts.
     ``max_steps``/``eval_every``/``patience`` are BUDGET parameters, not searched
-    hyperparameters: trials use a short cap, the final run a long one.
+    hyperparameters: trials use a short cap, the final run a long one. The family
+    enters only through ``config.build_model()`` and the resulting
+    :class:`BlockModel`'s ``make_objective``/``sample``.
     """
     rng = configure_determinism(seed)
     torch_gen = torch.Generator(device=device).manual_seed(seed + 1)
 
-    model = ConditionalDenoiser(config).to(device)
-    objective = EdmObjective(model, config)
+    model = config.build_model().to(device)
+    objective = model.make_objective()
     compiled, _ = ls.compile_block_strategies(dataset.factor_names, dataset.block_months)
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=config.lr, weight_decay=config.weight_decay
@@ -255,7 +316,7 @@ def train_diffusion(
         loss = objective.training_loss(x, cond, torch_gen)
         if config.lambda_tail > 0.0 and step % config.aux_every == 0:
             noise = torch.randn(x.shape, generator=torch_gen, device=device)
-            z_gen = sample_heun(model, cond, noise, config.aux_nfe)
+            z_gen = model.sample(cond, noise, config.aux_nfe)
             gen_units = _units_torch(z_gen, std, dataset.factor_names)
             real_units = _units_torch(x, std, dataset.factor_names)
             aux = ls.tail_auxiliary_torch(gen_units, real_units, compiled)
@@ -268,7 +329,7 @@ def train_diffusion(
         ema.update(model)
 
         if step % eval_every == 0 or step == max_steps:
-            eval_model = ConditionalDenoiser(config).to(device)
+            eval_model = config.build_model().to(device)
             eval_model.load_state_dict(ema.shadow)
             scores = evaluate_fold_scores(
                 eval_model, dataset, compiled, n_rep=n_rep_eval, device=device
@@ -301,7 +362,7 @@ def train_diffusion(
                     break
 
     assert best_state is not None and best_scores is not None
-    final = ConditionalDenoiser(config)
+    final = config.build_model()
     final.load_state_dict({k: v.cpu() for k, v in best_state.items()})
     return TrainResult(
         model=final,
@@ -318,6 +379,12 @@ def train_diffusion(
         stopped_early=stopped_early,
         steps_run=step,
     )
+
+
+#: WP2.8's name for :func:`train_blocks`, kept so every 3a caller and test is
+#: untouched by WP2.9's generalization (the function was always family-generic
+#: except for three constructor lines).
+train_diffusion = train_blocks
 
 
 def save_checkpoint(
@@ -344,9 +411,11 @@ def save_checkpoint(
         "per_fold_aux": result.per_fold_aux,
         "stopped_early": result.stopped_early,
         "steps_run": result.steps_run,
+        "generative_objective": getattr(result.model, "objective_name", "generative objective"),
         "early_stopping_metric": (
-            "sealed S = mean_folds(fixed-sigma-grid EDM objective) + 1.0 * "
-            "mean_folds(D4 tail elicitability auxiliary), on EMA weights"
+            f"sealed S = mean_folds("
+            f"{getattr(result.model, 'objective_name', 'generative objective')}) + 1.0 * "
+            f"mean_folds(D4 tail elicitability auxiliary), on EMA weights"
         ),
     }
     if extra_meta:

@@ -7,6 +7,113 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.9 — Layer 3b: conditional flow matching / rectified flow, CO-PRIMARY
+  with diffusion (DN-1.1 §II.4 (b)). New code only under `ah/gen/blocks/`, plus
+  tests, configs and scripts; no sealed judged source touched, zero amendments,
+  `ah.gen` still never imports `ah.eval`, no new dependency.**
+  - `gen/blocks/flow.py` (new): `FlowConfig`, `ConditionalVelocityField`,
+    `FlowMatchingObjective`, `flow_integrate`, `FlowBlockSampler`, `HierFlowV1`
+    and the registered `hier-flow-v1` factory (which pins the checkpoint hash,
+    the `cb-v1` fingerprint and both L1/L2 artifact SHAs exactly as
+    `hier-diffusion-v1` does). Rectified flow in its straight-line form:
+    `x_t = (1-t)x_0 + t x_1`, constant conditional target `x_1 - x_0`,
+    deterministic Euler or Heun integration from noise to data. Two sampler axes
+    with no 3a counterpart — `solver` and few-step `eval_nfe` — plus a LEARNED
+    NULL CONDITIONING VECTOR enabling classifier-free guidance (`cond_dropout`
+    at training, `guidance_scale` at sampling).
+  - **Guidance is counted honestly.** CFG costs two network evaluations per
+    step, so `FlowConfig.sampling_nfe` reports the doubled figure and the tuning
+    log records the TRUE NFE — otherwise the sealed tie-break on sampling cost
+    would prefer a sampler that is twice as expensive. `FlowConfig` also
+    collapses `guidance_scale` to 1.0 whenever `cond_dropout` is 0 (a null
+    branch that was never trained must not be sampled from), *before* the config
+    is hashed, so the sealed budget is not spent twice on the same model.
+    `FlowBlockSampler(guidance_scale=...)` and `sample(..., guidance_scale=...)`
+    override the checkpoint's own setting so the SAME checkpoint can be scored
+    and reported with and without guidance.
+  - **Shared, not forked.** `train.py` gained two structural protocols
+    (`BlockConfig`, `BlockModel`), a family-generic `train_blocks`, and an
+    optional `sample_fn` on `evaluate_fold_scores`; `train_diffusion` is now an
+    alias, so every WP2.8 caller and test is unchanged. `tuning.py` takes a
+    `config_cls`, so both arms run the same protocol code — the same budget
+    accounting, the same log validation, the same closed-form selection with the
+    same PINNED lambda — over their own logs. `diffusion.py` gained
+    `TorchBlockSampler` (all the WP2.8b sampler machinery: fingerprint refusal,
+    RNG contract, fixed-width/zero-padded batching, batch-1 tracing, output
+    map), `HierBlockSystem` (now with a `guidance=` hook parameter recorded in
+    ensemble lineage), and public `Attention`/`TransformerBlock`/`COND_GROUPS`.
+    `ConditionalDenoiser` itself is structurally untouched — its `state_dict`
+    keys are inside the pinned WP2.8 checkpoint hash, and that pin still
+    verifies, as do WP2.8's final gen/aux numbers through the new trainer.
+  - `gen/blocks/bakeoff.py` + `scripts/run_sampler_bakeoff.py` (new): the
+    like-for-like harness, in library form so WP2.10 drives both arms of
+    ablation system D from one call. Reports both terms of S separately per arm
+    with their scales (the sealed `tuning_protocol` consequence, wired in rather
+    than left to the writer — `INCOMPARABILITY_NOTE` is printed above every
+    table and no cross-arm S ranking is produced), true NFE per block, blocks/s,
+    s/decade and s/10k decades at a declared width and device, and the
+    `artifacts/wp28/ig-spread-diagnosis.md` §4 conditioning-response measurement
+    generalized over an arbitrary sampler.
+  - `configs/wp29-flow-search-v1.yaml` (new): the search space stated in
+    advance, its SHA-256 recorded in the log header before the first trial. The
+    budget is the sealed 40 **for this sampler** — WP2.8's 8 unspent trials are
+    not inherited and are not used. Shared knobs are held at WP2.8's values so
+    neither arm is searched harder than the other; the three
+    conditioning-strength axes (`cond_noise_std`, `cond_dropout`,
+    `guidance_scale`, each with a neutral value in the space) are there because
+    of WP2.8's MEASURED conditioning attenuation, and they are searched inside
+    the sealed criterion — no auxiliary term is added and nothing outside
+    `generative_objective + 1.0 * D4_aux` is optimized.
+  - `scripts/run_flow_tuning.py`, `scripts/train_flow_final.py` (new): the 3a
+    scripts with the config class swapped. Both wait politely for the DuckDB
+    catalog's exclusive file lock rather than racing another Step-2 job for it.
+    `scripts/verify_block_batching.py` gained `--arm` (default unchanged), so
+    the WP2.8b batching evidence is produced for either family by one script.
+  - **Campaign results** (full evidence in `artifacts/wp29/`). Search: **40/40
+    trials started, 40 completed, 0 crashed**, 2 h 58 m on the RTX 3080, on the
+    byte-identical WP2.8 dataset (367 raw blocks, ~42 effective/epoch, folds
+    35/35/35). Selected `cfg:5943f6cd2f6f1048` — d_model 192 / 4 layers,
+    **Euler at NFE 4**, `cond_dropout` 0.2, `guidance_scale` 1.0,
+    `cond_noise_std` 0.1, `lambda_tail` 0.3 — at S = −1.833365 = gen 1.511200 +
+    1.0·(−3.344565). Final training 13,000 steps / 926 s, early-stopped at step
+    5,000, S = −1.765125 = gen 1.644183 + 1.0·(−3.409308); checkpoint
+    `b1fe26e1…`, same-device CUDA bit-determinism verified, peak GPU memory
+    140 MiB. Both S terms are reported separately with their scales per sampler
+    and **no cross-arm S ranking is stated** — but the auxiliary term IS on one
+    scale, and 3b's −3.409 beats 3a's −3.264. Sampling cost at width 128 on
+    CUDA: **NFE 4 vs 31; 92 s vs 744 s per 10k decades on block sampling; 359 s
+    vs 1,656 s per 10k decades end to end through the joinery (4.6×)**.
+    λ = 1.0 made 3a's selection auxiliary-dominated (aux/gen sd 2.11×,
+    corr(S,aux) 0.911, argmin S = argmin aux) and 3b's genuinely joint (1.14×,
+    0.644, argmin S is neither term's) — the seal's own stated limitation, now
+    quantified per arm.
+  - **Guidance ablation** (same checkpoint, guidance 1.0 → 1.5 → 2.5): every
+    conditioning channel strengthens (`dw_equity_cum_log` 69% → 96% → 144%,
+    `dw_spread_center_pct` 19% → 25% → 32%, `h_spread_level_pct` 15% → 20% →
+    30%, regime one-hot 3% → 5% → 8%) while the D4 tail auxiliary degrades
+    monotonically (−3.409 → −3.302 → −3.118) at 2× the NFE. Reported both ways;
+    the sealed criterion, which sees only `gen + 1.0·aux`, selected guidance
+    off. The joinery `bridge.GuidanceHook` is plumbed and recorded in lineage
+    but NOT activated — `cb-v1` carries no waypoint LEVEL, so the hook's frozen
+    signature cannot express a band-centre correction at all, and any
+    post-hoc-repair arm must be evaluated against a settled `ig_spread` band.
+  - **Correction to WP2.8b's batch-composition claim.** WP2.8b recorded that a
+    row's sampler output "depends only on that row and on the width — never on
+    its position in the batch"; its test asserted permutation invariance using a
+    fixture whose output head is zero-initialized, i.e. a network that emits
+    identically zero, for which the claim is vacuous. Measured on networks with
+    weights (both families, CPU oneDNN and CUDA alike): holding a row at its own
+    batch index is EXACT — isolating it with every other row zeroed reproduces
+    the full batch bit for bit — but MOVING it to a different index changes its
+    output by ~2.4e-7, the same float32 GEMM round-off WP2.8b already measured
+    across widths. The index-preserving property is the one `sample_blocks`'
+    fixed-width chunking delivers (decade `m` is always row `m % width`) and the
+    one the acceptance filter and the ensemble digest rely on.
+    `TorchBlockSampler`'s docstring now states the true property, and
+    `tests/test_blocks_diffusion.py`'s composition test was STRENGTHENED — it
+    now runs on a network with weights and asserts index-preserving exactness
+    plus a bounded reorder divergence, rather than a stronger claim on a trivial
+    model. No behaviour changed and no committed number moves.
 - **WP2.7b — the `ig_spread` waypoint band half-width is REGIME-CONDITIONAL
   (a WP2.7 correction; nothing sealed touched, no retraining, `beta_L` and
   `cb-v1` unchanged).**

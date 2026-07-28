@@ -13,6 +13,11 @@ and batch 2 on both CPU and CUDA). This script is how that claim is evidenced.
 
     uv run python scripts/verify_block_batching.py --widths 1 8 64 --decades 20
     uv run python scripts/verify_block_batching.py --device cuda --widths 1024
+
+WP2.9 added ``--arm``: the same evidence is produced for either L3 sampler
+family through ``ah.gen.blocks.bakeoff.build_sampler``. The default is
+``hier-diffusion-v1``, so every WP2.8b invocation above behaves exactly as it
+did.
 """
 
 from __future__ import annotations
@@ -29,8 +34,6 @@ import numpy as np
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(_REPO_ROOT / "tests"))
 
-from ah.gen.blocks import diffusion as df  # noqa: E402
-from ah.gen.joinery import bridge  # noqa: E402
 from ah.gen.joinery.assemble import JoineryConfig, assemble_decades  # noqa: E402
 from joinery_common import (  # noqa: E402
     make_climate_artifact,
@@ -54,6 +57,7 @@ def main() -> None:
     p.add_argument("--filter", action="store_true", help="run with the acceptance filter on")
     p.add_argument("--out", type=Path, default=None, help="write the width-1 paths here (.npy)")
     p.add_argument("--against", type=Path, default=None, help="compare width-1 to this .npy")
+    p.add_argument("--arm", default="hier-diffusion-v1", help="which L3 sampler family (WP2.9)")
     args = p.parse_args()
 
     if args.device.startswith("cuda"):
@@ -70,8 +74,9 @@ def main() -> None:
     regimes = make_regimes_artifact(scratch / "reg")
     source = make_source(n_rows=240)
 
-    model, std, meta = df.load_checkpoint(df.DEFAULT_CHECKPOINT)
-    print(f"checkpoint {meta['checkpoint_hash'][:16]}  device={args.device}")
+    from ah.gen.blocks import bakeoff as bo
+
+    print(f"arm {args.arm}  device={args.device}")
     print(f"{args.decades} decades x {args.months} months, seed {args.seed}, filter={args.filter}")
 
     reference: np.ndarray | None = None
@@ -80,14 +85,14 @@ def main() -> None:
 
     print(f"\n{'width':>6} {'wall s':>9} {'sha256(paths)':>18}  divergence vs width 1")
     for width in args.widths:
-        sampler = df.DiffusionBlockSampler(
-            model,
-            std,
-            tuple(source.factor_names),
-            trained_fingerprint=bridge.contract_fingerprint(),
+        sampler, meta = bo.build_sampler(
+            args.arm,
             device=args.device,
             block_batch=width,
+            factor_names=tuple(source.factor_names),
         )
+        if width == args.widths[0]:
+            print(f"checkpoint {meta['checkpoint_hash'][:16]}  nfe/block {sampler.nfe_per_block}")
         t0 = time.perf_counter()
         ens = assemble_decades(
             climate=climate,

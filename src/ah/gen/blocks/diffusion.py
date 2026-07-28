@@ -33,6 +33,28 @@ per seed.
 the trained checkpoint hash, the c_b contract fingerprint, and the L1/L2
 artifact SHAs (raising on any mismatch) — the lineage claim every ensemble
 makes.
+
+WHAT WP2.9 REUSES FROM THIS MODULE (recorded, so the reuse is visible rather
+than archaeological). §WP2.9 says flow matching sits "behind the identical
+interface, sharing data/constraints/losses/training/tuning". Three pieces of
+*sampler* machinery are shared too, and they live here because this is where
+WP2.8b measured and pinned their properties:
+
+* :class:`TorchBlockSampler` — the fixed-width/zero-padded batched
+  ``BlockSampler`` implementation, the batch-1 tracing policy, the c_b
+  fingerprint refusal, and the de-standardize/constrain output map. A sampler
+  family supplies only ``_integrate``.
+* :class:`HierBlockSystem` — the ablation-system-D wrapper around
+  ``assemble_decades``. A family supplies only ``generator_id`` and its
+  system description.
+* :class:`Attention` / :class:`TransformerBlock` / :data:`COND_GROUPS` — the
+  backbone layers. :class:`ConditionalDenoiser` itself is NOT refactored: its
+  ``state_dict`` key names are inside the pinned checkpoint hash, so the class
+  is structurally frozen and WP2.9 composes the same layers into its own net.
+
+The alternative was a new shared module; it was not taken because the plan's
+§2 package layout names ``blocks/`` contents explicitly and the shared pieces
+are exactly the ones WP2.8b already documented here.
 """
 
 from __future__ import annotations
@@ -57,22 +79,32 @@ from ah.gen.joinery import bridge
 from ah.gen.joinery.waypoints import JoineryError
 
 __all__ = [
+    "COND_GROUPS",
     "GENERATOR_ID",
+    "Attention",
     "ConditionalDenoiser",
     "DiffusionBlockSampler",
     "DiffusionConfig",
     "EdmObjective",
+    "HierBlockSystem",
     "HierDiffusionV1",
+    "TorchBlockSampler",
+    "TransformerBlock",
     "heun_integrate",
     "hier_diffusion_v1_factory",
     "karras_sigmas",
     "load_checkpoint",
     "sample_heun",
+    "sinusoidal_embedding",
 ]
 
 GENERATOR_ID = "hier-diffusion-v1"
 
-_COND_GROUPS: tuple[tuple[int, int], ...] = ((0, 6), (6, 11), (11, 14), (14, 18))
+#: The c_b slices that become one cross-attention context token each: regime
+#: one-hot, s_t snapshot, h_t trailing summary, Δw increments. Shared with
+#: WP2.9's velocity field so both samplers read the frozen contract identically.
+COND_GROUPS: tuple[tuple[int, int], ...] = ((0, 6), (6, 11), (11, 14), (14, 18))
+_COND_GROUPS = COND_GROUPS  # historical private alias (WP2.8)
 
 
 @dataclass(frozen=True)
@@ -114,8 +146,12 @@ class DiffusionConfig:
     def as_dict(self) -> dict[str, Any]:
         return {k: getattr(self, k) for k in sorted(self.__dataclass_fields__)}
 
+    def build_model(self) -> ConditionalDenoiser:
+        """The family's model factory (:class:`ah.gen.blocks.train.BlockConfig`)."""
+        return ConditionalDenoiser(self)
 
-class _Attention(nn.Module):
+
+class Attention(nn.Module):
     """Hand-rolled multi-head attention (deterministic softmax matmuls)."""
 
     def __init__(self, d_model: int, n_heads: int) -> None:
@@ -144,13 +180,15 @@ class _Attention(nn.Module):
         return self.out(merged)
 
 
-class _Block(nn.Module):
+class TransformerBlock(nn.Module):
+    """Pre-norm self-attention + cross-attention onto c_b + MLP."""
+
     def __init__(self, d_model: int, n_heads: int, ffn_mult: int, dropout: float) -> None:
         super().__init__()
         self.ln1 = nn.LayerNorm(d_model)
-        self.self_attn = _Attention(d_model, n_heads)
+        self.self_attn = Attention(d_model, n_heads)
         self.lnc = nn.LayerNorm(d_model)
-        self.cross_attn = _Attention(d_model, n_heads)
+        self.cross_attn = Attention(d_model, n_heads)
         self.ln2 = nn.LayerNorm(d_model)
         self.mlp = nn.Sequential(
             nn.Linear(d_model, ffn_mult * d_model),
@@ -167,8 +205,26 @@ class _Block(nn.Module):
         return x + self.drop(self.mlp(self.ln2(x)))
 
 
+_Attention = Attention  # historical private aliases (WP2.8); kept so the
+_Block = TransformerBlock  # module's own history reads straight.
+
+
+def sinusoidal_embedding(scalar: torch.Tensor, freq: torch.Tensor) -> torch.Tensor:
+    """``[sin(s*f), cos(s*f)]`` for a ``(B,)`` scalar against ``(d/2,)`` frequencies."""
+    ang = scalar[:, None] * freq[None, :]
+    return torch.cat([torch.sin(ang), torch.cos(ang)], dim=-1)
+
+
 class ConditionalDenoiser(nn.Module):
-    """F_θ inside the EDM preconditioning; also exposes the full D(x; sigma, c)."""
+    """F_θ inside the EDM preconditioning; also exposes the full D(x; sigma, c).
+
+    STRUCTURALLY FROZEN: the ``state_dict`` key names below are inside
+    :data:`PINNED_CHECKPOINT_SHA256`. WP2.9 composes the same layer classes into
+    its own network rather than refactoring this one.
+    """
+
+    #: What the checkpoint meta records as the S-term's generative half.
+    objective_name = "fixed-sigma-grid EDM denoising objective"
 
     def __init__(self, config: DiffusionConfig) -> None:
         super().__init__()
@@ -179,9 +235,9 @@ class ConditionalDenoiser(nn.Module):
         self.sigma_mlp = nn.Sequential(nn.Linear(d, d), nn.GELU(), nn.Linear(d, d))
         freq = torch.exp(torch.linspace(0.0, math.log(1000.0), d // 2))
         self.register_buffer("freq", freq)
-        self.cond_proj = nn.ModuleList(nn.Linear(hi - lo, d) for lo, hi in _COND_GROUPS)
+        self.cond_proj = nn.ModuleList(nn.Linear(hi - lo, d) for lo, hi in COND_GROUPS)
         self.blocks = nn.ModuleList(
-            _Block(d, config.n_heads, config.ffn_mult, config.dropout)
+            TransformerBlock(d, config.n_heads, config.ffn_mult, config.dropout)
             for _ in range(config.n_layers)
         )
         self.ln_out = nn.LayerNorm(d)
@@ -190,8 +246,7 @@ class ConditionalDenoiser(nn.Module):
         nn.init.zeros_(self.out.bias)
 
     def _sigma_embedding(self, c_noise: torch.Tensor) -> torch.Tensor:
-        ang = c_noise[:, None] * self.freq[None, :]
-        return self.sigma_mlp(torch.cat([torch.sin(ang), torch.cos(ang)], dim=-1))
+        return self.sigma_mlp(sinusoidal_embedding(c_noise, self.freq))
 
     def forward(
         self, x_in: torch.Tensor, c_noise: torch.Tensor, cond: torch.Tensor
@@ -199,8 +254,7 @@ class ConditionalDenoiser(nn.Module):
         """F_θ: ``x_in`` (B, L, F) preconditioned input; ``cond`` (B, 18) standardized."""
         sig = self._sigma_embedding(c_noise)  # (B, d)
         tokens = [
-            proj(cond[:, lo:hi])
-            for proj, (lo, hi) in zip(self.cond_proj, _COND_GROUPS, strict=True)
+            proj(cond[:, lo:hi]) for proj, (lo, hi) in zip(self.cond_proj, COND_GROUPS, strict=True)
         ]
         context = torch.stack([*tokens, sig], dim=1)  # (B, 5, d)
         h = self.x_proj(x_in) + self.pos[None, :, :] + sig[:, None, :]
@@ -217,6 +271,19 @@ class ConditionalDenoiser(nn.Module):
         c_in = 1.0 / torch.sqrt(s2 + sd**2)
         c_noise = torch.log(sigma) / 4.0
         return c_skip * x + c_out * self.forward(c_in * x, c_noise, cond)
+
+    # -- the shared BlockModel surface (ah.gen.blocks.train.BlockModel) ------ #
+
+    def net_call(self, x: torch.Tensor, s: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
+        """The one network entry the sampler traces and integrates: D(x; sigma, c)."""
+        return self.denoise(x, s, cond)
+
+    def make_objective(self) -> EdmObjective:
+        return EdmObjective(self, self.config)
+
+    def sample(self, cond: torch.Tensor, noise: torch.Tensor, nfe: int) -> torch.Tensor:
+        """Differentiable probability-flow sampling (the training aux path uses it)."""
+        return heun_integrate(self.net_call, self.config, cond, noise, nfe)
 
 
 class EdmObjective:
@@ -323,8 +390,15 @@ def sample_heun(
 # --------------------------------------------------------------------------- #
 
 
-class DiffusionBlockSampler:
-    """The trained 3a sampler behind the frozen joinery ``BlockSampler`` protocol.
+class TorchBlockSampler:
+    """Shared torch ``BlockSampler`` machinery for every L3 sampler family.
+
+    WP2.8 wrote this for diffusion; WP2.9 reuses it verbatim for flow matching
+    (a family supplies only :meth:`_integrate`). Everything the joinery and the
+    acceptance filter depend on lives here, once: the c_b fingerprint refusal,
+    the noise-drawing contract, the fixed-width/zero-padded batching, the
+    batch-1 tracing policy, and the de-standardize + constraint-inverse output
+    map.
 
     Refuses to construct when the checkpoint's cb-v1 contract fingerprint
     differs from this runtime's (a sampler conditioned on a different contract
@@ -333,17 +407,33 @@ class DiffusionBlockSampler:
     mapped back through de-standardization and the constraint inverse — floors
     hold by construction for ANY model output.
 
-    BATCH WIDTH (WP2.8b). ``block_batch`` is how many decades' blocks one network
-    evaluation carries. It is a FIXED width, not "however many decades happen to
-    be in flight": :meth:`sample_blocks` chunks its input into ``block_batch``-row
-    batches and zero-pads the last one. Two properties come out of that, both
-    measured and both pinned by test:
+    BATCH WIDTH (WP2.8b, corrected by WP2.9 — see below). ``block_batch`` is how
+    many decades' blocks one network evaluation carries. It is a FIXED width, not
+    "however many decades happen to be in flight": :meth:`sample_blocks` chunks
+    its input into ``block_batch``-row batches and zero-pads the last one. Two
+    properties come out of that, both measured and both pinned by test:
 
-    * a row's output depends only on that row and on the width — never on its
-      position in the batch, its neighbours, or how much of the batch is padding.
-      So a decade's path is the same whether it is generated alone (as the
-      acceptance filter regenerates replacements) or inside a 1024-decade run;
+    * a row's output depends only on that row, on the width, and on its ROW
+      INDEX WITHIN THE BATCH — never on its neighbours and never on how much of
+      the batch is padding. Chunking maps decade ``m`` to row ``m % width`` for
+      every run, so a decade's path is the same whether it is generated in a
+      2-decade run or a 1024-decade one;
     * the ensemble is a deterministic function of (seed, width) alone.
+
+    WP2.9 CORRECTION, stated because WP2.8b's wording overreached and its test
+    could not catch it. WP2.8b claimed a row's output is independent of its
+    POSITION too, and asserted it with a fixture whose output head is
+    zero-initialized — i.e. a network that emits identically zero, for which any
+    such claim is vacuous. Measured on a network with non-zero weights (both
+    families, CPU oneDNN and CUDA alike): moving a row to a different index
+    within the same width changes its output by ~2.4e-7 absolute, the same
+    float32 GEMM round-off WP2.8b measured across widths. Holding the index
+    fixed is EXACT — isolating any single row at its own index, with every other
+    row zeroed, reproduces the full batch's value bit for bit. The invariant the
+    acceptance filter and the ensemble digest actually rely on is the
+    index-preserving one, and that one holds exactly; the tests now assert the
+    true property on a non-trivial network rather than the stronger one on a
+    trivial one.
 
     ``block_batch=1`` reproduces the per-block WP2.8 path BIT FOR BIT. Wider
     widths cannot: the float32 GEMM this network is built from is not batch-size
@@ -357,7 +447,7 @@ class DiffusionBlockSampler:
 
     def __init__(
         self,
-        model: ConditionalDenoiser,
+        model: Any,
         standardization: Standardization,
         factor_names: tuple[str, ...],
         *,
@@ -387,11 +477,22 @@ class DiffusionBlockSampler:
         self.block_months = int(model.config.block_months)
         self.nfe = int(model.config.eval_nfe if nfe is None else nfe)
         self.block_batch = int(block_batch)
-        # Traced inference graph for the batch-1 path only (see _denoise).
+        # Traced inference graph for the batch-1 path only (see _call_net).
         self._traced: dict[int, Any] = {}
 
-    def _denoise(self, x: torch.Tensor, sigma: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
-        """The denoiser: traced at batch 1, eager above it.
+    # -- what a sampler family supplies ------------------------------------- #
+
+    def _integrate(self, cond: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
+        """Family-specific deterministic integration; returns standardized x."""
+        raise NotImplementedError
+
+    @property
+    def nfe_per_block(self) -> int:
+        """Network evaluations one block costs (what the sealed tie-break reads)."""
+        return int(self.nfe)
+
+    def _call_net(self, x: torch.Tensor, s: torch.Tensor, cond: torch.Tensor) -> torch.Tensor:
+        """The network: traced at batch 1, eager above it.
 
         Tracing exists to strip eager dispatch from a MILLION batch-1 calls, and
         at batch 1 it roughly halves the cost. Above batch 1 the dispatch is
@@ -403,20 +504,20 @@ class DiffusionBlockSampler:
         is the model" is the right side of that. Recorded WP2.8b decision.
         """
         if int(x.shape[0]) != 1:
-            return self._model.denoise(x, sigma, cond)
+            return self._model.net_call(x, s, cond)
         key = int(x.shape[0])
         fn = self._traced.get(key)
         if fn is None:
 
             class _D(torch.nn.Module):
-                def __init__(self, m: ConditionalDenoiser) -> None:
+                def __init__(self, m: Any) -> None:
                     super().__init__()
                     self.m = m
 
                 def forward(
                     self, x: torch.Tensor, s: torch.Tensor, c: torch.Tensor
                 ) -> torch.Tensor:
-                    return self.m.denoise(x, s, c)
+                    return self.m.net_call(x, s, c)
 
             import warnings
 
@@ -424,19 +525,20 @@ class DiffusionBlockSampler:
                 # torch.jit.trace is deprecated in torch 2.13 but remains the
                 # only zero-new-dependency way to strip eager dispatch from a
                 # million batch-1 calls; parity with the eager model is asserted
-                # below. Revisit at WP2.9 if torch.export matures (recorded).
+                # below. WP2.9 re-checked torch.export: it still requires
+                # torch.export.export + an ExportedProgram call path whose
+                # deterministic-op guarantees are not established here, so the
+                # traced path stands (recorded).
                 warnings.simplefilter("ignore", DeprecationWarning)
                 fn = torch.jit.optimize_for_inference(
-                    torch.jit.trace(_D(self._model).eval(), (x, sigma, cond))
+                    torch.jit.trace(_D(self._model).eval(), (x, s, cond))
                 )
-                eager = self._model.denoise(x, sigma, cond)
-                traced = fn(x, sigma, cond)
+                eager = self._model.net_call(x, s, cond)
+                traced = fn(x, s, cond)
                 if float((eager - traced).abs().max()) > 1e-5:
-                    raise JoineryError(
-                        "traced denoiser diverged from the eager model at trace time"
-                    )
+                    raise JoineryError("traced network diverged from the eager model at trace time")
             self._traced[key] = fn
-        return fn(x, sigma, cond)
+        return fn(x, s, cond)
 
     def sample_batch(self, cond_vectors: np.ndarray, noise: np.ndarray) -> np.ndarray:
         """Blocks in FACTOR UNITS for ``(B, 18)`` raw c_b vectors + given noise.
@@ -449,7 +551,7 @@ class DiffusionBlockSampler:
         )
         noise_t = torch.as_tensor(noise, dtype=torch.float32, device=self._device)
         with torch.no_grad():
-            z = heun_integrate(self._denoise, self._model.config, cond, noise_t, self.nfe)
+            z = self._integrate(cond, noise_t)
         z_np = self._std.destandardize_x(z.double().cpu().numpy())
         return ct.panel_to_constrained(z_np, self.factor_names)
 
@@ -491,14 +593,29 @@ class DiffusionBlockSampler:
             pad = width - take
             if pad:
                 # Pad to the fixed width so the real rows see the same batch size
-                # in every call. Rows are independent through this network (no
-                # cross-row op anywhere: attention is within a block, LayerNorm
-                # and softmax are per row), so the padding cannot reach them —
-                # asserted by test, not assumed.
+                # AND the same row index in every call. Rows are independent
+                # through this network (no cross-row op anywhere: attention is
+                # within a block, LayerNorm and softmax are per row), so the
+                # padding cannot reach them — asserted by test, not assumed. What
+                # padding does NOT buy is index independence; see the class
+                # docstring's WP2.9 correction. Chunking at a fixed width is what
+                # keeps decade m at row m % width in every run.
                 chunk_c = np.concatenate([chunk_c, np.zeros((pad, chunk_c.shape[1]))])
                 chunk_n = np.concatenate([chunk_n, np.zeros((pad, self.block_months, n_factors))])
             out[lo:hi] = self.sample_batch(chunk_c, chunk_n)[:take]
         return out
+
+
+class DiffusionBlockSampler(TorchBlockSampler):
+    """The trained 3a sampler: :func:`heun_integrate` over the EDM sigma schedule.
+
+    Everything else — the fingerprint refusal, the RNG contract, the fixed-width
+    batching, the output map — is :class:`TorchBlockSampler`'s and is shared
+    verbatim with WP2.9's :class:`~ah.gen.blocks.flow.FlowBlockSampler`.
+    """
+
+    def _integrate(self, cond: torch.Tensor, noise: torch.Tensor) -> torch.Tensor:
+        return heun_integrate(self._call_net, self._model.config, cond, noise, self.nfe)
 
 
 # --------------------------------------------------------------------------- #
@@ -551,22 +668,29 @@ DEFAULT_BLOCK_BATCH: int = 1
 DEFAULT_SAMPLER_DEVICE: str = "cpu"
 
 
-class HierDiffusionV1:
-    """Ablation system D (3a): L1+L2+L4 joinery driven by the trained diffusion sampler.
+class HierBlockSystem:
+    """Ablation system D: L1+L2+L4 joinery driven by a trained L3 block sampler.
 
-    Implements :class:`ah.gen.base.Generator`. Same schema-enum wall as
-    ``bootstrap-v1``/``joinery-bootstrap-v0`` (STEP2R bumps the enum).
+    Implements :class:`ah.gen.base.Generator`. Subclasses set
+    :attr:`generator_id` and :attr:`system_description`; nothing else differs
+    between the 3a and 3b arms of system D, which is the point — §WP2.9's "both
+    samplers through one entry point" is this class plus the registry.
+
+    Same schema-enum wall as ``bootstrap-v1``/``joinery-bootstrap-v0`` (STEP2R
+    bumps the enum).
     """
 
-    generator_id = GENERATOR_ID
+    generator_id = "hier-block-system"
+    system_description = "L1+L2+L4 (trained L3 blocks)"
 
     def __init__(
         self,
         climate,
         regimes_artifact,
         source,
-        sampler: DiffusionBlockSampler,
+        sampler: TorchBlockSampler,
         config=None,
+        guidance: bridge.GuidanceHook | None = None,
     ) -> None:
         from ah.gen.joinery.assemble import JoineryConfig
 
@@ -575,13 +699,22 @@ class HierDiffusionV1:
         self._source = source
         self._sampler = sampler
         self._config = JoineryConfig() if config is None else config
+        #: DN-1.1 §II.5 design note (a) / §WP2.9's optional guidance hook. It is
+        #: plumbed but DEFAULTS TO None, and it is an ADDITIONAL arm, never a
+        #: replacement for reconciliation — Denton stays the guarantee, and any
+        #: run with a hook must be reported alongside the same run without it.
+        #: WP2.9 leaves it unused; see flow.py's module docstring for why
+        #: guidance is implemented as classifier-free guidance INSIDE the
+        #: sampler (learned aim) rather than as a post-hoc block adjustment
+        #: (repair, the same category as Denton).
+        self._guidance = guidance
         self.checkpoint_hash: str | None = None
         self.config_hash: str | None = None
 
     def fit(self, data: Any) -> None:
         raise JoineryError(
-            f"{GENERATOR_ID} is trained offline (scripts/train_blocks_final.py); "
-            f"fit() is not a runtime operation"
+            f"{self.generator_id} is trained offline (scripts/train_blocks_final.py "
+            f"/ scripts/train_flow_final.py); fit() is not a runtime operation"
         )
 
     def _assemble(self, *, n_paths: int, seed: int, months: int, world, config) -> Ensemble:
@@ -597,11 +730,15 @@ class HierDiffusionV1:
             world=world,
             sampler=self._sampler,
             config=config,
+            guidance=self._guidance,
         )
-        ensemble.meta.conditioning["system"] = "L1+L2+L4 (hier-diffusion-v1 blocks)"
+        ensemble.meta.conditioning["system"] = self.system_description
+        ensemble.meta.conditioning["joinery_guidance_hook"] = (
+            type(self._guidance).__name__ if self._guidance is not None else None
+        )
         meta = replace(
             ensemble.meta,
-            generator_id=GENERATOR_ID,
+            generator_id=self.generator_id,
             checkpoint_hash=self.checkpoint_hash,
             config_hash=self.config_hash,
         )
@@ -621,6 +758,13 @@ class HierDiffusionV1:
 
         config = dc_replace(self._config, acceptance_filter=False) if unfiltered else self._config
         return self._assemble(n_paths=n_paths, seed=seed, months=months, world=None, config=config)
+
+
+class HierDiffusionV1(HierBlockSystem):
+    """System D, 3a arm — the trained EDM diffusion sampler."""
+
+    generator_id = GENERATOR_ID
+    system_description = "L1+L2+L4 (hier-diffusion-v1 blocks)"
 
 
 def hier_diffusion_v1_factory() -> HierDiffusionV1:

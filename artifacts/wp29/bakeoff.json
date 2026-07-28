@@ -1,0 +1,430 @@
+{
+  "block_batch": 128,
+  "cost_blocks": 2048,
+  "device": "cuda",
+  "incomparability_note": "The two `gen` columns are NOT on one scale and must not be ranked against each other: 3a's is a sigma-weighted denoising MSE on a fixed sigma grid, 3b's is an unweighted velocity MSE on a fixed time grid. The sealed tuning_protocol records exactly this and requires both terms of S to be reported separately, per sampler, with their scales -- so `S` is shown per arm as the quantity each arm was SELECTED by, never as a cross-arm ranking. Directly comparable: the `aux` column (the same D4 elicitability estimator, same folds, same noise seeds), sampling cost, conditioning response, and battery outcomes.",
+  "n_probe": 256,
+  "n_rep_eval": 16,
+  "pending": "Battery outcome, reconciliation-adjustment distribution and waypoint-band diagnostics are NOT in this table. They run through the joinery, whose ig_spread waypoint band is being corrected (WP2.7b); measuring the two arms across two different bands would not be a bake-off. Those rows are filled by the end-to-end sealed battery run once the band correction has landed.",
+  "rows": [
+    {
+      "arm": "hier-diffusion-v1",
+      "aux_term": -3.2641910296710925,
+      "checkpoint_hash": "f0c79f000be659c8b443afba02a251ab8925d995fdebcf8e6e82195e8dd70c5a",
+      "conditioning": {
+        "channels": {
+          "dw_equity_cum_log": {
+            "feature": "equity_cum_log",
+            "historical_ols": 1.0086060849862821,
+            "model_finite_difference": 0.7892580338564944,
+            "ratio": 0.7825235695134924,
+            "swept_from": -0.1,
+            "swept_to": 0.1
+          },
+          "dw_log_cpi": {
+            "feature": "cpi_within_block_log",
+            "historical_ols": 0.8035107999494606,
+            "model_finite_difference": 0.30986503044938485,
+            "ratio": 0.3856389117220015,
+            "swept_from": -0.02,
+            "swept_to": 0.02
+          },
+          "dw_policy_rate_pct": {
+            "feature": "policy_mean_pct",
+            "historical_ols": -0.4360805040340071,
+            "model_finite_difference": 0.15129611959767075,
+            "ratio": -0.3469453878311243,
+            "swept_from": -1.0,
+            "swept_to": 1.0
+          },
+          "dw_spread_center_pct": {
+            "feature": "spread_within_block_change",
+            "historical_ols": 0.8499638147824843,
+            "model_finite_difference": 0.11578062365143385,
+            "ratio": 0.1362182973413562,
+            "swept_from": -0.5,
+            "swept_to": 0.5
+          },
+          "h_spread_level_pct": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 0.7631953339960285,
+            "model_finite_difference": 0.14189659516337993,
+            "ratio": 0.18592434838460156,
+            "swept_from": 0.5,
+            "swept_to": 1.5
+          },
+          "regime_onehot": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 1.2073652694610777,
+            "model_finite_difference": 0.02284465140493419,
+            "ratio": 0.018921077144393245,
+            "swept_from": 0.0,
+            "swept_to": 1.0
+          },
+          "state_pi_star": {
+            "feature": "policy_mean_pct",
+            "historical_ols": 1.062153483250531,
+            "model_finite_difference": 0.48814250156422845,
+            "ratio": 0.4595781205465292,
+            "swept_from": 0.0,
+            "swept_to": 4.0
+          }
+        },
+        "n_probe": 256,
+        "regime_band_centre": {
+          "CRI": 2.0,
+          "EXP": 0.7926347305389222,
+          "REC": 1.2094444444444443,
+          "REF": 0.9433333333333336,
+          "SLOW": 0.9910526315789473,
+          "STAG": 0.9740000000000002
+        },
+        "regime_sweep_generated_spread": {
+          "CRI": 0.9295106774103765,
+          "EXP": 0.9124977238626405,
+          "REC": 0.9124692848130269,
+          "REF": 0.9278635069487587,
+          "SLOW": 0.9070459774893798,
+          "STAG": 0.9066660260054423
+        },
+        "seed": 4242
+      },
+      "config_hash": "cfg:505f9800900bd757",
+      "cost": {
+        "arm": "hier-diffusion-v1",
+        "block_batch": 128,
+        "blocks_per_second": 537.7259098662944,
+        "device": "cuda",
+        "n_blocks_measured": 2048,
+        "nfe_per_10k_decades": 12400000,
+        "nfe_per_block": 31,
+        "seconds_per_10k_decades": 743.8733984372448,
+        "seconds_per_decade": 0.07438733984372448,
+        "wall_seconds": 3.808631799998693
+      },
+      "gen_term": 0.9378579407930374,
+      "generative_objective": "fixed-sigma-grid EDM denoising objective",
+      "guidance_scale": 1.0,
+      "notes": [
+        "selected under its own sealed 40-trial budget; generative objective = fixed-sigma-grid EDM denoising objective"
+      ],
+      "s_value": -2.326333088878055,
+      "selection_lambda": 1.0
+    },
+    {
+      "arm": "hier-flow-v1",
+      "aux_term": -3.4093082017985927,
+      "checkpoint_hash": "b1fe26e100678a26ae6702907c90ee1d51b0d482bbb23e6de97eed4d0053508e",
+      "conditioning": {
+        "channels": {
+          "dw_equity_cum_log": {
+            "feature": "equity_cum_log",
+            "historical_ols": 1.0086060849862821,
+            "model_finite_difference": 0.6969529852284692,
+            "ratio": 0.6910061277668658,
+            "swept_from": -0.1,
+            "swept_to": 0.1
+          },
+          "dw_log_cpi": {
+            "feature": "cpi_within_block_log",
+            "historical_ols": 0.8035107999494606,
+            "model_finite_difference": 0.22844824054910673,
+            "ratio": 0.2843125948817063,
+            "swept_from": -0.02,
+            "swept_to": 0.02
+          },
+          "dw_policy_rate_pct": {
+            "feature": "policy_mean_pct",
+            "historical_ols": -0.4360805040340071,
+            "model_finite_difference": 0.11266408430324626,
+            "ratio": -0.2583561596105207,
+            "swept_from": -1.0,
+            "swept_to": 1.0
+          },
+          "dw_spread_center_pct": {
+            "feature": "spread_within_block_change",
+            "historical_ols": 0.8499638147824843,
+            "model_finite_difference": 0.16462428509458688,
+            "ratio": 0.19368387480908955,
+            "swept_from": -0.5,
+            "swept_to": 0.5
+          },
+          "h_spread_level_pct": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 0.7631953339960285,
+            "model_finite_difference": 0.116720194301274,
+            "ratio": 0.15293620008148712,
+            "swept_from": 0.5,
+            "swept_to": 1.5
+          },
+          "regime_onehot": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 1.2073652694610777,
+            "model_finite_difference": 0.04010216461522986,
+            "ratio": 0.03321460839529528,
+            "swept_from": 0.0,
+            "swept_to": 1.0
+          },
+          "state_pi_star": {
+            "feature": "policy_mean_pct",
+            "historical_ols": 1.062153483250531,
+            "model_finite_difference": 0.31959162499735727,
+            "ratio": 0.3008902480075706,
+            "swept_from": 0.0,
+            "swept_to": 4.0
+          }
+        },
+        "n_probe": 256,
+        "regime_band_centre": {
+          "CRI": 2.0,
+          "EXP": 0.7926347305389222,
+          "REC": 1.2094444444444443,
+          "REF": 0.9433333333333336,
+          "SLOW": 0.9910526315789473,
+          "STAG": 0.9740000000000002
+        },
+        "regime_sweep_generated_spread": {
+          "CRI": 0.9523601434747299,
+          "EXP": 0.9122579788595,
+          "REC": 0.9245239152638381,
+          "REF": 0.9396181411961272,
+          "SLOW": 0.91519244837203,
+          "STAG": 0.9287327654140666
+        },
+        "seed": 4242
+      },
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "cost": {
+        "arm": "hier-flow-v1",
+        "block_batch": 128,
+        "blocks_per_second": 4346.207701140479,
+        "device": "cuda",
+        "n_blocks_measured": 2048,
+        "nfe_per_10k_decades": 1600000,
+        "nfe_per_block": 4,
+        "seconds_per_10k_decades": 92.03425779560348,
+        "seconds_per_decade": 0.009203425779560348,
+        "wall_seconds": 0.4712153999134898
+      },
+      "gen_term": 1.6441831787427266,
+      "generative_objective": "fixed-time-grid rectified-flow velocity objective",
+      "guidance_scale": 1.0,
+      "notes": [
+        "selected under its own sealed 40-trial budget; generative objective = fixed-time-grid rectified-flow velocity objective"
+      ],
+      "s_value": -1.7651250230558662,
+      "selection_lambda": 1.0
+    },
+    {
+      "arm": "hier-flow-v1 (ablation: guidance 1.5)",
+      "aux_term": -3.301597339499256,
+      "checkpoint_hash": "b1fe26e100678a26ae6702907c90ee1d51b0d482bbb23e6de97eed4d0053508e",
+      "conditioning": {
+        "channels": {
+          "dw_equity_cum_log": {
+            "feature": "equity_cum_log",
+            "historical_ols": 1.0086060849862821,
+            "model_finite_difference": 0.9683127766215597,
+            "ratio": 0.9600505004237898,
+            "swept_from": -0.1,
+            "swept_to": 0.1
+          },
+          "dw_log_cpi": {
+            "feature": "cpi_within_block_log",
+            "historical_ols": 0.8035107999494606,
+            "model_finite_difference": 0.2898228111792995,
+            "ratio": 0.36069560135038486,
+            "swept_from": -0.02,
+            "swept_to": 0.02
+          },
+          "dw_policy_rate_pct": {
+            "feature": "policy_mean_pct",
+            "historical_ols": -0.4360805040340071,
+            "model_finite_difference": 0.11869323101172102,
+            "ratio": -0.27218192492839555,
+            "swept_from": -1.0,
+            "swept_to": 1.0
+          },
+          "dw_spread_center_pct": {
+            "feature": "spread_within_block_change",
+            "historical_ols": 0.8499638147824843,
+            "model_finite_difference": 0.210798904603492,
+            "ratio": 0.24800926926217196,
+            "swept_from": -0.5,
+            "swept_to": 0.5
+          },
+          "h_spread_level_pct": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 0.7631953339960285,
+            "model_finite_difference": 0.15639618887347817,
+            "ratio": 0.20492288396811928,
+            "swept_from": 0.5,
+            "swept_to": 1.5
+          },
+          "regime_onehot": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 1.2073652694610777,
+            "model_finite_difference": 0.05802744985948649,
+            "ratio": 0.04806122167601173,
+            "swept_from": 0.0,
+            "swept_to": 1.0
+          },
+          "state_pi_star": {
+            "feature": "policy_mean_pct",
+            "historical_ols": 1.062153483250531,
+            "model_finite_difference": 0.33940530723306234,
+            "ratio": 0.31954450329944123,
+            "swept_from": 0.0,
+            "swept_to": 4.0
+          }
+        },
+        "n_probe": 256,
+        "regime_band_centre": {
+          "CRI": 2.0,
+          "EXP": 0.7926347305389222,
+          "REC": 1.2094444444444443,
+          "REF": 0.9433333333333336,
+          "SLOW": 0.9910526315789473,
+          "STAG": 0.9740000000000002
+        },
+        "regime_sweep_generated_spread": {
+          "CRI": 0.9792254355316272,
+          "EXP": 0.9211979856721407,
+          "REC": 0.9411557732486665,
+          "REF": 0.9632116735680156,
+          "SLOW": 0.9265833853325967,
+          "STAG": 0.9447406863638121
+        },
+        "seed": 4242
+      },
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "cost": {
+        "arm": "hier-flow-v1 (ablation: guidance 1.5)",
+        "block_batch": 128,
+        "blocks_per_second": 2038.299122914008,
+        "device": "cuda",
+        "n_blocks_measured": 2048,
+        "nfe_per_10k_decades": 3200000,
+        "nfe_per_block": 8,
+        "seconds_per_10k_decades": 196.24205078798695,
+        "seconds_per_decade": 0.019624205078798695,
+        "wall_seconds": 1.0047593000344932
+      },
+      "gen_term": 1.6441831787427266,
+      "generative_objective": "fixed-time-grid rectified-flow velocity objective",
+      "guidance_scale": 1.5,
+      "notes": [
+        "selected under its own sealed 40-trial budget; generative objective = fixed-time-grid rectified-flow velocity objective",
+        "ABLATION ARM, not a selected configuration: the SAME checkpoint sampled at guidance 1.5 instead of the sealed selection's 1. Classifier-free guidance is learned aim (it amplifies conditioning the model already reads), not post-hoc repair; it is reported here alongside the unguided row so the effect is visible, and it costs 2x the network evaluations."
+      ],
+      "s_value": -1.6574141607565294,
+      "selection_lambda": 1.0
+    },
+    {
+      "arm": "hier-flow-v1 (ablation: guidance 2.5)",
+      "aux_term": -3.1177731697964397,
+      "checkpoint_hash": "b1fe26e100678a26ae6702907c90ee1d51b0d482bbb23e6de97eed4d0053508e",
+      "conditioning": {
+        "channels": {
+          "dw_equity_cum_log": {
+            "feature": "equity_cum_log",
+            "historical_ols": 1.0086060849862821,
+            "model_finite_difference": 1.4567292636348124,
+            "ratio": 1.444299499397354,
+            "swept_from": -0.1,
+            "swept_to": 0.1
+          },
+          "dw_log_cpi": {
+            "feature": "cpi_within_block_log",
+            "historical_ols": 0.8035107999494606,
+            "model_finite_difference": 0.4054801176140121,
+            "ratio": 0.5046355539210127,
+            "swept_from": -0.02,
+            "swept_to": 0.02
+          },
+          "dw_policy_rate_pct": {
+            "feature": "policy_mean_pct",
+            "historical_ols": -0.4360805040340071,
+            "model_finite_difference": 0.0963426685713169,
+            "ratio": -0.22092863056268106,
+            "swept_from": -1.0,
+            "swept_to": 1.0
+          },
+          "dw_spread_center_pct": {
+            "feature": "spread_within_block_change",
+            "historical_ols": 0.8499638147824843,
+            "model_finite_difference": 0.2722649107137603,
+            "ratio": 0.320325296181504,
+            "swept_from": -0.5,
+            "swept_to": 0.5
+          },
+          "h_spread_level_pct": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 0.7631953339960285,
+            "model_finite_difference": 0.22702495346144913,
+            "ratio": 0.2974663802944981,
+            "swept_from": 0.5,
+            "swept_to": 1.5
+          },
+          "regime_onehot": {
+            "feature": "spread_mean_pct",
+            "historical_ols": 1.2073652694610777,
+            "model_finite_difference": 0.09126146775615407,
+            "ratio": 0.07558728916965596,
+            "swept_from": 0.0,
+            "swept_to": 1.0
+          },
+          "state_pi_star": {
+            "feature": "policy_mean_pct",
+            "historical_ols": 1.062153483250531,
+            "model_finite_difference": 0.370769749813256,
+            "ratio": 0.34907360909704066,
+            "swept_from": 0.0,
+            "swept_to": 4.0
+          }
+        },
+        "n_probe": 256,
+        "regime_band_centre": {
+          "CRI": 2.0,
+          "EXP": 0.7926347305389222,
+          "REC": 1.2094444444444443,
+          "REF": 0.9433333333333336,
+          "SLOW": 0.9910526315789473,
+          "STAG": 0.9740000000000002
+        },
+        "regime_sweep_generated_spread": {
+          "CRI": 1.0085148099726138,
+          "EXP": 0.9172533422164597,
+          "REC": 0.953025859035896,
+          "REF": 0.9863005301747267,
+          "SLOW": 0.9280558995408633,
+          "STAG": 0.9545150927545729
+        },
+        "seed": 4242
+      },
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "cost": {
+        "arm": "hier-flow-v1 (ablation: guidance 2.5)",
+        "block_batch": 128,
+        "blocks_per_second": 1381.577740147425,
+        "device": "cuda",
+        "n_blocks_measured": 2048,
+        "nfe_per_10k_decades": 3200000,
+        "nfe_per_block": 8,
+        "seconds_per_10k_decades": 289.524062509372,
+        "seconds_per_decade": 0.0289524062509372,
+        "wall_seconds": 1.4823632000479847
+      },
+      "gen_term": 1.6441831787427266,
+      "generative_objective": "fixed-time-grid rectified-flow velocity objective",
+      "guidance_scale": 2.5,
+      "notes": [
+        "selected under its own sealed 40-trial budget; generative objective = fixed-time-grid rectified-flow velocity objective",
+        "ABLATION ARM, not a selected configuration: the SAME checkpoint sampled at guidance 2.5 instead of the sealed selection's 1. Classifier-free guidance is learned aim (it amplifies conditioning the model already reads), not post-hoc repair; it is reported here alongside the unguided row so the effect is visible, and it costs 2x the network evaluations."
+      ],
+      "s_value": -1.4735899910537131,
+      "selection_lambda": 1.0
+    }
+  ],
+  "vintage_id": "2026-07-26.1"
+}
