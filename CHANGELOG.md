@@ -7,6 +7,92 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.8 — Layer 3a, the conditional diffusion block generator
+  (`ah/gen/blocks/`) and the sealed tuning protocol — DN-1.1 §II.4 (a),
+  registered as `hier-diffusion-v1`.**
+  - `data.py`: all overlapping L=6 blocks of the campaign panel, each carrying
+    the conditioning vector built **by the joinery bridge's own cb-v1
+    machinery** (`bridge.BlockConditioning` + `_history_summary` +
+    `_waypoint_increments`, C_B_DIM=18) — training and generation share one code
+    path behind the frozen contract. Δw for a historical block comes from
+    monthly target curves built from that segment's ACTUAL annual aggregates,
+    interpolated exactly as `waypoints.monthly_targets` interpolates generated
+    waypoints. **Train-only standardization** (constants recorded on the
+    dataset and in the checkpoint; a WP2.5-style leakage test poisons the
+    validation span and asserts every constant is bit-identical).
+    **Block-aware folds**: a block belongs to the fold containing its start and
+    any block straddling a boundary is dropped from both sides (tested).
+    **Effective-sample correction**: an epoch draws blocks on an L-spaced grid
+    with a random phase, so no two blocks in an epoch share a month —
+    247 raw train blocks are ~42 effective per epoch, and both numbers are
+    reported everywhere. Two recorded split-hygiene decisions, both strict:
+    target curves are built per split segment (the policy year-CENTER anchors
+    would otherwise interpolate the first validation year's mean into late-train
+    Δw), and the h_t fallback statistics for TRAINING conditioning are
+    train-segment-only. Simulated-conditioning augmentation was CONSIDERED and
+    DECIDED AGAINST (reason recorded in the module docstring: pairing simulated
+    c with nearest-conditioning historical targets would manufacture (c, x)
+    pairs the data does not contain and teach the model that off-support
+    conditioning maps to in-support blocks); conditioning-noise jitter is the
+    searched alternative and off-support behaviour is measured instead.
+  - `constraints.py`: hard floors by **transformed coordinates**, so a
+    violation is impossible by the codomain of the inverse map rather than by
+    clamping — rates/spreads in softplus space above the sealed floors
+    (`RATE_FLOOR_PCT` −1.0, `SPREAD_FLOOR_PCT` 0.0; DN-1.1's illustrative
+    "spread ≥ 100bp" is SUPERSEDED by the sealed WP2.2c conventions, recorded
+    plainly), cpi/equity_vol in log space, returns in log1p space. Round trips
+    are float64-exact across the softplus saturation boundary, and floor
+    impossibility is tested BY CONSTRUCTION (z from −1e6 to +700, and a
+    100×-noise panel through the full sampler), never by sampling luck.
+  - `losses.py`: the `GenerativeObjective` protocol (WP2.9's velocity matching
+    slots in behind it unchanged) and the **D4 tail elicitability auxiliary** in
+    the WP2.2c-CORRECTED direction — (VaR, ES) from the GENERATED sample scored
+    by Fissler-Ziegel against the comparison REALIZATIONS — implemented locally
+    in differentiable torch, with the strategy definitions read from the sealed
+    `ah.strategies` (never `ah.eval`). Parity with the sealed judged
+    implementations is asserted by test (`strategy_returns`, `elicitability_score`,
+    `var_es`). Recorded: only `sixty_forty` and `carry` are evaluable at block
+    scale — `eqw_factors`/`endowment_proxy` are the sealed
+    `uncomputable_d4_strategies`, and `momentum` is structurally degenerate on a
+    6-month block (its sealed 12-month warm-up covers every month, so its return
+    is identically 0.0). A non-positive generated ES contributes a stated
+    penalty (10.0), declared in the search-space file before the search ran.
+  - `diffusion.py`: EDM-style continuous-time diffusion (Karras preconditioning
+    c_skip/c_out/c_in/c_noise, log-normal σ training draws, the EDM weight,
+    Karras σ schedule, deterministic Heun integration with configurable NFE =
+    2·steps − 1, asserted by a call-counting test). Backbone: a small pre-norm
+    transformer over the six month-tokens with **cross-attention on c_b** (four
+    conditioning-group tokens + a σ token) — justified by the data scale
+    (x ∈ R^{6×12} = 72 numbers; a U-Net has nothing to downsample at length 6),
+    ~0.94M parameters at the selected width/depth. Attention is hand-rolled so
+    every op is deterministic under `use_deterministic_algorithms(True)`.
+    `DiffusionBlockSampler` implements the frozen joinery `BlockSampler`
+    protocol, refuses to construct on a c_b fingerprint mismatch, and draws all
+    noise from the caller's numpy generator — `assemble_decades` drives it
+    exactly as it drives the bootstrap stand-in (WP2.10's system D wiring,
+    tested end to end including bit-determinism and floor survival through
+    Denton).
+  - `train.py`: the plan-§1 determinism block (torch seed + PCG64 data order +
+    `use_deterministic_algorithms(True)` + cuDNN flags + `CUBLAS_WORKSPACE_CONFIG`),
+    checkpoints identified by SHA-256 over canonical state-dict bytes plus the
+    config hash and verified on every load, and **early stopping on the SEALED
+    selection quantity S** (both terms, on EMA weights) — nothing
+    battery-flavoured feeds a training decision, so the WP2.7 teach-to-the-exam
+    bar has nothing to catch.
+  - `tuning.py`: the forking-paths record. The search space was committed
+    BEFORE the search (`configs/wp28-diffusion-search-v1.yaml`, its SHA-256
+    written into the log header); every trial is logged with config hash, git
+    SHA, seed and per-fold scores, and a trial is logged as started BEFORE its
+    first step so an abandoned or crashed run still spends budget; selection is
+    the sealed closed form with `selection_lambda` PINNED at 1.0 and an NFE
+    tie-break, S recomputed from the logged fold scores rather than trusted.
+    `validate_log` is the machine check the acceptance asks for and it runs
+    against the REAL campaign log in the test suite.
+  - `ah.gen.blocks` never imports `ah.eval` (AST test over the whole package).
+  - Scripts: `run_blocks_tuning.py`, `train_blocks_final.py` (final training +
+    the monthly-tier neighborhood evidence table), `run_diffusion_battery.py`
+    (the sealed battery at n_paths=1024 filtered+unfiltered, with the
+    reconciliation-shrinkage and support comparison against WP2.7's baseline).
 - **WP2.7 — Layer 4, the joinery (`ah/gen/joinery/`): waypoints, bridging,
   Denton reconciliation, conditioning-support monitoring — DN-1.1 §II.5's
   7-step algorithm end to end, tested with bootstrap blocks as the stand-in
