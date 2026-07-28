@@ -21,6 +21,7 @@ from joinery_common import (
     CODE,
     EQUITY_BY_REGIME,
     SPREAD_BY_REGIME,
+    default_labels,
     make_climate_artifact,
     make_regime_paths,
     make_source,
@@ -92,6 +93,19 @@ class TestSourceStats:
         stats = wp.source_stats(source2, climate2)
         assert stats.spread_beta_credit_gap == pytest.approx(0.3, abs=0.05)
 
+    def test_pooled_resid_sd_is_still_reported_unchanged(self, stats, source, climate):
+        # WP2.7b made the BAND width regime-conditional; the pooled residual sd is
+        # kept on SourceStats as the documented fallback (absent regimes) and as the
+        # reference number the WP2.7/WP2.8 artifacts quote. Its definition must not
+        # drift: sd of (spread - mu_R - beta*credit_gap) over every month.
+        spread = source.values[:, list(source.factor_names).index("ig_spread")]
+        codes = np.array([CODE[label] for label in source.labels])
+        idx = climate.dates.get_indexer(source.dates)
+        gap = climate.states.mean(axis=0)[idx, wp._STATE_CREDIT_GAP]
+        resid = spread - stats.spread_mean_by_regime[codes]
+        expect = float(np.std(resid - stats.spread_beta_credit_gap * gap, ddof=1))
+        assert stats.spread_resid_sd == pytest.approx(expect, rel=1e-12)
+
     def test_missing_waypoint_factor_raises(self, climate):
         import ah.gen.bootstrap as bs
 
@@ -109,6 +123,132 @@ class TestSourceStats:
         )
         with pytest.raises(wp.JoineryError, match="policy_rate"):
             wp.source_stats(src2, climate)
+
+
+# --------------------------------------------------------------------------- #
+# WP2.7b: the band half-width is REGIME-CONDITIONAL
+#
+# The pooled half-width was refuted by the reference data itself
+# (artifacts/wp28/ig-spread-diagnosis.md + the WP2.7b re-estimation): real
+# 1990-2020 spreads exit their own pooled CRI band 94.1% of the time while
+# exiting the STAG/REF bands 0% of the time. These tests pin the ESTIMATOR's
+# stated properties, not any generator's score.
+# --------------------------------------------------------------------------- #
+
+
+def _replant_spread(source, spread: np.ndarray):
+    """A copy of ``source`` whose ig_spread column is ``spread``."""
+    import ah.gen.bootstrap as bs
+
+    values = source.values.copy()
+    values[:, list(source.factor_names).index("ig_spread")] = spread
+    return bs.BootstrapSource(
+        factor_names=source.factor_names,
+        dates=source.dates,
+        values=values,
+        labels=source.labels,
+        ruleset_version=source.ruleset_version,
+        vintage_id=source.vintage_id,
+        active_blocks=source.active_blocks,
+    )
+
+
+def _planted_dispersion_source(sd_by_label: dict[str, float], *, n_rows: int = 240, labels=None):
+    """A source whose ig_spread is level(R) + sd(R) * a deterministic zero-mean wave."""
+    labels = default_labels(n_rows) if labels is None else labels
+    base = make_source(n_rows, labels=labels)
+    t = np.arange(n_rows, dtype=np.float64)
+    # deterministic, zero-mean, unit-sd-ish wiggle that is not commensurate with the
+    # 8-month label cycle, so every regime samples it at many phases
+    wave = np.sqrt(2.0) * np.sin(t / 3.0 + 0.7)
+    spread = np.array(
+        [
+            SPREAD_BY_REGIME[label] + sd_by_label.get(label, 0.05) * w
+            for label, w in zip(labels, wave, strict=True)
+        ]
+    )
+    return _replant_spread(base, spread)
+
+
+class TestSpreadBandWidth:
+    def test_width_is_regime_conditional_and_tracks_planted_dispersion(self, climate):
+        source = _planted_dispersion_source({"EXP": 0.05, "REC": 0.60})
+        stats = wp.source_stats(source, climate)
+        half = stats.spread_band_half_width_by_regime
+        assert half[CODE["REC"]] > 5.0 * half[CODE["EXP"]]
+        # each recovers its planted sd to within the shrinkage + predictive inflation
+        assert half[CODE["EXP"]] == pytest.approx(0.05, rel=0.6)
+        assert half[CODE["REC"]] == pytest.approx(0.60, rel=0.3)
+        # and the single pooled number sits between them, fitting neither
+        assert half[CODE["EXP"]] < stats.spread_resid_sd < half[CODE["REC"]]
+
+    def test_thin_regime_is_shrunk_toward_the_typical_width(self, climate):
+        # STAG appears three times with an almost constant spread; its raw sd is
+        # near zero and must NOT become the band. It is pulled toward the
+        # information-weighted typical width.
+        labels = list(default_labels(240))
+        for i, label in enumerate(labels):
+            if label == "STAG":
+                labels[i] = "EXP"
+        for i in (30, 90, 150):
+            labels[i] = "STAG"
+        source = _planted_dispersion_source({"EXP": 0.20, "STAG": 0.01}, labels=tuple(labels))
+        stats = wp.source_stats(source, climate)
+        diag = stats.spread_band_diagnostics["by_regime"]["STAG"]
+        half = stats.spread_band_half_width_by_regime[CODE["STAG"]]
+        assert diag["n"] == 3
+        assert half > 3.0 * diag["raw_sd"]
+        assert half < stats.spread_band_diagnostics["typical_sd"] * 2.0
+
+    def test_effective_sample_size_discounts_serial_correlation(self, climate):
+        # One contiguous 60-month REC run of a slow wave: 60 months, far fewer
+        # independent observations.
+        labels = tuple("REC" if 60 <= i < 120 else "EXP" for i in range(240))
+        source = _planted_dispersion_source({"REC": 0.30, "EXP": 0.20}, labels=labels)
+        stats = wp.source_stats(source, climate)
+        rec = stats.spread_band_diagnostics["by_regime"]["REC"]
+        assert rec["n"] == 60
+        assert rec["n_eff_mean"] < 30.0
+        assert rec["rho"] > 0.3
+
+    def test_absent_regime_falls_back_to_the_pooled_width(self, climate):
+        source = make_source(labels=tuple("EXP" for _ in range(240)))
+        stats = wp.source_stats(source, climate)
+        for label in stats.absent_regimes:
+            assert stats.spread_band_half_width_by_regime[CODE[label]] == pytest.approx(
+                stats.spread_resid_sd
+            )
+            assert stats.spread_band_diagnostics["by_regime"][label]["fallback"] is True
+
+    def test_diagnostics_are_json_safe_and_name_every_regime(self, stats):
+        import json
+
+        diag = stats.spread_band_diagnostics
+        json.dumps(diag)  # must not raise
+        assert set(diag["by_regime"]) == set(wp.REGIME_LABELS)
+        assert diag["prior_df"] == wp.BAND_PRIOR_DF
+        for label in wp.REGIME_LABELS:
+            row = diag["by_regime"][label]
+            assert row["half_width"] == pytest.approx(
+                float(stats.spread_band_half_width_by_regime[CODE[label]])
+            )
+            assert set(row) >= {
+                "n",
+                "n_runs",
+                "rho",
+                "n_eff_mean",
+                "n_eff_var",
+                "raw_sd",
+                "half_width",
+            }
+
+    def test_widths_are_positive_and_deterministic(self, source, climate):
+        a = wp.source_stats(source, climate)
+        b = wp.source_stats(source, climate)
+        np.testing.assert_array_equal(
+            a.spread_band_half_width_by_regime, b.spread_band_half_width_by_regime
+        )
+        assert np.all(a.spread_band_half_width_by_regime > 0.0)
 
 
 # --------------------------------------------------------------------------- #
@@ -160,6 +300,8 @@ class TestStructuralWaypoints:
         regimes = _flat_regimes(label="REC")
         wps = wp.build_waypoints(sim, regimes, stats)
         gap = sim.state("credit_gap")
+        # WP2.7b: the half-width is the YEAR-END REGIME's width, not a pooled constant.
+        width = float(stats.spread_band_half_width_by_regime[CODE["REC"]])
         for k, one in enumerate(wps):
             for y, span in enumerate(wp.year_spans(MONTHS)):
                 yend = span.stop - 1
@@ -168,8 +310,29 @@ class TestStructuralWaypoints:
                 )
                 center = max(center, wp.SPREAD_FLOOR_PCT)
                 assert one.spread_center_pct[y] == pytest.approx(center, rel=1e-9)
-                assert one.spread_lo_pct[y] <= one.spread_center_pct[y] <= one.spread_hi_pct[y]
+                assert one.spread_lo_pct[y] == pytest.approx(
+                    max(center - width, wp.SPREAD_FLOOR_PCT), rel=1e-9
+                )
+                assert one.spread_hi_pct[y] == pytest.approx(center + width, rel=1e-9)
                 assert one.spread_lo_pct[y] >= wp.SPREAD_FLOOR_PCT
+
+    def test_spread_band_width_follows_the_year_end_regime(self, climate):
+        # A source whose CRI months are far more dispersed than its EXP months must
+        # give a CRI year-end a wider band than an EXP year-end, on the same decade.
+        source = _planted_dispersion_source({"EXP": 0.05, "CRI": 0.60})
+        stats = wp.source_stats(source, climate)
+        sim = _sim(climate, n_decades=1, theta_index=0)
+        labels = np.full((1, MONTHS), CODE["EXP"], dtype=np.int64)
+        labels[0, 24:36] = CODE["CRI"]  # year 2's year-end (month 35) is CRI
+        one = wp.build_waypoints(sim, make_regime_paths(labels), stats)[0]
+        widths = one.spread_hi_pct - one.spread_center_pct
+        assert widths[2] == pytest.approx(
+            float(stats.spread_band_half_width_by_regime[CODE["CRI"]]), rel=1e-9
+        )
+        assert widths[0] == pytest.approx(
+            float(stats.spread_band_half_width_by_regime[CODE["EXP"]]), rel=1e-9
+        )
+        assert widths[2] > 5.0 * widths[0]
 
     def test_deterministic(self, climate, stats):
         sim = _sim(climate)

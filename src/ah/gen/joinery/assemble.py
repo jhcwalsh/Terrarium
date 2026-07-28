@@ -566,6 +566,11 @@ def assemble_decades(
         "ruleset_version": str(regimes_artifact.meta.get("ruleset_version", "unknown")),
         "regime_mode": "semimarkov" if world is None else str(world.regimes.mode),
         "factor_conditions": results[0].waypoints.record,
+        # WP2.7b: the ig_spread band is regime-conditional; its width, the effective
+        # sample size behind each width and the estimator's constants travel with
+        # every ensemble, because the reconciliation diagnostic cannot be read
+        # without them.
+        "spread_band": stats.spread_band_diagnostics,
         "cb_contract": {
             "schema": bridge.C_B_SCHEMA_VERSION,
             "components": list(bridge.C_B_COMPONENTS),

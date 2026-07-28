@@ -13,6 +13,14 @@ Measures, on the SAME waypoints, for both block samplers:
 Also reports the historical (in-sample, caveated) band-exit rate of the real
 1990-2020 spread against its own band.
 
+SUPERSEDED IN PART BY WP2.7b. The committed
+``artifacts/wp28/ig-spread-diagnosis.{json,md}`` were produced when the band
+half-width was a single pooled ``sigma_resid``; WP2.7b made it regime-conditional,
+so re-running this script no longer reproduces those files. The script now reads
+the band from ``stats.spread_band_half_width_by_regime`` (i.e. it measures the
+CURRENT band) and additionally reports the old pooled band alongside it. The
+old-vs-new comparison proper lives in ``scripts/measure_spread_band.py``.
+
 Nothing here writes to the repo, changes generator behaviour, or touches a
 sealed judged source. Usage::
 
@@ -112,10 +120,16 @@ def main() -> None:
         stats.spread_mean_by_regime[codes] + stats.spread_beta_credit_gap * cg,
         wp.SPREAD_FLOOR_PCT,
     )
-    lo_h = np.maximum(center_hist - stats.spread_resid_sd, wp.SPREAD_FLOOR_PCT)
-    hi_h = np.maximum(center_hist + stats.spread_resid_sd, lo_h + 1e-9)
+    half_hist = stats.spread_band_half_width_by_regime[codes]  # WP2.7b: per regime
+    lo_h = np.maximum(center_hist - half_hist, wp.SPREAD_FLOOR_PCT)
+    hi_h = np.maximum(center_hist + half_hist, lo_h + 1e-9)
 
     report["band_constants"] = {
+        "band_half_width_by_regime": {
+            lab: float(v)
+            for lab, v in zip(REGIME_LABELS, stats.spread_band_half_width_by_regime, strict=True)
+        },
+        "band_estimator": stats.spread_band_diagnostics,
         "spread_mean_by_regime": {
             lab: float(v) for lab, v in zip(REGIME_LABELS, stats.spread_mean_by_regime, strict=True)
         },
@@ -123,7 +137,8 @@ def main() -> None:
             lab: int((codes == i).sum()) for i, lab in enumerate(REGIME_LABELS)
         },
         "beta_credit_gap": float(stats.spread_beta_credit_gap),
-        "resid_sd_band_half_width": float(stats.spread_resid_sd),
+        # the OLD (pre-WP2.7b) pooled half-width, kept for comparison only
+        "pooled_resid_sd_superseded": float(stats.spread_resid_sd),
         "hist_spread_mean": float(spread_hist.mean()),
         "hist_spread_sd": float(spread_hist.std(ddof=1)),
         "hist_spread_acf1": float(np.corrcoef(spread_hist[:-1], spread_hist[1:])[0, 1]),
@@ -249,7 +264,7 @@ def main() -> None:
             "within_regime_var": within,
             "between_share": between / (between + within),
             "within_regime_sd_rms": float(np.sqrt(within)),
-            "hist_within_band_half_width": float(stats.spread_resid_sd),
+            "mean_band_half_width": float(stats.spread_band_half_width_by_regime[codes].mean()),
         }
     report["variance_decomposition"] = decomp
     print("\nvariance decomposition of the year-end deviation:")
