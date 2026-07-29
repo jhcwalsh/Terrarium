@@ -7,6 +7,66 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.10 — the five ablation systems A–E as named compositions, the multi-seed
+  ablation grid, and a GENERATED `ABLATION.md`. No sealed judged source touched,
+  zero amendments; `ah.gen` still never imports `ah.eval`; no new dependency;
+  `schemas/` untouched.**
+  - `gen/systems.py` (new): DN-1.1 §II.7's table as code. **A** `abl-a-structure-only`
+    (L1+L2+L4 with a new `GaussianResidualBlockSampler` in place of L3), **B**
+    `abl-b-neural-rollout-flow` (L3 chained, no waypoint binding, no Denton), **C**
+    `abl-c-neural-only-flow` (B plus a frozen climate layer), **D** the existing
+    `hier-diffusion-v1` / `hier-flow-v1`, **E** the existing `bootstrap-v1`. A, B and C
+    register through `ah.gen.registry`; `systems.build(id, seed_index=k)` additionally
+    resolves a neural system to the checkpoint trained at seed index `k`.
+  - **System A's residual model, stated rather than left to be inferred:**
+    regime-conditional in LOCATION (the stratum mean when the stratum carries at least
+    `GAUSSIAN_MIN_REGIME_OBS = 24` months, the pooled mean otherwise) and POOLED in
+    DISPERSION (one sample covariance over the whole source). A regime-conditional
+    covariance is not estimable — STAG is ~5 months and REF ~9 against twelve factors —
+    and a pooled 372-month covariance is always PSD and adds no fitted knob. Rows within
+    a block are iid: system A carries no block-level temporal structure at all, which is
+    the point of the control. A keeps L4, because the waypoints are the only binding
+    point at which L1 and L2 reach the monthly path, and because Gaussian draws are not
+    floor-safe — Denton's floor re-application is what holds `floor_violations` at 0
+    (191 of 3000 raw draws are sub-floor on `ig_spread`; the assembled ensemble has none).
+  - **A shares the benchmark's draw-span handicap and D does not** — A's covariance rests
+    on the same complete-case 1990-01..2020-12 window `bootstrap-v1` resamples, because
+    `equity_vol`'s 1990 start binds a complete-case 12-factor covariance exactly as it
+    binds the sealed `block_draw_span`. Recorded as a confound, not repaired with a
+    fitted shrinkage constant.
+  - `gen/joinery/assemble.py`: two additive `JoineryConfig` levers with unchanged
+    defaults — `bind_waypoints` (False drops step 3's binding and step 5 entirely: Δw is
+    zero in `c_b`, no Denton, and *therefore no post-Denton floor re-application*) and
+    `use_climate` (False substitutes the new `frozen_climate()`, the posterior-mean state
+    at `s0_date` held constant, so L1 contributes no variation and L2 runs at its
+    baseline hazards). Every ensemble now records `waypoints_bound`,
+    `reconciliation_applied`, `floors_reapplied_post_denton` and `climate_layer`.
+  - `eval/ablation.py` (new): tabulates WP2.11's SEALED `multi_seed_decision_rule` inputs
+    out of stored battery reports — the comparison set, clause (i)'s mean
+    `elicitability_score` (NaN-propagating, per the sealed NaN rule), clause (ii)'s
+    band-exceedance count (ranged over the WHOLE comparison set so the seal's "zero
+    strategy-level metrics enter it" disclosure is MEASURED, not assumed), the pooled
+    inequality's two halves at ddof=1, clauses (2)–(4), and `criterion_bearing` broken
+    into its three sealed conditions. It does not execute the rule — `g2.py` does, at
+    WP2.11 — and it re-derives nothing: every input is a projection of a field the sealed
+    battery already computed.
+  - **The benchmark draw-span bias disclosure is computable and computed.**
+    `historical_strategy_returns_dated` reproduces `tails._historical_strategy_returns`
+    element for element (asserted by test) while keeping the date index, so the sealed
+    `elicitability_score` can be re-evaluated against the 1990-2020 realizations alone
+    with the run's own `(var_95, es_95)` forecast pair read from its stored report.
+  - `scripts/train_ablation_seeds.py` (new): retrains each family's ALREADY-SELECTED
+    config (`cfg:505f9800900bd757`, `cfg:5943f6cd2f6f1048`) at further seeds — no search,
+    no re-selection — and records each checkpoint's weight SHA-256 in
+    `configs/wp210-seed-checkpoints.json`, which `systems.build` verifies against.
+  - `scripts/run_ablation_grid.py` (new): the resumable single-process batch. Computes
+    the train+val reference ONCE for the whole grid (a test pins that this is
+    byte-identical to `run_full_battery` per cell), runs cells strictly sequentially in
+    ascending cost order, checkpoints after every cell, and records a failing cell in
+    `failures.json` without losing the grid.
+  - `scripts/build_ablation_report.py` (new): GENERATES `ABLATION.md` and `ablation.json`
+    from the stored artifacts. Tests assert the document is reproducible from them, and
+    that it changes when an artifact changes.
 - **WP2.9 — Layer 3b: conditional flow matching / rectified flow, CO-PRIMARY
   with diffusion (DN-1.1 §II.4 (b)). New code only under `ah/gen/blocks/`, plus
   tests, configs and scripts; no sealed judged source touched, zero amendments,
