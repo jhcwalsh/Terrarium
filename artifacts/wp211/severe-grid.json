@@ -1,0 +1,510 @@
+{
+  "block_batch": 128,
+  "cells": [
+    {
+      "arm": "severe",
+      "block_sampler_batch": 128,
+      "block_sampler_device": "cuda",
+      "checkpoint_hash": "668784c2d953808e0651ec710ed3a7664288844db3e8cac964598c943775f38f",
+      "climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "criterion_bearing": true,
+      "generator_id": "hier-flow-v1",
+      "layer_artifacts": {
+        "climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+        "regimes_pins_climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+        "regimes_sha256": "11f529fcc74dec410f1c0d336bdf18df4d017815bfcb51b8760d53e3d524c6f6"
+      },
+      "months": 120,
+      "n_paths": 1024,
+      "n_rejections": 0,
+      "passed_unfiltered": true,
+      "prereg_digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
+      "prereg_verified": true,
+      "reconciliation_unfiltered": {
+        "n_decades": 1024,
+        "per_factor": {
+          "cpi": {
+            "mean_abs_adjustment_max": 0.6048682963960674,
+            "mean_abs_adjustment_p50": 0.09407046415245804,
+            "mean_abs_adjustment_p90": 0.2449754459674818,
+            "n_flagged_decades": 678,
+            "variant": "proportional_via_log"
+          },
+          "equity_mkt": {
+            "mean_abs_adjustment_max": 0.03875267207003906,
+            "mean_abs_adjustment_p50": 0.011095810932320005,
+            "mean_abs_adjustment_p90": 0.01881216465302035,
+            "n_flagged_decades": 49,
+            "variant": "additive_log_returns"
+          },
+          "ig_spread": {
+            "mean_abs_adjustment_max": 1.0668167614214,
+            "mean_abs_adjustment_p50": 0.09688945963052756,
+            "mean_abs_adjustment_p90": 0.23359708536304294,
+            "n_flagged_decades": 1,
+            "variant": "additive_band"
+          },
+          "policy_rate": {
+            "mean_abs_adjustment_max": 11.922595593048808,
+            "mean_abs_adjustment_p50": 2.1579515478187523,
+            "mean_abs_adjustment_p90": 4.141519524928205,
+            "n_flagged_decades": 931,
+            "variant": "additive"
+          }
+        }
+      },
+      "s0_date": "1965-01-01",
+      "sample_seed": 20260727,
+      "seed_index": 0,
+      "severe_test_exclusion": "1970-01-01..1979-12-31",
+      "support_unfiltered": {
+        "extrapolation_share_max": 1.0,
+        "extrapolation_share_mean": 0.8640380859375001,
+        "n_flagged_off_support": 1009,
+        "quantile": 0.99,
+        "regime_freq_tv_mean": 0.34068935191264005,
+        "regime_frequencies_pooled": {
+          "CRI": 0.06754557291666667,
+          "EXP": 0.4306315104166667,
+          "REC": 0.2745849609375,
+          "REF": 0.12472330729166667,
+          "SLOW": 0.073583984375,
+          "STAG": 0.028930664062500003
+        }
+      },
+      "system_description": "L1+L2+L4 (hier-flow-v1 blocks), 1970s EXCLUDED from the fit",
+      "timings": {
+        "assemble_filtered_s": 27.76813817024231,
+        "assemble_unfiltered_s": 25.172536849975586,
+        "battery_s": 2405.027578830719,
+        "build_s": 0.4104483127593994,
+        "total_s": 2458.3787021636963
+      },
+      "train_seed": 20260728,
+      "vintage_id": "2026-07-26.1"
+    },
+    {
+      "arm": "primary",
+      "block_sampler_batch": 128,
+      "block_sampler_device": "cuda",
+      "checkpoint_hash": "b1fe26e100678a26ae6702907c90ee1d51b0d482bbb23e6de97eed4d0053508e",
+      "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "criterion_bearing": true,
+      "generator_id": "hier-flow-v1",
+      "layer_artifacts": {
+        "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+        "regimes_pins_climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+        "regimes_sha256": "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
+      },
+      "months": 120,
+      "n_paths": 1024,
+      "n_rejections": 0,
+      "passed_unfiltered": true,
+      "prereg_digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
+      "prereg_verified": true,
+      "reconciliation_unfiltered": {
+        "n_decades": 1024,
+        "per_factor": {
+          "cpi": {
+            "mean_abs_adjustment_max": 0.5927687047006392,
+            "mean_abs_adjustment_p50": 0.08794045599229755,
+            "mean_abs_adjustment_p90": 0.2307126792962769,
+            "n_flagged_decades": 634,
+            "variant": "proportional_via_log"
+          },
+          "equity_mkt": {
+            "mean_abs_adjustment_max": 0.04029494468733269,
+            "mean_abs_adjustment_p50": 0.011313398199807763,
+            "mean_abs_adjustment_p90": 0.018415828597556513,
+            "n_flagged_decades": 62,
+            "variant": "additive_log_returns"
+          },
+          "ig_spread": {
+            "mean_abs_adjustment_max": 1.1015655372780668,
+            "mean_abs_adjustment_p50": 0.08137861835145492,
+            "mean_abs_adjustment_p90": 0.19201719155466715,
+            "n_flagged_decades": 3,
+            "variant": "additive_band"
+          },
+          "policy_rate": {
+            "mean_abs_adjustment_max": 11.730140116379296,
+            "mean_abs_adjustment_p50": 2.1388960342438574,
+            "mean_abs_adjustment_p90": 4.023725489018251,
+            "n_flagged_decades": 931,
+            "variant": "additive"
+          }
+        }
+      },
+      "s0_date": "1965-01-01",
+      "sample_seed": 20260727,
+      "seed_index": 0,
+      "severe_test_exclusion": null,
+      "support_unfiltered": {
+        "extrapolation_share_max": 1.0,
+        "extrapolation_share_mean": 0.8631591796875,
+        "n_flagged_off_support": 1002,
+        "quantile": 0.99,
+        "regime_freq_tv_mean": 0.32668915222338935,
+        "regime_frequencies_pooled": {
+          "CRI": 0.056290690104166666,
+          "EXP": 0.4354166666666667,
+          "REC": 0.28570149739583334,
+          "REF": 0.11274414062499999,
+          "SLOW": 0.0802001953125,
+          "STAG": 0.029646809895833334
+        }
+      },
+      "system_description": "L1+L2+L4 (hier-flow-v1 blocks), full-sample fit",
+      "timings": {
+        "assemble_filtered_s": 42.801817178726196,
+        "assemble_unfiltered_s": 34.3437077999115,
+        "battery_s": 2379.9406323432922,
+        "build_s": 0.27796459197998047,
+        "total_s": 2457.36412191391
+      },
+      "train_seed": 20260728,
+      "vintage_id": "2026-07-26.1"
+    },
+    {
+      "arm": "severe",
+      "block_sampler_batch": 128,
+      "block_sampler_device": "cuda",
+      "checkpoint_hash": "b21d202cfde7cee953899bf0a1054327819d7b5481f2d27f638e96f77ad47d26",
+      "climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "criterion_bearing": true,
+      "generator_id": "hier-flow-v1",
+      "layer_artifacts": {
+        "climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+        "regimes_pins_climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+        "regimes_sha256": "11f529fcc74dec410f1c0d336bdf18df4d017815bfcb51b8760d53e3d524c6f6"
+      },
+      "months": 120,
+      "n_paths": 1024,
+      "n_rejections": 0,
+      "passed_unfiltered": true,
+      "prereg_digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
+      "prereg_verified": true,
+      "reconciliation_unfiltered": {
+        "n_decades": 1024,
+        "per_factor": {
+          "cpi": {
+            "mean_abs_adjustment_max": 0.6417015918230046,
+            "mean_abs_adjustment_p50": 0.09889081693801101,
+            "mean_abs_adjustment_p90": 0.24906744520170948,
+            "n_flagged_decades": 689,
+            "variant": "proportional_via_log"
+          },
+          "equity_mkt": {
+            "mean_abs_adjustment_max": 0.037210087516944046,
+            "mean_abs_adjustment_p50": 0.010989703375260666,
+            "mean_abs_adjustment_p90": 0.01782783815879414,
+            "n_flagged_decades": 42,
+            "variant": "additive_log_returns"
+          },
+          "ig_spread": {
+            "mean_abs_adjustment_max": 0.7569241857229257,
+            "mean_abs_adjustment_p50": 0.10268195374247807,
+            "mean_abs_adjustment_p90": 0.2611008749783892,
+            "n_flagged_decades": 0,
+            "variant": "additive_band"
+          },
+          "policy_rate": {
+            "mean_abs_adjustment_max": 13.04120759831381,
+            "mean_abs_adjustment_p50": 2.3219869895898047,
+            "mean_abs_adjustment_p90": 4.544592957511599,
+            "n_flagged_decades": 943,
+            "variant": "additive"
+          }
+        }
+      },
+      "s0_date": "1965-01-01",
+      "sample_seed": 20268646,
+      "seed_index": 1,
+      "severe_test_exclusion": "1970-01-01..1979-12-31",
+      "support_unfiltered": {
+        "extrapolation_share_max": 1.0,
+        "extrapolation_share_mean": 0.8648437499999999,
+        "n_flagged_off_support": 1010,
+        "quantile": 0.99,
+        "regime_freq_tv_mean": 0.3405484068627451,
+        "regime_frequencies_pooled": {
+          "CRI": 0.067529296875,
+          "EXP": 0.4311442057291667,
+          "REC": 0.2742024739583333,
+          "REF": 0.12476399739583333,
+          "SLOW": 0.0734619140625,
+          "STAG": 0.02889811197916667
+        }
+      },
+      "system_description": "L1+L2+L4 (hier-flow-v1 blocks), 1970s EXCLUDED from the fit",
+      "timings": {
+        "assemble_filtered_s": 41.933197259902954,
+        "assemble_unfiltered_s": 36.477731227874756,
+        "battery_s": 2372.4637446403503,
+        "build_s": 0.2827341556549072,
+        "total_s": 2451.157407283783
+      },
+      "train_seed": 20268647,
+      "vintage_id": "2026-07-26.1"
+    },
+    {
+      "arm": "primary",
+      "block_sampler_batch": 128,
+      "block_sampler_device": "cuda",
+      "checkpoint_hash": "5b359c8cf29d0de03bdf51d30447c68c4a4f2842cab611042e514cf14a8cf5aa",
+      "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "criterion_bearing": true,
+      "generator_id": "hier-flow-v1",
+      "layer_artifacts": {
+        "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+        "regimes_pins_climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+        "regimes_sha256": "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
+      },
+      "months": 120,
+      "n_paths": 1024,
+      "n_rejections": 0,
+      "passed_unfiltered": true,
+      "prereg_digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
+      "prereg_verified": true,
+      "reconciliation_unfiltered": {
+        "n_decades": 1024,
+        "per_factor": {
+          "cpi": {
+            "mean_abs_adjustment_max": 0.6287418028649407,
+            "mean_abs_adjustment_p50": 0.09543557392511853,
+            "mean_abs_adjustment_p90": 0.24025770279285552,
+            "n_flagged_decades": 665,
+            "variant": "proportional_via_log"
+          },
+          "equity_mkt": {
+            "mean_abs_adjustment_max": 0.05017221322591221,
+            "mean_abs_adjustment_p50": 0.01298604105085465,
+            "mean_abs_adjustment_p90": 0.021665225599769897,
+            "n_flagged_decades": 89,
+            "variant": "additive_log_returns"
+          },
+          "ig_spread": {
+            "mean_abs_adjustment_max": 0.9609650156758501,
+            "mean_abs_adjustment_p50": 0.10941443837938865,
+            "mean_abs_adjustment_p90": 0.29261272820317963,
+            "n_flagged_decades": 1,
+            "variant": "additive_band"
+          },
+          "policy_rate": {
+            "mean_abs_adjustment_max": 12.188721989782099,
+            "mean_abs_adjustment_p50": 2.2105762215828992,
+            "mean_abs_adjustment_p90": 4.1831597352650975,
+            "n_flagged_decades": 936,
+            "variant": "additive"
+          }
+        }
+      },
+      "s0_date": "1965-01-01",
+      "sample_seed": 20268646,
+      "seed_index": 1,
+      "severe_test_exclusion": null,
+      "support_unfiltered": {
+        "extrapolation_share_max": 1.0,
+        "extrapolation_share_mean": 0.86826171875,
+        "n_flagged_off_support": 1005,
+        "quantile": 0.99,
+        "regime_freq_tv_mean": 0.32656721868434874,
+        "regime_frequencies_pooled": {
+          "CRI": 0.056290690104166666,
+          "EXP": 0.43560384114583334,
+          "REC": 0.2856526692708333,
+          "REF": 0.11265462239583333,
+          "SLOW": 0.08015950520833334,
+          "STAG": 0.029638671875
+        }
+      },
+      "system_description": "L1+L2+L4 (hier-flow-v1 blocks), full-sample fit",
+      "timings": {
+        "assemble_filtered_s": 43.19569110870361,
+        "assemble_unfiltered_s": 38.409013748168945,
+        "battery_s": 2376.628061771393,
+        "build_s": 0.28789567947387695,
+        "total_s": 2458.5206623077393
+      },
+      "train_seed": 20268647,
+      "vintage_id": "2026-07-26.1"
+    },
+    {
+      "arm": "severe",
+      "block_sampler_batch": 128,
+      "block_sampler_device": "cuda",
+      "checkpoint_hash": "1276baad677c93e34c7f0b4156d4caf769c318bdecd3cf4e620cc738f4cfb1d8",
+      "climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "criterion_bearing": true,
+      "generator_id": "hier-flow-v1",
+      "layer_artifacts": {
+        "climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+        "regimes_pins_climate_sha256": "8feff27fb2aa773994439e72b5c9dd0f9c1c5e98bc9ab7edcc0c6f9cf5c4f65c",
+        "regimes_sha256": "11f529fcc74dec410f1c0d336bdf18df4d017815bfcb51b8760d53e3d524c6f6"
+      },
+      "months": 120,
+      "n_paths": 1024,
+      "n_rejections": 0,
+      "passed_unfiltered": true,
+      "prereg_digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
+      "prereg_verified": true,
+      "reconciliation_unfiltered": {
+        "n_decades": 1024,
+        "per_factor": {
+          "cpi": {
+            "mean_abs_adjustment_max": 0.6148124497759928,
+            "mean_abs_adjustment_p50": 0.09879159825190917,
+            "mean_abs_adjustment_p90": 0.24288200453360945,
+            "n_flagged_decades": 694,
+            "variant": "proportional_via_log"
+          },
+          "equity_mkt": {
+            "mean_abs_adjustment_max": 0.043035465580386366,
+            "mean_abs_adjustment_p50": 0.013623493149923126,
+            "mean_abs_adjustment_p90": 0.023148112559422854,
+            "n_flagged_decades": 105,
+            "variant": "additive_log_returns"
+          },
+          "ig_spread": {
+            "mean_abs_adjustment_max": 1.0195596244635212,
+            "mean_abs_adjustment_p50": 0.11459272048515683,
+            "mean_abs_adjustment_p90": 0.2667702908049776,
+            "n_flagged_decades": 0,
+            "variant": "additive_band"
+          },
+          "policy_rate": {
+            "mean_abs_adjustment_max": 13.501705812965323,
+            "mean_abs_adjustment_p50": 2.128979612933919,
+            "mean_abs_adjustment_p90": 4.3741263418966305,
+            "n_flagged_decades": 982,
+            "variant": "additive"
+          }
+        }
+      },
+      "s0_date": "1965-01-01",
+      "sample_seed": 20276565,
+      "seed_index": 2,
+      "severe_test_exclusion": "1970-01-01..1979-12-31",
+      "support_unfiltered": {
+        "extrapolation_share_max": 1.0,
+        "extrapolation_share_mean": 0.8669921875,
+        "n_flagged_off_support": 1009,
+        "quantile": 0.99,
+        "regime_freq_tv_mean": 0.3401458825717787,
+        "regime_frequencies_pooled": {
+          "CRI": 0.067431640625,
+          "EXP": 0.4316650390625,
+          "REC": 0.27423502604166666,
+          "REF": 0.12440592447916668,
+          "SLOW": 0.07342122395833334,
+          "STAG": 0.028841145833333335
+        }
+      },
+      "system_description": "L1+L2+L4 (hier-flow-v1 blocks), 1970s EXCLUDED from the fit",
+      "timings": {
+        "assemble_filtered_s": 44.98140811920166,
+        "assemble_unfiltered_s": 39.016685485839844,
+        "battery_s": 2594.2667713165283,
+        "build_s": 0.29476094245910645,
+        "total_s": 2678.559625864029
+      },
+      "train_seed": 20276566,
+      "vintage_id": "2026-07-26.1"
+    },
+    {
+      "arm": "primary",
+      "block_sampler_batch": 128,
+      "block_sampler_device": "cuda",
+      "checkpoint_hash": "b661abc1cc4dffde9477da774ddb0dcf19bea3e382c3105cbf06594c03daadde",
+      "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+      "config_hash": "cfg:5943f6cd2f6f1048",
+      "criterion_bearing": true,
+      "generator_id": "hier-flow-v1",
+      "layer_artifacts": {
+        "climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+        "regimes_pins_climate_sha256": "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487",
+        "regimes_sha256": "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
+      },
+      "months": 120,
+      "n_paths": 1024,
+      "n_rejections": 0,
+      "passed_unfiltered": true,
+      "prereg_digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
+      "prereg_verified": true,
+      "reconciliation_unfiltered": {
+        "n_decades": 1024,
+        "per_factor": {
+          "cpi": {
+            "mean_abs_adjustment_max": 0.6780924279804719,
+            "mean_abs_adjustment_p50": 0.0988907318418745,
+            "mean_abs_adjustment_p90": 0.2356523131811775,
+            "n_flagged_decades": 674,
+            "variant": "proportional_via_log"
+          },
+          "equity_mkt": {
+            "mean_abs_adjustment_max": 0.04141699401759507,
+            "mean_abs_adjustment_p50": 0.014722216331431276,
+            "mean_abs_adjustment_p90": 0.022763831307994198,
+            "n_flagged_decades": 42,
+            "variant": "additive_log_returns"
+          },
+          "ig_spread": {
+            "mean_abs_adjustment_max": 0.7329485535843838,
+            "mean_abs_adjustment_p50": 0.11754116212289667,
+            "mean_abs_adjustment_p90": 0.25512591024515013,
+            "n_flagged_decades": 0,
+            "variant": "additive_band"
+          },
+          "policy_rate": {
+            "mean_abs_adjustment_max": 13.135246784520708,
+            "mean_abs_adjustment_p50": 2.011340422971669,
+            "mean_abs_adjustment_p90": 4.186724857407973,
+            "n_flagged_decades": 974,
+            "variant": "additive"
+          }
+        }
+      },
+      "s0_date": "1965-01-01",
+      "sample_seed": 20276565,
+      "seed_index": 2,
+      "severe_test_exclusion": null,
+      "support_unfiltered": {
+        "extrapolation_share_max": 1.0,
+        "extrapolation_share_mean": 0.8650146484375001,
+        "n_flagged_off_support": 1003,
+        "quantile": 0.99,
+        "regime_freq_tv_mean": 0.3264659379376751,
+        "regime_frequencies_pooled": {
+          "CRI": 0.056298828125,
+          "EXP": 0.4355387369791667,
+          "REC": 0.2857666015625,
+          "REF": 0.11257324218749999,
+          "SLOW": 0.08021647135416667,
+          "STAG": 0.029606119791666666
+        }
+      },
+      "system_description": "L1+L2+L4 (hier-flow-v1 blocks), full-sample fit",
+      "timings": {
+        "assemble_filtered_s": 51.24782872200012,
+        "assemble_unfiltered_s": 45.21465611457825,
+        "battery_s": 2686.9277379512787,
+        "build_s": 0.311145544052124,
+        "total_s": 2783.701368331909
+      },
+      "train_seed": 20276566,
+      "vintage_id": "2026-07-26.1"
+    }
+  ],
+  "exclusion": "1970-01-01..1979-12-31",
+  "family": "flow",
+  "months": 120,
+  "n_paths": 1024,
+  "protocol": "severe_test_protocol (pre-registration.yaml)",
+  "s0_date": "1965-01-01",
+  "sampler_device": "cuda"
+}

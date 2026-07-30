@@ -136,3 +136,16 @@ experiments/
 !/artifacts/wp29/bakeoff-notes.md
 !/artifacts/wp29/neighborhood.md
 !/artifacts/wp29/neighborhood.json
+# WP2.11 part 1 (severe test) evidence, same reasoning as WP2.4 / WP2.7 / WP2.8 /
+# WP2.7b above: the per-cell battery reports reproduce from
+# scripts/run_severe_test.py against the sealed vintage and the pinned artifacts,
+# so only what nothing else in the repository holds is committed -- the generated
+# report, its raw numbers, the six-cell grid summary, the cycle-forcing
+# sensitivity measurement, and the severe checkpoint hashes.
+!/artifacts/wp211/
+/artifacts/wp211/*
+!/artifacts/wp211/SEVERE-TEST.md
+!/artifacts/wp211/severe-test.json
+!/artifacts/wp211/severe-grid.json
+!/artifacts/wp211/cycle-sensitivity.json
+!/artifacts/wp211/severe-checkpoints.json

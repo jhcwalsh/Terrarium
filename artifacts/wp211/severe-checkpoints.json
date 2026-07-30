@@ -1,0 +1,41 @@
+{
+  "flow:0": {
+    "best_aux_term": -3.3413167247624056,
+    "best_gen_term": 1.5671844979127247,
+    "best_s": -1.7741322268496809,
+    "best_step": 4000,
+    "checkpoint": "experiments/wp211/severe-l3b-flow-s0/checkpoint.pt",
+    "checkpoint_hash": "668784c2d953808e0651ec710ed3a7664288844db3e8cac964598c943775f38f",
+    "config_hash": "cfg:5943f6cd2f6f1048",
+    "steps_run": 12000,
+    "stopped_early": true,
+    "train_seed": 20260728,
+    "wall_s": 812.5327031612396
+  },
+  "flow:1": {
+    "best_aux_term": -3.34733771616429,
+    "best_gen_term": 1.5939579904079437,
+    "best_s": -1.7533797257563464,
+    "best_step": 4000,
+    "checkpoint": "experiments/wp211/severe-l3b-flow-s1/checkpoint.pt",
+    "checkpoint_hash": "b21d202cfde7cee953899bf0a1054327819d7b5481f2d27f638e96f77ad47d26",
+    "config_hash": "cfg:5943f6cd2f6f1048",
+    "steps_run": 12000,
+    "stopped_early": true,
+    "train_seed": 20268647,
+    "wall_s": 801.5567195415497
+  },
+  "flow:2": {
+    "best_aux_term": -3.287295623901839,
+    "best_gen_term": 1.4920946508646011,
+    "best_s": -1.7952009730372378,
+    "best_step": 4000,
+    "checkpoint": "experiments/wp211/severe-l3b-flow-s2/checkpoint.pt",
+    "checkpoint_hash": "1276baad677c93e34c7f0b4156d4caf769c318bdecd3cf4e620cc738f4cfb1d8",
+    "config_hash": "cfg:5943f6cd2f6f1048",
+    "steps_run": 12000,
+    "stopped_early": true,
+    "train_seed": 20276566,
+    "wall_s": 843.1280403137207
+  }
+}

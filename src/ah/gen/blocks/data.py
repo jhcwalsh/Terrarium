@@ -87,6 +87,7 @@ from ah.gen.joinery import bridge
 from ah.gen.joinery import waypoints as wp
 from ah.gen.joinery.waypoints import JoineryError, MonthlyTargets, SourceStats
 from ah.gen.regimes.semimarkov import REGIME_LABELS
+from ah.gen.severe import ExclusionSpan
 from ah.splits import VALIDATION
 
 __all__ = [
@@ -224,6 +225,10 @@ class BlockDataset:
     stats: SourceStats
     n_dropped_straddling: int
     validation_start_month: int
+    #: WP2.11 severe test: the excluded span, or None on the primary path.
+    exclusion: ExclusionSpan | None = None
+    #: Blocks dropped because their WINDOW intersects the exclusion. 0 without one.
+    n_dropped_excluded: int = 0
 
     @property
     def n_train_raw(self) -> int:
@@ -329,12 +334,26 @@ def build_dataset(
     block_months: int = bridge.BLOCK_MONTHS,
     n_folds: int = 3,
     validation_start_date: str = VALIDATION.start,
+    exclude: ExclusionSpan | None = None,
 ) -> BlockDataset:
     """Assemble the block training set from the campaign panel + L1 posterior.
 
     ``validation_start_date`` defaults to the SEALED split boundary
     (:data:`ah.splits.VALIDATION`); the parameter exists for synthetic tests
     only. Deterministic: no RNG anywhere in this function.
+
+    ``exclude`` (WP2.11 severe test) drops every block whose WINDOW
+    ``[start, start + L)`` intersects the excluded span -- not merely those whose
+    START is inside it, since a block that merely ends inside the decade still
+    trains on excluded months. The train-only standardization constants are then
+    re-derived on the reduced sample (they are part of the fit, not of the
+    architecture), and the block-aware fold structure is otherwise untouched.
+
+    NOTE: on the real campaign panel this is VACUOUS. The panel is the sealed
+    ``block_draw_span`` 1990-01..2020-12, which does not reach the 1970s -- the
+    same structural fact behind the sealed ``benchmark_exception``. The severe
+    L3 retrain is nonetheless not a no-op, because ``cond`` carries L1's
+    posterior-mean slow states and L1 has been refit.
     """
     import dataclasses
 
@@ -378,13 +397,35 @@ def build_dataset(
 
     edges = _fold_boundaries(validation_start, months, n_folds)
 
+    # WP2.11 severe test: any block whose WINDOW touches the exclusion is gone.
+    if exclude is None:
+        excluded_block = np.zeros(starts.size, dtype=bool)
+    else:
+        excluded_block = exclude.window_intersects(source.dates[starts], block_months)
+
     def inside(lo: int, hi: int) -> np.ndarray:
-        return np.flatnonzero((starts >= lo) & (starts + block_months <= hi))
+        return np.flatnonzero((starts >= lo) & (starts + block_months <= hi) & ~excluded_block)
 
     train_index = inside(edges[0], edges[1])
     fold_indices = tuple(inside(edges[k], edges[k + 1]) for k in range(1, len(edges) - 1))
     kept = train_index.size + sum(f.size for f in fold_indices)
-    n_dropped = int(starts.size - kept)
+    # A block can be lost for two DISJOINT reasons and the report must tell them
+    # apart: it straddles a split boundary, or the exclusion took it. `would_keep`
+    # is what `kept` would have been with no exclusion at all, so the difference
+    # is exactly the exclusion's cost and the remainder is the straddlers.
+    would_keep = int(
+        sum(
+            int(np.flatnonzero((starts >= edges[k]) & (starts + block_months <= edges[k + 1])).size)
+            for k in range(len(edges) - 1)
+        )
+    )
+    n_dropped_excluded = would_keep - kept
+    n_dropped = int(starts.size - would_keep)
+    if train_index.size == 0:
+        raise JoineryError(
+            "the severe-test exclusion leaves no training block at all; there is "
+            "nothing to retrain on"
+        )
 
     train_x = x[train_index]
     x_mean = train_x.mean(axis=(0, 1))
@@ -405,6 +446,8 @@ def build_dataset(
         stats=stats,
         n_dropped_straddling=n_dropped,
         validation_start_month=validation_start,
+        exclusion=exclude,
+        n_dropped_excluded=n_dropped_excluded,
     )
 
 

@@ -46,6 +46,7 @@ from ah.gen.bootstrap import CAMPAIGN_VINTAGE_ID  # noqa: E402
 from ah.gen.climate.simulate import load_artifact as load_climate_artifact  # noqa: E402
 from ah.gen.regimes import fit as rfit  # noqa: E402
 from ah.gen.regimes import semimarkov as sm  # noqa: E402
+from ah.gen.severe import SEVERE_TEST_EXCLUSION  # noqa: E402
 from ah.splits import DataAccess  # noqa: E402
 
 _DEFAULT_CLIMATE_ARTIFACT = (
@@ -79,7 +80,19 @@ def main() -> int:
     parser.add_argument("--config", default=None, help="alternate priors.yaml")
     parser.add_argument("--no-sensitivity", action="store_true")
     parser.add_argument("--no-acceptance", action="store_true")
+    parser.add_argument(
+        "--severe-test",
+        action="store_true",
+        help=(
+            "WP2.11 severe test: exclude the sealed 1970s span from the fitting sample. "
+            "The label history splits into observed segments; see "
+            "ah.gen.regimes.fit.segmented_spell_observations for the straddling-spell rule. "
+            "Writes to a separate experiment directory and never touches the primary artifact."
+        ),
+    )
     args = parser.parse_args()
+
+    exclude = SEVERE_TEST_EXCLUSION if args.severe_test else None
 
     config = sm.load_config(args.config)
     fit_updates = {}
@@ -93,7 +106,8 @@ def main() -> int:
         )
 
     cfg_hash = config_hash(sm.config_dict(config))
-    exp_id = f"regimes-l2-{cfg_hash.removeprefix('cfg:')[:12]}-s{args.seed}"
+    prefix = "regimes-l2-severe" if exclude is not None else "regimes-l2"
+    exp_id = f"{prefix}-{cfg_hash.removeprefix('cfg:')[:12]}-s{args.seed}"
     out_dir = Path(args.exp_root) / exp_id
 
     climate_artifact = load_climate_artifact(args.climate_artifact)
@@ -120,10 +134,13 @@ def main() -> int:
             vintage_id=args.vintage,
             out_dir=out_dir,
             created_at=args.created_at,
-            report_copy_path=_REPO_ROOT / rfit.REPORT_FILENAME,
-            sensitivity_report_copy_path=_REPO_ROOT / rfit.SENSITIVITY_REPORT_FILENAME,
+            report_copy_path=(None if exclude is not None else _REPO_ROOT / rfit.REPORT_FILENAME),
+            sensitivity_report_copy_path=(
+                None if exclude is not None else _REPO_ROOT / rfit.SENSITIVITY_REPORT_FILENAME
+            ),
             run_acceptance=not args.no_acceptance,
             run_sensitivity=not args.no_sensitivity,
+            exclude=exclude,
         )
         elapsed = time.perf_counter() - t0
     finally:
@@ -147,7 +164,8 @@ def main() -> int:
         inside = sum(1 for r in judged if r["inside"])
         print(f"[fit_regimes] acceptance: {inside}/{len(judged)} judged bands inside")
     print(f"[fit_regimes] artifact: {result.artifact_path}")
-    print(f"[fit_regimes] report:   {result.report_path} (+ repo-root copy)")
+    copy_note = " (+ repo-root copy)" if exclude is None else " (no repo-root copy: severe run)"
+    print(f"[fit_regimes] report:   {result.report_path}{copy_note}")
     return 0
 
 

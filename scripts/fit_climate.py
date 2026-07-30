@@ -42,6 +42,7 @@ from ah.experiment import config_hash  # noqa: E402
 from ah.gen.bootstrap import CAMPAIGN_VINTAGE_ID  # noqa: E402
 from ah.gen.climate import fit as cf  # noqa: E402
 from ah.gen.climate import model as cm  # noqa: E402
+from ah.gen.severe import SEVERE_TEST_EXCLUSION  # noqa: E402
 from ah.splits import DataAccess  # noqa: E402
 
 
@@ -68,7 +69,18 @@ def main() -> int:
     parser.add_argument("--warmup", type=int, default=None)
     parser.add_argument("--samples", type=int, default=None)
     parser.add_argument("--config", default=None, help="alternate priors.yaml")
+    parser.add_argument(
+        "--severe-test",
+        action="store_true",
+        help=(
+            "WP2.11 severe test: exclude the sealed 1970s span from the fitting sample by "
+            "UNMASKING those months (grid and state path unchanged). Writes to a separate "
+            "experiment directory and never touches the primary artifact."
+        ),
+    )
     args = parser.parse_args()
+
+    exclude = SEVERE_TEST_EXCLUSION if args.severe_test else None
 
     config = cm.load_config(args.config)
     fit_updates = {}
@@ -82,9 +94,16 @@ def main() -> int:
         )
 
     cfg_hash = config_hash(cm.config_dict(config))
-    exp_id = f"climate-l1-{cfg_hash.removeprefix('cfg:')[:12]}-s{args.seed}"
+    # The exclusion is NOT folded into the config hash (the config -- priors, span,
+    # fit settings -- is genuinely identical; only the DATA differ), so the severe
+    # run is separated by an explicit id prefix instead. The artifact's own content
+    # hash differs anyway, and meta records the exclusion.
+    prefix = "climate-l1-severe" if exclude is not None else "climate-l1"
+    exp_id = f"{prefix}-{cfg_hash.removeprefix('cfg:')[:12]}-s{args.seed}"
     out_dir = Path(args.exp_root) / exp_id
 
+    if exclude is not None:
+        print(f"[fit_climate] SEVERE TEST: excluding {exclude.label} from the fitting sample")
     print(f"[fit_climate] vintage {args.vintage}  config {cfg_hash}  seed {args.seed}")
     print(f"[fit_climate] exp dir: {out_dir}")
     print(
@@ -103,7 +122,10 @@ def main() -> int:
             vintage_id=args.vintage,
             out_dir=out_dir,
             created_at=args.created_at,
-            report_copy_path=_REPO_ROOT / "climate-fit-report.md",
+            report_copy_path=(
+                None if exclude is not None else _REPO_ROOT / "climate-fit-report.md"
+            ),
+            exclude=exclude,
         )
         elapsed = time.perf_counter() - t0
     finally:
@@ -116,7 +138,8 @@ def main() -> int:
         f"min_ess={d['min_ess']:.0f}"
     )
     print(f"[fit_climate] artifact: {result.artifact_path}")
-    print(f"[fit_climate] report:   {result.report_path} (+ repo-root copy)")
+    copy_note = " (+ repo-root copy)" if exclude is None else " (no repo-root copy: severe run)"
+    print(f"[fit_climate] report:   {result.report_path}{copy_note}")
     return 0
 
 
