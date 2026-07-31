@@ -642,3 +642,142 @@ amendments:
     false, for the same reason: nothing in this pass is a number, and no generator
     has been fitted beyond the frozen benchmark.'
   type: correction
+- amendment_id: AM-2026-07-29-001
+  date: '2026-07-29'
+  payload:
+    code_changes: NONE, inside or outside the seal. ah/eval/ablation.py's comparison_set()
+      reads the sealed field, not the gloss, and its docstring already named the correct
+      pair -- so no computed verdict to date rests on the false reading.
+    evidence:
+      same_document: rationale.d4_commodities_consequence and limitations.the_campaign_vintage_is_missing_two_of_fourteen_factors
+        both name eqw_factors and endowment_proxy as the uncomputable pair and sixty_forty/momentum/carry
+        as the computable three.
+      sealed_field: 'reference_run.uncomputable_d4_strategies: [eqw_factors, endowment_proxy]'
+      wp210_measurement: 'All 18 grid cells: sixty_forty, momentum and carry finite
+        elicitability_score (bootstrap-v1 seed 0: -2.5168, -2.3914, -1.7309); eqw_factors
+        and endowment_proxy NaN in every cell.'
+    found_while: Extracting WP2.10's results. THE RESULTS WERE ALREADY IN HAND, and
+      the correction is in the direction that makes a promotion possible. See the
+      rationale; it is not argued away there and must not be here.
+    hashed_file_set: 'UNCHANGED IN MEMBERSHIP: 32 files, the same list as the superseded
+      lock. This amendment adds no judged source; the digest moves only because pre-registration.yaml
+      is itself hashed.'
+    machine_check_that_could_not_have_caught_it: tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics
+      checks that the definition names the eleven strategy statistics and the two
+      cross-block ones, that uncomputable_d4_strategies is a proper subset of d4_strategies,
+      and that the subtraction is non-empty. It never compares the prose's enumeration
+      against the field's value. claims_with_tests does not reach the clause either
+      (no trigger phrase). RFR-76, unowned.
+    new_lock_digest: sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, selection weight, decision or rule text
+      changed value. The only edit to any sealed file is one prose clause in tail_tier_definition
+      and the correction note recorded beside it.
+    owner_approval: Explicit. The project owner was shown the WP2.10 results first
+      and was told plainly that the correction was being made at the worst possible
+      moment.
+    sealed_at: '2026-07-29'
+    superseded_lock_digest: sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585
+    the_defect: multi_seed_decision_rule.tail_tier_definition glossed reference_run.uncomputable_d4_strategies
+      as 'sixty_forty, momentum and carry'. The field is [eqw_factors, endowment_proxy].
+      The gloss named the complement of the field it glossed.
+    the_two_readings:
+      field_reading_ADOPTED: comparison set = {sixty_forty, momentum, carry}, all
+        computable; the rule executes; on the WP2.10 grid hier-flow-v1 satisfies clause
+        (1) in all three seeds.
+      gloss_reading_REJECTED: comparison set = {eqw_factors, endowment_proxy}, both
+        NaN on the generated side in all 18 cells; beats_definition's NaN rule then
+        makes no seed a beat for any system ever -- an automatic SHIP-BENCHMARK independent
+        of all evidence.
+  post_hoc: true
+  rationale: 'CORRECTION OF A FALSE PROSE GLOSS IN THE SEALED multi_seed_decision_rule.tail_tier_definition,
+    MADE AFTER RESULTS EXIST. THIS IS THE FIRST post_hoc: true ENTRY IN THIS LOG,
+    and that flag is the substance of the entry rather than a formality: every prior
+    amendment (AM-2026-07-26-001 through -008) is post_hoc: false because at the time
+    of each one no generator had been fitted and no G2 evidence existed. That is no
+    longer true. WP2.10''s 18-cell multi-seed ablation grid completed before this
+    defect was found.
+
+
+    WHAT THE GLOSS SAID. tail_tier_definition defined the comparison set as ''the
+    five d4_strategies minus reference_run.uncomputable_d4_strategies, which on this
+    vintage is sixty_forty, momentum and carry''. WHAT THE FIELD SAYS: reference_run.uncomputable_d4_strategies:
+    [eqw_factors, endowment_proxy]. The gloss named the COMPLEMENT of the very field
+    it glossed.
+
+
+    THREE INDEPENDENT CONFIRMATIONS THAT THE FIELD IS RIGHT AND THE GLOSS IS WRONG.
+    (1) The sealed field itself reads [eqw_factors, endowment_proxy], and it is the
+    field, never this prose, that ah.eval.prereg''s threshold-availability check and
+    ah/eval/ablation.py''s comparison_set() read. (2) The same sealed document, rationale.d4_commodities_consequence,
+    says: ''TWO of the five sealed D4 strategies have NO COMPUTABLE REFERENCE STATISTICS
+    on the sealed campaign vintage: eqw_factors and endowment_proxy ... The other
+    three (sixty_forty, momentum, carry) are computable and are where every sealed
+    thresholds.strategies entry lives'' -- and every sealed thresholds.strategies
+    key is in fact on one of those three. limitations.the_campaign_vintage_is_missing_two_of_fourteen_factors
+    says the same. (3) WP2.10''s measurements: on every one of the 18 grid cells,
+    sixty_forty, momentum and carry carry finite elicitability_score values (bootstrap-v1
+    seed 0: -2.5168, -2.3914, -1.7309) while eqw_factors and endowment_proxy are NaN
+    in all 18. elicitability_score scores the GENERATED forecast against the HISTORICAL
+    realizations, so a finite value is proof that the historical side exists.
+
+
+    WHY IT IS NOT INERT -- THE TWO READINGS GIVE OPPOSITE G2 VERDICTS, WHICH IS WHY
+    THIS IS AN AMENDMENT AND NOT A FOOTNOTE. Reading the FIELD (what the code does):
+    the comparison set is {sixty_forty, momentum, carry}, all computable, the rule
+    executes, and on the WP2.10 grid hier-flow-v1 satisfies clause (1) against bootstrap-v1
+    in all three seeds. Reading the GLOSS literally: the comparison set is {eqw_factors,
+    endowment_proxy}, both NaN on the generated side in every cell, and beats_definition''s
+    NaN rule (''if either side''s elicitability_score is NaN for any strategy in the
+    comparison set, the seed is NOT a beat -- not a tie, not an exclusion'') then
+    makes NO SEED A BEAT FOR ANY SYSTEM, EVER: an automatic SHIP-BENCHMARK independent
+    of all evidence, for all time. THIS AMENDMENT ADOPTS THE FIELD''S READING.
+
+
+    WHEN IT WAS FOUND, AND WHO BENEFITS -- STATED WITHOUT SOFTENING, BECAUSE THIS
+    IS THE PART A REVIEWER MUST WEIGH. It was found while extracting WP2.10''s results,
+    i.e. WITH THE RESULTS ALREADY IN HAND, and after it was already visible that hier-flow-v1
+    beats bootstrap-v1 on clause (1) in every seed. So: A CORRECTION THAT MAKES A
+    PROMOTION POSSIBLE HAS BEEN MADE BY THE PARTY THAT WOULD BENEFIT FROM A PROMOTION,
+    AFTER SEEING THAT A PROMOTION WAS IN REACH. That is the worst possible moment
+    to touch a sealed decision rule, and nothing in this entry disposes of it. It
+    is recorded here, undiluted, so a reviewer can weigh it against the evidence rather
+    than have it argued away. The project owner was shown the WP2.10 results first,
+    was told plainly that the correction was being made at the worst possible moment,
+    and approved it explicitly. What can be said on the other side, and no more than
+    this: two of the three confirmations above (the field itself; d4_commodities_consequence)
+    were sealed on 2026-07-26 and have been visible in the committed document since
+    long before any generator existed, so the reading adopted here is not one invented
+    after the fact; and no number moved.
+
+
+    WHAT MOVED AND WHAT DID NOT. Exactly one clause of prose inside tail_tier_definition,
+    plus an in-place record of the correction beside it (the same in-document convention
+    ensemble_size.mc_error_grid.reading''s CLAIMS-SWEEP CORRECTION already uses).
+    NO THRESHOLD, BAND, GATE, FLOOR, SPLIT, ENSEMBLE SIZE, SEVERITY, SELECTION WEIGHT
+    OR RULE TEXT MOVED -- not one. beats_definition (including the NaN rule, the pooled
+    inequality and clause (ii)''s scope), rule, benchmark_draw_span_bias, criterion_bearing_runs_only,
+    minimum_seeds, reference_run, the whole thresholds block, ensemble_size, tuning_protocol
+    and every decision are byte-identical. NO CODE CHANGED, inside or outside the
+    seal: ah/eval/ablation.py''s comparison_set() takes uncomputable_strategy_ids
+    from the sealed FIELD and its docstring already named eqw_factors and endowment_proxy
+    as the pair removed, so the executable path never read the false gloss and no
+    verdict computed to date was produced under the wrong reading.
+
+
+    WHAT THIS SAYS ABOUT THE STANDING CHECKS, recorded because a clean-looking test
+    suite that missed this is itself a finding. tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics
+    -- the machine check the sealed sentence itself points at -- COULD NOT HAVE CAUGHT
+    THIS DEFECT. It asserts that the definition names the eleven per-strategy statistics
+    and the two per-pair ones, that reference_run.uncomputable_d4_strategies is a
+    proper subset of d4_strategies, and that the subtraction is non-empty. It never
+    compares the prose''s ENUMERATION of the strategies against the field''s VALUE,
+    and all five strategy ids appear elsewhere in the same folded block, so no substring
+    check would have separated them either. The claims_with_tests registry does not
+    reach it either: the gloss carries none of the sealed trigger_phrases, and the
+    two registered anchors for this block sit on the two following lines. The general
+    gap -- A SEALED GLOSS THAT RESTATES A SEALED FIELD''S VALUE IN PROSE, WITH NOTHING
+    CHECKING THE RESTATEMENT AGAINST THE FIELD -- is the claims sweep''s defect class
+    (AM-2026-07-26-006/-008) one level down, and it is recorded in governance/retrofit-register.md
+    RFR-76 as UNOWNED.'
+  type: correction

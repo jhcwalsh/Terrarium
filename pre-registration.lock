@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585",
+  "digest": "sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275",
   "hashed_files": [
     "factors.yaml",
     "fixtures/worlds/conditional/crisis_severity_mild.worldspec.json",
@@ -35,5 +35,5 @@
     "src/ah/strategies.py"
   ],
   "prereg_path": "pre-registration.yaml",
-  "sealed_at": "2026-07-26"
+  "sealed_at": "2026-07-29"
 }

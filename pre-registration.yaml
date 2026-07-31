@@ -4201,8 +4201,24 @@ multi_seed_decision_rule:
     CROSS-BLOCK FACTOR PAIR, tail_dependence_lower and tail_dependence_upper. THE
     COMPARISON SET is family (a) restricted to the strategies with computable
     historical statistics -- the five d4_strategies minus
-    reference_run.uncomputable_d4_strategies, which on this vintage is sixty_forty,
-    momentum and carry -- plus all of family (b). A name whose historical side is NaN
+    reference_run.uncomputable_d4_strategies, which on this vintage is eqw_factors and
+    endowment_proxy, leaving sixty_forty, momentum and carry as the comparison set --
+    plus all of family (b). CORRECTED BY AMENDMENT AM-2026-07-29-001 (2026-07-29,
+    post_hoc TRUE -- the first post-hoc entry in this project's amendment log). Until
+    that amendment this clause read "which on this vintage is sixty_forty, momentum and
+    carry", which names the COMPLEMENT of the sealed field it glosses. The field
+    reference_run.uncomputable_d4_strategies is, and has been since the campaign vintage
+    moved to 2026-07-26.1, [eqw_factors, endowment_proxy]: the FIELD was right, the
+    GLOSS was wrong, and only the gloss has moved. THE DEFECT WAS NOT INERT. Read
+    literally, the gloss made the comparison set the two strategies whose historical
+    side is NaN on this vintage, and the NaN rule in beats_definition would then make no
+    seed a beat for any system ever -- an automatic SHIP-BENCHMARK independent of all
+    evidence -- whereas the field's reading leaves a comparison set that a challenger
+    can win. It was found while extracting WP2.10's results, WITH THOSE RESULTS ALREADY
+    IN HAND, and the correction is in the direction that makes a promotion possible.
+    governance/amendment-log.yaml AM-2026-07-29-001 records that in full and must be
+    read before weighing any PROMOTE verdict that rests on this clause.
+    A name whose historical side is NaN
     is excluded from the comparison rather than counted as a tie, because a comparison
     against nothing is not a comparison. This definition is machine-checked against the
     live suite by tests/test_prereg.py; the document is normative if they disagree.

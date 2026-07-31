@@ -7,6 +7,49 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **`AM-2026-07-29-001` — the first `post_hoc: true` amendment in this project. A false
+  prose gloss in the sealed `multi_seed_decision_rule.tail_tier_definition` is corrected,
+  and `pre-registration.lock` is now
+  `sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275`** (supersedes
+  `sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585`; **32 hashed
+  files, unchanged set** — this amendment adds no judged source, and the digest moves
+  only because `pre-registration.yaml` is itself hashed). **Not one threshold, band,
+  gate, floor, split, ensemble size, severity, selection weight or rule text moved, and
+  no code changed.**
+
+  **The defect.** `tail_tier_definition` defined the comparison set as "the five
+  `d4_strategies` minus `reference_run.uncomputable_d4_strategies`, **which on this
+  vintage is `sixty_forty`, `momentum` and `carry`**". The sealed field it glosses is
+  `[eqw_factors, endowment_proxy]` — the gloss named the field's **complement**.
+
+  **Why it is not inert.** The two readings give opposite G2 verdicts. Reading the FIELD
+  (what `ah/eval/ablation.py` does, and what `d4_commodities_consequence` and
+  `limitations.…missing_two_of_fourteen_factors` have said in the same sealed document
+  since 2026-07-26): the comparison set is `{sixty_forty, momentum, carry}`, all
+  computable, the rule executes. Reading the GLOSS literally: the comparison set is the
+  two strategies whose `elicitability_score` is NaN in all 18 WP2.10 cells, and
+  `beats_definition`'s NaN rule then makes **no seed a beat for any system, ever** — an
+  automatic SHIP-BENCHMARK independent of all evidence. The amendment adopts the field's
+  reading.
+
+  **The timing, recorded rather than argued away.** It was found while extracting
+  WP2.10's results — *with the results already in hand*, and after it was visible that
+  `hier-flow-v1` beats `bootstrap-v1` on clause (1) in every seed. **A correction that
+  makes a promotion possible was therefore made by the party that would benefit from a
+  promotion, after seeing that a promotion was in reach.** The project owner was shown
+  the results first, was told plainly that this is the timing, and approved it
+  explicitly. `post_hoc: true` exists for exactly this; every prior entry in the log is
+  `post_hoc: false`.
+
+  **The standing check could not have caught it** (`governance/retrofit-register.md`
+  RFR-76, unowned). `tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics`
+  asserts that the definition names the eleven per-strategy and two per-pair statistics,
+  that `uncomputable_d4_strategies` is a proper subset of `d4_strategies`, and that the
+  subtraction is non-empty — it never compares the prose's *enumeration* against the
+  field's *value*, and all five strategy ids appear elsewhere in the same folded block.
+  `claims_with_tests` does not reach the clause either: it carries none of the sealed
+  `trigger_phrases`, and this block's two registered anchors sit on the following two
+  lines.
 - **WP2.10 — the five ablation systems A–E as named compositions, the multi-seed
   ablation grid, and a GENERATED `ABLATION.md`. No sealed judged source touched,
   zero amendments; `ah.gen` still never imports `ah.eval`; no new dependency;
