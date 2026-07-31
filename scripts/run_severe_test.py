@@ -42,12 +42,23 @@ any artifact.
 The holdout is never touched: every read goes through ``DataAccess.train_val``,
 and nothing here imports ``ah.eval.g2``.
 
+Both co-primary L3 families run through this script. ``--family`` selects one;
+it defaults to ``flow``, so every WP2.11 part 1 invocation means exactly what it
+meant before this argument existed. The two families never share a stage: each
+has its own frozen config, its own checkpoints, its own cells and its own grid
+file, and the train stage must run for a family before its battery stage can.
+
 Usage (one GPU job at a time)::
 
     uv run python -u scripts/run_severe_test.py train --created-at 2026-07-29 \
         --device cuda --indices 0 1 2
     uv run python -u scripts/run_severe_test.py battery --block-batch 128 \
         --sampler-device cuda
+
+    uv run python -u scripts/run_severe_test.py train --family diffusion \
+        --created-at 2026-07-31 --device cuda --indices 0 1 2
+    uv run python -u scripts/run_severe_test.py battery --family diffusion \
+        --block-batch 128 --sampler-device cuda
 """
 
 from __future__ import annotations
@@ -82,10 +93,11 @@ from ah.eval.reference import compute_reference  # noqa: E402
 from ah.factors import load_manifest  # noqa: E402
 from ah.gen import severe  # noqa: E402
 from ah.gen.blocks import data as bd  # noqa: E402
+from ah.gen.blocks import diffusion as df  # noqa: E402
 from ah.gen.blocks import flow as fl  # noqa: E402
 from ah.gen.blocks import train as tr  # noqa: E402
 from ah.gen.blocks import tuning as tu  # noqa: E402
-from ah.gen.blocks.diffusion import HierBlockSystem  # noqa: E402
+from ah.gen.blocks.diffusion import DiffusionConfig, HierBlockSystem  # noqa: E402
 from ah.gen.blocks.flow import FlowConfig  # noqa: E402
 from ah.gen.bootstrap import (  # noqa: E402
     CAMPAIGN_VINTAGE_ID,
@@ -123,13 +135,44 @@ SEVERE_CLIMATE_ARTIFACT = (
     / "climate-posterior.npz"
 )
 
-FAMILY = "flow"
-FAMILY_SPEC = {
-    "config_cls": FlowConfig,
-    "tuning_exp": "l3b-flow-tuning-v1",
-    "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
-    "module": fl,
+#: The two co-primary L3 families, keyed exactly as ``ah.gen.systems`` keys them.
+#:
+#: ``train_tag``, ``cell_tag`` and ``grid_name`` are FROZEN per family rather than
+#: derived, because WP2.11 part 1's flow artifacts already exist on disk under the
+#: names below and its report is committed under ``artifacts/wp211/``. Flow's grid
+#: therefore keeps its original un-suffixed ``severe-grid.json`` name: renaming it
+#: for symmetry would strand a committed artifact and force a re-run whose only
+#: product is a different filename. The asymmetry is deliberate and recorded here
+#: rather than left for a reader to discover.
+FAMILIES: dict[str, dict[str, Any]] = {
+    "diffusion": {
+        "config_cls": DiffusionConfig,
+        "tuning_exp": "l3a-diffusion-tuning-v1",
+        "space": _REPO_ROOT / "configs" / "wp28-diffusion-search-v1.yaml",
+        "module": df,
+        "sampler_cls": df.DiffusionBlockSampler,
+        "train_tag": "severe-l3a-diffusion",
+        "cell_tag": "diffusion",
+        "grid_name": "severe-grid-diffusion.json",
+    },
+    "flow": {
+        "config_cls": FlowConfig,
+        "tuning_exp": "l3b-flow-tuning-v1",
+        "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
+        "module": fl,
+        "sampler_cls": fl.FlowBlockSampler,
+        "train_tag": "severe-l3b-flow",
+        "cell_tag": "flow",
+        "grid_name": "severe-grid.json",
+    },
 }
+
+
+def spec_for(family: str) -> dict[str, Any]:
+    """The frozen spec for one L3 family, or a hard exit naming the valid keys."""
+    if family not in FAMILIES:
+        raise SystemExit(f"unknown family {family!r}; expected one of {sorted(FAMILIES)}")
+    return FAMILIES[family]
 
 
 def severe_regimes_artifact() -> Path:
@@ -203,7 +246,8 @@ def stage_train(args: argparse.Namespace) -> None:
     std = dataset.standardization
     print(f"severe x_mean[:3]={std.x_mean[:3]}  c_mean[:3]={std.c_mean[:3]}", flush=True)
 
-    spec = FAMILY_SPEC
+    family = args.family
+    spec = spec_for(family)
     _space, _budget, space_sha = tu.load_search_space(spec["space"], spec["config_cls"])
     final_budget = yaml.safe_load(Path(spec["space"]).read_text("utf-8"))["final"]
     selection = json.loads(
@@ -217,14 +261,14 @@ def stage_train(args: argparse.Namespace) -> None:
     )
 
     for index in args.indices:
-        key = f"{FAMILY}:{index}"
-        out_dir = OUT_ROOT / f"severe-l3b-flow-s{index}"
+        key = f"{family}:{index}"
+        out_dir = OUT_ROOT / f"{spec['train_tag']}-s{index}"
         ckpt_path = out_dir / "checkpoint.pt"
         if key in manifest and ckpt_path.exists():
             print(f"[{key}] already trained; skipping", flush=True)
             continue
         out_dir.mkdir(parents=True, exist_ok=True)
-        seed = train_seed_for(FAMILY, index)
+        seed = train_seed_for(family, index)
         print(f"\n=== SEVERE retrain {key}: train seed {seed} ===", flush=True)
         t0 = time.time()
         result = tr.train_blocks(
@@ -244,7 +288,7 @@ def stage_train(args: argparse.Namespace) -> None:
             dataset,
             ckpt_path,
             extra_meta={
-                "generator_id": fl.GENERATOR_ID,
+                "generator_id": spec["module"].GENERATOR_ID,
                 "vintage_id": args.vintage,
                 "seed": seed,
                 "seed_index": index,
@@ -290,51 +334,73 @@ def stage_train(args: argparse.Namespace) -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _sampler_for(checkpoint: Path, expected_hash: str, source, block_batch, device):
-    model, std, meta = fl.load_checkpoint(checkpoint)
+def _sampler_for(family: str, checkpoint: Path, expected_hash: str, source, block_batch, device):
+    spec = spec_for(family)
+    model, std, meta = spec["module"].load_checkpoint(checkpoint)
     if meta["checkpoint_hash"] != expected_hash:
         raise SystemExit(
             f"{checkpoint}: hash {meta['checkpoint_hash'][:16]}... != pinned "
             f"{expected_hash[:16]}..."
         )
-    sampler = fl.FlowBlockSampler(
-        model,
-        std,
-        tuple(source.factor_names),
+    kwargs: dict[str, Any] = dict(
         trained_fingerprint=meta["cb_fingerprint"],
         device=device,
         block_batch=block_batch,
-        guidance_scale=fl.DEFAULT_GUIDANCE_SCALE,
     )
+    # Mirrors ah.gen.systems._build_sampler's branch verbatim: guidance is a
+    # FLOW-ONLY constructor argument (WP2.9's guidance arm) and
+    # DiffusionBlockSampler does not accept it. Kept as a branch rather than a
+    # spec field so the two call sites cannot drift apart silently.
+    if family == "flow":
+        kwargs["guidance_scale"] = spec["module"].DEFAULT_GUIDANCE_SCALE
+    sampler = spec["sampler_cls"](model, std, tuple(source.factor_names), **kwargs)
     return sampler, meta
 
 
-class _SevereFlow(HierBlockSystem):
-    generator_id = fl.GENERATOR_ID
-    system_description = "L1+L2+L4 (hier-flow-v1 blocks), 1970s EXCLUDED from the fit"
+def _arm_class(family: str, arm: str) -> type:
+    """The ``HierBlockSystem`` subclass for one (family, arm).
+
+    Built with ``type()`` rather than written out four times so the two arms
+    cannot drift in anything but the one word that distinguishes them. The
+    descriptions reproduce WP2.11 part 1's flow strings exactly -- they land in
+    ensemble metadata and therefore in every committed ``summary.json``.
+    """
+    module = spec_for(family)["module"]
+    fit = "1970s EXCLUDED from the fit" if arm == "severe" else "full-sample fit"
+    return type(
+        f"_{arm.capitalize()}{family.capitalize()}",
+        (HierBlockSystem,),
+        {
+            "generator_id": module.GENERATOR_ID,
+            "system_description": f"L1+L2+L4 ({module.GENERATOR_ID} blocks), {fit}",
+        },
+    )
 
 
-class _PrimaryFlow(HierBlockSystem):
-    generator_id = fl.GENERATOR_ID
-    system_description = "L1+L2+L4 (hier-flow-v1 blocks), full-sample fit"
-
-
-def build_arm(arm: str, seed_index: int, source, *, block_batch: int, device: str):
-    """Construct the severe or the primary flow system, launching from 1965."""
+def build_arm(family: str, arm: str, seed_index: int, source, *, block_batch: int, device: str):
+    """Construct the severe or the primary system for one family, from 1965."""
     config = JoineryConfig(s0_date=severe.SEVERE_TEST_S0_DATE)
+    cls = _arm_class(family, arm)
     if arm == "severe":
         climate = load_climate(SEVERE_CLIMATE_ARTIFACT)
         regimes = load_regimes(severe_regimes_artifact())
         manifest = json.loads(CHECKPOINT_MANIFEST.read_text("utf-8"))
-        entry = manifest[f"{FAMILY}:{seed_index}"]
+        key = f"{family}:{seed_index}"
+        if key not in manifest:
+            raise SystemExit(
+                f"{CHECKPOINT_MANIFEST} has no entry {key!r}; run the train stage "
+                f"for --family {family} first"
+            )
+        entry = manifest[key]
         sampler, meta = _sampler_for(
+            family,
             _REPO_ROOT / entry["checkpoint"],
             entry["checkpoint_hash"],
             source,
             block_batch,
             device,
         )
-        system = _SevereFlow(climate, regimes, source, sampler, config)
+        system = cls(climate, regimes, source, sampler, config)
     else:
         climate = load_climate(DEFAULT_CLIMATE_ARTIFACT)
         regimes = load_regimes(DEFAULT_REGIMES_ARTIFACT)
@@ -344,15 +410,16 @@ def build_arm(arm: str, seed_index: int, source, *, block_batch: int, device: st
             raise SystemExit("primary regimes artifact sha != WP2.7 pin")
         from ah.gen import systems as sysmod
 
-        path, expected = sysmod._checkpoint_for(FAMILY, seed_index)
-        sampler, meta = _sampler_for(path, expected, source, block_batch, device)
-        system = _PrimaryFlow(climate, regimes, source, sampler, config)
+        path, expected = sysmod._checkpoint_for(family, seed_index)
+        sampler, meta = _sampler_for(family, path, expected, source, block_batch, device)
+        system = cls(climate, regimes, source, sampler, config)
     system.checkpoint_hash = meta["checkpoint_hash"]
     system.config_hash = meta.get("config_hash")
     return system, meta
 
 
 def run_cell(
+    family: str,
     arm: str,
     seed_index: int,
     *,
@@ -366,12 +433,14 @@ def run_cell(
     device: str,
 ) -> dict[str, Any]:
     sample_seed = SAMPLE_SEED_BASE + SEED_STRIDE * seed_index
-    out_dir = OUT_ROOT / "cells" / f"{arm}-flow-s{seed_index}"
+    out_dir = OUT_ROOT / "cells" / f"{arm}-{spec_for(family)['cell_tag']}-s{seed_index}"
     out_dir.mkdir(parents=True, exist_ok=True)
     timings: dict[str, float] = {}
     t0 = time.time()
 
-    system, ckpt_meta = build_arm(arm, seed_index, source, block_batch=block_batch, device=device)
+    system, ckpt_meta = build_arm(
+        family, arm, seed_index, source, block_batch=block_batch, device=device
+    )
     timings["build_s"] = time.time() - t0
 
     t = time.time()
@@ -404,6 +473,7 @@ def run_cell(
     meta_c = unfiltered.meta.conditioning
     summary = {
         "arm": arm,
+        "family": family,
         "seed_index": seed_index,
         "sample_seed": sample_seed,
         "s0_date": severe.SEVERE_TEST_S0_DATE,
@@ -441,8 +511,10 @@ def stage_battery(args: argparse.Namespace) -> None:
     # Same determinism posture as scripts/run_ablation_grid.py, which the sealed
     # WP2.10 cells were produced under; CUBLAS_WORKSPACE_CONFIG is set at import.
     torch.use_deterministic_algorithms(True)
-    fl.DEFAULT_BLOCK_BATCH = args.block_batch
-    fl.DEFAULT_SAMPLER_DEVICE = args.sampler_device
+    family = args.family
+    spec = spec_for(family)
+    spec["module"].DEFAULT_BLOCK_BATCH = args.block_batch
+    spec["module"].DEFAULT_SAMPLER_DEVICE = args.sampler_device
 
     manifest = load_manifest()
     prereg = prereg_mod.load(_REPO_ROOT / "pre-registration.yaml")
@@ -469,14 +541,15 @@ def stage_battery(args: argparse.Namespace) -> None:
         rows: list[dict[str, Any]] = []
         for seed_index in args.indices:
             for arm in args.arms:
-                out_dir = OUT_ROOT / "cells" / f"{arm}-flow-s{seed_index}"
+                out_dir = OUT_ROOT / "cells" / f"{arm}-{spec['cell_tag']}-s{seed_index}"
                 if (out_dir / "summary.json").exists() and not args.force:
-                    print(f"  {arm}:s{seed_index} already done; skipping", flush=True)
+                    print(f"  {family}/{arm}:s{seed_index} already done; skipping", flush=True)
                     rows.append(json.loads((out_dir / "summary.json").read_text("utf-8")))
                     continue
-                print(f"\n=== cell {arm}:s{seed_index} ===", flush=True)
+                print(f"\n=== cell {family}/{arm}:s{seed_index} ===", flush=True)
                 rows.append(
                     run_cell(
+                        family,
                         arm,
                         seed_index,
                         source=source,
@@ -490,13 +563,14 @@ def stage_battery(args: argparse.Namespace) -> None:
                     )
                 )
 
-    (OUT_ROOT / "severe-grid.json").write_text(
+    grid_path = OUT_ROOT / spec["grid_name"]
+    grid_path.write_text(
         json.dumps(
             {
                 "protocol": "severe_test_protocol (pre-registration.yaml)",
                 "exclusion": severe.SEVERE_TEST_EXCLUSION.label,
                 "s0_date": severe.SEVERE_TEST_S0_DATE,
-                "family": FAMILY,
+                "family": family,
                 "n_paths": args.n_paths,
                 "months": args.months,
                 "block_batch": args.block_batch,
@@ -510,7 +584,7 @@ def stage_battery(args: argparse.Namespace) -> None:
         + "\n",
         "utf-8",
     )
-    print(f"\nwrote {OUT_ROOT / 'severe-grid.json'}", flush=True)
+    print(f"\nwrote {grid_path}", flush=True)
 
 
 def main() -> None:
@@ -523,6 +597,7 @@ def main() -> None:
     p_train.add_argument("--device", default="cuda")
     p_train.add_argument("--created-at", required=True)
     p_train.add_argument("--indices", type=int, nargs="+", default=[0, 1, 2])
+    p_train.add_argument("--family", default="flow", choices=sorted(FAMILIES))
     p_train.set_defaults(func=stage_train)
 
     p_bat = sub.add_parser("battery", help="regenerate from 1965 and judge")
@@ -534,6 +609,7 @@ def main() -> None:
     p_bat.add_argument("--sampler-device", default="cuda")
     p_bat.add_argument("--indices", type=int, nargs="+", default=[0, 1, 2])
     p_bat.add_argument("--arms", nargs="+", default=["severe", "primary"])
+    p_bat.add_argument("--family", default="flow", choices=sorted(FAMILIES))
     p_bat.add_argument("--force", action="store_true")
     p_bat.set_defaults(func=stage_battery)
 

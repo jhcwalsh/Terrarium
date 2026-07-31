@@ -80,10 +80,16 @@ def _catalog_access(catalog: Catalog, vintage_id: str) -> DataAccess:
     return DataAccess(reader)
 
 
-def load_cells() -> dict[tuple[str, int], dict[str, Any]]:
-    """``(arm, seed_index) -> {"summary": ..., "battery": ...}`` for every cell."""
+def load_cells(family: str = "flow") -> dict[tuple[str, int], dict[str, Any]]:
+    """``(arm, seed_index) -> {"summary": ..., "battery": ...}`` for one family's cells.
+
+    Keyed by ``(arm, seed_index)`` and NOT by family: one report covers one
+    family, and mixing two families' cells into a single keyspace would silently
+    collide ``("severe", 0)`` across them. ``--family`` selects which set is
+    read; the default reproduces WP2.11 part 1's flow report exactly.
+    """
     out: dict[tuple[str, int], dict[str, Any]] = {}
-    for d in sorted((OUT_ROOT / "cells").glob("*-flow-s*")):
+    for d in sorted((OUT_ROOT / "cells").glob(f"*-{family}-s*")):
         summary = json.loads((d / "summary.json").read_text("utf-8"))
         battery = json.loads((d / "battery.json").read_text("utf-8"))
         out[(summary["arm"], int(summary["seed_index"]))] = {
@@ -189,9 +195,12 @@ def restricted_history(catalog_root: Path, vintage: str, metric_names: set[str])
 
 
 def build(args: argparse.Namespace) -> None:
-    cells = load_cells()
+    cells = load_cells(args.family)
     if not cells:
-        raise SystemExit(f"no cells under {OUT_ROOT / 'cells'}; run the battery stage first")
+        raise SystemExit(
+            f"no {args.family} cells under {OUT_ROOT / 'cells'}; run the battery "
+            f"stage for --family {args.family} first"
+        )
     seed_indices = sorted({k[1] for k in cells})
     arms = sorted({k[0] for k in cells})
 
@@ -223,6 +232,7 @@ def build(args: argparse.Namespace) -> None:
             "B_by_tier": 'tier in ("1_5yr", "10yr")',
             "note": "they differ by the calibration suite's *_5y metrics; both reported",
         },
+        "family": args.family,
         "seed_indices": seed_indices,
         "arms": arms,
         "cells": {f"{a}:s{k}": cells[(a, k)]["summary"] for a, k in cells},
@@ -282,11 +292,16 @@ def build(args: argparse.Namespace) -> None:
         )
         doc["metrics"][name] = entry
 
-    (OUT_ROOT / "severe-test.json").write_text(
-        json.dumps(doc, indent=2, sort_keys=True, default=str) + "\n", "utf-8"
-    )
-    (OUT_ROOT / "SEVERE-TEST.md").write_text(render(doc), "utf-8")
-    print(f"wrote {OUT_ROOT / 'severe-test.json'} and {OUT_ROOT / 'SEVERE-TEST.md'}")
+    # Flow's two output names are GRANDFATHERED, matching run_severe_test.py's
+    # grid-file rule and for the same reason: WP2.11 part 1's report is committed
+    # under artifacts/wp211/ at these exact names. A second family gets suffixed
+    # names rather than overwriting the first family's report.
+    suffix = "" if args.family == "flow" else f"-{args.family}"
+    json_path = OUT_ROOT / f"severe-test{suffix}.json"
+    md_path = OUT_ROOT / f"SEVERE-TEST{suffix.upper()}.md"
+    json_path.write_text(json.dumps(doc, indent=2, sort_keys=True, default=str) + "\n", "utf-8")
+    md_path.write_text(render(doc), "utf-8")
+    print(f"wrote {json_path} and {md_path}")
 
 
 def _fmt(x: Any) -> str:
@@ -536,6 +551,7 @@ def main() -> None:
     parser.add_argument("--catalog-root", type=Path, default=_REPO_ROOT / "data")
     parser.add_argument("--vintage", default=CAMPAIGN_VINTAGE_ID)
     parser.add_argument("--no-history", action="store_true")
+    parser.add_argument("--family", default="flow", choices=["diffusion", "flow"])
     build(parser.parse_args())
 
 
