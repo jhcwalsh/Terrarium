@@ -64,6 +64,41 @@ All notable changes to this project are documented here. The project follows
     resolution:** G2 still proceeds with the `10yr` tier declared UNAVAILABLE per
     `conventions.ten_year_tier_coverage`, and `G2-EVIDENCE.md` still may not cite a
     `10yr` pass.
+  - **`RFR-80` — corrects `RFR-79` the same day, by appending rather than editing, per
+    this register's own rule.** RFR-79 claimed two of RFR-42's three causes were "since
+    discharged by the work itself". **Not established, and for one of the two
+    contradicted by the tree.** The sealed disclosure says `ergodicity_gap`'s
+    multi-century path is a capability "WP2.5's climate model **could** supply and no
+    current generator does" — a possible route, restated by RFR-79 as a delivered one;
+    `src/ah/eval/negative_controls.py`, a hashed judged source at this commit, still
+    records all 14 `ergodicity_gap` metrics as unavailable with no reference band. The
+    regime-duration cause is **unverified**: `usrec`/`growth_yoy` exist in
+    `ah/data/derive.py` as Step-1 labelling features, not as generated factors. **Correct
+    reading: one cause assigned to `WP1.13`, two still open.** No verdict, threshold or
+    sealed value is touched by either row. The lesson recorded with it: **a governance row
+    summarising a sealed disclosure must quote its modality** — "could supply and no
+    current generator does" versus "is supplied" is the whole defect, and it is RFR-76's
+    failure mode committed in the register rather than in the seal.
+  - **`RFR-81` — the valuation data was never missing; only the FACTOR MAPPING is, and
+    this supersedes the SEALED disclosure's own account of it.**
+    `conventions.ten_year_tier_coverage` says cause (a) needs "a new
+    `requirements.yaml` series plus a `factors.yaml` mapping"; RFR-42, RFR-79 and RFR-80
+    all repeated that framing, and RFR-79 scoped a whole work package on it.
+    **`shiller.cape` has been registered since Step 1** (`requirements.yaml:49`, FREE,
+    monthly, from 1881-01, auto intake) with `connectors/shiller.py` already parsing the
+    `CAPE` column from Shiller's `ie_data.xls`; **`fred.USREC` is registered too**
+    (`requirements.yaml:37`, from 1854-12, `enforce: true`). The real blocker is that
+    `factors.yaml`'s active blocks are `global` (8) + `us` (6) = 14 factors and none is a
+    valuation factor — and adding a fifteenth **generated** factor is a factor amendment
+    plus a full retrain of L1/L2/L3, for the reason already sealed for `R5` (FX) and `J3`
+    (UK): cross-block correlation cannot be grafted onto trained weights. The metric needs
+    a valuation path the *generator* emits, not a historical series. **`WP1.13` is
+    rescoped accordingly** — map an existing series and retrain, rather than build a
+    connector — and the retrain-now-versus-next-campaign choice is recorded as
+    **OPEN, owner's call**, not taken. Third finding in a row of the same shape, now
+    pointing into the seal itself: a check resolving every series and factor name in
+    sealed prose against `requirements.yaml`/`factors.yaml` would have caught it, and
+    belongs with RFR-78's identical proposal for `TIERS`/`SUITES`.
 - **`AM-2026-07-29-001` — the first `post_hoc: true` amendment in this project. A false
   prose gloss in the sealed `multi_seed_decision_rule.tail_tier_definition` is corrected,
   and `pre-registration.lock` is now
