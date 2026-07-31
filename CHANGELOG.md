@@ -7,6 +7,63 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2.11 governance step — four decisions taken and three deferrals assigned a
+  destination, ALL of them recorded BEFORE the one-shot holdout is touched and before
+  `ah/eval/g2.py` computes any verdict. No sealed file changed, no re-seal, no
+  amendment, no threshold written after the fact, no code touched.** The sequencing is
+  the point: every interpretive question that could be answered differently once holdout
+  numbers exist is answered now, while they do not.
+  - **`S2-SEVERE-GATING` — the severe test's INCONCLUSIVE reading is a HUMAN JUDGEMENT,
+    labelled as such, and the test enters `G2-EVIDENCE.md` as evidence rather than as a
+    gate.** `severe_test_protocol` pins a procedure but no criterion (RFR-77), so no
+    sealed rule produced WP2.11 part 1's reading. Two alternatives were rejected on the
+    record: writing a pass mark now (a threshold authored by the party holding the
+    result, after seeing it — the exact substitution the seal exists to prevent), and
+    declaring the test structurally uninformative (overclaiming — the exclusion left a
+    systematic footprint, regime-frequency TV +0.0140, consistent to four decimals
+    across three seeds). **The four clauses of `multi_seed_decision_rule.rule` are
+    untouched: the severe test is not one of them and never was**, so no verdict
+    arithmetic moves.
+  - **`S2-HORIZON-TIER` — both readings reported, neither adopted.** The sealed protocol
+    says "the horizon tier"; `TIERS` defines no such tier. `suite == "horizon"` selects
+    110 metrics, `tier in {1_5yr, 10yr}` selects 113, differing by
+    `interval_coverage_50_5y`, `interval_coverage_90_5y` and `pit_ks_stat_5y`. **That
+    the two agree is not a claim available before looking**, so narrowing is deferred to
+    a dated `protocol_change` amendment taken pre-campaign, when no results are in view
+    (RFR-78).
+  - **`S2-DEFAULT-GENERATOR` — decided BLIND: if both co-primaries clear the sealed
+    rule, the one that clears clause (1) on the STRICTER route (every seed, not merely
+    pooled-beyond-dispersion) becomes the default `generator_id`; the runner-up stays
+    registered and reachable but is not the default.** Taken before clauses (2)–(4) were
+    adjudicated and before the holdout was touched — which is the only thing that makes
+    it worth recording. The sealed `rule` is singular ("the challenger") while WP2.9
+    deliberately carried two co-primaries, so a both-pass outcome had no sealed
+    tie-break. A SHIP-BENCHMARK verdict moots it: `bootstrap-v1` stays default per the
+    seal.
+  - **`S2-REVIEWER-OF-RECORD` — the reviewer is the project owner, i.e. NOT independent
+    of the work, and `G2-EVIDENCE.md` must say exactly that** rather than let the phrase
+    "independent reviewer" imply an outside party. Binding sequencing: the post-hoc
+    `AM-2026-07-29-001` and the WP2.10 head-to-head go in front of the reviewer **before**
+    any verdict is computed. The evidence document must state, in one place, who
+    reviewed, that they are not independent, and that the amendment is a post-hoc
+    correction made by the beneficiary.
+  - **`RFR-77`, `RFR-78` — the two general gaps behind the decisions above, both
+    UNOWNED and both stated with their mechanical fix.** RFR-77: every sealed protocol
+    whose result may be cited must either pin a threshold or declare itself non-gating,
+    asserted by test over every `*_protocol` key. RFR-78: every tier, suite and metric
+    identifier appearing in sealed prose must resolve against the live `TIERS`/`SUITES`
+    registries — a gap `claims_with_tests` structurally cannot close, since it checks
+    that a named test EXISTS, not that a named IDENTIFIER resolves. Same shape as
+    RFR-76's targeted test; one pass should take all three.
+  - **`RFR-79` — `RFR-42` finally has an owner and a destination**, after sitting
+    "unscheduled" since 2026-07-26 with the register itself saying it should be owned
+    before G2. Two of its three causes were discharged by the work (regime duration via
+    WP2.6, `ergodicity_gap` via WP2.5); the valuation factor remains and is a **Step-1
+    data item**, assigned to the project owner as **`WP1.13` (valuation series
+    connector)**, targeted before Step 3's decade-scale work. **Assignment is not
+    resolution:** G2 still proceeds with the `10yr` tier declared UNAVAILABLE per
+    `conventions.ten_year_tier_coverage`, and `G2-EVIDENCE.md` still may not cite a
+    `10yr` pass.
 - **`AM-2026-07-29-001` — the first `post_hoc: true` amendment in this project. A false
   prose gloss in the sealed `multi_seed_decision_rule.tail_tier_definition` is corrected,
   and `pre-registration.lock` is now
