@@ -99,6 +99,14 @@ All notable changes to this project are documented here. The project follows
     pointing into the seal itself: a check resolving every series and factor name in
     sealed prose against `requirements.yaml`/`factors.yaml` would have caught it, and
     belongs with RFR-78's identical proposal for `TIERS`/`SUITES`.
+  - **`S2-VALUATION-FACTOR` — route (1), taken 2026-07-31: complete G2 on the sealed 14
+    factors.** Closes the decision RFR-81 left open. The `10yr` tier stays UNAVAILABLE as
+    sealed; the valuation factor enters as a dated factor amendment plus a full L1/L2/L3
+    retrain for the **next** campaign. Route (2) — retrain now — is recorded as rejected
+    rather than omitted: it would restart the campaign with the WP2.10 head-to-head
+    already known, the hazard `AM-2026-07-29-001` cost once, and at far greater scale
+    since a retrain re-rolls every number the verdict rests on. The decision claims only
+    that the fix does not belong inside the gate it would alter.
 - **`AM-2026-07-29-001` — the first `post_hoc: true` amendment in this project. A false
   prose gloss in the sealed `multi_seed_decision_rule.tail_tier_definition` is corrected,
   and `pre-registration.lock` is now
