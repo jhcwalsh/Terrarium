@@ -1,158 +1,185 @@
 # G2 reviewer packet
 
-**For:** the reviewer of record (decision `S2-REVIEWER-OF-RECORD`).
-**Prepared:** 2026-07-31, before any holdout evaluation and before any verdict is computed.
-**Status of the work:** the one-shot holdout has **not** been touched. No `FinalEvaluationToken`
-has been minted, nothing imports `ah.eval.g2`, and every read to date goes through
-`DataAccess.train_val` on campaign vintage `2026-07-26.1`.
+**For:** the reviewer of record.
+**Prepared:** 2026-07-31 — before the final test was run and before any verdict was calculated.
+**Plain-language version.** Every claim here points to a file where it can be checked; see §8.
 
 ---
 
-## 0. Read this part first
+## 1. Read this first
 
-You are the reviewer of record, and **you are not independent of this work**. That is a
-recorded decision, not an oversight (`S2-REVIEWER-OF-RECORD`), and `G2-EVIDENCE.md` is
-required to state it plainly rather than let the phrase "independent reviewer" imply an
-outside party. The review below is therefore weaker than an external one. It is what is
-available, and disclosing its weakness is the mitigation.
+Before any model was built, this project wrote down exactly how it would judge the results —
+every threshold, every rule, every definition — and sealed that rulebook cryptographically. The
+point is simple: you cannot move the goalposts after seeing where the ball landed.
 
-**What you are being asked to do:** weigh one post-hoc amendment against the results it
-makes adjudicable, and say whether the promotion it enables may proceed to the holdout.
-This gates everything downstream — the holdout is spent once and never again.
+**A sentence in that sealed rulebook turned out to be wrong.** It was corrected. The correction
+was made *after* the results were known, and by the person who benefits from it.
 
-**The conflict, stated before the evidence rather than after it.** The amendment corrects a
-defect that, uncorrected, would have forced an automatic SHIP-BENCHMARK verdict regardless
-of any evidence. It was found *after* the results existed, and it was found by the party
-who benefits from the correction, at a moment when it was already visible that the
-challenger was winning. Nothing in this packet disposes of that. It is the thing you are
-being asked to weigh.
+That is what you are being asked to weigh. Not whether the models are good — the sealed rule
+decides that on its own. Just this: **was that correction legitimate, and may the project now
+spend its one irreversible test?**
 
----
+**Two things to be clear about before you start.**
 
-## 1. The amendment: `AM-2026-07-29-001`
+You are the reviewer, and you are not independent of this work — you commissioned it. That is a
+recorded decision, not an oversight, and the final evidence document is required to say so
+plainly rather than let the phrase "independent reviewer" suggest an outside party. This review
+is weaker than an external one. Saying so is the only honest mitigation available.
 
-*Full text: `governance/amendment-log.yaml`. Defect-class record: `governance/retrofit-register.md` RFR-76.*
-
-### The defect
-
-The sealed `multi_seed_decision_rule.tail_tier_definition` defined the comparison set as
-
-> the five `d4_strategies` minus `reference_run.uncomputable_d4_strategies`, **which on this
-> vintage is `sixty_forty`, `momentum` and `carry`**
-
-The field it glosses, `reference_run.uncomputable_d4_strategies`, is
-`[eqw_factors, endowment_proxy]`. **The gloss named the complement of the field it glossed.**
-
-### Why it is not inert
-
-| | comparison set | consequence |
-|---|---|---|
-| **Reading the FIELD** (what the code does) | `{sixty_forty, momentum, carry}` — all computable | the rule executes and a challenger can win |
-| **Reading the GLOSS literally** | `{eqw_factors, endowment_proxy}` — both NaN in all 18 cells | `beats_definition`'s NaN rule makes **no seed a beat for any system, ever**: an automatic SHIP-BENCHMARK independent of all evidence, for all time |
-
-The amendment adopts the field's reading.
-
-### Three confirmations that the field is right
-
-1. The sealed field itself reads `[eqw_factors, endowment_proxy]`, and it is the field — never
-   this prose — that `ah/eval/ablation.py`'s `comparison_set()` reads.
-2. The same sealed document, `rationale.d4_commodities_consequence`, has said since 2026-07-26
-   that `eqw_factors` and `endowment_proxy` are the two uncomputable strategies and that the
-   other three are where every sealed `thresholds.strategies` entry lives.
-3. WP2.10's measurements: in all 18 grid cells, `sixty_forty`, `momentum` and `carry` carry
-   finite `elicitability_score` values; `eqw_factors` and `endowment_proxy` are NaN in every one.
-
-Points 1 and 2 were committed **before any generator existed**, so the adopted reading was not
-invented after the fact.
-
-### What moved, and what did not
-
-One clause of prose, plus an in-document record of the correction beside it. **No threshold,
-band, gate, floor, split, ensemble size, severity, selection weight or rule text moved. No code
-changed.** The lock moved `sha256:2531904623db…` → `sha256:e5a669cf156a…` only because
-`pre-registration.yaml` is itself hashed; the hashed file set is unchanged at 32 files.
-
-### What the standing checks missed
-
-`tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics`
-— the machine check the sealed sentence itself points at — **could not have caught this**. It
-asserts that the definition names the eleven per-strategy and two per-pair statistics, that
-`uncomputable_d4_strategies` is a proper subset of `d4_strategies`, and that the subtraction is
-non-empty. It never compares the prose's *enumeration* against the field's *value*, and all five
-strategy ids appear elsewhere in the same folded block. The `claims_with_tests` registry does not
-reach the clause either: it carries none of the sealed trigger phrases.
+And nothing here argues for a promotion. If the new models lose, shipping the simple benchmark
+with an honest write-up is a **successful** outcome of this stage. The project was built so that
+either answer is publishable.
 
 ---
 
-## 2. What the correction makes adjudicable
+## 2. What went wrong
 
-*Source: `ABLATION.md` §6, generated from the 18-cell grid. Reported, not adjudicated — `ah/eval/g2.py` executes the rule at WP2.11.*
+The rulebook defines which investment strategies the new models get compared on. It does this
+twice: once as a **list** the software actually reads, and once as an **English sentence**
+describing that list for a human reader.
 
-`d_s` is (challenger − benchmark) mean elicitability difference at seed `s`; more negative is
-better. The pooled route is a beat iff `mean_s(d_s) < 0` **and** `|mean_s(d_s)| > sd_s(d_s)`.
+The sentence described the list backwards. It named the strategies that were being *excluded*
+as though they were the ones being *kept*, and vice versa.
 
-| challenger | d(s0) | d(s1) | d(s2) | mean | sd | pooled beat | beats every seed | clause (ii) every seed |
-|---|---|---|---|---|---|---|---|---|
-| `abl-a-structure-only` | 0.4121 | 0.4122 | 0.4128 | 0.4124 | 0.0004 | **no** | **no** | yes |
-| `abl-b-neural-rollout-flow` | −0.2437 | 0.4051 | −0.2064 | −0.0150 | 0.3643 | **no** | **no** | **no** |
-| `abl-c-neural-only-flow` | 0.1281 | 53.1004 | 0.3878 | 17.8721 | 30.5089 | **no** | **no** | **no** |
-| `hier-diffusion-v1` | −0.2391 | −0.2172 | −0.2249 | −0.2271 | 0.0111 | yes | **no** | **no** |
-| **`hier-flow-v1`** | **−0.2779** | **−0.3044** | **−0.3079** | **−0.2967** | **0.0164** | **yes** | **yes** | **yes** |
+## 3. Why that isn't a typo
 
-**The sealed disclosure that cuts the other way.** `bootstrap-v1` can only resample 1990–2020,
-while a challenger fitted on the full train+validation span has seen 1929–33, 1937, 1973–74 and
-1987 — and both are scored against the same realizations. The head-to-head is therefore **biased
-toward promotion** by a mechanism unrelated to generator quality. The seal binds the evidence
-document to report the comparison restricted to the common window:
+Because the two readings give opposite verdicts.
 
-| challenger | mean d (restricted 1990–2020) | pooled beat |
-|---|---|---|
-| `hier-diffusion-v1` | −0.2665 | yes |
-| **`hier-flow-v1`** | **−0.3635** | **yes** |
+- **Reading the list** (which is what the software has always done): the comparison runs on three
+  strategies that have usable historical data. The contest happens. A challenger can win.
+- **Reading the sentence literally**: the comparison runs on two strategies that have *no* usable
+  historical data — and there is a rule saying that when data is missing, the challenger does not
+  win that round. Applied here, no challenger could ever win any round, in any circumstance,
+  no matter how good it was. **The benchmark would win automatically, forever, regardless of all
+  evidence.**
 
-The promotion **survives the restriction** — it does not depend on the wider data window.
+So this is not a cosmetic fix. Left alone, it decides the outcome by itself.
+
+## 4. The evidence that the list is right and the sentence was wrong
+
+Three independent things point the same way:
+
+1. **The software has always used the list**, never the sentence. No result produced so far was
+   calculated under the wrong reading.
+2. **Another passage in the same sealed document** — written on the same day, months before any
+   model existed — describes the same two strategies as the unusable ones, agreeing with the list
+   and contradicting the sentence.
+3. **The measurements agree.** Across all eighteen experimental runs, the three strategies the
+   list keeps produce real numbers; the two it excludes produce nothing, every time.
+
+Points 1 and 2 were committed to the repository **before any model was trained**. Whatever else is
+true, the reading now adopted was not invented after the fact to suit a result.
+
+## 5. What actually changed — and the part that should worry you
+
+**Changed:** one sentence of description, plus a note recording the correction beside it.
+
+**Not changed:** not one threshold, limit, bound, cut-off, sample size, weighting or rule. No
+software. The pass marks are exactly what they were.
+
+**The part that should worry you.** The error was found while writing up the results — with those
+results already in hand, and after it was already visible that the leading challenger was beating
+the benchmark. So: *a correction that makes a promotion possible was made by the party who would
+benefit from a promotion, at the moment it became clear a promotion was within reach.*
+
+Nothing in this document disposes of that. It is recorded in full, undiluted, in the project's
+amendment log, flagged as the first "made after results existed" entry in the project's history —
+every previous one was made before any model was fitted. It is written down that way so you can
+weigh it, rather than have it explained away.
+
+## 6. Why no automated check caught it
+
+There is a test that guards this exact sentence. It checks that the sentence mentions the right
+statistics, and that the excluded list is a genuine subset of the full list, and that something
+remains after the subtraction. **All of that was true.** What it never does is compare the names
+the sentence *recites* against the names the list *contains* — and since all five strategy names
+appear elsewhere in the same passage, no simple text search would have separated them either.
+
+This is the third finding of the same shape in this project: **sealed prose asserting something
+that nothing verifies against reality.** The other two were found in the last two days — a
+governance note that overstated what had been delivered, and a sealed sentence that misdescribes
+the project's own data holdings. The general fix is known, cheap, and currently **nobody's job**.
+In my view that is the most important systemic issue in this packet, more than the amendment
+itself.
 
 ---
 
-## 3. What has happened since the amendment, that a reviewer should know
+## 7. What the correction makes judgeable
 
-- **`RFR-80`** — a governance row I wrote overclaimed that two of the decade-tier's three
-  blocking causes were "discharged by the work". Not established, and for one of them
-  contradicted by the tree. Corrected by appending, same day.
-- **`RFR-81`** — the sealed disclosure itself misdescribes the repository's data layer: it says
-  closing the valuation gap needs "a new `requirements.yaml` series", but `shiller.cape` has been
-  registered since Step 1. Only the *factor mapping* is missing, and that needs an amendment plus
-  a full retrain. Decision `S2-VALUATION-FACTOR` completes G2 on the sealed 14 factors.
-- **Three findings of the same shape in a row** — a sealed gloss misstating a sealed field
-  (RFR-76), a register row misquoting a sealed modality (RFR-80), a sealed sentence misdescribing
-  the data layer (RFR-81). None was catchable by `claims_with_tests`, which verifies that a named
-  *test* exists, not that a stated *fact* is true. **This is the most important systemic finding
-  in the packet**, and its fix is unowned.
-- **The severe test on `hier-diffusion-v1`** (running now) has produced a real signal:
-  `severe:s1` returns **8 `money_pump_violations`** where its full-sample control at the same
-  training seed returns 0. One seed of three so far. It does not touch the verdict — the severe
-  test is evidence, not a gate (`S2-SEVERE-GATING`) — but it is a genuine robustness finding, and
-  it emerged from an arm I predicted would be uninformative.
+With the comparison restored, here is how the five systems did against the benchmark. Lower is
+better; the test is whether a challenger beats the benchmark reliably rather than luckily, so it
+must win either in *every* repeat run or by a margin clearly larger than the run-to-run noise.
+
+| system | result |
+|---|---|
+| structure-only (no neural component) | **loses** — worse than the benchmark |
+| neural, no assembly stage | **inconclusive** — wildly inconsistent between runs |
+| neural, no climate stage | **loses badly** — one run was catastrophic |
+| full hierarchy, diffusion | **wins on the looser test**, fails the stricter one |
+| **full hierarchy, flow matching** | **wins on every test, in every repeat run** |
+
+**The catch that cuts the other way, and it is a real one.** The benchmark can only reshuffle data
+from 1990–2020. The challengers were fitted on history going back to 1929, so they have seen the
+Depression, 1937, the 1973–74 crash and 1987 — and both are then marked against the full record
+including all of it. That advantage has nothing to do with which model is better. The sealed
+rulebook anticipated this and requires the comparison to be re-run on the common 1990–2020 window
+only.
+
+**The result survives that restriction** — the leading challenger's margin actually widens. So the
+win does not depend on the unfair data advantage. It still needs to be weighed, not just noted.
+
+## 8. Other things you should know before deciding
+
+- **A stress test found something real.** We hid the 1970s from the models entirely, retrained,
+  and asked whether they could still produce 1970s-like decades. For the flow model, the answer
+  was inconclusive — the test couldn't tell the trained-with from the trained-without apart. For
+  the diffusion model, one of three runs produced **eight internal-consistency violations**
+  (paths that would allow a riskless profit — something that should never occur), where the
+  identical model trained on the full history produced none. That is a genuine robustness
+  finding. It does not affect the verdict, which is computed only on the main experiments. One
+  further run is still in progress and will show whether it is systematic or a fluke.
+- **The decade-scale measurements are unusable and always were.** Sixteen of twenty-two are dead
+  for want of inputs that were never built. This is declared in the sealed rulebook, and the
+  evidence document is forbidden from claiming a pass there.
+- **A related discovery this week:** the sealed rulebook says closing that gap needs new data.
+  It doesn't — the data has been in the repository since the first stage. What's missing is
+  wiring it into the models, which needs a rule amendment and a complete retraining. You've
+  already decided to finish this gate on the current setup and do that next time round.
+
+## 9. The questions actually being put to you
+
+1. **Was the list the right reading?** If yes, this was a correction. If you think the sentence
+   should have governed as written, then the benchmark wins automatically and that is the verdict —
+   a defensible position, since it is what the sealed document literally said.
+2. **Does the timing spoil it?** It was corrected by the beneficiary, after the benefit was
+   visible. Weigh that against: the supporting evidence predates every model, and no number moved.
+3. **Does the benchmark's data disadvantage change your answer?** The win survives correcting for
+   it, but the rulebook asks you to weigh the bias, not merely note it.
+4. **May the final test be spent?** It runs once, ever. Everything after it is irreversible.
+
+## 10. What happens if you approve
+
+The stress test finishes → the held-back data is opened and evaluated, once, logged → the sealed
+rule computes the verdict → the evidence document is generated, carrying every disclosure in this
+packet → model records are written → the release is tagged.
+
+**If the answer comes back "keep the benchmark", that is a successful outcome**, by the plan's own
+design and the rulebook's own words.
 
 ---
 
-## 4. The questions actually being put to you
+## 11. Where to verify any of this
 
-1. **Is the field's reading the correct one?** If yes, the amendment is a correction. If you think
-   the gloss should have governed, the verdict is SHIP-BENCHMARK regardless of evidence, and that
-   is a defensible position — it is what the sealed document literally said.
-2. **Does the timing invalidate it?** The correction was made by the beneficiary, after the benefit
-   was visible. Weigh that against: the field and its supporting rationale were committed before
-   any generator existed, and no number moved.
-3. **Does the draw-span bias change your answer?** The promotion survives the restricted window,
-   but the seal requires the bias to be weighed, not just reported.
-4. **May the holdout be spent?** It is spent once. Everything downstream is irreversible.
+| claim | file |
+|---|---|
+| The amendment, in full, with the timing recorded | `governance/amendment-log.yaml` — `AM-2026-07-29-001` |
+| Why the guarding test could not catch it | `governance/retrofit-register.md` — RFR-76 |
+| The other two findings of the same shape | `governance/retrofit-register.md` — RFR-80, RFR-81 |
+| The full results table and the restricted re-run | `ABLATION.md` §6 and §7 |
+| Every decision taken, with dates and reasoning | `governance/decision-register.md` |
+| The stress test and its inconclusive reading | `artifacts/wp211/SEVERE-TEST.md` |
+| The sealed rulebook itself | `pre-registration.yaml` |
 
-## 5. What happens on approval
-
-The diffusion severe arm finishes → the one-shot holdout is evaluated through the explicit-purpose
-path, once, logged → `ah/eval/g2.py` executes the sealed rule → `G2-EVIDENCE.md` is generated with
-this packet's disclosures included → model cards → `v0.2.0-g2`.
-
-**A SHIP-BENCHMARK verdict remains a successful outcome of Step 2**, by the plan's own design and
-by the seal's own words. Nothing in this packet should be read as arguing for a promotion.
+**Status of the irreversible step:** untouched. The held-back data has not been opened, no access
+token has been created, and every calculation so far has run on the training and validation data
+only.
