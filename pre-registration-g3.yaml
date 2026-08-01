@@ -1,0 +1,252 @@
+# pre-registration-g3.yaml — the G3-pre seal (Step 3, wp3-00; DN-5 §7 option 1,
+# STEP3-amendment-A1 Delta 6, KICKOFF-STEP3 §2).
+#
+# Sealed on G2 terms: these criteria AND the code that judges them are hashed
+# together into pre-registration-g3.lock BEFORE any WP3.2 estimation or any
+# cashflow code exists. Edits after sealing are dated amendments in
+# governance/amendment-log.yaml (same four-type vocabulary; post_hoc stated).
+# The seal-boundary guards (tests/test_seal_guards.py) cover this lock from the
+# commit that mints it — the first seal born with its guards.
+#
+# W11 REVIEW GATE: `sealed` flips true and the lock is minted ONLY after the
+# owner's pre-seal review with W11 in attendance (MPP-A1;
+# S2-REVIEWER-OF-RECORD sequencing). Until then this document is a complete
+# draft and binds nothing.
+
+schema_version: "1.0"
+sealed: true
+prepared: 2026-08-01
+campaign_vintage_id: "2026-08-01.2"
+taxonomy_version: taxonomy-v1.1
+provenance_script: scripts/measure_g3_reference.py
+# Hashed by the seal machinery alongside this document (prereg.seal's
+# factor_manifest convention) — the factor set is upstream of every mapping.
+factor_manifest: factors.yaml
+
+decisions:
+  granularity: >-
+    Owner decision, 2026-08-01: thresholds PER MODELED SLEEVE (not per delivered
+    series). The pooling rule, verbatim: a sleeve's reference composite is the
+    EQUAL-WEIGHT MONTHLY MEAN over its member sub-strategy series (membership =
+    taxonomy/albourne_mapping.yaml series map at taxonomy-v1.1), each member
+    DE-SMOOTHED with the D1 primary (GLM MA(k), ah.data.desmooth.glm_ma) over
+    its own train+validation span before pooling. Generated sleeve returns are
+    TRUE returns, so the reference is on the true-return scale. Per-series
+    thresholds remain available later as an additive amendment.
+  severity: >-
+    enforce on the 95-family (var_95, es_95): well estimated at the 120-month
+    judged length. report on the 99-family (var_99, es_99): roughly six tail
+    observations per 120-month replicate is too noisy to gate on honestly.
+  reference_surface: >-
+    ah.splits.DataAccess.train_val only (train 1871-01..2011-01 + validation
+    2011-01..2021-01). The holdout (2021-01..2026-08) is structurally
+    unreachable from the judged module; the leakage guard extends to Step 3
+    estimation unchanged.
+  band_machinery: >-
+    ah.eval.reference.block_bootstrap_band (sealed Step-2 code, COMPOSED never
+    restated): n_resamples 1000, block_length 24 months, level 0.95, replicates
+    length-matched to the judged 120-month sleeve paths
+    (resample_length 120). Thresholds are band midpoint +/- K*half_width with
+    K = 4 — the same K the owner ratified for D6 (2026-07-31). Per-sleeve seeds
+    are BAND_SEED_BASE + 7919 * (stable sleeve-id offset), so adding a sleeve
+    never re-rolls another's band.
+
+pm_sleeves_structurally_unavailable: >-
+  The nine modeled PM sleeves (pm_buyout, pm_growth, pm_vc, pm_secondaries,
+  pm_direct_lending, pm_mezzanine, pm_distressed, pm_re_value_add, pm_infra)
+  have NO delivered return series — every albourne.pm_* registration is COMM,
+  undelivered (data/GAPS.md). No threshold for them is authored here, because a
+  threshold authored without reference data would be an invented number wearing
+  a sealed one's clothes. TRIGGER: first PM delivery -> author PM thresholds by
+  the same pooling rule via a dated amendment BEFORE any PM mapping estimation
+  uses that data. Until then the sleeve-tail battery judges the seven HF
+  sleeves below and says so wherever it reports.
+
+# --------------------------------------------------------------------------- #
+# The 2022 episode-reproduction criteria (frozen here so no cashflow parameter
+# is ever tuned against the episode that judges it — the plan's own pitfall,
+# closed structurally). Reference values measured by the provenance script or
+# quoted from vendored sources, named per criterion. The SCORING CODE does not
+# exist yet (it is WP3.11's deliverable); it joins pre-registration-g3.lock BY
+# DATED AMENDMENT in the same commit that creates it, and the import-closure
+# guard enforces that from that commit onward. Criteria severities: each
+# criterion is pass/fail at G1-completion; the gate rule is below.
+# --------------------------------------------------------------------------- #
+episode_2022_criteria:
+  window: 2022-01-01 .. 2023-12-31 (the Step-1 episode pack window)
+  public_equity_drawdown:
+    formula: >-
+      peak-to-trough drawdown of the cumulated public-equity total-return path
+      (french.mkt_rf + french.rf), base 2021-12, through 2023-12, on the
+      engine's public path for the 2022 replay.
+    reference: -0.2484
+    pass: within +/- 0.05 absolute of reference
+    source: measured (provenance script)
+  mark_lag:
+    formula: >-
+      months from the public-equity trough month to the REPORTED private/HF
+      sleeve composite trough month in the engine's 2022 replay (reported
+      marks, i.e. after WP3.3 forward smoothing).
+    pass: lag >= 1 and <= 6 months for the PM cohort aggregate; >= 0 and <= 3
+      for the HF sleeve aggregate
+    source: >-
+      authored; anchored on the measured reported-drawdown table below (HF
+      reported composites troughed shallow and late relative to public in
+      2022-23) and the quarterly PM marking cycle.
+  private_weight_breach:
+    formula: >-
+      first month in the 2022 replay where private weight exceeds its target
+      range upper bound, and the breach size at that month, for the reference
+      over-allocated institution defined in the replay spec (WP3.11).
+    pass: breach occurs within 3 months of the public trough month; breach size
+      >= 0.02 absolute weight (the denominator effect, not a rounding artifact)
+    source: authored (engine-only quantity; formula pre-stated)
+  distribution_shortfall:
+    formula: >-
+      the 2022-23 trough aggregate distribution rate (f_dist applied by tier 1)
+      divided by its unconditional normal rate.
+    pass: depth in [0.45, 0.55] of normal, per the P-A drought calibration
+    source: >-
+      linkage-estimation §5 P-A, quoted: dist_rate_normal ~= 25%/yr of NAV,
+      dist_rate_trough ~= 11-14%/yr, depth ~= 0.45-0.55 of normal, duration
+      ~= 3 years. P-A's own instruction adopted verbatim: reproducing the
+      trough is an ACCEPTANCE TEST, never a calibration adjustment.
+  secondary_pricing:
+    formula: >-
+      the engine's state-dependent secondary discount evaluated at the 2022-H2
+      stress state in the replay.
+    pass: price in [0.76, 0.86] of NAV (anchor 0.81 +/- 0.05)
+    source: docs/data/secondaries.md, 2022-H2 row (advisor FY secondary review)
+  coverage_warning:
+    formula: >-
+      unfunded/NAV reported as headline AND unfunded/liquid computed as the
+      warning trigger, both emitted by the replay for the reference
+      institution.
+    pass: both quantities present in the replay output (presence criterion —
+      numeric bands belong to WP3.7/3.8 acceptance, not this seal)
+    source: >-
+      linkage-estimation §5 P-B, caveat adopted: the binding 2008 constraint
+      was unfunded against LIQUID assets; the two ratios diverge exactly when
+      it matters.
+  gate_rule: >-
+    G1-completion (WP3.11) PASSES the episode criterion set iff
+    public_equity_drawdown, mark_lag, distribution_shortfall and
+    secondary_pricing all pass, and the two remaining criteria
+    (private_weight_breach, coverage_warning) either pass or fail with the
+    failure written into G1-EVIDENCE.md as a named limitation. A NaN in any
+    criterion's computed value is a FAIL for that criterion, never a pass and
+    never an exclusion.
+
+# --------------------------------------------------------------------------- #
+# The tier-0-beats rule (STEP3 plan DoD item 3, Delta 4). Same shape as G2's
+# beats_definition, deliberately.
+# --------------------------------------------------------------------------- #
+tier0_beats_rule: >-
+  Tier 1 (market-sensitive TA, linkage_version public-0.1) BEATS tier 0
+  (historical simulation + constant-G TA) iff tier 1's episode score is
+  STRICTLY LOWER than tier 0's, where the episode score is the count of failed
+  criteria from episode_2022_criteria (each tier scored by the identical
+  sealed formulas; a tie is NOT a beat). A NaN criterion value on either side
+  makes that criterion a fail for that side — never a tie, never an exclusion.
+  Every published claim names the linkage_version it was scored under:
+  public-0.1 beating tier 0 and a later panel-1.0 beating tier 0 are different
+  claims with different audiences (Delta 4), and neither implies the other.
+  If tier 1 does not beat tier 0, tier 0 ships and G3 says so — the same
+  honest-negative discipline as G2.
+
+seal_scope:
+  hashed_files:
+    - pre-registration-g3.yaml
+    - factors.yaml
+    - src/ah/eval/sleevetails.py
+    # The seal machinery seals itself, exactly as prereg.py does inside the G2
+    # lock (the RFR-83 lesson: a sealed guard with an unsealed checker is a
+    # hole wearing a lock). Caught by the G3 boundary guard's FIRST run.
+    - src/ah/eval/g3seal.py
+    - src/ah/eval/prereg.py
+    - src/ah/eval/reference.py
+    - src/ah/eval/metrics/tails.py
+    - src/ah/eval/metrics/_pooling.py
+    - src/ah/splits.py
+    - src/ah/data/desmooth.py
+    - src/ah/data/derive.py
+    - src/ah/data/taxonomy.py
+    - taxonomy/sleeves.yaml
+    - taxonomy/albourne_mapping.yaml
+  note: >-
+    Everything statically importable from the judged module plus the two
+    taxonomy files that define sleeve membership (an edit to membership changes
+    what a sealed threshold is a threshold OF). Several files are also inside
+    the G2 lock; hashing them again here keeps this lock self-contained rather
+    than dependent on another campaign's. The import-closure guard
+    (tests/test_seal_guards.py) verifies this list against the actual imports
+    on every suite run. LATER ARRIVALS, planned: WP3.11's episode scorer and
+    WP3.2's mapping estimator join by dated amendment in the commits that
+    create them; PM thresholds join at first PM delivery.
+
+# ------------------------------------------------------------------- #
+# Measured numbers, embedded verbatim from the provenance script output.
+# ------------------------------------------------------------------- #
+# measured by scripts/measure_g3_reference.py on vintage 2026-08-01.2
+sleeve_tail_thresholds:
+  hf_credit:
+    members: [albourne.hf_rv_credit_ret_m, albourne.hf_structured_credit_ret_m]
+    train_val_months: 225
+    var_95: {point: 0.013535, lo: 0.007448, hi: 0.023854, min: -0.017161, max: 0.048463, severity: enforce}
+    es_95: {point: 0.045307, lo: 0.012240, hi: 0.089469, min: -0.103604, max: 0.205313, severity: enforce}
+    var_99: {point: 0.076158, lo: 0.012171, hi: 0.090230, min: -0.104919, max: 0.207320, severity: report}
+    es_99: {point: 0.118897, lo: 0.014874, hi: 0.133991, min: -0.163802, max: 0.312666, severity: report}
+  hf_cta:
+    members: [albourne.hf_cta_ret_m]
+    train_val_months: 228
+    var_95: {point: 0.039778, lo: 0.033112, hi: 0.046450, min: 0.013105, max: 0.066457, severity: enforce}
+    es_95: {point: 0.051429, lo: 0.040574, hi: 0.065024, min: 0.003898, max: 0.101700, severity: enforce}
+    var_99: {point: 0.058458, lo: 0.041188, hi: 0.076241, min: -0.011391, max: 0.128820, severity: report}
+    es_99: {point: 0.069957, lo: 0.043141, hi: 0.076701, min: -0.007198, max: 0.127040, severity: report}
+  hf_equity_ls:
+    members: [albourne.hf_asia_ls_ret_m, albourne.hf_em_ls_ret_m, albourne.hf_europe_ls_ret_m, albourne.hf_fund_emn_ret_m, albourne.hf_japan_ls_ret_m, albourne.hf_quant_emn_ret_m, albourne.hf_stat_arb_ret_m, albourne.hf_us_ls_ret_m]
+    train_val_months: 228
+    var_95: {point: 0.023492, lo: 0.011478, hi: 0.036728, min: -0.026397, max: 0.074603, severity: enforce}
+    es_95: {point: 0.035006, lo: 0.018925, hi: 0.049295, min: -0.026629, max: 0.094849, severity: enforce}
+    var_99: {point: 0.038399, lo: 0.021352, hi: 0.067850, min: -0.048395, max: 0.137597, severity: report}
+    es_99: {point: 0.053949, lo: 0.022950, hi: 0.071719, min: -0.050204, max: 0.144873, severity: report}
+  hf_event:
+    members: [albourne.hf_activist_ret_m, albourne.hf_distressed_ret_m, albourne.hf_em_fi_ret_m, albourne.hf_risk_arb_ret_m]
+    train_val_months: 228
+    var_95: {point: 0.031430, lo: 0.017416, hi: 0.039333, min: -0.015460, max: 0.072210, severity: enforce}
+    es_95: {point: 0.058061, lo: 0.028171, hi: 0.081931, min: -0.052470, max: 0.162572, severity: enforce}
+    var_99: {point: 0.073252, lo: 0.031096, hi: 0.110425, min: -0.087896, max: 0.229417, severity: report}
+    es_99: {point: 0.116143, lo: 0.031998, hi: 0.134405, min: -0.121611, max: 0.288014, severity: report}
+  hf_macro:
+    members: [albourne.hf_gaa_ret_m, albourne.hf_global_macro_ret_m]
+    train_val_months: 228
+    var_95: {point: 0.019426, lo: 0.011366, hi: 0.024903, min: -0.008941, max: 0.045209, severity: enforce}
+    es_95: {point: 0.028810, lo: 0.017367, hi: 0.038422, min: -0.014216, max: 0.070004, severity: enforce}
+    var_99: {point: 0.034323, lo: 0.018148, hi: 0.050179, min: -0.029897, max: 0.098224, severity: report}
+    es_99: {point: 0.045146, lo: 0.021863, hi: 0.050339, min: -0.020851, max: 0.093054, severity: report}
+  hf_multi:
+    members: [albourne.hf_ms_diversified_ret_m]
+    train_val_months: 227
+    var_95: {point: 0.033159, lo: 0.018585, hi: 0.049922, min: -0.028421, max: 0.096928, severity: enforce}
+    es_95: {point: 0.055107, lo: 0.029142, hi: 0.098355, min: -0.074677, max: 0.202175, severity: enforce}
+    var_99: {point: 0.064662, lo: 0.032529, hi: 0.121345, min: -0.100694, max: 0.254568, severity: report}
+    es_99: {point: 0.098355, lo: 0.034097, hi: 0.126811, min: -0.104974, max: 0.265882, severity: report}
+  hf_rv:
+    members: [albourne.hf_cb_arb_ret_m, albourne.hf_fi_arb_ret_m]
+    train_val_months: 226
+    var_95: {point: 0.010195, lo: 0.004582, hi: 0.070879, min: -0.094864, max: 0.170325, severity: enforce}
+    es_95: {point: 0.036645, lo: 0.009754, hi: 0.080515, min: -0.096387, max: 0.186656, severity: enforce}
+    var_99: {point: 0.072196, lo: 0.011889, hi: 0.094279, min: -0.111695, max: 0.217864, severity: report}
+    es_99: {point: 0.082983, lo: 0.013704, hi: 0.098031, min: -0.112787, max: 0.224522, severity: report}
+episode_2022_measured:
+  public_equity_drawdown: -0.2484  # french.mkt_rf+rf TR, 2021-12 base
+  dgs10_move_2022_pp: 2.15
+  cpi_yoy_peak: 0.0906
+  sleeve_reported_drawdown_2022_23:  # REPORTED composites, not de-smoothed
+    hf_credit: -0.0252
+    hf_cta: -0.1059
+    hf_equity_ls: -0.0319
+    hf_event: -0.0851
+    hf_macro: -0.0653
+    hf_multi: -0.0047
+    hf_rv: -0.0234

@@ -1,0 +1,21 @@
+{
+  "digest": "sha256:d21910da5914365347e50709c7b0dfcd58ddc0aa27c396d882cf4f32b2d67424",
+  "hashed_files": [
+    "factors.yaml",
+    "pre-registration-g3.yaml",
+    "src/ah/data/derive.py",
+    "src/ah/data/desmooth.py",
+    "src/ah/data/taxonomy.py",
+    "src/ah/eval/g3seal.py",
+    "src/ah/eval/metrics/_pooling.py",
+    "src/ah/eval/metrics/tails.py",
+    "src/ah/eval/prereg.py",
+    "src/ah/eval/reference.py",
+    "src/ah/eval/sleevetails.py",
+    "src/ah/splits.py",
+    "taxonomy/albourne_mapping.yaml",
+    "taxonomy/sleeves.yaml"
+  ],
+  "prereg_path": "pre-registration-g3.yaml",
+  "sealed_at": "2026-08-01T00:00:00"
+}
