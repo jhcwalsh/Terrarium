@@ -64,6 +64,26 @@ def validate_file(path: str | Path, schema: IntakeSchema) -> IntakeResult:
         )
 
     violations = schema.validate(df)
+
+    # WP2R.1: the taxonomy boundary. For an Albourne schema grouped by strategy,
+    # every vendor code must map to a platform sleeve_id — an unmapped code is an
+    # intake error with a readable report, never a silent drop or a silent accept
+    # (STEP2R-CONSOLIDATION-PLAN §WP2R.1). New codes are a mapping-file change
+    # (taxonomy/albourne_mapping.yaml), made on delivery.
+    if schema.source == "albourne" and schema.group_col and schema.group_col in df.columns:
+        from ah.data.taxonomy import unmapped_codes
+
+        for code in unmapped_codes(df[schema.group_col].dropna().unique()):
+            violations.append(
+                Violation(
+                    "unmapped_strategy",
+                    schema.group_col,
+                    f"vendor code '{code}' maps to no sleeve_id in "
+                    "taxonomy/albourne_mapping.yaml; add the mapping (or the reasoned "
+                    "exclusion) before this file can be ingested",
+                )
+            )
+
     accepted = not violations
     return IntakeResult(
         accepted=accepted,

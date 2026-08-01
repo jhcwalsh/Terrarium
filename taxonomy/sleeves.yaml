@@ -1,0 +1,458 @@
+# taxonomy/sleeves.yaml — the platform's own sleeve_id namespace (WP2R.1, R1).
+#
+# Authored against Instructions/sleeve-vehicle-state-spec.md §1 (v1.0-r): the FULL
+# candidate breadth is the namespace; `modeled_in_v1: true` marks the v1 build list
+# (spec recommendation: 8-10 PM and 7-9 HF — this file models 9 PM and 7 HF, at the
+# granularity of the registered albourne.* return series). Vendor classifications
+# NEVER appear in model code: taxonomy/albourne_mapping.yaml maps vendor codes to
+# these ids at the intake boundary, so a taxonomy change is a mapping-file change,
+# not a refactor.
+#
+# `vehicle` is the DEFAULT vehicle type for the strategy; vehicle type is a property
+# of the fund/cohort, not the strategy (spec §2), so a fund may override it.
+# `aggregates` lists the sub-strategy sleeves a group-level sleeve rolls up; a sleeve
+# with no `aggregates` is a leaf strategy.
+#
+# R13 (secondaries): its own sleeve, never a buyout clone — see pm_secondaries.notes.
+
+version: taxonomy-v1.0
+
+vehicle_types: [closed_end, open_ended, evergreen, hybrid]
+
+sleeves:
+  # ------------------------------------------------------------------ HF: Equity
+  - id: hf_equity_ls
+    group: hf_equity
+    vehicle: open_ended
+    modeled_in_v1: true
+    aggregates: [hf_fundamental_ls, hf_quant_equity, hf_sector_specialist, hf_equity_market_neutral]
+    definition: Equity long/short group aggregate — the v1 modeled sleeve for albourne.hf_els_ret_m.
+  - id: hf_fundamental_ls
+    group: hf_equity
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Fundamental single-name equity long/short.
+  - id: hf_quant_equity
+    group: hf_equity
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Systematic/quantitative equity selection.
+  - id: hf_sector_specialist
+    group: hf_equity
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Sector-specialist equity long/short (e.g. healthcare, TMT, financials).
+  - id: hf_equity_market_neutral
+    group: hf_equity
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Beta-neutral equity (fundamental or quantitative market neutral).
+
+  # ------------------------------------------------------------- HF: Event driven
+  - id: hf_event
+    group: hf_event
+    vehicle: open_ended
+    modeled_in_v1: true
+    aggregates: [hf_merger_arb, hf_special_situations, hf_activist, hf_distressed_securities]
+    definition: Event-driven group aggregate — the v1 modeled sleeve for albourne.hf_event_ret_m.
+  - id: hf_merger_arb
+    group: hf_event
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Announced-deal merger arbitrage.
+  - id: hf_special_situations
+    group: hf_event
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Special situations / catalyst-driven equity and credit.
+  - id: hf_activist
+    group: hf_event
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Activist equity with engagement-driven catalysts.
+  - id: hf_distressed_securities
+    group: hf_event
+    vehicle: open_ended
+    modeled_in_v1: false
+    notes: Overlaps private credit's distressed-for-control (pm_distressed) — the boundary
+      is traded securities (here) versus control/loan-to-own (there), per spec §1.1.
+    definition: Distressed and restructuring securities, traded not control.
+
+  # ----------------------------------------------------------- HF: Relative value
+  - id: hf_rv
+    group: hf_rv
+    vehicle: open_ended
+    modeled_in_v1: true
+    aggregates: [hf_fi_arb, hf_convert_arb, hf_vol_arb, hf_cap_structure_arb]
+    definition: Relative-value group aggregate — the v1 modeled sleeve for albourne.hf_rv_ret_m.
+  - id: hf_fi_arb
+    group: hf_rv
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Fixed income arbitrage (curve, basis, swap-spread).
+  - id: hf_convert_arb
+    group: hf_rv
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Convertible arbitrage.
+  - id: hf_vol_arb
+    group: hf_rv
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Volatility arbitrage / dispersion.
+  - id: hf_cap_structure_arb
+    group: hf_rv
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Capital-structure arbitrage across an issuer's instruments.
+
+  # ------------------------------------------------------------------ HF: Credit
+  - id: hf_credit
+    group: hf_credit
+    vehicle: hybrid
+    modeled_in_v1: true
+    aggregates: [hf_ls_credit, hf_structured_credit, hf_specialty_finance]
+    notes: Vehicle type is per-fund here more than anywhere — some credit vehicles are
+      drawdown-structured (spec §1.1); the hybrid default records that.
+    definition: Credit group aggregate — the v1 modeled sleeve for albourne.hf_credit_ret_m.
+  - id: hf_ls_credit
+    group: hf_credit
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Long/short corporate credit.
+  - id: hf_structured_credit
+    group: hf_credit
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Structured credit (ABS/RMBS/CLO tranches).
+  - id: hf_specialty_finance
+    group: hf_credit
+    vehicle: hybrid
+    modeled_in_v1: false
+    definition: Specialty-finance lending strategies in hedge-fund wrappers.
+
+  # ------------------------------------------------------------------- HF: Macro
+  - id: hf_macro
+    group: hf_macro
+    vehicle: open_ended
+    modeled_in_v1: true
+    aggregates: [hf_disc_macro, hf_sys_macro]
+    notes: Often the claimed crisis diversifier — that behavior is validated explicitly,
+      not assumed (spec §1.1).
+    definition: Macro group aggregate — the v1 modeled sleeve for albourne.hf_macro_ret_m.
+  - id: hf_disc_macro
+    group: hf_macro
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Discretionary global macro.
+  - id: hf_sys_macro
+    group: hf_macro
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Systematic macro (non-CTA).
+
+  # -------------------------------------------------------- HF: Managed futures
+  - id: hf_cta
+    group: hf_managed_futures
+    vehicle: open_ended
+    modeled_in_v1: true
+    aggregates: [hf_trend, hf_short_term]
+    notes: Convex payoff profile; crisis-conditional correlation is checked (spec §1.1).
+    definition: Managed-futures group aggregate — the v1 modeled sleeve for albourne.hf_cta_ret_m.
+  - id: hf_trend
+    group: hf_managed_futures
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Trend-following CTA.
+  - id: hf_short_term
+    group: hf_managed_futures
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Non-trend / short-term systematic futures.
+
+  # ---------------------------------------------------------- HF: Multi-strategy
+  - id: hf_multi
+    group: hf_multi
+    vehicle: open_ended
+    modeled_in_v1: true
+    aggregates: [hf_platform_multistrat, hf_internal_allocator]
+    notes: Pass-through leverage; redemption terms often the tightest (spec §1.1).
+    definition: Multi-strategy group aggregate — the v1 modeled sleeve for albourne.hf_multi_ret_m.
+  - id: hf_platform_multistrat
+    group: hf_multi
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Platform multi-strategy (pod shops).
+  - id: hf_internal_allocator
+    group: hf_multi
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Internal-allocator multi-strategy vehicles.
+
+  # -------------------------------------------------------- HF: Insurance-linked
+  - id: hf_ils
+    group: hf_ils
+    vehicle: open_ended
+    modeled_in_v1: false
+    aggregates: [hf_cat_bonds, hf_collateralized_re, hf_ils_multistrat]
+    notes: Side pockets are the norm, not the exception (spec §1.1); no registered v1
+      return series, so the group is namespace-only until one is delivered.
+    definition: Insurance-linked strategies group aggregate — near-zero market beta, event-driven tails.
+  - id: hf_cat_bonds
+    group: hf_ils
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Catastrophe bonds.
+  - id: hf_collateralized_re
+    group: hf_ils
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Collateralized reinsurance.
+  - id: hf_ils_multistrat
+    group: hf_ils
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Multi-strategy insurance-linked vehicles.
+
+  # ------------------------------------------------------------- HF: Commodities
+  - id: hf_commodities
+    group: hf_commodities
+    vehicle: open_ended
+    modeled_in_v1: false
+    aggregates: [hf_disc_commodity, hf_sys_commodity]
+    notes: Distinct from CTA trend (spec §1.1); no registered v1 return series.
+    definition: Commodities group aggregate (discretionary + systematic, non-CTA).
+  - id: hf_disc_commodity
+    group: hf_commodities
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Discretionary commodity trading.
+  - id: hf_sys_commodity
+    group: hf_commodities
+    vehicle: open_ended
+    modeled_in_v1: false
+    definition: Systematic commodity strategies.
+
+  # ------------------------------------------------------- PM: Private equity
+  - id: pm_buyout
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: true
+    aggregates: [pm_large_buyout, pm_mid_buyout, pm_small_buyout]
+    definition: Buyout aggregate — the v1 modeled sleeve for albourne.pm_buyout_ret_q.
+  - id: pm_large_buyout
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Large-cap buyout.
+  - id: pm_mid_buyout
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Mid-market buyout.
+  - id: pm_small_buyout
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Small buyout.
+  - id: pm_growth
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: true
+    definition: Growth equity — the v1 modeled sleeve for albourne.pm_growth_ret_q.
+  - id: pm_vc
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: true
+    aggregates: [pm_venture_early, pm_venture_late]
+    definition: Venture aggregate — the v1 modeled sleeve for albourne.pm_vc_ret_q.
+  - id: pm_venture_early
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Early-stage venture.
+  - id: pm_venture_late
+    group: pm_pe
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Late-stage / growth venture.
+
+  # -------------------------------------------------------- PM: Secondaries (R13)
+  - id: pm_secondaries
+    group: pm_secondaries
+    vehicle: closed_end
+    modeled_in_v1: true
+    aggregates: [pm_pe_secondaries, pm_credit_secondaries, pm_gp_led]
+    notes: "R13: its own sleeve. Faster J-curve, earlier distributions — TA parameters
+      are estimated separately for it and are NEVER cloned from buyout (spec §1.2;
+      STEP2R-CONSOLIDATION-PLAN §WP2R.1)."
+    definition: Secondaries aggregate — the v1 modeled sleeve for albourne.pm_secondaries_ret_q.
+  - id: pm_pe_secondaries
+    group: pm_secondaries
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: LP-interest PE secondaries.
+  - id: pm_credit_secondaries
+    group: pm_secondaries
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Credit secondaries.
+  - id: pm_gp_led
+    group: pm_secondaries
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: GP-led / continuation vehicles.
+
+  # ----------------------------------------------------- PM: Private credit
+  - id: pm_direct_lending
+    group: pm_credit
+    vehicle: closed_end
+    modeled_in_v1: true
+    definition: Senior direct lending — the v1 modeled sleeve for albourne.pm_dl_ret_q.
+  - id: pm_unitranche
+    group: pm_credit
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Unitranche lending.
+  - id: pm_mezzanine
+    group: pm_credit
+    vehicle: closed_end
+    modeled_in_v1: true
+    definition: Mezzanine — the v1 modeled sleeve for albourne.pm_mezz_ret_q.
+  - id: pm_opportunistic_credit
+    group: pm_credit
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Opportunistic / special-situations credit.
+  - id: pm_distressed
+    group: pm_credit
+    vehicle: closed_end
+    modeled_in_v1: true
+    notes: Distressed-for-control / loan-to-own. Boundary with hf_distressed_securities
+      (traded distressed) documented on both sleeves, per spec §1.1.
+    definition: Distressed private credit — the v1 modeled sleeve for albourne.pm_distressed_ret_q.
+  - id: pm_specialty_finance_abs
+    group: pm_credit
+    vehicle: hybrid
+    modeled_in_v1: false
+    definition: Specialty / asset-backed finance.
+  - id: pm_venture_debt
+    group: pm_credit
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Venture debt.
+
+  # --------------------------------------------------------- PM: Real estate
+  - id: pm_re_core
+    group: pm_re
+    vehicle: evergreen
+    modeled_in_v1: false
+    notes: Core RE is typically open-ended — a genuinely different vehicle (spec §1.2);
+      the evergreen queue mechanics are exactly why it is first-class in §2.
+    definition: Core real estate (open-ended/evergreen).
+  - id: pm_re_core_plus
+    group: pm_re
+    vehicle: evergreen
+    modeled_in_v1: false
+    definition: Core-plus real estate.
+  - id: pm_re_value_add
+    group: pm_re
+    vehicle: closed_end
+    modeled_in_v1: true
+    definition: Value-add real estate — the v1 modeled sleeve for albourne.pm_re_va_ret_q.
+  - id: pm_re_opportunistic
+    group: pm_re
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Opportunistic real estate.
+  - id: pm_re_debt
+    group: pm_re
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Real estate debt.
+
+  # ------------------------------------------------------- PM: Infrastructure
+  - id: pm_infra
+    group: pm_infra
+    vehicle: hybrid
+    modeled_in_v1: true
+    aggregates: [pm_infra_core, pm_infra_core_plus, pm_infra_value_add, pm_infra_greenfield, pm_infra_debt]
+    notes: Long lives; extension behavior matters (spec §1.2). Core infra is evergreen,
+      the rest closed-end — hybrid default records the split.
+    definition: Infrastructure aggregate — the v1 modeled sleeve for albourne.pm_infra_ret_q.
+  - id: pm_infra_core
+    group: pm_infra
+    vehicle: evergreen
+    modeled_in_v1: false
+    definition: Core infrastructure (open-ended).
+  - id: pm_infra_core_plus
+    group: pm_infra
+    vehicle: hybrid
+    modeled_in_v1: false
+    definition: Core-plus infrastructure.
+  - id: pm_infra_value_add
+    group: pm_infra
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Value-add infrastructure.
+  - id: pm_infra_greenfield
+    group: pm_infra
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Greenfield / development infrastructure.
+  - id: pm_infra_debt
+    group: pm_infra
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Infrastructure debt.
+
+  # --------------------------------------------------- PM: Natural resources
+  - id: pm_energy
+    group: pm_natres
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Energy (commodity factor exposure explicit, spec §1.2).
+  - id: pm_mining
+    group: pm_natres
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Mining / metals.
+  - id: pm_timberland
+    group: pm_natres
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Timberland.
+  - id: pm_agriculture
+    group: pm_natres
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Agriculture.
+
+  # ------------------------------------------------------ PM: Niche / royalties
+  - id: pm_pharma_royalties
+    group: pm_niche
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Pharma royalties (low-correlation claims validated, not assumed — spec §1.2).
+  - id: pm_media_royalties
+    group: pm_niche
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Music / media royalties.
+  - id: pm_litigation_finance
+    group: pm_niche
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Litigation finance.
+
+  # ------------------------------------------------------- PM: Multi-manager
+  - id: pm_fof
+    group: pm_multi
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Fund-of-funds (fee layering; distinct call/distribution profile — spec §1.2).
+  - id: pm_coinvest
+    group: pm_multi
+    vehicle: closed_end
+    modeled_in_v1: false
+    definition: Co-investment vehicles.
