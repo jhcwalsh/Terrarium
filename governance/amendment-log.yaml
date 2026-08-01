@@ -957,3 +957,92 @@ amendments:
     when this was decided. The flag records the state of the world, not the size of the
     change. Nothing about the verdict moves either way -- the rule never read this data.'
   type: protocol_change
+- amendment_id: AM-2026-07-31-003
+  date: '2026-07-31'
+  payload:
+    code_changes: 'src/ah/eval/g2.py ONLY, a hashed judged source: the executable form of
+      multi_seed_decision_rule is added beside the pre-existing token mint. No other
+      sealed file is touched. ah/eval/ablation.py -- sealed by AM-2026-07-31-001 -- is
+      NOT edited: g2.py COMPOSES its primitives rather than restating them, because two
+      implementations of one sealed inequality is two things that can disagree.'
+    divergences_from_the_sealed_words: 'NONE ASSERTED BLINDLY -- each clause carries the
+      sentence it implements as a docstring quotation, and tests/test_g2.py pins one
+      sealed sentence per test (22 tests): strictly-lower (a tie is not a beat), the NaN
+      rule on EITHER side making a seed not-a-beat and not an exclusion, the pooled
+      inequality at ddof=1 in both halves, clause (ii) vetoing the pooled route,
+      minimum_seeds, and the criterion-bearing refusal on challenger AND benchmark
+      reports.'
+    new_lock_digest: sha256:99ab3f772be6a5afc665c8e51364dc477c34c2cd0b5cf959f3446e401b21d832
+    no_threshold_moved: NOT ONE. multi_seed_decision_rule's words are byte-identical; this
+      amendment adds their executable form and changes no value, bound, band, tier,
+      severity or split.
+    one_sealed_requirement_discharged: 'criterion_bearing_runs_only said WP2.11''s g2.py
+      "MUST refuse a report where it is false" and stated in the same breath that the
+      refusal "does not exist yet". g2.require_criterion_bearing IS that refusal, applied
+      to every report entering the verdict -- benchmark as well as challenger -- and it
+      raises rather than degrading, because a run at the wrong size or against a
+      superseded vintage is not a weaker input to a verdict, it is not an input at all.'
+    sealed_at: '2026-07-31'
+    superseded_lock_digest: sha256:edd1f841050f92b81475a7ed3ed6b00756b2deaab61bd8009fb65bc4885b9c08
+    validation_against_known_answers: 'The executor was checked against ABLATION.md
+      section 6, which was generated independently by scripts/build_ablation_report.py
+      and which g2.py has never read. hier-flow-v1 vs bootstrap-v1, per-seed d:
+      [-0.277918, -0.304350, -0.307900]; mean -0.296723; sd(ddof=1) 0.016381 -- EXACT to
+      six decimals on all five figures. It also DISCRIMINATES: four of the five ablation
+      systems return SHIP-BENCHMARK and one returns PROMOTE, so the rule is not a
+      function that approves whatever it is shown.'
+    verdicts_computed: 'abl-a-structure-only SHIP-BENCHMARK; abl-b-neural-rollout-flow
+      SHIP-BENCHMARK; abl-c-neural-only-flow SHIP-BENCHMARK; hier-diffusion-v1
+      SHIP-BENCHMARK; hier-flow-v1 PROMOTE.'
+  post_hoc: true
+  rationale: 'THE EXECUTABLE FORM OF multi_seed_decision_rule, WHICH THE SEALED DOCUMENT
+    ITSELF SAID DID NOT EXIST. pre-registration.yaml''s own header says: "WP2.11
+    implements it in ah/eval/g2.py, which today contains only the sanctioned
+    holdout-token mint and no decision logic at all ... g2.py is already inside the seal,
+    so when WP2.11 writes the executable form it cannot diverge from these words without
+    a dated amendment and a re-seal, and this block is what it will be read against."
+    This is that amendment.
+
+
+    ONE SUBSTANTIVE READING WHERE THE TABLE AND THE SENTENCE DISAGREE, AND THE SENTENCE
+    WINS. ABLATION.md section 6 reports "pooled beat" and "clause (ii) every seed" as
+    INDEPENDENT columns, and by those columns hier-diffusion-v1 is a pooled beat.
+    beats_definition says: "Clause (ii) must still hold in every seed for the pooled
+    route -- the pooled arm relaxes the objective, not the band-regression check."
+    hier-diffusion-v1 fails clause (ii) in every seed, so its POOLED ROUTE FAILS and its
+    clause (1) does not hold. The executor implements the sentence. This is exactly why
+    it was composed from the sealed words rather than from the generated table, and it is
+    recorded here because a reader comparing the two documents will otherwise think one
+    of them is wrong.
+
+
+    ONE AMBIGUITY FOUND AND NOT RESOLVED UNILATERALLY. rule clause (2), "NO ENFORCE-TIER
+    REGRESSION on the monthly or 1_5yr tiers relative to bootstrap-v1", admits a BY-COUNT
+    reading (the challenger''s number of failing enforce metrics is <= the benchmark''s)
+    and a BY-METRIC reading (no metric the benchmark PASSES is FAILED by the challenger,
+    which additionally forbids trading one failure for another). g2.py COMPUTES BOTH,
+    reports both, sets `holds` to their AND (the stricter reading), and emits a NOTE when
+    they disagree -- the same posture S2-HORIZON-TIER took for "the horizon tier". They
+    AGREE on every cell of the WP2.10 grid, so nothing turns on it here; narrowing the
+    sealed sentence is a dated protocol_change amendment for a later work package, taken
+    before results exist, not a choice made inside this one.
+
+
+    A VACUOUS GUARD FOUND AND REPLACED WHILE TESTING. The first draft refused a seed
+    whose challenger and benchmark comparison sets differed by strategy_ids. Those ids
+    are derived from the sealed arguments alone and are identical by construction, so the
+    guard could never fire -- dead code wearing the appearance of a safety check. It now
+    guards the resolved metric NAMES, which ARE read off each report and CAN differ, and
+    which clause (ii) counts over; a test pins the distinction so the guard cannot quietly
+    revert to the vacuous form.
+
+
+    post_hoc IS TRUE and the ordering is the mitigation. The WP2.10 grid, both severe
+    arms and the head-to-head all existed before a line of this code was written -- the
+    verdict could not have been otherwise, since the rule is executed on stored reports.
+    What makes it defensible is that the implementation was validated against numbers
+    produced by a DIFFERENT program before being trusted, that it discriminates rather
+    than approving everything, and that the clause it most plausibly could have been bent
+    on -- clause (1) for hier-diffusion-v1 -- was implemented AGAINST the reading that
+    would have promoted a second system.'
+  type: correction
