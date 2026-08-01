@@ -1,0 +1,98 @@
+# taxonomy/albourne_mapping.yaml — vendor code -> sleeve_id (WP2R.1, R1).
+#
+# The boundary file the spec's design principle demands: Albourne's classification
+# never enters model code; it is mapped to the platform's own sleeve_id namespace
+# (taxonomy/sleeves.yaml) exactly here. An UNMAPPED vendor code is an INTAKE ERROR
+# with a readable report, never a silent drop (STEP2R-CONSOLIDATION-PLAN §WP2R.1) —
+# so new vendor codes are added HERE, on delivery, as a mapping-file change.
+#
+# Two vocabularies, per the scope inventory available today:
+#   codes.albourne  — the short strategy codes the PM/cashflow intake files carry
+#                     (format-faithful with tests/fixtures/data/intake/albourne/;
+#                     real delivery codes are appended on arrival).
+#   codes.hedgers   — the Albourne HedgeRS AW sub-strategy indices (name + index_id),
+#                     taken from the HedgeRS index catalog via the HFModelling scope
+#                     inventory; the HF return series intake path.
+#
+# Grouping note: HedgeRS's own super-strategies do NOT bind — e.g. HedgeRS classes
+# equity market neutral under Relative Value, this platform's spec §1.1 places it in
+# the Equity group. The mapping below follows the PLATFORM's taxonomy; that is the
+# point of mapping at the boundary.
+
+version: taxonomy-v1.0
+
+# Every registered albourne return series -> exactly one sleeve_id (acceptance).
+series:
+  albourne.hf_els_ret_m: hf_equity_ls
+  albourne.hf_event_ret_m: hf_event
+  albourne.hf_rv_ret_m: hf_rv
+  albourne.hf_credit_ret_m: hf_credit
+  albourne.hf_macro_ret_m: hf_macro
+  albourne.hf_cta_ret_m: hf_cta
+  albourne.hf_multi_ret_m: hf_multi
+  albourne.pm_buyout_ret_q: pm_buyout
+  albourne.pm_growth_ret_q: pm_growth
+  albourne.pm_vc_ret_q: pm_vc
+  albourne.pm_secondaries_ret_q: pm_secondaries
+  albourne.pm_dl_ret_q: pm_direct_lending
+  albourne.pm_mezz_ret_q: pm_mezzanine
+  albourne.pm_distressed_ret_q: pm_distressed
+  albourne.pm_re_va_ret_q: pm_re_value_add
+  albourne.pm_infra_ret_q: pm_infra
+
+# Registered albourne series that are deliberately NOT sleeve-scoped: the cashflow
+# packs are cross-strategy datasets whose per-row `strategy` column maps through
+# `codes.albourne` below. Listing them here (with reasons) is what lets a test assert
+# that series + non_sleeve_series exactly cover every registered albourne series.
+non_sleeve_series:
+  albourne.cf_A_lifecycle: ALB-A fund-lifecycle matrices, per-strategy rows via codes.albourne
+  albourne.cf_B_calendar_rates: ALB-B calendar call/distribution rates, per-strategy rows via codes.albourne
+  albourne.cf_C_age_calendar: ALB-C age-by-calendar matrices, per-strategy rows via codes.albourne
+  albourne.cf_D_vintage: ALB-D vintage-level dataset, per-strategy rows via codes.albourne
+  albourne.cf_E_episodes: ALB-E episode dataset, per-strategy rows via codes.albourne
+
+codes:
+  # Short strategy codes carried by PM return and cashflow intake files.
+  albourne:
+    buyout: pm_buyout
+    growth: pm_growth
+    vc: pm_vc
+    secondaries: pm_secondaries
+    dl: pm_direct_lending
+    mezz: pm_mezzanine
+    distressed: pm_distressed
+    re_va: pm_re_value_add
+    infra: pm_infra
+
+  # HedgeRS AW sub-strategy indices (the HF scope inventory). Many-to-one is
+  # expected: the v1 HF sleeves are group aggregates, and each vendor code still
+  # maps to exactly one sleeve_id.
+  hedgers:
+    "HedgeRS AW Asia Pacific L/S": {index_id: 109739, sleeve: hf_equity_ls}
+    "HedgeRS AW EM L/S": {index_id: 109741, sleeve: hf_equity_ls}
+    "HedgeRS AW Japan L/S": {index_id: 109747, sleeve: hf_equity_ls}
+    "HedgeRS AW US L/S": {index_id: 109749, sleeve: hf_equity_ls}
+    "HedgeRS AW European L/S": {index_id: 109743, sleeve: hf_equity_ls}
+    "HedgeRS AW Activist": {index_id: 109778, sleeve: hf_event}
+    "HedgeRS AW Distressed / Restructuring": {index_id: 109773, sleeve: hf_event}
+    "HedgeRS AW Emerging Market FI": {index_id: 109776, sleeve: hf_event}
+    "HedgeRS AW Risk Arbitrage": {index_id: 109780, sleeve: hf_event}
+    # Platform grouping, not HedgeRS's: equity market neutral (fundamental,
+    # quantitative, stat-arb) sits in the Equity group per spec §1.1.
+    "HedgeRS AW Fundamental Equity MN": {index_id: 109798, sleeve: hf_equity_ls}
+    "HedgeRS AW Statistical Arbitrage": {index_id: 109806, sleeve: hf_equity_ls}
+    "HedgeRS AW Quantitative Equity MN": {index_id: 109802, sleeve: hf_equity_ls}
+    "HedgeRS AW Fixed Income Arbitrage": {index_id: 109814, sleeve: hf_rv}
+    "HedgeRS AW CB Arbitrage": {index_id: 109808, sleeve: hf_rv}
+    "HedgeRS AW Relative Value Credit": {index_id: 109796, sleeve: hf_credit}
+    "HedgeRS AW Structured Credit": {index_id: 109818, sleeve: hf_credit}
+    "HedgeRS AW Global Macro": {index_id: 109714, sleeve: hf_macro}
+    "HedgeRS AW Global Asset Allocation": {index_id: 109713, sleeve: hf_macro}
+    "HedgeRS AW CTA": {index_id: 109710, sleeve: hf_cta}
+    "HedgeRS AW Insurance": {index_id: 109827, sleeve: hf_ils}
+
+# Vendor identifiers that are deliberately NOT mapped to any sleeve — with reasons,
+# because an excluded code and a forgotten code must be distinguishable.
+excluded_codes:
+  "HedgeRS Universal (AW)": {index_id: 109832, reason: composite benchmark over the whole universe, not a sleeve}
+  "HedgeRS Universal (EW)": {index_id: 109831, reason: composite benchmark (equal-weighted baseline), not a sleeve}

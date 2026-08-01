@@ -7,6 +7,25 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.1 — taxonomy freeze and the Albourne mapping (R1, R13)** (Step 2R).
+  `taxonomy/sleeves.yaml` — the platform's own `sleeve_id` namespace, 61 sleeves over
+  17 groups from the sleeve-vehicle-state spec's full candidate breadth, with
+  `modeled_in_v1` marking the build list (7 HF + 9 PM, inside the spec's recommended
+  ranges, at exactly the granularity of the 16 registered `albourne.*` return series).
+  `taxonomy/albourne_mapping.yaml` — the vendor boundary: every registered Albourne
+  series maps to exactly one sleeve (cashflow packs covered by an explicit non-sleeve
+  list so nothing is unaccounted for); the 20 real HedgeRS AW sub-strategy indices
+  (name + index id, from the HFModelling scope inventory) map to platform sleeves
+  **by the platform's grouping, not HedgeRS's** (equity market neutral sits in Equity
+  per spec §1.1); the two Universal composites are excluded *with reasons*, because an
+  excluded code and a forgotten code must be distinguishable. **Secondaries is its own
+  sleeve (R13)** with the never-cloned-from-buyout note pinned by a test.
+  `ah/data/taxonomy.py` loads + validates both files (version skew, unknown targets,
+  mapped-and-excluded conflicts all raise); `ah.data.intake.validate_file` now fails
+  an Albourne strategy-grouped drop carrying an unmapped vendor code, with a readable
+  report naming the code and the mapping file. 15 tests. Honest note: the plan's
+  "re-file existing intakes" clause is vacuous — no Albourne intake was ever
+  delivered; the committed fixtures are swept instead.
 - **WP2R.8 — governance consolidation + the three seal guards** (Step 2R).
   - **`tests/test_seal_guards.py` (13 tests) closes the RFR-76..84 defect class** —
     "the seal asserts something nothing mechanically verifies" — by making the seal's
