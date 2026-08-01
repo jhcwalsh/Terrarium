@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.5 — tier 0, the transparent cashflow benchmark, frozen before tier 1
+  exists** (Step 3). `ah/port/cashflow_tier0.py` runs the register's classic
+  constant-G TA **through the same cohort recursion tier 1 will use, linkage
+  off** — one model, never two. The cohort recursion aligned to the register's
+  canonical form (`RD(t) = Y·(t/L)^B`) with the flagged terminal convention
+  resolved: at `age ≥ L`, full liquidation and the undrawn commitment lapses.
+  **G measured, not adopted**: 12.05%/yr, the annualized mean public total return
+  over 1,134 train+val months — PME-neutral by construction ("private assets are
+  public assets with a J-curve", the strawman tier 1 must beat). The plan's
+  historical-simulation leg is UNPARAMETERIZABLE (ALB-A/C never delivered) and
+  recorded with its trigger. **`AM-2026-08-01-004`** (pre-hoc, the purest case:
+  the comparator doesn't exist yet) seals the spec into the G3 lock
+  (`sha256:5e555a4f…`). 6 tests: J-curve shape, terminal wind-up, 12%-fund
+  moneyness, bit-determinism.
 - **WP3.3 — the forward smoothing kernel** (Step 3). `ah/port/smoothing.py` + the
   frozen θ artifact (`mappings/smoothing-kernel-v1.0.yaml`, `smooth-2026.08`,
   sealed pre-hoc by `AM-2026-08-01-003` under the settled rule: **estimates seal,

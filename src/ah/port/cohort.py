@@ -156,12 +156,18 @@ class ClosedEndCohort:
 
         ``call_rate_t = RC(age) * f_call``           (RC annual; scaled by period)
         ``call_t      = call_rate_t * unfunded``     (capped at unfunded)
-        ``dist_rate_t = (age/L)^B * y_eff * f_dist`` (bounded [0, 1])
+        ``dist_rate_t = Y * (age/L)^B * f_dist``     (the register's classic RD(t); bounded [0, 1])
         ``NAV_t       = NAV*(1+r) + call_t - dist_t`` (floored at 0)
 
-        ``y_eff = max(yield_rate, age/L)`` folds the income yield and the
-        classic TA maturity ramp into one bounded rate; income books
-        ``min(dist, yield_rate * grown NAV)``, capital the remainder.
+        The distribution rate is the model-parameter-register §1 form exactly
+        (``RD(t) = Y * (t/L)^B``, annual, scaled to the period). ``Y`` here is
+        the register's yield/terminal rate — the LEVEL of the bow at maturity —
+        so at ``age = L`` the annual distribution rate is ``Y``. TERMINAL
+        LIQUIDATION (the register's flagged convention, resolved): from
+        ``age >= L`` (extensions excluded — WP3.4's behavior), the remaining
+        NAV distributes in full, forcing NAV to zero rather than letting the
+        bow taper forever. Income books ``min(dist, yield_rate/periods_py *
+        grown NAV)``, capital the remainder.
         """
         if f_call < 0.0 or f_dist < 0.0:
             raise CohortError("linkage multipliers must be non-negative")
@@ -170,15 +176,22 @@ class ClosedEndCohort:
         p = self._contract.parameters
         life = self._contract.lifecycle.contractual_life_years
 
-        rc_index = min(int(self.age_years), len(p.rc_curve) - 1)
-        call_rate = min(1.0, p.rc_curve[rc_index] * f_call * years_per_period)
-        call = min(self.unfunded, call_rate * self.unfunded)
+        terminal = self.age_years >= life and self.extension_status != "extended"
+        if terminal:
+            call = 0.0  # past end of life the commitment lapses: no further calls
+        else:
+            rc_index = min(int(self.age_years), len(p.rc_curve) - 1)
+            call_rate = min(1.0, p.rc_curve[rc_index] * f_call * years_per_period)
+            call = min(self.unfunded, call_rate * self.unfunded)
 
         grown = max(0.0, self.nav_true * (1.0 + r_true))
         life_frac = min(1.0, self.age_years / life)
-        dist_rate = min(1.0, (life_frac**p.bow) * max(p.yield_rate, life_frac) * f_dist)
+        if terminal:
+            dist_rate = 1.0  # terminal liquidation: the fund winds up, NAV -> 0
+        else:
+            dist_rate = min(1.0, p.yield_rate * (life_frac**p.bow) * f_dist * years_per_period)
         dist = dist_rate * grown
-        income = min(dist, p.yield_rate * grown)
+        income = min(dist, p.yield_rate * years_per_period * grown)
         capital = dist - income
 
         nav_growth = grown - self.nav_true
