@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.11 — the 2022 end-to-end reproduction: G1 completion, and the honest
+  answer is FAIL** (Step 3; `G1-EVIDENCE.md`). Observed 2022–23 history through
+  the full chain, scored by `ah/eval/episode2022.py` against the criteria sealed
+  at G3-pre *before any judged code existed*. **Four criteria pass** — the public
+  drawdown exactly, **`distribution_shortfall` at 0.544 through the full chain**
+  (the P-A calibration held beyond the point function), secondary pricing,
+  coverage. **`mark_lag` fails on its HF half (−3.1 months)**: the mapped HF
+  composite troughs at June's first leg, before September's public trough — the
+  genuine test the measured-zero-stickiness decision preserved, returning its
+  genuine answer. Diagnosis on record: the sealed HY omission and/or stickiness
+  resident in 2021–23 — both next-campaign questions, neither a tuning knob.
+  `private_weight_breach` fails as a *permitted named* failure (9 months early —
+  the denominator effect arrived at the first leg). **Tier 1 beats tier 0**
+  (2 fails vs 3: constant G produces no drought at all), so tier 1 ships under
+  the sealed beats rule with the failure reported, per the plan's own DoD.
+  **`AM-2026-08-02-001`** seals the scorer (pure, engine-free — the judge never
+  imports the defendant) — **post_hoc: true, stated plainly**: the replay ran
+  first; what bounds the hazard is that every formula quotes its sealed sentence
+  and the result sealed alongside is a FAIL. Lock at `sha256:5a7186e5…`;
+  the boundary guard now covers the scorer as a third entry point. 13 tests.
 - **WP3.10 — hero funds** (Step 3). `ah/port/heroes.py`: 3–5 named synthetic
   funds split from a cohort (log-normal weights on per-hero 7919-strided seeds,
   `n_funds=1`, `dispersion_draw` = weight quantile), every hero contract-valid,
