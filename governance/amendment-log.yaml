@@ -1094,3 +1094,32 @@ amendments:
     Step 3 result existed at either amendment. This is the guards doing at minute-scale
     what RFR-82 took two days to catch.'
   type: correction
+- amendment_id: AM-2026-08-01-003
+  date: '2026-08-01'
+  payload:
+    calibration_deviation: DN-5 5.3 suggests calibrating stickiness on 2021-23; REFUSED
+      -- that span is the holdout AND the sealed judging episode. Calibrated on in-sample
+      NBER stress (2008-09, 2020). A deviation from the design note in the seal's
+      favour, recorded in the artifact itself.
+    files_added: scripts/estimate_smoothing_kernel.py (the estimator; train+val only),
+      mappings/smoothing-kernel-v1.0.yaml (theta per sleeve, k, stickiness; kernel_version
+      smooth-2026.08)
+    new_lock_digest: sha256:cce871dffe6215f7d59d8a4a76f0426fe5a051b2a9c69f65feb375b4b312d446
+    sealed_at: '2026-08-01T21:00:00+00:00'
+    superseded_lock_digest: sha256:9018a6fb7b31464df02d174b492de4d1038777a082b37015d1c7a11e831d0e2d
+    the_measured_negative: 'Stickiness calibrated 0.0 AS MEASURED: theta0 was HIGHER
+      in NBER stress months (0.833) than calm (0.793) -- no extra stickiness detectable
+      in-sample, mildly OPPOSITE to DN-5 5.3''s prior. Shipped as measured rather
+      than invented; the mechanism is implemented and inert at 0; WP3.11''s sealed
+      mark_lag criterion becomes a genuine test of whether 2022''s lag emerges without
+      it.'
+  post_hoc: false
+  rationale: 'WP3.3''S SMOOTHING-KERNEL ESTIMATE JOINS THE G3 LOCK, PRE-HOC, under
+    the boundary rule -002 settled: ESTIMATES SEAL, ENGINES DO NOT. The sealed mark_lag
+    criterion judges REPORTED marks, which are true returns passed through the kernel''s
+    theta weights -- an unfrozen theta would let mark_lag be gamed by re-estimation,
+    so the estimate freezes before any replay exists. The kernel engine (src/ah/port/smoothing.py)
+    stays outside, lineage-pinned by kernel_version, exactly as the mapping applier
+    is. Post_hoc FALSE: no episode replay, no sleeve-tail evaluation, no Step 3 result
+    of any kind existed.'
+  type: protocol_change

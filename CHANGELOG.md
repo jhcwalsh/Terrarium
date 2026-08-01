@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.3 — the forward smoothing kernel** (Step 3). `ah/port/smoothing.py` + the
+  frozen θ artifact (`mappings/smoothing-kernel-v1.0.yaml`, `smooth-2026.08`,
+  sealed pre-hoc by `AM-2026-08-01-003` under the settled rule: **estimates seal,
+  engines don't** — an unfrozen θ would let the sealed `mark_lag` criterion be
+  gamed). **SM-10 proven as a test**: smooth with known θ, hand the result to the
+  *sealed* de-smoother, it recovers the weights and the truth — reported and true
+  are one model seen two ways. **The measured negative ships as measured**:
+  stickiness calibrated **0.0** on in-sample NBER stress (θ0 *rose* in stress,
+  0.793→0.833 — mildly opposite DN-5 §5.3's prior); the mechanism is implemented
+  and inert, and WP3.11's sealed criterion becomes a genuine test of whether
+  2022's mark lag emerges without it. Calibration on 2021–23 **refused** (holdout
+  + judging episode), a recorded deviation in the seal's favour. The Geltner
+  family is named UNPARAMETERIZED (no PM data) and raises rather than pretends.
+  10 tests.
 - **WP3.2 — factor → sleeve mappings** (Step 3). `scripts/estimate_sleeve_mappings.py`
   estimates DN-5 §3.2's pattern on the six regression sleeves' **de-smoothed**
   composites (asserted byte-equal to the sealed G3 reference), train+validation

@@ -1,0 +1,34 @@
+# mappings/smoothing-kernel-v1.0.yaml — scripts/estimate_smoothing_kernel.py
+# vintage 2026-08-01.2; train+validation only; SM-10: exact inverse of the D1 primary.
+kernel_version: smooth-2026.08
+campaign_vintage_id: "2026-08-01.2"
+desmoothing_method: glm_ma  # the paired inverse (SM-10); one model, two views
+stickiness_calibration: >-
+  Calibrated on IN-SAMPLE NBER stress months (2008-09, 2020) — deliberately
+  NOT DN-5 5.3's 2021-23, which is holdout span and the sealed judging
+  episode; using it would gut the sealed mark_lag criterion. Recorded
+  deviation from the design note, in the seal's favour.
+families:
+  geltner:
+    status: UNPARAMETERIZED  # no PM series delivered; the sealed PM unavailability
+    trigger: first PM delivery -> parameterize by amendment before any RE/infra
+      reported path is generated
+  glm:
+    sleeves:
+      hf_credit: {k: 2, theta: [0.6500, 0.2500, 0.1000]}
+      hf_cta: {k: 1, theta: [0.9656, 0.0344]}
+      hf_equity_ls: {k: 2, theta: [0.7500, 0.1500, 0.1000]}
+      hf_event: {k: 2, theta: [0.7500, 0.2000, 0.0500]}
+      hf_macro: {k: 1, theta: [0.9328, 0.0672]}
+      hf_multi: {k: 3, theta: [0.5500, 0.2500, 0.1500, 0.0500]}
+      hf_rv: {k: 2, theta: [0.6500, 0.2500, 0.1000]}
+    # MEASURED ZERO, and the sign of the evidence is the finding: theta0 was
+    # HIGHER in NBER stress months (0.833) than calm (0.793) on this panel -
+    # no extra stickiness detectable in-sample, mildly OPPOSITE to DN-5 5.3's
+    # prior. Shipped as measured rather than invented: the mechanism is
+    # implemented (the kernel accepts s), its calibrated value is 0, and the
+    # sealed mark_lag criterion at WP3.11 becomes a genuine test of whether
+    # 2022's mark lag emerges without it. If it fails there, that is a
+    # finding about WHERE stickiness lives, not a tuning opportunity.
+    stickiness: 0.0000
+    stickiness_evidence: {theta0_calm_pooled: 0.7926, theta0_stress_pooled: 0.8332, n_sleeves_pooled: 7}
