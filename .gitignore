@@ -149,3 +149,11 @@ experiments/
 !/artifacts/wp211/severe-grid.json
 !/artifacts/wp211/cycle-sensitivity.json
 !/artifacts/wp211/severe-checkpoints.json
+# WP2.11 part 2b: the same three products for the diffusion co-primary, on the
+# same rule. The allowlist above is per-file, so a second family's report is
+# ignored by default and silently -- `git commit` reported success while the
+# report it described was never staged. Caught by reading the commit's own file
+# count against what it claimed. Any third family needs three more lines here.
+!/artifacts/wp211/SEVERE-TEST-DIFFUSION.md
+!/artifacts/wp211/severe-test-diffusion.json
+!/artifacts/wp211/severe-grid-diffusion.json
