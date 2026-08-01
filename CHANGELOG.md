@@ -7,6 +7,17 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.9 — Step 2R closes: full-stack regression under the frozen contracts;
+  tag `v0.3.0-contracts`** (`CONSOLIDATION-EVIDENCE.md`). G0 CLI end-to-end on a
+  migrated v1.2 preset (**replay MATCH**), Step-1 layer green with the first real
+  delivery current, Step-2 battery evidenced by WP2R.5's bit-identical
+  reproduction, and **WP2R.4's deferred clause discharged**: `hier-flow-v1` from
+  its pinned, hash-verified checkpoint emits a generator-output document that
+  validates with every tensor digest re-derived. **Zero digests re-baselined**
+  (nothing numeric moved all step); zero open retrofit items assigned to 2R
+  (R1–R7, R13–R14 all absorbed, each remaining register row has a named owner or
+  trigger); the seal untouched at 33 files. No Step 3 work is blocked by an
+  unfrozen interface.
 - **WP2R.2 — HF de-smoothing at sub-strategy granularity (R2)** (Step 2R; owner
   decision, option b). The 7 never-delivered group-level `albourne.hf_*` series are
   retired and **21 sub-strategy series registered** (the 20 HedgeRS AW indices +
