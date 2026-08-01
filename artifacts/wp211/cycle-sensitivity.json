@@ -1,0 +1,49 @@
+{
+  "abs_diff_at_s0": {
+    "credit_gap": 0.0,
+    "g": 0.0,
+    "pi_star": 0.0,
+    "r_star": 0.0,
+    "v": 0.0
+  },
+  "abs_diff_at_s0_in_own_sd": {
+    "credit_gap": 0.0,
+    "g": 0.0,
+    "pi_star": 0.0,
+    "r_star": 0.0,
+    "v": 0.0
+  },
+  "exclusion": "1970-01-01..1979-12-31",
+  "forward_filter_control_max_abs_diff_up_to_s0": 0.0,
+  "forward_filter_control_note": "must be ~0: the forward filter cannot see the future, so the in-gap cycle cannot reach a pre-1970 filtered state. A non-zero value here means the measurement is wrong, not the model.",
+  "max_abs_diff_anywhere": {
+    "credit_gap": 0.04589924421147629,
+    "g": 0.0,
+    "pi_star": 0.0,
+    "r_star": 0.0,
+    "v": 0.0
+  },
+  "max_abs_diff_anywhere_in_own_sd": {
+    "credit_gap": 0.009094118362690468,
+    "g": 0.0,
+    "pi_star": 0.0,
+    "r_star": 0.0,
+    "v": 0.0
+  },
+  "s0_date": "1965-01-01",
+  "state_names": [
+    "pi_star",
+    "r_star",
+    "g",
+    "v",
+    "credit_gap"
+  ],
+  "state_sd_as_fitted": {
+    "credit_gap": 5.0471351241460125,
+    "g": 0.7466362037742293,
+    "pi_star": 4.678477498728449,
+    "r_star": 3.692843177619522,
+    "v": 0.3955124312036792
+  },
+  "what": "severe L1 fit AS RUN (cycle retained through the excluded decade) vs a TOTAL exclusion (cycle zeroed there too), at the severe posterior's mean theta; FFBS (backward-sampled) state path under one shared PRNG key, same masked observations in both"
+}

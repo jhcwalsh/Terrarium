@@ -642,3 +642,407 @@ amendments:
     false, for the same reason: nothing in this pass is a number, and no generator
     has been fitted beyond the frozen benchmark.'
   type: correction
+- amendment_id: AM-2026-07-29-001
+  date: '2026-07-29'
+  payload:
+    code_changes: NONE, inside or outside the seal. ah/eval/ablation.py's comparison_set()
+      reads the sealed field, not the gloss, and its docstring already named the correct
+      pair -- so no computed verdict to date rests on the false reading.
+    evidence:
+      same_document: rationale.d4_commodities_consequence and limitations.the_campaign_vintage_is_missing_two_of_fourteen_factors
+        both name eqw_factors and endowment_proxy as the uncomputable pair and sixty_forty/momentum/carry
+        as the computable three.
+      sealed_field: 'reference_run.uncomputable_d4_strategies: [eqw_factors, endowment_proxy]'
+      wp210_measurement: 'All 18 grid cells: sixty_forty, momentum and carry finite
+        elicitability_score (bootstrap-v1 seed 0: -2.5168, -2.3914, -1.7309); eqw_factors
+        and endowment_proxy NaN in every cell.'
+    found_while: Extracting WP2.10's results. THE RESULTS WERE ALREADY IN HAND, and
+      the correction is in the direction that makes a promotion possible. See the
+      rationale; it is not argued away there and must not be here.
+    hashed_file_set: 'UNCHANGED IN MEMBERSHIP: 32 files, the same list as the superseded
+      lock. This amendment adds no judged source; the digest moves only because pre-registration.yaml
+      is itself hashed.'
+    machine_check_that_could_not_have_caught_it: tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics
+      checks that the definition names the eleven strategy statistics and the two
+      cross-block ones, that uncomputable_d4_strategies is a proper subset of d4_strategies,
+      and that the subtraction is non-empty. It never compares the prose's enumeration
+      against the field's value. claims_with_tests does not reach the clause either
+      (no trigger phrase). RFR-76, unowned.
+    new_lock_digest: sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, selection weight, decision or rule text
+      changed value. The only edit to any sealed file is one prose clause in tail_tier_definition
+      and the correction note recorded beside it.
+    owner_approval: Explicit. The project owner was shown the WP2.10 results first
+      and was told plainly that the correction was being made at the worst possible
+      moment.
+    sealed_at: '2026-07-29'
+    superseded_lock_digest: sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585
+    the_defect: multi_seed_decision_rule.tail_tier_definition glossed reference_run.uncomputable_d4_strategies
+      as 'sixty_forty, momentum and carry'. The field is [eqw_factors, endowment_proxy].
+      The gloss named the complement of the field it glossed.
+    the_two_readings:
+      field_reading_ADOPTED: comparison set = {sixty_forty, momentum, carry}, all
+        computable; the rule executes; on the WP2.10 grid hier-flow-v1 satisfies clause
+        (1) in all three seeds.
+      gloss_reading_REJECTED: comparison set = {eqw_factors, endowment_proxy}, both
+        NaN on the generated side in all 18 cells; beats_definition's NaN rule then
+        makes no seed a beat for any system ever -- an automatic SHIP-BENCHMARK independent
+        of all evidence.
+  post_hoc: true
+  rationale: 'CORRECTION OF A FALSE PROSE GLOSS IN THE SEALED multi_seed_decision_rule.tail_tier_definition,
+    MADE AFTER RESULTS EXIST. THIS IS THE FIRST post_hoc: true ENTRY IN THIS LOG,
+    and that flag is the substance of the entry rather than a formality: every prior
+    amendment (AM-2026-07-26-001 through -008) is post_hoc: false because at the time
+    of each one no generator had been fitted and no G2 evidence existed. That is no
+    longer true. WP2.10''s 18-cell multi-seed ablation grid completed before this
+    defect was found.
+
+
+    WHAT THE GLOSS SAID. tail_tier_definition defined the comparison set as ''the
+    five d4_strategies minus reference_run.uncomputable_d4_strategies, which on this
+    vintage is sixty_forty, momentum and carry''. WHAT THE FIELD SAYS: reference_run.uncomputable_d4_strategies:
+    [eqw_factors, endowment_proxy]. The gloss named the COMPLEMENT of the very field
+    it glossed.
+
+
+    THREE INDEPENDENT CONFIRMATIONS THAT THE FIELD IS RIGHT AND THE GLOSS IS WRONG.
+    (1) The sealed field itself reads [eqw_factors, endowment_proxy], and it is the
+    field, never this prose, that ah.eval.prereg''s threshold-availability check and
+    ah/eval/ablation.py''s comparison_set() read. (2) The same sealed document, rationale.d4_commodities_consequence,
+    says: ''TWO of the five sealed D4 strategies have NO COMPUTABLE REFERENCE STATISTICS
+    on the sealed campaign vintage: eqw_factors and endowment_proxy ... The other
+    three (sixty_forty, momentum, carry) are computable and are where every sealed
+    thresholds.strategies entry lives'' -- and every sealed thresholds.strategies
+    key is in fact on one of those three. limitations.the_campaign_vintage_is_missing_two_of_fourteen_factors
+    says the same. (3) WP2.10''s measurements: on every one of the 18 grid cells,
+    sixty_forty, momentum and carry carry finite elicitability_score values (bootstrap-v1
+    seed 0: -2.5168, -2.3914, -1.7309) while eqw_factors and endowment_proxy are NaN
+    in all 18. elicitability_score scores the GENERATED forecast against the HISTORICAL
+    realizations, so a finite value is proof that the historical side exists.
+
+
+    WHY IT IS NOT INERT -- THE TWO READINGS GIVE OPPOSITE G2 VERDICTS, WHICH IS WHY
+    THIS IS AN AMENDMENT AND NOT A FOOTNOTE. Reading the FIELD (what the code does):
+    the comparison set is {sixty_forty, momentum, carry}, all computable, the rule
+    executes, and on the WP2.10 grid hier-flow-v1 satisfies clause (1) against bootstrap-v1
+    in all three seeds. Reading the GLOSS literally: the comparison set is {eqw_factors,
+    endowment_proxy}, both NaN on the generated side in every cell, and beats_definition''s
+    NaN rule (''if either side''s elicitability_score is NaN for any strategy in the
+    comparison set, the seed is NOT a beat -- not a tie, not an exclusion'') then
+    makes NO SEED A BEAT FOR ANY SYSTEM, EVER: an automatic SHIP-BENCHMARK independent
+    of all evidence, for all time. THIS AMENDMENT ADOPTS THE FIELD''S READING.
+
+
+    WHEN IT WAS FOUND, AND WHO BENEFITS -- STATED WITHOUT SOFTENING, BECAUSE THIS
+    IS THE PART A REVIEWER MUST WEIGH. It was found while extracting WP2.10''s results,
+    i.e. WITH THE RESULTS ALREADY IN HAND, and after it was already visible that hier-flow-v1
+    beats bootstrap-v1 on clause (1) in every seed. So: A CORRECTION THAT MAKES A
+    PROMOTION POSSIBLE HAS BEEN MADE BY THE PARTY THAT WOULD BENEFIT FROM A PROMOTION,
+    AFTER SEEING THAT A PROMOTION WAS IN REACH. That is the worst possible moment
+    to touch a sealed decision rule, and nothing in this entry disposes of it. It
+    is recorded here, undiluted, so a reviewer can weigh it against the evidence rather
+    than have it argued away. The project owner was shown the WP2.10 results first,
+    was told plainly that the correction was being made at the worst possible moment,
+    and approved it explicitly. What can be said on the other side, and no more than
+    this: two of the three confirmations above (the field itself; d4_commodities_consequence)
+    were sealed on 2026-07-26 and have been visible in the committed document since
+    long before any generator existed, so the reading adopted here is not one invented
+    after the fact; and no number moved.
+
+
+    WHAT MOVED AND WHAT DID NOT. Exactly one clause of prose inside tail_tier_definition,
+    plus an in-place record of the correction beside it (the same in-document convention
+    ensemble_size.mc_error_grid.reading''s CLAIMS-SWEEP CORRECTION already uses).
+    NO THRESHOLD, BAND, GATE, FLOOR, SPLIT, ENSEMBLE SIZE, SEVERITY, SELECTION WEIGHT
+    OR RULE TEXT MOVED -- not one. beats_definition (including the NaN rule, the pooled
+    inequality and clause (ii)''s scope), rule, benchmark_draw_span_bias, criterion_bearing_runs_only,
+    minimum_seeds, reference_run, the whole thresholds block, ensemble_size, tuning_protocol
+    and every decision are byte-identical. NO CODE CHANGED, inside or outside the
+    seal: ah/eval/ablation.py''s comparison_set() takes uncomputable_strategy_ids
+    from the sealed FIELD and its docstring already named eqw_factors and endowment_proxy
+    as the pair removed, so the executable path never read the false gloss and no
+    verdict computed to date was produced under the wrong reading.
+
+
+    WHAT THIS SAYS ABOUT THE STANDING CHECKS, recorded because a clean-looking test
+    suite that missed this is itself a finding. tests/test_prereg.py::test_the_sealed_tail_tier_definition_matches_the_registered_statistics
+    -- the machine check the sealed sentence itself points at -- COULD NOT HAVE CAUGHT
+    THIS DEFECT. It asserts that the definition names the eleven per-strategy statistics
+    and the two per-pair ones, that reference_run.uncomputable_d4_strategies is a
+    proper subset of d4_strategies, and that the subtraction is non-empty. It never
+    compares the prose''s ENUMERATION of the strategies against the field''s VALUE,
+    and all five strategy ids appear elsewhere in the same folded block, so no substring
+    check would have separated them either. The claims_with_tests registry does not
+    reach it either: the gloss carries none of the sealed trigger_phrases, and the
+    two registered anchors for this block sit on the two following lines. The general
+    gap -- A SEALED GLOSS THAT RESTATES A SEALED FIELD''S VALUE IN PROSE, WITH NOTHING
+    CHECKING THE RESTATEMENT AGAINST THE FIELD -- is the claims sweep''s defect class
+    (AM-2026-07-26-006/-008) one level down, and it is recorded in governance/retrofit-register.md
+    RFR-76 as UNOWNED.'
+  type: correction
+- amendment_id: AM-2026-07-31-001
+  date: '2026-07-31'
+  payload:
+    code_changes: 'ONE, inside the seal, and it is the fix itself: src/ah/eval/prereg.py''s
+      _REQUIRED_JUDGED_SOURCES gains ("src","ah","eval","ablation.py") with the reasoning
+      inline. NO judging arithmetic changed anywhere. ablation.py itself is NOT edited by
+      this amendment -- it is sealed exactly as WP2.10 wrote it.'
+    evidence:
+      created: 29fa613, WP2.10, 2026-07-29. One commit has ever touched the file.
+      unchanged_across_the_window: '`git diff 29fa613 HEAD -- src/ah/eval/ablation.py`
+        is EMPTY. (A raw byte hash appears to differ only because the working tree is
+        CRLF and the blob is LF; normalized, both are sha256 81834b0c366cb2d6...) So the
+        WP2.10 grid and ABLATION.md rest on the same bytes this amendment seals.'
+      what_it_implements: comparison_set, clause_i, clause_ii, pooled_difference (the
+        exact inequality in beats_definition), enforce_rows, memorization_enforce,
+        constraint_violations, criterion_bearing, restricted_elicitability -- every
+        arithmetic the G2 verdict is computed from.
+    hashed_file_set: 'CHANGED IN MEMBERSHIP: 32 -> 33 files. Added
+      src/ah/eval/ablation.py. Nothing removed. This is the first amendment in the
+      project to widen the hashed set.'
+    new_lock_digest: sha256:f10553a4b74242f2b8c77954f923c06de979a8adb0851adf8f8edecf940b15ec
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, selection weight, decision or rule text changed
+      value. No verdict has been computed at any point before or by this amendment.
+    sealed_at: '2026-07-31'
+    superseded_lock_digest: sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275
+    the_defect: src/ah/eval/ablation.py -- the executable form of the very clauses this
+      document seals in words -- was created outside src/ah/eval/metrics/ and was never
+      added to _REQUIRED_JUDGED_SOURCES, so it was NOT HASHED between 2026-07-29 and
+      2026-07-31.
+    timing: Found at WP2.11 while reading the sealed set to implement g2.py, BEFORE any
+      verdict was computed and BEFORE the holdout was touched. Fixed as its own dated
+      amendment rather than folded into the later g2.py implementation commit,
+      deliberately -- a hole in the seal should not ride invisibly on a code change.
+  post_hoc: true
+  rationale: 'A HOLE IN THE SEAL ITSELF, NOT IN THE ACCOUNTING OF IT -- and that
+    distinction is the whole content of this entry. AM-2026-07-26-006/-008 (the claims
+    sweep) added _pooling.py and negative_controls.py to the seal_scope ACCOUNTING and
+    could say truthfully that "the SEAL never had a hole; the accounting of it did":
+    both files were in _REQUIRED_JUDGED_SOURCES and in the lock the entire time, merely
+    unnamed in the prose that claims to enumerate the sealed set. THAT IS NOT THE CASE
+    HERE. src/ah/eval/ablation.py was not in _REQUIRED_JUDGED_SOURCES, not in the lock,
+    and not hashed. For two days the code that computes the G2 verdict could have been
+    edited with no lock violation and no test failure.
+
+
+    THE RULE IT BROKE IS THIS PROJECT''S OWN, STATED AND WITH PRECEDENT. ah.eval.prereg''s
+    module docstring says a judging module created outside src/ah/eval/metrics/ is not
+    reached by _METRIC_SUITE_NAMES and "joins the seal only by being added to
+    _METRIC_SUITE_NAMES / _REQUIRED_JUDGED_SOURCES ... in the same PR that adds the
+    module". pre-registration.yaml''s own header applies it by name to battery.py and
+    panel.py: "judging code created outside src/ah/eval/metrics/, joined to this list in
+    the same commit that added them". WP2.10 added ablation.py and did not do it. WP2.10''s
+    commit message says "No sealed judged source touched, zero amendments" -- TRUE AS
+    WRITTEN, and it is the wrong test: the omission was not touching a sealed source but
+    CREATING one and leaving it unsealed.
+
+
+    WHAT SAVES THE RESULTS, AND WHY IT IS THE WRONG KIND OF ASSURANCE. Exactly one commit
+    has ever touched the file, and the diff from it to this re-seal is empty, so every
+    number in ABLATION.md rests on the bytes now hashed. Any reader can verify that from
+    git alone. But it is evidence AFTER the fact where the seal exists to provide design
+    BEFORE it: "we checked and nobody changed it" is a different and weaker claim than
+    "it could not have been changed undetected", and the entire purpose of hashing the
+    judging code is to be able to make the second claim. That is why this is recorded as
+    a defect (governance/retrofit-register.md RFR-82) rather than as housekeeping.
+
+
+    post_hoc IS TRUE. Results existed when this was found -- the WP2.10 grid, both severe
+    arms, and the head-to-head. No verdict had been computed and the holdout had not been
+    touched, and this amendment changes no arithmetic that could move one; but the flag
+    records the state of the world, not the size of the change, and the world had results
+    in it.
+
+
+    WHY IT IS ITS OWN AMENDMENT. Implementing multi_seed_decision_rule in g2.py forces a
+    re-seal regardless, and this could have ridden along inside it. It does not, because a
+    hole in the seal is a governance defect that a reader must be able to find as such --
+    not a line in the diff of a commit whose subject is "implement the decision rule".
+
+
+    WHY type: correction AND NOT protocol_change, since the hashed set does widen. The
+    sealed protocol ALREADY REQUIRED this file to be hashed: ah.eval.prereg''s docstring
+    and pre-registration.yaml''s header both state that judging code created outside
+    src/ah/eval/metrics/ joins _REQUIRED_JUDGED_SOURCES in the commit that adds it. This
+    amendment brings the ARTIFACT into line with the RULE; it does not move the rule. A
+    protocol_change would be the honest label if the seal''s scope were being redefined,
+    and it is not -- what changes is that the scope is now actually applied to a file it
+    always covered in principle. Recorded because the alternative -- inventing a fifth
+    amendment type to describe this one event -- would have meant editing the sealed
+    AMENDMENT_TYPES vocabulary for the convenience of the party filing the amendment.'
+  type: correction
+- amendment_id: AM-2026-07-31-002
+  date: '2026-07-31'
+  payload:
+    code_changes: NONE. ah/eval/g2.py's FinalEvaluationToken mint is left exactly as it
+      is -- the capability stays, unused. No guard is weakened, no split boundary moves,
+      and ah.splits still refuses the holdout without a token.
+    hashed_file_set: 'UNCHANGED: 33 files, same membership as AM-2026-07-31-001. The
+      digest moves only because pre-registration.yaml is itself hashed.'
+    new_lock_digest: sha256:edd1f841050f92b81475a7ed3ed6b00756b2deaab61bd8009fb65bc4885b9c08
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, selection weight or decision-rule text changed
+      value. multi_seed_decision_rule is byte-identical; it never read the holdout.
+    prohibitions_unchanged: 'At most once, ever, through a FinalEvaluationToken mintable
+      only in ah/eval/g2.py; no tuning on the holdout under any circumstance
+      (tuning_protocol.prohibitions). Both still bind in full. What changed is that the
+      one permitted spend was NOT TAKEN.'
+    sealed_at: '2026-07-31'
+    superseded_lock_digest: sha256:f10553a4b74242f2b8c77954f923c06de979a8adb0851adf8f8edecf940b15ec
+    the_change: 'The splits block''s statement that the holdout "is spent EXACTLY ONCE, by
+      WP2.11" no longer describes what WP2.11 did. The sentence is left standing and
+      annotated in place; the holdout was NOT spent at G2 and remains unspent.'
+    what_was_specified_and_what_was_not:
+      never_specified: WHAT THE ONE-SHOT EVALUATION COMPUTES. Not in this document, not
+        in STEP2-GENERATOR-PLAN Sec.WP2.11, which says only "the one-shot holdout
+        evaluation through the explicit-purpose path -- once, logged, never repeated".
+      specified: the span (2021-01-01..2026-08-01), the guard (FinalEvaluationToken,
+        mintable only in ah/eval/g2.py, with an import-graph test proving ah.gen cannot
+        reach it), that it may be spent at most once, and that nothing may ever be tuned
+        on it.
+  post_hoc: true
+  rationale: 'THE HOLDOUT WAS NOT SPENT, AND THAT IS THE CONSERVATIVE ACT RATHER THAN AN
+    OMISSION.
+
+
+    THE DEFECT THAT FORCED THE DECISION. This document pins the holdout''s span, its
+    guard, its at-most-once budget and an absolute no-tuning prohibition -- and never
+    says what the single permitted evaluation should COMPUTE. The plan is no more
+    specific. Critically, NONE OF multi_seed_decision_rule''s FOUR CLAUSES READS THE
+    HOLDOUT: all four are computed on the WP2.10 ablation grid against a train+validation
+    reference, so the G2 verdict is fully determined without it. The holdout''s role at
+    G2 was therefore never a defined test -- only a defined guard around an undefined
+    one.
+
+
+    WHY SPENDING IT WOULD HAVE BEEN WORSE THAN NOT. Any procedure run against it at
+    WP2.11 would have been authored at WP2.11, with the ablation grid, both severe arms,
+    the head-to-head and the restricted-window re-run all already in hand. That is the
+    forking path this file exists to close, applied to the one resource in the project
+    that cannot be restored. A holdout number produced that way is uninterpretable: a
+    reader cannot distinguish "the system generalizes" from "the author picked a
+    procedure that showed it does". Not spending costs the gate nothing, because the
+    verdict does not depend on it, and leaves the resource worth exactly what it was.
+
+
+    WHAT A LATER GATE MUST DO TO SPEND IT. Write the evaluation down FIRST -- what is
+    generated, at what size, from what conditioning state, scored on which metrics,
+    against which realizations, with what decision consequence if any -- seal that
+    specification before the campaign it will judge, and only then mint the token. That
+    is what pre-registration means, and it is the one thing WP2.3 did not do for this
+    resource.
+
+
+    WHY AN AMENDMENT RATHER THAN A NOTE. The sealed sentence asserts a fact about this
+    project''s conduct ("is spent EXACTLY ONCE, by WP2.11") that is no longer true.
+    Leaving it unamended would leave the sealed document making a false statement about
+    what actually happened -- which is EXACTLY the defect class this project has now
+    recorded five times against other prose (RFR-76, -77, -78, -81, -82: the seal
+    asserting or assuming something nothing verifies). Filing this amendment is the
+    author holding their own document to the standard they applied to those.
+
+
+    THE LITERAL READING, NAMED RATHER THAN GLOSSED. "Spent EXACTLY ONCE" can be read as
+    REQUIRING a spend, in which case not spending departs from the sealed text and this
+    amendment is what makes that departure legitimate and dated. It can also be read as
+    BOUNDING spending at one, in which case zero conforms. The first reading is the
+    stricter one and is the reason this is filed as a protocol_change rather than left as
+    a decision-register row. Both readings are recorded so a reviewer weighs the choice
+    rather than inherits it.
+
+
+    post_hoc IS TRUE: the WP2.10 grid, both severe arms and the head-to-head all existed
+    when this was decided. The flag records the state of the world, not the size of the
+    change. Nothing about the verdict moves either way -- the rule never read this data.'
+  type: protocol_change
+- amendment_id: AM-2026-07-31-003
+  date: '2026-07-31'
+  payload:
+    code_changes: 'src/ah/eval/g2.py ONLY, a hashed judged source: the executable form of
+      multi_seed_decision_rule is added beside the pre-existing token mint. No other
+      sealed file is touched. ah/eval/ablation.py -- sealed by AM-2026-07-31-001 -- is
+      NOT edited: g2.py COMPOSES its primitives rather than restating them, because two
+      implementations of one sealed inequality is two things that can disagree.'
+    divergences_from_the_sealed_words: 'NONE ASSERTED BLINDLY -- each clause carries the
+      sentence it implements as a docstring quotation, and tests/test_g2.py pins one
+      sealed sentence per test (22 tests): strictly-lower (a tie is not a beat), the NaN
+      rule on EITHER side making a seed not-a-beat and not an exclusion, the pooled
+      inequality at ddof=1 in both halves, clause (ii) vetoing the pooled route,
+      minimum_seeds, and the criterion-bearing refusal on challenger AND benchmark
+      reports.'
+    new_lock_digest: sha256:99ab3f772be6a5afc665c8e51364dc477c34c2cd0b5cf959f3446e401b21d832
+    no_threshold_moved: NOT ONE. multi_seed_decision_rule's words are byte-identical; this
+      amendment adds their executable form and changes no value, bound, band, tier,
+      severity or split.
+    one_sealed_requirement_discharged: 'criterion_bearing_runs_only said WP2.11''s g2.py
+      "MUST refuse a report where it is false" and stated in the same breath that the
+      refusal "does not exist yet". g2.require_criterion_bearing IS that refusal, applied
+      to every report entering the verdict -- benchmark as well as challenger -- and it
+      raises rather than degrading, because a run at the wrong size or against a
+      superseded vintage is not a weaker input to a verdict, it is not an input at all.'
+    sealed_at: '2026-07-31'
+    superseded_lock_digest: sha256:edd1f841050f92b81475a7ed3ed6b00756b2deaab61bd8009fb65bc4885b9c08
+    validation_against_known_answers: 'The executor was checked against ABLATION.md
+      section 6, which was generated independently by scripts/build_ablation_report.py
+      and which g2.py has never read. hier-flow-v1 vs bootstrap-v1, per-seed d:
+      [-0.277918, -0.304350, -0.307900]; mean -0.296723; sd(ddof=1) 0.016381 -- EXACT to
+      six decimals on all five figures. It also DISCRIMINATES: four of the five ablation
+      systems return SHIP-BENCHMARK and one returns PROMOTE, so the rule is not a
+      function that approves whatever it is shown.'
+    verdicts_computed: 'abl-a-structure-only SHIP-BENCHMARK; abl-b-neural-rollout-flow
+      SHIP-BENCHMARK; abl-c-neural-only-flow SHIP-BENCHMARK; hier-diffusion-v1
+      SHIP-BENCHMARK; hier-flow-v1 PROMOTE.'
+  post_hoc: true
+  rationale: 'THE EXECUTABLE FORM OF multi_seed_decision_rule, WHICH THE SEALED DOCUMENT
+    ITSELF SAID DID NOT EXIST. pre-registration.yaml''s own header says: "WP2.11
+    implements it in ah/eval/g2.py, which today contains only the sanctioned
+    holdout-token mint and no decision logic at all ... g2.py is already inside the seal,
+    so when WP2.11 writes the executable form it cannot diverge from these words without
+    a dated amendment and a re-seal, and this block is what it will be read against."
+    This is that amendment.
+
+
+    ONE SUBSTANTIVE READING WHERE THE TABLE AND THE SENTENCE DISAGREE, AND THE SENTENCE
+    WINS. ABLATION.md section 6 reports "pooled beat" and "clause (ii) every seed" as
+    INDEPENDENT columns, and by those columns hier-diffusion-v1 is a pooled beat.
+    beats_definition says: "Clause (ii) must still hold in every seed for the pooled
+    route -- the pooled arm relaxes the objective, not the band-regression check."
+    hier-diffusion-v1 fails clause (ii) in every seed, so its POOLED ROUTE FAILS and its
+    clause (1) does not hold. The executor implements the sentence. This is exactly why
+    it was composed from the sealed words rather than from the generated table, and it is
+    recorded here because a reader comparing the two documents will otherwise think one
+    of them is wrong.
+
+
+    ONE AMBIGUITY FOUND AND NOT RESOLVED UNILATERALLY. rule clause (2), "NO ENFORCE-TIER
+    REGRESSION on the monthly or 1_5yr tiers relative to bootstrap-v1", admits a BY-COUNT
+    reading (the challenger''s number of failing enforce metrics is <= the benchmark''s)
+    and a BY-METRIC reading (no metric the benchmark PASSES is FAILED by the challenger,
+    which additionally forbids trading one failure for another). g2.py COMPUTES BOTH,
+    reports both, sets `holds` to their AND (the stricter reading), and emits a NOTE when
+    they disagree -- the same posture S2-HORIZON-TIER took for "the horizon tier". They
+    AGREE on every cell of the WP2.10 grid, so nothing turns on it here; narrowing the
+    sealed sentence is a dated protocol_change amendment for a later work package, taken
+    before results exist, not a choice made inside this one.
+
+
+    A VACUOUS GUARD FOUND AND REPLACED WHILE TESTING. The first draft refused a seed
+    whose challenger and benchmark comparison sets differed by strategy_ids. Those ids
+    are derived from the sealed arguments alone and are identical by construction, so the
+    guard could never fire -- dead code wearing the appearance of a safety check. It now
+    guards the resolved metric NAMES, which ARE read off each report and CAN differ, and
+    which clause (ii) counts over; a test pins the distinction so the guard cannot quietly
+    revert to the vacuous form.
+
+
+    post_hoc IS TRUE and the ordering is the mitigation. The WP2.10 grid, both severe
+    arms and the head-to-head all existed before a line of this code was written -- the
+    verdict could not have been otherwise, since the rule is executed on stored reports.
+    What makes it defensible is that the implementation was validated against numbers
+    produced by a DIFFERENT program before being trusted, that it discriminates rather
+    than approving everything, and that the clause it most plausibly could have been bent
+    on -- clause (1) for hier-diffusion-v1 -- was implemented AGAINST the reading that
+    would have promoted a second system.'
+  type: correction

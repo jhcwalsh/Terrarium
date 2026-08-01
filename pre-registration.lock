@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:2531904623db3d9e31c9dc234ae104cc8c010ed45223a381e94c6ba83312e585",
+  "digest": "sha256:99ab3f772be6a5afc665c8e51364dc477c34c2cd0b5cf959f3446e401b21d832",
   "hashed_files": [
     "factors.yaml",
     "fixtures/worlds/conditional/crisis_severity_mild.worldspec.json",
@@ -15,6 +15,7 @@
     "src/ah/battery/stylized.py",
     "src/ah/battery/thresholds.yaml",
     "src/ah/data/derive.py",
+    "src/ah/eval/ablation.py",
     "src/ah/eval/battery.py",
     "src/ah/eval/g2.py",
     "src/ah/eval/metrics/_pooling.py",
@@ -35,5 +36,5 @@
     "src/ah/strategies.py"
   ],
   "prereg_path": "pre-registration.yaml",
-  "sealed_at": "2026-07-26"
+  "sealed_at": "2026-07-31"
 }

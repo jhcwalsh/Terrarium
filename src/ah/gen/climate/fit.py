@@ -39,7 +39,7 @@ Mixed-frequency mapping (recorded interface decisions):
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
@@ -50,6 +50,7 @@ import pandas as pd
 from ah.experiment import ExperimentStore, config_hash, git_sha
 from ah.gen.climate import model as cm
 from ah.gen.climate.simulate import content_sha256
+from ah.gen.severe import ExclusionSpan
 from ah.splits import TRAIN, DataAccess
 
 __all__ = [
@@ -85,6 +86,12 @@ class FitData:
     cape_demean_span: tuple[str, str]
     cape_demean_n: int
     channel_counts: dict[str, int]
+    #: WP2.11 severe test: the span removed from the fitting sample, or None.
+    exclusion: ExclusionSpan | None = None
+    #: How many (month, channel) observations the exclusion unmasked. 0 without one.
+    excluded_observations: int = 0
+    #: Per-channel observations lost to the exclusion.
+    excluded_channel_counts: dict[str, int] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -119,8 +126,22 @@ def _align(series: pd.Series | None, dates: pd.DatetimeIndex) -> np.ndarray:
     return series.reindex(dates).to_numpy(dtype=np.float64)
 
 
-def build_fit_data(access: DataAccess, config: cm.ClimateConfig) -> FitData:
-    """Assemble the KF panel for the config span, train+validation only."""
+def build_fit_data(
+    access: DataAccess,
+    config: cm.ClimateConfig,
+    *,
+    exclude: ExclusionSpan | None = None,
+) -> FitData:
+    """Assemble the KF panel for the config span, train+validation only.
+
+    ``exclude`` (WP2.11 severe test) removes a span from the FITTING SAMPLE by
+    UNMASKING its observations rather than deleting its rows: the grid, and
+    therefore the state path, is unchanged, and the filter simply learns nothing
+    from those months (see :mod:`ah.gen.severe` for why masking, not deletion,
+    is the right reading, and ``ah.gen.climate.model._filter_step`` for the
+    mechanism). The CAPE demean constant is re-derived on the reduced sample,
+    because it is part of the fit and not of the architecture.
+    """
     dates = pd.date_range(config.span.start, config.span.end, freq="MS", inclusive="left")
     t_len = len(dates)
     ids = config.series
@@ -160,7 +181,7 @@ def build_fit_data(access: DataAccess, config: cm.ClimateConfig) -> FitData:
 
     # --- monthly log CAPE, demeaned on the TRAIN span only ---
     cape = _tv_series(access, ids.cape_monthly)
-    demean_mean, demean_n = _train_span_log_cape_mean(cape, config)
+    demean_mean, demean_n = _train_span_log_cape_mean(cape, config, exclude)
     if cape is not None:
         log_cape = np.log(cape[cape > 0]) - demean_mean
         vals = _align(log_cape, dates)
@@ -246,6 +267,18 @@ def build_fit_data(access: DataAccess, config: cm.ClimateConfig) -> FitData:
             rows, vals = year_rows(r10, month=12)
             put("a_r10", rows, vals)
 
+    # --- WP2.11 severe test: unmask the excluded span (the grid is untouched) ---
+    excluded_counts: dict[str, int] = {}
+    n_excluded = 0
+    if exclude is not None:
+        inside = exclude.contains(dates)
+        excluded_counts = {name: int(mask[inside, i].sum()) for i, name in enumerate(cm.CHANNELS)}
+        n_excluded = int(sum(excluded_counts.values()))
+        mask[inside, :] = 0.0
+        y[inside, :] = 0.0
+        aux_pi[inside, :] = 0.0
+        aux_c[inside, :] = 0.0
+
     m0, p0 = cm.init_state_moments(config)
     kf = cm.KFData(y=y, mask=mask, aux_pi=aux_pi, aux_c=aux_c, cycle=cycle, m0=m0, p0=p0)
     counts = {name: int(mask[:, i].sum()) for i, name in enumerate(cm.CHANNELS)}
@@ -256,32 +289,55 @@ def build_fit_data(access: DataAccess, config: cm.ClimateConfig) -> FitData:
         cape_demean_span=(config.span.start, TRAIN.end),
         cape_demean_n=demean_n,
         channel_counts=counts,
+        exclusion=exclude,
+        excluded_observations=n_excluded,
+        excluded_channel_counts=excluded_counts,
     )
 
 
 def _train_span_log_cape_mean(
-    cape: pd.Series | None, config: cm.ClimateConfig
+    cape: pd.Series | None,
+    config: cm.ClimateConfig,
+    exclude: ExclusionSpan | None = None,
 ) -> tuple[float, int]:
-    """Mean log CAPE over [span.start, TRAIN.end) -- the train-only demean."""
+    """Mean log CAPE over [span.start, TRAIN.end) minus ``exclude`` -- the demean.
+
+    The demean constant is a FITTED normalization, so a severe-test fit must not
+    see the excluded decade in it either (the same posture as L3's train-only
+    standardization constants being re-derived on the reduced sample).
+    """
     if cape is None:
         return 0.0, 0
     span = cape[(cape.index >= config.span.start) & (cape.index < TRAIN.end)]
     span = span[span > 0]
+    if exclude is not None and not span.empty:
+        span = span[~exclude.contains(pd.DatetimeIndex(span.index))]
     if span.empty:
         return 0.0, 0
     return float(np.log(span).mean()), len(span)
 
 
 def assert_train_only_normalization(
-    fit_data: FitData, access: DataAccess, config: cm.ClimateConfig
+    fit_data: FitData,
+    access: DataAccess,
+    config: cm.ClimateConfig,
+    *,
+    exclude: ExclusionSpan | None = None,
 ) -> None:
     """Refuse a FitData whose demean constant is not the train-span constant.
 
     This is the door the plan's full-sample-leakage test knocks on: recompute the
-    train-span mean from the raw series and require an exact match.
+    train-span mean from the raw series and require an exact match. Under a
+    severe-test ``exclude`` the expected constant is the REDUCED-sample one, so a
+    severe-test fit carrying the primary (full-sample) constant is refused too.
     """
+    if exclude is not None and fit_data.exclusion != exclude:
+        raise NormalizationLeakageError(
+            f"fit data records exclusion {fit_data.exclusion!r} but the guard was asked "
+            f"to verify against {exclude!r}"
+        )
     expected_mean, expected_n = _train_span_log_cape_mean(
-        _tv_series(access, config.series.cape_monthly), config
+        _tv_series(access, config.series.cape_monthly), config, exclude
     )
     if fit_data.cape_demean_span != (config.span.start, TRAIN.end):
         raise NormalizationLeakageError(
@@ -477,6 +533,12 @@ def _report(
         f"- NUTS: {diagnostics['n_chains']} chain(s) x {diagnostics['n_samples']} samples "
         f"({diagnostics['n_warmup']} warmup), target_accept {config.fit.target_accept}"
     )
+    if fit_data.exclusion is not None:
+        add(
+            f"- **WP2.11 SEVERE TEST**: fitting sample EXCLUDES {fit_data.exclusion.label} "
+            f"({fit_data.excluded_observations} observations unmasked; the monthly grid and "
+            f"therefore the state path are unchanged)"
+        )
     add("")
     add("## Train-only normalization")
     add("")
@@ -560,17 +622,21 @@ def fit_climate(
     out_dir: str | Path,
     created_at: str,
     report_copy_path: str | Path | None = None,
+    exclude: ExclusionSpan | None = None,
 ) -> FitResult:
     """Fit L1 on the panel behind ``access``; write artifact + report + exp record.
 
     ``out_dir`` becomes the experiment directory (``ah.experiment`` layout: its
-    parent is the store root, its name the exp_id).
+    parent is the store root, its name the exp_id). ``exclude`` is the WP2.11
+    severe-test fitting-sample exclusion; it is recorded in the artifact meta (and
+    therefore in the artifact's content hash), so a severe-test posterior can
+    never be mistaken for the primary one.
     """
     out = Path(out_dir)
     out.mkdir(parents=True, exist_ok=True)
 
-    fit_data = build_fit_data(access, config)
-    assert_train_only_normalization(fit_data, access, config)
+    fit_data = build_fit_data(access, config, exclude=exclude)
+    assert_train_only_normalization(fit_data, access, config, exclude=exclude)
 
     cfg = cm.config_dict(config)
     cfg_hash = config_hash(cfg)
@@ -608,6 +674,18 @@ def fit_climate(
             "span": list(fit_data.cape_demean_span),
         },
         "cycle_proxy": "1 - 2*USREC (NBER); WP2.6 supplies c_t at simulation time",
+        "severe_test_exclusion": (
+            None
+            if exclude is None
+            else {
+                "span": exclude.label,
+                "start": exclude.start,
+                "end_exclusive": exclude.end_exclusive,
+                "mechanism": "observations UNMASKED; grid and state path unchanged",
+                "observations_removed": fit_data.excluded_observations,
+                "by_channel": dict(fit_data.excluded_channel_counts),
+            }
+        ),
         "diagnostics": {
             "max_rhat": diagnostics["max_rhat"],
             "min_ess": diagnostics["min_ess"],

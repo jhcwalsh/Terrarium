@@ -33,7 +33,8 @@ evidence, not a sealed battery metric; WP2.11 must cite it as such.
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, field
+from itertools import pairwise
 from pathlib import Path
 from typing import Any
 
@@ -43,6 +44,7 @@ import pandas as pd
 from ah.experiment import ExperimentStore, config_hash, git_sha
 from ah.gen.climate.simulate import ClimateArtifact, content_sha256, simulate_decades
 from ah.gen.regimes import semimarkov as sm
+from ah.gen.severe import ExclusionSpan, segments_outside
 from ah.splits import DataAccess
 
 __all__ = [
@@ -289,10 +291,95 @@ class SpellData:
     soj_state: np.ndarray  # (n_soj,) int
     soj_dur: np.ndarray  # (n_soj,) int, months >= 1
     soj_z: np.ndarray  # (n_soj, 4) standardized
-    soj_censored: np.ndarray  # (n_soj,) bool; True only for the final spell
+    soj_censored: np.ndarray  # (n_soj,) bool; True for each segment's final spell
     trans_from: np.ndarray  # (n_tr,) int
     trans_to: np.ndarray  # (n_tr,) int
     trans_z: np.ndarray  # (n_tr, 4) standardized
+    #: ABSOLUTE month index of each retained sojourn's start. Used to look z up on
+    #: the full-span covariate array, which is what makes multi-segment fitting
+    #: (the WP2.11 severe test) index-correct. Empty for the legacy construction.
+    soj_start: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int64))
+    #: ABSOLUTE month index of each transition (= the incoming spell's first month).
+    trans_start: np.ndarray = field(default_factory=lambda: np.empty(0, dtype=np.int64))
+
+
+def segmented_spell_observations(labels: np.ndarray, segments: list[tuple[int, int]]) -> SpellData:
+    """Sojourn/transition observations from one or more label SEGMENTS.
+
+    THE RULE (WP2.11 severe test; stated because the sealed protocol requires a
+    straddling-spell rule to be stated and justified). The excluded span splits
+    the contiguous label history into maximal observed segments. Each segment is
+    treated exactly as the primary fit treats the whole sample:
+
+    - its FIRST spell is DROPPED -- its start is unobserved, i.e. left-truncated.
+      For the leading segment that is the sample's own left truncation, unchanged;
+      for a segment that begins the month after the gap, the spell may have begun
+      inside the gap, so its start is unobserved in exactly the same sense.
+    - its LAST spell is RIGHT-CENSORED -- it contributes ``log P(X >= d-1)``, the
+      survival term the primary fit already uses at the sample end. For a segment
+      that ends the month before the gap, the spell genuinely continues into
+      unobserved months, so the censoring term is the correct likelihood
+      contribution rather than an approximation.
+    - transitions are counted only at spell boundaries INTERIOR to a segment, so
+      no transition is invented across the gap.
+    - a segment carrying exactly ONE spell contributes NOTHING: that spell is both
+      left-truncated and right-censored, and "duration >= d measured from an
+      unknown start" carries no usable information.
+
+    Why this rather than "drop every straddling spell": dropping discards the two
+    straddlers' partial information entirely, whereas the censoring term uses
+    exactly the part of it that is observed, and it does so through machinery the
+    model already has. ``soj_z``/``trans_z`` are left empty here; the caller
+    attaches standardized covariates by ABSOLUTE month index (``soj_start`` /
+    ``trans_start``), which is what keeps multi-segment fitting index-correct.
+    """
+    if not segments:
+        raise sm.RegimesError("segmented_spell_observations needs at least one segment")
+    arr = np.asarray(labels)
+    soj_state: list[int] = []
+    soj_dur: list[int] = []
+    soj_start: list[int] = []
+    soj_censored: list[bool] = []
+    trans_from: list[int] = []
+    trans_to: list[int] = []
+    trans_start: list[int] = []
+
+    for lo, hi in segments:
+        if not 0 <= lo < hi <= arr.size:
+            raise sm.RegimesError(f"segment [{lo}, {hi}) is outside a {arr.size}-month history")
+        spells = sm.spells_from_labels(arr[lo:hi])
+        if len(spells) < 2:
+            continue  # one spell: both truncated and censored -> no observation
+        for i, (state, start, dur) in enumerate(spells[1:]):
+            soj_state.append(int(state))
+            soj_dur.append(int(dur))
+            soj_start.append(int(lo + start))
+            soj_censored.append(i == len(spells) - 2)  # the segment's last spell
+        for (from_state, _, _), (to_state, to_start, _) in pairwise(spells):
+            trans_from.append(int(from_state))
+            trans_to.append(int(to_state))
+            trans_start.append(int(lo + to_start))
+
+    return SpellData(
+        soj_state=np.asarray(soj_state, dtype=np.int64),
+        soj_dur=np.asarray(soj_dur, dtype=np.int64),
+        soj_z=np.empty((len(soj_state), _NC), dtype=np.float64),
+        soj_censored=np.asarray(soj_censored, dtype=bool),
+        trans_from=np.asarray(trans_from, dtype=np.int64),
+        trans_to=np.asarray(trans_to, dtype=np.int64),
+        trans_z=np.empty((len(trans_from), _NC), dtype=np.float64),
+        soj_start=np.asarray(soj_start, dtype=np.int64),
+        trans_start=np.asarray(trans_start, dtype=np.int64),
+    )
+
+
+def _attach_covariates(spells: SpellData, z: np.ndarray) -> SpellData:
+    """Fill ``soj_z``/``trans_z`` from the full-span ``z`` at absolute indices."""
+    import dataclasses
+
+    soj_z = z[spells.soj_start] if spells.soj_start.size else np.empty((0, _NC))
+    trans_z = z[spells.trans_start] if spells.trans_start.size else np.empty((0, _NC))
+    return dataclasses.replace(spells, soj_z=soj_z, trans_z=trans_z)
 
 
 @dataclass(frozen=True)
@@ -311,6 +398,12 @@ class FitData:
     cycle_by_regime: np.ndarray  # (6,)
     init_freqs: np.ndarray  # (6,)
     climate_artifact_sha256: str
+    #: WP2.11 severe test: the excluded span, or None on the primary path.
+    exclusion: ExclusionSpan | None = None
+    #: ``[lo, hi)`` observed segments; one whole-span segment without an exclusion.
+    segments: tuple[tuple[int, int], ...] = ()
+    #: What the exclusion cost, for the report: counts before and after.
+    exclusion_cost: dict[str, Any] = field(default_factory=dict)
 
 
 def build_fit_data(
@@ -319,6 +412,7 @@ def build_fit_data(
     climate_artifact: ClimateArtifact,
     *,
     thr: dict[str, Any] | None = None,
+    exclude: ExclusionSpan | None = None,
 ) -> FitData:
     """Assemble labels, covariates and spell observations for one ruleset.
 
@@ -327,6 +421,14 @@ def build_fit_data(
     maximal contiguous run of months where all four label features AND the
     climate grid are available (INDPRO bounds it on the left, the artifact/
     train_val end on the right).
+
+    ``exclude`` (WP2.11 severe test) removes a span from the FITTING SAMPLE. The
+    data-availability gap check above is unchanged and still runs on the full
+    span; the exclusion is then applied ON TOP, splitting the fit span into
+    observed segments handled by :func:`segmented_spell_observations` (see its
+    docstring for the straddling-spell rule). The covariate standardization
+    constants, the per-regime cycle means and the initial frequencies are all
+    re-derived on the RETAINED months, because all three are fitted quantities.
     """
     from ah.data.derive import regime_thresholds
 
@@ -353,47 +455,70 @@ def build_fit_data(
         access, config, climate_artifact, dates, span["drawdown"].to_numpy(), thresholds
     )
 
-    cov_mean = z_raw.mean(axis=0)
-    cov_sd = z_raw.std(axis=0)
+    # --- WP2.11 severe test: split the fit span into observed segments ---------
+    segments = segments_outside(dates, exclude)
+    if not segments:
+        raise sm.RegimesError("the exclusion removes the entire regime fit span")
+    retained = np.concatenate([np.arange(lo, hi) for lo, hi in segments])
+
+    # Every fitted normalization is re-derived on the RETAINED months only.
+    cov_mean = z_raw[retained].mean(axis=0)
+    cov_sd = z_raw[retained].std(axis=0)
     # the drawdown dummy stays 0/1 (a standardized dummy has no cleaner meaning)
     cov_mean[3] = 0.0
     cov_sd[3] = 1.0
     cov_sd[cov_sd == 0.0] = 1.0
     z = (z_raw - cov_mean) / cov_sd
 
-    spells = sm.spells_from_labels(labels)
-    if len(spells) < 3:
+    all_spells = sm.spells_from_labels(labels)
+    if len(all_spells) < 3:
         raise sm.RegimesError(
-            f"only {len(spells)} spell(s) in the label sequence; after dropping the "
+            f"only {len(all_spells)} spell(s) in the label sequence; after dropping the "
             f"left-truncated first and right-censoring the last there is nothing to fit"
         )
-
-    soj = spells[1:]  # first spell dropped: left-truncated
-    soj_state = np.array([s for s, _, _ in soj], dtype=np.int64)
-    soj_dur = np.array([d for _, _, d in soj], dtype=np.int64)
-    soj_z = np.stack([z[t0] for _, t0, _ in soj])
-    soj_censored = np.zeros(len(soj), dtype=bool)
-    soj_censored[-1] = True  # last spell truncated by the sample end
-
-    trans_from = np.array([s for s, _, _ in spells[:-1]], dtype=np.int64)
-    trans_to = np.array([s for s, _, _ in spells[1:]], dtype=np.int64)
-    trans_z = np.stack([z[t0] for _, t0, _ in spells[1:]])
+    spell_obs = _attach_covariates(segmented_spell_observations(labels, segments), z)
+    if spell_obs.soj_state.size == 0:
+        raise sm.RegimesError("no sojourn survives the exclusion; there is nothing to fit")
+    soj_state = spell_obs.soj_state
+    trans_from, trans_to = spell_obs.trans_from, spell_obs.trans_to
 
     counts = np.zeros((_N, _N), dtype=np.int64)
     np.add.at(counts, (trans_from, trans_to), 1)
 
     usrec = span["usrec"].to_numpy(dtype=np.float64)
     proxy = 1.0 - 2.0 * usrec
+    kept_labels = labels[retained]
     cycle = np.empty(_N, dtype=np.float64)
     for k in range(_N):
-        mask = labels == k
+        mask = kept_labels == k
         if mask.any():
-            cycle[k] = float(np.clip(proxy[mask].mean(), -1.0, 1.0))
+            cycle[k] = float(np.clip(proxy[retained][mask].mean(), -1.0, 1.0))
         else:
             # a label absent from history: fall back to its ruleset-side sign
             cycle[k] = -1.0 if _LABELS[k] in ("REC", "CRI") else 1.0
 
-    init_freqs = np.bincount(labels, minlength=_N).astype(np.float64) / labels.size
+    init_freqs = np.bincount(kept_labels, minlength=_N).astype(np.float64) / kept_labels.size
+
+    full_obs = segmented_spell_observations(labels, [(0, labels.size)])
+    cost: dict[str, Any] = {
+        "months_total": int(labels.size),
+        "months_retained": int(retained.size),
+        "months_excluded": int(labels.size - retained.size),
+        "n_spells_total": len(all_spells),
+        "sojourns_full_sample": int(full_obs.soj_state.size),
+        "sojourns_retained": int(soj_state.size),
+        "transitions_full_sample": int(full_obs.trans_from.size),
+        "transitions_retained": int(trans_from.size),
+        "sojourns_by_regime_full": {
+            _LABELS[k]: int((full_obs.soj_state == k).sum()) for k in range(_N)
+        },
+        "sojourns_by_regime_retained": {_LABELS[k]: int((soj_state == k).sum()) for k in range(_N)},
+        "months_by_regime_full": {_LABELS[k]: int((labels == k).sum()) for k in range(_N)},
+        "months_by_regime_retained": {_LABELS[k]: int((kept_labels == k).sum()) for k in range(_N)},
+        "empty_regimes_after_exclusion": [
+            _LABELS[k] for k in range(_N) if int((soj_state == k).sum()) == 0
+        ],
+    }
 
     return FitData(
         dates=dates,
@@ -403,19 +528,14 @@ def build_fit_data(
         z=z,
         cov_mean=cov_mean,
         cov_sd=cov_sd,
-        spells=SpellData(
-            soj_state=soj_state,
-            soj_dur=soj_dur,
-            soj_z=soj_z,
-            soj_censored=soj_censored,
-            trans_from=trans_from,
-            trans_to=trans_to,
-            trans_z=trans_z,
-        ),
+        spells=spell_obs,
         transition_counts=counts,
         cycle_by_regime=cycle,
         init_freqs=init_freqs,
         climate_artifact_sha256=str(climate_artifact.meta["content_sha256"]),
+        exclusion=exclude,
+        segments=tuple(segments),
+        exclusion_cost=cost,
     )
 
 
@@ -928,11 +1048,39 @@ def _report(
     add(f"- artifact content sha256: `{artifact_digest}`")
     add(f"- climate (L1) artifact sha256: `{fit_data.climate_artifact_sha256}`")
     add(f"- ruleset: `{fit_data.ruleset_version}`")
-    add(
-        f"- label span: {fit_data.dates[0].date()} .. {fit_data.dates[-1].date()} "
-        f"({len(fit_data.dates)} months, {len(fit_data.spells.soj_state) + 1} spells; "
-        f"first spell left-truncated and dropped, last right-censored)"
-    )
+    if fit_data.exclusion is None:
+        add(
+            f"- label span: {fit_data.dates[0].date()} .. {fit_data.dates[-1].date()} "
+            f"({len(fit_data.dates)} months, {len(fit_data.spells.soj_state) + 1} spells; "
+            f"first spell left-truncated and dropped, last right-censored)"
+        )
+    else:
+        # Under an exclusion `n_sojourns + 1` is NOT the spell count (one spell is
+        # dropped PER SEGMENT, not once), so the true totals are quoted instead.
+        add(
+            f"- label span: {fit_data.dates[0].date()} .. {fit_data.dates[-1].date()} "
+            f"({len(fit_data.dates)} months, "
+            f"{fit_data.exclusion_cost['n_spells_total']} spells in the full span, "
+            f"{len(fit_data.spells.soj_state)} sojourn observations retained across "
+            f"{len(fit_data.segments)} segments)"
+        )
+    if fit_data.exclusion is not None:
+        cost = fit_data.exclusion_cost
+        add(
+            f"- **WP2.11 SEVERE TEST**: fitting sample EXCLUDES "
+            f"{fit_data.exclusion.label}. Label history split into "
+            f"{len(fit_data.segments)} observed segment(s); each segment's first spell "
+            f"dropped (left-truncated) and last spell right-censored; no transition "
+            f"counted across the gap."
+        )
+        add(
+            f"  - months {cost['months_retained']}/{cost['months_total']} retained; "
+            f"sojourns {cost['sojourns_retained']}/{cost['sojourns_full_sample']}; "
+            f"transitions {cost['transitions_retained']}/{cost['transitions_full_sample']}"
+        )
+        add(f"  - sojourns by regime, full sample: `{cost['sojourns_by_regime_full']}`")
+        add(f"  - sojourns by regime, retained:   `{cost['sojourns_by_regime_retained']}`")
+        add(f"  - regimes with ZERO retained sojourns: `{cost['empty_regimes_after_exclusion']}`")
     add(
         f"- NUTS: {diagnostics['n_chains']} chain(s) x {diagnostics['n_samples']} samples "
         f"({diagnostics['n_warmup']} warmup), target_accept {config.fit.target_accept}"
@@ -1211,6 +1359,22 @@ def _artifact_meta(
             "logit p = alpha + gamma'z; higher p => shorter sojourn"
         ),
         "cycle_mapping": "per-regime train+val mean of 1 - 2*USREC (L1's fitting proxy)",
+        "severe_test_exclusion": (
+            None
+            if fit_data.exclusion is None
+            else {
+                "span": fit_data.exclusion.label,
+                "start": fit_data.exclusion.start,
+                "end_exclusive": fit_data.exclusion.end_exclusive,
+                "mechanism": (
+                    "label history split into observed SEGMENTS; each segment's first "
+                    "spell dropped (left-truncated) and last spell right-censored; no "
+                    "transition counted across the gap"
+                ),
+                "segments": [list(seg) for seg in fit_data.segments],
+                "cost": fit_data.exclusion_cost,
+            }
+        ),
         "diagnostics": {
             "max_rhat": diagnostics["max_rhat"],
             "min_ess": diagnostics["min_ess"],
@@ -1232,6 +1396,7 @@ def fit_regimes(
     sensitivity_report_copy_path: str | Path | None = None,
     run_acceptance: bool = True,
     run_sensitivity: bool = True,
+    exclude: ExclusionSpan | None = None,
 ) -> FitResult:
     """Fit L2 on the labeled history; write artifact(s), reports, exp record.
 
@@ -1250,7 +1415,7 @@ def fit_regimes(
     acc = config.acceptance
 
     # ---- v1 ----
-    fd_v1 = build_fit_data(access, config, climate_artifact)
+    fd_v1 = build_fit_data(access, config, climate_artifact, exclude=exclude)
     diag_v1, draws_v1 = _fit_one(fd_v1, config, seed)
     meta_v1 = _artifact_meta(
         fd_v1,
@@ -1321,7 +1486,7 @@ def fit_regimes(
     sensitivity_report_path: Path | None = None
     if run_sensitivity:
         thr_b = config.sensitivity.model_dump()
-        fd_v1b = build_fit_data(access, config, climate_artifact, thr=thr_b)
+        fd_v1b = build_fit_data(access, config, climate_artifact, thr=thr_b, exclude=exclude)
         diag_v1b, draws_v1b = _fit_one(fd_v1b, config, seed + 1)
         meta_v1b = _artifact_meta(
             fd_v1b,

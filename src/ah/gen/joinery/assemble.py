@@ -69,6 +69,7 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pandas as pd
 
 from ah.core.numericworld import NumericWorld
 from ah.gen import registry
@@ -105,6 +106,7 @@ __all__ = [
     "JoineryBootstrapV0",
     "JoineryConfig",
     "assemble_decades",
+    "frozen_climate",
 ]
 
 GENERATOR_ID = "joinery-bootstrap-v0"
@@ -156,6 +158,31 @@ class JoineryConfig:
     s0_date: str | None = None  # None -> the artifact's last fitted month
     reconcile: rc.ReconcileConfig = field(default_factory=rc.ReconcileConfig)
 
+    #: WP2.10 ablation lever — DN-1.1 §II.7 system **B** (neural rollout).
+    #: ``False`` drops step 3's *binding* and step 5 entirely: the bridge is handed
+    #: ``targets=None`` (so every Δw component of ``c_b`` is zero) and no Denton
+    #: reconciliation runs, which also means **the post-Denton floor re-application
+    #: does not run** — the only remaining floor guarantee is whatever the block
+    #: sampler provides structurally (``ah.gen.blocks.constraints`` does; the
+    #: bootstrap stand-in does by construction; a Gaussian sampler does NOT, which
+    #: is why system A keeps binding on). Waypoints are still *built* — the regime
+    #: labels feed ``c_b``'s one-hot and the support diagnostic — they are simply
+    #: not aimed at. Reconciliation diagnostics come back empty, and the ensemble
+    #: lineage records ``reconciliation_applied: false``.
+    bind_waypoints: bool = True
+
+    #: WP2.10 ablation lever — DN-1.1 §II.7 system **C** (neural only, "no L1").
+    #: ``False`` replaces the simulated climate path with the posterior-MEAN state
+    #: at ``s0_date``, held constant for every month of every decade (and the
+    #: posterior-mean θ for the waypoint parameters). L1 therefore contributes no
+    #: variation to anything: ``c_b``'s state snapshot is a constant vector, L2's
+    #: slow-state covariates are constant so the semi-Markov chain runs at its
+    #: baseline hazards, and the structural waypoints stop moving. It is the
+    #: cheapest faithful reading of "no L1" that keeps every downstream interface
+    #: intact — L2 is logit-linked to L1's slow states, so the layer cannot simply
+    #: be deleted without also deleting L2.
+    use_climate: bool = True
+
     def as_dict(self) -> dict[str, Any]:
         return {
             "block_months": self.block_months,
@@ -165,6 +192,8 @@ class JoineryConfig:
             "two_pass": self.two_pass,
             "support_quantile": self.support_quantile,
             "s0_date": self.s0_date,
+            "bind_waypoints": self.bind_waypoints,
+            "use_climate": self.use_climate,
             "reconcile": {k: float(v) for k, v in self.reconcile.__dict__.items()},
         }
 
@@ -282,6 +311,59 @@ class _FilterScorer:
 
 
 # --------------------------------------------------------------------------- #
+# "no L1": the climate layer replaced by its posterior mean (WP2.10 system C)
+# --------------------------------------------------------------------------- #
+
+
+def frozen_climate(
+    climate: ClimateArtifact,
+    *,
+    months: int,
+    s0_date: str | None = None,
+    seed: int = 0,
+) -> SimulatedClimate:
+    """A one-decade :class:`SimulatedClimate` with NO climate dynamics at all.
+
+    Every month carries the same state vector — the posterior MEAN of the smoothed
+    state at ``s0_date`` (the artifact's last fitted month by default) — and every
+    waypoint parameter is the posterior mean of its draws. Deterministic: no RNG is
+    consumed, and ``seed`` is recorded only so the returned object says which decade
+    stream it stands in for.
+
+    This is what :attr:`JoineryConfig.use_climate` ``= False`` substitutes for
+    :func:`~ah.gen.climate.simulate.simulate_decades`. It removes the climate layer's
+    two contributions at once — the *path* (slow states stop moving) and the
+    *parameter uncertainty* (every decade gets the same θ) — which is exactly the
+    pair DN-1.1 §II.7 asks system C to do without. ``theta_index`` is ``-1``: no
+    posterior draw was selected, and a reader of the lineage must not be able to
+    mistake the mean for a draw.
+    """
+    from ah.gen.climate.simulate import N_STATES, PARAM_NAMES
+
+    ts = climate.dates[-1] if s0_date is None else pd.Timestamp(s0_date)
+    locs = climate.dates.get_indexer([ts])
+    if locs[0] < 0:
+        raise wp.JoineryError(
+            f"s0_date {ts.date()} is not on the climate artifact's monthly grid "
+            f"({climate.dates[0].date()} .. {climate.dates[-1].date()})"
+        )
+    t0 = int(locs[0])
+    mean_state = np.asarray(climate.states[:, t0, :], dtype=np.float64).mean(axis=0)
+    states = np.broadcast_to(mean_state, (1, months, N_STATES)).copy()
+    params = {
+        name: np.array([float(np.mean(climate.params[name]))], dtype=np.float64)
+        for name in PARAM_NAMES
+    }
+    return SimulatedClimate(
+        states=states,
+        theta_index=np.array([-1], dtype=np.int64),
+        params=params,
+        s0_date=ts,
+        seed=int(seed),
+    )
+
+
+# --------------------------------------------------------------------------- #
 # per-decade generation (steps 1-5 for one decade index)
 # --------------------------------------------------------------------------- #
 
@@ -354,9 +436,17 @@ class _DecadeFactory:
     def _simulate_layers(self, m: int) -> tuple[SimulatedClimate, RegimePaths]:
         l1_seed = self.seed + LAYER_SEED_OFFSETS["climate"] + SEED_STRIDE * m
         l2_seed = self.seed + LAYER_SEED_OFFSETS["regimes"] + SEED_STRIDE * m
-        sim = simulate_decades(
-            self.climate, 1, seed=l1_seed, months=self.months, s0_date=self.config.s0_date
-        )
+        if self.config.use_climate:
+            sim = simulate_decades(
+                self.climate, 1, seed=l1_seed, months=self.months, s0_date=self.config.s0_date
+            )
+        else:
+            # System C: L1 replaced by its posterior mean, frozen. No RNG is drawn
+            # here, so l1_seed is deliberately unused -- the decade's remaining
+            # randomness (L2's chain, L3's blocks) still runs on its own streams.
+            sim = frozen_climate(
+                self.climate, months=self.months, s0_date=self.config.s0_date, seed=l1_seed
+            )
         if self.world is None:
             regimes = simulate_regimes(self.regimes_artifact, sim.states, seed=l2_seed)
         else:
@@ -389,7 +479,11 @@ class _DecadeFactory:
             decade_index=m,
             sim=sim,
             waypoints=waypoints,
-            targets=wp.monthly_targets(waypoints, self.months),
+            # System B: `targets=None` is the bridge's documented unbound mode --
+            # every waypoint increment in c_b becomes zero.
+            targets=(
+                wp.monthly_targets(waypoints, self.months) if self.config.bind_waypoints else None
+            ),
             rng=np.random.Generator(
                 np.random.PCG64(self.seed + LAYER_SEED_OFFSETS["blocks"] + SEED_STRIDE * m)
             ),
@@ -423,9 +517,16 @@ class _DecadeFactory:
         names = tuple(self.sampler.factor_names)
         results: list[_DecadeResult] = []
         for prep, (raw, conds) in zip(preps, outputs, strict=True):
-            reconciled, diagnostics = rc.reconcile_decade(
-                raw, names, prep.waypoints, self.config.reconcile
-            )
+            if self.config.bind_waypoints:
+                reconciled, diagnostics = rc.reconcile_decade(
+                    raw, names, prep.waypoints, self.config.reconcile
+                )
+            else:
+                # System B/C: step 5 does not run. An empty DecadeReconciliation is
+                # the honest record (no factor was adjusted); note that the floor
+                # RE-application inside reconcile_decade does not run either -- see
+                # JoineryConfig.bind_waypoints.
+                reconciled, diagnostics = raw, rc.DecadeReconciliation()
             results.append(
                 _DecadeResult(
                     path=reconciled,
@@ -554,6 +655,12 @@ def assemble_decades(
     conditioning: dict[str, Any] = {
         "system": "L1+L2+L4 (bootstrap stand-in blocks)",
         "one_pass": not config.two_pass,
+        # WP2.10: which of DN-1.1 §II.5's steps actually ran. A reader of an
+        # ablation ensemble must not have to infer this from an empty diagnostic.
+        "waypoints_bound": bool(config.bind_waypoints),
+        "reconciliation_applied": bool(config.bind_waypoints),
+        "floors_reapplied_post_denton": bool(config.bind_waypoints),
+        "climate_layer": "simulated" if config.use_climate else "frozen-posterior-mean",
         "layer_seeds": {layer: seed + offset for layer, offset in LAYER_SEED_OFFSETS.items()},
         "seed_stride": SEED_STRIDE,
         "layer_artifacts": {

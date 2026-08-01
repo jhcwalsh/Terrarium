@@ -197,6 +197,27 @@ active_blocks: [global, us]
 # convention ah.splits.DataAccess.frame applies, stated here so a reader does not have
 # to infer it. The holdout is the final ~5 years and is spent EXACTLY ONCE, by WP2.11,
 # through a FinalEvaluationToken mintable only in ah/eval/g2.py.
+#
+# AMENDED BY AM-2026-07-31-002 (2026-07-31, protocol_change, post_hoc TRUE): THE HOLDOUT
+# WAS NOT SPENT AT G2, AND REMAINS UNSPENT. The sentence above is left standing because
+# this file is a record and not a wish, but it no longer describes what WP2.11 did, and a
+# reader must not take "is spent EXACTLY ONCE, by WP2.11" as an account of events.
+# THE REASON, in one line: this document specifies the holdout's SPAN, its GUARD, that it
+# may be spent at most once, and that nothing may EVER be tuned on it -- and NOWHERE
+# specifies WHAT THE ONE-SHOT EVALUATION COMPUTES. STEP2-GENERATOR-PLAN Sec.WP2.11 says
+# only "the one-shot holdout evaluation through the explicit-purpose path -- once,
+# logged, never repeated". None of multi_seed_decision_rule's four clauses reads the
+# holdout: all four are computed on the WP2.10 ablation grid against a train+validation
+# reference. So any holdout procedure run at G2 would have been CHOSEN BY THE AUTHOR AT
+# WP2.11, with the grid, both severe arms and the head-to-head already in hand -- the
+# exact forking path this file exists to close, applied to a resource that cannot be
+# restored once spent. Declining is the conservative act: an unspent holdout stays worth
+# exactly what it was, while a holdout spent on a post-hoc procedure is worth little and
+# is gone. THE PROHIBITIONS ARE UNCHANGED AND STILL BIND -- at most once, ever, through
+# the token, and no tuning on it under any circumstance. See
+# governance/decision-register.md S2-HOLDOUT-NOT-SPENT and
+# governance/retrofit-register.md RFR-83, which owns the general defect: a sealed GUARD
+# with no sealed TEST behind it.
 # --------------------------------------------------------------------------- #
 splits:
   train:      {start: "1871-01-01", end: "2011-01-01"}
@@ -2991,6 +3012,28 @@ structurally_unavailable_statistics:
 # the two decisions WP2.1b deferred to WP2.3 by name.
 # --------------------------------------------------------------------------- #
 seal_scope:
+  ablation_py: SEALED
+  ablation_py_reason: >-
+    ADDED BY AMENDMENT AM-2026-07-31-001, AND THIS ENTRY RECORDS A HOLE IN THE SEAL
+    RATHER THAN A HOLE IN THE ACCOUNTING OF IT -- the distinction the claims-sweep
+    addition (_pooling.py, negative_controls.py) was careful to draw in the other
+    direction. Those two were hashed the whole time and merely unnamed; src/ah/eval/
+    ablation.py was NOT HASHED AT ALL between 2026-07-29 and 2026-07-31. It is judging
+    code in the strictest sense: it implements comparison_set, clause_i, clause_ii, the
+    pooled inequality of multi_seed_decision_rule.beats_definition, enforce_rows,
+    memorization_enforce, constraint_violations and the criterion_bearing refusal -- i.e.
+    every arithmetic the G2 verdict is computed from, and the executable form of the very
+    clauses this document seals in words. It sits outside src/ah/eval/metrics/, so
+    _METRIC_SUITE_NAMES does not reach it, which is precisely the case ah.eval.prereg's
+    module docstring says joins the seal ONLY by being named in
+    _REQUIRED_JUDGED_SOURCES, "in the same commit that adds the module" -- the rule
+    battery.py and panel.py were added under, and the rule WP2.10 did not follow.
+    THE EXPOSURE WAS A POSSIBILITY, NOT AN EVENT: exactly one commit (29fa613) has ever
+    touched the file and the diff from it to this re-seal is empty, so the WP2.10 grid
+    and ABLATION.md rest on the same bytes now sealed. That is verifiable by any reader
+    from git alone. It is also the wrong kind of assurance -- evidence after the fact
+    where the seal exists to give design before it -- which is why this is recorded as a
+    defect (governance/retrofit-register.md RFR-82) and not as routine housekeeping.
   derive_py: SEALED
   derive_py_reason: >-
     governance/retrofit-register.md RFR-10, first half. src/ah/data/derive.py is ON THE
@@ -4201,8 +4244,24 @@ multi_seed_decision_rule:
     CROSS-BLOCK FACTOR PAIR, tail_dependence_lower and tail_dependence_upper. THE
     COMPARISON SET is family (a) restricted to the strategies with computable
     historical statistics -- the five d4_strategies minus
-    reference_run.uncomputable_d4_strategies, which on this vintage is sixty_forty,
-    momentum and carry -- plus all of family (b). A name whose historical side is NaN
+    reference_run.uncomputable_d4_strategies, which on this vintage is eqw_factors and
+    endowment_proxy, leaving sixty_forty, momentum and carry as the comparison set --
+    plus all of family (b). CORRECTED BY AMENDMENT AM-2026-07-29-001 (2026-07-29,
+    post_hoc TRUE -- the first post-hoc entry in this project's amendment log). Until
+    that amendment this clause read "which on this vintage is sixty_forty, momentum and
+    carry", which names the COMPLEMENT of the sealed field it glosses. The field
+    reference_run.uncomputable_d4_strategies is, and has been since the campaign vintage
+    moved to 2026-07-26.1, [eqw_factors, endowment_proxy]: the FIELD was right, the
+    GLOSS was wrong, and only the gloss has moved. THE DEFECT WAS NOT INERT. Read
+    literally, the gloss made the comparison set the two strategies whose historical
+    side is NaN on this vintage, and the NaN rule in beats_definition would then make no
+    seed a beat for any system ever -- an automatic SHIP-BENCHMARK independent of all
+    evidence -- whereas the field's reading leaves a comparison set that a challenger
+    can win. It was found while extracting WP2.10's results, WITH THOSE RESULTS ALREADY
+    IN HAND, and the correction is in the direction that makes a promotion possible.
+    governance/amendment-log.yaml AM-2026-07-29-001 records that in full and must be
+    read before weighing any PROMOTE verdict that rests on this clause.
+    A name whose historical side is NaN
     is excluded from the comparison rather than counted as a tie, because a comparison
     against nothing is not a comparison. This definition is machine-checked against the
     live suite by tests/test_prereg.py; the document is normative if they disagree.

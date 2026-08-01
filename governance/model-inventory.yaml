@@ -42,3 +42,156 @@ components:
       tests/test_compiler.py — 50-fixture offline regression harness
       (40 valid, 5 clamp, 5 reject). The live model is never exercised in tests.
     last_review: "2026-07-24"
+
+  # ------------------------------------------------------------------------- #
+  # Step 2 generators (WP2.4–WP2.11). Every card below is `numeric` tier: no LLM
+  # output enters any of these paths. All were fitted on the sealed campaign
+  # vintage 2026-07-26.1 through DataAccess.train_val — THE HOLDOUT IS UNSPENT
+  # AND WAS NEVER READ BY ANY OF THEM (AM-2026-07-31-002).
+  #
+  # GPU DETERMINISM, stated once rather than repeated on every torch-backed card:
+  # CUBLAS_WORKSPACE_CONFIG=:4096:8 is set before any CUDA context exists and
+  # torch.use_deterministic_algorithms(True) is asserted by every training and
+  # sampling stage. Every stream is keyed by an integer seed; no clock is read
+  # into any artifact. Reproduction is bit-identical ON THE SAME DEVICE AND
+  # TOOLCHAIN; cross-device bit-identity is NOT claimed and was not tested.
+  # Ensemble seeds are base_seed + 7919*k.
+  # ------------------------------------------------------------------------- #
+
+  - name: bootstrap-v1
+    version: "bootstrap-v1"
+    tier: numeric
+    owner: platform
+    role: "the frozen benchmark; default generator_id until 2026-07-31"
+    training_vintage: "2026-07-26.1"
+    seeds: "sampling seeds 20260727 + 7919k; deterministic, not trained"
+    validation_evidence: >
+      tests/test_bootstrap.py; the WP2.4 battery; the WP2.10 grid as system E.
+      Passes every enforce tier in all three seeds with zero constraint
+      violations.
+    known_limitations: >
+      BLOCK DRAW SPAN 1990-01..2020-12 — it cannot resample 1929-33, 1937,
+      1973-74 or 1987, while challengers fitted on the full span have seen them
+      and both are scored against the same realizations. Sealed as
+      benchmark_draw_span_bias: the head-to-head is biased TOWARD promotion by a
+      mechanism unrelated to generator quality. It also CANNOT BE POSED the
+      severe test at all — its draw span contains neither the excluded decade nor
+      the 1965 start state, so its row there is NOT ANSWERABLE rather than not
+      run. Emits verbatim historical windows by construction.
+    last_review: "2026-07-31"
+
+  - name: hier-flow-v1
+    version: "hier-flow-v1"
+    tier: numeric
+    owner: platform
+    role: "PROMOTED at G2 (2026-07-31); the default generator_id from v0.2.0-g2"
+    training_vintage: "2026-07-26.1"
+    architecture: "L1 climate + L2 semi-Markov regimes + L3b conditional flow matching + L4 waypoints/Denton"
+    seeds: "training seed indices 0,1,2 → 20260728, 20268647, 20276566"
+    checkpoint_hashes: {s0: b1fe26e10067, s1: 5b359c8cf29d0de0, s2: b661abc1cc4dffde}
+    severe_test_checkpoints: {s0: 668784c2d953808e, s1: b21d202cfde7cee9, s2: 1276baad677c93e3}
+    validation_evidence: >
+      G2-EVIDENCE.md. Clause (1) on BOTH routes: beats bootstrap-v1 in every seed
+      AND pooled by more than the cross-seed dispersion (mean d −0.296723, sd
+      0.016381). Survives the sealed restricted-window re-run with a WIDER margin
+      (−0.363470). Clauses (2)–(4) hold in every seed. tests/test_g2.py,
+      tests/test_blocks_flow.py, the WP2.9 bake-off, the WP2.10 grid.
+    known_limitations: >
+      DOES NOT REPRODUCE 1966-84: calls it a long inflation era 0.42–0.44 of the
+      time against history's 1.00; inflation mean-reversion half-life ~30 against
+      61.2; equity drawdown median depth ~0.034 against 0.069; invents stagnant
+      decades at 0.29–0.75 against a historical 0.00–0.05. SUPPORT: extrapolation
+      share 0.876–0.883 with 1006–1009 of 1024 decades flagged off-support in the
+      judged cells — high, disclosed, and to be weighed against clause (1).
+      SEVERE TEST INCONCLUSIVE, and its L3 leg is structurally vacuous (0 blocks
+      dropped: the block draw span never reaches the 1970s). The 10yr tier that
+      would catch decade-scale error is 73% structurally unavailable, so decade
+      dynamics are LARGELY UNJUDGED rather than judged and passed. Promotion is
+      NOT a statement of fitness for real decisions; that is Step 5's question.
+    last_review: "2026-07-31"
+
+  - name: hier-diffusion-v1
+    version: "hier-diffusion-v1"
+    tier: numeric
+    owner: platform
+    role: "co-primary; NOT promoted. Stays registered and reachable, not the default (S2-DEFAULT-GENERATOR)"
+    training_vintage: "2026-07-26.1"
+    architecture: "L1 + L2 + L3a conditional diffusion (EDM / Heun) + L4"
+    seeds: "training seed indices 0,1,2 → 20260727, 20268646, 20276565"
+    checkpoint_hashes: {s0: f0c79f000be6, s1: 6e06252943e45d51, s2: 38f385c6e87d12d2}
+    severe_test_checkpoints: {s0: dd589ac80071fbf1, s1: a64463efa5fa9253, s2: 375b486be15a4f0a}
+    validation_evidence: >
+      G2-EVIDENCE.md; tests/test_blocks_diffusion.py; the WP2.9 bake-off; the
+      WP2.10 grid; the WP2.11 severe arm (six criterion-bearing cells).
+    known_limitations: >
+      CLAUSE (1) FAILS. It beats bootstrap-v1 on the objective pooled, but
+      beats_definition requires clause (ii) to hold in EVERY seed for the pooled
+      route and it fails clause (ii) in every seed — so neither route carries.
+      ABLATION.md §6 reports the two as independent columns and therefore shows a
+      pooled beat; the RULE combines them. ~2.8× hier-flow-v1's end-to-end cost,
+      dominated by judging rather than sampling. ONE ENFORCE FAILURE in twelve
+      severe cells: severe-diffusion-s1 returned 8 money_pump_violations where its
+      full-sample control at the same training seed returned 0 — one seed in
+      three, reported as suggestive and NOT conclusive. Its objective S values are
+      NOT comparable with flow's: an ELBO against an exact log-likelihood (RFR-73).
+    last_review: "2026-07-31"
+
+  - name: abl-a-structure-only
+    version: "abl-a-structure-only"
+    tier: numeric
+    owner: platform
+    role: "ablation control A — L1+L2+L4 with Gaussian residuals in place of L3"
+    training_vintage: "2026-07-26.1"
+    validation_evidence: "ABLATION.md; tests/test_ablation_grid.py. Clause (1) fails on both routes."
+    known_limitations: >
+      Regime-conditional in LOCATION, POOLED in DISPERSION — a regime-conditional
+      covariance is not estimable (STAG ~5 months, REF ~9 against twelve factors).
+      Rows within a block are iid: it carries NO block-level temporal structure,
+      which is the point of the control. SHARES the benchmark's draw-span handicap
+      where system D does not — recorded as a confound, not repaired with a fitted
+      constant.
+    last_review: "2026-07-31"
+
+  - name: abl-b-neural-rollout-flow
+    version: "abl-b-neural-rollout-flow"
+    tier: numeric
+    owner: platform
+    role: "ablation control B — L3 chained, no waypoint binding, no Denton"
+    training_vintage: "2026-07-26.1"
+    validation_evidence: >
+      ABLATION.md. Clause (1) fails; wildly inconsistent between seeds (sd 0.364
+      against a mean of −0.015).
+    known_limitations: "Ablates the joinery. The diffusion variant of B is UNTESTED (recorded in ah/gen/systems.py)."
+    last_review: "2026-07-31"
+
+  - name: abl-c-neural-only-flow
+    version: "abl-c-neural-only-flow"
+    tier: numeric
+    owner: platform
+    role: "ablation control C — B plus a frozen climate layer; no L1"
+    training_vintage: "2026-07-26.1"
+    validation_evidence: >
+      ABLATION.md. Clause (1) AND clause (2) both fail; one seed diverged
+      catastrophically (d = 53.1).
+    known_limitations: "Ablates the climate layer. The diffusion variant of C is UNTESTED."
+    last_review: "2026-07-31"
+
+  # SIGNATURE-VARIANT DEFERRAL NOTE (STEP2-GENERATOR-PLAN §WP2.11 requires this
+  # here by name). DN-1.1's signature-based small-data generator is DEFERRED and
+  # was never built for Step 2: the panel this step trains on is data-dense, and
+  # the signature variant is DN-1.1's tool for the SPARSE case. It re-enters at
+  # Step 3's sparse strategy sleeves, where that condition holds. The registered
+  # id is RESERVED so it cannot be taken by another component meanwhile.
+  - name: signature-variant
+    version: "RESERVED — not implemented"
+    tier: numeric
+    owner: platform
+    role: "reserved id; DN-1.1 small-data generator, deferred to Step 3"
+    validation_evidence: >
+      NONE — nothing was built. This card exists to reserve the id and record the
+      deferral, not to describe a model.
+    known_limitations: >
+      Deferred deliberately, not omitted: Step 2's panel is data-dense and the
+      signature variant addresses sparsity. Re-entry is Step 3's sparse strategy
+      sleeves. Any G3 evidence must not cite this row as a component that exists.
+    last_review: "2026-07-31"
