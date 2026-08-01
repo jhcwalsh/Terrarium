@@ -18,7 +18,10 @@ from jsonschema import Draft202012Validator
 
 from ah.core.worldspec import WorldSpec
 
-_SCHEMA_FILENAME = "worldspec-v1.0.schema.json"
+# WP2R.7: v1.2 is the active contract; it accepts 1.0.x documents unchanged (the
+# sealed fixtures and vendored example stay untouched). worldspec-v1.0.schema.json
+# remains in schemas/ as the vendored record of the original contract.
+_SCHEMA_FILENAME = "worldspec-v1.2.schema.json"
 
 
 def _repo_root() -> Path:

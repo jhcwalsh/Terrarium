@@ -816,3 +816,11 @@ def hier_diffusion_v1_factory() -> HierDiffusionV1:
 
 
 registry.register(GENERATOR_ID, hier_diffusion_v1_factory)
+
+# WP2R.7: `conditional-diffusion` is WorldSpec v1.0's legacy name for the diffusion
+# family (the v1.0 enum predates Step 2's registry). Sealed/vendored 1.0.x worlds
+# carry it and may not be edited, so it resolves here as a deprecated alias — the
+# same mechanism as bootstrap.py's `bootstrap-stratified`. New worlds author
+# `hier-diffusion-v1` (or the promoted default `hier-flow-v1`).
+LEGACY_SCHEMA_GENERATOR_ID = "conditional-diffusion"
+registry.register(LEGACY_SCHEMA_GENERATOR_ID, hier_diffusion_v1_factory)

@@ -68,7 +68,7 @@ def preset(
             "illiquidity_premium_annual_pct": 2.0,
         }
     return {
-        "spec_version": "1.0.0",
+        "spec_version": "1.2.0",
         "world_id": world_id,
         "status": "draft",
         "provenance": {
