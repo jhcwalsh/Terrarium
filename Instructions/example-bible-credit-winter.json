@@ -1,0 +1,135 @@
+{
+  "bible_version": "1.0.0",
+  "world_id": "7f3e2a10-9c4b-4d8e-b2a1-5e6f7a8b9c0d",
+
+  "safety": {
+    "fictional_attestation": true,
+    "screened_against": "gleif-lei+sec-adv snapshot 2026-06",
+    "generic_allowlist": ["the central bank", "the statistics office", "the finance ministry", "the regulator"]
+  },
+
+  "institution": {
+    "name": "The Harborlight Pension Trust",
+    "kind": "db_pension",
+    "short_name": "Harborlight",
+    "consultant_ref": "kestrel",
+    "peer_universe_label": "simulated peer universe (140 histories)"
+  },
+
+  "cast": [
+    {
+      "id": "meridian",
+      "name": "Meridian Capital Partners",
+      "kind": "gp_buyout",
+      "profile": {
+        "one_liner": "Mid-market buyout firm; 2021-vintage flagship entered the decade at peak entry multiples and 5.5 turns of leverage.",
+        "aum_band": "10-50bn",
+        "founded_year": 2004,
+        "signature_traits": ["never concedes marks are stale", "attributes every problem to 'temporary dislocation'", "quietly excellent at operations despite the bravado"]
+      },
+      "voice": { "register": "confident_promotional", "tics": ["opens every letter with a macro paragraph", "signs off 'Onward.'"] },
+      "arc": [
+        { "from_quarter": 4, "beat": "Financing costs begin to bite across the 2021 vintage; letters grow defensive." },
+        { "from_quarter": 9, "beat": "Hands a portfolio company's keys to lenders — the cycle's first large surrender." },
+        { "from_quarter": 16, "beat": "Pivots messaging to operational value-creation; begins raising a smaller, soberer fund." },
+        { "from_quarter": 30, "beat": "The 2031 fund quietly performs; redemption arc complete." }
+      ],
+      "relationships": [
+        { "with": "stonebeck", "nature": "borrower from — the keys in Q9 are handed to Stonebeck" },
+        { "with": "harborlight-implicit", "nature": "the institution holds its 2027 flagship" }
+      ],
+      "held_by_institution": true
+    },
+    {
+      "id": "stonebeck",
+      "name": "Stonebeck Credit",
+      "kind": "direct_lender",
+      "profile": {
+        "one_liner": "Scaled direct lender, covenant-lite book written 2024–2027; has never seen a default cycle at current size.",
+        "aum_band": "50-200bn",
+        "founded_year": 2011,
+        "signature_traits": ["cites 'structural seniority' in every document", "reassuring to a fault until suddenly not"]
+      },
+      "voice": { "register": "folksy_reassuring", "tics": ["uses lending-as-partnership language", "one homespun metaphor per letter"] },
+      "arc": [
+        { "from_quarter": 6, "beat": "First covenant breaches surface; letters emphasize 'constructive amendments'." },
+        { "from_quarter": 10, "beat": "Recovery rates print far below model; workout season begins in earnest." },
+        { "from_quarter": 13, "beat": "Gates redemptions; secondary bids quoted in the low 80s against marks." },
+        { "from_quarter": 22, "beat": "Raises a workout-focused vehicle led by newly hired restructuring team." }
+      ],
+      "relationships": [
+        { "with": "meridian", "nature": "lender to Meridian portfolio companies" },
+        { "with": "harborlight-implicit", "nature": "the institution holds its evergreen income fund" }
+      ],
+      "held_by_institution": true
+    },
+    {
+      "id": "kestrel",
+      "name": "Kestrel Advisory",
+      "kind": "consultant",
+      "profile": {
+        "one_liner": "The institution's investment consultant; cautious by constitution, keeper of the pacing model.",
+        "aum_band": "<1bn",
+        "founded_year": 1987,
+        "signature_traits": ["frames everything as ranges", "never says 'sell', says 'right-size'"]
+      },
+      "voice": { "register": "measured_institutional", "tics": ["numbered recommendations", "closes with 'we remain available to discuss'"] },
+      "arc": [
+        { "from_quarter": 8, "beat": "Memos begin flagging the widening reported-vs-listed gap in private sleeves." },
+        { "from_quarter": 13, "beat": "Presents the secondary-sale option paper to the committee." }
+      ],
+      "relationships": [{ "with": "harborlight-implicit", "nature": "retained consultant to the institution" }],
+      "held_by_institution": false
+    },
+    {
+      "id": "vessey",
+      "name": "Aline Vessey",
+      "kind": "cio_persona",
+      "profile": {
+        "one_liner": "Celebrated CIO of a rival simulated pension; the peer the committee is silently measured against.",
+        "aum_band": "10-50bn",
+        "signature_traits": ["publicly contrarian, privately disciplined", "quotable in exactly one sentence per quarter"]
+      },
+      "voice": { "register": "combative_contrarian", "tics": ["speaks in aphorisms"] },
+      "arc": [
+        { "from_quarter": 12, "beat": "Buys private credit secondaries near the lows; pilloried, then vindicated." }
+      ],
+      "relationships": [],
+      "held_by_institution": false
+    }
+  ],
+
+  "research_houses": [
+    {
+      "id": "calder",
+      "name": "Calder & Root",
+      "prior": "structurally_constructive",
+      "voice": { "register": "confident_promotional", "tics": ["titles always contain a verb of motion"] },
+      "coverage": ["private_credit", "stonebeck", "equities"]
+    },
+    {
+      "id": "grimshaw",
+      "name": "Grimshaw Partners",
+      "prior": "structurally_cautious",
+      "voice": { "register": "dry_academic", "tics": ["footnote-style asides", "one chart described in words"] },
+      "coverage": ["private_credit", "stonebeck", "credit"]
+    }
+  ],
+
+  "media": {
+    "wire_name": "The Simulated Wire",
+    "paper_name": "The Ledger",
+    "columnists": [
+      { "name": "R. Okafor", "beat": "credit markets" },
+      { "name": "J. Lindqvist", "beat": "pensions and allocators" }
+    ]
+  },
+
+  "creation_checks": {
+    "validator_version": "bible-val/1.0",
+    "passed": ["B1", "B2", "B3", "B4", "B5"],
+    "warnings": [
+      { "rule": "B3", "message": "Vessey arc beat Q12 (buying secondaries near lows) assumes secondary discounts consistent with WorldSpec crisis window Q6–Q13 — confirmed consistent; note retained for audit." }
+    ]
+  }
+}
