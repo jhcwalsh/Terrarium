@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.1 — the artifact service: calendar, chronicle record, renderers**
+  (Step 4; `ah/artifacts/`). The storyteller layer's rails, before any
+  storyteller exists. The **calendar** rides the WorldSpec schema's sanctioned
+  `x_` escape hatch (`extensions.x_temporal_delivery.artifact_calendar`) —
+  the vendored schema has no core `temporal_delivery` block, the conflict the
+  plan/schema rule requires flagging: promotion to a core block awaits an
+  owner schema minor bump. Declarations validate against the vendored schema
+  untouched; scheduling is pure arithmetic (monthly / quarter-end / `event` =
+  runtime-only), deterministic under declaration reordering. **Publications
+  ride the existing append-only chronicle** as `type="artifact"` entries (one
+  immutability story, no migration) carrying the sealed G9 record — type,
+  dateline, author tier, gate result, payload hash, prompt version, model id,
+  retry count — and an incomplete record **refuses to publish** (a tier-2
+  record without prompt/model provenance is exactly what G9 blocks). Five
+  **renderers** (wire item, release page, statement, letterhead, board pack)
+  apply the simulated-world watermark IN the renderer, and `export()`
+  re-applies it idempotently at the boundary. Payload hashing is
+  canonical-JSON SHA-256 (key order never matters). The boundary guard is the
+  first test: `ah/core`, `ah/gen`, `ah/port` never import the artifact layer.
+  13 tests.
 - **WP3.11 — the 2022 end-to-end reproduction: G1 completion, and the honest
   answer is FAIL** (Step 3; `G1-EVIDENCE.md`). Observed 2022–23 history through
   the full chain, scored by `ah/eval/episode2022.py` against the criteria sealed
