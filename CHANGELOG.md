@@ -7,6 +7,16 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.8 — the pension twin** (Step 3). `ah/port/twin.py`: parameterized DB
+  liability profile (v1-simple, stated; member-level projection is a later named
+  refinement), funding ratio, rate/inflation shocks consuming the frozen WP2R.6
+  hedging/collateral contract. **Actuarial directions and magnitudes pinned by
+  test** (|ΔPV|/PV ≈ duration×Δy; ~19y scheme duration). **The gilt mechanic
+  end-to-end**: a 250bp shock exhausts collateral headroom and force-unwinds the
+  hedge at the worst moment — logged, never silent; an under-hedged plan's
+  funding volatility is liability-dominated (3×+, tested). **The hold-course twin
+  takes the crisis state only to ignore it** — §5.1's cost-of-flinching
+  counterfactual, explicit in the signature. 8 tests.
 - **WP3.7 — the portfolio engine** (Step 3). `ah/port/engine.py`: the §8
   waterfall in order (distributions in → calls out → spending → shortfall
   resolution: liquid pro-rata, then forced secondary at the 0.81-NAV public
