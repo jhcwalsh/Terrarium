@@ -31,15 +31,27 @@ class TestDraftDocument:
         b = g3seal.seal_g3(sealed_at="2099-01-01T00:00:00", dry_run=True)
         assert a == b  # sealed_at is recorded, never hashed — the G2 convention
 
-    def test_mint_refuses_while_unsealed(self):
-        """The W11 review gate, mechanical: flipping `sealed` is the owner's act."""
+    def test_mint_and_verify_refuse_while_unsealed(self, tmp_path, monkeypatch):
+        """The W11 review gate, mechanical: flipping `sealed` is the owner's act.
+        Pinned on a draft COPY (the real document sealed on 2026-08-01), so the
+        refusal behavior stays tested after the mint, not only before it."""
+        draft = tmp_path / "pre-registration-g3.yaml"
+        text = g3seal.G3_PREREG_PATH.read_text("utf-8").replace(
+            "sealed: true", "sealed: false", 1
+        )
+        draft.write_text(text, encoding="utf-8")
+        shutil.copy(ROOT / "factors.yaml", tmp_path / "factors.yaml")
+        monkeypatch.setattr(g3seal, "G3_PREREG_PATH", draft)
+        monkeypatch.setattr(g3seal, "G3_LOCK_PATH", tmp_path / "pre-registration-g3.lock")
         with pytest.raises(g3seal.G3SealError, match="W11"):
             g3seal.seal_g3(sealed_at=SEALED_AT)
-        assert not g3seal.G3_LOCK_PATH.exists()
-
-    def test_verify_refuses_while_unsealed(self):
+        assert not (tmp_path / "pre-registration-g3.lock").exists()
         with pytest.raises(g3seal.G3SealError, match="not sealed"):
             g3seal.verify_g3()
+
+    def test_the_real_document_is_sealed_and_verifies(self):
+        """Post-mint (2026-08-01): the lock exists and every sealed byte matches."""
+        assert g3seal.verify_g3().startswith("sha256:")
 
     def test_document_and_judged_code_agree_on_the_sleeve_set(self):
         doc = yaml.safe_load(g3seal.G3_PREREG_PATH.read_text("utf-8"))

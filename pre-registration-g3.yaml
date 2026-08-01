@@ -14,7 +14,7 @@
 # draft and binds nothing.
 
 schema_version: "1.0"
-sealed: false
+sealed: true
 prepared: 2026-08-01
 campaign_vintage_id: "2026-08-01.2"
 taxonomy_version: taxonomy-v1.1

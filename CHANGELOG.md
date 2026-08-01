@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **wp3-00 — G3-pre SEALED** (`pre-registration-g3.lock`, `sha256:d21910da5914…`,
+  13 files; owner-approved 2026-08-01; the mint mechanically refused until the
+  owner flipped the flag). Step 3's rules frozen **before any of the code they
+  judge exists**: per-modeled-sleeve tail thresholds for the 7 HF sleeves
+  (measured from de-smoothed train+val history, PM sealed as structurally
+  unavailable with delivery as the trigger), the 2022 episode-reproduction
+  criteria (measured −24.8% public drawdown anchor; P-A drought depth; the
+  0.81 NAV secondary anchor; NaN = fail everywhere), and the tier-0-beats rule.
+  Judged code: `ah/eval/sleevetails.py` + `ah/eval/g3seal.py`, both inside the
+  lock (the boundary guard's first run caught `g3seal.py` undeclared — RFR-83's
+  class, fixed before minting). The guard now binds both locks on every suite
+  run. Review basis recorded in the register (`S3-G3PRE-SEAL`), including that
+  W11 attendance is not evidenced. **WP3.2 estimation and cashflow code are now
+  unblocked** — and judged by rules older than themselves.
 - **WP2R.9 — Step 2R closes: full-stack regression under the frozen contracts;
   tag `v0.3.0-contracts`** (`CONSOLIDATION-EVIDENCE.md`). G0 CLI end-to-end on a
   migrated v1.2 preset (**replay MATCH**), Step-1 layer green with the first real
