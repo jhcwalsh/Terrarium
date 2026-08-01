@@ -1206,3 +1206,32 @@ amendments:
     preserved as a genuine test returned its genuine answer. Nothing in the sealed
     criteria, thresholds or gate rule moved.'
   type: protocol_change
+- amendment_id: AM-2026-08-02-002
+  date: '2026-08-02'
+  payload:
+    g4pre_freeze:
+      authoring_spec: Instructions/ARTIFACT-AUTHORING.md
+      authoring_spec_sha256: sha256:ef5184489920e9901298682745c68eae0b0ab7ec713dd1306b7978d8d8b9df3a
+      blocking_rules: G1,G2,G3,G4,G5,G8 block; G6 advisory in v1; G7 blocks next chapter;
+        G9 blocks publication
+      first_pass_threshold: 0.95
+      regression_membership_rule: '~30 payloads: {bull,crash,gate,comp-gap,quiet}
+        x {entity kinds, house pair}; concrete set + hashes frozen at wp4-05 creation'
+      retry_policy: 2 retries then Tier-1 templated fallback
+  post_hoc: false
+  rationale: 'G4-PRE FREEZE (kickoff decision D-K4-3, owner-ratified 2026-08-01):
+    the Tier-2 authoring gate''s judging terms freeze BEFORE any prompt exists or
+    is tuned -- the same thresholds-before-tuning discipline as G2/G3-pre, one entry
+    instead of a lock because the judged surface is a vendored specification, not
+    estimated code. Frozen here: (1) the consistency-gate rules G1-G9 exactly as vendored
+    in Instructions/ARTIFACT-AUTHORING.md v1.0-r (hash in payload), with G1-G5 and
+    G8 blocking, G6 advisory in v1, two retries then Tier-1 fallback; (2) the ship
+    threshold >=95% first-pass gate rate on the frozen regression set; (3) the regression-set
+    membership rule: ~30 payloads spanning {bull, crash, gate-event, big-comp-gap,
+    quiet} x {entity kinds, the research-house pair}, the concrete set frozen with
+    per-payload hashes in the commit that creates it (wp4-05) BEFORE any prompt version
+    ships. POST_HOC FALSE: no Tier-2 prompt, author run, or gate result exists anywhere
+    in the repo at filing. The authoring spec is reconstructed text (v1.0-r); the
+    owner''s ratification stands as confirmation it is workable, and any blocking-rule
+    ambiguity found later halts and asks rather than interpreting (KICKOFF-STEP4 s5).'
+  type: protocol_change
