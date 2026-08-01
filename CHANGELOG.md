@@ -7,6 +7,18 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.1 — the runtime state objects** (`ah/port/`: cohort, sleeves, portfolio —
+  Step 3). Liquidity-spine v0.2 §3 state + §4 recursions as pure objects (no I/O,
+  no RNG, no clock; linkage responses injected as floats, Phase-A subset = 1.0).
+  Every object **round-trips through the frozen v1.0 contracts and re-validates on
+  serialize** — a state that can't serialize is a bug at mutation time. The
+  denominator effect is first-class: coverage and private weight on **both bases**,
+  plus `coverage_liquid` (P-B's binding-ratio caveat). Recall **unwinds paid-in**
+  (stated LP convention keeping `paid_in <= committed` for the cohort's whole
+  life); the evergreen queue ages with no gate declared; forced sales are a logged
+  event list awaiting WP3.7's waterfall. 26 tests incl. a 15-year invariant sweep
+  under wild returns; `ah.port` at 96% coverage (G3 floor 85%); ruff + pyright
+  (full strictness — `port/` is not in the relaxed pyright environments) clean.
 - **wp3-00 — G3-pre SEALED** (`pre-registration-g3.lock`, `sha256:d21910da5914…`,
   13 files; owner-approved 2026-08-01; the mint mechanically refused until the
   owner flipped the flag). Step 3's rules frozen **before any of the code they
