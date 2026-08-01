@@ -1,0 +1,35 @@
+{
+  "state_version": "1.0.0",
+  "vehicle_type": "evergreen",
+  "identity": {
+    "sleeve_id": "pm_re_core",
+    "n_funds": 1,
+    "fund_name": null
+  },
+  "value": {
+    "nav_true": 25.0,
+    "nav_reported": 25.6
+  },
+  "terms": {
+    "redemption_cap_pct_per_period": 0.05,
+    "notice_days": 90,
+    "queue_policy": "pro_rata"
+  },
+  "queue": {
+    "pending_redemption_amount": 3.2,
+    "queue_age_periods": 2.0,
+    "fulfilled_pct_history": [1.0, 1.0, 0.6, 0.35]
+  },
+  "liquidity": {
+    "realizable_this_period": 1.25,
+    "expected_time_to_full_exit_periods": 6.5
+  },
+  "flows": {
+    "subscriptions": 0.0,
+    "redemptions_requested": 1.4,
+    "redemptions_fulfilled": 0.55,
+    "return_true": -0.021,
+    "return_reported": 0.002,
+    "income_distributed": 0.22
+  }
+}

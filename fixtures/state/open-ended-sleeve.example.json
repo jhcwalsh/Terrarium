@@ -1,0 +1,37 @@
+{
+  "state_version": "1.0.0",
+  "vehicle_type": "open_ended",
+  "identity": {
+    "sleeve_id": "hf_macro",
+    "n_funds": 6,
+    "fund_name": null
+  },
+  "value": {
+    "nav_true": 54.2,
+    "nav_reported": 54.0
+  },
+  "terms": {
+    "notice_days": 60,
+    "lockup_remaining_months": 0.0,
+    "gate_pct": 0.25,
+    "redemption_frequency": "quarterly",
+    "side_pocket_share": 0.03
+  },
+  "liquidity": {
+    "realizable_30d": 12.0,
+    "realizable_90d": 38.5,
+    "realizable_180d": 52.6,
+    "gated_flag": false,
+    "gated_share": 0.0,
+    "queue_position": null
+  },
+  "flows": {
+    "subscriptions": 0.0,
+    "redemptions_requested": 2.0,
+    "redemptions_paid": 2.0,
+    "return_true": 0.012,
+    "return_reported": 0.011,
+    "fees": 0.09,
+    "performance_fee_crystallized": 0.0
+  }
+}

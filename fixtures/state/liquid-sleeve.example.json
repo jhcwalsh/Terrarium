@@ -1,0 +1,12 @@
+{
+  "state_version": "1.0.0",
+  "vehicle_type": "liquid",
+  "identity": {
+    "sleeve_id": "liquid_public_equity"
+  },
+  "value": 180.0,
+  "weight": 0.42,
+  "target_weight": 0.4,
+  "return_period": -0.034,
+  "transaction_cost_bps": 5.0
+}

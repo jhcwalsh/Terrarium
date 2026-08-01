@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.3 — the sleeve/vehicle state schema freeze (R3, R14)** (Step 2R).
+  `schemas/sleeve-vehicle-state-v1.0.schema.json` implements the spec's §3 with the
+  **three private vehicle types first-class** (closed-end cohort, open-ended sleeve,
+  evergreen vehicle — the queue block exists *only* on evergreen, pinned by a test)
+  plus the liquid funding sleeve, discriminated by `vehicle_type`. R14's
+  recycling/recallable state is explicit and required (`recallable_balance`,
+  `cumulative_recycled`); the granularity switch is exactly `n_funds` +
+  `dispersion_draw` (spec §5 — same object for sleeve, cohort, and hero-fund modes).
+  `ah/core/sleevestate.py` is the pydantic mirror with the WorldSpec dual-validation
+  pattern (jsonschema first), **strictly stricter on exactly two documented
+  cross-field invariants** JSON Schema cannot express (`paid_in <= committed`,
+  `recallable_balance <= cumulative_distributions`) — the agreement test asserts
+  both the agreement and the divergence set. Four hand-authored examples
+  (`fixtures/state/*.example.json`) round-trip bit-faithfully; example sleeve ids
+  resolve against the WP2R.1 taxonomy. 32 tests; the new core module is at 100%
+  branch coverage inside the `ah.core` gate.
 - **WP2R.1 — taxonomy freeze and the Albourne mapping (R1, R13)** (Step 2R).
   `taxonomy/sleeves.yaml` — the platform's own `sleeve_id` namespace, 61 sleeves over
   17 groups from the sleeve-vehicle-state spec's full candidate breadth, with
