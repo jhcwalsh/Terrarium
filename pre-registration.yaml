@@ -2991,6 +2991,28 @@ structurally_unavailable_statistics:
 # the two decisions WP2.1b deferred to WP2.3 by name.
 # --------------------------------------------------------------------------- #
 seal_scope:
+  ablation_py: SEALED
+  ablation_py_reason: >-
+    ADDED BY AMENDMENT AM-2026-07-31-001, AND THIS ENTRY RECORDS A HOLE IN THE SEAL
+    RATHER THAN A HOLE IN THE ACCOUNTING OF IT -- the distinction the claims-sweep
+    addition (_pooling.py, negative_controls.py) was careful to draw in the other
+    direction. Those two were hashed the whole time and merely unnamed; src/ah/eval/
+    ablation.py was NOT HASHED AT ALL between 2026-07-29 and 2026-07-31. It is judging
+    code in the strictest sense: it implements comparison_set, clause_i, clause_ii, the
+    pooled inequality of multi_seed_decision_rule.beats_definition, enforce_rows,
+    memorization_enforce, constraint_violations and the criterion_bearing refusal -- i.e.
+    every arithmetic the G2 verdict is computed from, and the executable form of the very
+    clauses this document seals in words. It sits outside src/ah/eval/metrics/, so
+    _METRIC_SUITE_NAMES does not reach it, which is precisely the case ah.eval.prereg's
+    module docstring says joins the seal ONLY by being named in
+    _REQUIRED_JUDGED_SOURCES, "in the same commit that adds the module" -- the rule
+    battery.py and panel.py were added under, and the rule WP2.10 did not follow.
+    THE EXPOSURE WAS A POSSIBILITY, NOT AN EVENT: exactly one commit (29fa613) has ever
+    touched the file and the diff from it to this re-seal is empty, so the WP2.10 grid
+    and ABLATION.md rest on the same bytes now sealed. That is verifiable by any reader
+    from git alone. It is also the wrong kind of assurance -- evidence after the fact
+    where the seal exists to give design before it -- which is why this is recorded as a
+    defect (governance/retrofit-register.md RFR-82) and not as routine housekeeping.
   derive_py: SEALED
   derive_py_reason: >-
     governance/retrofit-register.md RFR-10, first half. src/ah/data/derive.py is ON THE

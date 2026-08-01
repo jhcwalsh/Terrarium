@@ -781,3 +781,95 @@ amendments:
     (AM-2026-07-26-006/-008) one level down, and it is recorded in governance/retrofit-register.md
     RFR-76 as UNOWNED.'
   type: correction
+- amendment_id: AM-2026-07-31-001
+  date: '2026-07-31'
+  payload:
+    code_changes: 'ONE, inside the seal, and it is the fix itself: src/ah/eval/prereg.py''s
+      _REQUIRED_JUDGED_SOURCES gains ("src","ah","eval","ablation.py") with the reasoning
+      inline. NO judging arithmetic changed anywhere. ablation.py itself is NOT edited by
+      this amendment -- it is sealed exactly as WP2.10 wrote it.'
+    evidence:
+      created: 29fa613, WP2.10, 2026-07-29. One commit has ever touched the file.
+      unchanged_across_the_window: '`git diff 29fa613 HEAD -- src/ah/eval/ablation.py`
+        is EMPTY. (A raw byte hash appears to differ only because the working tree is
+        CRLF and the blob is LF; normalized, both are sha256 81834b0c366cb2d6...) So the
+        WP2.10 grid and ABLATION.md rest on the same bytes this amendment seals.'
+      what_it_implements: comparison_set, clause_i, clause_ii, pooled_difference (the
+        exact inequality in beats_definition), enforce_rows, memorization_enforce,
+        constraint_violations, criterion_bearing, restricted_elicitability -- every
+        arithmetic the G2 verdict is computed from.
+    hashed_file_set: 'CHANGED IN MEMBERSHIP: 32 -> 33 files. Added
+      src/ah/eval/ablation.py. Nothing removed. This is the first amendment in the
+      project to widen the hashed set.'
+    new_lock_digest: sha256:f10553a4b74242f2b8c77954f923c06de979a8adb0851adf8f8edecf940b15ec
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, selection weight, decision or rule text changed
+      value. No verdict has been computed at any point before or by this amendment.
+    sealed_at: '2026-07-31'
+    superseded_lock_digest: sha256:e5a669cf156a5e9f27be0a48f6ec4e7c7737feb60fc7fbd4a3c4fa08b765c275
+    the_defect: src/ah/eval/ablation.py -- the executable form of the very clauses this
+      document seals in words -- was created outside src/ah/eval/metrics/ and was never
+      added to _REQUIRED_JUDGED_SOURCES, so it was NOT HASHED between 2026-07-29 and
+      2026-07-31.
+    timing: Found at WP2.11 while reading the sealed set to implement g2.py, BEFORE any
+      verdict was computed and BEFORE the holdout was touched. Fixed as its own dated
+      amendment rather than folded into the later g2.py implementation commit,
+      deliberately -- a hole in the seal should not ride invisibly on a code change.
+  post_hoc: true
+  rationale: 'A HOLE IN THE SEAL ITSELF, NOT IN THE ACCOUNTING OF IT -- and that
+    distinction is the whole content of this entry. AM-2026-07-26-006/-008 (the claims
+    sweep) added _pooling.py and negative_controls.py to the seal_scope ACCOUNTING and
+    could say truthfully that "the SEAL never had a hole; the accounting of it did":
+    both files were in _REQUIRED_JUDGED_SOURCES and in the lock the entire time, merely
+    unnamed in the prose that claims to enumerate the sealed set. THAT IS NOT THE CASE
+    HERE. src/ah/eval/ablation.py was not in _REQUIRED_JUDGED_SOURCES, not in the lock,
+    and not hashed. For two days the code that computes the G2 verdict could have been
+    edited with no lock violation and no test failure.
+
+
+    THE RULE IT BROKE IS THIS PROJECT''S OWN, STATED AND WITH PRECEDENT. ah.eval.prereg''s
+    module docstring says a judging module created outside src/ah/eval/metrics/ is not
+    reached by _METRIC_SUITE_NAMES and "joins the seal only by being added to
+    _METRIC_SUITE_NAMES / _REQUIRED_JUDGED_SOURCES ... in the same PR that adds the
+    module". pre-registration.yaml''s own header applies it by name to battery.py and
+    panel.py: "judging code created outside src/ah/eval/metrics/, joined to this list in
+    the same commit that added them". WP2.10 added ablation.py and did not do it. WP2.10''s
+    commit message says "No sealed judged source touched, zero amendments" -- TRUE AS
+    WRITTEN, and it is the wrong test: the omission was not touching a sealed source but
+    CREATING one and leaving it unsealed.
+
+
+    WHAT SAVES THE RESULTS, AND WHY IT IS THE WRONG KIND OF ASSURANCE. Exactly one commit
+    has ever touched the file, and the diff from it to this re-seal is empty, so every
+    number in ABLATION.md rests on the bytes now hashed. Any reader can verify that from
+    git alone. But it is evidence AFTER the fact where the seal exists to provide design
+    BEFORE it: "we checked and nobody changed it" is a different and weaker claim than
+    "it could not have been changed undetected", and the entire purpose of hashing the
+    judging code is to be able to make the second claim. That is why this is recorded as
+    a defect (governance/retrofit-register.md RFR-82) rather than as housekeeping.
+
+
+    post_hoc IS TRUE. Results existed when this was found -- the WP2.10 grid, both severe
+    arms, and the head-to-head. No verdict had been computed and the holdout had not been
+    touched, and this amendment changes no arithmetic that could move one; but the flag
+    records the state of the world, not the size of the change, and the world had results
+    in it.
+
+
+    WHY IT IS ITS OWN AMENDMENT. Implementing multi_seed_decision_rule in g2.py forces a
+    re-seal regardless, and this could have ridden along inside it. It does not, because a
+    hole in the seal is a governance defect that a reader must be able to find as such --
+    not a line in the diff of a commit whose subject is "implement the decision rule".
+
+
+    WHY type: correction AND NOT protocol_change, since the hashed set does widen. The
+    sealed protocol ALREADY REQUIRED this file to be hashed: ah.eval.prereg''s docstring
+    and pre-registration.yaml''s header both state that judging code created outside
+    src/ah/eval/metrics/ joins _REQUIRED_JUDGED_SOURCES in the commit that adds it. This
+    amendment brings the ARTIFACT into line with the RULE; it does not move the rule. A
+    protocol_change would be the honest label if the seal''s scope were being redefined,
+    and it is not -- what changes is that the scope is now actually applied to a file it
+    always covered in principle. Recorded because the alternative -- inventing a fifth
+    amendment type to describe this one event -- would have meant editing the sealed
+    AMENDMENT_TYPES vocabulary for the convenience of the party filing the amendment.'
+  type: correction

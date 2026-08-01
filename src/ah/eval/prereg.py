@@ -264,6 +264,25 @@ _REQUIRED_JUDGED_SOURCES = (
     # detects badness at all. A version of that record produced by unsealed code would
     # be exactly the "seal appears stronger than it is" failure this list prevents.
     ("src", "ah", "eval", "negative_controls.py"),
+    # WP2.11, closing governance/retrofit-register.md RFR-82 -- and this entry records a
+    # HOLE IN THE SEAL, not a hole in the accounting of it. `ablation.py` was created by
+    # WP2.10 (29fa613, 2026-07-29) and is judging code in the strictest sense: it
+    # implements `comparison_set`, `clause_i`, `clause_ii`, the pooled inequality of
+    # `multi_seed_decision_rule.beats_definition`, `enforce_rows`, `memorization_enforce`,
+    # `constraint_violations` and the `criterion_bearing` refusal -- i.e. every arithmetic
+    # the G2 verdict is computed from. It sits OUTSIDE `src/ah/eval/metrics/`, so
+    # `_METRIC_SUITE_NAMES` does not reach it, which is exactly the case the module
+    # docstring above says joins the seal only by being named here, "in the same commit
+    # that adds the module". That did not happen: it went unsealed from 2026-07-29 to
+    # 2026-07-31, a window in which the code computing the verdict could have been edited
+    # with no lock violation. Distinguish this from the CLAIMS-SWEEP ADDITION above, which
+    # could truthfully say the seal never had a hole and only its accounting did --
+    # `_pooling.py` and `negative_controls.py` were hashed the whole time. This file was
+    # not. It was verified unchanged across the window (one commit ever touched it; the
+    # diff from that commit to the re-seal is empty), so the exposure was a POSSIBILITY
+    # and not an event -- but the difference between those two is evidence, not design,
+    # and the seal is supposed to make it design.
+    ("src", "ah", "eval", "ablation.py"),
     # WP2.3, closing governance/retrofit-register.md RFR-10's first half. `derive.py`
     # is ON THE READ PATH: `ah.eval.panel._DERIVED_EXPRS` calls `derive.add`,
     # `derive.difference` and `derive.funding_stress` at panel-read time for

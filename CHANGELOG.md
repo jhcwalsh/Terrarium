@@ -7,6 +7,62 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **`AM-2026-07-31-001` — A HOLE IN THE SEAL, not in the accounting of it, and the first
+  in this project. `pre-registration.lock` is now
+  `sha256:f10553a4b74242f2b8c77954f923c06de979a8adb0851adf8f8edecf940b15ec`**
+  (supersedes `sha256:e5a669cf156a…`; **32 → 33 hashed files**, `src/ah/eval/ablation.py`
+  added, nothing removed — the first amendment in the project to widen the hashed set).
+  Not one threshold, band, gate, floor, split, size, severity or rule text moved, and no
+  judging arithmetic changed.
+
+  **The defect.** `src/ah/eval/ablation.py` implements `comparison_set`, `clause_i`,
+  `clause_ii`, the pooled inequality of `beats_definition`, `enforce_rows`,
+  `memorization_enforce`, `constraint_violations` and the `criterion_bearing` refusal —
+  every arithmetic the G2 verdict is computed from, and the executable form of the
+  clauses the sealed document states in words. Created by WP2.10 (`29fa613`, 2026-07-29)
+  **outside** `src/ah/eval/metrics/`, where `_METRIC_SUITE_NAMES` cannot reach it, and
+  never added to `_REQUIRED_JUDGED_SOURCES`. **It was not hashed at all from 2026-07-29
+  to 2026-07-31** — the code computing the verdict was editable with no lock violation
+  and no failing test.
+
+  **Why this is a different category from the claims sweep.**
+  `AM-2026-07-26-006/-008` added `_pooling.py` and `negative_controls.py` to the sealed
+  *accounting* and could say truthfully that "the SEAL never had a hole; the accounting
+  of it did" — both were hashed throughout, merely unnamed in the prose. **This file was
+  not hashed.**
+
+  **The rule it broke is this project's own, stated twice and with precedent.**
+  `ah.eval.prereg`'s docstring: such a module "joins the seal only by being added to
+  `_METRIC_SUITE_NAMES` / `_REQUIRED_JUDGED_SOURCES` … in the same PR that adds the
+  module". The sealed header applies it by name to `battery.py` and `panel.py`, "joined
+  to this list in the same commit that added them". WP2.10's commit says "No sealed
+  judged source touched, zero amendments" — **true as written, and the wrong test**: the
+  omission was not *touching* a sealed source but *creating* one and leaving it unsealed.
+
+  **The results survive, by the wrong kind of assurance.** Exactly one commit has ever
+  touched the file and the diff from it to the re-seal is empty, so every number in
+  `ABLATION.md` rests on the bytes now hashed — verifiable from git alone. But that is
+  evidence *after* the fact where the seal exists to give design *before* it. "We checked
+  and nobody changed it" is a weaker claim than "it could not have been changed
+  undetected", and being able to make the second claim is the entire point of hashing the
+  judging code.
+
+  **Filed as `correction`, not `protocol_change`**, because the sealed protocol already
+  required this file to be hashed — the amendment brings the artifact into line with the
+  rule rather than moving the rule. Inventing a fifth amendment type would have meant
+  editing the sealed `AMENDMENT_TYPES` vocabulary for the filer's own convenience.
+  Deliberately **not** folded into the `g2.py` implementation commit that forces a
+  re-seal anyway: a hole in the seal must be findable as its own governance record.
+
+  **`RFR-82` records the class, and it is the fifth of its family in three days** —
+  RFR-76 (sealed gloss versus sealed field), RFR-77 (protocol with no criterion), RFR-78
+  (sealed prose naming an identifier that does not resolve), RFR-81 (sealed prose
+  misdescribing the data layer), and this. All five share one shape: **the seal asserts
+  or assumes something nothing mechanically verifies.** This one's fix is the cheapest
+  and closes a hole rather than a mis-description — an import-graph test that every
+  module reachable from the judging entry points is sealed, suite-registered, or on an
+  explicit excluded list with a stated reason. It would have failed the moment WP2.10
+  committed. Unowned.
 - **WP2.11 governance step — four decisions taken and three deferrals assigned a
   destination, ALL of them recorded BEFORE the one-shot holdout is touched and before
   `ah/eval/g2.py` computes any verdict. No sealed file changed, no re-seal, no
