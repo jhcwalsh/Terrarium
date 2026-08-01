@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.6 — vehicle mechanics** (Step 3). `ah/port/vehicles.py`: notice-period
+  maturation, gate proration with rolled excess, side-pocket withholding and
+  resolution, and `realizable_by_horizon` — the 30/90/180-day arithmetic of the
+  terms, not the stated NAV (lockups zero it; gates cap each dealing date).
+  **The 2022-23 evergreen mechanic emerges from rules**: stressed demand + the
+  cap → the queue ages and fulfilment collapses with *no gate flag in the state
+  to declare* — the lock-in is emergent, which is the point. ALB-F base rates
+  never delivered: the stress bands are authored (kind C) against the public
+  episode record and say so. 7 tests.
 - **WP3.4 — tier 1, the market-sensitive cashflow engine** (Step 3;
   `linkage_version: tier1-public-0.1`). `ah/port/cashflow_tier1.py`: the same
   cohort recursion as tier 0 with the linkage ON — **the one-model identity is a
