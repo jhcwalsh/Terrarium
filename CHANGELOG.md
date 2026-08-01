@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.7 — WorldSpec v1.2: the resolved generator namespace** (Step 2R).
+  `schemas/worldspec-v1.2.schema.json` becomes the active contract (v1.0 stays
+  vendored, untouched): `generator_id` now carries the real registry ids —
+  **`hier-flow-v1`, the G2-promoted default**, `bootstrap-v1`,
+  `joinery-bootstrap-v0`, `hier-diffusion-v1`, `toy-v0` — while the three legacy
+  names stay as deprecated members so the **sealed 1.0.x fixture worlds revalidate
+  and run untouched** (`bootstrap-stratified`→`bootstrap-v1` and, new,
+  `conditional-diffusion`→`hier-diffusion-v1` via registry aliases;
+  `signature-mmd` stays nameable-but-unrunnable, matching its RESERVED card).
+  `spec_version` widens to `1.(0|2).x`; `engine_defaults.taxonomy_version`
+  (optional) references the WP2R.1 sleeve namespace. Presets regenerated at 1.2.0
+  **by their own script** (one line per file). "V-rules unchanged" is a checked
+  fact: a test strips the three declared changes and asserts v1.2 == v1.0
+  byte-for-byte at the JSON level. The plan's "finalized `temporal_delivery`
+  block" turned out to be defined **nowhere** — deferred to Step 4 as RFR-87
+  rather than authored from a single clause of a later plan. 22 tests.
 - **WP2R.5 — frozen-vintage reproduction and the rolling-refresh handoff** (Step 2R).
   - **G2's numbers reproduce bit-identically from the frozen vintage.** The
     verdict-bearing grid subset (promoted `hier-flow-v1` × 3 seeds *retrained from

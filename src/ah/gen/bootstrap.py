@@ -882,13 +882,15 @@ def bootstrap_v1_factory() -> BootstrapV1:
 # schema, and then fails `resolve_for_world` with UnknownGeneratorError. Both ids
 # resolve to the SAME factory, so an ensemble is identical whichever name reached it.
 #
-# STEP2R-CONSOLIDATION-PLAN Sec.WP2R.6 bumps the schema to the resolved generator_id
-# namespace ("including whichever system G2 promoted -- or `bootstrap-v1` if the
-# benchmark shipped"), which is where the two names get reconciled. Until then this
-# alias is the whole fix, and it needs no amendment: `ah/gen/registry.py` and this
-# module are outside the pre-registration seal (no `gen/` file is a judged source --
-# `gen/base.py` is excluded by name as "the defendant whose output is judged, not the
-# judge itself").
+# RECONCILED at WP2R.7 (the plan scoped this under §WP2R.7, the WorldSpec bump —
+# an earlier revision of this comment said §WP2R.6, an off-by-one): WorldSpec v1.2's
+# enum carries the resolved namespace (`bootstrap-v1` first-class, `hier-flow-v1`
+# the promoted default) AND keeps `bootstrap-stratified` as a deprecated member,
+# because the sealed 1.0.x fixture worlds carry it and may not be edited. This alias
+# therefore stays: it is what makes those sealed worlds RUN, not merely validate.
+# It needs no amendment: `ah/gen/registry.py` and this module are outside the
+# pre-registration seal (no `gen/` file is a judged source -- `gen/base.py` is
+# excluded by name as "the defendant whose output is judged, not the judge itself").
 SCHEMA_GENERATOR_ID = "bootstrap-stratified"
 
 registry.register(GENERATOR_ID, bootstrap_v1_factory)

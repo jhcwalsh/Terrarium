@@ -48,7 +48,22 @@ RegimeName = Literal[
 Status = Literal["draft", "validated", "approved", "archived"]
 SourceKind = Literal["compiler", "preset", "manual", "derived"]
 ParameterVintage = Literal["historical_average", "current", "custom"]
-GeneratorId = Literal["toy-v0", "bootstrap-stratified", "signature-mmd", "conditional-diffusion"]
+# WP2R.7 (WorldSpec v1.2): the resolved generator namespace. `hier-flow-v1` is the
+# G2-promoted default (S2-DEFAULT-GENERATOR). The last three are DEPRECATED legacy
+# names kept so sealed 1.0.x worlds revalidate: `bootstrap-stratified` and
+# `conditional-diffusion` resolve through registry aliases to `bootstrap-v1` and
+# `hier-diffusion-v1`; `signature-mmd` names the RESERVED signature-variant and
+# raises UnknownGeneratorError until something registers under it.
+GeneratorId = Literal[
+    "toy-v0",
+    "bootstrap-v1",
+    "joinery-bootstrap-v0",
+    "hier-diffusion-v1",
+    "hier-flow-v1",
+    "bootstrap-stratified",
+    "signature-mmd",
+    "conditional-diffusion",
+]
 DesmoothingMethod = Literal["geltner_ar1", "glm_ma", "regime_glm"]
 PathShape = Literal["linear", "front_loaded", "back_loaded", "spike_and_settle"]
 EquityBondRegime = Literal["negative", "positive", "inflation_conditional"]
@@ -261,6 +276,10 @@ class EngineDefaults(_Base):
     desmoothing_method: DesmoothingMethod = "glm_ma"
     n_paths: int = Field(ge=100, le=100000)  # required (no default; schema requires it)
     base_seed: int | None = None
+    # WP2R.7: the sleeve-namespace release structural references and Step-3 mappings
+    # resolve against (taxonomy/sleeves.yaml `version`). Optional: 1.0.x worlds
+    # predate the namespace and revalidate unchanged.
+    taxonomy_version: str | None = Field(default=None, pattern=r"^taxonomy-v[0-9]+\.[0-9]+$")
 
 
 # --------------------------------------------------------------------------- #
@@ -269,7 +288,7 @@ class EngineDefaults(_Base):
 
 
 class WorldSpec(_Base):
-    spec_version: str = Field(pattern=r"^1\.0\.[0-9]+$")
+    spec_version: str = Field(pattern=r"^1\.(0|2)\.[0-9]+$")
     world_id: str  # format: uuid
     status: Status
     provenance: Provenance
