@@ -164,6 +164,18 @@ seal_scope:
     # hole wearing a lock). Caught by the G3 boundary guard's FIRST run.
     - src/ah/eval/g3seal.py
     - src/ah/eval/prereg.py
+    # AM-2026-08-01-001 (planned arrival per seal_scope.note): WP3.2's mapping
+    # estimator and its frozen artifact join the lock in the commit that
+    # creates them — post_hoc FALSE, no Step 3 result existed.
+    # AM-2026-08-01-002 (correction, minutes later): -001 also listed the
+    # runtime applier (src/ah/port/mapping.py); the boundary guard rejected it
+    # within minutes — the applier is the DEFENDANT, not the judge (the same
+    # argument that keeps generators outside the G2 lock), and is pinned by
+    # mapping_version lineage instead. Sealing the estimate freezes the
+    # judgment inputs; sealing the engine would blur the boundary the guards
+    # exist to keep sharp.
+    - scripts/estimate_sleeve_mappings.py
+    - mappings/sleeve-mappings-v1.0.yaml
     - src/ah/eval/reference.py
     - src/ah/eval/metrics/tails.py
     - src/ah/eval/metrics/_pooling.py

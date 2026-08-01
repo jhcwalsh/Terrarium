@@ -7,6 +7,24 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.2 — factor → sleeve mappings** (Step 3). `scripts/estimate_sleeve_mappings.py`
+  estimates DN-5 §3.2's pattern on the six regression sleeves' **de-smoothed**
+  composites (asserted byte-equal to the sealed G3 reference), train+validation
+  only, with sign constraints + shrinkage toward the DN-5 priors (SM-4) via bounded
+  ridge; structural zeros never enter the solver. **`hf_cta` is a rule, not a
+  regression** (DN-5 §3.4): 12-month TSM overlay on generated paths, vol-targeted,
+  RNG-free, warm-up flat. Frozen artifact `mappings/sleeve-mappings-v1.0.yaml`
+  (**`map-2026.08`** — WorldSpec's `mapping_version` has its first real value);
+  runtime applier `ah/port/mapping.py` (correlated residuals per the platform seed
+  rule). **The D1 exhibit delivers**: de-smoothed equity betas 30–80% above
+  smoothed (event 0.32→0.42, multi 0.12→0.22). HY/commodities loadings recorded as
+  **structurally unestimable** (the sealed missing_factors), never silent zeros.
+  **`AM-2026-08-01-001` — the project's first pre-hoc amendment**: estimator,
+  artifact and applier joined the G3 lock (`sha256:8f41bafb…`) exactly as the
+  sealed document announced, before any result existed. Register **D4 CLOSED**:
+  constant betas per DN-5 §4.3; regime variation reaches sleeves through the
+  generator's factors, not the loadings. `MAPPINGS.md` carries fit/OOS/regime
+  diagnostics (macro's R²=0.05 is DN-5's own prediction, reported not hidden).
 - **WP3.1 — the runtime state objects** (`ah/port/`: cohort, sleeves, portfolio —
   Step 3). Liquidity-spine v0.2 §3 state + §4 recursions as pure objects (no I/O,
   no RNG, no clock; linkage responses injected as floats, Phase-A subset = 1.0).
