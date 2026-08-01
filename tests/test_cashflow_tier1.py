@@ -12,6 +12,7 @@ from __future__ import annotations
 import inspect
 import json
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 import pytest
@@ -120,7 +121,7 @@ class TestOneModel:
 
 
 class TestStructuralMechanics:
-    def _states(self, quarters: int):
+    def _states(self, quarters: int) -> dict[str, Any]:
         return dict(
             drawdown_depth=np.zeros(quarters),
             spread_ratio=np.ones(quarters),
