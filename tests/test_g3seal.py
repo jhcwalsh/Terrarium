@@ -1,0 +1,142 @@
+"""wp3-00 — the G3-pre seal machinery and the draft document's shape.
+
+One sealed-sentence-per-test, G2 style: the mint refuses until the owner flips
+the flag after the W11 review; the document and the judged code agree on the
+sleeve set exactly; phantoms in the seal scope are errors; a sealed byte moved
+without an amendment is a verify failure.
+"""
+
+from __future__ import annotations
+
+import json
+import shutil
+from pathlib import Path
+
+import pytest
+import yaml
+
+from ah.eval import g3seal
+from ah.eval import sleevetails as st
+
+ROOT = Path(__file__).resolve().parents[1]
+SEALED_AT = "2026-08-01T00:00:00"
+
+
+class TestDraftDocument:
+    def test_structural_check_passes_on_the_real_document(self):
+        g3seal.structural_check(yaml.safe_load(g3seal.G3_PREREG_PATH.read_text("utf-8")))
+
+    def test_dry_run_digest_is_deterministic(self):
+        a = g3seal.seal_g3(sealed_at=SEALED_AT, dry_run=True)
+        b = g3seal.seal_g3(sealed_at="2099-01-01T00:00:00", dry_run=True)
+        assert a == b  # sealed_at is recorded, never hashed — the G2 convention
+
+    def test_mint_refuses_while_unsealed(self):
+        """The W11 review gate, mechanical: flipping `sealed` is the owner's act."""
+        with pytest.raises(g3seal.G3SealError, match="W11"):
+            g3seal.seal_g3(sealed_at=SEALED_AT)
+        assert not g3seal.G3_LOCK_PATH.exists()
+
+    def test_verify_refuses_while_unsealed(self):
+        with pytest.raises(g3seal.G3SealError, match="not sealed"):
+            g3seal.verify_g3()
+
+    def test_document_and_judged_code_agree_on_the_sleeve_set(self):
+        doc = yaml.safe_load(g3seal.G3_PREREG_PATH.read_text("utf-8"))
+        assert set(doc["sleeve_tail_thresholds"]) == set(st.hf_sleeve_members())
+
+    def test_every_seal_scope_entry_exists(self):
+        doc = yaml.safe_load(g3seal.G3_PREREG_PATH.read_text("utf-8"))
+        for rel in doc["seal_scope"]["hashed_files"]:
+            assert (ROOT / rel).exists(), f"seal_scope names phantom '{rel}'"
+        assert (ROOT / doc["provenance_script"]).exists()
+        assert (ROOT / "docs" / "data" / "secondaries.md").exists()  # cited source
+
+
+class TestShapeRefusals:
+    def _doc(self) -> dict:
+        return yaml.safe_load(g3seal.G3_PREREG_PATH.read_text("utf-8"))
+
+    def test_missing_sleeve_is_named(self):
+        doc = self._doc()
+        doc["sleeve_tail_thresholds"].pop("hf_cta")
+        with pytest.raises(g3seal.G3SealError, match="hf_cta"):
+            g3seal.structural_check(doc)
+
+    def test_severity_drift_is_named(self):
+        doc = self._doc()
+        doc["sleeve_tail_thresholds"]["hf_macro"]["var_95"]["severity"] = "report"
+        with pytest.raises(g3seal.G3SealError, match=r"hf_macro\.var_95"):
+            g3seal.structural_check(doc)
+
+    def test_membership_drift_is_named(self):
+        doc = self._doc()
+        doc["sleeve_tail_thresholds"]["hf_rv"]["members"] = ["albourne.hf_cb_arb_ret_m"]
+        with pytest.raises(g3seal.G3SealError, match="hf_rv"):
+            g3seal.structural_check(doc)
+
+    def test_missing_gate_rule_is_named(self):
+        doc = self._doc()
+        del doc["episode_2022_criteria"]["gate_rule"]
+        with pytest.raises(g3seal.G3SealError, match="gate_rule"):
+            g3seal.structural_check(doc)
+
+
+class TestMintAndTamper:
+    def test_mint_verify_tamper_cycle(self, tmp_path, monkeypatch):
+        """On tmp copies: flip sealed -> mint -> verify OK -> move one sealed
+        byte -> verify names the mismatch."""
+        prereg = tmp_path / "pre-registration-g3.yaml"
+        shutil.copy(g3seal.G3_PREREG_PATH, prereg)
+        # prereg.seal resolves factor_manifest beside the document
+        shutil.copy(ROOT / "factors.yaml", tmp_path / "factors.yaml")
+        text = prereg.read_text("utf-8").replace("sealed: false", "sealed: true", 1)
+        prereg.write_text(text, encoding="utf-8")
+        lock = tmp_path / "pre-registration-g3.lock"
+        monkeypatch.setattr(g3seal, "G3_PREREG_PATH", prereg)
+        monkeypatch.setattr(g3seal, "G3_LOCK_PATH", lock)
+
+        digest = g3seal.seal_g3(sealed_at=SEALED_AT)
+        assert lock.exists()
+        recorded = json.loads(lock.read_text("utf-8"))
+        assert recorded["digest"] == digest
+        assert g3seal.verify_g3() == digest
+
+        prereg.write_text(prereg.read_text("utf-8").replace("K = 4", "K = 5", 1), encoding="utf-8")
+        with pytest.raises(g3seal.G3SealError, match="mismatch"):
+            g3seal.verify_g3()
+
+
+class TestJudgedCode:
+    def test_judge_inside_and_outside_and_nan(self):
+        import numpy as np
+
+        rng = np.random.default_rng(7)
+        band = st.SleeveBand(
+            sleeve_id="hf_macro",
+            statistic="var_95",
+            severity="enforce",
+            point=0.03,
+            lo=0.02,
+            hi=0.05,
+            threshold_min=0.0,
+            threshold_max=0.10,
+        )
+        calm = rng.normal(0.005, 0.02, size=(8, 120))
+        report = st.judge_sleeve("hf_macro", calm, [band])
+        assert report["enforce_passed"] is True
+
+        wild = rng.normal(-0.05, 0.30, size=(8, 120))  # var far above max
+        report = st.judge_sleeve("hf_macro", wild, [band])
+        assert report["enforce_passed"] is False
+
+        with_nan = calm.copy()
+        with_nan[0, 0] = np.nan
+        report = st.judge_sleeve("hf_macro", with_nan, [band])
+        assert report["enforce_passed"] is False  # NaN is a fail, never a pass
+
+    def test_shapes_are_refused(self):
+        import numpy as np
+
+        with pytest.raises(st.SleeveTailsError, match="n_paths"):
+            st.judge_sleeve("hf_macro", np.zeros(120), [])

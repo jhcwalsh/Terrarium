@@ -157,3 +157,6 @@ experiments/
 !/artifacts/wp211/SEVERE-TEST-DIFFUSION.md
 !/artifacts/wp211/severe-test-diffusion.json
 !/artifacts/wp211/severe-grid-diffusion.json
+
+# wp3-00 scratch: regenerable measured fragment (embedded verbatim in pre-registration-g3.yaml)
+/g3-reference-measured.yaml

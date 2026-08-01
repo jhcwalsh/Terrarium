@@ -140,7 +140,7 @@ def _imports_of(path: Path, mod: str) -> set[str]:
     return found
 
 
-def judging_closure() -> dict[str, Path]:
+def judging_closure(entry_points: tuple[str, ...] = JUDGING_ENTRY_POINTS) -> dict[str, Path]:
     """Static import closure of the judging entry points, ``ah``-package only.
 
     ``ah.eval.battery`` loads its metric suites through ``import_module`` (a
@@ -149,7 +149,7 @@ def judging_closure() -> dict[str, Path]:
     judging code by construction.
     """
     seen: dict[str, Path] = {}
-    queue: list[str] = list(JUDGING_ENTRY_POINTS)
+    queue: list[str] = list(entry_points)
     while queue:
         mod = queue.pop()
         if mod in seen:
@@ -241,6 +241,49 @@ class TestJudgingImportClosure:
                 f"{rel} is a metric suite module (dynamically imported by "
                 "ah.eval.battery) and must be sealed"
             )
+
+
+class TestG3SealBoundary:
+    """The same closure guard, over the G3-pre surface (wp3-00) — binding from
+    the DRAFT onward, so the first G3 lock is minted with its boundary already
+    checked rather than guarded retroactively."""
+
+    G3_ENTRY_POINTS = ("ah.eval.sleevetails", "ah.eval.g3seal")
+
+    def test_g3_reachable_modules_are_declared_or_excluded(self):
+        declared = set(
+            yaml.safe_load((ROOT / "pre-registration-g3.yaml").read_text("utf-8"))["seal_scope"][
+                "hashed_files"
+            ]
+        )
+        g2_sealed = sealed_files()
+        unclassified = []
+        for mod, path in judging_closure(self.G3_ENTRY_POINTS).items():
+            rel = path.relative_to(ROOT).as_posix()
+            if rel in declared or rel in g2_sealed or rel in EXCLUDED_FROM_SEAL:
+                continue
+            unclassified.append(f"{rel} (imported as {mod})")
+        assert not unclassified, (
+            "modules reachable from the G3 judged entry points are neither in "
+            "pre-registration-g3.yaml's seal_scope, nor G2-sealed, nor excluded-"
+            f"with-a-reason: {sorted(unclassified)}"
+        )
+
+    def test_g3_declared_list_has_no_stale_source_entries(self):
+        """Declared .py entries under src/ must be reachable — a sealed list
+        carrying dead code misstates what the seal defends."""
+        declared = yaml.safe_load((ROOT / "pre-registration-g3.yaml").read_text("utf-8"))[
+            "seal_scope"
+        ]["hashed_files"]
+        reachable = {
+            p.relative_to(ROOT).as_posix() for p in judging_closure(self.G3_ENTRY_POINTS).values()
+        }
+        stale = [
+            rel
+            for rel in declared
+            if rel.startswith("src/") and rel.endswith(".py") and rel not in reachable
+        ]
+        assert not stale, f"declared but unreachable from the G3 entry points: {stale}"
 
 
 def _prereg() -> dict:

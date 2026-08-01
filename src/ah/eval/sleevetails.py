@@ -214,9 +214,17 @@ def judge_sleeve(
     all_enforce_ok = True
     for band in bands:
         which, level = band.statistic.split("_", 1)
+        # A path carrying any non-finite value scores NaN directly — the sealed
+        # estimator is never handed NaN input (its NaN quantile would produce an
+        # empty tail slice), and a NaN per-path statistic makes the sleeve fail
+        # below: the anti-gaming rule, absence never scores better than presence.
         per_path = np.array(
             [
-                float(var_es(generated[i], float(level) / 100.0)[0 if which == "var" else 1])
+                (
+                    float(var_es(generated[i], float(level) / 100.0)[0 if which == "var" else 1])
+                    if np.all(np.isfinite(generated[i]))
+                    else np.nan
+                )
                 for i in range(generated.shape[0])
             ]
         )
