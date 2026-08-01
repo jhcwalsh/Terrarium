@@ -101,16 +101,18 @@ RunRecord-computable annotations, grounded-corpus content), and the SPA/UI
 work tracks DN-3 separately. Delta 4's constraint binds here regardless: both
 annotations computable from the RunRecord alone, no new state.
 
-## 4. Open decisions for the owner at kickoff
+## 4. Kickoff decisions — resolved
 
-| Id | Decision | Recommendation |
+All six resolved by the owner, 2026-08-01:
+
+| Id | Decision | Resolution |
 |---|---|---|
-| D-K4-1 | ~~Supply the two `artifact-layer/` docs~~ **Discharged 2026-08-01** — both vendored with `RECONSTRUCTION-NOTES.md`. Residual: ratify the **B6 check** for WP4.3, and confirm the notes' §5 claim that the Albourne derived-measures spec is "stranded" — `Instructions/albourne-derived-measures-spec.md` has been vendored since Step 1, so either §5 is stale or a fuller original exists | Ratify B6; confirm §5 vs the vendored Albourne spec before anything new freezes against ALB-A–F |
-| D-K4-2 | Repo boundary for the experience deltas | Engine-side only in this repo (above); UI deltas tracked against DN-3 |
-| D-K4-3 | G4-pre freeze of regression membership + thresholds + gate rules | Ratify — one amendment entry before any prompt tuning (§2) |
-| D-K4-4 | Real-entity screen source | Owner to name the GLEIF/SEC snapshot (or approve a proposed one); vendored offline, version recorded, refresh cadence stated |
-| D-K4-5 | Human cohorts for WP4.7/4.9 | Long-lead external dependency: decide early whether the first cohort is internal players; recruitment scale/timing is the owner's action. WP4.9 publishes whichever way it falls |
-| D-K4-6 | LLM provider/model for narrator + committee | Anthropic API in the Step 0 compiler-harness pattern (offline fixtures, `--live` flag) unless the owner directs otherwise; model id and prompt version recorded per artifact/decision either way |
+| D-K4-1 | Artifact-layer docs; B6; Albourne §5 claim | **RESOLVED.** Docs vendored; **B6 ratified** (lands in WP4.3, recorded against the schema changelog). Albourne question closed by inspection: `Instructions/albourne-derived-measures-spec.md` is the **original**, vendored at Step 1 (`a37b175`), sections A–G present — ALB-A–F are its section letters; `RECONSTRUCTION-NOTES.md` §5 is stale on this item and nothing needs recovering |
+| D-K4-2 | Repo boundary for the experience deltas | **RESOLVED: engine-side only in this repo.** Owner condition: the UI deltas **must not be lost** — they are registered in `Instructions/experience-deltas-register.md` (created with this resolution), which DN-3 work must consume; the register is the durable record, not this kickoff's prose |
+| D-K4-3 | G4-pre freeze | **RATIFIED.** Minted as one amendment-log entry at Step 4 build start, before any prompt tuning; covers regression-set membership rule, the ≥95% first-pass threshold, and the G1–G9 blocking split as vendored |
+| D-K4-4 | Real-entity screen source | **RESOLVED (delegated to builder): GLEIF LEI Golden Copy + SEC EDGAR.** GLEIF Level-1 full file (CC0, monthly, versioned by publication date) filtered to a normalized financial-entity name list, plus SEC EDGAR `company_tickers.json`; vendored as a derived fixture with its generation script in `scripts/`, source names, publication dates, and SHA-256 recorded. Refresh: at each Step 4 minor release, cadence stated in the fixture header |
+| D-K4-5 | Human cohorts for WP4.7/4.9 | **RESOLVED: no external cohorts yet.** The app is built first; the owner is the first and only test cohort for now, with external cohorts brought in later. Consequence, stated: the WP4.9 validation study **cannot complete** on a one-person cohort — it runs its ablation arms (heuristic, random-within-bounds, hold-course) and pathology measurements now, and the human-cohort arm is deferred with the deferral recorded in the study write-up. The plan's rule is unchanged and now bites harder: **no client-facing actor claim** until the full study exists |
+| D-K4-6 | LLM provider | **RESOLVED: Claude** (Anthropic API), Step 0 compiler-harness pattern — recorded fixtures offline, `--live` for real calls, model id + prompt version chronicled per artifact and per decision |
 
 ## 5. Halt conditions
 
@@ -118,9 +120,10 @@ annotations computable from the RunRecord alone, no new state.
   Any WP finding them materially ambiguous on a blocking rule — or finding
   content the reconstruction notes' gap register does not explain — **halts
   and asks** rather than interpreting; the notes' own footer requires
-  verification before treating anything as a frozen contract. In particular,
-  nothing freezes against them (D-K4-3's G4-pre included) until the owner
-  confirms the reconstruction stands.
+  verification before treating anything as a frozen contract. The owner's
+  2026-08-01 resolutions (B6 ratified, G4-pre ratified) stand as confirmation
+  that the reconstruction is workable; the ambiguity rule above survives that
+  confirmation — recovered text still halts on any blocking-rule doubt.
 - The **real-entity screen halts** WP4.3's B-check completion until a
   versioned offline snapshot is vendored (D-K4-4). No network at test time is
   non-negotiable.
