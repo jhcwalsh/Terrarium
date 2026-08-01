@@ -19,17 +19,39 @@
 # the Equity group. The mapping below follows the PLATFORM's taxonomy; that is the
 # point of mapping at the boundary.
 
-version: taxonomy-v1.0
+version: taxonomy-v1.1
 
 # Every registered albourne return series -> exactly one sleeve_id (acceptance).
+# taxonomy-v1.1 (WP2R.2, owner decision option b): HF series at SUB-STRATEGY
+# granularity, replacing the seven never-delivered group ids. Many-to-one is
+# expected and correct: v1 models HF at group-sleeve granularity, so several
+# sub-strategy series roll up to one modeled sleeve. hf_ils receives a series
+# while staying outside the v1 build list - data availability and the build
+# list are different statements.
 series:
-  albourne.hf_els_ret_m: hf_equity_ls
-  albourne.hf_event_ret_m: hf_event
-  albourne.hf_rv_ret_m: hf_rv
-  albourne.hf_credit_ret_m: hf_credit
-  albourne.hf_macro_ret_m: hf_macro
+  albourne.hf_asia_ls_ret_m: hf_equity_ls
+  albourne.hf_em_ls_ret_m: hf_equity_ls
+  albourne.hf_japan_ls_ret_m: hf_equity_ls
+  albourne.hf_us_ls_ret_m: hf_equity_ls
+  albourne.hf_europe_ls_ret_m: hf_equity_ls
+  # spec section 1.1 places equity market neutral in the Equity group (the
+  # platform's grouping, not HedgeRS's - same call as codes.hedgers below)
+  albourne.hf_fund_emn_ret_m: hf_equity_ls
+  albourne.hf_stat_arb_ret_m: hf_equity_ls
+  albourne.hf_quant_emn_ret_m: hf_equity_ls
+  albourne.hf_activist_ret_m: hf_event
+  albourne.hf_distressed_ret_m: hf_event
+  albourne.hf_em_fi_ret_m: hf_event
+  albourne.hf_risk_arb_ret_m: hf_event
+  albourne.hf_fi_arb_ret_m: hf_rv
+  albourne.hf_cb_arb_ret_m: hf_rv
+  albourne.hf_rv_credit_ret_m: hf_credit
+  albourne.hf_structured_credit_ret_m: hf_credit
+  albourne.hf_global_macro_ret_m: hf_macro
+  albourne.hf_gaa_ret_m: hf_macro
   albourne.hf_cta_ret_m: hf_cta
-  albourne.hf_multi_ret_m: hf_multi
+  albourne.hf_insurance_ret_m: hf_ils
+  albourne.hf_ms_diversified_ret_m: hf_multi
   albourne.pm_buyout_ret_q: pm_buyout
   albourne.pm_growth_ret_q: pm_growth
   albourne.pm_vc_ret_q: pm_vc
@@ -52,7 +74,13 @@ non_sleeve_series:
   albourne.cf_E_episodes: ALB-E episode dataset, per-strategy rows via codes.albourne
 
 codes:
-  # Short strategy codes carried by PM return and cashflow intake files.
+  # Short strategy codes carried by PM return and cashflow intake files, plus
+  # (taxonomy-v1.1) the HF sub-strategy codes, where THE CODE IS THE SERIES-ID
+  # FRAGMENT: ah.data.intake.to_series_frames keys a grouped file's series as
+  # `<source>.<code>`, so a drop whose strategy column carries these codes lands
+  # under exactly the registered requirements.yaml ids. (The PM codes below do
+  # NOT yet obey that rule - `buyout` keys `albourne.buyout`, not the registered
+  # `albourne.pm_buyout_ret_q`; recorded as RFR-88, bites on first PM delivery.)
   albourne:
     buyout: pm_buyout
     growth: pm_growth
@@ -63,6 +91,27 @@ codes:
     distressed: pm_distressed
     re_va: pm_re_value_add
     infra: pm_infra
+    hf_asia_ls_ret_m: hf_equity_ls
+    hf_em_ls_ret_m: hf_equity_ls
+    hf_japan_ls_ret_m: hf_equity_ls
+    hf_us_ls_ret_m: hf_equity_ls
+    hf_europe_ls_ret_m: hf_equity_ls
+    hf_fund_emn_ret_m: hf_equity_ls
+    hf_stat_arb_ret_m: hf_equity_ls
+    hf_quant_emn_ret_m: hf_equity_ls
+    hf_activist_ret_m: hf_event
+    hf_distressed_ret_m: hf_event
+    hf_em_fi_ret_m: hf_event
+    hf_risk_arb_ret_m: hf_event
+    hf_fi_arb_ret_m: hf_rv
+    hf_cb_arb_ret_m: hf_rv
+    hf_rv_credit_ret_m: hf_credit
+    hf_structured_credit_ret_m: hf_credit
+    hf_global_macro_ret_m: hf_macro
+    hf_gaa_ret_m: hf_macro
+    hf_cta_ret_m: hf_cta
+    hf_insurance_ret_m: hf_ils
+    hf_ms_diversified_ret_m: hf_multi
 
   # HedgeRS AW sub-strategy indices (the HF scope inventory). Many-to-one is
   # expected: the v1 HF sleeves are group aggregates, and each vendor code still

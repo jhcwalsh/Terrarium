@@ -28,7 +28,7 @@ def taxonomy() -> tx.Taxonomy:
 
 class TestNamespace:
     def test_loads_and_is_versioned(self, taxonomy):
-        assert taxonomy.version == tx.TAXONOMY_VERSION == "taxonomy-v1.0"
+        assert taxonomy.version == tx.TAXONOMY_VERSION == "taxonomy-v1.1"
 
     def test_v1_build_list_is_within_the_spec_recommendation(self, taxonomy):
         """Spec §1.2 note: 8-10 PM and 7-9 HF sleeves for v1."""
@@ -70,10 +70,17 @@ class TestSeriesCoverage:
             f"stale: {sorted((mapped | non_sleeve) - registered)}"
         )
 
-    def test_series_targets_are_modeled_v1_sleeves(self, taxonomy):
-        """The 16 return series ARE the v1 build list, at its granularity."""
+    def test_series_coverage_of_the_v1_build_list(self, taxonomy):
+        """taxonomy-v1.1 (option b): HF series are sub-strategy granular, so
+        several series roll up to one modeled sleeve, and hf_ils receives a
+        series while staying outside the build list — data availability and the
+        build list are different statements. What must hold: every modeled
+        sleeve is fed by at least one series, and every target is a real sleeve."""
         targets = set(taxonomy.series_to_sleeve.values())
-        assert targets == set(taxonomy.modeled_v1)
+        assert set(taxonomy.modeled_v1) <= targets, (
+            f"modeled sleeves with no series: {sorted(set(taxonomy.modeled_v1) - targets)}"
+        )
+        assert targets <= set(taxonomy.sleeves)
 
 
 class TestVendorCodes:

@@ -34,7 +34,7 @@ _REPO_ROOT = Path(__file__).resolve().parents[3]
 SLEEVES_PATH = _REPO_ROOT / "taxonomy" / "sleeves.yaml"
 MAPPING_PATH = _REPO_ROOT / "taxonomy" / "albourne_mapping.yaml"
 
-TAXONOMY_VERSION = "taxonomy-v1.0"
+TAXONOMY_VERSION = "taxonomy-v1.1"
 
 
 class TaxonomyError(ValueError):

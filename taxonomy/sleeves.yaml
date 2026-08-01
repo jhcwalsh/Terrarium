@@ -15,7 +15,7 @@
 #
 # R13 (secondaries): its own sleeve, never a buyout clone — see pm_secondaries.notes.
 
-version: taxonomy-v1.0
+version: taxonomy-v1.1
 
 vehicle_types: [closed_end, open_ended, evergreen, hybrid]
 
