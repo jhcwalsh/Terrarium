@@ -7,6 +7,12 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.10 — hero funds** (Step 3). `ah/port/heroes.py`: 3–5 named synthetic
+  funds split from a cohort (log-normal weights on per-hero 7919-strided seeds,
+  `n_funds=1`, `dispersion_draw` = weight quantile), every hero contract-valid,
+  and **reconciliation as an identity**: every extensive field sums exactly to
+  the parent, with a test that catches a cooked book. Name↔World-Bible binding
+  deliberately left to Step 4. 4 tests.
 - **WP3.9 — the liability proxy** (Step 3). `ah/port/proxy.py`: LSMC discipline
   (Krah et al.) with a polynomial basis a reader can audit — disjoint
   fit/validation scenario sets (7919 rule), **pre-stated error bounds declared
