@@ -1,0 +1,38 @@
+# mappings/cashflow-tier1-v1.0.yaml — scripts/freeze_tier1_linkage.py
+# vintage 2026-08-01.2. Frozen BEFORE any episode replay exists.
+linkage_version: tier1-public-0.1
+campaign_vintage_id: "2026-08-01.2"
+f_dist:
+  form: clip(exp(-a*dd - b*ln(spread_ratio)), floor, ceiling)
+  a_drawdown: 1.540688
+  b_log_spread: 1.376940
+  floor: 0.3
+  ceiling: 1.5
+  calibration: {target: 0.5, dd_2022_measured: 0.2484, spread_ratio_2022_measured: 1.2528, elasticity_ratio: '0.37:0.30 (P-A verbatim)'}
+  substitutions: >-
+    log P/D -> equity drawdown depth (valuation proxy); HY spread -> IG
+    (Baa-Aaa) spread ratio, HY being a sealed missing factor. Coefficients
+    re-solved so the P-A public target (drought depth 0.50 at the measured
+    2022 state) holds under the substituted drivers.
+f_call:
+  form: clip(1 - c*dd, 0.5, 1.2)
+  c: 0.1
+  source: Delta 3 / linkage-estimation s4 - near-flat for buyout in stress;
+    the self-funding breakdown is distribution-side. Venture-style call
+    ACCELERATION is a later, named knob, not silently folded in.
+no_crisis_term: >-
+  STRUCTURAL (Delta 3): both functions consume continuous market states
+  only - no regime label, no recession dummy, by signature. The
+  adds-nothing regression test runs at the WP3.11 replay.
+lambda_g: 0  # the smoothing kernel owns the lag; never double-counted
+pm_growth_loadings:  # DN-5 s3.3 priors ADOPTED AS CHOSEN (kind C) - no PM
+                     # data exists; sensitivity-flagged, never called estimates
+  pm_buyout: {equity_mkt: 1.2, smb: 0.2, hml: 0.2, d_ig: -0.05}
+  pm_growth: {equity_mkt: 1.3, hml: -0.2}
+  pm_vc: {equity_mkt: 1.2, hml: -0.3}
+  pm_secondaries: {equity_mkt: 1.1, d_ig: -0.05}
+  pm_direct_lending: {d_ig: -0.35}
+  pm_mezzanine: {equity_mkt: 0.3, d_ig: -0.2}
+  pm_distressed: {equity_mkt: 0.35, d_ig: -0.25}
+  pm_re_value_add: {equity_mkt: 0.5}
+  pm_infra: {equity_mkt: 0.3}

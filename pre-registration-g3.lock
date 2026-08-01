@@ -1,14 +1,16 @@
 {
-  "digest": "sha256:5e555a4f39c0f63af529ddce9d4f0824fe7500017bef153edf29ad3e0e6d21ee",
+  "digest": "sha256:a2bffa6eaa24c06a6bed89a591284fbeb655d66b83514c0ea63c15343fa7bf2f",
   "hashed_files": [
     "factors.yaml",
     "mappings/cashflow-tier0-v1.0.yaml",
+    "mappings/cashflow-tier1-v1.0.yaml",
     "mappings/sleeve-mappings-v1.0.yaml",
     "mappings/smoothing-kernel-v1.0.yaml",
     "pre-registration-g3.yaml",
     "scripts/estimate_sleeve_mappings.py",
     "scripts/estimate_smoothing_kernel.py",
     "scripts/freeze_tier0_spec.py",
+    "scripts/freeze_tier1_linkage.py",
     "src/ah/data/derive.py",
     "src/ah/data/desmooth.py",
     "src/ah/data/taxonomy.py",
@@ -23,5 +25,5 @@
     "taxonomy/sleeves.yaml"
   ],
   "prereg_path": "pre-registration-g3.yaml",
-  "sealed_at": "2026-08-01T23:00:00+00:00"
+  "sealed_at": "2026-08-02T01:00:00+00:00"
 }
