@@ -7,6 +7,35 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.8 — governance consolidation + the three seal guards** (Step 2R).
+  - **`tests/test_seal_guards.py` (13 tests) closes the RFR-76..84 defect class** —
+    "the seal asserts something nothing mechanically verifies" — by making the seal's
+    *boundary* a checked fact: (1) **import closure**: every module reachable from the
+    judging entry points (`ah.eval.g2`, `ah.battery.report`, plus `battery.py`'s
+    dynamically imported metric suites) is sealed or on an exclusion list where every
+    entry carries a disputable reason and staleness fails; (2) **sealed-name
+    resolution**: threshold names, strategy weights, factor lists and the executable
+    rule's tiers resolve against the registries defining them, with the one *known*
+    unresolvable phrase (S2-HORIZON-TIER's "horizon tier") pinned so fixing it forces
+    the pin to move; (3) **citation integrity** over `governance/*.md` and the
+    evidence documents — `file::test`, repo paths, *and bare filenames* (RFR-84's
+    corrected spec, including its quoted-as-known-bad exclusion). First run found one
+    new genuine dangling citation (RFR-31's renamed test — corrected by appending
+    **RFR-85**) and rediscovered the two already on record (RFR-75, RFR-84).
+  - **Decision register consolidated**: D1/D2/D3 CLOSED with evidence; **D6 RATIFIED
+    by the owner** (the AM-2026-07-26-001/-002 provisional values); the 2R plan's
+    D4/D5 glosses closed **by content** per the owner (S2-D4 already closed;
+    `S2-D5-STATE-SPACE` filed) while the register's own D4/D5 stay honestly OPEN with
+    Step-3 owners; the plan-vs-register id mismatch and the D9 overload recorded
+    (RFR-78 class); **S2R-FX-NEXT-CAMPAIGN**: the owner folded the FX block into the
+    next campaign's retrain (one retrain buys FX + `WP1.13` CAPE + regime persistence),
+    discharging SM-13 at the 2R session as DN-5 asked.
+  - **`governance/evidence/`**: frozen snapshots of `G2-EVIDENCE.md`, `ABLATION.md`,
+    `ablation.json` with pinned sha256s — copies, not moves, because sealed files cite
+    the root documents by name. The negative-control report the plan names **never
+    existed as a file**; recorded in the archive README rather than reconstructed.
+  - Model-inventory refresh clause: verified already satisfied by WP2.11's seven
+    Step-2 cards; nothing to add.
 - **WP2R.4 — the generator-output contract** (`schemas/generator-output-v1.0.schema.json`,
   Step 2R). The frozen contract for what a generator emits: the provenance quartet
   (generator / checkpoint / config / vintage) plus seed and blocks; the factor namespace

@@ -6,16 +6,46 @@ Status transitions to `RATIFIED` (or `REPLACED`) with a dated note and a PR link
 
 | ID | Decision | Options | Recommended default | Status | Owner | Blocks |
 | --- | --- | --- | --- | --- | --- | --- |
-| D1 | De-smoothing method | geltner_ar1 · glm_ma · regime_glm | glm_ma | OPEN | research | Step 1 mappings |
-| D2 | Factor list / regime ruleset | candidate panel vs learned | rule-based regime v1 | OPEN | research | generator training |
-| D3 | Generator family | toy-v0 · bootstrap · signature-mmd · conditional-diffusion | toy-v0 (Step 0) | OPEN | platform | Step 2 |
-| D4 | Correlation regime model | negative · positive · inflation_conditional | inflation_conditional | OPEN | research | mappings |
-| D5 | Structural parameter vintage default | historical_average · current · custom | current | OPEN | product | world authoring |
-| D6 | Stylized-fact thresholds | per-metric min/max, enforce vs todo | all `todo` (pre-registration) | OPEN | research | battery enforcement |
-| D7 | Albourne cashflow groups A/B intake | schema variants | groups A-E per spec | OPEN | data | Step 1 calibration |
-| D8 | Persistence backend | SQLite · Postgres | SQLite (repository pattern) | OPEN | platform | scale-out |
-| D9 | Compiler model + prompt policy | model id, prompt versioning | claude-sonnet-4-6 / compile-world-v1.0 | OPEN | platform | live compile |
-| D10 | Approval workflow | roles, gates before shared library | human approver required | OPEN | product | shared library |
+| D1 | De-smoothing method | geltner_ar1 · glm_ma · regime_glm | glm_ma | CLOSED 2026-07-31 | research | none (was: Step 1 mappings) |
+| D2 | Factor list / regime ruleset | candidate panel vs learned | rule-based regime v1 | CLOSED 2026-07-31 | research | none (was: generator training) |
+| D3 | Generator family | toy-v0 · bootstrap · signature-mmd · conditional-diffusion | toy-v0 (Step 0) | CLOSED 2026-07-31 | platform | none (was: Step 2) |
+| D4 | Correlation regime model | negative · positive · inflation_conditional | inflation_conditional | OPEN | research (Step 3: WP3.2 regime-varying treatment) | mappings |
+| D5 | Structural parameter vintage default | historical_average · current · custom | current | OPEN | product (Step 3: world authoring) | world authoring |
+| D6 | Stylized-fact thresholds | per-metric min/max, enforce vs todo | all `todo` (pre-registration) | RATIFIED 2026-07-31 | research | none (was: battery enforcement) |
+| D7 | Albourne cashflow groups A/B intake | schema variants | groups A-E per spec | OPEN | data (Step 3: WP3.4 institutional recalibration per STEP3-amendment-A1 Delta 1) | Step 3 calibration |
+| D8 | Persistence backend | SQLite · Postgres | SQLite (repository pattern) | OPEN | platform (Step 3+: scale-out) | scale-out |
+| D9 | Compiler model + prompt policy | model id, prompt versioning | claude-sonnet-4-6 / compile-world-v1.0 | OPEN | platform (Step 4: live compile) | live compile |
+| D10 | Approval workflow | roles, gates before shared library | human approver required | OPEN | product (Step 4: shared library) | shared library |
+
+**WP2R.8 closures (2026-07-31), evidence per row.** **D1**: `glm_ma` primary with
+`geltner_ar1` secondary shipped and tested in Step 1 (`ah/data/desmooth.py`,
+`tests/test_desmooth.py`); volatility-ratio and beta-shift diagnostics are the
+acceptance evidence. One honesty note: **no `DESMOOTHING.md` report was ever
+committed** — STEP2R-CONSOLIDATION-PLAN §WP2R.2 says "regenerate" a file that does not
+exist (RFR-77/-78 class); WP2R.2 will *author* it, and its HF sections are blocked on
+the undelivered Albourne HF series. **D2**: the sealed 14-factor panel over blocks
+`[global, us]` (`factors.yaml`) and `regime_ruleset_v1` (`ah/data/derive.py`), both
+inside `pre-registration.lock` since 2026-07-26 — the seal, not this register, is the
+authority. **D3**: closed by the G2 verdict — PROMOTE `hier-flow-v1` over
+`bootstrap-v1` (`G2-EVIDENCE.md`, snapshotted in `governance/evidence/`); the options
+column above predates the L1–L4 hierarchical family and none of its four names is what
+shipped, recorded rather than reworded. `toy-v0` remains Step 0's deterministic engine
+for the rails. **D6**: RATIFIED by the project owner on 2026-07-31 — the provisional
+values pre-authorized by `AM-2026-07-26-001`/`-002` (`ensemble_size.n_paths: 1024`,
+`bootstrap_v1.mean_block_months`, the `nn_distance_*` margin factor, the
+`elicitability_score` bound, the `var_95`/`es_95` three-fold width, `K = 4`,
+`tuning_protocol.trial_budget_per_system: 40` with its tie-break) carried the campaign
+to a completed, reviewed G2 gate and are ratified as sealed; a future campaign seals
+its own values regardless, so this binds nothing forward.
+
+**The 2R plan's D-ids do not all match this table (RFR-78 class, in a plan).**
+STEP2R-CONSOLIDATION-PLAN §WP2R.8 says to close "D4 (tail objective + strategy set)"
+and "D5 (state space)". In this register D4 is the *correlation regime model* and D5
+is the *structural parameter vintage default* — different decisions. Resolved by the
+owner on 2026-07-31: **close by content, not by id.** The strategy set the plan's
+"D4" describes is `S2-D4` below, closed since WP2.1b; the state space its "D5"
+describes is closed as `S2-D5-STATE-SPACE` below. The register's own D4 and D5 remain
+OPEN with Step-3 owners, because nothing has decided them.
 
 ## Step 2 decisions (STEP2-GENERATOR-PLAN / WP2.1b)
 
@@ -43,6 +73,8 @@ status conventions as the table above.
 | S2-VALUATION-FACTOR | Whether to add a valuation factor and retrain, now that RFR-81 shows the data was always registered | CLOSED | **Route (1): complete G2 on the sealed 14 factors.** Taken by the owner on 2026-07-31, closing the decision RFR-81 deliberately left open. The `10yr` tier stays declared UNAVAILABLE exactly as `conventions.ten_year_tier_coverage` seals it, `G2-EVIDENCE.md` may not cite a `10yr` pass, and the valuation factor enters as a **dated factor amendment plus a full L1/L2/L3 retrain for the NEXT campaign** (`WP1.13`, rescoped by RFR-81 to "map `shiller.cape` and retrain", owner: project owner). **Route (2), rejected and recorded because rejecting it is the substance:** retraining at 15 factors now would restart the campaign with the WP2.10 head-to-head already in hand -- the same hazard `AM-2026-07-29-001` already cost once, and a far larger one, since a retrain re-rolls every number the verdict rests on. **What this decision does NOT claim:** that 14 factors is the right panel, or that the decade tier's unavailability is acceptable in the long run. It claims only that the fix does not belong inside the gate it would alter. | none |
 | S2-REVIEW-OUTCOME | The reviewer-of-record review required by `S2-REVIEWER-OF-RECORD`, and what its approval does and does not cover | CLOSED | **APPROVED on 2026-07-31, by the project owner as reviewer of record, BEFORE the holdout was opened and before any verdict was computed** -- the sequencing `S2-REVIEWER-OF-RECORD` made binding. Material reviewed: `governance/G2-REVIEWER-PACKET.md` (plain-language, committed at `52c46ba`), which carries `AM-2026-07-29-001` in full including its timing, the head-to-head from `ABLATION.md` §6, the sealed draw-span bias and the restricted-window re-run, RFR-76/-80/-81, and the diffusion severe-arm money-pump finding. **WHAT THE APPROVAL COVERS -- three narrow questions, and nothing else:** (1) the field's reading is the correct one and `AM-2026-07-29-001` is a genuine correction rather than a convenient one; (2) the benchmark's 1990-2020 draw-span disadvantage, weighed rather than merely noted, does not undermine the comparison -- the challenger's margin WIDENS under the sealed restricted-window re-run; (3) the one-shot holdout may be spent. **WHAT IT EXPLICITLY DOES NOT COVER, recorded because the distinction is the substance of the review:** it is NOT a judgement that the results are "good enough", and NOT an endorsement of model quality. That question was answered in advance by the sealed rule, and a reviewer approving or declining on their own read of the numbers -- in either direction -- would be doing precisely what the seal exists to prevent. **THE REVIEWER IS NOT INDEPENDENT of the work** (they commissioned it); `G2-EVIDENCE.md` must state that plainly rather than let "independent reviewer" imply an outside party, and must state alongside it that `AM-2026-07-29-001` is a post-hoc correction made by the beneficiary. **BOTH READINGS OF THE EVIDENCE STAND TOGETHER and both must be published:** the challenger beats the benchmark on the pre-registered criterion in every seed and on both routes, AND neither generator is a convincing model of history -- 1966-84 is called a long inflation era under half the time against history's every window, inflation persistence is roughly half its historical half-life, drawdowns are understated about twofold, stagnant decades are invented at 0.29-0.75 against a historical 0.00-0.05, and the `10yr` tier that would catch decade-scale error is 73% structurally unavailable. A PROMOTE verdict changes the default `generator_id` for Step 3's work; it is not a statement of fitness for real decisions, which Step 5's decision-evaluation exists to test. | WP2.11 |
 | S2-BRANCH-DEVIATION | WP2.10 and WP2.11 share the branch `wp2-10-ablation`, against the one-work-package-per-branch convention | CLOSED | **Merge as-is and RECORD the deviation; do not split.** Decided 2026-07-31. The branch carries 13 commits ahead of `main`: two of WP2.10 and eleven of WP2.11 plus governance. **THE DECIDING REASON is not tidiness but traceability:** `S2-REVIEW-OUTCOME` in this very file cites commit `52c46ba` BY HASH as the material the reviewer of record reviewed. Splitting the branch rewrites every hash after the split point and turns a committed audit citation into a dangling reference — an audit trail pointing at a commit that no longer exists is strictly worse than a branch with an untidy name. Supporting: the branch is already on `origin`, so splitting means rewriting PUBLISHED history and force-pushing, which this repo carries a standing caution about (history was rewritten once, to scrub a secret); and the commits are individually labelled (`WP2.10:`, `WP2.11 part 1/2a/2b`, `AM-…`, `S2-…`) so the history reads as two work packages whatever the branch is called. **What the deviation costs:** nothing touching the seal, the evidence, the numbers or the verdict — it is a process-convention breach, and this project's practice for those is to record rather than paper over. **The remedy is PROSPECTIVE:** WP2.12 onward starts on its own branch, which restores the convention in a way retro-splitting would not. **The merge itself is NOT authorized by this row** — it waits on the full gate being green (verdict code, `G2-EVIDENCE.md`, model cards), per the standing definition of done. | WP2.11 close-out |
+| S2R-FX-NEXT-CAMPAIGN | The FX judgment call DN-5 §8 flags as "the item most likely to be regretted" (SM-13), due at the 2R session per STEP3-amendment-A1 housekeeping | CLOSED | **Fold an FX block into the NEXT generator campaign's retrain.** Decided by the project owner on 2026-07-31, at the 2R session as DN-5 asked, rather than being discovered a third time. The next campaign already carries a full L1/L2/L3 retrain for two other reasons — `WP1.13` (map `shiller.cape`, revive the `10yr` tier, per `S2-VALUATION-FACTOR`) and the regime-persistence fix the severe test located upstream of L3 — so adding the FX block there means ONE retrain buys all three, where adding FX alone would cost the same retrain for one. **What this does and does not change now:** `R5`/`J3` remain CLOSED-deferred for the v1 campaign exactly as sealed (`active_blocks: [global, us]` untouched); the `block_addition` amendment is authored when the next campaign's seal is authored, not today; UK worlds remain blocked until then per J3. SM-13's flag is discharged as a *decision taken*, not as work done. | next campaign seal |
+| S2-D5-STATE-SPACE | The slow-state (L1) state space | CLOSED | **The five-state contract DN-1.1 §II.2 specifies — `(pi_star, r_star, g, v, credit_gap)` — implemented as `ah.gen.climate.model.STATE_NAMES`, fitted by WP2.5 (`climate-fit-report.md`, artifact `climate-l1-f7d4119c7101-s20260726` pinned by content SHA-256 in `ah/gen/joinery/assemble.py`), consumed by L2 (`COVARIATE_NAMES` over the states) and by the waypoint layer, and carried on every emitted ensemble since WP2R.4's generator-output contract.** Filed 2026-07-31 under WP2R.8's close-by-content resolution: STEP2R-CONSOLIDATION-PLAN §WP2R.8 calls this decision "D5", an id this register had already given to the structural-parameter vintage default (see the platform-table note above). | none |
 | S2-HOLDOUT-NOT-SPENT | Whether to spend the one-shot holdout at G2, given that the sealed document never specified what the evaluation computes | CLOSED | **NOT SPENT. The holdout remains unspent and its one permitted use is intact.** Decided 2026-07-31 by the project owner, recorded as `AM-2026-07-31-002` (`protocol_change`, `post_hoc: true`) because the sealed splits block asserts the holdout "is spent EXACTLY ONCE, by WP2.11" and that is no longer an account of events. **The defect behind the decision:** the seal pins the SPAN, the GUARD, the at-most-once budget and an absolute no-tuning prohibition, and never says WHAT THE SINGLE EVALUATION COMPUTES; `STEP2-GENERATOR-PLAN` §WP2.11 says only "once, logged, never repeated". **None of `multi_seed_decision_rule`'s four clauses reads the holdout** — all four run on the WP2.10 grid against a train+validation reference — so the verdict is fully determined without it. **Why declining is conservative rather than negligent:** any procedure run at WP2.11 would have been authored at WP2.11, with the grid, both severe arms, the head-to-head and the restricted-window re-run already visible. That is the forking path the seal exists to close, applied to the one resource that cannot be restored. A number produced that way cannot be distinguished by any reader from "the author chose a procedure that showed what they wanted". Not spending costs the gate nothing and leaves the resource worth what it was. **What a later gate must do to spend it:** write the evaluation down first — what is generated, at what size, from what conditioning state, scored on which metrics against which realizations, with what consequence — seal that specification BEFORE the campaign it judges, then mint the token. **Both readings of "spent exactly once" are on the record**: as REQUIRING a spend (so this is a dated departure, which the amendment legitimizes) or as BOUNDING spending at one (so zero conforms). The stricter reading is why it was filed as an amendment rather than left as a register row. `G2-EVIDENCE.md` must state plainly that the holdout was not spent and why. | none |
 
 **D6 status after WP2.3.** The platform table's `D6` (stylized-fact thresholds) is no
@@ -71,6 +103,15 @@ from Step2R §WP2R.4 (where STEP2R-CONSOLIDATION-PLAN originally scoped it) to W
 because the FX decision sits inside the pre-registration seal's blast radius and had to
 be settled before WP2.3, not after Step 3 planning begins. STEP2R-CONSOLIDATION-PLAN.md
 §WP2R.4 has been updated to reflect this (dated note there points back here).
+
+**Footnote -- "D9" is overloaded too (added at WP2R.8, 2026-07-31).** This file's D9 is
+the **compiler model + prompt policy**. The Phase A / liquidity-spine document set
+(`Instructions/WP3.9-liquidity-spine-v0.2.md` §14, `Instructions/STEP3-amendment-A1.md`
+Delta 5, `Instructions/STEP5-amendment-A1.md`) uses "D9" for the **decision-alpha /
+walk-forward evaluation ledger** — the thing `STEP5-DECISION-EVALUATION-PLAN.md` §WP5.1
+calls "walk-forward per D9". Same resolution as the D4 footnote below: neither renames
+the other; "D9" in a Phase A or Step 5 document means the decision-evaluation ledger,
+"D9" in this file's platform table means the compiler policy.
 
 **Footnote -- "D4" is overloaded.** The `D4` in the platform table above (this file's
 first table) is the **correlation regime model** decision. STEP2-GENERATOR-PLAN §WP2.3
