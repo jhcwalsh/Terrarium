@@ -99,6 +99,27 @@ All notable changes to this project are documented here. The project follows
     pointing into the seal itself: a check resolving every series and factor name in
     sealed prose against `requirements.yaml`/`factors.yaml` would have caught it, and
     belongs with RFR-78's identical proposal for `TIERS`/`SUITES`.
+  - **`S2-REVIEW-OUTCOME` — the reviewer-of-record review APPROVED on 2026-07-31, before
+    the holdout was opened and before any verdict was computed**, discharging the
+    sequencing `S2-REVIEWER-OF-RECORD` made binding. Material: the plain-language
+    `governance/G2-REVIEWER-PACKET.md`. **The approval covers three narrow questions and
+    nothing else** — that `AM-2026-07-29-001` is a genuine correction rather than a
+    convenient one; that the benchmark's 1990–2020 draw-span disadvantage, weighed rather
+    than noted, does not undermine the comparison (the challenger's margin *widens* under
+    the sealed restricted-window re-run); and that the one-shot holdout may be spent.
+    **It is explicitly NOT a judgement that the results are "good enough" and NOT an
+    endorsement of model quality** — that was answered in advance by the sealed rule, and a
+    reviewer deciding it on their own reading of the numbers, in either direction, would be
+    doing the very thing the seal exists to prevent. The reviewer is **not independent** of
+    the work. **Both readings stand together and both must be published:** the challenger
+    beats the benchmark on the pre-registered criterion in every seed and on both routes,
+    *and* neither generator is a convincing model of history — 1966–84 called a long
+    inflation era under half the time against history's every window, inflation persistence
+    at roughly half its historical half-life, drawdowns understated about twofold, stagnant
+    decades invented at 0.29–0.75 against a historical 0.00–0.05, and the `10yr` tier that
+    would catch decade-scale error 73% structurally unavailable. A PROMOTE changes the
+    default `generator_id` for Step 3's work; it is not a statement of fitness for real
+    decisions, which Step 5 exists to test.
   - **`S2-VALUATION-FACTOR` — route (1), taken 2026-07-31: complete G2 on the sealed 14
     factors.** Closes the decision RFR-81 left open. The `10yr` tier stays UNAVAILABLE as
     sealed; the valuation factor enters as a dated factor amendment plus a full L1/L2/L3

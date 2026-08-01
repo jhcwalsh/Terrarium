@@ -4,6 +4,25 @@
 **Prepared:** 2026-07-31 — before the final test was run and before any verdict was calculated.
 **Plain-language version.** Every claim here points to a file where it can be checked; see §8.
 
+> ## OUTCOME — APPROVED, 2026-07-31
+>
+> Approved by the project owner as reviewer of record, before the holdout was opened and
+> before any verdict was computed. Recorded as `S2-REVIEW-OUTCOME` in
+> `governance/decision-register.md`.
+>
+> **The approval covers the three narrow questions in §9 and nothing else:** that the
+> correction was genuine, that the benchmark's data disadvantage does not undermine the
+> comparison, and that the one-shot test may be spent.
+>
+> **It is explicitly NOT a judgement that the results are good enough, and NOT an
+> endorsement of model quality.** That question was settled in advance by the sealed rule;
+> a reviewer deciding it on their own reading of the numbers — in either direction — would
+> be doing the very thing the seal exists to prevent.
+>
+> The reviewer is not independent of the work. Both readings of the evidence stand together
+> and both must be published: the challenger beats the benchmark on the pre-registered
+> criterion, and neither generator is a convincing model of history.
+
 ---
 
 ## 1. Read this first
