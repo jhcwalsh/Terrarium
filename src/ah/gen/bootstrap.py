@@ -101,7 +101,7 @@ from ah.core.numericworld import NumericWorld
 from ah.data import derive
 from ah.factors import FactorManifest, FactorSource, load_manifest
 from ah.gen import registry
-from ah.gen.base import Ensemble, EnsembleMeta
+from ah.gen.base import AbsentLayer, Ensemble, EnsembleMeta, RegimeRecord
 from ah.splits import DataAccess
 
 __all__ = [
@@ -688,6 +688,15 @@ class BootstrapV1:
         index, unsatisfiable = self._draw_indices(source, months, n_paths, seed, requested)
         paths = source.values[index]
 
+        # WP2R.4: the realized regime path — the regime_ruleset_v1 label of the
+        # historical row each month was actually drawn from. This is a record of
+        # what the stratified draw did, not a conditioning mechanism: no RNG is
+        # consumed, and under a WorldSpec sequence the realized label equals the
+        # requested one wherever the stratum was satisfiable.
+        label_codes = {label: i for i, label in enumerate(REGIME_LABELS)}
+        source_codes = np.array([label_codes[label] for label in source.labels], dtype=np.int64)
+        realized = source_codes[index]
+
         conditioning: dict[str, Any] = {
             "mode": "unconditional" if world is None else world.regimes.mode,
             "regime_path_source": (
@@ -719,7 +728,25 @@ class BootstrapV1:
             conditioning=conditioning,
             active_blocks=tuple(source.active_blocks),
         )
-        return Ensemble(paths=paths, factor_names=list(source.factor_names), meta=meta)
+        return Ensemble(
+            paths=paths,
+            factor_names=list(source.factor_names),
+            meta=meta,
+            regimes=RegimeRecord(
+                labels=realized,
+                legend=REGIME_LABELS,
+                mode=(
+                    "realized-historical-frequency"
+                    if requested is None
+                    else "realized-worldspec-sequence"
+                ),
+                ruleset_version=source.ruleset_version,
+            ),
+            slow_states=AbsentLayer(
+                "bootstrap-v1 has no slow-state layer; blocks are drawn "
+                "directly from the historical panel"
+            ),
+        )
 
     # -- the Politis-Romano draw, stratified by start-month regime ------------- #
 
