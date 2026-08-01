@@ -12,9 +12,15 @@ import typer
 
 from ah.data.catalog import Catalog
 from ah.data.episode import build_episode, episode_years
-from ah.data.intake import ingest_file, parse_intake_filename, validate_file
+from ah.data.intake import ingest_file, parse_intake_filename, to_series_frames, validate_file
 from ah.data.manifest import requirements
-from ah.data.refresh import Provider, connector_provider, csv_dir_provider, refresh
+from ah.data.refresh import (
+    Provider,
+    apply_intake_frames,
+    connector_provider,
+    csv_dir_provider,
+    refresh,
+)
 from ah.data.reports import generate_data_status_md
 from ah.data.schemas import SCHEMAS, get_schema
 
@@ -166,6 +172,49 @@ def intake_validate(
     result = ingest_file(cat, file, resolved, received_at=_now())
     typer.echo(result.report)
     if not result.accepted:
+        raise typer.Exit(1)
+
+
+@intake_app.command("apply")
+def intake_apply(
+    file: Path = typer.Argument(...),
+    vintage: str = typer.Option(..., "--vintage", help="Vintage id to write (e.g. 2026-08-01.1)."),
+    schema: str | None = typer.Option(None, "--schema", help="Schema name (default: infer)."),
+    data_root: Path = typer.Option(DEFAULT_DATA_ROOT, "--data-root"),
+) -> None:
+    """Validate a drop AND apply it: write the vintage, run QC, advance on pass.
+
+    The manual-intake last mile (WP2R.2). Rejected drops apply nothing; an
+    accepted drop that fails QC leaves the vintage quarantined with the current
+    pointer unmoved - same discipline as `ah data refresh`.
+    """
+    name = schema
+    if name is None:
+        group, _ = parse_intake_filename(file.name)
+        name = next((s for s in SCHEMAS if group.replace("-", "_") in s), None)
+    resolved = get_schema(name) if name else None
+    if resolved is None:
+        raise typer.BadParameter(f"could not resolve a schema (got '{name}'); pass --schema")
+    cat = _catalog(data_root)
+    result = ingest_file(cat, file, resolved, received_at=_now())
+    typer.echo(result.report)
+    if not result.accepted or result.frame is None:
+        raise typer.Exit(1)
+    frames = to_series_frames(resolved, result.frame)
+    outcome = apply_intake_frames(
+        cat, requirements(), frames=frames, vintage=vintage, asof=_today(), created_at=_now()
+    )
+    if outcome.already_exists:
+        typer.echo(f"vintage {vintage} already exists; nothing applied")
+        raise typer.Exit(1)
+    status = "QUARANTINED" if outcome.quarantined else "current"
+    typer.echo(
+        f"vintage {vintage} {status}: wrote {len(outcome.written)} series, "
+        f"carried forward {len(outcome.carried_forward)}."
+    )
+    if outcome.quarantined and outcome.qc is not None:
+        for f in outcome.qc.enforce_failures:
+            typer.echo(f"  QC enforce: {f.series_id} {f.rule} ({f.detail})")
         raise typer.Exit(1)
 
 

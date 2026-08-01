@@ -72,13 +72,38 @@ series:
   albourne.pm_distressed_ret_q:  {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_re_va_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_infra_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P1, intake: manual, enforce: true}
-  albourne.hf_els_ret_m:    {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.hf_macro_ret_m:  {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.hf_rv_ret_m:     {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.hf_event_ret_m:  {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.hf_credit_ret_m: {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.hf_cta_ret_m:    {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.hf_multi_ret_m:  {source: albourne, code: null, frequency: "M", units: ret, min_start: null, sla_days: 60, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  # WP2R.2 (owner decision 2026-08-01, option b): HF series are registered at
+  # SUB-STRATEGY granularity — the 20 HedgeRS AW sub-strategy indices plus the
+  # MS Diversified multi-strat index — replacing the seven group-level ids
+  # (hf_els/hf_macro/hf_rv/hf_event/hf_credit/hf_cta/hf_multi _ret_m), which were
+  # never delivered and are retired. De-smoothing and Step-3 mapping estimation
+  # run per delivered series; the group aggregates, where needed, are built
+  # platform-side from these. The id fragment after "albourne." doubles as the
+  # intake `strategy` code (ah.data.intake.to_series_frames keys series as
+  # `<source>.<code>`); taxonomy/albourne_mapping.yaml codes.albourne maps each
+  # code to its platform sleeve. Delivery route: the HedgeRS API cache in the
+  # owner's HFModelling project (licensed; local only; data/ is gitignored).
+  albourne.hf_asia_ls_ret_m:           {source: albourne, code: "109739", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_em_ls_ret_m:             {source: albourne, code: "109741", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_japan_ls_ret_m:          {source: albourne, code: "109747", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_us_ls_ret_m:             {source: albourne, code: "109749", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_europe_ls_ret_m:         {source: albourne, code: "109743", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_activist_ret_m:          {source: albourne, code: "109778", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_distressed_ret_m:        {source: albourne, code: "109773", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_em_fi_ret_m:             {source: albourne, code: "109776", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_risk_arb_ret_m:          {source: albourne, code: "109780", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_fund_emn_ret_m:          {source: albourne, code: "109798", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_stat_arb_ret_m:          {source: albourne, code: "109806", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_quant_emn_ret_m:         {source: albourne, code: "109802", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_fi_arb_ret_m:            {source: albourne, code: "109814", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_cb_arb_ret_m:            {source: albourne, code: "109808", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_rv_credit_ret_m:         {source: albourne, code: "109796", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_structured_credit_ret_m: {source: albourne, code: "109818", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_global_macro_ret_m:      {source: albourne, code: "109714", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_gaa_ret_m:               {source: albourne, code: "109713", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_cta_ret_m:               {source: albourne, code: "109710", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.hf_insurance_ret_m:         {source: albourne, code: "109827", frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P1, intake: manual, enforce: true}
+  albourne.hf_ms_diversified_ret_m:    {source: albourne, code: null, frequency: "M", units: ret, min_start: 2002-01, sla_days: 75, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "HedgeRS AW MS Diversified (multistrat index family; index id recorded on delivery)."}
   albourne.cf_A_lifecycle:     {source: albourne, code: null, frequency: "per-spec", units: cf, min_start: null, sla_days: 200, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.cf_B_calendar_rates: {source: albourne, code: null, frequency: "Q", units: rate, min_start: null, sla_days: 200, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.cf_C_age_calendar:  {source: albourne, code: null, frequency: "per-spec", units: rate, min_start: null, sla_days: 200, license_tier: COMM, priority: P1, intake: manual, enforce: true}

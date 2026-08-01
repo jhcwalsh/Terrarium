@@ -7,6 +7,32 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.2 — HF de-smoothing at sub-strategy granularity (R2)** (Step 2R; owner
+  decision, option b). The 7 never-delivered group-level `albourne.hf_*` series are
+  retired and **21 sub-strategy series registered** (the 20 HedgeRS AW indices +
+  MS Diversified), with the WP2R.2 id rule: *the intake `strategy` code IS the
+  registered id fragment*, so canonicalization and the registry agree by
+  construction. Taxonomy bumped to **v1.1** (mapping-file change, as designed).
+  - **The manual-intake last mile now exists** (`apply_intake_frames` +
+    `ah data intake apply`): accepted drop → vintage → QC → pointer, exactly
+    `refresh()`'s discipline; unregistered ids are a loud error. Until now an
+    accepted intake never reached the vintage store — half of **RFR-88**, whose
+    other half (the PM code family still keys `albourne.buyout`, not the
+    registered id) bites on first PM delivery and is recorded.
+  - **First real delivery executed**: `scripts/export_hedgers_intake.py` bridges
+    the licensed HedgeRS cache (local only, never committed) into a 5,914-row
+    drop; vintage `2026-08-01.2` is **current** (21 written + 37 carried). The
+    new registrations use `sla_days: 75` — set at authorship to the vendor's
+    real month-boundary cadence (RFR-86's lesson applied to a *fresh* number,
+    which is correction, not gate-tuning; the French SLA decision stays yours).
+  - **`DESMOOTHING.md` authored** (it never existed — D1 register note): GLM
+    MA(k) primary + Geltner secondary over all 21 series, acceptance asserted in
+    the generating script (σ-ratio ≥ 1, means unchanged ≤ 5e-4, no beta falling
+    under material weights). **The finding matches the plan's prediction**:
+    material smoothing in credit/structured credit/ILS/distressed (σ-ratio up to
+    1.43, equity beta rising 0.25→0.38 on distressed), negligible in
+    macro/CTA/GAA. Parameters and diagnostics only — no licensed values leave
+    `data/`. `tests/test_intake_apply.py` (4) covers the apply step.
 - **WP2R.7 — WorldSpec v1.2: the resolved generator namespace** (Step 2R).
   `schemas/worldspec-v1.2.schema.json` becomes the active contract (v1.0 stays
   vendored, untouched): `generator_id` now carries the real registry ids —

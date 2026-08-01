@@ -143,4 +143,6 @@ class TestTaxonomyVersionField:
     def test_declared_version_matches_the_shipped_taxonomy(self):
         from ah.data.taxonomy import TAXONOMY_VERSION
 
-        assert TAXONOMY_VERSION == "taxonomy-v1.0"  # the value worlds should declare
+        # taxonomy-v1.1 at WP2R.2 (HF series re-registered at sub-strategy
+        # granularity, owner decision). This pin moves only with a deliberate bump.
+        assert TAXONOMY_VERSION == "taxonomy-v1.1"  # the value worlds should declare

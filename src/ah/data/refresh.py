@@ -116,6 +116,71 @@ def refresh(
     )
 
 
+def apply_intake_frames(
+    catalog: Catalog,
+    reqs: Requirements,
+    *,
+    frames: dict[str, pd.DataFrame],
+    vintage: str,
+    asof: str,
+    created_at: str,
+) -> RefreshResult:
+    """The manual-intake last mile (WP2R.2, closing half of RFR-88).
+
+    ``frames`` is :func:`ah.data.intake.to_series_frames`' output for an
+    ACCEPTED drop — per-series ``(date, value)`` frames keyed by series id.
+    This runs exactly :func:`refresh`'s sequence with the fetch replaced by the
+    drop: write each frame under ``vintage``, carry forward everything the drop
+    did not cover, run QC over the new pairs, advance the ``current`` pointer
+    only if QC passes, regenerate the gap/status registers. Until this existed,
+    ``ingest_file`` recorded a drop in ``intake_log`` and stopped — an accepted
+    delivery never reached the vintage store.
+
+    Every key in ``frames`` must be a registered series id: with the WP2R.2
+    convention that the intake ``strategy`` code IS the id fragment, a drop
+    whose codes are mapped (the WP2R.1 boundary) lands under registered ids by
+    construction, and anything else is a loud error here rather than a silent
+    new id in the store.
+    """
+    unknown = sorted(set(frames) - {r.series_id for r in reqs})
+    if unknown:
+        raise ValueError(
+            f"intake frames carry series ids that requirements.yaml does not register: "
+            f"{unknown} — register the series (or fix the strategy codes) before applying"
+        )
+    if catalog.vintage_status(vintage) is not None:
+        # idempotent, exactly as refresh(): this vintage was already built
+        return RefreshResult(vintage, sorted(frames), [], already_exists=True)
+
+    catalog.create_vintage(vintage, created_at=created_at)
+    written: list[str] = []
+    pairs: list[tuple[Requirement, pd.DataFrame]] = []
+    for series_id in sorted(frames):
+        req = next(r for r in reqs if r.series_id == series_id)
+        catalog.register_series(req)
+        catalog.write_observations(vintage, series_id, frames[series_id])
+        written.append(series_id)
+        pairs.append((req, frames[series_id]))
+
+    carried = _carry_forward(catalog, reqs, vintage, written)
+    qc = run_qc(catalog, vintage, pairs, asof=asof, created_at=created_at)
+    if qc.passed and written:
+        catalog.advance_pointer(vintage, when=created_at)
+
+    gaps_md = generate_gaps_md(gap_register(catalog, reqs, asof=asof))
+    status_md = generate_data_status_md(catalog, reqs, asof=asof)
+    return RefreshResult(
+        vintage,
+        sorted(frames),
+        written,
+        quarantined=not qc.passed,
+        qc=qc,
+        gaps_md=gaps_md,
+        status_md=status_md,
+        carried_forward=carried,
+    )
+
+
 def _carry_forward(
     catalog: Catalog, reqs: Requirements, vintage: str, written: list[str]
 ) -> list[str]:
