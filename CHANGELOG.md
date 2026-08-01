@@ -7,6 +7,43 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **`AM-2026-07-31-002` — THE HOLDOUT WAS NOT SPENT, and remains unspent.
+  `pre-registration.lock` is now `sha256:edd1f841050f92b8…`** (supersedes
+  `sha256:f10553a4b742…`; 33 hashed files, unchanged membership). No threshold, band,
+  gate, floor, split boundary, size, severity or rule text moved; `multi_seed_decision_rule`
+  is byte-identical; no code changed and the token mint in `ah/eval/g2.py` is left intact
+  and unused.
+
+  **The defect that forced the decision.** The seal pins the holdout's span
+  (`2021-01-01..2026-08-01`), its guard (a `FinalEvaluationToken` mintable only in
+  `ah/eval/g2.py`, with an import-graph test proving `ah.gen` cannot reach it), its
+  at-most-once budget, and an absolute no-tuning prohibition — and **never says what the
+  one permitted evaluation computes.** `STEP2-GENERATOR-PLAN` §WP2.11 adds only "once,
+  logged, never repeated". **None of the rule's four clauses reads the holdout**; all
+  four run on the WP2.10 grid against a train+validation reference, so the verdict is
+  fully determined without it. The project built an effective mechanism to protect a
+  resource and never wrote down what to do with it.
+
+  **Why declining is conservative rather than negligent.** Any procedure run at WP2.11
+  would have been authored at WP2.11, with the grid, both severe arms, the head-to-head
+  and the restricted-window re-run already visible — the forking path the seal exists to
+  close, applied to the one resource that cannot be restored. No reader could distinguish
+  "the system generalizes" from "the author picked a procedure that showed it does". Not
+  spending costs the gate nothing and leaves the resource worth what it was.
+
+  **Filed as an amendment rather than a note** because the sealed splits block asserts the
+  holdout "is spent EXACTLY ONCE, by WP2.11", and leaving that unamended would leave the
+  sealed document making a false statement about the project's own conduct — the exact
+  defect class recorded five times already against other prose. **Both readings of "spent
+  exactly once" are on the record**: as *requiring* a spend (so this is a dated departure
+  the amendment legitimizes) or as *bounding* spending at one (so zero conforms). The
+  stricter reading is why it is an amendment. **The prohibitions are unchanged and still
+  bind** — at most once, ever, through the token, and no tuning under any circumstance.
+
+  **`RFR-83`** owns the general defect: **a sealed guard with no sealed test behind it.**
+  It extends RFR-77 one step further back — a sealed protocol must specify its own inputs
+  and outputs, not merely its access control. **A guard is not a test.** Unowned, and it
+  must be closed *before* the next campaign rather than during it.
 - **`AM-2026-07-31-001` — A HOLE IN THE SEAL, not in the accounting of it, and the first
   in this project. `pre-registration.lock` is now
   `sha256:f10553a4b74242f2b8c77954f923c06de979a8adb0851adf8f8edecf940b15ec`**

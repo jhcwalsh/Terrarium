@@ -873,3 +873,87 @@ amendments:
     amendment type to describe this one event -- would have meant editing the sealed
     AMENDMENT_TYPES vocabulary for the convenience of the party filing the amendment.'
   type: correction
+- amendment_id: AM-2026-07-31-002
+  date: '2026-07-31'
+  payload:
+    code_changes: NONE. ah/eval/g2.py's FinalEvaluationToken mint is left exactly as it
+      is -- the capability stays, unused. No guard is weakened, no split boundary moves,
+      and ah.splits still refuses the holdout without a token.
+    hashed_file_set: 'UNCHANGED: 33 files, same membership as AM-2026-07-31-001. The
+      digest moves only because pre-registration.yaml is itself hashed.'
+    new_lock_digest: sha256:edd1f841050f92b81475a7ed3ed6b00756b2deaab61bd8009fb65bc4885b9c08
+    no_threshold_moved: NOT ONE. No min, max, severity, band, floor, gate bound, ensemble
+      size, block length, split boundary, selection weight or decision-rule text changed
+      value. multi_seed_decision_rule is byte-identical; it never read the holdout.
+    prohibitions_unchanged: 'At most once, ever, through a FinalEvaluationToken mintable
+      only in ah/eval/g2.py; no tuning on the holdout under any circumstance
+      (tuning_protocol.prohibitions). Both still bind in full. What changed is that the
+      one permitted spend was NOT TAKEN.'
+    sealed_at: '2026-07-31'
+    superseded_lock_digest: sha256:f10553a4b74242f2b8c77954f923c06de979a8adb0851adf8f8edecf940b15ec
+    the_change: 'The splits block''s statement that the holdout "is spent EXACTLY ONCE, by
+      WP2.11" no longer describes what WP2.11 did. The sentence is left standing and
+      annotated in place; the holdout was NOT spent at G2 and remains unspent.'
+    what_was_specified_and_what_was_not:
+      never_specified: WHAT THE ONE-SHOT EVALUATION COMPUTES. Not in this document, not
+        in STEP2-GENERATOR-PLAN Sec.WP2.11, which says only "the one-shot holdout
+        evaluation through the explicit-purpose path -- once, logged, never repeated".
+      specified: the span (2021-01-01..2026-08-01), the guard (FinalEvaluationToken,
+        mintable only in ah/eval/g2.py, with an import-graph test proving ah.gen cannot
+        reach it), that it may be spent at most once, and that nothing may ever be tuned
+        on it.
+  post_hoc: true
+  rationale: 'THE HOLDOUT WAS NOT SPENT, AND THAT IS THE CONSERVATIVE ACT RATHER THAN AN
+    OMISSION.
+
+
+    THE DEFECT THAT FORCED THE DECISION. This document pins the holdout''s span, its
+    guard, its at-most-once budget and an absolute no-tuning prohibition -- and never
+    says what the single permitted evaluation should COMPUTE. The plan is no more
+    specific. Critically, NONE OF multi_seed_decision_rule''s FOUR CLAUSES READS THE
+    HOLDOUT: all four are computed on the WP2.10 ablation grid against a train+validation
+    reference, so the G2 verdict is fully determined without it. The holdout''s role at
+    G2 was therefore never a defined test -- only a defined guard around an undefined
+    one.
+
+
+    WHY SPENDING IT WOULD HAVE BEEN WORSE THAN NOT. Any procedure run against it at
+    WP2.11 would have been authored at WP2.11, with the ablation grid, both severe arms,
+    the head-to-head and the restricted-window re-run all already in hand. That is the
+    forking path this file exists to close, applied to the one resource in the project
+    that cannot be restored. A holdout number produced that way is uninterpretable: a
+    reader cannot distinguish "the system generalizes" from "the author picked a
+    procedure that showed it does". Not spending costs the gate nothing, because the
+    verdict does not depend on it, and leaves the resource worth exactly what it was.
+
+
+    WHAT A LATER GATE MUST DO TO SPEND IT. Write the evaluation down FIRST -- what is
+    generated, at what size, from what conditioning state, scored on which metrics,
+    against which realizations, with what decision consequence if any -- seal that
+    specification before the campaign it will judge, and only then mint the token. That
+    is what pre-registration means, and it is the one thing WP2.3 did not do for this
+    resource.
+
+
+    WHY AN AMENDMENT RATHER THAN A NOTE. The sealed sentence asserts a fact about this
+    project''s conduct ("is spent EXACTLY ONCE, by WP2.11") that is no longer true.
+    Leaving it unamended would leave the sealed document making a false statement about
+    what actually happened -- which is EXACTLY the defect class this project has now
+    recorded five times against other prose (RFR-76, -77, -78, -81, -82: the seal
+    asserting or assuming something nothing verifies). Filing this amendment is the
+    author holding their own document to the standard they applied to those.
+
+
+    THE LITERAL READING, NAMED RATHER THAN GLOSSED. "Spent EXACTLY ONCE" can be read as
+    REQUIRING a spend, in which case not spending departs from the sealed text and this
+    amendment is what makes that departure legitimate and dated. It can also be read as
+    BOUNDING spending at one, in which case zero conforms. The first reading is the
+    stricter one and is the reason this is filed as a protocol_change rather than left as
+    a decision-register row. Both readings are recorded so a reviewer weighs the choice
+    rather than inherits it.
+
+
+    post_hoc IS TRUE: the WP2.10 grid, both severe arms and the head-to-head all existed
+    when this was decided. The flag records the state of the world, not the size of the
+    change. Nothing about the verdict moves either way -- the rule never read this data.'
+  type: protocol_change
