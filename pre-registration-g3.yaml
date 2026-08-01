@@ -176,6 +176,12 @@ seal_scope:
     # exist to keep sharp.
     - scripts/estimate_sleeve_mappings.py
     - mappings/sleeve-mappings-v1.0.yaml
+    # AM-2026-08-01-003 (pre-hoc, same rule): WP3.3's smoothing-kernel estimate
+    # joins — the sealed mark_lag criterion could be gamed through θ, so the
+    # ESTIMATE seals; the kernel engine (src/ah/port/smoothing.py) stays
+    # lineage-pinned outside, per the -002 boundary.
+    - scripts/estimate_smoothing_kernel.py
+    - mappings/smoothing-kernel-v1.0.yaml
     - src/ah/eval/reference.py
     - src/ah/eval/metrics/tails.py
     - src/ah/eval/metrics/_pooling.py
