@@ -7,6 +7,15 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.7 — the portfolio engine** (Step 3). `ah/port/engine.py`: the §8
+  waterfall in order (distributions in → calls out → spending → shortfall
+  resolution: liquid pro-rata, then forced secondary at the 0.81-NAV public
+  anchor haircut), **every forced sale logged** with period/amount/cause/sleeves.
+  **§7's mechanic implemented and tested**: spending rides the trailing average
+  of *reported* value — it falls <15% while true value crashes 40%, exactly when
+  liquid assets are scarcest. **The plan's acceptance verbatim**: an
+  over-committed institution in a crisis produces forced sales; a well-buffered
+  one does not. Breach detection on both bases. 7 tests.
 - **WP3.6 — vehicle mechanics** (Step 3). `ah/port/vehicles.py`: notice-period
   maturation, gate proration with rolled excess, side-pocket withholding and
   resolution, and `realizable_by_horizon` — the 30/90/180-day arithmetic of the
