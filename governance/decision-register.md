@@ -9,7 +9,7 @@ Status transitions to `RATIFIED` (or `REPLACED`) with a dated note and a PR link
 | D1 | De-smoothing method | geltner_ar1 · glm_ma · regime_glm | glm_ma | CLOSED 2026-07-31 | research | none (was: Step 1 mappings) |
 | D2 | Factor list / regime ruleset | candidate panel vs learned | rule-based regime v1 | CLOSED 2026-07-31 | research | none (was: generator training) |
 | D3 | Generator family | toy-v0 · bootstrap · signature-mmd · conditional-diffusion | toy-v0 (Step 0) | CLOSED 2026-07-31 | platform | none (was: Step 2) |
-| D4 | Correlation regime model | negative · positive · inflation_conditional | inflation_conditional | OPEN | research (Step 3: WP3.2 regime-varying treatment) | mappings |
+| D4 | Correlation regime model | negative · positive · inflation_conditional | inflation_conditional | CLOSED 2026-08-01 | research | none (was: mappings) |
 | D5 | Structural parameter vintage default | historical_average · current · custom | current | OPEN | product (Step 3: world authoring) | world authoring |
 | D6 | Stylized-fact thresholds | per-metric min/max, enforce vs todo | all `todo` (pre-registration) | RATIFIED 2026-07-31 | research | none (was: battery enforcement) |
 | D7 | Albourne cashflow groups A/B intake | schema variants | groups A-E per spec | OPEN | data (Step 3: WP3.4 institutional recalibration per STEP3-amendment-A1 Delta 1) | Step 3 calibration |
@@ -37,6 +37,18 @@ values pre-authorized by `AM-2026-07-26-001`/`-002` (`ensemble_size.n_paths: 102
 `tuning_protocol.trial_budget_per_system: 40` with its tie-break) carried the campaign
 to a completed, reviewed G2 gate and are ratified as sealed; a future campaign seals
 its own values regardless, so this binds nothing forward.
+
+**D4 closed at WP3.2 (2026-08-01).** The regime treatment of the mappings is DN-5
+§4.3's, adopted deliberately: **betas are constant** — regime variation reaches
+sleeve returns through the generator's regime-conditioned *factors* (the L2/L3
+path every ensemble now carries first-class), never through regime-switching
+loadings, and sleeve-space correlation therefore inherits factor-space
+correlation plus the estimated cross-sleeve residual correlation
+(`mappings/sleeve-mappings-v1.0.yaml`). The `inflation_conditional` default
+remains the toy-v0 engine's lever only. What this costs is DN-5 §7's tension,
+already resolved by the sealed thin-mapping decision (G3-pre): sleeve-space
+tails get their own sealed battery instead of regime-varying betas. Re-opening
+regime-varying mappings is a Step-3R+ decision with its own evidence bar.
 
 **The 2R plan's D-ids do not all match this table (RFR-78 class, in a plan).**
 STEP2R-CONSOLIDATION-PLAN §WP2R.8 says to close "D4 (tail objective + strategy set)"

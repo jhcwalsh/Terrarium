@@ -1,8 +1,10 @@
 {
-  "digest": "sha256:d21910da5914365347e50709c7b0dfcd58ddc0aa27c396d882cf4f32b2d67424",
+  "digest": "sha256:9018a6fb7b31464df02d174b492de4d1038777a082b37015d1c7a11e831d0e2d",
   "hashed_files": [
     "factors.yaml",
+    "mappings/sleeve-mappings-v1.0.yaml",
     "pre-registration-g3.yaml",
+    "scripts/estimate_sleeve_mappings.py",
     "src/ah/data/derive.py",
     "src/ah/data/desmooth.py",
     "src/ah/data/taxonomy.py",
@@ -17,5 +19,5 @@
     "taxonomy/sleeves.yaml"
   ],
   "prereg_path": "pre-registration-g3.yaml",
-  "sealed_at": "2026-08-01T00:00:00"
+  "sealed_at": "2026-08-01T18:30:00+00:00"
 }

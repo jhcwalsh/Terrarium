@@ -1046,3 +1046,51 @@ amendments:
     on -- clause (1) for hier-diffusion-v1 -- was implemented AGAINST the reading that
     would have promoted a second system.'
   type: correction
+- amendment_id: AM-2026-08-01-001
+  date: '2026-08-01'
+  payload:
+    files_added: scripts/estimate_sleeve_mappings.py (the estimator; train+validation
+      only, composite asserted equal to the sealed G3 reference), mappings/sleeve-mappings-v1.0.yaml
+      (the frozen loadings artifact, mapping_version map-2026.08), src/ah/port/mapping.py
+      (the runtime applier + the DN-5 s3.4 CTA rule)
+    new_lock_digest: sha256:8f41bafb4ec03c47783917d82cf80dda5f145e08c76543746e4f9af50cebbc2b
+    no_threshold_moved: NOT ONE. Every sleeve-tail threshold, episode criterion and
+      rule sentence is byte-identical; the scope widened by exactly the three announced
+      files.
+    sealed_at: '2026-08-01T18:00:00+00:00'
+    structural_omissions_carried: hy_spread and commodities loadings are UNESTIMABLE
+      on the sealed vintage (the sealed missing_factors) -- recorded in the artifact
+      as named omissions, never silent zeros; d_ig loadings carry the spread-change
+      sign convention (flip of DN-5's credit-return columns).
+    superseded_lock_digest: sha256:d21910da5914365347e50709c7b0dfcd58ddc0aa27c396d882cf4f32b2d67424
+  post_hoc: false
+  rationale: 'THE PLANNED ARRIVAL THE SEALED DOCUMENT ITSELF ANNOUNCED. pre-registration-g3.yaml''s
+    seal_scope.note, sealed this morning, says: ''WP3.2''s mapping estimator joins
+    by dated amendment in the commit that creates it.'' This is that amendment, filed
+    post_hoc FALSE because it is true: no Step 3 estimation result, no sleeve-tail
+    evaluation and no episode replay existed when the scope widened -- the estimator''s
+    own outputs are being sealed at birth, before anything they could be tuned toward
+    exists. First use of the pre-hoc path the G2 campaign never got.'
+  type: protocol_change
+- amendment_id: AM-2026-08-01-002
+  date: '2026-08-01'
+  payload:
+    caught_by: tests/test_seal_guards.py TestG3SealBoundary.test_g3_declared_list_has_no_stale_source_entries,
+      first full-suite run after -001
+    file_removed_from_scope: src/ah/port/mapping.py
+    new_lock_digest: sha256:9018a6fb7b31464df02d174b492de4d1038777a082b37015d1c7a11e831d0e2d
+    sealed_at: '2026-08-01T18:30:00+00:00'
+    superseded_lock_digest: sha256:8f41bafb4ec03c47783917d82cf80dda5f145e08c76543746e4f9af50cebbc2b
+  post_hoc: false
+  rationale: 'AM-2026-08-01-001 OVER-WIDENED THE SCOPE BY ONE FILE, AND THE BOUNDARY
+    GUARD REJECTED IT WITHIN MINUTES. The runtime applier (src/ah/port/mapping.py)
+    was listed alongside the estimator and artifact; tests/test_seal_guards.py''s
+    G3 stale-source check failed it as declared-but-unreachable from the judged entry
+    points -- and the guard encodes the right boundary: the applier is the DEFENDANT,
+    not the judge, exactly the argument that keeps generators outside the G2 lock.
+    It is pinned by mapping_version lineage (WorldSpec engine_defaults) like a checkpoint,
+    not by the judge''s seal. The estimator script and the frozen artifact REMAIN
+    sealed -- they are what prevents silent re-estimation. Still post_hoc FALSE: no
+    Step 3 result existed at either amendment. This is the guards doing at minute-scale
+    what RFR-82 took two days to catch.'
+  type: correction
