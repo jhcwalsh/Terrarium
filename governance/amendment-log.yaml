@@ -1175,3 +1175,34 @@ amendments:
     FALSE: no episode replay, no tier comparison, no Step 3 evaluation of any kind
     existed.'
   type: protocol_change
+- amendment_id: AM-2026-08-02-001
+  date: '2026-08-02'
+  payload:
+    files_added: src/ah/eval/episode2022.py (the scorer; pure, engine-free), scripts/run_2022_replay.py
+      (the driver/provenance script)
+    new_lock_digest: sha256:5a7186e58d4de1925f909d426492eeea087b49c80821a43dc7c6be3cdfd758ca
+    replay_result_at_sealing: 'Episode criterion set FAIL under the sealed gate rule:
+      mark_lag''s HF half at -3.1 months (the mapped HF composite troughs at June
+      2022''s first leg, before September''s public trough); private_weight_breach
+      fails as a PERMITTED NAMED failure (breach 9 months early -- the denominator
+      effect arrived at the first leg). public_equity_drawdown, distribution_shortfall
+      (0.544, inside the P-A window through the FULL chain), secondary_pricing and
+      coverage_warning pass. Tier 1 BEATS tier 0, 2 fails vs 3. Diagnosis in G1-EVIDENCE.md:
+      the sealed HY omission and/or stickiness resident in 2021-23 -- both next-campaign
+      questions, neither a tuning opportunity.'
+    sealed_at: '2026-08-02T06:00:00+00:00'
+    superseded_lock_digest: sha256:a2bffa6eaa24c06a6bed89a591284fbeb655d66b83514c0ea63c15343fa7bf2f
+  post_hoc: true
+  rationale: 'THE EPISODE SCORER JOINS THE G3 LOCK -- the LAST planned arrival the
+    sealed document announced (''WP3.11''s episode scorer joins by dated amendment
+    in the commit that creates it''). POST_HOC TRUE, stated plainly: unlike amendments
+    -001..-005, the replay RAN before this amendment was filed, so its results (episode
+    FAIL on mark_lag''s HF half; tier 1 beats tier 0 at 2 vs 3) existed when the scorer
+    was sealed. What bounds the hazard: the scorer implements the SEALED criteria
+    verbatim (each function quotes its sealed formula; the sealed numbers were frozen
+    at G3-pre before any judged code existed), the scorer consumes computed quantities
+    and never imports the engine it judges, and the result being sealed alongside
+    it is an honest FAIL -- the criterion the measured-zero-stickiness decision deliberately
+    preserved as a genuine test returned its genuine answer. Nothing in the sealed
+    criteria, thresholds or gate rule moved.'
+  type: protocol_change

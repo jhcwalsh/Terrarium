@@ -98,6 +98,7 @@ def run_tier1(
     terms: StructuralTerms | None = None,
     fees_on: bool = True,
     linkage_on: bool = True,
+    start_mid_life: bool = False,
     artifact_path: Path | None = None,
 ) -> Tier1Result:
     """One cohort's market-sensitive path over ``len(sleeve_returns)`` quarters.
@@ -112,12 +113,18 @@ def run_tier1(
         raise Tier1Error("returns and state arrays must share a length")
     terms = terms or StructuralTerms()
 
-    cohort = ClosedEndCohort.new_commitment(
-        base_document,
-        committed=committed,
-        vintage_year=vintage_year,
-        cohort_id=f"tier1-{vintage_year}",
-    )
+    if start_mid_life:
+        # the 2022 replay's case: an EXISTING cohort (age, NAV, unfunded as
+        # documented) hit by the episode — a fresh fund has no distributions
+        # to starve inside a two-year window
+        cohort = ClosedEndCohort.from_document(base_document)
+    else:
+        cohort = ClosedEndCohort.new_commitment(
+            base_document,
+            committed=committed,
+            vintage_year=vintage_year,
+            cohort_id=f"tier1-{vintage_year}",
+        )
     fee_spec = cohort.contract.fees
     life = cohort.contract.lifecycle.contractual_life_years
 

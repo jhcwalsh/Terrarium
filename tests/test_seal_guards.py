@@ -248,7 +248,7 @@ class TestG3SealBoundary:
     the DRAFT onward, so the first G3 lock is minted with its boundary already
     checked rather than guarded retroactively."""
 
-    G3_ENTRY_POINTS = ("ah.eval.sleevetails", "ah.eval.g3seal")
+    G3_ENTRY_POINTS = ("ah.eval.sleevetails", "ah.eval.g3seal", "ah.eval.episode2022")
 
     def test_g3_reachable_modules_are_declared_or_excluded(self):
         declared = set(
