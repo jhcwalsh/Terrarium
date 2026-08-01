@@ -7,6 +7,34 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **`RFR-84` — RFR-82 contained two false statements, and both are instances of the
+  class RFR-82 itself documents.** Written one commit after that class was named, by the
+  party naming it. (1) It cites `tests/test_splits.py` as precedent for an import-graph
+  check; **there is no such file** — the real tests are
+  `tests/test_leakage_guard.py::test_gen_modules_never_import_g2` and
+  `tests/test_bootstrap.py::test_no_gen_module_imports_ah_eval`. That is RFR-75's defect
+  exactly, which itself notes it "was caught by a one-off script, not by anything that
+  will run again". Nothing runs again, so it happened again, in the row explaining why.
+  (2) It describes `AM-2026-07-31-001` as type `seal_scope_addition`; that filing was
+  rejected by `tests/test_prereg.py` against the sealed four-type vocabulary and the
+  amendment was filed as `correction` — the row described a filing that never existed.
+  Corrected by appending, per this register's own rule. Neither error touches a
+  threshold, a verdict, a hash, or the substance of the finding — `ablation.py` was
+  genuinely unsealed, the re-seal is genuine, the proposed fix is right. What was wrong
+  is the account of the evidence, which is the part a reviewer follows to verify it.
+
+  **The prototype corrected its own specification.** Running the proposed check across
+  `governance/*.md` and `pre-registration.yaml` found one genuine dangling citation
+  pre-dating this work (a renamed conditional-tier test) and one false positive (RFR-75
+  quoting the bad citation it documents) — so a prose checker must distinguish a citation
+  from a quotation of one. And it **did not catch RFR-82's error at all**: RFR-75
+  specified the check over `file::test` pairs, while RFR-82's error was a bare filename.
+  The corrected spec resolves bare `tests/*.py` references too. Both refinements came
+  from running it rather than reasoning about it.
+
+  **Seven findings of one class in three days, and the seventh is the record of the
+  fifth.** That is not carelessness more care would fix — prose citations to code are
+  unverifiable by reading and decay silently. Only a machine check catches them. Unowned.
 - **`AM-2026-07-31-002` — THE HOLDOUT WAS NOT SPENT, and remains unspent.
   `pre-registration.lock` is now `sha256:edd1f841050f92b8…`** (supersedes
   `sha256:f10553a4b742…`; 33 hashed files, unchanged membership). No threshold, band,
