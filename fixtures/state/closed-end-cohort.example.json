@@ -1,0 +1,64 @@
+{
+  "state_version": "1.0.0",
+  "vehicle_type": "closed_end",
+  "identity": {
+    "sleeve_id": "pm_buyout",
+    "vintage_year": 2019,
+    "cohort_id": "pm_buyout-2019",
+    "n_funds": 12,
+    "fund_name": null
+  },
+  "commitment": {
+    "committed": 100.0,
+    "paid_in": 62.5,
+    "unfunded": 37.5,
+    "recallable_balance": 3.0,
+    "cumulative_recycled": 1.5
+  },
+  "value": {
+    "nav_true": 71.8,
+    "nav_reported": 68.4,
+    "cumulative_distributions": 18.0
+  },
+  "lifecycle": {
+    "age_years": 5.25,
+    "contractual_life_years": 10.0,
+    "extension_status": "none"
+  },
+  "performance": {
+    "tvpi": 1.44,
+    "dpi": 0.29,
+    "rvpi": 1.15,
+    "irr_to_date": 0.128,
+    "pme": 1.06
+  },
+  "parameters": {
+    "rc_curve": [0.25, 0.3, 0.2, 0.12, 0.08, 0.05],
+    "bow": 2.5,
+    "yield_rate": 0.01,
+    "beta_g": 0.55,
+    "alpha_g": 0.02,
+    "lambda_g": 0.4,
+    "k_d": 1.2,
+    "k_c": 0.9,
+    "sigma_eps": 0.08,
+    "dispersion_draw": null
+  },
+  "fees": {
+    "mgmt_fee_rate": 0.02,
+    "fee_basis_state": "committed",
+    "carry_rate": 0.2,
+    "hurdle": 0.08,
+    "catch_up": 1.0,
+    "waterfall_type": "european",
+    "accrued_carry": 1.9
+  },
+  "flows": {
+    "calls": 2.5,
+    "distributions_income": 0.4,
+    "distributions_capital": 1.6,
+    "nav_growth": 1.1,
+    "fees_paid": 0.5,
+    "carry_crystallized": 0.0
+  }
+}

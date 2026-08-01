@@ -1,0 +1,308 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal/sleeve-vehicle-state/v1.0.0/sleeve-vehicle-state.schema.json",
+  "title": "SleeveVehicleState",
+  "description": "The frozen sleeve/vehicle state contract (Step 2R WP2R.3, implementing sleeve-vehicle-state-spec.md section 3). One document is ONE sleeve-level state at ONE point in time: a closed-end cohort (or synthetic fund - same object, n_funds = 1), an open-ended sleeve, an evergreen/semi-liquid vehicle, or a liquid sleeve, discriminated by vehicle_type (R3: three private vehicle types first-class, plus the liquid funding source). The granularity switch (spec section 5) is carried by n_funds and dispersion_draw alone - the same object serves sleeve, cohort and synthetic-fund modes. Cross-field invariants that JSON Schema cannot express (paid_in <= committed; recallable_balance <= cumulative_distributions) are enforced by the pydantic mirror (ah.core.sleevestate) and asserted equivalent by the agreement test.",
+  "type": "object",
+  "required": ["state_version", "vehicle_type"],
+  "oneOf": [
+    { "$ref": "#/$defs/closed_end_cohort" },
+    { "$ref": "#/$defs/open_ended_sleeve" },
+    { "$ref": "#/$defs/evergreen_vehicle" },
+    { "$ref": "#/$defs/liquid_sleeve" }
+  ],
+  "$defs": {
+
+    "version": {
+      "type": "string",
+      "pattern": "^1\\.0\\.[0-9]+$",
+      "description": "Semantic version of this state contract."
+    },
+
+    "money": { "type": "number", "minimum": 0 },
+    "signed": { "type": "number" },
+    "fraction": { "type": "number", "minimum": 0, "maximum": 1 },
+    "nullable_fraction": { "type": ["number", "null"], "minimum": 0, "maximum": 1 },
+
+    "closed_end_cohort": {
+      "type": "object",
+      "description": "Spec section 3.1. A strategy x vintage cohort, or a synthetic fund at n_funds = 1 (hero funds included).",
+      "required": ["state_version", "vehicle_type", "identity", "commitment", "value", "lifecycle", "performance", "parameters", "fees", "flows"],
+      "additionalProperties": false,
+      "properties": {
+        "state_version": { "$ref": "#/$defs/version" },
+        "vehicle_type": { "const": "closed_end" },
+        "identity": {
+          "type": "object",
+          "required": ["sleeve_id", "vintage_year", "cohort_id", "n_funds", "fund_name"],
+          "additionalProperties": false,
+          "properties": {
+            "sleeve_id": { "type": "string", "minLength": 1, "description": "A taxonomy/sleeves.yaml id; vendor codes never appear here." },
+            "vintage_year": { "type": "integer", "minimum": 1980, "maximum": 2100 },
+            "cohort_id": { "type": "string", "minLength": 1 },
+            "n_funds": { "type": "integer", "minimum": 1, "description": "The granularity switch: >1 = cohort aggregate, 1 = a single (possibly synthetic/hero) fund." },
+            "fund_name": { "type": ["string", "null"], "description": "Populated only for narrative hero funds, bound to the World Bible cast in Step 4." }
+          }
+        },
+        "commitment": {
+          "type": "object",
+          "description": "R14: recycling/recallable state is explicit, never implied.",
+          "required": ["committed", "paid_in", "unfunded", "recallable_balance", "cumulative_recycled"],
+          "additionalProperties": false,
+          "properties": {
+            "committed": { "$ref": "#/$defs/money" },
+            "paid_in": { "$ref": "#/$defs/money", "description": "PIC <= committed (pydantic-enforced)." },
+            "unfunded": { "$ref": "#/$defs/money", "description": "Never negative - the schema bound IS the property." },
+            "recallable_balance": { "$ref": "#/$defs/money", "description": "Distributions subject to recall; <= cumulative_distributions (pydantic-enforced)." },
+            "cumulative_recycled": { "$ref": "#/$defs/money", "description": "Total recycled to date under the recycling provision (R14)." }
+          }
+        },
+        "value": {
+          "type": "object",
+          "required": ["nav_true", "nav_reported", "cumulative_distributions"],
+          "additionalProperties": false,
+          "properties": {
+            "nav_true": { "$ref": "#/$defs/money" },
+            "nav_reported": { "$ref": "#/$defs/money", "description": "The smoothed, lagged mark an investor sees (WP3.3's forward smoothing)." },
+            "cumulative_distributions": { "$ref": "#/$defs/money" }
+          }
+        },
+        "lifecycle": {
+          "type": "object",
+          "required": ["age_years", "contractual_life_years", "extension_status"],
+          "additionalProperties": false,
+          "properties": {
+            "age_years": { "type": "number", "minimum": 0 },
+            "contractual_life_years": { "type": "number", "exclusiveMinimum": 0 },
+            "extension_status": { "type": "string", "enum": ["none", "extended", "expired"] }
+          }
+        },
+        "performance": {
+          "type": "object",
+          "description": "To-date metrics; null where undefined early in life (IRR before meaningful flows, PME before a public path exists).",
+          "required": ["tvpi", "dpi", "rvpi", "irr_to_date", "pme"],
+          "additionalProperties": false,
+          "properties": {
+            "tvpi": { "type": ["number", "null"], "minimum": 0 },
+            "dpi": { "type": ["number", "null"], "minimum": 0 },
+            "rvpi": { "type": ["number", "null"], "minimum": 0 },
+            "irr_to_date": { "type": ["number", "null"] },
+            "pme": { "type": ["number", "null"], "minimum": 0, "description": "Against the GENERATED public path, never a historical index." }
+          }
+        },
+        "parameters": {
+          "type": "object",
+          "description": "The TA-with-market-linkage parameter state (sources: ALB-A/B or the public-0.1 calibration - the linkage_version discriminator lives on the run, not here).",
+          "required": ["rc_curve", "bow", "yield_rate", "beta_g", "alpha_g", "lambda_g", "k_d", "k_c", "sigma_eps", "dispersion_draw"],
+          "additionalProperties": false,
+          "properties": {
+            "rc_curve": { "type": "array", "items": { "$ref": "#/$defs/fraction" }, "minItems": 1, "description": "RC(t): rate-of-contribution by fund age." },
+            "bow": { "type": "number", "exclusiveMinimum": 0, "description": "B - the distribution-timing bow." },
+            "yield_rate": { "$ref": "#/$defs/fraction", "description": "Y - the income yield component." },
+            "beta_g": { "$ref": "#/$defs/signed", "description": "Growth linkage to the generated public path." },
+            "alpha_g": { "$ref": "#/$defs/signed" },
+            "lambda_g": { "type": "number", "minimum": 0, "description": "Linkage smoothing/decay." },
+            "k_d": { "type": "number", "minimum": 0, "description": "Exit-market distribution multiplier." },
+            "k_c": { "type": "number", "minimum": 0, "description": "Call multiplier." },
+            "sigma_eps": { "type": "number", "minimum": 0, "description": "Residual dispersion." },
+            "dispersion_draw": { "$ref": "#/$defs/nullable_fraction", "description": "The quartile/dispersion draw for a synthetic fund (spec section 3.1 names it quartile_draw; the 2R plan's discriminator name is used, recorded deviation). Null in cohort mode." }
+          }
+        },
+        "fees": {
+          "type": "object",
+          "required": ["mgmt_fee_rate", "fee_basis_state", "carry_rate", "hurdle", "catch_up", "waterfall_type", "accrued_carry"],
+          "additionalProperties": false,
+          "properties": {
+            "mgmt_fee_rate": { "$ref": "#/$defs/fraction" },
+            "fee_basis_state": { "type": "string", "enum": ["committed", "invested", "nav"], "description": "The basis-change state machine's current basis." },
+            "carry_rate": { "$ref": "#/$defs/fraction" },
+            "hurdle": { "$ref": "#/$defs/fraction" },
+            "catch_up": { "$ref": "#/$defs/fraction" },
+            "waterfall_type": { "type": "string", "enum": ["european", "american"] },
+            "accrued_carry": { "$ref": "#/$defs/money" }
+          }
+        },
+        "flows": {
+          "type": "object",
+          "description": "This period's flows (quarterly for closed-end).",
+          "required": ["calls", "distributions_income", "distributions_capital", "nav_growth", "fees_paid", "carry_crystallized"],
+          "additionalProperties": false,
+          "properties": {
+            "calls": { "$ref": "#/$defs/money" },
+            "distributions_income": { "$ref": "#/$defs/money" },
+            "distributions_capital": { "$ref": "#/$defs/money" },
+            "nav_growth": { "$ref": "#/$defs/signed" },
+            "fees_paid": { "$ref": "#/$defs/money" },
+            "carry_crystallized": { "$ref": "#/$defs/money" }
+          }
+        }
+      }
+    },
+
+    "open_ended_sleeve": {
+      "type": "object",
+      "description": "Spec section 3.2. An open-ended HF sleeve or individual synthetic fund.",
+      "required": ["state_version", "vehicle_type", "identity", "value", "terms", "liquidity", "flows"],
+      "additionalProperties": false,
+      "properties": {
+        "state_version": { "$ref": "#/$defs/version" },
+        "vehicle_type": { "const": "open_ended" },
+        "identity": {
+          "type": "object",
+          "required": ["sleeve_id", "n_funds", "fund_name"],
+          "additionalProperties": false,
+          "properties": {
+            "sleeve_id": { "type": "string", "minLength": 1 },
+            "n_funds": { "type": "integer", "minimum": 1 },
+            "fund_name": { "type": ["string", "null"] }
+          }
+        },
+        "value": {
+          "type": "object",
+          "required": ["nav_true", "nav_reported"],
+          "additionalProperties": false,
+          "properties": {
+            "nav_true": { "$ref": "#/$defs/money" },
+            "nav_reported": { "$ref": "#/$defs/money" }
+          }
+        },
+        "terms": {
+          "type": "object",
+          "required": ["notice_days", "lockup_remaining_months", "gate_pct", "redemption_frequency", "side_pocket_share"],
+          "additionalProperties": false,
+          "properties": {
+            "notice_days": { "type": "integer", "minimum": 0 },
+            "lockup_remaining_months": { "type": "number", "minimum": 0 },
+            "gate_pct": { "$ref": "#/$defs/nullable_fraction", "description": "Null = no gate provision; 0 is a total gate." },
+            "redemption_frequency": { "type": "string", "enum": ["daily", "weekly", "monthly", "quarterly", "semiannual", "annual"] },
+            "side_pocket_share": { "$ref": "#/$defs/fraction" }
+          }
+        },
+        "liquidity": {
+          "type": "object",
+          "description": "Realizable-vs-stated liquidity - the key modeled risk for this vehicle (spec section 2).",
+          "required": ["realizable_30d", "realizable_90d", "realizable_180d", "gated_flag", "gated_share", "queue_position"],
+          "additionalProperties": false,
+          "properties": {
+            "realizable_30d": { "$ref": "#/$defs/money" },
+            "realizable_90d": { "$ref": "#/$defs/money" },
+            "realizable_180d": { "$ref": "#/$defs/money" },
+            "gated_flag": { "type": "boolean" },
+            "gated_share": { "$ref": "#/$defs/fraction" },
+            "queue_position": { "type": ["number", "null"], "minimum": 0 }
+          }
+        },
+        "flows": {
+          "type": "object",
+          "required": ["subscriptions", "redemptions_requested", "redemptions_paid", "return_true", "return_reported", "fees", "performance_fee_crystallized"],
+          "additionalProperties": false,
+          "properties": {
+            "subscriptions": { "$ref": "#/$defs/money" },
+            "redemptions_requested": { "$ref": "#/$defs/money" },
+            "redemptions_paid": { "$ref": "#/$defs/money" },
+            "return_true": { "$ref": "#/$defs/signed" },
+            "return_reported": { "$ref": "#/$defs/signed" },
+            "fees": { "$ref": "#/$defs/money" },
+            "performance_fee_crystallized": { "$ref": "#/$defs/money" }
+          }
+        }
+      }
+    },
+
+    "evergreen_vehicle": {
+      "type": "object",
+      "description": "Spec section 3.3. First-class (R3): the failure mode is the queue that lengthens in stress, converting a liquid allocation into a locked one with no formal gate declared.",
+      "required": ["state_version", "vehicle_type", "identity", "value", "terms", "queue", "liquidity", "flows"],
+      "additionalProperties": false,
+      "properties": {
+        "state_version": { "$ref": "#/$defs/version" },
+        "vehicle_type": { "const": "evergreen" },
+        "identity": {
+          "type": "object",
+          "required": ["sleeve_id", "n_funds", "fund_name"],
+          "additionalProperties": false,
+          "properties": {
+            "sleeve_id": { "type": "string", "minLength": 1 },
+            "n_funds": { "type": "integer", "minimum": 1 },
+            "fund_name": { "type": ["string", "null"] }
+          }
+        },
+        "value": {
+          "type": "object",
+          "required": ["nav_true", "nav_reported"],
+          "additionalProperties": false,
+          "properties": {
+            "nav_true": { "$ref": "#/$defs/money" },
+            "nav_reported": { "$ref": "#/$defs/money" }
+          }
+        },
+        "terms": {
+          "type": "object",
+          "required": ["redemption_cap_pct_per_period", "notice_days", "queue_policy"],
+          "additionalProperties": false,
+          "properties": {
+            "redemption_cap_pct_per_period": { "$ref": "#/$defs/fraction" },
+            "notice_days": { "type": "integer", "minimum": 0 },
+            "queue_policy": { "type": "string", "enum": ["pro_rata", "fifo"] }
+          }
+        },
+        "queue": {
+          "type": "object",
+          "required": ["pending_redemption_amount", "queue_age_periods", "fulfilled_pct_history"],
+          "additionalProperties": false,
+          "properties": {
+            "pending_redemption_amount": { "$ref": "#/$defs/money" },
+            "queue_age_periods": { "type": "number", "minimum": 0 },
+            "fulfilled_pct_history": { "type": "array", "items": { "$ref": "#/$defs/fraction" }, "description": "Per-period fulfillment history; lengthening-under-stress is WP3.6's acceptance episode." }
+          }
+        },
+        "liquidity": {
+          "type": "object",
+          "required": ["realizable_this_period", "expected_time_to_full_exit_periods"],
+          "additionalProperties": false,
+          "properties": {
+            "realizable_this_period": { "$ref": "#/$defs/money" },
+            "expected_time_to_full_exit_periods": { "type": "number", "minimum": 0 }
+          }
+        },
+        "flows": {
+          "type": "object",
+          "required": ["subscriptions", "redemptions_requested", "redemptions_fulfilled", "return_true", "return_reported", "income_distributed"],
+          "additionalProperties": false,
+          "properties": {
+            "subscriptions": { "$ref": "#/$defs/money" },
+            "redemptions_requested": { "$ref": "#/$defs/money" },
+            "redemptions_fulfilled": { "$ref": "#/$defs/money" },
+            "return_true": { "$ref": "#/$defs/signed" },
+            "return_reported": { "$ref": "#/$defs/signed" },
+            "income_distributed": { "$ref": "#/$defs/money" }
+          }
+        }
+      }
+    },
+
+    "liquid_sleeve": {
+      "type": "object",
+      "description": "Spec section 3.4 - deliberately simple; the funding source for everything above.",
+      "required": ["state_version", "vehicle_type", "identity", "value", "weight", "target_weight", "return_period", "transaction_cost_bps"],
+      "additionalProperties": false,
+      "properties": {
+        "state_version": { "$ref": "#/$defs/version" },
+        "vehicle_type": { "const": "liquid" },
+        "identity": {
+          "type": "object",
+          "required": ["sleeve_id"],
+          "additionalProperties": false,
+          "properties": {
+            "sleeve_id": { "type": "string", "minLength": 1 }
+          }
+        },
+        "value": { "$ref": "#/$defs/money" },
+        "weight": { "type": "number", "minimum": 0, "description": "Current portfolio weight. No upper bound here: leverage is a portfolio-level concern (WP2R.6)." },
+        "target_weight": { "$ref": "#/$defs/fraction" },
+        "return_period": { "$ref": "#/$defs/signed", "description": "This period's return, from generated factors." },
+        "transaction_cost_bps": { "type": "number", "minimum": 0 }
+      }
+    }
+  }
+}
