@@ -1123,3 +1123,27 @@ amendments:
     is. Post_hoc FALSE: no episode replay, no sleeve-tail evaluation, no Step 3 result
     of any kind existed.'
   type: protocol_change
+- amendment_id: AM-2026-08-01-004
+  date: '2026-08-01'
+  payload:
+    files_added: scripts/freeze_tier0_spec.py, mappings/cashflow-tier0-v1.0.yaml (tier0-2026.08)
+    g_measured: 'g_annual = 12.0539 percent: the annualized mean monthly public total
+      return (french.mkt_rf + french.rf) over 1134 train+validation months -- PME-neutral
+      by construction, within a point of the classic TA paper''s 13 percent convention
+      but MEASURED rather than adopted.'
+    historical_simulation_leg: UNPARAMETERIZABLE (needs ALB-A/C, never delivered);
+      recorded in the spec with its delivery trigger, not silently dropped. Until
+      then tier 0 is the constant-G TA alone and every tier-0 claim says so.
+    new_lock_digest: sha256:5e555a4f39c0f63af529ddce9d4f0824fe7500017bef153edf29ad3e0e6d21ee
+    sealed_at: '2026-08-01T23:00:00+00:00'
+    superseded_lock_digest: sha256:cce871dffe6215f7d59d8a4a76f0426fe5a051b2a9c69f65feb375b4b312d446
+  post_hoc: false
+  rationale: 'TIER 0''S SPECIFICATION FREEZES BEFORE ANY TIER-1 CODE EXISTS -- the
+    standing benchmark-first rule made mechanical. The sealed tier0_beats_rule judges
+    tier 1 against tier 0 on the sealed episode formulas; an unfrozen tier 0 could
+    be weakened after tier 1''s numbers were seen, so the benchmark''s spec (measured
+    constant G, the classic register form, the terminal convention, and the RECORDED
+    unavailability of the historical-simulation leg) seals now. Post_hoc FALSE in
+    the strongest sense available: the thing this benchmark will be compared against
+    has not been written.'
+  type: protocol_change

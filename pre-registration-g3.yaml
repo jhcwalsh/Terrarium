@@ -182,6 +182,10 @@ seal_scope:
     # lineage-pinned outside, per the -002 boundary.
     - scripts/estimate_smoothing_kernel.py
     - mappings/smoothing-kernel-v1.0.yaml
+    # AM-2026-08-01-004 (pre-hoc, the purest case): tier 0's frozen spec joins
+    # BEFORE ANY TIER-1 CODE EXISTS -- the benchmark-first rule, mechanical.
+    - scripts/freeze_tier0_spec.py
+    - mappings/cashflow-tier0-v1.0.yaml
     - src/ah/eval/reference.py
     - src/ah/eval/metrics/tails.py
     - src/ah/eval/metrics/_pooling.py

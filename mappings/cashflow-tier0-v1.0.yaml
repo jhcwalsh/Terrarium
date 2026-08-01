@@ -1,0 +1,22 @@
+# mappings/cashflow-tier0-v1.0.yaml — scripts/freeze_tier0_spec.py
+# vintage 2026-08-01.2; train+validation only. FROZEN BEFORE TIER 1 EXISTS
+# (the standing benchmark-first rule; G3-pre's tier0_beats_rule is the judge).
+tier0_version: tier0-2026.08
+campaign_vintage_id: "2026-08-01.2"
+form: >-
+  The model-parameter-register section 1 classic TA, run through the SAME
+  cohort recursion tier 1 uses with the linkage OFF: f_call = f_dist = 1,
+  NAV growth constant at g_annual. Terminal liquidation at age >= L
+  (extensions excluded). One model, linkage on or off - never two models.
+g_annual: 0.120539
+g_source: >-
+  Annualized mean monthly public total return (french.mkt_rf + french.rf),
+  1134 train+validation months. PME-neutral by construction: tier 0
+  embodies 'private assets are public assets with a J-curve', the
+  assumption-free strawman the market-sensitive tier must beat.
+historical_simulation_leg: >-
+  UNPARAMETERIZABLE - the plan's replay-observed-rate-profiles leg needs
+  ALB-A/C, never delivered (the sealed PM unavailability). Recorded with
+  its trigger (first ALB-A/C delivery -> parameterize by amendment), not
+  silently dropped. Until then tier 0 is the constant-G TA alone and every
+  tier-0 claim says so.
