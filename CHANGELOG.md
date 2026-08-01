@@ -7,6 +7,14 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.9 — the liability proxy** (Step 3). `ah/port/proxy.py`: LSMC discipline
+  (Krah et al.) with a polynomial basis a reader can audit — disjoint
+  fit/validation scenario sets (7919 rule), **pre-stated error bounds declared
+  before any fit** (0.5% validation / 1.0% capital-region), and the capital
+  region tested point-by-point, not on average. **The fit refuses to ship when
+  underpowered** (degrees 4–5 fail their own bounds honestly; degree 6 passes
+  at 0.16%/0.03%); the proxy refuses to extrapolate outside its fitted region.
+  Portfolio metrics run direct, per the plan's boundary. 5 tests.
 - **WP3.8 — the pension twin** (Step 3). `ah/port/twin.py`: parameterized DB
   liability profile (v1-simple, stated; member-level projection is a later named
   refinement), funding ratio, rate/inflation shocks consuming the frozen WP2R.6
