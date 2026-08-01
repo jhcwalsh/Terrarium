@@ -73,8 +73,9 @@ import pandas as pd
 
 from ah.core.numericworld import NumericWorld
 from ah.gen import registry
-from ah.gen.base import Ensemble, EnsembleMeta
+from ah.gen.base import Ensemble, EnsembleMeta, RegimeRecord, SlowStateRecord
 from ah.gen.bootstrap import BootstrapSource
+from ah.gen.climate.model import STATE_NAMES
 from ah.gen.climate.simulate import (
     ClimateArtifact,
     SimulatedClimate,
@@ -88,6 +89,7 @@ from ah.gen.joinery import reconcile as rc
 from ah.gen.joinery import support as sp
 from ah.gen.joinery import waypoints as wp
 from ah.gen.regimes.semimarkov import (
+    REGIME_LABELS,
     RegimePaths,
     RegimesArtifact,
     regime_path_for_world,
@@ -375,6 +377,11 @@ class _DecadeResult:
     reconciliation: rc.DecadeReconciliation
     support: dict[str, Any]
     decade_index: int
+    # WP2R.4: the decade's slow-state row (months, n_states), STATE_NAMES order,
+    # retained from the (possibly two-pass) simulated climate so the emitted
+    # ensemble can carry its L1 layer. The regime path needs no extra field —
+    # waypoints.labels is the operative (crisis-overlaid) monthly label path.
+    states: np.ndarray
 
 
 @dataclass
@@ -534,6 +541,7 @@ class _DecadeFactory:
                     reconciliation=diagnostics,
                     support=sp.decade_support(conds, prep.waypoints.labels, self.support_ref),
                     decade_index=prep.decade_index,
+                    states=prep.sim.states[0],
                 )
             )
         return results
@@ -719,7 +727,30 @@ def assemble_decades(
         conditioning=conditioning,
         active_blocks=tuple(source.active_blocks),
     )
-    return Ensemble(paths=paths, factor_names=list(sampler.factor_names), meta=meta)
+    # WP2R.4: the layers the paths were generated under, first-class on the
+    # ensemble. Labels are the operative per-decade paths (crisis overlays
+    # applied) — the same arrays the bridge conditioned on; states are the
+    # (possibly two-pass) L1 rows each decade was assembled against. Both
+    # reflect the post-acceptance-filter results list, so a replaced decade
+    # carries its replacement's layers, never the rejected original's.
+    regimes = RegimeRecord(
+        labels=np.stack([r.waypoints.labels for r in results]),
+        legend=REGIME_LABELS,
+        mode=str(conditioning["regime_mode"]),
+        ruleset_version=str(regimes_artifact.meta.get("ruleset_version", "unknown")),
+    )
+    slow = SlowStateRecord(
+        states=np.stack([r.states for r in results]),
+        names=STATE_NAMES,
+        layer="simulated" if config.use_climate else "frozen-posterior-mean",
+    )
+    return Ensemble(
+        paths=paths,
+        factor_names=list(sampler.factor_names),
+        meta=meta,
+        regimes=regimes,
+        slow_states=slow,
+    )
 
 
 def _aggregate_reconciliation(results: list[_DecadeResult]) -> dict[str, Any]:

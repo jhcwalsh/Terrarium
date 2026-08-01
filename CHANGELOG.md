@@ -7,6 +7,35 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.4 — the generator-output contract** (`schemas/generator-output-v1.0.schema.json`,
+  Step 2R). The frozen contract for what a generator emits: the provenance quartet
+  (generator / checkpoint / config / vintage) plus seed and blocks; the factor namespace
+  with units and the primitive-vs-derived split, derived variables carrying their defining
+  identity (`expr` + `inputs`) so a consumer can recompute them; the regime path; the
+  slow-state (L1) layer; and the joinery waypoint/diagnostic block. Tensors are pinned by
+  shape/dtype/sha256 (`ah.core.digest` canonical rounding), never embedded.
+  - **Absence is a statement.** A generator with no regime path or slow-state layer
+    declares `AbsentLayer(reason)` at construction; the document spells it
+    `{"absent": true, "reason": ...}`; a bare `None` makes `build_document` raise. No
+    component of the contract can be silently missing — the mechanical form of the
+    RFR-76..84 lesson, applied to a contract at birth rather than retrofitted.
+  - `Ensemble` gains optional `regimes`/`slow_states` records (every existing constructor
+    unchanged — sealed `ah/eval/` callers untouched). The joinery now *retains* what it
+    previously dropped: per-decade operative regime labels (crisis overlays applied) and
+    the L1 state rows; `bootstrap-v1` emits its **realized** regime path (the historical
+    label of every row actually drawn — a record of the stratified draw, not a new
+    conditioning mechanism; no RNG consumed, bit-identical paths per seed).
+  - `ah/gen/output.py`: `build_document` (validates before returning), `validate_document`,
+    `verify_arrays` (re-derives every digest). `tests/test_generator_output.py` (15):
+    schema-validity and digest verification for the joinery and bootstrap emitters, the
+    frozen-posterior-mean marking (system C), per-seed document bit-stability, both
+    refusals (bare-`None` layer, undeclared factor), tamper detection, and namespace
+    fidelity — every derived factor's identity resolves to a real `ah.data.derive` helper
+    over registered series (the acceptance clause as a test).
+  - **Process note:** CLAUDE.md declares `schemas/` read-only vendored truth; the 2R plan
+    explicitly instructs authoring this new file there. Read per the stated conflict rule
+    (plan wins for process): authoring a *new* contract is the sanctioned act, no existing
+    schema was touched. Flagged here rather than resolved silently.
 - **WP2.11 — THE G2 GATE. Verdict: PROMOTE `hier-flow-v1` over `bootstrap-v1`.**
   `AM-2026-07-31-003` seals the executable form of `multi_seed_decision_rule`;
   `pre-registration.lock` is now `sha256:99ab3f772be6a5af…` (33 files, membership

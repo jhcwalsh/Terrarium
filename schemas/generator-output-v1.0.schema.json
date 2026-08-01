@@ -1,0 +1,283 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal/generator-output/v1.0.0/generator-output.schema.json",
+  "title": "GeneratorOutput",
+  "description": "The versioned contract for what a generator emits (Step 2R, WP2R.4). One document per Ensemble. Tensors are pinned by shape/dtype/sha256 digest (ah.core.digest canonical float64 rounding), never embedded: the document is the auditable description of an ensemble, and the arrays live wherever the run put them. Components a generator does not produce (a bootstrap has no slow states) are declared absent with a reason - absence is a statement, not an omission.",
+  "type": "object",
+  "required": ["contract_version", "provenance", "shape", "factors", "arrays", "regimes", "slow_states", "diagnostics", "conditioning"],
+  "additionalProperties": false,
+  "properties": {
+
+    "contract_version": {
+      "type": "string",
+      "pattern": "^1\\.0\\.[0-9]+$",
+      "description": "Semantic version of this generator-output contract."
+    },
+
+    "provenance": {
+      "type": "object",
+      "description": "The provenance quartet (generator, checkpoint, config, vintage) plus the seed and block set - everything needed to name what produced the arrays. Mirrors EnsembleMeta.",
+      "required": ["generator_id", "checkpoint_hash", "config_hash", "vintage_id", "seed", "active_blocks"],
+      "additionalProperties": false,
+      "properties": {
+        "generator_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The registry id that produced this ensemble (ah.gen.registry). Must resolve."
+        },
+        "checkpoint_hash": {
+          "type": ["string", "null"],
+          "description": "Content hash of the trained checkpoint, null for generators with no trained weights (bootstrap, Gaussian control)."
+        },
+        "config_hash": {
+          "type": ["string", "null"],
+          "description": "Content hash of the sampler/training config, null where no config object exists."
+        },
+        "vintage_id": {
+          "type": "string",
+          "minLength": 1,
+          "description": "The data vintage every fitted artifact and reference statistic came from."
+        },
+        "seed": {
+          "type": "integer",
+          "description": "The single base seed all randomness flowed from (PCG64; path k opens base_seed + 7919*k)."
+        },
+        "active_blocks": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "minItems": 1,
+          "uniqueItems": true,
+          "description": "The factor blocks (factors.yaml factor_blocks) this ensemble was generated over."
+        }
+      }
+    },
+
+    "shape": {
+      "type": "object",
+      "required": ["n_paths", "months", "n_factors"],
+      "additionalProperties": false,
+      "properties": {
+        "n_paths": { "type": "integer", "minimum": 1 },
+        "months": { "type": "integer", "minimum": 1 },
+        "n_factors": { "type": "integer", "minimum": 1 }
+      }
+    },
+
+    "factors": {
+      "type": "array",
+      "minItems": 1,
+      "description": "The factor namespace, in paths[:, :, i] column order. Copied from the sealed factor manifest (factors.yaml) at emit time; an agreement test, not this schema, asserts the copy is faithful. n_factors must equal the length of this array.",
+      "items": {
+        "type": "object",
+        "required": ["name", "block", "kind", "units", "identity"],
+        "additionalProperties": false,
+        "if": { "properties": { "kind": { "const": "unavailable" } } },
+        "then": {},
+        "else": {
+          "properties": { "units": { "type": "string", "minLength": 1 } }
+        },
+        "properties": {
+          "name": { "type": "string", "minLength": 1 },
+          "block": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The factor block (factors.yaml) that declares this factor."
+          },
+          "kind": {
+            "type": "string",
+            "enum": ["series", "derived", "unavailable"],
+            "description": "The primitive-vs-derived split, stated explicitly. 'series' = primitive, read from one registered series; 'derived' = computed by a named ah.data.derive helper; 'unavailable' = generated but with no Step-1 source (reference statistics do not exist for it)."
+          },
+          "units": {
+            "type": ["string", "null"],
+            "description": "Units of this factor's generated values: the requirements.yaml units for a series factor, the manifest's declared units for a derived one. Null is permitted only for kind=unavailable, where no sourcing series exists to carry units (enforced by the conditional below)."
+          },
+          "identity": {
+            "description": "For kind=derived: the defining identity, sufficient for a consumer to recompute the variable from its inputs. For series/unavailable: null.",
+            "oneOf": [
+              { "type": "null" },
+              {
+                "type": "object",
+                "required": ["expr", "inputs"],
+                "additionalProperties": false,
+                "properties": {
+                  "expr": {
+                    "type": "string",
+                    "minLength": 1,
+                    "description": "The ah.data.derive function name that defines this variable."
+                  },
+                  "inputs": {
+                    "type": "array",
+                    "items": { "type": "string", "minLength": 1 },
+                    "minItems": 1,
+                    "description": "The requirements.yaml series ids the identity consumes, positional, in the order the helper expects."
+                  }
+                }
+              }
+            ]
+          }
+        }
+      }
+    },
+
+    "arrays": {
+      "type": "object",
+      "description": "Digest descriptors for every tensor the ensemble carries. 'paths' is always present; the others mirror the regimes / slow_states blocks (present as a descriptor exactly when the block is present, else null).",
+      "required": ["paths", "regime_labels", "slow_states"],
+      "additionalProperties": false,
+      "properties": {
+        "paths": { "$ref": "#/$defs/tensor" },
+        "regime_labels": {
+          "oneOf": [ { "type": "null" }, { "$ref": "#/$defs/tensor" } ],
+          "description": "(n_paths, months) integer codes into regimes.labels_legend, when the generator produced a regime path."
+        },
+        "slow_states": {
+          "oneOf": [ { "type": "null" }, { "$ref": "#/$defs/tensor" } ],
+          "description": "(n_paths, months, n_states) in slow_states.names order, when the generator ran a slow-state layer."
+        }
+      }
+    },
+
+    "regimes": {
+      "description": "The regime path the ensemble was generated under, or an explicit absence.",
+      "oneOf": [
+        { "$ref": "#/$defs/absent" },
+        {
+          "type": "object",
+          "required": ["labels_legend", "mode", "ruleset_version"],
+          "additionalProperties": false,
+          "properties": {
+            "labels_legend": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 2,
+              "uniqueItems": true,
+              "description": "Integer code i in the regime_labels tensor means labels_legend[i]. For regime_ruleset_v1 this is the six Step-1 labels in ah.data.derive order."
+            },
+            "mode": {
+              "type": "string",
+              "minLength": 1,
+              "description": "How the path arose: 'semimarkov' (fitted skeleton), a WorldSpec regimes.mode, or a generator-specific mode string. Recorded verbatim from the run."
+            },
+            "ruleset_version": {
+              "type": "string",
+              "minLength": 1,
+              "description": "The regime ruleset the labels are defined against (e.g. regime_ruleset_v1)."
+            }
+          }
+        }
+      ]
+    },
+
+    "slow_states": {
+      "description": "The slow-state layer (L1) the paths were generated under, or an explicit absence.",
+      "oneOf": [
+        { "$ref": "#/$defs/absent" },
+        {
+          "type": "object",
+          "required": ["names", "layer"],
+          "additionalProperties": false,
+          "properties": {
+            "names": {
+              "type": "array",
+              "items": { "type": "string", "minLength": 1 },
+              "minItems": 1,
+              "uniqueItems": true,
+              "description": "State names in the slow_states tensor's last-axis order (the climate model's STATE_NAMES contract)."
+            },
+            "layer": {
+              "type": "string",
+              "enum": ["simulated", "frozen-posterior-mean"],
+              "description": "Whether the slow states were simulated from the posterior or frozen at its mean (ablation system C)."
+            }
+          }
+        }
+      ]
+    },
+
+    "diagnostics": {
+      "description": "The waypoint/diagnostic block: what the joinery did and how well, or an explicit absence for generators with no joinery.",
+      "oneOf": [
+        { "$ref": "#/$defs/absent" },
+        {
+          "type": "object",
+          "required": ["waypoints_bound", "reconciliation", "support", "waypoint_tolerance", "acceptance_filter"],
+          "additionalProperties": true,
+          "properties": {
+            "waypoints_bound": {
+              "type": "boolean",
+              "description": "Whether annual waypoints were computed and bound (Denton reconciliation ran). False for the rollout ablation."
+            },
+            "reconciliation": {
+              "type": "object",
+              "description": "Per-factor reconciliation-diagnostic distribution across paths, as emitted by the joinery."
+            },
+            "support": {
+              "type": "object",
+              "description": "Support-monitoring summary (Mahalanobis exceedances against the reference)."
+            },
+            "waypoint_tolerance": {
+              "type": "object",
+              "required": ["n_decades_ok", "all_ok"],
+              "additionalProperties": true,
+              "properties": {
+                "n_decades_ok": { "type": "integer", "minimum": 0 },
+                "all_ok": { "type": "boolean" }
+              }
+            },
+            "acceptance_filter": {
+              "type": "object",
+              "required": ["enabled", "n_rejected"],
+              "additionalProperties": true,
+              "properties": {
+                "enabled": { "type": "boolean" },
+                "n_rejected": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      ]
+    },
+
+    "conditioning": {
+      "type": "object",
+      "description": "The generator's full conditioning record (EnsembleMeta.conditioning), verbatim. Deliberately open: its contents are generator-specific lineage, and the sealed conditioning statements - not this schema - govern what conditioning is permitted."
+    }
+  },
+
+  "$defs": {
+    "tensor": {
+      "type": "object",
+      "description": "A tensor pinned by shape, dtype and content digest. The digest is ah.core.digest.sha256_of_arrays over the single array (canonical float64 rounding), so any holder of the array can verify it against this document.",
+      "required": ["shape", "dtype", "sha256"],
+      "additionalProperties": false,
+      "properties": {
+        "shape": {
+          "type": "array",
+          "items": { "type": "integer", "minimum": 0 },
+          "minItems": 1
+        },
+        "dtype": { "type": "string", "minLength": 1 },
+        "sha256": {
+          "type": "string",
+          "pattern": "^sha256:[0-9a-f]{64}$",
+          "description": "ah.core.digest.sha256_of_arrays output, prefix included - the platform's digest convention."
+        }
+      }
+    },
+    "absent": {
+      "type": "object",
+      "description": "An explicit absence: the generator does not produce this component, and the document says why instead of leaving a reader to infer it.",
+      "required": ["absent", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "absent": { "const": true },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Why this component does not exist for this generator (e.g. 'bootstrap-v1 has no slow-state layer; blocks are drawn from the historical panel')."
+        }
+      }
+    }
+  }
+}
