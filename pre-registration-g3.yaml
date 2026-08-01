@@ -186,6 +186,11 @@ seal_scope:
     # BEFORE ANY TIER-1 CODE EXISTS -- the benchmark-first rule, mechanical.
     - scripts/freeze_tier0_spec.py
     - mappings/cashflow-tier0-v1.0.yaml
+    # AM-2026-08-01-005 (pre-hoc): tier 1's frozen linkage joins -- the sealed
+    # distribution_shortfall and secondary_pricing criteria run through these
+    # parameters; an unfrozen linkage could be re-solved after a replay.
+    - scripts/freeze_tier1_linkage.py
+    - mappings/cashflow-tier1-v1.0.yaml
     - src/ah/eval/reference.py
     - src/ah/eval/metrics/tails.py
     - src/ah/eval/metrics/_pooling.py

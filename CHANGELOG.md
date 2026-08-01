@@ -7,6 +7,25 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP3.4 — tier 1, the market-sensitive cashflow engine** (Step 3;
+  `linkage_version: tier1-public-0.1`). `ah/port/cashflow_tier1.py`: the same
+  cohort recursion as tier 0 with the linkage ON — **the one-model identity is a
+  passing test** (linkage off + fees off reproduces tier 0 flow-for-flow) — plus
+  the structural mechanics: management fees with the basis change
+  (committed→NAV), European carry above hurdle, recycling through the R14
+  recallable machinery, subscription-line deferral, extension behavior.
+  **`f_dist` calibrated to public anchors**: coefficients solved so P-A's
+  drought-depth center (0.50) holds exactly at the *measured* 2022 state
+  (dd 24.8%, IG spread ratio 1.253), influence shared in P-A's own 0.37:0.30
+  elasticity ratio; substitutions documented (log P/D→drawdown; HY→IG, HY being
+  a sealed missing factor). **`f_call` near-flat** (Delta 3: the self-funding
+  breakdown is distribution-side) — a severe drawdown moves calls 3%.
+  **No crisis/regime term, structurally** — continuous states only, pinned by a
+  signature test; the adds-nothing regression runs at the WP3.11 replay. PM
+  growth loadings are DN-5 priors **adopted as chosen (kind C)**, never called
+  estimates. **`AM-2026-08-01-005`** (pre-hoc, the fifth) seals the linkage into
+  the G3 lock (`sha256:a2bffa6e…`). 11 tests incl. stress-starves-distributions
+  (−25%+ dists, −<10% calls).
 - **WP3.5 — tier 0, the transparent cashflow benchmark, frozen before tier 1
   exists** (Step 3). `ah/port/cashflow_tier0.py` runs the register's classic
   constant-G TA **through the same cohort recursion tier 1 will use, linkage

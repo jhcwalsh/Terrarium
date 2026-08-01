@@ -1147,3 +1147,31 @@ amendments:
     the strongest sense available: the thing this benchmark will be compared against
     has not been written.'
   type: protocol_change
+- amendment_id: AM-2026-08-01-005
+  date: '2026-08-01'
+  payload:
+    files_added: scripts/freeze_tier1_linkage.py, mappings/cashflow-tier1-v1.0.yaml
+      (linkage_version tier1-public-0.1)
+    new_lock_digest: sha256:a2bffa6eaa24c06a6bed89a591284fbeb655d66b83514c0ea63c15343fa7bf2f
+    no_crisis_term: 'Structural (Delta 3): both linkage functions consume continuous
+      market states only, by signature, pinned by test; the adds-nothing regression
+      runs at the WP3.11 replay.'
+    sealed_at: '2026-08-02T01:00:00+00:00'
+    solved_coefficients: a_drawdown 1.541, b_log_spread 1.377 at measured dd_2022
+      0.248, spread_ratio 1.253; floor 0.30, ceiling 1.50; f_call slope 0.10 (near-flat
+      per Delta 3).
+    superseded_lock_digest: sha256:5e555a4f39c0f63af529ddce9d4f0824fe7500017bef153edf29ad3e0e6d21ee
+  post_hoc: false
+  rationale: 'TIER 1''S FROZEN LINKAGE JOINS THE G3 LOCK, PRE-HOC (the fifth planned
+    arrival; estimates seal, engines do not). The sealed distribution_shortfall criterion
+    judges the replay''s drought depth and the linkage parameters ARE what produce
+    it -- an unfrozen f_dist could be re-solved after a replay showed a miss. Calibration
+    is PUBLIC-route (linkage_version public-0.1 per Amendment A1 Delta 1): coefficients
+    solved so P-A''s drought-depth center (0.50) holds at the MEASURED 2022 state,
+    with influence shared in P-A''s own 0.37:0.30 elasticity ratio; substitutions
+    (log P/D -> drawdown depth; HY -> IG spread, HY being a sealed missing factor)
+    documented in the artifact. The PM growth loadings are DN-5 tabled priors ADOPTED
+    AS CHOSEN (kind C) -- no PM data exists; never presented as estimates. Post_hoc
+    FALSE: no episode replay, no tier comparison, no Step 3 evaluation of any kind
+    existed.'
+  type: protocol_change
