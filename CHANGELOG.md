@@ -7,6 +7,19 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.6 — portfolio/institution state extensions (R6, R7), schema-level only**
+  (Step 2R). `schemas/portfolio-institution-state-v1.0.schema.json` +
+  `ah/core/institutionstate.py` (same dual-validation pattern): rates/inflation
+  hedge ratios; the **collateral pool** — eligible assets with haircuts, posted,
+  and *headroom*, the variable the 2022 gilt episode was about; **explicit and
+  pass-through leverage** (ratio-of-NAV, 1.0 = unlevered); portfolio fee-drag
+  aggregation; per-liquid-sleeve transaction-cost defaults; and the **FX hedge
+  ratio, present but inert at 0** — consistent with sealed R5 (no v1 FX factor)
+  while letting the contract survive the next campaign's FX block unchanged
+  (S2R-FX-NEXT-CAMPAIGN). A stub DB-pension-shaped institution validates and
+  round-trips (`fixtures/state/institution-stub.json`); Step 3's plan vocabulary
+  is the field vocabulary, pinned by a test. Implementation is WP3.7/WP3.8's,
+  deliberately not built here. 10 tests; new core module at 100% coverage.
 - **WP2R.3 — the sleeve/vehicle state schema freeze (R3, R14)** (Step 2R).
   `schemas/sleeve-vehicle-state-v1.0.schema.json` implements the spec's §3 with the
   **three private vehicle types first-class** (closed-end cohort, open-ended sleeve,

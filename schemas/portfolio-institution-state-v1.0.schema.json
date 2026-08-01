@@ -1,0 +1,116 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal/portfolio-institution-state/v1.0.0/portfolio-institution-state.schema.json",
+  "title": "PortfolioInstitutionState",
+  "description": "The portfolio/institution state extensions (Step 2R WP2R.6, R6/R7). SCHEMA-LEVEL ONLY: implementation is Step 3 (WP3.7 portfolio engine, WP3.8 institutional twin). These are the variables that make a DB pension twin behave like a pension rather than an endowment with liabilities attached: rate/inflation hedge ratios, the collateral pool (eligible assets, haircuts, posted, headroom), explicit and pass-through leverage, portfolio-level fee drag, and the FX hedge ratio consistent with the sealed R5 decision (FX out of scope for the v1 campaign; the FIELD exists so the contract does not need to move when the next campaign adds the FX block per S2R-FX-NEXT-CAMPAIGN). Sleeve-level state lives in sleeve-vehicle-state-v1.0.schema.json; this document composes sleeves by id.",
+  "type": "object",
+  "required": ["state_version", "portfolio", "institution"],
+  "additionalProperties": false,
+  "properties": {
+
+    "state_version": {
+      "type": "string",
+      "pattern": "^1\\.0\\.[0-9]+$"
+    },
+
+    "portfolio": {
+      "type": "object",
+      "required": ["cash", "sleeve_ids", "fee_drag_bps_annual", "transaction_cost_defaults_bps"],
+      "additionalProperties": false,
+      "properties": {
+        "cash": {
+          "type": "number",
+          "minimum": 0,
+          "description": "The cash account (portfolio currency units). Receives distributions, income, redemption proceeds; pays calls, subscriptions, fees, benefits/spending (spec section 4.4)."
+        },
+        "sleeve_ids": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true,
+          "description": "The sleeves this portfolio holds, by taxonomy/sleeves.yaml id (alternatives) or liquid_* id (funding sleeves). Sleeve state itself is per sleeve-vehicle-state-v1.0."
+        },
+        "fee_drag_bps_annual": {
+          "type": "number",
+          "minimum": 0,
+          "default": 0,
+          "description": "R6: portfolio-level fee-drag aggregation, annualized basis points on total value. Computed by WP3.7; a stored stub carries 0."
+        },
+        "transaction_cost_defaults_bps": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 0 },
+          "description": "R6: default one-way transaction cost per liquid sleeve id, basis points. A liquid sleeve's own transaction_cost_bps (sleeve-vehicle-state) overrides its default here."
+        }
+      }
+    },
+
+    "institution": {
+      "type": "object",
+      "required": ["hedging", "collateral_pool", "leverage"],
+      "additionalProperties": false,
+      "properties": {
+
+        "hedging": {
+          "type": "object",
+          "description": "R6: the hedge ratios WP3.8's twin consumes. All are fractions of the corresponding liability exposure hedged, 0..1.5 (over-hedging above 1.0 is real and allowed; far above it is a data error).",
+          "required": ["rates_hedge_ratio", "inflation_hedge_ratio", "fx_hedge_ratio"],
+          "additionalProperties": false,
+          "properties": {
+            "rates_hedge_ratio": {
+              "type": "number", "minimum": 0, "maximum": 1.5, "default": 0,
+              "description": "Interest-rate hedge ratio (fraction of liability PV01 hedged)."
+            },
+            "inflation_hedge_ratio": {
+              "type": "number", "minimum": 0, "maximum": 1.5, "default": 0,
+              "description": "Inflation hedge ratio (fraction of liability IE01 hedged)."
+            },
+            "fx_hedge_ratio": {
+              "type": "number", "minimum": 0, "maximum": 1.5, "default": 0,
+              "description": "FX hedge ratio. Consistent with sealed R5: the v1 campaign generates no FX factor, so v1 institutions are modeled fully-hedged-or-single-currency and this field is inert at default 0; it becomes live when the next campaign's FX block lands (S2R-FX-NEXT-CAMPAIGN)."
+            }
+          }
+        },
+
+        "collateral_pool": {
+          "type": "object",
+          "description": "R7: the collateral pool behind the hedges - eligible assets with haircuts, what is posted, and the headroom that determines how far rates can move before forced unwinds (the gilt-crisis mechanic).",
+          "required": ["eligible_assets", "posted", "headroom"],
+          "additionalProperties": false,
+          "properties": {
+            "eligible_assets": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["sleeve_id", "haircut"],
+                "additionalProperties": false,
+                "properties": {
+                  "sleeve_id": { "type": "string", "minLength": 1, "description": "A liquid sleeve id eligible as collateral." },
+                  "haircut": { "type": "number", "minimum": 0, "maximum": 1, "description": "Fractional haircut applied to this asset's value when posted." }
+                }
+              },
+              "description": "The haircut schedule over eligible collateral assets."
+            },
+            "posted": {
+              "type": "number", "minimum": 0, "default": 0,
+              "description": "Collateral currently posted (portfolio currency units, post-haircut)."
+            },
+            "headroom": {
+              "type": "number", "minimum": 0, "default": 0,
+              "description": "Eligible-but-unposted capacity (post-haircut). The variable the 2022 gilt episode was ABOUT."
+            }
+          }
+        },
+
+        "leverage": {
+          "type": "object",
+          "description": "R7: explicit (institution-level borrowing / repo / LDI leverage) and pass-through (looking through leveraged vehicles), both as ratios of net asset value. 1.0 = unlevered.",
+          "required": ["explicit_ratio", "pass_through_ratio"],
+          "additionalProperties": false,
+          "properties": {
+            "explicit_ratio": { "type": "number", "minimum": 1, "default": 1, "description": "Gross exposure / NAV from explicit borrowing and derivative leverage." },
+            "pass_through_ratio": { "type": "number", "minimum": 1, "default": 1, "description": "Look-through leverage carried inside vehicles (e.g. platform multi-strat pass-through)." }
+          }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,31 @@
+{
+  "state_version": "1.0.0",
+  "portfolio": {
+    "cash": 12.5,
+    "sleeve_ids": ["liquid_public_equity", "liquid_govt_bonds", "pm_buyout", "hf_macro", "pm_re_core"],
+    "fee_drag_bps_annual": 68.0,
+    "transaction_cost_defaults_bps": {
+      "liquid_public_equity": 5.0,
+      "liquid_govt_bonds": 2.0
+    }
+  },
+  "institution": {
+    "hedging": {
+      "rates_hedge_ratio": 0.7,
+      "inflation_hedge_ratio": 0.55,
+      "fx_hedge_ratio": 0.0
+    },
+    "collateral_pool": {
+      "eligible_assets": [
+        { "sleeve_id": "liquid_govt_bonds", "haircut": 0.02 },
+        { "sleeve_id": "liquid_public_equity", "haircut": 0.15 }
+      ],
+      "posted": 18.0,
+      "headroom": 26.5
+    },
+    "leverage": {
+      "explicit_ratio": 1.35,
+      "pass_through_ratio": 1.08
+    }
+  }
+}
