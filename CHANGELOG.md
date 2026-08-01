@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP2R.5 — frozen-vintage reproduction and the rolling-refresh handoff** (Step 2R).
+  - **G2's numbers reproduce bit-identically from the frozen vintage.** The
+    verdict-bearing grid subset (promoted `hier-flow-v1` × 3 seeds *retrained from
+    the sealed training seeds*, benchmark `bootstrap-v1` × 3) re-run end to end in a
+    worktree pinned at `v0.2.0-g2`: **zero numeric differences** against the
+    campaign originals across every `battery.json`/`summary.json` — training
+    determinism holds, not merely sampling determinism. Benign diffs (wall clock;
+    the lock digest, which legitimately re-sealed between the runs) and the
+    comparator's own initial `nan != nan` bug are recorded in
+    `governance/evidence/WP2R5-VINTAGE-HANDOFF.md`. Diffusion/ablation cells
+    deliberately out of scope (≈4.6× cost, not verdict-bearing), stated.
+  - **Rolling refresh handed off, honestly:** the "monthly cron"
+    (`data-monthly.yml`) never stopped — it runs on origin against a temp volume;
+    the local `--live` refresh wrote vintage `2026-08-01` and **QC quarantined it**
+    (five `french.*` series at 61d vs a 60d SLA — a month-boundary cadence
+    collision, RFR-86, owner's call; deliberately not "fixed" by widening the SLA in
+    the WP judged by it). The pointer correctly holds at `2026-07-26.1`.
+    `fred.SAHMREALTIME`'s first fetch (798 rows; `min_start` 1959-12 now verified
+    live) waits in the quarantined vintage by design. Gap register current at 63
+    series; campaign vintage already pinned per-component in the model inventory.
 - **WP2R.6 — portfolio/institution state extensions (R6, R7), schema-level only**
   (Step 2R). `schemas/portfolio-institution-state-v1.0.schema.json` +
   `ah/core/institutionstate.py` (same dual-validation pattern): rates/inflation
