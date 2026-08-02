@@ -1,0 +1,26 @@
+{
+ "non_criterion_bearing": true,
+ "purpose": "score the L1-implied target curves themselves (no L3 anywhere)",
+ "s0": "random fitted months",
+ "n_decades": 512,
+ "months": 120,
+ "base_seed": 20260802,
+ "targets_long_inflation_era_frequency": 0.50390625,
+ "acceptance_run_value_for_comparison": 0.41,
+ "history_anchor": 1.0,
+ "yoy_ge_4pct_max_run_months": {
+  "p50": 24.0,
+  "p90": 108.0,
+  "ge_24m_fraction": 0.50390625
+ },
+ "pi_star_pct": {
+  "mean_of_decade_means": 2.366889386979277,
+  "p50_decade_max": 7.800768057292103,
+  "p90_decade_max": 15.167877465466725
+ },
+ "equity_decade_log_return": {
+  "p10": -0.35780886177233046,
+  "p50": 0.41217185319973015,
+  "negative_fraction": 0.216796875
+ }
+}

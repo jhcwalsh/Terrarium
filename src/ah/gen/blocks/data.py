@@ -229,6 +229,14 @@ class BlockDataset:
     exclusion: ExclusionSpan | None = None
     #: Blocks dropped because their WINDOW intersects the exclusion. 0 without one.
     n_dropped_excluded: int = 0
+    #: A' residual parameterization (campaign-2): when True, ``x`` holds
+    #: DEVIATIONS around the conditioning-implied drift means and ``drift_mean``
+    #: holds those means (``(n_blocks, L, F)``, unconstrained coordinates,
+    #: :func:`ah.gen.joinery.bridge.conditioning_drift_means` over ``cond``).
+    #: Unit conversions must add it back; the sampler does the same at
+    #: generation time from the raw c_b vector, which is the symmetry contract.
+    residual_drift: bool = False
+    drift_mean: np.ndarray | None = None
 
     @property
     def n_train_raw(self) -> int:
@@ -253,8 +261,17 @@ class BlockDataset:
         return self.standardization.standardize_cond(self.cond[self.fold_indices[k]])
 
     def fold_x_units(self, k: int) -> np.ndarray:
-        """Fold blocks in FACTOR UNITS (cpi as within-block relative level)."""
-        z = self.x[self.fold_indices[k]]
+        """Fold blocks in FACTOR UNITS (cpi as within-block relative level).
+
+        Under the residual parameterization the drift mean is added back first,
+        so the sealed tail auxiliary keeps scoring ACTUAL factor units — the
+        criterion's meaning does not move with the parameterization.
+        """
+        rows = self.fold_indices[k]
+        z = self.x[rows]
+        if self.residual_drift:
+            assert self.drift_mean is not None
+            z = z + self.drift_mean[rows]
         return ct.panel_to_constrained(z, self.factor_names)
 
 
@@ -335,6 +352,7 @@ def build_dataset(
     n_folds: int = 3,
     validation_start_date: str = VALIDATION.start,
     exclude: ExclusionSpan | None = None,
+    residual_drift: bool = False,
 ) -> BlockDataset:
     """Assemble the block training set from the campaign panel + L1 posterior.
 
@@ -395,6 +413,15 @@ def build_dataset(
             col = names.index(chained)
             x[:, :, col] -= x[:, :1, col]  # log level relative to block month 0
 
+    # A' residual parameterization: targets become deviations around the
+    # conditioning-implied drift means. Computed from the SAME cond rows the
+    # model trains on, so the sampler's add-back from the raw c_b vector is
+    # exactly symmetric. Standardization below then describes the residuals.
+    drift_mean = None
+    if residual_drift:
+        drift_mean = bridge.conditioning_drift_means(cond, source.factor_names, block_months)
+        x = x - drift_mean
+
     edges = _fold_boundaries(validation_start, months, n_folds)
 
     # WP2.11 severe test: any block whose WINDOW touches the exclusion is gone.
@@ -448,6 +475,8 @@ def build_dataset(
         validation_start_month=validation_start,
         exclusion=exclude,
         n_dropped_excluded=n_dropped_excluded,
+        residual_drift=bool(residual_drift),
+        drift_mean=drift_mean,
     )
 
 

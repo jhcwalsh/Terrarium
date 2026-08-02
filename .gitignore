@@ -164,6 +164,9 @@ experiments/
 !/artifacts/campaign2/
 /artifacts/campaign2/*
 !/artifacts/campaign2/guidance-sweep-results.json
+!/artifacts/campaign2/residual-acceptance.json
+!/artifacts/campaign2/targets-probe.json
+!/artifacts/campaign2/targets-probe-historical-starts.json
 
 # wp3-00 scratch: regenerable measured fragment (embedded verbatim in pre-registration-g3.yaml)
 /g3-reference-measured.yaml

@@ -53,6 +53,7 @@ from ah.gen.blocks import constraints as ct
 from ah.gen.blocks import data as bd
 from ah.gen.blocks import losses as ls
 from ah.gen.joinery import bridge
+from ah.gen.joinery.waypoints import JoineryError
 
 __all__ = [
     "SELECTION_LAMBDA",
@@ -170,12 +171,23 @@ class _Ema:
 
 
 def _units_torch(
-    z_std: torch.Tensor, std: bd.Standardization, factor_names: tuple[str, ...]
+    z_std: torch.Tensor,
+    std: bd.Standardization,
+    factor_names: tuple[str, ...],
+    drift: torch.Tensor | None = None,
 ) -> torch.Tensor:
-    """Standardized unconstrained -> factor units, differentiable (aux loss path)."""
+    """Standardized unconstrained -> factor units, differentiable (aux loss path).
+
+    ``drift`` is the A' conditioning-implied mean for these rows (unconstrained
+    coordinates); under the residual parameterization it must be added back so
+    the tail auxiliary keeps scoring actual factor units.
+    """
     mean = torch.as_tensor(std.x_mean, dtype=z_std.dtype, device=z_std.device)
     scale = torch.as_tensor(std.x_std, dtype=z_std.dtype, device=z_std.device)
-    return ct.panel_to_constrained_torch(z_std * scale + mean, factor_names)
+    z = z_std * scale + mean
+    if drift is not None:
+        z = z + drift
+    return ct.panel_to_constrained_torch(z, factor_names)
 
 
 def evaluate_fold_scores(
@@ -229,9 +241,14 @@ def evaluate_fold_scores(
         cond_rep = cond.repeat(n_rep, 1)
         with torch.no_grad():
             z = sample_fn(cond_rep, torch.as_tensor(noise, dtype=torch.float32, device=device), nfe)
-        gen_units = ct.panel_to_constrained(
-            std.destandardize_x(z.double().cpu().numpy()), dataset.factor_names
-        )
+        z_np = std.destandardize_x(z.double().cpu().numpy())
+        if dataset.residual_drift:
+            # A' symmetry: generated deviations get the fold rows' drift means
+            # back (fold_x_units does the same for the real side), so the sealed
+            # auxiliary compares actual factor units on both sides.
+            assert dataset.drift_mean is not None
+            z_np = z_np + np.tile(dataset.drift_mean[dataset.fold_indices[k]], (n_rep, 1, 1))
+        gen_units = ct.panel_to_constrained(z_np, dataset.factor_names)
         aux, detail = ls.tail_auxiliary_validation(gen_units, dataset.fold_x_units(k), compiled)
         per_fold_aux.append(aux)
         per_fold_aux_detail.append(detail)
@@ -273,6 +290,13 @@ def train_blocks(
     """
     rng = configure_determinism(seed)
     torch_gen = torch.Generator(device=device).manual_seed(seed + 1)
+
+    if bool(getattr(config, "residual_drift", False)) != bool(dataset.residual_drift):
+        raise JoineryError(
+            f"config.residual_drift={getattr(config, 'residual_drift', False)} but the "
+            f"dataset was built with residual_drift={dataset.residual_drift}; the model "
+            "would train against the wrong parameterization"
+        )
 
     model = config.build_model().to(device)
     objective = model.make_objective()
@@ -317,8 +341,12 @@ def train_blocks(
         if config.lambda_tail > 0.0 and step % config.aux_every == 0:
             noise = torch.randn(x.shape, generator=torch_gen, device=device)
             z_gen = model.sample(cond, noise, config.aux_nfe)
-            gen_units = _units_torch(z_gen, std, dataset.factor_names)
-            real_units = _units_torch(x, std, dataset.factor_names)
+            drift = None
+            if dataset.residual_drift:
+                assert dataset.drift_mean is not None
+                drift = torch.as_tensor(dataset.drift_mean[rows], dtype=z_gen.dtype, device=device)
+            gen_units = _units_torch(z_gen, std, dataset.factor_names, drift)
+            real_units = _units_torch(x, std, dataset.factor_names, drift)
             aux = ls.tail_auxiliary_torch(gen_units, real_units, compiled)
             loss = loss + config.lambda_tail * aux
 

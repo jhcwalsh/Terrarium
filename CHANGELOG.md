@@ -7,6 +7,34 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **Campaign-2 A' — residual drift parameterization** (owner escalation
+  path "B then A if needed"; B' measured and MISSED first). The B' sweep
+  proved classifier-free guidance moves persistence monotonically the
+  WRONG way (half-life 29.4→23.8 vs history 61.2 as scale rises) while
+  sharpening drawdowns — the wrong lever by construction. A' makes trend
+  tracking STRUCTURAL: the L3 network models deviations around
+  conditioning-implied drift means (`bridge.conditioning_drift_means` —
+  cpi ramp, equity constant drift, derived from the Δw components already
+  in c_b, so the cb-v1 fingerprint is untouched). Dataset subtracts the
+  means (`build_dataset(residual_drift=True)`); the sampler adds them
+  back from the same raw c_b vector (exact train/sample symmetry, tested);
+  every unit conversion restores them so the sealed tail auxiliary keeps
+  scoring ACTUAL factor units (tested: fold units byte-identical across
+  parameterizations). `FlowConfig`/`DiffusionConfig.residual_drift`
+  omitted from `as_dict()` at its default so every pre-A' config hash —
+  the sealed selection's included — recomputes byte-identical (recorded
+  choice). Trainer refuses a config/dataset flag mismatch. 14 new tests.
+  **Measured outcome: A' moves none of the four chased statistics — and
+  the probes explain why.** Scoring the L1-implied target curves
+  themselves (no L3 anywhere) reproduces the ensembles' numbers, so L3
+  already tracks its conditioning; and the sealed-battery record shows
+  the chased anchors were the SEVERE test's conditional 1966-84 values —
+  under the sealed unconditional bands, cpi persistence PASSES. The
+  genuine sealed defects are level-factor half-lives (reverting at the
+  block-reassembly timescale) and equity/hml lost-decade excess (part
+  start-state artifact). Full trace + revised owner options in
+  `Instructions/campaign2-regime-fix-options.md`; A' stays as tested
+  infrastructure, off by default.
 - **The Tier-2 ship-gate chase: GATE G4 CLOSES** (owner-directed;
   fifteen live runs, every lever versioned). From WP4.5's honest 76.7% to
   the binding pair rule met at **96.7% / 100.0%** (runs 14/15, identical
