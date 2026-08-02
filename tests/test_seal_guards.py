@@ -286,6 +286,49 @@ class TestG3SealBoundary:
         assert not stale, f"declared but unreachable from the G3 entry points: {stale}"
 
 
+class TestG5SealBoundary:
+    """The same boundary discipline, third lock (wp5-00, owner-ordered
+    late freeze): everything reachable from the G5 judged entry points is
+    declared, sealed elsewhere, or excluded with a reason — and the
+    declared list carries no dead code."""
+
+    G5_ENTRY_POINTS = ("ah.eval.decision_metrics", "ah.eval.g5seal")
+
+    def _declared(self) -> set:
+        return set(
+            yaml.safe_load((ROOT / "step5-evaluation-protocol.yaml").read_text("utf-8"))[
+                "seal_scope"
+            ]["hashed_files"]
+        )
+
+    def test_g5_reachable_modules_are_declared_or_excluded(self):
+        declared = self._declared()
+        g2_sealed = sealed_files()
+        unclassified = []
+        for mod, path in judging_closure(self.G5_ENTRY_POINTS).items():
+            rel = path.relative_to(ROOT).as_posix()
+            if rel in declared or rel in g2_sealed or rel in EXCLUDED_FROM_SEAL:
+                continue
+            unclassified.append(f"{rel} (imported as {mod})")
+        assert not unclassified, (
+            "modules reachable from the G5 judged entry points are neither in "
+            "step5-evaluation-protocol.yaml's seal_scope, nor G2-sealed, nor "
+            f"excluded-with-a-reason: {sorted(unclassified)}"
+        )
+
+    def test_g5_declared_list_has_no_stale_source_entries(self):
+        declared = self._declared()
+        reachable = {
+            p.relative_to(ROOT).as_posix() for p in judging_closure(self.G5_ENTRY_POINTS).values()
+        }
+        stale = [
+            rel
+            for rel in declared
+            if rel.startswith("src/") and rel.endswith(".py") and rel not in reachable
+        ]
+        assert not stale, f"declared but unreachable from the G5 entry points: {stale}"
+
+
 def _prereg() -> dict:
     return yaml.safe_load((ROOT / "pre-registration.yaml").read_text(encoding="utf-8"))
 
