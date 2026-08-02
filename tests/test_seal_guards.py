@@ -393,6 +393,14 @@ GOVERNANCE_DOCS = (
 #: checker re-reporting the defect the register exists to record.
 CITATION_ALLOWLIST: dict[str, str] = {
     "DESMOOTHING.md": "cited as ABSENT, deliberately (WP2R.8 closure note on D1)",
+    "DN-5-decision-alpha-and-twin.md": (
+        "cited by RFR-89 as NOT IN REPO, deliberately — the retrofit task named it "
+        "as optional background and the row records that it was absent at execution"
+    ),
+    "retrofit-R1-decision-alpha.md": (
+        "cited by RFR-89 as NOT IN REPO, deliberately — same task, same absence, "
+        "recorded rather than implied"
+    ),
     "MASTER-ROADMAP.md": "cited as MISSING from the repo, deliberately (2R plan source)",
     "tier1-synthesis-and-decisions.md": "cited as missing per CLAUDE.md's standing note",
     "progress.md": "session-tool artifact name, not a repo citation",

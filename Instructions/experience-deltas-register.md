@@ -16,6 +16,9 @@ are never deleted — they are closed with a pointer to the implementing work.*
 | E5 | **Delta 5 — Help agent scope (M5)** | Grounded-corpus content: commitment mechanics, coverage, forced sales — answerable from glossary + interpretation guide + revealed state | The agent itself; the never-advice rule: explains why, never suggests what | OPEN |
 | E6 | **Delta 6 — Inspection points I4–I6** | I4 (reported-vs-true toggle) and I6 (liquidity) run on WP3.3/WP3.9 outputs **before** `wp4-01` branches; work items recorded before G4 closes | I5 (first-run observation, ~20 real users) gates M4 — deferred with D-K4-5 (owner is the only cohort for now); must run before any external release | OPEN |
 
+| E7 | **Retrofit R-1 (DN-5) — three analysis series** | RunRecord stamps (`twin_definition`) land at the retrofit; the drift twin's engine work is scheduled later | The analysis screen must accommodate **three** series — player, policy twin, drift twin — not two: layout, legend, and colour set widen now so the third series is a data arrival, not a redesign; renders correctly when given two | OPEN |
+| E8 | **Retrofit R-1 (DN-5) — per-window annotation slot** | Decision-window contract (`ah/artifacts/decisions.py`) defines window identity | The post-game view carries one short annotation line per decision window (e.g. `Year 4, de-risked: -2.1 points`); placeholder or hidden when absent, but the slot exists in the layout before the scoring that fills it | OPEN |
+
 **Standing rule:** closing a row requires a pointer (commit, WP, or DN-3
 ticket), not a deletion. If the DN-3 project starts in another repository,
 this file is copied there and the copy noted here.

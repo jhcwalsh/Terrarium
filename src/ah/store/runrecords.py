@@ -19,6 +19,14 @@ from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.store.worlds import get_world
 
+# Retrofit R-1 (DN-5) version stamps -- inert, written on every run so a
+# RunRecord states what produced it. Nothing reads them yet; the values
+# change only when the decision schema / decision-alpha definition / twin
+# definition actually change, by their own governance.
+DECISION_SCHEMA_VERSION = "1.0"
+DECISION_ALPHA_VERSION = "1.0"
+TWIN_DEFINITION = "policy"  # value recorded, behaviour unchanged
+
 
 def compute_outputs_digest(world: dict[str, Any], seed: int, n_paths: int) -> str:
     """Digest the ensemble a run would produce from ``world`` at ``seed``/``n_paths``."""
@@ -41,8 +49,9 @@ def save_run_record(
 ) -> None:
     conn.execute(
         "INSERT INTO run_records(run_id, world_id, resolved_engine, seed, n_paths, "
-        "overrides, outputs_digest, summary_stats, created_at) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        "overrides, outputs_digest, summary_stats, created_at, "
+        "decision_schema_version, decision_alpha_version, twin_definition) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             run_id,
             world_id,
@@ -53,6 +62,9 @@ def save_run_record(
             outputs_digest,
             json.dumps(summary_stats, sort_keys=True),
             created_at,
+            DECISION_SCHEMA_VERSION,
+            DECISION_ALPHA_VERSION,
+            TWIN_DEFINITION,
         ),
     )
     conn.commit()
