@@ -1295,3 +1295,24 @@ amendments:
     record as binding rather than voluntary). post_hoc: false - no pipeline-v2 run,
     recording, or measurement exists at filing.'
   type: protocol_change
+- amendment_id: AM-2026-08-02-005
+  date: '2026-08-02'
+  payload:
+    walkforward_folds:
+      growth: expanding
+      n_folds: 10
+      rebalancing: quarterly
+      test_years: 2011..2020
+      train_start: 1871-01
+  post_hoc: false
+  rationale: 'WALK-FORWARD FOLD STRUCTURE PINNED, pre-hoc (wp5-01). The sealed G5
+    protocol pins the SCHEME (expanding-window walk-forward, quarterly rebalancing)
+    but not the fold count or boundaries - a residual degree of freedom that could
+    be tuned after seeing results if left open. Pinned NOW, before the harness has
+    ever run and before any evaluation result of any kind exists: ONE FOLD PER VALIDATION
+    YEAR - ten folds, test years 2011..2020 inclusive (the sealed validation span
+    2011-01..2021-01), each fold training on ALL history from 1871-01 up to its test
+    year''s start (expanding, never sliding), quarterly rebalancing within the test
+    year. The holdout (2021-01+) is touched by NONE of this. post_hoc: false - the
+    harness does not exist yet; this amendment precedes its first line.'
+  type: protocol_change
