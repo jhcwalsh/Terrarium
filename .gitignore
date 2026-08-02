@@ -158,5 +158,12 @@ experiments/
 !/artifacts/wp211/severe-test-diffusion.json
 !/artifacts/wp211/severe-grid-diffusion.json
 
+# campaign-2 measurement records: reproducible from scripts/ against the pinned
+# checkpoint and campaign vintage, but committed because they justify decisions
+# (the B' -> A' escalation is argued from this file).
+!/artifacts/campaign2/
+/artifacts/campaign2/*
+!/artifacts/campaign2/guidance-sweep-results.json
+
 # wp3-00 scratch: regenerable measured fragment (embedded verbatim in pre-registration-g3.yaml)
 /g3-reference-measured.yaml

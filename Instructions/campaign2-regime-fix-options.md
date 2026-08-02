@@ -104,3 +104,37 @@ The mechanism is NOT where the options above located it. Traced:
 The owner's B-then-A intent (cheap lever first, structural second) is
 preserved exactly; only the mechanism's address changed. The four
 acceptance statistics are unchanged and remain the only yardstick.
+
+---
+
+## B' RESULT (2026-08-02): MISS — escalation to A' fires
+
+Sweep executed (scripts/campaign2_guidance_sweep.py, 512 decades x 120
+months per level, sample seed 20260802, promoted flow checkpoint seed
+index 1; results at artifacts/campaign2/guidance-sweep-results.json,
+non-criterion-bearing):
+
+| statistic | history | g=1.0 | g=1.5 | g=2.0 | g=3.0 |
+|---|---|---|---|---|---|
+| cpi.long_inflation_era_frequency | 1.000 | 0.396 | 0.361 | 0.356 | 0.314 |
+| cpi.mean_reversion_halflife (months) | 61.2 | 29.4 | 27.6 | 26.1 | 23.8 |
+| lost_decade_frequency (equity) | ~0.00-0.05 | 0.365 | 0.365 | 0.369 | 0.375 |
+| equity_mkt.drawdown_median_depth | 0.069 | 0.045 | 0.057 | 0.068 | 0.100 |
+
+Guidance moves persistence MONOTONICALLY THE WRONG WAY: half-life falls
+29.4 -> 23.8 and era frequency falls 0.396 -> 0.314 as the scale rises.
+Mechanism: classifier-free guidance amplifies the WITHIN-BLOCK conditional
+response (hence drawdowns sharpen — 0.068 at g=2.0 matches history's
+0.069 almost exactly, overshooting at 3.0) but adds no era-scale memory;
+sharper monthly responses mean faster mean-crossings, i.e. SHORTER
+measured half-lives. B' is the wrong lever for persistence by
+construction, not by tuning.
+
+Per the recorded decision (B then A if needed): **A' — residual
+parameterization around the L1-implied factor means, with retrain —
+proceeds now.** Secondary finding preserved for the A' acceptance run:
+guidance ~2.0 is a candidate drawdown-depth corrector to re-measure on
+the A' checkpoint (it may become unnecessary if persistence restores
+compounding stress). The commodities lost-decade cell returned nan at
+every level (short simulated span vs the decade window; not one of the
+four anchors) — to be resolved before the campaign battery.

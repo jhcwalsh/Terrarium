@@ -1,0 +1,65 @@
+{
+ "non_criterion_bearing": true,
+ "purpose": "B' sweep: guidance vs the four acceptance statistics",
+ "checkpoint": "promoted flow seed_index 1 (cond_dropout 0.2, trained null branch)",
+ "history_anchors": {
+  "long_inflation_era_frequency": 1.0,
+  "inflation_half_life": 61.2,
+  "stagnant_decade_frequency": "0.00-0.05",
+  "equity_drawdown_median_depth": 0.069
+ },
+ "n_paths": 512,
+ "months": 120,
+ "sample_seed": 20260802,
+ "created_at": "2026-08-02",
+ "rows": [
+  {
+   "guidance": 1.0,
+   "assemble_s": 497.3,
+   "cpi.mean_reversion_halflife": 29.385267131271554,
+   "equity_mkt.drawdown_median_depth": 0.045192470875649204,
+   "equity_mkt.lost_decade_frequency": 0.365234375,
+   "smb.lost_decade_frequency": 0.2734375,
+   "hml.lost_decade_frequency": 0.76953125,
+   "mom.lost_decade_frequency": 0.20703125,
+   "commodities.lost_decade_frequency": NaN,
+   "cpi.long_inflation_era_frequency": 0.396484375
+  },
+  {
+   "guidance": 1.5,
+   "assemble_s": 1024.5,
+   "cpi.mean_reversion_halflife": 27.61260463563935,
+   "equity_mkt.drawdown_median_depth": 0.05677569693341411,
+   "equity_mkt.lost_decade_frequency": 0.365234375,
+   "smb.lost_decade_frequency": 0.236328125,
+   "hml.lost_decade_frequency": 0.81640625,
+   "mom.lost_decade_frequency": 0.380859375,
+   "commodities.lost_decade_frequency": NaN,
+   "cpi.long_inflation_era_frequency": 0.361328125
+  },
+  {
+   "guidance": 2.0,
+   "assemble_s": 993.6,
+   "cpi.mean_reversion_halflife": 26.07277731480357,
+   "equity_mkt.drawdown_median_depth": 0.06769325279205474,
+   "equity_mkt.lost_decade_frequency": 0.369140625,
+   "smb.lost_decade_frequency": 0.216796875,
+   "hml.lost_decade_frequency": 0.81640625,
+   "mom.lost_decade_frequency": 0.4453125,
+   "commodities.lost_decade_frequency": NaN,
+   "cpi.long_inflation_era_frequency": 0.35546875
+  },
+  {
+   "guidance": 3.0,
+   "assemble_s": 961.6,
+   "cpi.mean_reversion_halflife": 23.784595595855798,
+   "equity_mkt.drawdown_median_depth": 0.10007223096497164,
+   "equity_mkt.lost_decade_frequency": 0.375,
+   "smb.lost_decade_frequency": 0.193359375,
+   "hml.lost_decade_frequency": 0.7265625,
+   "mom.lost_decade_frequency": 0.53125,
+   "commodities.lost_decade_frequency": NaN,
+   "cpi.long_inflation_era_frequency": 0.314453125
+  }
+ ]
+}
