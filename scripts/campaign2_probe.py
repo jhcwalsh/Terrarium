@@ -84,7 +84,11 @@ def main() -> None:
     manifest = load_manifest()
     with Catalog(_REPO_ROOT / "data") as catalog:
         access = spliced_access(catalog, PROBE_VINTAGE)
-        source = build_source(access, manifest, vintage_id=PROBE_VINTAGE)
+        # enforce_sealed_span=False: the probe's WHOLE POINT is a factor set
+        # the seal doesn't cover (hy_spread revived); the sealed-set guard
+        # rightly refused the default (its first live catch) and this probe
+        # is non-criterion-bearing by label and by construction.
+        source = build_source(access, manifest, vintage_id=PROBE_VINTAGE, enforce_sealed_span=False)
     climate = load_climate(DEFAULT_CLIMATE_ARTIFACT)
     if climate.meta["content_sha256"] != PINNED_CLIMATE_SHA256:
         raise SystemExit("climate artifact sha != WP2.7 pin; refusing")
@@ -93,8 +97,9 @@ def main() -> None:
     n_factors = dataset.blocks.shape[-1] if hasattr(dataset, "blocks") else "?"
     print(f"probe dataset: vintage {PROBE_VINTAGE}, factors dim = {n_factors}")
 
-    config = FlowConfig()
-    seed = train_seed_for("hier-flow-v1", 0)
+    n_factors = dataset.x_mean.shape[0] if hasattr(dataset, "x_mean") else 13
+    config = FlowConfig(n_factors=n_factors)  # 13 with hy_spread revived
+    seed = train_seed_for("flow", 0)
     t0 = time.perf_counter()
     result = train_blocks(
         dataset,
