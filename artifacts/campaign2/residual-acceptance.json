@@ -1,0 +1,43 @@
+{
+ "non_criterion_bearing": true,
+ "purpose": "A' residual parameterization vs the four acceptance statistics",
+ "checkpoint_hash": "35944bededc5face2e6821aec0214f1e00747b762d669ade6f3e682e89735ab9",
+ "config_hash": "cfg:80411c2031c6d220",
+ "baseline": "artifacts/campaign2/guidance-sweep-results.json (B' rows, same seed/paths)",
+ "history_anchors": {
+  "long_inflation_era_frequency": 1.0,
+  "inflation_half_life": 61.2,
+  "stagnant_decade_frequency": "0.00-0.05",
+  "equity_drawdown_median_depth": 0.069
+ },
+ "n_paths": 512,
+ "months": 120,
+ "sample_seed": 20260802,
+ "created_at": "2026-08-02",
+ "rows": [
+  {
+   "guidance": 1.0,
+   "assemble_s": 498.8,
+   "cpi.mean_reversion_halflife": 29.9649653642267,
+   "equity_mkt.drawdown_median_depth": 0.043859176925693466,
+   "equity_mkt.lost_decade_frequency": 0.375,
+   "smb.lost_decade_frequency": 0.373046875,
+   "hml.lost_decade_frequency": 0.810546875,
+   "mom.lost_decade_frequency": 0.1875,
+   "commodities.lost_decade_frequency": NaN,
+   "cpi.long_inflation_era_frequency": 0.41015625
+  },
+  {
+   "guidance": 2.0,
+   "assemble_s": 988.0,
+   "cpi.mean_reversion_halflife": 28.317474129230607,
+   "equity_mkt.drawdown_median_depth": 0.06627448800577174,
+   "equity_mkt.lost_decade_frequency": 0.37890625,
+   "smb.lost_decade_frequency": 0.283203125,
+   "hml.lost_decade_frequency": 0.896484375,
+   "mom.lost_decade_frequency": 0.3359375,
+   "commodities.lost_decade_frequency": NaN,
+   "cpi.long_inflation_era_frequency": 0.380859375
+  }
+ ]
+}
