@@ -57,13 +57,24 @@ class Slot:
 
 
 def read_calendar(worldspec_doc: dict[str, Any]) -> list[CalendarEntry]:
-    """Parse ``extensions.x_temporal_delivery.artifact_calendar``.
+    """Parse the artifact calendar — core block first, extension as fallback.
 
-    A world that declares nothing emits nothing — an absent block is an empty
-    calendar, not an error. A malformed block raises: silence never swallows
-    a typo'd declaration.
+    v1.3 (owner-ratified 2026-08-02) promotes ``temporal_delivery`` to a
+    core WorldSpec block; ``extensions.x_temporal_delivery`` remains the
+    migration path until v1.4. A document carrying BOTH refuses — two
+    declarations is a contradiction, not a preference. A world that
+    declares neither emits nothing — an absent calendar is empty, not an
+    error. A malformed block raises: silence never swallows a typo'd
+    declaration.
     """
-    block = worldspec_doc.get("extensions", {}).get("x_temporal_delivery")
+    core = worldspec_doc.get("temporal_delivery")
+    ext = worldspec_doc.get("extensions", {}).get("x_temporal_delivery")
+    if core is not None and ext is not None:
+        raise CalendarError(
+            "both temporal_delivery and extensions.x_temporal_delivery declared; "
+            "migrate to the core block (v1.3), do not carry both"
+        )
+    block = core if core is not None else ext
     if block is None:
         return []
     if not isinstance(block, dict) or "artifact_calendar" not in block:

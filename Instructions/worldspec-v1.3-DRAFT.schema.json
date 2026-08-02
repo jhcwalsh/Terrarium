@@ -1,0 +1,834 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://internal/worldspec/v1.3.0/worldspec.schema.json",
+  "title": "WorldSpec (v1.3 DRAFT - owner approval pending)",
+  "description": "The versioned contract of the Alternate Histories platform. A WorldSpec fully defines a counterfactual world: its narrative (display only), its regime and factor conditioning (engine input), its structural configuration of alternative asset classes (engine input), and its provenance (audit). A WorldSpec defines a world; it does not record a simulation. Simulations are recorded in RunRecords that reference a WorldSpec by id.",
+  "type": "object",
+  "required": [
+    "spec_version",
+    "world_id",
+    "status",
+    "provenance",
+    "narrative",
+    "horizon",
+    "regimes",
+    "factor_conditions",
+    "structural",
+    "engine_defaults"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "spec_version": {
+      "type": "string",
+      "pattern": "^1\\.(0|2|3)\\.[0-9]+$",
+      "description": "Semantic version of the WorldSpec schema this document conforms to. v1.3 (Step 4 WP4.6) widens the same way v1.2 did: 1.0.x and 1.2.x documents remain valid unchanged (sealed fixture worlds are never edited); 1.3.x documents may declare the core temporal_delivery block. extensions.x_temporal_delivery remains legal for one version as the migration path and is removed at v1.4."
+    },
+    "world_id": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Stable identifier for this world. Immutable once assigned; edits that change any engine-consumed field require a new world_id with parent_world_id set in provenance.source."
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "draft",
+        "validated",
+        "approved",
+        "archived"
+      ],
+      "description": "Lifecycle state. 'validated' = passed the validator; 'approved' = signed off for use outside the authoring session (required before a world appears in any shared library or committee material)."
+    },
+    "provenance": {
+      "type": "object",
+      "required": [
+        "created_at",
+        "author",
+        "source"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "created_at": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "author": {
+          "type": "string",
+          "description": "User principal (SSO id) of the human who caused this world to exist. Always a human, never a model."
+        },
+        "source": {
+          "type": "object",
+          "required": [
+            "kind"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "kind": {
+              "type": "string",
+              "enum": [
+                "compiler",
+                "preset",
+                "manual",
+                "derived"
+              ]
+            },
+            "user_scenario_text": {
+              "type": "string",
+              "maxLength": 2000,
+              "description": "Verbatim scenario text the user submitted, when kind=compiler. Retained for audit and prompt-regression testing."
+            },
+            "compiler_model": {
+              "type": "string",
+              "description": "Model identifier used to compile the scenario, e.g. 'claude-sonnet-4-6'."
+            },
+            "compiler_prompt_version": {
+              "type": "string",
+              "description": "Version tag of the prompt-library entry used."
+            },
+            "parent_world_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "When kind=derived, the world this one was cloned or edited from."
+            }
+          }
+        },
+        "validation": {
+          "type": "object",
+          "description": "Written by the validator service, never by the compiler or a human.",
+          "required": [
+            "validator_version",
+            "validated_at",
+            "clamps",
+            "warnings"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "validator_version": {
+              "type": "string"
+            },
+            "validated_at": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "clamps": {
+              "type": "array",
+              "description": "Every parameter the validator forced into bounds. An empty array means the compiler's raw output was within bounds.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "path",
+                  "submitted",
+                  "applied"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "path": {
+                    "type": "string",
+                    "description": "JSON pointer to the clamped field."
+                  },
+                  "submitted": {
+                    "type": "number"
+                  },
+                  "applied": {
+                    "type": "number"
+                  }
+                }
+              }
+            },
+            "warnings": {
+              "type": "array",
+              "description": "Coherence-rule findings (rules V1..Vn in the spec document). Warnings do not block validation but are displayed to the author and retained.",
+              "items": {
+                "type": "object",
+                "required": [
+                  "rule",
+                  "message"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "rule": {
+                    "type": "string",
+                    "pattern": "^V[0-9]+$"
+                  },
+                  "message": {
+                    "type": "string"
+                  },
+                  "acknowledged_by_author": {
+                    "type": "boolean",
+                    "default": false
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "narrative": {
+      "type": "object",
+      "description": "The story layer. DISPLAY ONLY: no engine component may read any field in this object. The compiler must generate narrative and parameters together so they agree, but the engine's behavior is fully determined by regimes, factor_conditions, and structural.",
+      "required": [
+        "language",
+        "title",
+        "tagline",
+        "summary",
+        "lesson",
+        "dispatches"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "language": {
+          "type": "string",
+          "default": "en"
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "tagline": {
+          "type": "string",
+          "maxLength": 140
+        },
+        "summary": {
+          "type": "string",
+          "maxLength": 1200,
+          "description": "The world in 2-4 sentences."
+        },
+        "lesson": {
+          "type": "string",
+          "maxLength": 600,
+          "description": "What this world teaches an allocator, in 1-3 sentences."
+        },
+        "dispatches": {
+          "type": "array",
+          "minItems": 3,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "required": [
+              "date",
+              "headline"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "date": {
+                "type": "string",
+                "pattern": "^[0-9]{4}(-Q[1-4])?$",
+                "description": "Year or year-quarter; must fall within the horizon (rule V7)."
+              },
+              "headline": {
+                "type": "string",
+                "maxLength": 120
+              },
+              "detail": {
+                "type": "string",
+                "maxLength": 300
+              }
+            }
+          }
+        }
+      }
+    },
+    "horizon": {
+      "type": "object",
+      "required": [
+        "start",
+        "quarters"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "start": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-Q[1-4]$",
+          "description": "First simulated quarter, e.g. '2027-Q1'."
+        },
+        "quarters": {
+          "type": "integer",
+          "minimum": 8,
+          "maximum": 120,
+          "description": "Length of the world. 40 = a decade."
+        }
+      }
+    },
+    "regimes": {
+      "type": "object",
+      "description": "The macro-regime skeleton of the world. Exactly one mode is active. 'sequence' pins regimes to quarters (deterministic worlds); 'transition_matrix' lets regimes evolve stochastically per path (each simulated history draws its own regime sequence); 'unconditional' disables regime conditioning entirely (pure resampled history).",
+      "required": [
+        "mode"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "sequence",
+            "transition_matrix",
+            "unconditional"
+          ]
+        },
+        "sequence": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": [
+              "regime",
+              "from_quarter",
+              "to_quarter"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "regime": {
+                "$ref": "#/$defs/regime_name"
+              },
+              "from_quarter": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "to_quarter": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Inclusive. Segments must tile the horizon without gaps or overlaps (rule V10)."
+              }
+            }
+          }
+        },
+        "transition_matrix": {
+          "type": "object",
+          "required": [
+            "states",
+            "matrix",
+            "initial_state"
+          ],
+          "additionalProperties": false,
+          "properties": {
+            "states": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 6,
+              "items": {
+                "$ref": "#/$defs/regime_name"
+              }
+            },
+            "matrix": {
+              "type": "array",
+              "description": "Row-stochastic quarterly transition probabilities, rows/cols in 'states' order. Rows must sum to 1 within 1e-6 (rule V11).",
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1
+                }
+              }
+            },
+            "initial_state": {
+              "$ref": "#/$defs/regime_name"
+            }
+          }
+        }
+      }
+    },
+    "factor_conditions": {
+      "type": "object",
+      "description": "Conditioning targets for the factor generator. Any omitted field means 'let the generator's learned (regime-conditional) behavior decide'. Present fields are constraints the generated factor paths must respect in distribution.",
+      "additionalProperties": false,
+      "properties": {
+        "policy_rate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "start_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 15
+            },
+            "end_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 20
+            },
+            "path_shape": {
+              "type": "string",
+              "enum": [
+                "linear",
+                "front_loaded",
+                "back_loaded",
+                "spike_and_settle"
+              ],
+              "default": "linear"
+            }
+          }
+        },
+        "inflation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "average_pct": {
+              "type": "number",
+              "minimum": -5,
+              "maximum": 20
+            },
+            "peak_pct": {
+              "type": "number",
+              "minimum": -5,
+              "maximum": 30
+            },
+            "peak_quarter": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "equity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "drift_annual_pct": {
+              "type": "number",
+              "minimum": -15,
+              "maximum": 20
+            },
+            "vol_annual_pct": {
+              "type": "number",
+              "minimum": 8,
+              "maximum": 45
+            }
+          }
+        },
+        "credit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "hy_spread_start_bps": {
+              "type": "number",
+              "minimum": 200,
+              "maximum": 800
+            },
+            "hy_spread_peak_bps": {
+              "type": "number",
+              "minimum": 250,
+              "maximum": 2200
+            },
+            "peak_quarter": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        },
+        "commodities": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "drift_annual_pct": {
+              "type": "number",
+              "minimum": -15,
+              "maximum": 25
+            }
+          }
+        },
+        "correlation": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "equity_bond_regime": {
+              "type": "string",
+              "enum": [
+                "negative",
+                "positive",
+                "inflation_conditional"
+              ],
+              "default": "inflation_conditional",
+              "description": "'inflation_conditional' = the generator's learned regime-dependent correlation (sign flips with the inflation state)."
+            },
+            "crisis_correlation_boost": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 0.6,
+              "description": "Additional common-factor loading applied inside crisis windows."
+            }
+          }
+        },
+        "crisis_windows": {
+          "type": "array",
+          "maxItems": 4,
+          "description": "Deterministic stress episodes overlaid on the regime skeleton. Empty or omitted = no forced crisis (crises may still arise stochastically under transition_matrix mode).",
+          "items": {
+            "type": "object",
+            "required": [
+              "start_quarter",
+              "length_quarters",
+              "severity"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "start_quarter": {
+                "type": "integer",
+                "minimum": 0
+              },
+              "length_quarters": {
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 12
+              },
+              "severity": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 1,
+                "description": "0 = mild wobble, 1 = 2008-scale."
+              }
+            }
+          }
+        }
+      }
+    },
+    "structural": {
+      "type": "object",
+      "description": "The structural configuration of the alternative asset classes \u2014 the dials that distinguish 'the asset class as it was' from 'the asset class as it is'. Consumed by the factor-to-asset mapping layer, not by the factor generator.",
+      "required": [
+        "parameter_vintage"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "parameter_vintage": {
+          "type": "string",
+          "enum": [
+            "historical_average",
+            "current",
+            "custom"
+          ],
+          "description": "'historical_average' = mappings use average structural parameters over the calibration sample (backward-looking worlds). 'current' = mappings use latest observed structural parameters (forward-looking worlds). 'custom' = the sleeve-level overrides below are authoritative."
+        },
+        "private_equity": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "entry_multiple_drift_annual_pct": {
+              "type": "number",
+              "minimum": -6,
+              "maximum": 4,
+              "description": "Annualized valuation-multiple tailwind (+) or drag (-)."
+            },
+            "leverage_turns": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 8,
+              "description": "Net debt / EBITDA at entry; scales the equity-factor beta in the mapping."
+            },
+            "illiquidity_premium_annual_pct": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 5
+            }
+          }
+        },
+        "private_credit": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "annual_loss_rate_pct": {
+              "type": "number",
+              "minimum": 0.2,
+              "maximum": 10,
+              "description": "Through-cycle annual credit losses; the crisis multiplier is a mapping-layer constant."
+            },
+            "recovery_rate_pct": {
+              "type": "number",
+              "minimum": 20,
+              "maximum": 80
+            },
+            "spread_over_base_bps": {
+              "type": "number",
+              "minimum": 250,
+              "maximum": 900
+            }
+          }
+        },
+        "real_estate": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "cap_rate_shift_bps": {
+              "type": "number",
+              "minimum": -300,
+              "maximum": 500,
+              "description": "Total cap-rate change over the horizon."
+            },
+            "income_yield_pct": {
+              "type": "number",
+              "minimum": 2,
+              "maximum": 8
+            }
+          }
+        },
+        "infrastructure": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "discount_rate_shift_bps": {
+              "type": "number",
+              "minimum": -300,
+              "maximum": 500
+            },
+            "inflation_linkage": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1,
+              "description": "Share of revenues contractually inflation-linked."
+            }
+          }
+        },
+        "smoothing": {
+          "type": "object",
+          "description": "Controls the reported-marks overlay (appraisal smoothing). Affects display series and any 'as reported' analytics; never affects true-economics paths.",
+          "additionalProperties": false,
+          "properties": {
+            "emit_reported_marks": {
+              "type": "boolean",
+              "default": true
+            },
+            "weights_on_truth": {
+              "type": "object",
+              "description": "Per-sleeve weight on current-quarter true return in the reported mark (Geltner-style AR(1)); remainder carries the prior mark. Lower = smoother.",
+              "additionalProperties": false,
+              "properties": {
+                "private_equity": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 1
+                },
+                "private_credit": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 1
+                },
+                "real_estate": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 1
+                },
+                "infrastructure": {
+                  "type": "number",
+                  "minimum": 0.1,
+                  "maximum": 1
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "engine_defaults": {
+      "type": "object",
+      "description": "Author-preferred engine configuration. These are DEFAULTS: a RunRecord may override any of them and records the resolved values. Reproducibility is anchored in RunRecords, not here.",
+      "required": [
+        "generator_id",
+        "n_paths"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "generator_id": {
+          "type": "string",
+          "enum": [
+            "toy-v0",
+            "bootstrap-v1",
+            "joinery-bootstrap-v0",
+            "hier-diffusion-v1",
+            "hier-flow-v1",
+            "bootstrap-stratified",
+            "signature-mmd",
+            "conditional-diffusion"
+          ],
+          "description": "The resolved generator namespace (WP2R.7). 'hier-flow-v1' is the G2-promoted default (S2-DEFAULT-GENERATOR); 'toy-v0' is Step 0's deterministic engine; 'bootstrap-v1' the frozen benchmark; 'joinery-bootstrap-v0' the L1+L2+L4 assembly with bootstrap blocks; 'hier-diffusion-v1' the registered non-default co-primary. The last three are DEPRECATED legacy names kept so sealed 1.0.x worlds revalidate: 'bootstrap-stratified' and 'conditional-diffusion' resolve through registry aliases to 'bootstrap-v1' and 'hier-diffusion-v1'; 'signature-mmd' names the RESERVED signature-variant (model inventory) and raises UnknownGeneratorError until a generator is registered under it. New worlds author the new names."
+        },
+        "min_generator_version": {
+          "type": "string",
+          "description": "Semver floor, e.g. '2.1.0'."
+        },
+        "mapping_version": {
+          "type": "string",
+          "description": "Factor-to-asset mapping release, e.g. 'map-2026.2'."
+        },
+        "desmoothing_method": {
+          "type": "string",
+          "enum": [
+            "geltner_ar1",
+            "glm_ma",
+            "regime_glm"
+          ],
+          "default": "glm_ma",
+          "description": "Which de-smoothed calibration the mappings were fit on."
+        },
+        "n_paths": {
+          "type": "integer",
+          "minimum": 100,
+          "maximum": 100000,
+          "default": 10000
+        },
+        "base_seed": {
+          "type": "integer",
+          "description": "Optional. If present, the default run of this world is fully deterministic."
+        },
+        "taxonomy_version": {
+          "type": "string",
+          "pattern": "^taxonomy-v[0-9]+\\.[0-9]+$",
+          "description": "Optional (WP2R.7): the sleeve-namespace release (taxonomy/sleeves.yaml 'version') that structural sleeve references and Step-3 factor-to-sleeve mappings resolve against. Current: 'taxonomy-v1.0'. Optional so 1.0.x worlds, which predate the namespace, revalidate unchanged."
+        }
+      }
+    },
+    "extensions": {
+      "type": "object",
+      "description": "Namespaced escape hatch for experimental fields (e.g. 'x_crypto_sleeve'). Keys must start with 'x_'. Engines must ignore unknown extensions. Promotion of an extension into the core schema requires a minor version bump.",
+      "propertyNames": {
+        "pattern": "^x_"
+      }
+    },
+    "temporal_delivery": {
+      "type": "object",
+      "description": "Live-mode delivery contract (promoted from extensions.x_temporal_delivery at WP4.6 per the owner's 2026-08-02 decision). Declares what this world emits and how its decade is revealed. Engines never read this block.",
+      "additionalProperties": false,
+      "required": [
+        "artifact_calendar",
+        "reveal",
+        "tape_selection"
+      ],
+      "properties": {
+        "artifact_calendar": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "artifact_type",
+              "cadence",
+              "author_tier"
+            ],
+            "properties": {
+              "artifact_type": {
+                "enum": [
+                  "wire_item",
+                  "release_page",
+                  "statement",
+                  "letterhead",
+                  "board_pack"
+                ]
+              },
+              "cadence": {
+                "enum": [
+                  "monthly",
+                  "quarterly",
+                  "event"
+                ]
+              },
+              "author_tier": {
+                "enum": [
+                  1,
+                  2
+                ]
+              },
+              "offset_weeks": {
+                "type": "integer",
+                "minimum": -4,
+                "maximum": 4
+              }
+            }
+          }
+        },
+        "reveal": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "mode",
+            "cadence_days"
+          ],
+          "properties": {
+            "mode": {
+              "enum": [
+                "precomputed",
+                "chaptered"
+              ],
+              "description": "precomputed (default): the full decade sealed at t0. chaptered: generated in chapters behind a flag, waypoints sealed at t0."
+            },
+            "cadence_days": {
+              "type": "number",
+              "exclusiveMinimum": 0,
+              "description": "wall-clock days per world month"
+            },
+            "sealed_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "description": "written at world build; proves nobody rewrote history mid-game"
+            },
+            "waypoints_hash": {
+              "type": "string",
+              "pattern": "^sha256:[0-9a-f]{64}$",
+              "description": "chaptered mode only: the t0-sealed waypoint list"
+            }
+          }
+        },
+        "tape_selection": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "rule"
+          ],
+          "properties": {
+            "rule": {
+              "enum": [
+                "random",
+                "percentile",
+                "pinned"
+              ]
+            },
+            "percentile": {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 100,
+              "description": "required iff rule=percentile; PRE-STATED, recorded in provenance"
+            },
+            "pinned_path_id": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "required iff rule=pinned"
+            },
+            "metric": {
+              "enum": [
+                "terminal_wealth"
+              ],
+              "default": "terminal_wealth",
+              "description": "the ranking metric for percentile selection"
+            }
+          }
+        },
+        "notification_policy": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "push": {
+              "type": "array",
+              "items": {
+                "enum": [
+                  "regime_event"
+                ]
+              },
+              "description": "push ONLY regime events (the plan's rule); everything else lands in the digest"
+            }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "regime_name": {
+      "type": "string",
+      "enum": [
+        "expansion",
+        "slowdown",
+        "recession",
+        "crisis",
+        "recovery",
+        "stagflation",
+        "reflation",
+        "deflation_boom"
+      ]
+    }
+  }
+}

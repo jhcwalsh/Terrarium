@@ -7,6 +7,32 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.6 — live mode: sealed reveal, three tape rules, the information
+  wall** (Step 4; `ah/artifacts/live.py`). The decade is precomputed and
+  **sealed at t₀** (SHA-256 over the tape; a single mark moved one
+  millionth fails verification, by test). The three **tape-selection
+  rules** — seeded-random, **pre-stated** percentile of terminal wealth,
+  pinned id — each record complete provenance including the sealed hash;
+  the percentile parameter refuses to be supplied after the fact. The
+  **reveal pointer** is pure arithmetic over caller-supplied elapsed time
+  (no clock reads, even here). The **information wall is structural**:
+  `RevealedTape` copies only the revealed months at construction, so data
+  past the pointer never enters the object — there is nothing beyond the
+  wall to leak (asserted down to `data.base is None`). Chaptered
+  generation exists **behind a flag, default OFF**, with waypoints sealed
+  at t₀ (order-sensitive hash). Notification policy: **push only regime
+  events**, everything else to the digest. **The v1.3 WorldSpec schema is
+  RATIFIED** (owner approval 2026-08-02, same day as the draft):
+  `schemas/worldspec-v1.3.schema.json` promotes `temporal_delivery` to a
+  core block (calendar + reveal + tape-selection + notification policy,
+  fully sub-schema'd — the percentile parameter lives in the spec, which
+  is what makes it pre-stated); the version pattern widens as v1.2's did
+  (1.0.x/1.2.x sealed documents stay valid unchanged), and
+  `extensions.x_temporal_delivery` remains the migration path until v1.4.
+  `read_calendar` prefers the core block, falls back to the extension,
+  and **refuses a document carrying both** — two declarations is a
+  contradiction, not a preference. The draft is retained in
+  `Instructions/` as the approval record. 13 tests.
 - **WP4.5 — the authoring regression set: frozen first, measured when the
   meter runs** (Step 4; `fixtures/authoring_regression/`). The G4-pre
   membership rule made concrete: **30 deterministic payloads** — 10
