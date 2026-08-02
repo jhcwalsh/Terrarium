@@ -28,7 +28,23 @@ def test_register_rules_present() -> None:
         "private_credit_pre2004",
         "nareit_delevered_re",
         "fedfunds_pre1954",
+        "fx_usd_pre2006",
     }
+
+
+def test_fx_usd_pre2006_rule_extends_the_broad_dollar_from_major() -> None:
+    """Campaign-2 (S2R-FX-NEXT-CAMPAIGN; R5 re-entry): the fx block's series
+    is the trade-weighted BROAD dollar index (fred.DTWEXBGS, 2006-01 on),
+    spliced backward from the DISCONTINUED major-currencies index
+    (fred.DTWEXM, 1973-2019) over their 2006-2019 overlap -- the donor's
+    full remaining life. Proxy-flagged, never overwriting an actual."""
+    rule = PROXY_RULES["fx_usd_pre2006"]
+    assert rule.target == "fred.DTWEXBGS"
+    assert rule.donor == "fred.DTWEXM"
+    assert rule.transform == "regression"
+    assert rule.overlap_start == "2006-01-01"
+    assert rule.overlap_end == "2019-12-01"
+    assert "is_proxy" in rule.doc
 
 
 def test_fedfunds_pre1954_rule_extends_the_policy_rate_from_bills() -> None:
