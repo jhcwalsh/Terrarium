@@ -7,6 +7,24 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.7 — actor windows: calendars, triggers, the playbook, wargames**
+  (Step 4; `ah/artifacts/windows.py`). Real decisions are not uniformly
+  spaced: calendar windows carry the cadence, and **event windows** open
+  on the plan's closed trigger list (spread breach, gating, mark
+  catch-up, collateral call). The window log is append-only and typed on
+  the retrofit's decision contract — **the RFR-89 re-check ran at the
+  moment of first consumption and passed** (RFR-90): two actions in one
+  window survive record, count, and export un-collapsed. The
+  **pre-commitment playbook** freezes at t₀ by order-sensitive hash;
+  triggers fire, executions record, and recording an execution for a rule
+  that never triggered refuses — adherence is measured when the moment
+  comes, not on paper. Its outputs are byte-shaped for the SEALED
+  adherence metric **without importing it** (judge/defendant separation;
+  format compatibility proven in the test, where importing the judge is
+  legitimate). **Wargame sessions** hold one world, one seed, one
+  decision-alpha version by construction, and export the cohort exercise
+  (every team's windows) as evidence for the sealed metrics — scores are
+  never computed actor-side. 9 tests.
 - **wp5-00 — the Step 5 scorecard, frozen late and said so** (owner-ordered
   2026-08-02). The plan required the WP5.1–5.2 metric definitions frozen
   during Step 3; the obligation slipped to mid-Step 4 and is now
