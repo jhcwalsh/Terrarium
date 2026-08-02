@@ -7,6 +7,29 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.4 — the Tier-2 authoring pipeline: author, gate, retry, fall back**
+  (Step 4; `ah/artifacts/payloads.py`, `prompts.py`, `gate.py`,
+  `author.py`). The first LLM-adjacent code in the repo, built under the
+  frozen G4-pre terms. **Payload builders are deterministic code, never an
+  LLM**: P-LETTER/P-NOTE per the vendored spec §2, every figure
+  pre-formatted so authors copy rather than compute, and **arc beats
+  stripped at the dateline inside the builder** — a leak upstream is
+  structurally impossible. **Prompts are the spec's §3 text verbatim** at
+  the spec's version ids (`author-prompt/letter@1.0`, `note@1.0`), with a
+  **template-hash pin test** making the freeze executable: editing a
+  prompt without bumping its version fails CI first. **The consistency
+  gate G1–G8 runs in the frozen order and split** (G1–G5+G8 block, G6
+  advisory-and-says-so, G7 fog discipline): derived numbers block (G1),
+  unsubstantiated events block (G2), future quarters/years block (G3,
+  keyword rules — the spec's leak-checker prompt is v1.1, recorded),
+  unknown proper nouns block (G4), promises/advice/no-hedging block (G5),
+  stripped marking blocks (G8); G9 is the chronicle record's own
+  refusals, already live since WP4.1. **The pipeline retries twice with
+  violations attached, then falls back to a Tier-1 substitute** recorded
+  as tier-1 authorship — boring but honest beats fluent but wrong. The
+  author is an injected callable: tests run synthetic authors offline
+  (pytest-socket enforces); live Claude authoring arrives with the
+  regression set (WP4.5) behind `--live`. 17 tests.
 - **Retrofit R-1 (DN-5) — decision-schema shaping, before the engine work
   exists** (owner-tasked; shape only, no behaviour). The typed decision
   contract (`ah/artifacts/decisions.py`): a window carries a LIST of typed
