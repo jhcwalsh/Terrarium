@@ -76,7 +76,7 @@ class TestBriefing:
     def test_prompt_carries_persona_as_configuration(self):
         prompt = com.render_committee_prompt(PERSONA, _briefing())
         assert "disciplined, contrarian only with evidence" in prompt
-        assert com.COMMITTEE_PROMPT_VERSION == "committee-prompt@1.0"
+        assert com.COMMITTEE_PROMPT_VERSION == "committee-prompt@1.1"
 
 
 class TestBoundedDecisions:
@@ -84,7 +84,7 @@ class TestBoundedDecisions:
         decision = _decide(lambda p: GOOD_RESPONSE)
         assert decision.decided_by == "model"
         assert decision.window.actions[0].verb == "rebalance_public"
-        assert decision.prompt_version == "committee-prompt@1.0"
+        assert decision.prompt_version == "committee-prompt@1.1"
         assert decision.persona_id == "steady"
 
     def test_off_menu_action_falls_back_with_the_failure_filed(self):

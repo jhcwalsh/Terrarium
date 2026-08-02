@@ -1,0 +1,866 @@
+[
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 1000
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.7268173129981098,
+  "window_id": 1,
+  "world_seed": 1000
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 1000
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 1000
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.42731485518126416,
+  "window_id": 2,
+  "world_seed": 1000
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 1000
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 1000
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6462810220819051,
+  "window_id": 3,
+  "world_seed": 1000
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 1000
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 8919
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.42731485518126416,
+  "window_id": 1,
+  "world_seed": 8919
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 8919
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 8919
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6462810220819051,
+  "window_id": 2,
+  "world_seed": 8919
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 8919
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 8919
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6817223704685662,
+  "window_id": 3,
+  "world_seed": 8919
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 8919
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 16838
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6462810220819051,
+  "window_id": 1,
+  "world_seed": 16838
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 16838
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 16838
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6817223704685662,
+  "window_id": 2,
+  "world_seed": 16838
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 16838
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 16838
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.4722065673314656,
+  "window_id": 3,
+  "world_seed": 16838
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 16838
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 24757
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6817223704685662,
+  "window_id": 1,
+  "world_seed": 24757
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 24757
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 24757
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.4722065673314656,
+  "window_id": 2,
+  "world_seed": 24757
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 24757
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 24757
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.5913699130012903,
+  "window_id": 3,
+  "world_seed": 24757
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 24757
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 32676
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.4722065673314656,
+  "window_id": 1,
+  "world_seed": 32676
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 32676
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 32676
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.5913699130012903,
+  "window_id": 2,
+  "world_seed": 32676
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 32676
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 32676
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6820809529552605,
+  "window_id": 3,
+  "world_seed": 32676
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 32676
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 40595
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.5913699130012903,
+  "window_id": 1,
+  "world_seed": 40595
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 40595
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 40595
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.6820809529552605,
+  "window_id": 2,
+  "world_seed": 40595
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 40595
+ },
+ {
+  "arm": "heuristic",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 40595
+ },
+ {
+  "arm": "random_within_bounds",
+  "decided_by": "rule",
+  "n_actions": 1,
+  "target_weight": 0.45894734236379114,
+  "window_id": 3,
+  "world_seed": 40595
+ },
+ {
+  "arm": "hold_course",
+  "decided_by": "rule",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.66,
+  "window_id": 2,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 3,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 1000
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 1,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 2,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.5,
+  "window_id": 2,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.68,
+  "window_id": 3,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 8919
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 2,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 3,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.55,
+  "window_id": 3,
+  "world_seed": 16838
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 2,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 3,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 24757
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.55,
+  "window_id": 1,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.5,
+  "window_id": 2,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.35,
+  "window_id": 2,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.625,
+  "window_id": 3,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 32676
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 1,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.63,
+  "window_id": 1,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.5,
+  "window_id": 1,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 1,
+  "target_weight": 0.65,
+  "window_id": 2,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 2,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:steady",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:momentum",
+  "decided_by": "model",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 40595
+ },
+ {
+  "arm": "model:preserver",
+  "decided_by": "heuristic_fallback",
+  "n_actions": 0,
+  "target_weight": null,
+  "window_id": 3,
+  "world_seed": 40595
+ }
+]
