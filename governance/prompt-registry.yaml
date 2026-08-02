@@ -1,0 +1,69 @@
+# prompt-registry.yaml -- every generative prompt in the platform (WP4.10)
+#
+# The standing answer to "which prompt produced that, and what tested it?".
+# Rules (frozen at G4-pre for the authoring pair; extended to all by policy):
+# any edit bumps the version; a bumped authoring version re-runs the frozen
+# 30-payload regression set; hash pins in tests fail CI on silent edits.
+
+registry_version: 1.0
+
+prompts:
+  compile-world:
+    current: compile-world-v1.0
+    role: scenario text -> WorldSpec JSON (Step 0 compiler)
+    model_pinned: claude-sonnet-4-6
+    regression: tests/test_compiler.py (~50 scenarios, offline fixtures)
+    hash_pin: prompt_v1.PROMPT_VERSION recorded in provenance
+    status: live (offline; --live for real calls)
+
+  author-prompt/letter:
+    current: author-prompt/letter@1.1
+    history:
+      - {version: "1.0", note: spec s3 verbatim (vendored ARTIFACT-AUTHORING v1.0-r)}
+      - {version: "1.1", note: "hard rules sharpened where run-4 first drafts
+          slipped (guarantee-word ban; exact number formats; events only from
+          newsflow) - sealed rules restated concretely, nothing weakened"}
+    model_pinned: claude-sonnet-5
+    regression: fixtures/authoring_regression (30 payloads, hashes frozen);
+      five live runs, trajectory 3.3% -> 76.7% first-pass
+    hash_pin: tests/test_authoring.py::TestPrompts::test_template_hash_pin_the_freeze_made_executable
+    status: "NOT SHIPPING - first-pass 76.7% < the frozen 0.95 gate
+      (AM-2026-08-02-002); live-world Tier-2 authoring disabled until a
+      version measures >= 0.95"
+
+  author-prompt/note:
+    current: author-prompt/note@1.2
+    history:
+      - {version: "1.0", note: spec s3 verbatim}
+      - {version: "1.1", note: sentence-case titles (run-2 - Title Case defeated
+          the G4 closed-world scan)}
+      - {version: "1.2", note: inherits letter@1.1's sharpened hard rules}
+    model_pinned: claude-sonnet-5
+    regression: same frozen set and trajectory as letter
+    hash_pin: same test
+    status: NOT SHIPPING - same gate, same reason
+
+  committee-prompt:
+    current: committee-prompt@1.1
+    history:
+      - {version: "1.0", note: initial}
+      - {version: "1.1", note: "action element shape made explicit (validation
+          run 1: the model wrote 'action' for 'verb' because the prompt never
+          showed the format - a prompt defect; the bounded contract's
+          rejections were correct throughout)"}
+    model_pinned: claude-sonnet-5
+    regression: fixtures/actor_validation/decision_records.json (6 worlds x 3
+      windows x 3 personas, live run 2); fallback rate 0.20, persona
+      sensitivity 0.78 (governance/evidence/ACTOR-VALIDATION.md)
+    hash_pin: tests/test_committee.py (version asserted)
+    status: "STUDY-GRADE ONLY - no client-facing actor claim precedes the
+      full WP4.9 study (human-cohort arm deferred, owner decision D-K4-5)"
+
+variance_policy: >
+  Tier-1 output variance across seeds is ZERO by construction and by test
+  (same tape, same words - tests/test_artifacts_templates.py). Tier-2 and
+  committee outputs are stochastic by nature; their variance is measured,
+  recorded (five regression runs; persona sensitivity 0.78), and bounded by
+  the gate/contract rather than pretended away. Replay of a live world
+  reproduces the identical artifact SEQUENCE from the chronicle, never by
+  re-prompting.
