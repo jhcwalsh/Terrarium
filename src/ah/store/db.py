@@ -56,7 +56,31 @@ BEFORE DELETE ON chronicle
 BEGIN
     SELECT RAISE(ABORT, 'chronicle is append-only: DELETE is forbidden');
 END;
+
+-- Leaderboard (retrofit R-1, DN-5): created BEFORE any rows exist, with
+-- decision_alpha_version in the scope key from birth -- scores produced
+-- under different decision-alpha definitions never share a board.
+CREATE TABLE IF NOT EXISTS leaderboard (
+    id                     INTEGER PRIMARY KEY AUTOINCREMENT,
+    world_id               TEXT NOT NULL,
+    seed                   INTEGER NOT NULL,
+    decision_alpha_version TEXT NOT NULL,
+    participant            TEXT NOT NULL,
+    score                  REAL NOT NULL,
+    created_at             TEXT NOT NULL,
+    UNIQUE (world_id, seed, decision_alpha_version, participant)
+);
 """
+
+# Additive columns on existing tables (retrofit R-1): applied by migrate()
+# only when absent, so a pre-change database upgrades in place -- old rows
+# read back with NULL stamps (they predate the stamps), new rows always
+# carry them. No version break, no rewrite of existing bytes.
+_RUN_RECORD_STAMPS = (
+    ("decision_schema_version", "TEXT"),
+    ("decision_alpha_version", "TEXT"),
+    ("twin_definition", "TEXT"),
+)
 
 
 def connect(path: str | Path = ":memory:") -> sqlite3.Connection:
@@ -72,4 +96,8 @@ def connect(path: str | Path = ":memory:") -> sqlite3.Connection:
 def migrate(conn: sqlite3.Connection) -> None:
     """Create tables and triggers if absent (idempotent)."""
     conn.executescript(_SCHEMA)
+    existing = {row["name"] for row in conn.execute("PRAGMA table_info(run_records)")}
+    for column, sqltype in _RUN_RECORD_STAMPS:
+        if column not in existing:
+            conn.execute(f"ALTER TABLE run_records ADD COLUMN {column} {sqltype}")
     conn.commit()

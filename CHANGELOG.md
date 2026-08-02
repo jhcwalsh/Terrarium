@@ -7,6 +7,28 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **Retrofit R-1 (DN-5) — decision-schema shaping, before the engine work
+  exists** (owner-tasked; shape only, no behaviour). The typed decision
+  contract (`ah/artifacts/decisions.py`): a window carries a LIST of typed
+  actions (singleton never special-cased), `reached + []` is a first-class
+  "chose to do nothing" distinct from `not_reached` (which may carry no
+  actions), `set_pacing`/`sell_secondary` are declared in the enum and
+  **rejected with an explicit not-yet-implemented error** — never silently
+  dropped — and `cost_charged` is engine-written only (`engine_charge` is
+  the single writer; client payloads carrying it refuse). Three inert
+  **version stamps** on every new RunRecord (`decision_schema_version`
+  "1.0", `decision_alpha_version` "1.0", `twin_definition` "policy") via an
+  in-place additive migration — a pre-change database upgrades with legacy
+  rows reading back stampless; `verify_run` and the replay anchor
+  untouched. The **leaderboard** table is created before any row exists
+  anywhere, with `(world_id, seed, decision_alpha_version)` in the unique
+  constraint from birth and the version a required argument on every
+  repository function. UI reservations (three-series analysis layout,
+  per-window annotation slot) recorded as experience-deltas **E7/E8** per
+  D-K4-2. **Survey finding, per the task's own ask**: no code assumed a
+  single action per window because WP4.6/4.7 did not exist yet — the
+  retrofit is contract-first, and that assumption gets re-checked when
+  WP4.7 consumes the contract (RFR-89). 11 tests.
 - **WP4.3 — the World Bible: checks B1–B6, the entity screen, cast binding**
   (Step 4; `ah/artifacts/bible.py`). The continuity database and safety
   enforcement point, executable. Schema-first validation, then the six
