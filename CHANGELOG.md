@@ -7,6 +7,22 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.2 — Tier-1 templates: the volume, at zero marginal cost** (Step 4;
+  `ah/artifacts/templates.py`). Every builder is a pure function of
+  tape-shaped inputs — no LLM, no RNG, no clock; same tape, same words, by
+  test. Numbers pre-format to publication precision (`fmt_*`) so downstream
+  authors **copy rather than compute** — the G1 discipline inherited by
+  construction. **Amendment Delta 2 lands**: capital call, distribution,
+  coverage-band crossing, forced sale, secondary discount — all in the **cash
+  account's voice** (the honest third plane, per the delta verbatim), with
+  the **forced-sale item reading like the distress it is** (headline-cause,
+  named sleeves, stated haircut; refuses to typeset without them). Plus the
+  furniture: morning digest (quiet days included), data-release pages where
+  the revision column is content, central-bank statements with stance
+  language keyed deterministically on the rate move, quarterly statements
+  with **peer percentiles computed from ensemble bands** (monotonicity
+  checked, never authored), and the board pack that refuses to assemble with
+  any of its five sections empty. 11 tests.
 - **WP4.1 — the artifact service: calendar, chronicle record, renderers**
   (Step 4; `ah/artifacts/`). The storyteller layer's rails, before any
   storyteller exists. The **calendar** rides the WorldSpec schema's sanctioned
