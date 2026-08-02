@@ -90,6 +90,7 @@ class TestG5Seal:
         # copy the sealed pair; tamper the code copy; verification must fail
         root = tmp_path
         (root / "src" / "ah" / "eval").mkdir(parents=True)
+        (root / "Instructions").mkdir()
         for rel in (
             "step5-evaluation-protocol.yaml",
             "pre-registration-g5.lock",
@@ -98,6 +99,7 @@ class TestG5Seal:
             "src/ah/eval/prereg.py",
             "src/ah/splits.py",
             "factors.yaml",
+            "Instructions/holdout-evaluation-spec.md",  # sealed at AM-006
         ):
             dst = root / rel
             dst.parent.mkdir(parents=True, exist_ok=True)

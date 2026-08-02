@@ -59,6 +59,8 @@ metrics:
 
 decision_alpha_version: "1.0"   # the RunRecord stamp (retrofit R-1) refers to THIS seal
 
+holdout_evaluation_spec: Instructions/holdout-evaluation-spec.md  # sealed, AM-2026-08-02-006
+
 holdout_rule: >
   The holdout is spent ONCE, through ah.eval.g2's explicit-purpose token
   path, after every other decision is closed; the result publishes
@@ -71,3 +73,4 @@ seal_scope:
     - src/ah/eval/g5seal.py
     - src/ah/eval/prereg.py
     - src/ah/splits.py
+    - Instructions/holdout-evaluation-spec.md

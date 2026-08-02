@@ -1316,3 +1316,24 @@ amendments:
     year. The holdout (2021-01+) is touched by NONE of this. post_hoc: false - the
     harness does not exist yet; this amendment precedes its first line.'
   type: protocol_change
+- amendment_id: AM-2026-08-02-006
+  date: '2026-08-02'
+  payload:
+    g5_remint:
+      added: Instructions/holdout-evaluation-spec.md
+      digest: sha256:6b223aa903b175acaaa41eedc6370b03ecabadc18bacfa52e717c67c45b39610
+  post_hoc: false
+  rationale: 'THE HOLDOUT-EVALUATION SPECIFICATION SEALS, owner-approved 2026-08-02
+    (''approved - seal the holdout spec''). Discharges S2-HOLDOUT-NOT-SPENT''s requirement
+    in full and IN ORDER: the evaluation is written down completely (one 1024-path
+    ensemble from the promoted campaign-2 generator, conditioned on the 2021-01 boundary
+    from train+validation only, base_seed 20260000 single draw; scored against the
+    realized 2021-01..2026-07 holdout through the token path; drawdown_surprise primary,
+    sealed calibration secondaries; result publishes verbatim either way, no retuning,
+    no second draw) and sealed BEFORE the campaign it judges has a promotion seal,
+    training run, or candidate. Instructions/holdout-evaluation-spec.md joins seal_scope.hashed_files;
+    lock re-minted (digest in payload). Approving the spec approves the RECIPE - the
+    spend remains a separate explicit owner act at Step 5''s end, never covered by
+    any standing authorization. post_hoc: false - no holdout evaluation of any kind
+    has ever run.'
+  type: protocol_change

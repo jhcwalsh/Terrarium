@@ -1,6 +1,7 @@
 {
-  "digest": "sha256:ac6f2a3c1732173dbd3816cc4ff803d22992871efacf42f0eada5f645f520cca",
+  "digest": "sha256:6b223aa903b175acaaa41eedc6370b03ecabadc18bacfa52e717c67c45b39610",
   "hashed_files": [
+    "Instructions/holdout-evaluation-spec.md",
     "factors.yaml",
     "src/ah/eval/decision_metrics.py",
     "src/ah/eval/g5seal.py",
@@ -9,5 +10,5 @@
     "step5-evaluation-protocol.yaml"
   ],
   "prereg_path": "step5-evaluation-protocol.yaml",
-  "sealed_at": "2026-08-02T18:00:00+00:00"
+  "sealed_at": "2026-08-02T23:00:00+00:00"
 }

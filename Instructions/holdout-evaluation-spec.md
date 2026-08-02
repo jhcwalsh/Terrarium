@@ -1,6 +1,8 @@
-# Holdout-evaluation specification — DRAFT for owner approval
+# Holdout-evaluation specification — APPROVED and SEALED
 
-*What S2-HOLDOUT-NOT-SPENT demands before the one shot can ever be fired:
+*APPROVED by the owner 2026-08-02 ('approved - seal the holdout spec');
+sealed into the G5 lock by AM-2026-08-02-006 the same day, BEFORE any
+campaign-2 promotion seal exists. What S2-HOLDOUT-NOT-SPENT demands before the one shot can ever be fired:
 "write the evaluation down first — what is generated, at what size, from
 what conditioning state, scored on which metrics against which
 realizations, with what consequence — seal that specification BEFORE the
@@ -59,8 +61,8 @@ way it falls**:
 - The spec, once sealed, changes only by pre-hoc amendment BEFORE the
   campaign promotion seal; after that it is fixed until spent.
 
-**Decision requested:** approve for sealing (an AM entry re-minting the
-G5 lock with this file in scope), or amend first.
+**Decision record:** approved and sealed as above. Changes henceforth
+only by pre-hoc amendment BEFORE the campaign promotion seal.
 
 ---
 

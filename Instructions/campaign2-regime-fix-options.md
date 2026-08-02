@@ -60,7 +60,7 @@ duration-fitting groundwork). Either path lands behind the campaign seal
 with the four acceptance statistics pre-stated in it. C goes to the
 research backlog with this memo as its record.
 
-**Decision requested:** approve B-then-A-if-needed, or direct otherwise.
+**DECISION (owner, 2026-08-02): B then A if needed** — verbatim 'B then A if needed'. Option B's refit proceeds immediately; the four acceptance statistics above are the escalation trigger; C stays on the research backlog with this memo as its record.
 
 ---
 
