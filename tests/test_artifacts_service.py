@@ -73,6 +73,30 @@ class TestCalendar:
         assert len(entries) == 5
         assert cal.read_calendar({"world_id": "w"}) == []
 
+    def test_core_block_reads_identically_and_both_refuses(self):
+        """v1.3 (ratified 2026-08-02): the core block is the same contract."""
+        ext_doc = self._spec()
+        core_doc = {k: v for k, v in ext_doc.items() if k != "extensions"} | {
+            "temporal_delivery": ext_doc["extensions"]["x_temporal_delivery"]
+        }
+        assert cal.read_calendar(core_doc) == cal.read_calendar(ext_doc)
+        both = dict(core_doc)
+        both["extensions"] = ext_doc["extensions"]
+        with pytest.raises(cal.CalendarError, match="do not carry both"):
+            cal.read_calendar(both)
+
+    def test_v13_schema_accepts_the_core_block(self):
+        schema = json.loads((ROOT / "schemas" / "worldspec-v1.3.schema.json").read_text("utf-8"))
+        doc = json.loads(
+            (ROOT / "schemas" / "example-long-stagflation.worldspec.json").read_text("utf-8")
+        )
+        doc["temporal_delivery"] = {
+            "artifact_calendar": CALENDAR_BLOCK["x_temporal_delivery"]["artifact_calendar"],
+            "reveal": {"mode": "precomputed", "cadence_days": 1.0},
+            "tape_selection": {"rule": "percentile", "percentile": 50.0},
+        }
+        jsonschema.Draft202012Validator(schema).validate(doc)
+
     def test_malformed_block_raises(self):
         with pytest.raises(cal.CalendarError, match="artifact_calendar"):
             cal.read_calendar({"extensions": {"x_temporal_delivery": {"oops": []}}})
