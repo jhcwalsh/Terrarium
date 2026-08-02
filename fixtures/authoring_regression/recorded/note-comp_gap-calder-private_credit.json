@@ -1,20 +1,14 @@
 {
  "asof": "2026-08-02",
- "attempt_violations": [
-  [
-   {
-    "message": "proper nouns outside the closed world: ['Where Grimshaw']",
-    "rule": "G4"
-   }
-  ]
- ],
+ "attempt_violations": [],
  "author_tier": 2,
  "gate_result": "pass",
  "kind": "note",
  "model_id": "claude-sonnet-5",
  "payload_id": "note-comp_gap-calder-private_credit",
- "prompt_version": "author-prompt/note@1.2",
- "retry_count": 1,
- "text": "Credit marks climb toward the public rally\n\nRating: overweight\n\nPrivate credit spent March 15, 2028 catching up rather than cracking. The reported_vs_public_gap of -8.5% simply reflects marks that update slower than public prices, not hidden deterioration. With hy_spread_now_bps at 380bps and drawdown flat at +0.0%, the underlying carry story remains intact: a one_year_return of +9.3% shows the asset class compounding through a policy_rate_now of 4.75% and cpi_now at 2.7%. Growth-supportive conditions continue to give borrowers room to refinance, and spread compression from here would only extend the constructive path already visible in the twelve-month number.\n\nThe newsflow that \"public rally leaves private marks behind\" is not evidence of fragility\u2014it is evidence of a lag that markets have seen before. When listed comps rerate sharply, private valuations typically follow with delay, not with denial. The ytd_return of +1.0% looks modest against that backdrop, but it is consistent with a marking process that smooths rather than mispriced. Grimshaw Partners frames this lag as fragility compounding beneath stable marks; we read the same gap as convergence still in progress. Policy support and resilient growth conditions argue for marks catching up to fundamentals, not fundamentals catching down to marks.\n\nThe",
+ "pipeline_version": "author-pipeline/2.0",
+ "prompt_version": "author-prompt/note@1.5",
+ "retry_count": 0,
+ "text": "# Private credit marks climb toward public strength\n\n**Rating: overweight**\n\nThe gap between reported and public performance\u2014reported_vs_public_gap at -8.5%\u2014reads to us as lag, not deception. Public rally leaves private marks behind precisely because private valuations move on a quarterly cadence while listed comps rerate sharply in real time. With drawdown at +0.0% and a one_year_return of +9.3%, the underlying book has not cracked; it has simply not yet been asked to catch up to the marks the public market is already pricing. We expect that catch-up to arrive as valuation cycles turn, not as a shock.\n\nGrimshaw Partners frames this same gap as fragility compounding beneath stable marks. We read the identical spread differently: hy_spread_now_bps at 380bps remains consistent with a credit complex under manageable stress, not one masking hidden deterioration. Policy_rate_now at 4.75% against cpi_now of 2.7% still leaves real rates restrictive enough to reward patient capital, and as the policy stance eases over time\u2014our house view holds that growth and policy support resolve stress rather than entrench it\u2014the private-public gap should compress from the private side up, not the public side down.\n\nYtd_return of +1.0% looks thin in isolation, but set against a full one_year_return of +9.3% it reads as a pause within an otherwise constructive trend, consistent with marks digesting the public rerating before following it upward.\n\nThe risk to this view: if reported marks are understating stress rather than merely lagging it, the -8.5% gap could widen instead of close, and a compression trade built on convergence would be premature. We think this risk is manageable but watch it closely, and would treat any evidence of marks moving away from\u2014rather than toward\u2014public levels as reason to reconsider the overweight.",
  "violations": []
 }

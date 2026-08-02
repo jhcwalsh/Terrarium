@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **The Tier-2 ship-gate chase: GATE G4 CLOSES** (owner-directed;
+  fifteen live runs, every lever versioned). From WP4.5's honest 76.7% to
+  the binding pair rule met at **96.7% / 100.0%** (runs 14/15, identical
+  configuration). What it took, all on the record: gate-impl 1.0.3→1.0.6
+  (each a false-positive correction argued against the sealed rule's own
+  text — headline case, sentence-starters, market terms, modality,
+  document furniture); prompts letter@1.1→1.4 / note@1.2→1.5
+  (contrastive exemplars, role-not-name for real institutions, exact
+  number formats); **pipeline v2** — the pre-gate self-check, ratified
+  PRE-HOC by the owner (`AM-2026-08-02-004`) with the "first-pass"
+  definition decided before any v2 run existed, and the
+  two-consecutive-runs ship rule made binding after a lucky single pass
+  (run 9, 96.7% unconfirmed at 90/96.7/90) was REFUSED; two harness bugs
+  caught by their own guards (a literal backspace byte in a regex — the
+  offline replay test; token-cap truncation amputating outlooks — the
+  63.3% crater that diagnosed it). One true positive along the way: G4
+  caught a letter naming The Federal Reserve. Tier-2 live-world authoring
+  is ENABLED at exactly the shipped configuration; any change re-runs the
+  frozen set. `G4-EVIDENCE.md` carries the closing line: **all four
+  project gates resolved.** 3 new tests.
 - **WP4.10 — the GenAI governance pack; Gate G4 scored, honestly open**
   (Step 4 closer). `governance/prompt-registry.yaml`: all four prompt
   families with versions, hash pins, regression links, and ship status

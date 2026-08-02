@@ -49,7 +49,10 @@ class AnthropicAuthor:
         client = anthropic.Anthropic()
         message = client.messages.create(
             model=self.model,
-            max_tokens=1024,
+            # 2048: the v2 self-check re-emits WHOLE drafts; 1024 truncated
+            # long letters mid-outlook (run 11's ten no-hedging failures
+            # were amputated tails, the committee 512-cap bug's sibling)
+            max_tokens=2048,
             messages=[{"role": "user", "content": prompt}],
         )
         return "".join(
@@ -96,6 +99,7 @@ def run_live(asof: str) -> None:  # pragma: no cover - live only
             on_retry=lambda _a, report, _sink=attempt_violations: _sink.append(
                 list(report.violations)
             ),
+            self_check=author,  # pipeline v2 (AM-2026-08-02-004)
         )
         record = {
             "payload_id": payload_id,
@@ -104,6 +108,7 @@ def run_live(asof: str) -> None:  # pragma: no cover - live only
             "gate_result": result.gate_result,
             "retry_count": result.retry_count,
             "prompt_version": result.prompt_version,
+            "pipeline_version": result.pipeline_version,
             "model_id": result.model_id,
             "author_tier": result.author_tier,
             "violations": result.gate_report.violations,

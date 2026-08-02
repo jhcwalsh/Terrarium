@@ -6,7 +6,7 @@ Ship gate (FROZEN, AM-2026-08-02-002): first-pass gate rate >= 95%.
 
 | first-pass | pass after retry | fallback | first-pass rate | ships |
 |---|---|---|---|---|
-| 30/30 | 0 | 0 | 100.0% | YES |
+| 29/30 | 1 | 0 | 96.7% | YES |
 
 ## Per-payload results
 
@@ -17,7 +17,7 @@ Ship gate (FROZEN, AM-2026-08-02-002): first-pass gate rate >= 95%.
 | letter-comp_gap-meridian | pass | 0 | - |
 | letter-comp_gap-stonebeck | pass | 0 | - |
 | letter-crash-meridian | pass | 0 | - |
-| letter-crash-stonebeck | pass | 0 | - |
+| letter-crash-stonebeck | pass | 1 | - |
 | letter-gate_event-meridian | pass | 0 | - |
 | letter-gate_event-stonebeck | pass | 0 | - |
 | letter-quiet-meridian | pass | 0 | - |

@@ -28,6 +28,41 @@ from ah.artifacts.prompts import PROMPT_VERSIONS, render_prompt
 
 MAX_RETRIES = 2  # frozen: two retries, then Tier-1 fallback
 
+#: Pipeline v2 (AM-2026-08-02-004, owner-ratified): an optional SELF-CHECK
+#: call executes inside the production of each submitted draft — the model
+#: reviews its own draft against the hard rules before submission. The
+#: external gate still judges each submission exactly once; the frozen
+#: threshold is unchanged; "first-pass" means gate-passed on the first
+#: SUBMISSION, per the ratified definition.
+PIPELINE_V1 = "author-pipeline/1.0"
+PIPELINE_V2 = "author-pipeline/2.0"
+# 1.1: preserve-structure rules (run 13: the checker, told "body only",
+# stripped a note's rating line it was never told to keep) and the check
+# is now an explicit act-on-each-rule checklist.
+SELF_CHECK_PROMPT_VERSION = "self-check@1.1"
+
+SELF_CHECK_PROMPT = """\
+Review the draft below against these rules. If it violates any rule, output
+the corrected draft; if it is compliant, output it unchanged. Output the
+draft body ONLY - no commentary, no preamble.
+
+RULES:
+- Every number must match the facts table character-for-character; no digit
+  may appear that is not in the facts table.
+- No promise words in any form: guarantee, assure, will deliver.
+- The outlook must contain at least one cautious word (may / could / risk /
+  watch / prudent).
+- Name only the allowed entities; real institutions by role only ("the
+  central bank"), never by name.
+- No references beyond the dateline; no events the newsflow does not report.
+
+FACTS TABLE (the only permitted numbers):
+{claims}
+
+DRAFT:
+{draft}
+"""
+
 
 class AuthorFn(Protocol):
     def __call__(self, prompt: str) -> str: ...
@@ -42,6 +77,7 @@ class AuthoringResult:
     prompt_version: str
     model_id: str
     author_tier: int
+    pipeline_version: str = PIPELINE_V1
 
 
 def tier1_fallback_text(payload: dict[str, Any]) -> str:
@@ -67,14 +103,28 @@ def author_artifact(
     past_artifacts: list[str] | None = None,
     fog: dict[str, Any] | None = None,
     on_retry: Callable[[int, GateReport], None] | None = None,
+    self_check: AuthorFn | None = None,
 ) -> AuthoringResult:
-    """Render the prompt, author, gate; retry twice; then fall back."""
+    """Render the prompt, author, gate; retry twice; then fall back.
+
+    ``self_check`` (pipeline v2, AM-2026-08-02-004): when supplied, every
+    draft passes through one self-review call before submission — inside
+    the production of the submitted draft, per the ratified definition.
+    """
     prompt_version = PROMPT_VERSIONS[kind]
+    pipeline_version = PIPELINE_V2 if self_check is not None else PIPELINE_V1
     base_prompt = render_prompt(kind, payload, allowed_entities=allowed_entities)
     prompt = base_prompt
     last_report = GateReport()
     for attempt in range(MAX_RETRIES + 1):
         draft = author(prompt)
+        if self_check is not None:
+            draft = self_check(
+                SELF_CHECK_PROMPT.format(
+                    claims=fmt_claims_for_prompt(payload["checkable_claims_table"]),
+                    draft=draft,
+                )
+            )
         report = run_gate(
             draft,
             payload,
@@ -93,6 +143,7 @@ def author_artifact(
                 prompt_version=prompt_version,
                 model_id=model_id,
                 author_tier=2,
+                pipeline_version=pipeline_version,
             )
         last_report = report
         if on_retry is not None:
@@ -112,4 +163,5 @@ def author_artifact(
         prompt_version=prompt_version,
         model_id=model_id,
         author_tier=1,  # the substitute is Tier-1 authorship, recorded as such
+        pipeline_version=pipeline_version,
     )

@@ -17,14 +17,21 @@ from typing import Any
 from ah.artifacts.payloads import fmt_claims_for_prompt
 
 PROMPT_VERSIONS = {
+    # 1.3: the role-not-name rule for real institutions joins the exemplars
+    # (run-7 true positive: a letter named The Federal Reserve).
+    # 1.2: contrastive micro-exemplars for the three run-5 residual failure
+    # modes (the 95% chase, lever 1) - demonstrated form, no full example
+    # letter to copy numbers from.
     # 1.1: hard rules sharpened where run-4 first drafts actually slipped
     # (in-character 'guarantee' language; number reformatting) — the sealed
     # rules restated concretely, nothing weakened.
-    "letter": "author-prompt/letter@1.1",
+    "letter": "author-prompt/letter@1.4",
     # 1.1: sentence-case titles (run-2: headline Title Case defeated the G4
     # closed-world scan; sentence case keeps real entities catchable).
     # 1.2: inherits letter@1.1's sharpened hard rules by reference.
-    "note": "author-prompt/note@1.2",
+    # 1.3: the same micro-exemplars, IN the note template explicitly - a
+    # textual 'identical to T-LETTER' is invisible to a model writing a note.
+    "note": "author-prompt/note@1.5",
 }
 
 PRIOR_GLOSS = {
@@ -53,6 +60,20 @@ exceeds 3pts, you MUST address the gap in your firm's characteristic way (defend
 or acknowledge, per voice/traits — but never misstate a number); (3) outlook consistent
 with your character, hedged as a real GP hedges.
 
+
+THE THREE COMMON FAILURES, WITH FIXES (follow the RIGHT form exactly):
+- WRONG: "we guarantee recovery" / "assured returns" -> RIGHT: "we believe recovery is likely"
+- WRONG: restating +9.0% as "9%" or "nine percent" -> RIGHT: "+9.0%" character-for-character
+- WRONG: "defaults rose across the market" when the newsflow above reports no defaults
+  -> RIGHT: discuss such events only if the newsflow reports them; otherwise stay
+  hypothetical ("should defaults rise...")
+- WRONG: naming real institutions ("The Federal Reserve") -> RIGHT: role only
+  ("the central bank", "the regulator")
+- WRONG: any digit not in the facts table, even casually ("0.2 turns of
+  leverage") -> RIGHT: numbers appear ONLY if copied from the facts table
+- Your outlook MUST contain at least one cautious word (may / could / risk /
+  watch / prudent) - a letter with no hedging anywhere will be rejected
+
 HARD RULES: Mention only these named entities: {{allowed_entities}}. No real firms or people.
 No dates or events after {{dateline}}. No promises of returns — never write 'guarantee',
 'assure', or 'will deliver' in any form, however in-character it feels. Copy every number
@@ -76,6 +97,20 @@ and named entities), rating from {overweight|neutral|underweight|no_rating},
 2-4 paragraphs of argument READING THE SAME DATA THROUGH YOUR PRIOR, one explicitly stated
 risk to your own view. Your interpretation should plausibly differ from the rival's;
 your facts cannot.
+
+
+THE THREE COMMON FAILURES, WITH FIXES (follow the RIGHT form exactly):
+- WRONG: "we guarantee recovery" / "assured returns" -> RIGHT: "we believe recovery is likely"
+- WRONG: restating +9.0% as "9%" or "nine percent" -> RIGHT: "+9.0%" character-for-character
+- WRONG: "defaults rose across the market" when the newsflow above reports no defaults
+  -> RIGHT: discuss such events only if the newsflow reports them; otherwise stay
+  hypothetical ("should defaults rise...")
+- WRONG: naming real institutions ("The Federal Reserve") -> RIGHT: role only
+  ("the central bank", "the regulator")
+- WRONG: any digit not in the facts table, even casually ("0.2 turns of
+  leverage") -> RIGHT: numbers appear ONLY if copied from the facts table
+- Your outlook MUST contain at least one cautious word (may / could / risk /
+  watch / prudent) - a letter with no hedging anywhere will be rejected
 
 HARD RULES: identical to T-LETTER (entities, dateline, exact number formats, no promises,
 events only from the newsflow, no simulation references, body only).

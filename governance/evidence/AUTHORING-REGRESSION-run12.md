@@ -6,7 +6,7 @@ Ship gate (FROZEN, AM-2026-08-02-002): first-pass gate rate >= 95%.
 
 | first-pass | pass after retry | fallback | first-pass rate | ships |
 |---|---|---|---|---|
-| 30/30 | 0 | 0 | 100.0% | YES |
+| 29/30 | 1 | 0 | 96.7% | YES |
 
 ## Per-payload results
 
@@ -30,7 +30,7 @@ Ship gate (FROZEN, AM-2026-08-02-002): first-pass gate rate >= 95%.
 | note-comp_gap-calder-stonebeck | pass | 0 | - |
 | note-comp_gap-grimshaw-private_credit | pass | 0 | - |
 | note-comp_gap-grimshaw-stonebeck | pass | 0 | - |
-| note-crash-calder-private_credit | pass | 0 | - |
+| note-crash-calder-private_credit | pass | 1 | - |
 | note-crash-calder-stonebeck | pass | 0 | - |
 | note-crash-grimshaw-private_credit | pass | 0 | - |
 | note-crash-grimshaw-stonebeck | pass | 0 | - |

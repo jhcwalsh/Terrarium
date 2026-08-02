@@ -1,26 +1,14 @@
 {
  "asof": "2026-08-02",
- "attempt_violations": [
-  [
-   {
-    "message": "events with no chronicle substantiation: ['rate cut']",
-    "rule": "G2"
-   }
-  ],
-  [
-   {
-    "message": "events with no chronicle substantiation: ['redemption gating']",
-    "rule": "G2"
-   }
-  ]
- ],
+ "attempt_violations": [],
  "author_tier": 2,
  "gate_result": "pass",
  "kind": "note",
  "model_id": "claude-sonnet-5",
  "payload_id": "note-crash-grimshaw-private_credit",
- "prompt_version": "author-prompt/note@1.2",
- "retry_count": 2,
- "text": "Title: Marks that lag, spreads that don't\n\nRating: underweight\n\nGrimshaw Partners, 2028-03-15. The data panel is not subtle, though the marks pretend otherwise. Private credit shows a one_year_return of +3.3% even as ytd_return sits at -12.0% \u2014 a divergence that only makes sense if one assumes valuation committees are still working off a stale quarter.\u00b9 The reported_vs_public_gap of +9.5% is the tell: public proxies have already repriced for a world of hy_spread_now_bps at 780bps, while private books have not yet caught up. Lagging marks are not the same as stable value.\n\nCalder & Root's view \u2014 that policy support resolves the stress \u2014 asks us to believe policy_rate_now at 5.25% is doing more work than the newsflow suggests. Equities entering bear market territory and spreads gapping wider on default fears are not symptoms that yield readily to rate relief; they are symptoms of credit quality reassertion, the kind that outlasts a policy pivot narrative. Cpi_now at 4.1% keeps the central bank's hands somewhat tied besides, which undercuts the \"support resolves it\" thesis at the root.\n\nPicture, if you will, a chart with two lines: the private_credit NAV index, smooth and gently declining, sitting atop a public high-yield index that has just fallen off a shelf. The gap between them is not evidence of resilience; it is evidence of a lag waiting to close, likely downward, once drawdown of -18.0% forces recognition events across the book.\n\nThe risk to this view: if policy easing does arrive credibly and default fears prove overstated, the reported_vs_public_gap could close upward instead \u2014 marks catching up to a public recovery rather than a public rout. That scenario would make the cautious read look merely early rather than correct.\n\n\u00b9 Valuation committees rarely mark faster than they must.",
+ "pipeline_version": "author-pipeline/2.0",
+ "prompt_version": "author-prompt/note@1.5",
+ "retry_count": 0,
+ "text": "# Marks that lag, spreads that don't\n\n**Rating: underweight**\n\nThe reported_vs_public_gap of +9.5% is, in our house view, not a footnote but the thesis. Private credit valuations are marked to models that update on a lag; public proxies for credit risk do not extend that courtesy. With hy_spread_now_bps at 780bps and spreads gapping wider on default fears, the public market is already pricing stress that private books have not yet acknowledged. The one_year_return of +3.3% should be read less as evidence of resilience than as evidence of staleness.\n\nThe bull case \u2014 that policy support resolves the stress \u2014 presumes the transmission mechanism from policy to portfolio is fast and clean. We are less sanguine. At policy_rate_now of 5.25% against cpi_now of 4.1%, real rates remain restrictive; \"support\" here means a rate path, not a cut already delivered. Meanwhile equities have entered bear market territory, and the drawdown of -18.0% alongside a ytd_return of -12.0% suggests the correction is broad rather than sector-specific. Fragilities of this kind tend to compound: a widening in liquid spreads typically precedes, not follows, marks in illiquid vehicles catching down to reality.\n\nPicture a chart with two lines: public spreads climbing steadily since year start, and a private-credit NAV line drawn nearly flat until a single sharp step down near the edge of the page \u2014 that step has not yet been drawn.\n\nThe explicit risk to this view: should policy easing arrive faster than the curve implies, the reported_vs_public_gap could close through public spreads tightening rather than private marks falling, vindicating patience over caution. We think this less likely than a mark-down, but prudent readers should watch the pace of any easing before assuming the gap resolves in private credit's favor.",
  "violations": []
 }

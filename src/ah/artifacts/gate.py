@@ -33,7 +33,23 @@ from ah.artifacts.render import WATERMARK_BANNER, WATERMARK_FOOTER
 #: present — 'exactly one' was stricter than sealed text); proper-noun scan
 #: no longer glues across newlines. note@1.1 (sentence-case titles) is the
 #: companion prompt-side fix, version-bumped per the frozen rule.
-GATE_IMPL_VERSION = "gate-impl/1.0.2"
+#: 1.0.3: run-6 false-positive fixes - sentence-starting relative/interrogative
+#: adverbs join the stopwords ("Where Grimshaw" is the allowed entity plus an
+#: adverb, not a new firm); the hedge lexicon covers ordinary cautious prose
+#: ("watching closely", "holding steady" - the sealed rule demands hedging
+#: PRESENT, not one narrow vocabulary); market-expectation phrasings
+#: ("pricing in rate cuts") are expectations, not event claims (G2).
+#: 1.0.4: run-7 fixes - G2's default pattern narrows to EVENT phrasings
+#: (the sealed rule polices named events; "default risk remains contained"
+#: is a state assessment, not an event claim - surfaced when the @1.2
+#: exemplar primed the word into every draft); "net asset value index"
+#: joins the finance phrases. "The Federal Reserve" flagged by G4 is a
+#: TRUE positive (real institutions at role level only) and stays.
+#: 1.0.5: run-8 fix - sentence-starting prepositions join the stopwords
+#: ("At Stonebeck, we..." is an allowed entity plus a preposition).
+#: 1.0.6: run-10 fix - document furniture ("Quarterly Letter", "Annual
+#: Report") is not an entity reference.
+GATE_IMPL_VERSION = "gate-impl/1.0.6"
 
 RATINGS = ("overweight", "neutral", "underweight", "no_rating")
 _PROMISE_PATTERNS = (
@@ -66,13 +82,23 @@ _HEDGE_WORDS = (
     "vulnerab",
     "fragil",
     "stress",
+    # ordinary cautious-outlook prose is hedging too (1.0.3)
+    "watch",
+    "patien",
+    "disciplin",
+    "steady",
+    "humble",
+    "time will tell",
+    "hard to know",
+    "no promises",
 )
 # G2 polices EVENT CLAIMS, not vocabulary: 'gate' counts only as the
 # redemption-gating event, not the common noun/metaphor (run-1 fix).
 _EVENT_PATTERNS = {
     "redemption gating": r"\bgat(?:e[sd]?|ing)\b[^.]{0,40}\bredemptions?\b"
     r"|\bredemptions?\b[^.]{0,40}\bgat(?:e[sd]?|ing)\b",
-    "default": r"\bdefault(?:s|ed)?\b",
+    "default": r"\bdefaults?\s+(?:rose|rise|spiked|surged|climbed|jumped|hit|swept)\b"
+    r"|\bdefaulted\b|\b(?:entered|filed for)\s+default\b",
     "rate cut": r"\brate cuts?\b",
     "rate hike": r"\brate hikes?\b",
     "bear market": r"\bbear market\b",
@@ -92,7 +118,8 @@ _PROPER_RE = re.compile(r"\b([A-Z][a-z]+(?:[ ]+(?:&[ ]+)?[A-Z][a-z]+)+)\b")
 #: A hypothetical or outlook mention is not an event claim (1.0.2): an event
 #: match preceded nearby by a modal marker is exempt from G2.
 _MODAL_GUARD = re.compile(
-    r"\b(?:may|might|could|would|if|should|expect(?:ed)?|potential|risk of|were)\b[^.]{0,60}$"
+    r"\b(?:may|might|could|would|if|should|expect(?:ed|ations?)?|potential|risk of|were"
+    r"|pric(?:e[sd]?|ing) in|anticipat)\b[^.]{0,60}$"
 )
 # Letter furniture: salutations and sign-offs are prose conventions, not
 # entity references (run-1's dominant false positive, 18/30). Lines opening
@@ -121,6 +148,10 @@ _COMMON_PHRASES = {
     "fixed income",
     "fair value",
     "net asset value",
+    "net asset value index",
+    # document furniture is not an entity reference (1.0.6)
+    "quarterly letter", "quarterly statement", "annual report",
+    "annual letter", "investor letter", "board pack",
 }
 _TITLE_STOPWORDS = {
     "The",
@@ -141,6 +172,36 @@ _TITLE_STOPWORDS = {
     "Your",
     "Their",
     "Its",
+    # sentence-starting relative/interrogative adverbs (1.0.3)
+    "Where",
+    "When",
+    "While",
+    "What",
+    "Why",
+    "How",
+    "If",
+    "As",
+    "Since",
+    "Though",
+    "Although",
+    "Unlike",
+    "Should",
+    "Whether",
+    # sentence-starting prepositions (1.0.5)
+    "At",
+    "From",
+    "With",
+    "By",
+    "Under",
+    "Across",
+    "Beyond",
+    "Against",
+    "Within",
+    "Between",
+    "After",
+    "Before",
+    "During",
+    "Here",
 }
 
 

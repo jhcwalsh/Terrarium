@@ -9,7 +9,7 @@ touch this system, and how is that bounded?".
 | Component | Status | Role | Reads narrative? | In numeric path? |
 | --- | --- | --- | --- | --- |
 | Scenario compiler | live (Step 0 offline) | scenario text → WorldSpec JSON | n/a (writes it) | **No** |
-| Narrator (Tier-2, WP4.4) | built; **ship-gated** (76.7% < the frozen 95% first-pass bar — live-world authoring disabled) | letters/notes from deterministic payloads, judged by gate G1–G9 | yes (bible cast, arcs) | **No** (boundary test since wp4-01) |
+| Narrator (Tier-2, WP4.4) | **SHIPPING** (pair rule met 2026-08-02: 96.7%/100.0% at pipeline v2; fifteen-run trajectory in the manifest) | letters/notes from deterministic payloads, judged by gate G1–G9 | yes (bible cast, arcs) | **No** (boundary test since wp4-01) |
 | AI committee (WP4.8) | built; **study-grade only** (WP4.9 incomplete until the human-cohort arm runs, D-K4-5) | bounded in-world decisions, briefed behind the wall, rationales filed | yes (wire, briefing) | **No** (decisions reshape the institution, never the tape) |
 
 Registry of every prompt, version, hash pin, and ship status:

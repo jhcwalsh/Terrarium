@@ -17,7 +17,7 @@ prompts:
     status: live (offline; --live for real calls)
 
   author-prompt/letter:
-    current: author-prompt/letter@1.1
+    current: author-prompt/letter@1.4
     history:
       - {version: "1.0", note: spec s3 verbatim (vendored ARTIFACT-AUTHORING v1.0-r)}
       - {version: "1.1", note: "hard rules sharpened where run-4 first drafts
@@ -27,12 +27,12 @@ prompts:
     regression: fixtures/authoring_regression (30 payloads, hashes frozen);
       five live runs, trajectory 3.3% -> 76.7% first-pass
     hash_pin: tests/test_authoring.py::TestPrompts::test_template_hash_pin_the_freeze_made_executable
-    status: "NOT SHIPPING - first-pass 76.7% < the frozen 0.95 gate
-      (AM-2026-08-02-002); live-world Tier-2 authoring disabled until a
-      version measures >= 0.95"
+    status: "SHIPPING (2026-08-02) - pair rule met at 96.7%/100.0%
+      (runs 14/15, pipeline v2 + self-check@1.1); see the manifest for the
+      full fifteen-run trajectory"
 
   author-prompt/note:
-    current: author-prompt/note@1.2
+    current: author-prompt/note@1.5
     history:
       - {version: "1.0", note: spec s3 verbatim}
       - {version: "1.1", note: sentence-case titles (run-2 - Title Case defeated
@@ -41,7 +41,7 @@ prompts:
     model_pinned: claude-sonnet-5
     regression: same frozen set and trajectory as letter
     hash_pin: same test
-    status: NOT SHIPPING - same gate, same reason
+    status: SHIPPING (2026-08-02) - same pair, same configuration
 
   committee-prompt:
     current: committee-prompt@1.1

@@ -1,19 +1,19 @@
 # AUTHORING-REGRESSION.md — the WP4.5 set, measured
 
 Set `authoring-regression-1.0` (30 payloads); model `claude-sonnet-5`;
-prompts author-prompt/letter@1.4 / author-prompt/note@1.5; gate-impl/1.0.6; run asof 2026-08-02 (LIVE).
+prompts author-prompt/letter@1.4 / author-prompt/note@1.5; gate-impl/1.0.5; run asof 2026-08-02 (LIVE).
 Ship gate (FROZEN, AM-2026-08-02-002): first-pass gate rate >= 95%.
 
 | first-pass | pass after retry | fallback | first-pass rate | ships |
 |---|---|---|---|---|
-| 30/30 | 0 | 0 | 100.0% | YES |
+| 29/30 | 1 | 0 | 96.7% | YES |
 
 ## Per-payload results
 
 | payload | result | retries | violations at final gate |
 |---|---|---|---|
 | letter-bull-meridian | pass | 0 | - |
-| letter-bull-stonebeck | pass | 0 | - |
+| letter-bull-stonebeck | pass | 1 | - |
 | letter-comp_gap-meridian | pass | 0 | - |
 | letter-comp_gap-stonebeck | pass | 0 | - |
 | letter-crash-meridian | pass | 0 | - |

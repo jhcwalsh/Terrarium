@@ -1,24 +1,14 @@
 {
  "asof": "2026-08-02",
- "attempt_violations": [
-  [
-   {
-    "message": "events with no chronicle substantiation: ['default']",
-    "rule": "G2"
-   },
-   {
-    "message": "no hedging language anywhere in the draft",
-    "rule": "G5"
-   }
-  ]
- ],
+ "attempt_violations": [],
  "author_tier": 2,
  "gate_result": "pass",
  "kind": "note",
  "model_id": "claude-sonnet-5",
  "payload_id": "note-gate_event-calder-private_credit",
- "prompt_version": "author-prompt/note@1.2",
- "retry_count": 1,
- "text": "Private credit climbs past the gate toward firmer footing\n\nRating: overweight\n\nThe headline stress in private credit reads more like friction than fracture when set against the policy backdrop. High-yield spreads at 640bps and a -3.0% drawdown look severe in isolation, but the one-year return of +6.0% shows the asset class still compounding through the cycle. With policy_rate_now at 5.25% and cpi_now at 3.8%, the rate-cutting runway that typically repairs credit conditions remains open, and history in this house's view favors resolution over rupture when growth support persists.\n\nStonebeck Credit's gating of redemptions and secondary bids quoted in the low 80s are liquidity events, not solvency verdicts. Gates exist precisely to prevent forced selling from becoming a self-fulfilling marking problem; they are a stabilizing mechanism as much as a warning sign. The reported_vs_public_gap of +1.0% is modest by historical standards and consistent with normal valuation lag in privately marked portfolios during a repricing quarter, not with the \"fragilities compounding beneath stable marks\" that Grimshaw Partners describes. We read the same gap as evidence that private marks are catching down toward public proxies in an orderly fashion, ahead of an easing cycle that should narrow spreads from here.\n\nThe explicit risk to this view is that the gap could widen further if secondary bids in the low 80s persist and more managers follow Stonebeck in gating redemptions, which may indicate that public markets are pricing stress faster than private books can absorb it. Should that repricing accelerate before policy support arrives, the ytd_return of -3.5% could deepen before the structural tailwin",
+ "pipeline_version": "author-pipeline/2.0",
+ "prompt_version": "author-prompt/note@1.5",
+ "retry_count": 0,
+ "text": "# Private credit pushes through the gate toward a cleaner mark\n\n**Rating: overweight**\n\nThe headline print looks rough \u2014 ytd_return: -3.5% against a one_year_return: +6.0% \u2014 but read against a policy_rate_now: 5.25% and cpi_now: 3.8%, this is a market absorbing a known rate shock, not discovering a hidden one. Drawdown of -3.0% sits inside a range consistent with orderly repricing rather than disorderly unwind. Where critics read the reported_vs_public_gap: +1.0% as evidence that \"fragilities are compounding beneath stable marks,\" we read the same gap as the ordinary lag of private valuation catching up to public price discovery \u2014 a gap that narrows as growth and policy support work through the cycle, not one that widens into crisis.\n\nThe decision by one manager to gate redemptions is best understood as liquidity management, not a solvency signal: funds facing outflows in a repricing market have every incentive to protect remaining holders by slowing the exit queue. Secondary bids quoted at a steep discount to par reflect exactly the kind of forced-seller pricing that historically overshoots fundamental value in structurally constructive regimes. With hy_spread_now_bps at 640bps, spreads are compensating holders generously for the risk being taken, and carry at these levels could reward patience as policy support and easing growth conditions work through the credit complex.\n\nThe risk to this view is straightforward and worth stating plainly: if the discounted secondary bids prove to be a floor-finding exercise rather than a trough, and gating spreads beyond the fund already affected, the reported-versus-public gap could widen rather than close, and investors should watch redemption behavior across the sector closely. We think that outcome is the less likely path, but prudent positioning sizes for it nonetheless.",
  "violations": []
 }
