@@ -1,0 +1,20 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [
+  [
+   {
+    "message": "events with no chronicle substantiation: ['default']",
+    "rule": "G2"
+   }
+  ]
+ ],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-bull-grimshaw-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 1,
+ "text": "Title: Marks that lag, and a gap that shouldn't comfort anyone\n\nRating: underweight\n\nGrimshaw Partners, 2028-03-15. The data panel offers a study in reassurance that dissolves under scrutiny. A reported drawdown of +0.0% against a reported-vs-public gap of -0.8% is not evidence of stability; it is evidence of a marking convention that has not yet caught up to the public market's own repricing.\u00b9 Private credit valuations move at the speed of their committees, not their collateral. When the gap between reported and public marks sits persistently negative, the honest reading is that private books are behind, not that they are insulated.\n\nThe rival house \u2014 Calder & Root \u2014 reads policy support as resolution: rates steady at 4.50%, spreads at a seemingly tame 320bps, equities extending gains, issuance windows reopening. We read the same tape as delay. A 320bps spread is not compression so much as complacency priced into a market where new issuance is reopening precisely because sponsors need refinancing runway before conditions tighten again. The one_year_return of +15.0% against a ytd_return of +6.0% suggests deceleration already underway, even as headline sentiment (equities extending gains) papers over it.\n\nCPI at 2.4% gives policymakers room to hold rather than cut, which removes the tailwind the rival's thesis depends on. Structurally, fragilities compound quietly in private credit \u2014 covenant loosening, extend-and-pretend restructurings, valuation lag \u2014 long before they show up in a drawdown figure. The absence of drawdown today is not proof of absence of stress; it is proof that stress has not yet been marked.\n\nRisk to this view: if issuance windows reopening genuinely reflect broad-based balance-sheet repair rather than refinancing necessity, the reported-vs-public gap could close constructively, vindicating the rival's \"stay the course\" read rather than ours.\n\n\u00b9 A chart of reported versus public marks, plotted monthly, would show two lines converging late and reluctantly \u2014 the private line always arriving after the public one has already moved.",
+ "violations": []
+}

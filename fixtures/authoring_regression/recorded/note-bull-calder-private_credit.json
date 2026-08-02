@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-bull-calder-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Private credit climbs as issuance windows reopen\n\nRating: overweight\n\nCalder & Root reads the March 15, 2028 tape as confirmation that private credit is compounding through strength, not despite it. The one_year_return of +15.0% and ytd_return of +6.0% sit atop a drawdown of +0.0%, a combination that speaks to a market absorbing a policy_rate_now of 4.50% without cracking. With cpi_now at 2.4%, the disinflation path gives policy room to ease, and easing is the mechanism through which growth and time resolve stress in credit structures that were built for exactly this kind of gradual normalization.\n\nGrimshaw Partners argues that fragilities are compounding beneath stable marks. We read the same reported_vs_public_gap of -0.8% and see modest, ordinary marking conservatism, not concealment. An hy_spread_now_bps of 320bps is a healthy risk premium, not a red flag; it prices real uncertainty while still permitting the sector to extend gains alongside equities. New issuance windows reopening is the tell here: primary markets do not reopen for assets investors believe are quietly deteriorating. They reopen when forward confidence in refinancing and growth resumes, and that confidence transmits directly into private credit sponsors' willingness to originate.\n\nThe newsflow of equities extending gains and issuance windows reopening reinforces a structurally constructive reading: capital is finding its way back to risk because the growth and policy backdrop supports it, and private credit is a direct beneficiary of that reopening liquidity channel.\n\nThe risk to this view is straightforward: if the reported_vs_public_gap widens meaningfully from -0.8% while spreads stay pinned near 320bps, that would suggest marks are lagging deteriorating fundamentals rather than reflecting temporary conservatism, undermining the constructive thesis before public data catches up.",
+ "violations": []
+}

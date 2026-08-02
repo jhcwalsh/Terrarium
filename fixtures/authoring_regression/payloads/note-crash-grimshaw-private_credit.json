@@ -1,0 +1,37 @@
+{
+ "artifact_type": "wire_item",
+ "checkable_claims_table": {
+  "cpi_now": "4.1%",
+  "drawdown": "-18.0%",
+  "hy_spread_now_bps": "780bps",
+  "one_year_return": "+3.3%",
+  "policy_rate_now": "5.25%",
+  "reported_vs_public_gap": "+9.5%",
+  "ytd_return": "-12.0%"
+ },
+ "chronicle_extracts": [
+  "Equities enter bear market territory",
+  "Spreads gap wider on default fears"
+ ],
+ "dateline": "2028-03-15",
+ "dateline_quarter": 8,
+ "house": {
+  "coverage": [
+   "private_credit",
+   "stonebeck",
+   "credit"
+  ],
+  "id": "grimshaw",
+  "name": "Grimshaw Partners",
+  "prior": "structurally_cautious",
+  "voice": {
+   "register": "dry_academic",
+   "tics": [
+    "footnote-style asides",
+    "one chart described in words"
+   ]
+  }
+ },
+ "rival_stance_summary": "Calder & Root: policy support resolves the stress; stay the course.",
+ "subject": "private_credit"
+}

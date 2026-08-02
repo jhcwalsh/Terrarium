@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-bull-meridian",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "Dear Partners,\n\nThe macro tape continues its quiet rehabilitation. CPI now prints at 2.4%, the policy rate holds at 4.50%, and high-yield spreads have compressed to 320bps \u2014 a level that, six months ago, would have seemed optimistic. Equities extend their gains, and new issuance windows have reopened across the leveraged finance market, a signal we read as the credit complex finally catching up to fundamentals rather than the other way around. Stonebeck Credit's latest desk commentary echoes what we have argued since the leverage cycle turned: the repricing was necessary, the dislocation was temporary, and the underlying businesses were never the problem.\n\nAgainst that backdrop, the flagship posted a reported return of +3.2% for the quarter, bringing year-to-date performance to +6.0% and since-inception to +45.0%. Public equities were up +4.0% over the same period \u2014 a narrow gap, and one we'd note is measured against an index unburdened by the financing structures our vintage carries. Our portfolio companies are not equities; they are operating businesses with debt stacks assembled at the top of the cycle, and the NAV index at 106.0 reflects marks that our valuation committee, working alongside Kestrel Advisory, continues to stand behind. We have heard the commentary in The Ledger questioning whether private marks lag the reopening in public and credit markets. We'd simply point to the spread compression itself: 320bps is not a level consistent with the stress narrative some outlets prefer.\n\nOperationally, the story remains",
+ "violations": []
+}

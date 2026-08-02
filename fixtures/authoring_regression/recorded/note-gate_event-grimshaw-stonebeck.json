@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-gate_event-grimshaw-stonebeck",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "# Stonebeck: the gate as confession, not circuit-breaker\n\nRating: underweight\n\nCalder & Root read the redemption gate as friction that policy support will dissolve.\u00b9 We read it as the mechanism by which a marked book finally admits what secondary prices have been saying for weeks. Bids quoted in the low 80s are not a liquidity event; they are a valuation event that the official marks have not yet caught up to \u2014 hence a reported_vs_public_gap of +1.0%, small in isolation but directionally consistent with a book that lags its own collateral.\n\nThe headline numbers invite complacency. one_year_return of +6.0% and ytd_return of -3.5% can be read as a pause in an otherwise sound compounding story. We would note instead that the ytd figure is the more recent, more informative print, and that it arrived alongside hy_spread_now_bps of 640bps \u2014 wide enough to signal genuine credit stress, not mere seasonal noise. Layer on policy_rate_now at 5.25% against cpi_now of 3.8%: real rates remain restrictive by any conventional measure, which is precisely the condition under which gated vehicles discover their fragilities rather than resolve them.\n\nPicture the chart: drawdown at -3.0% sits as a shallow trough on the page, almost reassuring next to the taller bar of hy_spread_now_bps \u2014 the spread bar dwarfs the drawdown bar by an order of magnitude, and it is the spread, not the drawdown, that should be setting the scale of concern here.\u00b2\n\nThe explicit risk to this view: gates can also reflect prudent liability management rather than insolvency, and if policy eases faster than the curve implies, spreads could compress before marks are forced to adjust \u2014 leaving underweight positioning early.\n\n---\n\u00b9 \"Stay the course\" presumes the course was accurately charted.\n\u00b2 A trough that shallow, next to a spread that wide, is not a coincidence we're prepared to ignore.",
+ "violations": []
+}

@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-gate_event-meridian",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "Dear Partners,\n\nThe macro backdrop remains one of adjustment rather than crisis. Headline inflation has cooled to 3.8%, yet the policy rate sits at 5.25%, and high-yield spreads have widened to 640bps as credit markets continue to reprice risk more cautiously than the underlying fundamentals warrant. We read this as a market still working through a temporary dislocation in the cost of capital \u2014 a repricing, not a repudiation, of the private markets thesis. The recent gating of redemptions at Stonebeck Credit is a useful reminder of why we structured our fund with long-dated, drawdown capital rather than open-ended liquidity promises to our limited partners. Liquidity mismatches are a lender's problem before they are ever an operator's problem, and our portfolio companies do not answer capital calls with redemption gates.\n\nTurning to performance: the flagship returned -2.0% for the quarter, bringing year-to-date performance to -3.5%, against a since-inception return of +18.0% that remains the truer measure of what this strategy is built to deliver over a full cycle. Public equities were down -3.0% over the same period, and while comparisons between listed and private marks are always imperfect, we would simply note that our operating businesses continue to compound cash flow through pricing actions and cost programs that a quarter",
+ "violations": []
+}

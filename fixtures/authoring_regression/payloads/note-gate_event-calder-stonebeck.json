@@ -1,0 +1,36 @@
+{
+ "artifact_type": "wire_item",
+ "checkable_claims_table": {
+  "cpi_now": "3.8%",
+  "drawdown": "-3.0%",
+  "hy_spread_now_bps": "640bps",
+  "one_year_return": "+6.0%",
+  "policy_rate_now": "5.25%",
+  "reported_vs_public_gap": "+1.0%",
+  "ytd_return": "-3.5%"
+ },
+ "chronicle_extracts": [
+  "Stonebeck Credit gates redemptions",
+  "Secondary bids quoted in the low 80s"
+ ],
+ "dateline": "2028-03-15",
+ "dateline_quarter": 8,
+ "house": {
+  "coverage": [
+   "private_credit",
+   "stonebeck",
+   "equities"
+  ],
+  "id": "calder",
+  "name": "Calder & Root",
+  "prior": "structurally_constructive",
+  "voice": {
+   "register": "confident_promotional",
+   "tics": [
+    "titles always contain a verb of motion"
+   ]
+  }
+ },
+ "rival_stance_summary": "Grimshaw Partners: fragilities are compounding beneath stable marks.",
+ "subject": "stonebeck"
+}

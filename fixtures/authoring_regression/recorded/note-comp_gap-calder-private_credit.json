@@ -1,0 +1,20 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [
+  [
+   {
+    "message": "proper nouns outside the closed world: ['Where Grimshaw']",
+    "rule": "G4"
+   }
+  ]
+ ],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-comp_gap-calder-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 1,
+ "text": "Credit marks climb toward the public rally\n\nRating: overweight\n\nPrivate credit spent March 15, 2028 catching up rather than cracking. The reported_vs_public_gap of -8.5% simply reflects marks that update slower than public prices, not hidden deterioration. With hy_spread_now_bps at 380bps and drawdown flat at +0.0%, the underlying carry story remains intact: a one_year_return of +9.3% shows the asset class compounding through a policy_rate_now of 4.75% and cpi_now at 2.7%. Growth-supportive conditions continue to give borrowers room to refinance, and spread compression from here would only extend the constructive path already visible in the twelve-month number.\n\nThe newsflow that \"public rally leaves private marks behind\" is not evidence of fragility\u2014it is evidence of a lag that markets have seen before. When listed comps rerate sharply, private valuations typically follow with delay, not with denial. The ytd_return of +1.0% looks modest against that backdrop, but it is consistent with a marking process that smooths rather than mispriced. Grimshaw Partners frames this lag as fragility compounding beneath stable marks; we read the same gap as convergence still in progress. Policy support and resilient growth conditions argue for marks catching up to fundamentals, not fundamentals catching down to marks.\n\nThe",
+ "violations": []
+}

@@ -1,0 +1,54 @@
+# authoring_regression manifest -- the WP4.5 freeze (AM-2026-08-02-002)
+#
+# Membership rule, frozen at G4-pre: ~30 payloads spanning
+# {bull, crash, gate_event, comp_gap, quiet} x {entity kinds, house pair}.
+# Regeneration (scripts/gen_authoring_regression.py) is byte-identical;
+# tests/test_authoring_regression.py fails on ANY drift from these hashes.
+# Any prompt or model change re-runs the full set (spec s5, frozen).
+
+set_version: authoring-regression-1.0
+payload_count: 30
+ship_gate_first_pass: 0.95
+payloads:
+  letter-bull-meridian: sha256:04972aa99944d633409479b6431a4bbb21219ba899e93bd33d4da783ba25f2e6
+  letter-bull-stonebeck: sha256:d3081db3e92d23130760d8b440b42c2b95a1d264758e07246915e6f929b189bb
+  letter-comp_gap-meridian: sha256:822d7eb8ccaf5c9c84d380463fbc1973500bcea3ce89e5362df0e4b614ad5385
+  letter-comp_gap-stonebeck: sha256:95437caadab62b86c852f2cb7506c8e69c7f70c6fe7f9df95efb45d61f74798a
+  letter-crash-meridian: sha256:4c8072d59030a5a8d7235d1f24a9ac9d9b516637130143f42f094acf0ae37ba4
+  letter-crash-stonebeck: sha256:e7b1247368c3e8e33ba9b1b8f65378e4da5eac941ce31d5f80f10684d2b2b226
+  letter-gate_event-meridian: sha256:aa7feda9652c8113bb24c327eadc322bcd5f6e6991e67c578e9e7bf59b56f5ad
+  letter-gate_event-stonebeck: sha256:fb99a148e2494b7b823f32f2a71bcf34fef1db911e46b5b564a9aecbed208a28
+  letter-quiet-meridian: sha256:071668d456286e5252c2b7566082af7e45deac3f2209f01c3ae310010ecb4ffe
+  letter-quiet-stonebeck: sha256:2ebf36a436123cbf54020b2ba122f0710edb3be75a947db38a550260526dcc55
+  note-bull-calder-private_credit: sha256:9c31650cb486a7165d4fdf8708352538e44c471472ae2c4597128270b1bf6f77
+  note-bull-calder-stonebeck: sha256:41db4de6674280a7a6cdaedef120ac87ca1a6aebe38b8508a2a65c707dea2f23
+  note-bull-grimshaw-private_credit: sha256:8d849b7a9da13c7ae815f2e3d56941c3ccd08530cb3c85bc890816d0b0a0aff4
+  note-bull-grimshaw-stonebeck: sha256:7fe3d30b2d9b9ebcde8d624d4984cc2c5563fed5ce13415d1e41fe6320a2f9ee
+  note-comp_gap-calder-private_credit: sha256:ab7584f2d969a3c07cf51a2493002ecceed9e85a24e99a29bf951f1adcbe01d1
+  note-comp_gap-calder-stonebeck: sha256:fb7030c7beb28a8d0ecd3b1f80ec7d54f8fba84177617d6dbb475adf3d73af32
+  note-comp_gap-grimshaw-private_credit: sha256:d2a9c74af8e63003b6684877ffa85d7db3346b27b3e8341dcc78ab816bc51d5d
+  note-comp_gap-grimshaw-stonebeck: sha256:7ec3fe78111b6730d49a36c963bfb71d00207a238e3a697b3757bbfed8a07cef
+  note-crash-calder-private_credit: sha256:a1a1026b782f628cf6007ad3d838fa200efb1b2ded440a0f922dee45d001d20e
+  note-crash-calder-stonebeck: sha256:57aef78276f775d9404d1a25e4a1923d5f11bb618129380bba3234e37c848116
+  note-crash-grimshaw-private_credit: sha256:c3048eb434be88b2523ca289a8664d8796ba25e2fc56bfe86b7eb5c22b2662e1
+  note-crash-grimshaw-stonebeck: sha256:edf4030e1b1be294164f52ad7a3643d4e98782cd242067e43cefdec2d33d99e9
+  note-gate_event-calder-private_credit: sha256:30ff835ddf054d204036753fc7fbfc5a9171ef43f564d7ed755fe96e8066958f
+  note-gate_event-calder-stonebeck: sha256:64342eadb0f096771026f049a7ddcc233bb4c8b81d728fa562484b720fe18b0e
+  note-gate_event-grimshaw-private_credit: sha256:9f68926d40a8d9916b58b95f377c05c34cecab711c8cd8ce92b11bd2c7ad0b5f
+  note-gate_event-grimshaw-stonebeck: sha256:5830be4546f346ac31d1041e2e40d0902497e64eefb981320dd99dbe582a0951
+  note-quiet-calder-private_credit: sha256:5b043422d2f71f35261321b57cbf36f8f09e0955358ccfb24eca2030ad03d6d3
+  note-quiet-calder-stonebeck: sha256:ffb4dd239bfe11162f0675c7e75294b6086e35c2cd54c613cff268e2d7445042
+  note-quiet-grimshaw-private_credit: sha256:3180455620889dd79dda5a270b6afa4d8e6bc0cb210140b3ceea3b4b254a2d2f
+  note-quiet-grimshaw-stonebeck: sha256:db3a8851ba818cda2b02b25446ecd7210a1c5048c0b4d9131d39c2a85a61189e
+live_run: >
+  MEASURED 2026-08-02, five live runs, trajectory on the record
+  (governance/evidence/AUTHORING-REGRESSION.md + -run1.md): first-pass
+  3.3% (gate-impl 1.0.0) -> 16.7% (1.0.1) -> 66.7% x2 (1.0.2 + note@1.1)
+  -> 76.7% (letter@1.1 + note@1.2). Zero fallbacks in the last three runs;
+  every artifact clears within two retries. THE SHIP GATE IS NOT MET:
+  76.7% < the frozen 0.95 first-pass bar, so NO Tier-2 prompt version
+  ships; live-world Tier-2 authoring stays disabled until a version
+  measures >= 0.95 on this set. Residual failures are stochastic model
+  first-draft slips (in-character promises, number reformatting, event
+  phrasing), all healed by the retry loop - next levers are few-shot
+  exemplars or a pre-gate self-check pass, by version bump as always.

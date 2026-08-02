@@ -1,0 +1,51 @@
+{
+ "arc_beats_to_date": [
+  "Q6: First covenant breaches surface; letters emphasize 'constructive amendments'."
+ ],
+ "artifact_type": "letterhead",
+ "checkable_claims_table": {
+  "cpi_now": "4.1%",
+  "hy_spread_now_bps": "780bps",
+  "nav_index": "88.0",
+  "policy_rate_now": "5.25%",
+  "public_equity_q": "-18.0%",
+  "reported_return_q": "-8.5%",
+  "reported_return_si": "+10.0%",
+  "reported_return_ytd": "-12.0%"
+ },
+ "chronicle_extracts": [
+  "Equities enter bear market territory",
+  "Spreads gap wider on default fears"
+ ],
+ "comp_gap_exceeds_3pts": true,
+ "dateline": "2028-03-15",
+ "dateline_quarter": 8,
+ "entity": {
+  "id": "stonebeck",
+  "kind": "direct_lender",
+  "name": "Stonebeck Credit",
+  "one_liner": "Scaled direct lender, covenant-lite book written 2024\u20132027; has never seen a default cycle at current size.",
+  "relationships": [
+   "meridian",
+   "institution"
+  ],
+  "signature_traits": [
+   "cites 'structural seniority' in every document",
+   "reassuring to a fault until suddenly not"
+  ],
+  "voice": {
+   "register": "folksy_reassuring",
+   "tics": [
+    "uses lending-as-partnership language",
+    "one homespun metaphor per letter"
+   ]
+  }
+ },
+ "fund_facts": {
+  "calls_flag": true,
+  "distributions_flag": false,
+  "gate_status": "open",
+  "secondary_market_context": "secondaries quoted low-80s vs NAV"
+ },
+ "quarter_label": "2028-Q1"
+}

@@ -1,0 +1,20 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [
+  [
+   {
+    "message": "no hedging language anywhere in the draft",
+    "rule": "G5"
+   }
+  ]
+ ],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-bull-stonebeck",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 1,
+ "text": "Dear Partners,\n\nThere's an old saying among row-crop farmers that the quarter you get too comfortable is the quarter the weather turns. We don't say that to be dour \u2014 we say it because it's true, and because at Stonebeck Credit we've always believed a lending relationship is a partnership, not a transaction, and partnerships work best when both sides keep their boots on the ground even when the sun's out.\n\nAnd the sun has been out. Equities extended their gains again this quarter, public equity returned +4.0%, high-yield spreads sit at a constructive 320bps, and new issuance windows have reopened across the market \u2014 a signal, we think, that capital markets are functioning and that our borrowers have refinancing paths available to them when they need one. CPI running at 2.4% against a policy rate of 4.50% suggests we may be past the steepest part of the tightening cycle, though we'd caution \u2014 as we always do \u2014 that this is an assessment, not a certainty, and rate paths can surprise even patient lenders.\n\nOn the portfolio: we're reporting +3.2% for the quarter, +6.0% year-to-date, and +45.0% since inception. Our NAV index stands at 106.0, marks that reflect the discipline our underwriting team, led with real rigor by R. Okafor, brings to every credit. We're aware the gap between our quarterly return and the public-equity comparison this period is wider than some of you would like. We'd ask you to remember that direct lending is not equities dressed up in different clothing \u2014 our structural seniority in the capital stack means we are compensated for patience and protection, not for correlation with the tape. When public markets run hot, our marks are deliberately, appropriately slower to chase them. That is not underperformance; that is the nature of the instrument, and Kestrel Advisory's independent valuation review this quarter supports our marks as reasonable given comparable transaction data.\n\nWe continue to work constructively with the small number of borrowers navigating covenant conversations that began surfacing last cycle \u2014 Calder & Root among the advisory groups helping us structure amendments that preserve value for both sides. Meridian Capital Partners and Grimshaw Partners remain engaged co-lenders on several of these situations, and we're grateful for the alignment.\n\nLooking ahead, we remain constructive but not complacent. Conditions could shift \u2014 spreads could widen, issuance windows could narrow again \u2014 and no one, including us, can promise otherwise. What we can tell The Harborlight Pension Trust and our other partners is that structural seniority remains our anchor, our underwriting hasn't drifted, and we intend to keep walking these credits alongside our borrowers, row by row, through whatever weather comes.\n\nWith continued gratitude for your trust,\n\nAline Vessey\nStonebeck Credit",
+ "violations": []
+}

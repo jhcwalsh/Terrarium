@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-gate_event-calder-stonebeck",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Stonebeck advances toward resolution despite redemption gate\n\nRating: overweight\n\nThe redemption gate at Stonebeck Credit reads, in our house view, as a liquidity mechanism rather than a solvency verdict. Gates exist precisely to prevent forced selling into air pockets \u2014 and the reported_vs_public_gap of +1.0% supports that reading: internal marks sit above where secondary desks are currently clearing paper in the low 80s. That gap is the market overshooting on panic pricing while the manager holds a firmer, arguably more accurate, view of underlying value. Grimshaw's language of \"fragilities compounding beneath stable marks\" inverts this: we read the same spread between reported and public prices as evidence the public tape is the noisy signal, not the reported book.\n\nContextualize the drawdown of -3.0% and ytd_return of -3.5% against the one_year_return of +6.0%. A vehicle that has still delivered a positive twelve-month print through a period where hy_spread_now_bps has widened to 640bps is demonstrating carry res",
+ "violations": []
+}

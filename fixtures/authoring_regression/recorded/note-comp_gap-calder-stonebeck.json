@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-comp_gap-calder-stonebeck",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Stonebeck climbs toward its public marks\n\nRating: overweight\n\nCalder & Root reads Stonebeck's 2028-03-15 data as a name still catching up to a resolving macro backdrop rather than a name masking hidden decay. CPI at 2.7% and a policy rate holding at 4.75% describe an environment where disinflation is doing real work without forcing abrupt tightening. Against that setting, a one_year_return of +9.3% and a flat drawdown of +0.0% show a portfolio that has weathered the adjustment cycle intact. The ytd_return of +1.0% looks modest only if one ignores the base it sits on.\n\nThe reported_vs_public_gap of -8.5% is the crux of the disagreement with Grimshaw Partners. Where they read the gap as fragility compounding beneath stable marks, we read it as private marks lagging a public rally that has already run \u2014 precisely what \"Listed comps rerate sharply\" describes. Public markets tend to reprice growth and policy support faster than private books, and a lag is not the same as a hidden loss. History in this asset class shows these gaps close upward as marks catch up to comparables, not downward as comparables retreat.\n\nHY spreads at 380bps remain wide enough to price real caution, but not so wide as to signal imminent credit stress; in a structurally constructive regime, spread compression is the more probable path as growth and policy support persist. \"Public rally leaves private marks behind\" reads to us as sequencing, not divergence.\n\nThe risk to this view: if the public rally itself was built on optimism the fundamentals cannot support, the -8.5% gap could instead resolve downward, validating the fragility thesis rather than the catch-up one. We are watching whether spread and comp behavior confirm convergence or reversal.",
+ "violations": []
+}

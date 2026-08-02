@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-quiet-meridian",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "The quarter unfolded, as these things tend to, in relative quiet. The Simulated Wire logged a session or two of genuine somnolence, and the data prints that mattered \u2014 CPI at 2.9%, policy rate holding at 5.00% \u2014 came in exactly where the consensus expected them to land. There is a temptation, in moments like this, to overread stillness as signal. We resist that temptation. Markets that stop shouting are not necessarily markets that have stopped moving; they are markets catching their breath before the next repricing. High yield spreads at 400bps tell a story of credit markets that remain cautious but orderly \u2014 not seized, not euphoric, simply pricing risk with more discipline than they did at the top of the cycle we entered our flagship into.\n\nThat discipline matters to us directly. Our 2021-vintage flagship was built in an era of full prices and full leverage, and the carrying cost of that leverage has been the dominant feature of recent quarters. This quarter, however, brought a measure of stability rather than further erosion. NAV index sits at 101.1, and the fund posted a reported return of +1.1% for the quarter, matching year-to-date at +1.1% and extending since-inception performance to +33.0%. Public equities returned +1.3% over the same period \u2014 a narrow gap, and one we'd characterize as noise rather than signal. We do not chase quarter-to-quarter comparisons against liquid indices; our portfolio companies are not marked by the whims of a Tuesday afternoon, and the modest divergence this quarter reflects timing of oper",
+ "violations": []
+}

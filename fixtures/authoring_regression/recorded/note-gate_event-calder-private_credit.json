@@ -1,0 +1,24 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [
+  [
+   {
+    "message": "events with no chronicle substantiation: ['default']",
+    "rule": "G2"
+   },
+   {
+    "message": "no hedging language anywhere in the draft",
+    "rule": "G5"
+   }
+  ]
+ ],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-gate_event-calder-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 1,
+ "text": "Private credit climbs past the gate toward firmer footing\n\nRating: overweight\n\nThe headline stress in private credit reads more like friction than fracture when set against the policy backdrop. High-yield spreads at 640bps and a -3.0% drawdown look severe in isolation, but the one-year return of +6.0% shows the asset class still compounding through the cycle. With policy_rate_now at 5.25% and cpi_now at 3.8%, the rate-cutting runway that typically repairs credit conditions remains open, and history in this house's view favors resolution over rupture when growth support persists.\n\nStonebeck Credit's gating of redemptions and secondary bids quoted in the low 80s are liquidity events, not solvency verdicts. Gates exist precisely to prevent forced selling from becoming a self-fulfilling marking problem; they are a stabilizing mechanism as much as a warning sign. The reported_vs_public_gap of +1.0% is modest by historical standards and consistent with normal valuation lag in privately marked portfolios during a repricing quarter, not with the \"fragilities compounding beneath stable marks\" that Grimshaw Partners describes. We read the same gap as evidence that private marks are catching down toward public proxies in an orderly fashion, ahead of an easing cycle that should narrow spreads from here.\n\nThe explicit risk to this view is that the gap could widen further if secondary bids in the low 80s persist and more managers follow Stonebeck in gating redemptions, which may indicate that public markets are pricing stress faster than private books can absorb it. Should that repricing accelerate before policy support arrives, the ytd_return of -3.5% could deepen before the structural tailwin",
+ "violations": []
+}
