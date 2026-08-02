@@ -1,0 +1,67 @@
+# pacing-parameters-v1.0.yaml -- the pacing table (WI-I6-1, owner-approved 2026-08-02)
+#
+# THE accessible source of truth for closed-end pacing parameters. To change a
+# rate: edit THIS file, run `uv run python scripts/inspect_pacing.py` to see
+# what the change means, and regenerate/patch the state fixtures to match --
+# tests/test_pacing_artifact.py is the drift guard that fails if any fixture
+# and this table disagree. Nothing about these rates lives only in code.
+#
+# Register form (model-parameter-register.md s1, implemented verbatim in
+# ah/port/cohort.py): annual distribution rate RD(age) = Y * (age/L)^B,
+# scaled to the period, times the tier-1 linkage f_dist in stress; terminal
+# liquidation at age >= L. Annual call rate = rc_curve[age] on unfunded.
+#
+# SOURCE CLASSES (each parameter labeled):
+#   measured   -- estimated from a named dataset in the repo
+#   published  -- calibrated to a cited public study
+#   chosen     -- judgement anchored to consultant aggregates (register's
+#                 stated ALB-A fallback); superseded the day ALB-A delivers
+#
+# WI-I6-1 history: v1.0 corrects yield_rate for pm_buyout from 0.01 (a
+# synthetic fixture stand-in mis-scaled against the register's definition of
+# Y as the TERMINAL TOTAL distribution rate; caught by inspection I6) to
+# 0.55 (chosen: reconciles the fixture's own flows snapshot -- 11.0%/yr at
+# age 5.25 -- and lands the implied curve inside public aggregate ranges).
+# Sensitivity of the sealed G1 drought ratio to this rescale is measured in
+# governance/evidence/WI-I6-1-SENSITIVITY.md.
+
+artifact_version: pacing-1.0
+approved: 2026-08-02 (owner; WI-I6-1)
+drift_guard: tests/test_pacing_artifact.py
+inspect_with: scripts/inspect_pacing.py
+
+sleeves:
+  pm_buyout:
+    contractual_life_years: 10.0   # class: chosen; typical 10-14y per register
+    bow: 2.5                        # class: chosen; TA-family shape parameter
+    yield_rate: 0.55                # class: chosen; terminal TOTAL dist rate /yr.
+                                    # Implied curve: 2.7%/yr age 3, 9.7% age 5,
+                                    # 22.6% age 7, 31.4% age 8, 55% age 10 ->
+                                    # terminal liquidation. Anchors: fixture
+                                    # flows snapshot (11.0%/yr @ 5.25y) and
+                                    # consultant-aggregate ranges (Bain /
+                                    # PitchBook family; NOT reproducible from
+                                    # primary data -- the register's stated
+                                    # fallback while ALB-A is undelivered).
+    rc_curve: [0.25, 0.30, 0.20, 0.12, 0.08, 0.05]
+                                    # class: chosen; %/yr of unfunded by age
+                                    # year. Slow tail (34% uncalled at age 7)
+                                    # noted at I6 -- pending ALB-A item 1.
+
+open_questions:
+  - id: PQ-1
+    question: >
+      Functional form: the register writes RD = Y*(age/L)^B (multiplicative)
+      and carries its own caveat to verify against Takahashi-Alexander (2002),
+      whose canonical form is RD = max(Y, (age/L)^B) with Y an income floor.
+      WP3.1 resolved multiplicative, verbatim from the register, documented in
+      cohort.py. Re-open ONLY with ALB-A data in hand (fit both forms, keep
+      the better) -- not on judgement.
+  - id: PQ-2
+    question: >
+      yield_rate double duty: cohort.py also uses yield_rate as the INCOME cap
+      inside each distribution (income = min(dist, Y/4 * NAV)). At Y=0.55 the
+      cap no longer binds, so the income/capital split degenerates to
+      all-income. No engine invariant or test consumes the proportions today
+      (verified at WI-I6-1); a separate income_yield parameter belongs in the
+      next state-schema revision, owner-approved, alongside PQ-1.

@@ -7,6 +7,23 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WI-I6-1 — the pacing table: distribution rates out of the code, into a
+  file** (owner-approved fix for inspection I6's red flag).
+  `mappings/pacing-parameters-v1.0.yaml` is now THE source of truth for
+  closed-end pacing parameters — every value labeled with its source class
+  (measured / published / chosen), the register's ALB-A fallback stated, and
+  two open questions on the record (PQ-1 functional form vs
+  Takahashi–Alexander, re-opened only with ALB-A data; PQ-2 the
+  yield-rate/income-cap double duty). `scripts/inspect_pacing.py` prints the
+  table and its implied curves on demand; `tests/test_pacing_artifact.py` is
+  the drift guard — a fixture that disagrees with the table fails CI. The
+  rescale itself: pm_buyout `yield_rate` 0.01 → **0.55** (the fixture's own
+  flows snapshot now reconciles with its parameters to 2%). **The sealed G1
+  drought verdict is measured ROBUST to the rescale**: trough ratio 0.5442
+  (old) vs 0.5433 (corrected), both inside the sealed [0.45, 0.55] —
+  `governance/evidence/WI-I6-1-SENSITIVITY.md`, a robustness note, not a
+  reseal; the sealed replay, its evidence, and the G3 lock untouched. All 91
+  fixture-consuming tests pass unchanged. 4 new tests.
 - **WP4.2 — Tier-1 templates: the volume, at zero marginal cost** (Step 4;
   `ah/artifacts/templates.py`). Every builder is a pure function of
   tape-shaped inputs — no LLM, no RNG, no clock; same tape, same words, by
