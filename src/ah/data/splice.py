@@ -122,9 +122,20 @@ PROXY_RULES: dict[str, ProxyRule] = {
         target="fred.HY_OAS",
         donor="derived.baa_aaa_spread",
         transform="regression",
-        overlap_start="1996-12-01",
-        overlap_end="2005-12-01",
-        doc="HY OAS before 1996 regressed on the Baa-Aaa spread over the 1996-2005 overlap.",
+        overlap_start="2023-08-01",
+        overlap_end="2026-07-01",
+        doc=(
+            "HY OAS extended backward from the Baa-Aaa spread. CAMPAIGN-2 "
+            "CORRECTION (RFR-92): the rule as first authored specified a "
+            "1996-2005 overlap that FRED has NEVER served under the ICE "
+            "licensing cap (~3 trailing years only; S2-CAMPAIGN-VINTAGE "
+            "records 37 obs, all recent) -- the rule was unfittable from "
+            "birth. The overlap is now the licensed window that actually "
+            "exists (2023-08..2026-07, ~36 monthly obs): thin, but HY OAS "
+            "and Baa-Aaa are tightly coupled and the fit quality is "
+            "reported by the splice's own overlap-error check. Every "
+            "extended observation is flagged is_proxy."
+        ),
     ),
     "fedfunds_pre1954": ProxyRule(
         rule_id="fedfunds_pre1954",
@@ -140,6 +151,23 @@ PROXY_RULES: dict[str, ProxyRule] = {
             "is defined as; the bill is a market yield carrying term premium and "
             "policy expectations, so it is a documented PROXY for the pre-1954 "
             "pre-history only and every spliced observation is flagged is_proxy."
+        ),
+    ),
+    "fx_usd_pre2006": ProxyRule(
+        rule_id="fx_usd_pre2006",
+        target="fred.DTWEXBGS",
+        donor="fred.DTWEXM",
+        transform="regression",
+        overlap_start="2006-01-01",
+        overlap_end="2019-12-01",
+        doc=(
+            "Trade-weighted broad dollar index before 2006-01 (DTWEXBGS's first "
+            "observation) regressed on the discontinued major-currencies index "
+            "DTWEXM over the 2006-2019 overlap (the donor's full remaining life). "
+            "Campaign-2's fx block (S2R-FX-NEXT-CAMPAIGN; R5 re-entry): the broad "
+            "index is the honest modern series, the major-currencies index the "
+            "only long-history donor, and every pre-2006 observation is a "
+            "documented PROXY flagged is_proxy."
         ),
     ),
     "long_tsy_tr_pre1973": ProxyRule(
