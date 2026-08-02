@@ -347,6 +347,52 @@ def _waypoint_increments(
     )
 
 
+#: A' residual parameterization covers exactly the INTEGRATED-DRIFT factors,
+#: whose Δw component determines a per-month mean with no absolute level needed.
+#: policy_rate and ig_spread are mean-reverting LEVELS whose Δw is a level
+#: change — a level anchor is not recoverable from c_b (the Taylor anchor needs
+#: per-decade posterior draws that c_b does not carry), so they stay direct.
+DRIFT_MEAN_FACTORS: tuple[str, ...] = ("cpi", "equity_mkt")
+
+_DW_LOG_CPI = C_B_COMPONENTS.index("dw_log_cpi")
+_DW_EQUITY_CUM_LOG = C_B_COMPONENTS.index("dw_equity_cum_log")
+
+
+def conditioning_drift_means(
+    cond_vectors: np.ndarray, factor_names: Sequence[str], block_months: int
+) -> np.ndarray:
+    """Per-month conditioning-implied drift means in UNCONSTRAINED coordinates.
+
+    The A' residual contract: the network models deviations around these means
+    — subtracted from targets at dataset build, added back after de-standardize
+    at sample time — so era-scale trend tracking is structural rather than
+    learned. Derived from the RAW (unstandardized) c_b vectors alone, which is
+    what makes train/sample symmetry exact and leaves the cb-v1 contract and
+    its fingerprint untouched.
+
+    Given Δw spanning ``block_months`` monthly increments of the target curve:
+
+    - ``cpi``: the block's x is log level rebased to block month 0, so the
+      implied mean is the linear ramp ``m[j] = Δw_log_cpi * j / L``.
+    - ``equity_mkt``: x is log1p(monthly return), so the implied mean is the
+      constant per-month drift ``m[j] = Δw_equity_cum_log / L``.
+
+    Zero Δw (bind_waypoints off, or a targets-free segment) gives a zero mean,
+    collapsing the residual path to the direct one.
+    """
+    cond = np.asarray(cond_vectors, dtype=np.float64)
+    if cond.ndim != 2 or cond.shape[1] != C_B_DIM:
+        raise JoineryError(f"cond_vectors must be (n, {C_B_DIM}); got {cond.shape}")
+    names = list(factor_names)
+    m = np.zeros((cond.shape[0], block_months, len(names)), dtype=np.float64)
+    ramp = np.arange(block_months, dtype=np.float64) / float(block_months)
+    if "cpi" in names:
+        m[:, :, names.index("cpi")] = cond[:, _DW_LOG_CPI, None] * ramp
+    if "equity_mkt" in names:
+        m[:, :, names.index("equity_mkt")] = cond[:, _DW_EQUITY_CUM_LOG, None] / float(block_months)
+    return m
+
+
 @dataclass(frozen=True)
 class DecadeAssembly:
     """One decade's inputs to :func:`assemble_decade_paths`.

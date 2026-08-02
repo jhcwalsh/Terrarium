@@ -138,13 +138,21 @@ class DiffusionConfig:
     aux_nfe: int = 9
     # conditioning-noise augmentation (see data.py's recorded decision)
     cond_noise_std: float = 0.0
+    # A' residual parameterization (campaign-2) — same field as FlowConfig so
+    # the bake-off compares like with like; see flow.py for the contract.
+    residual_drift: bool = False
     # data geometry
     block_months: int = bridge.BLOCK_MONTHS
     n_factors: int = 12
     cond_dim: int = bridge.C_B_DIM
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: getattr(self, k) for k in sorted(self.__dataclass_fields__)}
+        doc = {k: getattr(self, k) for k in sorted(self.__dataclass_fields__)}
+        if not doc["residual_drift"]:
+            # Hash stability: omitted at its default so every pre-A' config_hash
+            # recomputes byte-identical (same recorded choice as FlowConfig).
+            del doc["residual_drift"]
+        return doc
 
     def build_model(self) -> ConditionalDenoiser:
         """The family's model factory (:class:`ah.gen.blocks.train.BlockConfig`)."""
@@ -553,6 +561,12 @@ class TorchBlockSampler:
         with torch.no_grad():
             z = self._integrate(cond, noise_t)
         z_np = self._std.destandardize_x(z.double().cpu().numpy())
+        if getattr(self._model.config, "residual_drift", False):
+            # A' symmetry: the network emitted deviations; the drift means come
+            # from the same raw c_b vector the dataset subtracted them against.
+            z_np = z_np + bridge.conditioning_drift_means(
+                cond_vectors, self.factor_names, self.block_months
+            )
         return ct.panel_to_constrained(z_np, self.factor_names)
 
     def _draw_noise(self, rng: np.random.Generator) -> np.ndarray:

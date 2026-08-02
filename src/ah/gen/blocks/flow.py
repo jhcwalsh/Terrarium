@@ -151,6 +151,10 @@ class FlowConfig:
     cond_noise_std: float = 0.0
     cond_dropout: float = 0.0
     guidance_scale: float = 1.0
+    # A' residual parameterization (campaign-2): the network models deviations
+    # around bridge.conditioning_drift_means; the dataset must be built with the
+    # matching flag and the sampler adds the means back from the raw c_b vector.
+    residual_drift: bool = False
     # data geometry
     block_months: int = bridge.BLOCK_MONTHS
     n_factors: int = 12
@@ -189,7 +193,13 @@ class FlowConfig:
         return int(self.eval_nfe) * (2 if self.guidance_active else 1)
 
     def as_dict(self) -> dict[str, Any]:
-        return {k: getattr(self, k) for k in sorted(self.__dataclass_fields__)}
+        doc = {k: getattr(self, k) for k in sorted(self.__dataclass_fields__)}
+        if not doc["residual_drift"]:
+            # Hash stability: the field postdates the sealed WP2.9 selection, so
+            # omitting it at its default keeps every pre-A' config_hash — the
+            # sealed selection's included — byte-identical on recomputation.
+            del doc["residual_drift"]
+        return doc
 
     def build_model(self) -> ConditionalVelocityField:
         """The family's model factory (:class:`ah.gen.blocks.train.BlockConfig`)."""
