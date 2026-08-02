@@ -236,8 +236,8 @@ class TestPipeline:
         pipeline records v1 unchanged."""
         bad_then_fixed = GOOD_DRAFT + " We guarantee recovery."
 
-        def checker(review_prompt: str) -> str:
-            assert "FACTS TABLE" in review_prompt
+        def checker(prompt: str) -> str:
+            assert "FACTS TABLE" in prompt
             return GOOD_DRAFT  # the self-review strips the promise
 
         result = au.author_artifact(
