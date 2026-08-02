@@ -1267,3 +1267,31 @@ amendments:
     to everything these metrics judge; the lateness itself is the reason this entry
     exists.'
   type: protocol_change
+- amendment_id: AM-2026-08-02-004
+  date: '2026-08-02'
+  payload:
+    pipeline_v2:
+      first_pass_definition: gate-passed on first submission; submission may include
+        one self-review call
+      self_check_prompt: self-check@1.0
+      ship_rule: two consecutive runs >= 0.95 at identical configuration
+      threshold_unchanged: 0.95
+      v1_final_state: 90.0/96.7/90.0 over runs 8-10; not shipped
+  post_hoc: false
+  rationale: 'AUTHORING PIPELINE v2: THE PRE-GATE SELF-CHECK, owner-ratified 2026-08-02
+    after the confirmation discipline rejected a lucky pass. The measured state at
+    pipeline v1 (prompts letter@1.4/note@1.5, gate-impl/1.0.5): first-pass 90.0% ->
+    96.7% -> 90.0% across the final three runs - a single qualifying run existed and
+    was NOT shipped, because two of three runs missed and certifying the lucky third
+    would be the quiet self-deception this governance exists to prevent. THE RATIFIED
+    DEFINITION: a self-check step (one additional model call reviewing the draft against
+    the hard rules) executes INSIDE the production of the first submitted draft; the
+    external gate G1-G9 still judges each submission exactly once; the frozen >=0.95
+    first-pass threshold (AM-2026-08-02-002) and the blocking split are UNCHANGED.
+    What ''first-pass'' means under v2 - gate-passed on the first SUBMISSION, where
+    a submission may include self-review - is this amendment''s content, decided by
+    the owner, recorded before any v2 run exists. The ship decision requires TWO consecutive
+    runs >=0.95 at identical configuration (the confirmation discipline, now on the
+    record as binding rather than voluntary). post_hoc: false - no pipeline-v2 run,
+    recording, or measurement exists at filing.'
+  type: protocol_change

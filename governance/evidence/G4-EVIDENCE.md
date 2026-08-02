@@ -1,16 +1,19 @@
 # G4-EVIDENCE.md — Gate G4, scored criterion by criterion (WP4.10)
 
 *Assembled at the close of the Step 4 build queue (wp4-01..wp4-10 plus the
-retrofit and the wp5-00 metric freeze). Every claim below cites a test, an
-evidence document, or a sealed artifact. **Verdict up front: G4 does NOT
-close today — criterion 1's Tier-2 half is honestly unmet.** Five of six
-criteria are evidenced; the gap is named, measured, and has stated next
-levers.*
+retrofit and the wp5-00 metric freeze), and CLOSED at the ship-gate chase.
+Every claim below cites a test, an evidence document, or a sealed artifact.
+**Verdict: ALL SIX CRITERIA MET — Gate G4 CLOSES 2026-08-02.** Criterion 1
+was open at assembly (76.7%) and closed by the chase: fifteen live runs,
+pipeline v2 ratified pre-hoc (AM-2026-08-02-004), and the binding pair rule
+met at **96.7% / 100.0%** (runs 14/15, identical configuration). An earlier
+lucky single pass was refused; the pair rule exists because of it.*
 
 ## The six criteria (plan DoD, verbatim in substance)
 
 **1. Tier-1 deterministic at calendar slots; Tier-2 ≥95% first-pass with
-retry/fallback exercised.** — **HALF MET.** Tier-1: deterministic by test
+retry/fallback exercised.** — **MET** (closed by the chase; assembly-time
+state preserved below for the record). Tier-1: deterministic by test
 (same tape, same words; schedule deterministic under declaration
 reordering). Tier-2: the retry/fallback path is exercised and logged
 (five live runs, zero fallbacks in the last three, every retry recorded)
@@ -73,13 +76,18 @@ twice over: the engine consumes a NumericWorld that omits narrative
 `tests/test_artifacts_service.py::TestBoundary` on every CI run since
 wp4-01. Generative components read the tape; they cannot write it.
 
-## What closing G4 requires
+## The closing line
 
-One thing: a Tier-2 prompt version measuring **≥95% first-pass** on the
-frozen 30-payload set. Everything else is evidenced above. When that
-measurement exists, this document gains its closing line and the gate
-tags; until then Step 4's build is COMPLETE and its gate is OPEN — the
-same honest posture as G1's mark_lag and G2's generator caveat.
+The measurement exists. Runs 14 and 15 (`letter@1.4`/`note@1.5`,
+`gate-impl/1.0.6`, `author-pipeline/2.0` + `self-check@1.1`) measured
+**96.7% and 100.0% first-pass** — two consecutive runs over the frozen
+bar at identical configuration, per the binding pair rule
+(AM-2026-08-02-004). The full fifteen-run trajectory, every instrument
+failure, and the refused lucky pass are in
+`fixtures/authoring_regression/manifest.yaml` and the archived evidence
+files. **Gate G4 is CLOSED.** Step 4 ends with all four project gates
+resolved: G0 closed, G1 evidenced with its named mark_lag limitation, G2
+closed with its generator caveat, G4 closed clean.
 
 ---
 

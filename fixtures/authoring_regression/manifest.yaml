@@ -41,14 +41,15 @@ payloads:
   note-quiet-grimshaw-private_credit: sha256:3180455620889dd79dda5a270b6afa4d8e6bc0cb210140b3ceea3b4b254a2d2f
   note-quiet-grimshaw-stonebeck: sha256:db3a8851ba818cda2b02b25446ecd7210a1c5048c0b4d9131d39c2a85a61189e
 live_run: >
-  MEASURED 2026-08-02, five live runs, trajectory on the record
-  (governance/evidence/AUTHORING-REGRESSION.md + -run1.md): first-pass
-  3.3% (gate-impl 1.0.0) -> 16.7% (1.0.1) -> 66.7% x2 (1.0.2 + note@1.1)
-  -> 76.7% (letter@1.1 + note@1.2). Zero fallbacks in the last three runs;
-  every artifact clears within two retries. THE SHIP GATE IS NOT MET:
-  76.7% < the frozen 0.95 first-pass bar, so NO Tier-2 prompt version
-  ships; live-world Tier-2 authoring stays disabled until a version
-  measures >= 0.95 on this set. Residual failures are stochastic model
-  first-draft slips (in-character promises, number reformatting, event
-  phrasing), all healed by the retry loop - next levers are few-shot
-  exemplars or a pre-gate self-check pass, by version bump as always.
+  SHIPPED 2026-08-02 under the pair rule (AM-2026-08-02-004): runs 14 and
+  15 at identical configuration (letter@1.4 / note@1.5, gate-impl/1.0.6,
+  author-pipeline/2.0 with self-check@1.1) measured 96.7% and 100.0%
+  first-pass - both >= the frozen 0.95 bar. Full fifteen-run trajectory on
+  the record (3.3 -> 16.7 -> 66.7 -> 66.7 -> 76.7 -> 76.7 -> 70.0 -> 90.0
+  -> 96.7 -> 90.0 -> 63.3 -> 96.7 -> 93.3 -> 96.7 -> 100.0): every
+  collapse was the instrument (gate scanners, token caps, checker
+  instructions), fixed on versioned levers with the frozen threshold and
+  blocking split never touched. An earlier lucky single pass (run 9) was
+  NOT shipped; the pair rule exists because of it. Tier-2 live-world
+  authoring is ENABLED at exactly this configuration; any change to
+  prompts, gate impl, or pipeline re-runs the set per the frozen rule.

@@ -103,15 +103,15 @@ class TestPrompts:
     def test_template_hash_pin_the_freeze_made_executable(self):
         assert (
             hashlib.sha256(pr.T_LETTER.encode()).hexdigest()
-            == "5034c3dcf2d537811ceeff70adcf681bac0ade139b1dbb08cb05deef7ec1128a"
+            == "58b0d9bc171648ee5664237ae0fc15de143e85d1e48bae6ac78a0289a7325cbe"
         ), "T-LETTER edited: bump author-prompt/letter version and re-run the regression set"
         assert (
             hashlib.sha256(pr.T_NOTE.encode()).hexdigest()
-            == "c4d46bcd5eb6fc80d3e075182773deea0d99427250878bf2fe82d1a2ff6ed6c7"
+            == "3cb150e0f8390a003a196aad8663e7e2844759872361d9babc5a23c79e2f370a"
         ), "T-NOTE edited: bump author-prompt/note version and re-run the regression set"
         # versions bumped WITH their edits (the frozen rule, both levers)
-        assert pr.PROMPT_VERSIONS["letter"] == "author-prompt/letter@1.1"
-        assert pr.PROMPT_VERSIONS["note"] == "author-prompt/note@1.2"
+        assert pr.PROMPT_VERSIONS["letter"] == "author-prompt/letter@1.4"
+        assert pr.PROMPT_VERSIONS["note"] == "author-prompt/note@1.5"
 
 
 class TestGate:
@@ -150,6 +150,22 @@ class TestGate:
         assert not any(v["rule"] == "G2" for v in report.violations)
         report = self._run(GOOD_DRAFT + " Defaults rose across the book.")
         assert any(v["rule"] == "G2" for v in report.violations)
+
+
+    def test_g4_sentence_starters_before_allowed_entities(self):
+        # run-6 fix: 'Where Grimshaw sees rot' is the rival plus an adverb
+        report = self._run(GOOD_DRAFT + " Where Meridian Capital Partners leads, we watch.")
+        assert not any(v["rule"] == "G4" for v in report.violations)
+
+    def test_g5_ordinary_cautious_prose_is_hedging(self):
+        # run-6 fix: 'watching closely' hedges without the old lexicon
+        draft = "A quarter of +2.0% against +5.5% for equities. We are watching closely. Onward."
+        report = self._run(draft)
+        assert not any("hedging" in v["message"] for v in report.violations if v["rule"] == "G5")
+
+    def test_g2_pricing_in_is_an_expectation_not_an_event(self):
+        report = self._run(GOOD_DRAFT + " Markets are pricing in rate cuts by year-end.")
+        assert not any(v["rule"] == "G2" for v in report.violations)
 
     def test_g4_market_terms_are_subjects_not_entities(self):
         report = self._run(GOOD_DRAFT + " Private Credit repriced while Public Markets cleared.")
@@ -212,7 +228,38 @@ class TestPipeline:
         )
         assert result.gate_result == "pass" and result.retry_count == 0
         assert result.author_tier == 2
-        assert result.prompt_version == "author-prompt/letter@1.1"
+        assert result.prompt_version == "author-prompt/letter@1.4"
+
+    def test_pipeline_v2_self_check_runs_inside_the_submission(self):
+        """AM-2026-08-02-004: the self-check repairs the draft BEFORE the
+        gate sees it; the result records pipeline v2; without a checker the
+        pipeline records v1 unchanged."""
+        bad_then_fixed = GOOD_DRAFT + " We guarantee recovery."
+
+        def checker(review_prompt: str) -> str:
+            assert "FACTS TABLE" in review_prompt
+            return GOOD_DRAFT  # the self-review strips the promise
+
+        result = au.author_artifact(
+            "letter",
+            _letter_payload(),
+            author=self._author_always(bad_then_fixed),
+            model_id="fake",
+            allowed_entities=ALLOWED,
+            generic_allowlist=GENERIC,
+            self_check=checker,
+        )
+        assert result.gate_result == "pass" and result.retry_count == 0
+        assert result.pipeline_version == "author-pipeline/2.0"
+        v1 = au.author_artifact(
+            "letter",
+            _letter_payload(),
+            author=self._author_always(GOOD_DRAFT),
+            model_id="fake",
+            allowed_entities=ALLOWED,
+            generic_allowlist=GENERIC,
+        )
+        assert v1.pipeline_version == "author-pipeline/1.0"
 
     def test_retry_prompt_carries_the_violation_then_passes(self):
         calls: list[str] = []
