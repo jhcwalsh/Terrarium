@@ -1,0 +1,47 @@
+# entity_screen manifest -- the real-entity name screen's data (WP4.3, D-K4-4)
+#
+# The screen exists so no fictional cast member can share a name with a real
+# firm (B1) and no masthead can dress as a real outlet (B5). Tests run
+# offline; everything here is a vendored snapshot with its version recorded,
+# per the plan's own requirement.
+
+screen_version: sec-edgar-2026-08-02+curated-1.0
+
+sources:
+  - id: sec_company_tickers
+    file: sec_company_tickers.json
+    origin: https://www.sec.gov/files/company_tickers.json
+    fetched: 2026-08-02
+    sha256: d9aa7dbb17263cfc2a66963be457e666fc30a2e6222e235bf93e481619b94dcb
+    entries: 10412
+    note: all US-listed issuers (CIK, ticker, title); public domain
+  - id: curated_financial_entities
+    file: curated_financial_entities.txt
+    origin: hand-curated at WP4.3 (kind C, chosen)
+    version: curated-1.0
+    note: >
+      Major global asset managers, PE/HF/credit firms, banks, insurers,
+      consultants and allocators not necessarily US-listed -- the realistic
+      collision space for a fictional GP/lender/consultant cast. One name
+      per line; '#' comments allowed.
+  - id: curated_media_tokens
+    file: curated_media_tokens.txt
+    origin: hand-curated at WP4.3 (kind C, chosen)
+    version: curated-1.0
+    note: real-outlet tokens for the B5 trade-dress screen (substring match)
+
+matching_rule: >
+  Exact match on normalized names (lowercase, punctuation stripped), and
+  again with legal-form suffixes removed (inc, corp, ltd, llc, lp, plc,
+  holdings, group, ...). Near-miss/fuzzy detection is NOT in v1 -- recorded
+  limitation, revisit with GLEIF integration.
+
+deferred:
+  - id: gleif_golden_copy
+    reason: >
+      D-K4-4 names the GLEIF LEI Golden Copy; the Level-1 full file is a
+      ~430MB download / multi-GB unzipped, out of proportion for this WP.
+      Deferred to a follow-up with owner sign-off on storage (filtered name
+      list or bloom filter). Until then the curated list covers the
+      realistic collision space; this is a stated narrowing of the sealed
+      D-K4-4 resolution, flagged in the WP4.3 commit, not silent.

@@ -1,0 +1,174 @@
+# Curated global financial entities (curated-1.0, kind C) -- the realistic
+# collision space for fictional GPs, lenders, consultants and allocators.
+# One name per line. Normalized+suffix-stripped matching applies.
+# Private equity / buyout
+Blackstone
+KKR
+Kohlberg Kravis Roberts
+Carlyle Group
+Apollo Global Management
+TPG
+EQT Partners
+CVC Capital Partners
+Advent International
+Bain Capital
+Warburg Pincus
+Silver Lake
+Vista Equity Partners
+Thoma Bravo
+General Atlantic
+Insight Partners
+Permira
+Cinven
+Bridgepoint
+Hellman & Friedman
+Leonard Green
+Clayton Dubilier & Rice
+Francisco Partners
+Platinum Equity
+Roark Capital
+# Credit / direct lending / distressed
+Ares Management
+Oaktree Capital
+Blue Owl Capital
+Sixth Street
+HPS Investment Partners
+Golub Capital
+Monroe Capital
+Fortress Investment Group
+Cerberus Capital
+Angelo Gordon
+Centerbridge
+Anchorage Capital
+Silver Point
+GoldenTree
+King Street
+Beach Point
+Crescent Capital
+Benefit Street
+# Hedge funds
+Bridgewater Associates
+AQR Capital
+Two Sigma
+Renaissance Technologies
+Citadel
+Millennium Management
+Point72
+D E Shaw
+Man Group
+Elliott Management
+Baupost Group
+Farallon Capital
+Davidson Kempner
+Marshall Wace
+Brevan Howard
+Caxton Associates
+Moore Capital
+Tudor Investment
+Third Point
+Pershing Square
+Lone Pine
+Tiger Global
+Coatue
+Viking Global
+# Asset managers / insurers
+BlackRock
+Vanguard
+State Street
+Fidelity
+T Rowe Price
+Capital Group
+Wellington Management
+PIMCO
+Invesco
+Franklin Templeton
+Schroders
+Amundi
+DWS
+abrdn
+Baillie Gifford
+Neuberger Berman
+Allianz
+AXA
+MetLife
+Prudential
+Manulife
+Aviva
+Legal & General
+M&G
+# Banks / advisory
+Goldman Sachs
+Morgan Stanley
+JPMorgan
+J P Morgan
+Bank of America
+Citigroup
+Wells Fargo
+Barclays
+Deutsche Bank
+BNP Paribas
+Societe Generale
+HSBC
+Standard Chartered
+Nomura
+Macquarie
+UBS
+Credit Suisse
+Lazard
+Evercore
+Rothschild
+Houlihan Lokey
+Jefferies
+PJT Partners
+Moelis
+Centerview
+# Consultants / private-markets platforms
+Cambridge Associates
+Mercer
+Willis Towers Watson
+Aon
+Callan
+Meketa
+NEPC
+RVK
+Wilshire
+Albourne
+Hamilton Lane
+StepStone
+Pathway Capital
+Adams Street
+HarbourVest
+Lexington Partners
+Coller Capital
+Ardian
+Partners Group
+Pantheon Ventures
+AlpInvest
+ICG
+Intermediate Capital Group
+Eurazeo
+Tikehau
+Grosvenor
+GCM Grosvenor
+LGT Capital
+Golding Capital
+# Allocators / sovereigns
+CDPQ
+CPP Investments
+CPPIB
+Ontario Teachers
+OMERS
+PSP Investments
+AIMCo
+GIC
+Temasek
+ADIA
+Abu Dhabi Investment Authority
+Public Investment Fund
+Mubadala
+Qatar Investment Authority
+Norges Bank Investment Management
+APG
+PGGM
+CalPERS
+CalSTRS

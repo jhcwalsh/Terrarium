@@ -36,7 +36,7 @@
       ],
       "relationships": [
         { "with": "stonebeck", "nature": "borrower from — the keys in Q9 are handed to Stonebeck" },
-        { "with": "harborlight-implicit", "nature": "the institution holds its 2027 flagship" }
+        { "with": "institution", "nature": "the institution holds its 2027 flagship" }
       ],
       "held_by_institution": true
     },
@@ -59,7 +59,7 @@
       ],
       "relationships": [
         { "with": "meridian", "nature": "lender to Meridian portfolio companies" },
-        { "with": "harborlight-implicit", "nature": "the institution holds its evergreen income fund" }
+        { "with": "institution", "nature": "the institution holds its evergreen income fund" }
       ],
       "held_by_institution": true
     },
@@ -78,7 +78,7 @@
         { "from_quarter": 8, "beat": "Memos begin flagging the widening reported-vs-listed gap in private sleeves." },
         { "from_quarter": 13, "beat": "Presents the secondary-sale option paper to the committee." }
       ],
-      "relationships": [{ "with": "harborlight-implicit", "nature": "retained consultant to the institution" }],
+      "relationships": [{ "with": "institution", "nature": "retained consultant to the institution" }],
       "held_by_institution": false
     },
     {
@@ -126,8 +126,8 @@
   },
 
   "creation_checks": {
-    "validator_version": "bible-val/1.0",
-    "passed": ["B1", "B2", "B3", "B4", "B5"],
+    "validator_version": "bible-val/1.1",
+    "passed": ["B1", "B2", "B3", "B4", "B5", "B6"],
     "warnings": [
       { "rule": "B3", "message": "Vessey arc beat Q12 (buying secondaries near lows) assumes secondary discounts consistent with WorldSpec crisis window Q6–Q13 — confirmed consistent; note retained for audit." }
     ]

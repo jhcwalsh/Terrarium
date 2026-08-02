@@ -7,6 +7,27 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.3 — the World Bible: checks B1–B6, the entity screen, cast binding**
+  (Step 4; `ah/artifacts/bible.py`). The continuity database and safety
+  enforcement point, executable. Schema-first validation, then the six
+  creation checks — B1 real-entity screen over every named entity; B2 arcs
+  inside the horizon, strictly ordered; B3 economic consistency (a stress
+  beat before the world's credit-stress window blocks, unless flagged
+  idiosyncratic; **no window supplied = B3 warned and NOT passed**, never
+  silent); B4 the disagreeing pair (the schema's enum already guarantees
+  valid priors, so B4 enforces that the houses' priors don't converge); B5
+  trade-dress screen on mastheads; **B6 referential integrity** (ratified
+  D-K4-1) — the example bible's `harborlight-implicit` danglers are closed
+  to `institution` per the reconstruction notes' own recommendation, and
+  the golden test now demands all six. The **entity screen** is a vendored
+  snapshot with its version in every report
+  (`fixtures/entity_screen/`): SEC EDGAR company list (10,412 issuers,
+  fetched 2026-08-02, sha256 recorded) + curated global financial names +
+  media tokens; normalized and legal-suffix-stripped exact matching, with
+  the **GLEIF golden-copy integration a stated deferral in the manifest**
+  (~430MB full file; narrowing of D-K4-4 flagged, not silent).
+  `bind_cast` binds `held_by_institution` entities to Step 3 hero funds
+  1:1 — a named GP has numbers behind it or the binding refuses. 13 tests.
 - **WI-I6-1 — the pacing table: distribution rates out of the code, into a
   file** (owner-approved fix for inspection I6's red flag).
   `mappings/pacing-parameters-v1.0.yaml` is now THE source of truth for
