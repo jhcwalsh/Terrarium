@@ -39,7 +39,10 @@ from ah.artifacts.decisions import (
 )
 from ah.artifacts.live import RevealedTape
 
-COMMITTEE_PROMPT_VERSION = "committee-prompt@1.0"
+# 1.1: the action element shape is now EXPLICIT (run-1 of the validation
+# study: the model wrote "action" for "verb" because the prompt never
+# showed the element format - a prompt defect, not a contract one).
+COMMITTEE_PROMPT_VERSION = "committee-prompt@1.1"
 
 COMMITTEE_PROMPT = """\
 You are the investment committee of a simulated institution in a market
@@ -48,9 +51,11 @@ simulation. Persona: {persona}.
 REVEALED STATE (everything you may know; nothing beyond it exists for you):
 {briefing}
 
-ALLOWED ACTIONS (the complete menu; anything else is rejected):
-- rebalance_public: payload {{"target_weights": {{"<sleeve>": <fraction>}}}}
-- an empty list: reaching the window and choosing to do nothing is a decision
+ALLOWED ACTIONS (the complete menu; anything else is rejected). Each
+action element must be EXACTLY this shape - the key is "verb", nothing else:
+  {{"verb": "rebalance_public", "payload": {{"target_weights": {{"<sleeve>": <fraction>}}}}}}
+An empty actions list is valid: reaching the window and choosing to do
+nothing is a decision.
 
 Respond with JSON only:
 {{"actions": [...], "rationale": "<3-6 sentences, your reasoning on the record>"}}

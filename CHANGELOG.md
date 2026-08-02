@@ -7,6 +7,28 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.9 — the actor validation study: run, measured, deferred honestly**
+  (Step 4; `ah/artifacts/validation.py`, `scripts/run_actor_validation.py`,
+  `governance/evidence/ACTOR-VALIDATION.md`). The ablation arms (heuristic,
+  seeded random-within-bounds, hold-course) and the live Claude committee
+  across three personas ran on **identical worlds, windows, and data** (the
+  sealed comparison rule). Two live runs, the instrument debugged before
+  its readings were believed: run 1 measured a 70% fallback rate that one
+  probe call diagnosed as HARNESS pathology (a truncating token cap and a
+  prompt that never showed the action element's shape — the model wrote
+  `"action"` for `"verb"` and the bounded contract rightly rejected it);
+  fixed on the correct levers (`committee-prompt@1.1`, element shape
+  explicit; 1024 tokens). Run 2's honest numbers: **fallback rate 0.20**
+  (residual model format drift, each rejection filed) and **persona
+  sensitivity 0.78** — 78% of decision cells show persona disagreement,
+  reported as PROMPT SENSITIVITY per the plan's pitfall list, never sold
+  as insight. Effect sizes are structurally unable to travel without their
+  across-world dispersion and world count. **Deferred per owner decision
+  D-K4-5**: the human-cohort arm — and with it the too-rational pathology,
+  which is DEFINED against human cohorts and gets no proxy number in its
+  place. The standing rule rides in the evidence: no client-facing actor
+  claim precedes the full study, and the study is INCOMPLETE until the
+  human arm runs. 5 tests.
 - **WP4.8 — the AI committee: bounded, briefed, filed, beatable** (Step 4;
   `ah/artifacts/committee.py`). The four disciplines from the plan,
   structural: **bounded** — model output parses through the typed decision
