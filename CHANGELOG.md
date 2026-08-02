@@ -7,6 +7,24 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.8 — the AI committee: bounded, briefed, filed, beatable** (Step 4;
+  `ah/artifacts/committee.py`). The four disciplines from the plan,
+  structural: **bounded** — model output parses through the typed decision
+  contract, so an off-menu or declared-but-unimplemented action is
+  rejected and never coerced; **briefed** — the briefing is deterministic
+  code over `RevealedTape`, inheriting the information wall (there is
+  nothing beyond the pointer in the input object), reported-plane weights
+  and the last N wire items alongside; **filed** — every decision carries
+  a rationale (a decision without one refuses), the persona id, prompt
+  version (`committee-prompt@1.0`) and model id, and emits its minutes as
+  a wire payload for the chronicle; **beatable** — the heuristic ablation
+  is both the fallback (invalid model output → heuristic decision WITH
+  the failure quoted in the filed rationale, never erased) and the
+  wp4-09 baseline, joined by seeded random-within-bounds and hold-course.
+  Personas are configuration rendered into the prompt, never code paths —
+  their differences get measured as prompt sensitivity, not celebrated.
+  Deciders are injected callables (offline tests; live Claude behind
+  `--live` when wp4-09 runs the comparison). 11 tests.
 - **WP4.7 — actor windows: calendars, triggers, the playbook, wargames**
   (Step 4; `ah/artifacts/windows.py`). Real decisions are not uniformly
   spaced: calendar windows carry the cadence, and **event windows** open
