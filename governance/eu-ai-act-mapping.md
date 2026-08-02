@@ -49,6 +49,13 @@ the current phase (owner-only testing, D-K4-5).
 
 ## Open items
 
+- **Research-use consent disclosure** (D-K5-4, owner-approved 2026-08-02):
+  the public product's ranked runs will feed the RQ5 behavioural panel;
+  the research-use disclosure is designed into the consent flow from the
+  start (sharing-spec s12 framing) and joins this counsel review — added
+  now, per STEP5-amendment-A1, rather than retrofitted after players
+  exist.
+
 - Counsel review of the classifications above before any client-facing use.
 - Re-map when the human-cohort phase begins (natural-person interaction
   changes the transparency surface).
