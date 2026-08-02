@@ -7,6 +7,25 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP4.10 — the GenAI governance pack; Gate G4 scored, honestly open**
+  (Step 4 closer). `governance/prompt-registry.yaml`: all four prompt
+  families with versions, hash pins, regression links, and ship status
+  (the authoring pair NOT SHIPPING at 76.7%; the committee STUDY-GRADE
+  ONLY). **Injection testing on every payload path**
+  (`tests/test_injection.py`): injected wire text rides into prompts as
+  data, a draft that OBEYS an injection trips G3+G4, a committee decider
+  that obeys emits an off-menu action the bounded contract rejects into
+  the filed fallback — and the template engine is proven single-pass
+  (payload values containing `{{…}}` are never re-expanded).
+  `governance/eu-ai-act-mapping.md`: obligation mapping (transparency via
+  renderer watermarking, traceability via G9, robustness via the frozen
+  regression set) + the NIST AI RMF scaffold, counsel review flagged
+  before client-facing reliance. `genai-track.md` updated to today's
+  truth. **`governance/evidence/G4-EVIDENCE.md` scores all six gate
+  criteria**: five evidenced, criterion 1's Tier-2 half UNMET at 76.7% <
+  95% — so **Step 4's build is COMPLETE and Gate G4 is OPEN on one named
+  item**, with its consequence enforced (live Tier-2 disabled) and next
+  levers recorded. The same honest posture as G1's mark_lag. 4 tests.
 - **WP4.9 — the actor validation study: run, measured, deferred honestly**
   (Step 4; `ah/artifacts/validation.py`, `scripts/run_actor_validation.py`,
   `governance/evidence/ACTOR-VALIDATION.md`). The ablation arms (heuristic,
