@@ -1,0 +1,21 @@
+# Real-outlet tokens for the B5 trade-dress screen (substring, normalized).
+bloomberg
+reuters
+financial times
+wall street journal
+wsj
+the economist
+barron
+marketwatch
+cnbc
+dow jones
+morningstar
+pitchbook
+preqin
+institutional investor
+pensions and investments
+efinancial
+seeking alpha
+motley fool
+axios
+politico
