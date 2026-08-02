@@ -1,0 +1,13 @@
+{
+  "digest": "sha256:ac6f2a3c1732173dbd3816cc4ff803d22992871efacf42f0eada5f645f520cca",
+  "hashed_files": [
+    "factors.yaml",
+    "src/ah/eval/decision_metrics.py",
+    "src/ah/eval/g5seal.py",
+    "src/ah/eval/prereg.py",
+    "src/ah/splits.py",
+    "step5-evaluation-protocol.yaml"
+  ],
+  "prereg_path": "step5-evaluation-protocol.yaml",
+  "sealed_at": "2026-08-02T18:00:00+00:00"
+}

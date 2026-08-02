@@ -1,0 +1,73 @@
+# step5-evaluation-protocol.yaml -- the Step 5 scorecard and protocol, FROZEN
+#
+# Sealed at wp5-00 (owner-ordered 2026-08-02) via pre-registration-g5.lock,
+# the third use of the Step 2 seal mechanism. The plan's constraint is that
+# these definitions freeze before any result they judge exists; the freeze
+# is LATE relative to the plan's own schedule (it named Step 3) and the
+# lateness is recorded in amendment AM-2026-08-02-003 rather than smoothed
+# over. What bounds the hazard: no Step 5 evaluation has ever run, no
+# decision metric has ever been computed on any outcome, and the actor
+# results these metrics will judge (wp4-07 onward) do not exist yet.
+
+protocol_version: g5-protocol-1.0
+sealed: true
+
+evaluation:
+  scheme: expanding_window_walk_forward   # per D9
+  fold_growth: expanding                  # never sliding; history only accumulates
+  rebalancing: quarterly
+  statistical_test:
+    test: wilcoxon_signed_rank
+    across: folds
+    report: [statistic, p_value, effect_size_rank_biserial]
+    note: effect sizes reported ALWAYS; a p-value alone is not a result
+
+benchmark_policies:
+  - history_only_optimization
+  - gaussian_monte_carlo
+  - bootstrap_ensemble
+  - static_60_40
+  - static_endowment_mix
+  - fixed_heuristic_rules
+
+comparison_rule: >
+  Every decision-maker (human committee, AI committee, heuristic rule,
+  each benchmark policy) is scored on IDENTICAL worlds and seeds against
+  its own hold-course twin. Different seeds or worlds = no comparison.
+
+metrics:
+  primary: drawdown_surprise
+  primary_rule: >
+    Exactly one primary metric, pre-stated here. All others are secondary:
+    they may inform, they may not headline, and no significance claim is
+    made on a secondary without naming it as secondary. This is the
+    p-value-hunting defense from the plan's pitfall list, sealed.
+  secondary:
+    - decision_alpha
+    - decision_alpha_by_window     # R12; the v1.0 definition every RunRecord stamp cites
+    - forced_sale_cost
+    - liquidity_shortfall_probability
+    - funding_ratio_tail           # worst 1% terminal
+    - breach_duration_quarters
+    - precommitment_adherence
+    - calibration                  # carried over from the Step 2 battery tier, unchanged
+  definitions: >
+    src/ah/eval/decision_metrics.py is the normative definition of every
+    metric named above -- exact formula, worked example in the docstring,
+    unit test asserting the example. The code is hashed into the lock
+    with this document; editing either breaks the seal.
+
+decision_alpha_version: "1.0"   # the RunRecord stamp (retrofit R-1) refers to THIS seal
+
+holdout_rule: >
+  The holdout is spent ONCE, through ah.eval.g2's explicit-purpose token
+  path, after every other decision is closed; the result publishes
+  whatever it says. Unchanged from the Step 2 covenant.
+
+seal_scope:
+  hashed_files:
+    - step5-evaluation-protocol.yaml
+    - src/ah/eval/decision_metrics.py
+    - src/ah/eval/g5seal.py
+    - src/ah/eval/prereg.py
+    - src/ah/splits.py

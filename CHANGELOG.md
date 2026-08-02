@@ -7,6 +7,29 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **wp5-00 — the Step 5 scorecard, frozen late and said so** (owner-ordered
+  2026-08-02). The plan required the WP5.1–5.2 metric definitions frozen
+  during Step 3; the obligation slipped to mid-Step 4 and is now
+  discharged with the lateness on the record (`AM-2026-08-02-003`), not
+  smoothed over. Sealed together in **`pre-registration-g5.lock`**
+  (`sha256:ac6f2a3c…`, the third use of the Step 2 seal mechanism):
+  `step5-evaluation-protocol.yaml` (expanding-window walk-forward, the six
+  benchmark policies, Wilcoxon with effect sizes, the identical-worlds
+  comparison rule, the one-shot holdout covenant) and
+  `ah/eval/decision_metrics.py` — every metric an executable formula with
+  its worked example asserted by test: **drawdown surprise as the sole
+  pre-stated PRIMARY** (the p-hacking defense, sealed), decision alpha vs
+  the hold-course twin, per-window alpha with an exact telescoping
+  identity (this seal is what `decision_alpha_version: "1.0"` on every
+  RunRecord formally refers to), forced-sale cost, liquidity-shortfall
+  probability, funding-ratio tail, breach duration, pre-commitment
+  adherence (denominator = triggered rules only; no credit for calm
+  paper). The G5 wrapper refuses documents that disagree with the code;
+  the seal guards patrol a third boundary (`TestG5SealBoundary`); tamper
+  of one character in the sealed code fails verification, by test. What
+  the amendment states precisely: nothing these metrics judge exists yet
+  — wp4-07's windows, committees, and wargames all land AFTER the seal.
+  12 tests.
 - **WP4.6 — live mode: sealed reveal, three tape rules, the information
   wall** (Step 4; `ah/artifacts/live.py`). The decade is precomputed and
   **sealed at t₀** (SHA-256 over the tape; a single mark moved one

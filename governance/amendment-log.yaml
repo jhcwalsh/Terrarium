@@ -1235,3 +1235,35 @@ amendments:
     owner''s ratification stands as confirmation it is workable, and any blocking-rule
     ambiguity found later halts and asks rather than interpreting (KICKOFF-STEP4 s5).'
   type: protocol_change
+- amendment_id: AM-2026-08-02-003
+  date: '2026-08-02'
+  payload:
+    g5_freeze:
+      actual_freeze: 2026-08-02, mid-Step 4, before wp4-07
+      decision_alpha_version: '1.0'
+      digest: sha256:ac6f2a3c1732173dbd3816cc4ff803d22992871efacf42f0eada5f645f520cca
+      lock: pre-registration-g5.lock
+      planned_freeze_window: Step 3 (per the plan)
+      primary_metric: drawdown_surprise
+      protocol_version: g5-protocol-1.0
+  post_hoc: false
+  rationale: 'THE STEP 5 METRIC FREEZE, LATE AND SAID SO. STEP5-DECISION-EVALUATION-PLAN''s
+    own critical constraint requires the WP5.1-5.2 protocol and metric definitions
+    frozen DURING STEP 3, before any result is seen; the obligation was carried in
+    KICKOFF-STEP3 (''slotted after wp3-02'') and KICKOFF-STEP4''s housekeeping (''must
+    not slip past Step 4''), and it slipped to mid-Step-4. Owner ordered the freeze
+    2026-08-02; sealed the same day as pre-registration-g5.lock (digest in payload)
+    covering step5-evaluation-protocol.yaml + ah/eval/decision_metrics.py + the g5seal
+    wrapper, guards extended (TestG5SealBoundary). WHAT BOUNDS THE HAZARD, stated
+    precisely: no Step 5 evaluation has ever run; no decision metric here defined
+    has ever been computed on any outcome; the decision-maker results these metrics
+    will judge (wp4-07 onward: windows, committees, wargames) do not exist in any
+    form; and the Step-3/4 results that DO exist (the 2022 replay, the authoring regression)
+    are judged by their own separate sealed criteria, not by these metrics. What the
+    lateness DID expose: the metric AUTHOR had seen the 2022 replay''s shape and the
+    WP3.7 engine''s outputs while writing formulas - the primary-metric pre-statement
+    (drawdown surprise), the one-primary rule, and the identical-worlds comparison
+    rule are sealed exactly to cap that residual influence. post_hoc: false with respect
+    to everything these metrics judge; the lateness itself is the reason this entry
+    exists.'
+  type: protocol_change
