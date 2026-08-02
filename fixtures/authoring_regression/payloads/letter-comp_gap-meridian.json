@@ -1,0 +1,52 @@
+{
+ "arc_beats_to_date": [
+  "Q4: Financing costs begin to bite across the 2021 vintage; letters grow defensive."
+ ],
+ "artifact_type": "letterhead",
+ "checkable_claims_table": {
+  "cpi_now": "2.7%",
+  "hy_spread_now_bps": "380bps",
+  "nav_index": "101.0",
+  "policy_rate_now": "4.75%",
+  "public_equity_q": "+9.0%",
+  "reported_return_q": "+0.5%",
+  "reported_return_si": "+28.0%",
+  "reported_return_ytd": "+1.0%"
+ },
+ "chronicle_extracts": [
+  "Public rally leaves private marks behind",
+  "Listed comps rerate sharply"
+ ],
+ "comp_gap_exceeds_3pts": true,
+ "dateline": "2028-03-15",
+ "dateline_quarter": 8,
+ "entity": {
+  "id": "meridian",
+  "kind": "gp_buyout",
+  "name": "Meridian Capital Partners",
+  "one_liner": "Mid-market buyout firm; 2021-vintage flagship entered the decade at peak entry multiples and 5.5 turns of leverage.",
+  "relationships": [
+   "stonebeck",
+   "institution"
+  ],
+  "signature_traits": [
+   "never concedes marks are stale",
+   "attributes every problem to 'temporary dislocation'",
+   "quietly excellent at operations despite the bravado"
+  ],
+  "voice": {
+   "register": "confident_promotional",
+   "tics": [
+    "opens every letter with a macro paragraph",
+    "signs off 'Onward.'"
+   ]
+  }
+ },
+ "fund_facts": {
+  "calls_flag": false,
+  "distributions_flag": true,
+  "gate_status": "open",
+  "secondary_market_context": "secondary market quiet"
+ },
+ "quarter_label": "2028-Q1"
+}

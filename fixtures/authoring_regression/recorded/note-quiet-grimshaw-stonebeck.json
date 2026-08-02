@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-quiet-grimshaw-stonebeck",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Title: Stonebeck: calm tape, uncompensated risk\n\nRating: underweight\n\nThe wire was quiet and the prints came in line \u2014 precisely the conditions under which complacency compounds fastest.\u00b9 Stonebeck's headline numbers look serene: a one_year_return of +11.0% against a ytd_return of +1.1%, drawdown flat at +0.0%. Calder & Root read this as confirmation that policy support has resolved the stress. We read the same tape as a lull between structural cracks, not evidence the cracks have closed.\n\nConsider the spread. At 400bps, high-yield compensation sits well above the historical calm-market norm, even as policy_rate_now holds at 5.00% and cpi_now prints 2.9% \u2014 a policy stance still restrictive in real terms, whatever the disinflation narrative suggests. A spread this wide alongside a drawdown of zero is not equilibrium; it is a market pricing risk into fixed income while equity-adjacent marks have not yet caught up.\u00b2 The reported_vs_public_gap of -0.2% is small, almost trivial on its face \u2014 but in our experience these gaps widen exactly when they matter most, and a negative print this early in a \"quiet\" cycle deserves more suspicion than comfort.\n\nPicture the chart: a nearly flat drawdown line running alongside a stubbornly elevated spread line that refuses to converge toward it \u2014 two series that should move together in a genuinely resolved stress episode, diverging instead. That divergence is the whole thesis.\n\nWhere Calder & Root see policy support as resolution, we see policy support as a stay of execution: rates restrictive enough to keep pressure on leveraged balance sheets, spreads wide enough to admit the market agrees, and reported marks slow to reflect it.\n\nThe risk to this view: if disinflation continues and the gap between marks and reality closes benignly rather than violently, our caution simply costs carry \u2014 a plausible outcome, and the one for which \"in line\" prints are usually the first sign.\n\n---\n\u00b9 Quiet sessions are when fragilities accrue their interest.\n\u00b2 Marks lag; spreads rarely do.",
+ "violations": []
+}

@@ -103,12 +103,15 @@ class TestPrompts:
     def test_template_hash_pin_the_freeze_made_executable(self):
         assert (
             hashlib.sha256(pr.T_LETTER.encode()).hexdigest()
-            == "a25252da750e2561506a3532bfd07a3e270a7f09ea4f40ddde713f034a50b710"
+            == "5034c3dcf2d537811ceeff70adcf681bac0ade139b1dbb08cb05deef7ec1128a"
         ), "T-LETTER edited: bump author-prompt/letter version and re-run the regression set"
         assert (
             hashlib.sha256(pr.T_NOTE.encode()).hexdigest()
-            == "13133c0206471a2018f763f52dee22f2ca149e593ea4825de636dc36066fdb5d"
+            == "c4d46bcd5eb6fc80d3e075182773deea0d99427250878bf2fe82d1a2ff6ed6c7"
         ), "T-NOTE edited: bump author-prompt/note version and re-run the regression set"
+        # versions bumped WITH their edits (the frozen rule, both levers)
+        assert pr.PROMPT_VERSIONS["letter"] == "author-prompt/letter@1.1"
+        assert pr.PROMPT_VERSIONS["note"] == "author-prompt/note@1.2"
 
 
 class TestGate:
@@ -133,6 +136,24 @@ class TestGate:
     def test_g2_blocks_an_unsubstantiated_event(self):
         report = self._run(GOOD_DRAFT + " Peers face a bear market in credit.")
         assert any(v["rule"] == "G2" for v in report.violations)
+        report = self._run(GOOD_DRAFT + " Rivals gated redemptions across the sector.")
+        assert any(v["rule"] == "G2" for v in report.violations)
+
+    def test_g2_ignores_gate_as_a_common_noun(self):
+        # run-1 fix: 'gate' polices the redemption-gating EVENT, not vocabulary
+        report = self._run(GOOD_DRAFT + " The gate between hope and evidence stays open.")
+        assert not any(v["rule"] == "G2" for v in report.violations)
+
+    def test_g2_modality_guard_outlook_is_not_an_event_claim(self):
+        # run-2 fix: 'defaults may rise' speculates; 'defaults rose' claims
+        report = self._run(GOOD_DRAFT + " If conditions worsen, defaults could follow.")
+        assert not any(v["rule"] == "G2" for v in report.violations)
+        report = self._run(GOOD_DRAFT + " Defaults rose across the book.")
+        assert any(v["rule"] == "G2" for v in report.violations)
+
+    def test_g4_market_terms_are_subjects_not_entities(self):
+        report = self._run(GOOD_DRAFT + " Private Credit repriced while Public Markets cleared.")
+        assert not any(v["rule"] == "G4" for v in report.violations)
 
     def test_g3_blocks_a_future_reference(self):
         report = self._run(GOOD_DRAFT + " We are positioned for Q9 and beyond.")
@@ -143,6 +164,15 @@ class TestGate:
             GOOD_DRAFT.replace("Meridian Capital Partners", "Blackrock Global Advisors")
         )
         assert any(v["rule"] == "G4" for v in report.violations)
+
+    def test_g4_exempts_salutations_and_letter_furniture(self):
+        # run-1's dominant false positive (18/30): 'Dear Partners' is prose
+        # furniture, not an entity reference
+        drafted = "Dear Partners,\n" + GOOD_DRAFT + "\nSincerely Yours,\nThe Team"
+        report = self._run(drafted)
+        assert not any(v["rule"] == "G4" for v in report.violations), report.violations
+        report = self._run("Dear Limited Partners,\n" + GOOD_DRAFT)
+        assert not any(v["rule"] == "G4" for v in report.violations)
 
     def test_g5_blocks_promises_and_missing_hedge(self):
         report = self._run(GOOD_DRAFT + " We guarantee recovery.")
@@ -182,7 +212,7 @@ class TestPipeline:
         )
         assert result.gate_result == "pass" and result.retry_count == 0
         assert result.author_tier == 2
-        assert result.prompt_version == "author-prompt/letter@1.0"
+        assert result.prompt_version == "author-prompt/letter@1.1"
 
     def test_retry_prompt_carries_the_violation_then_passes(self):
         calls: list[str] = []

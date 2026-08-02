@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-quiet-grimshaw-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Title: Private credit's calm carries a lagging shadow\n\nRating: underweight\n\nThe tape offers little to argue with on its face: a quiet session, prints in line, spreads holding at 400bps, and a headline drawdown of +0.0%.\u00b9 Calder & Root read this as vindication \u2014 policy support resolving stress, the cycle staying the course. We read the same absence of movement as the more interesting datum. Private credit marks do not move on quiet sessions; they move on revaluation events, and revaluation events are precisely what a 5.00% policy rate held this long is designed to postpone rather than prevent.\n\nConsider the gap between reported and public-market proxies, at -0.2% \u2014 narrow, almost reassuring. But narrow gaps in this asset class tend to widen discontinuously rather than drift, since marks are set by committees with quarterly memories, not by continuous auction.\u00b2 The one-year return of +11.0% against a year-to-date figure of +1.1% is the chart worth describing rather than plotting: a steep, smooth ascent through most of the trailing year that has gone essentially flat in the most recent stretch \u2014 not reversed, not accelerated, just becalmed at a rate (5.00%) that keeps refinancing arithmetic tight for the borrowers underlying these books. Flat is not the same as resolved.\n\nCPI at 2.9% gives the Committee room to talk about \"support\" without committing to cuts large enough to actually loosen credit conditions for the marginal borrower. Calder & Root's stay-the-course thesis assumes the policy path does the deleveraging work quietly, off-screen. Our prior says fragility compounds precisely off-screen, in vintages not yet marked to the stress they already contain.\n\nRisk to this view: if the rate path eases meaningfully from 5.00% before the next marking cycle, the lag we're pricing in simply never materializes as loss, and this note ages as unnecessarily dour.\n\n\u00b9 Zero is a mark, not an observation.\n\u00b2 A committee's silence is not liquidity.",
+ "violations": []
+}

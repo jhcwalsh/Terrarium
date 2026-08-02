@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-crash-stonebeck",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "Dear Partners,\n\nWe write this quarter from a market that has decided, rather abruptly, to reprice risk all at once. Public equities have slid into bear territory, high-yield spreads have gapped out to 780bps, and the policy rate sits at 5.25% against inflation still running at 4.1%. It is the kind of weather that makes everyone check the barn roof twice. We have checked ours. It is holding.\n\nStonebeck's reported return for the quarter was -8.5%, bringing the year-to-date figure to -12.0%. Since inception, we remain at +10.0%, and we think that longer arc matters more than any single squall. Our NAV index now stands at 88.0, a mark that reflects real, if uneven, price discovery across the book rather than a wholesale repricing to the tape.\n\nWe know the instinct, seeing public equities down -18.0% this quarter against our -8.5%, is to ask whether we are marking generously. We understand the question; we would ask it too if we sat where you sit. Our answer, as it has been, rests on structural seniority: our positions sit ahead of equity and much of the capital structure in every deal we hold, and that seniority is not a marketing phrase, it is the mechanical reason a lender's losses lag an equity holder's losses in a downturn like this one. We are not the same asset as the S&P, and a quarter like this one is precisely why that distinction was built into the strategy from the start.\n\nThe constructive amendments we discussed with several of you last quarter \u2014 the first covenant conversations this book has ever needed at its current scale \u2014 have continued in that same spirit. Borrowers are coming to the table early, sponsors are contributing incremental equity where covenants have been tight, and our teams, led on the ground by J",
+ "violations": []
+}

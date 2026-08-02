@@ -1,0 +1,20 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [
+  [
+   {
+    "message": "no hedging language anywhere in the draft",
+    "rule": "G5"
+   }
+  ]
+ ],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-quiet-stonebeck",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 1,
+ "text": "Dear Partners,\n\nIt was a quiet session on the wire this quarter, and the data prints came in largely as expected \u2014 CPI at 2.9%, policy rate holding at 5.00%. We take a measure of comfort in that quiet, though we'd be the first to say that calm tape is not the same thing as calm credit, and we try never to confuse the two. High yield spreads sit at 400bps, which strikes us as a market pricing in patience rather than complacency \u2014 though of course spreads can widen faster than they narrow, and we hold that possibility loosely rather than dismiss it.\n\nOn the portfolio, Stonebeck reported a return of +1.1% for the quarter, matching our year-to-date figure of +1.1%, against since-inception performance of +33.0%. Public equities moved +1.3% over the same period \u2014 a gap of a couple tenths, nothing that keeps us up at night, and frankly the kind of divergence you'd expect between a public tape that reprices by the minute and a lending book we mark with the deliberateness it deserves. Our NAV index sits at 101.1, a figure we regard as sober rather than celebratory.\n\nWe think of this business the way a farmer thinks of a shared field \u2014 you don't own the harvest alone, you tend it alongside the people who planted with you, and you don't panic at the first cloud on the horizon, but you do watch the sky. That's the spirit behind our contin",
+ "violations": []
+}

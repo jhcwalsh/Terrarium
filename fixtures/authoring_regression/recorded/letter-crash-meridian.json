@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-crash-meridian",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "Dear Partners,\n\nMarkets spent the quarter re-learning a lesson they last forgot in the previous cycle: liquidity is not the same thing as value. The policy rate now sits at 5.25%, inflation is holding at 4.1%, and high yield spreads have gapped out to 780bps as default fears resurface across the credit complex. Public equities have entered bear-market territory outright, down -18.0% for the quarter. This is a liquidity event first and a valuation event a distant second \u2014 the kind of environment in which mark-to-market vehicles overshoot on the way down, precisely because they must.\n\nAgainst that backdrop, Meridian's flagship reported a -8.5% return for the quarter, bringing year-to-date performance to -12.0%. Since inception, the portfolio remains at +10.0%, a reminder that the compounding we underwrote in 2021 has not been erased \u2014 it has been temporarily obscured. We recognize the -8.5% sits meaningfully better than the -18.0% suffered by public markets this quarter, and we anticipate the question our partners at The Harborlight Pension Trust and others will rightly ask: why the gap? The answer is structural, not evasive. Our portfolio companies are not repriced tick-by-tick by panicked sellers; they are valued on operating fundamentals, discounted cash flows, and comparable transactions that have not yet cleared in this dislocated tape. Private marks lag public repricing by design \u2014 that is a feature of the asset class our LPs signed up for, not a flaw we are papering over.\n\nOperationally, the portfolio continues to perform ahead of what headline numbers suggest. R. Okafor's team has pushed pricing actions through at three of our largest holdings faster than budgeted, and J. L",
+ "violations": []
+}

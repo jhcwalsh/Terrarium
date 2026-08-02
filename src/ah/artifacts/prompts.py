@@ -17,8 +17,14 @@ from typing import Any
 from ah.artifacts.payloads import fmt_claims_for_prompt
 
 PROMPT_VERSIONS = {
-    "letter": "author-prompt/letter@1.0",
-    "note": "author-prompt/note@1.0",
+    # 1.1: hard rules sharpened where run-4 first drafts actually slipped
+    # (in-character 'guarantee' language; number reformatting) — the sealed
+    # rules restated concretely, nothing weakened.
+    "letter": "author-prompt/letter@1.1",
+    # 1.1: sentence-case titles (run-2: headline Title Case defeated the G4
+    # closed-world scan; sentence case keeps real entities catchable).
+    # 1.2: inherits letter@1.1's sharpened hard rules by reference.
+    "note": "author-prompt/note@1.2",
 }
 
 PRIOR_GLOSS = {
@@ -48,8 +54,11 @@ or acknowledge, per voice/traits — but never misstate a number); (3) outlook c
 with your character, hedged as a real GP hedges.
 
 HARD RULES: Mention only these named entities: {{allowed_entities}}. No real firms or people.
-No dates or events after {{dateline}}. No promises of returns. Do not mention that this is a
-simulation. Output the letter body only, no headers.
+No dates or events after {{dateline}}. No promises of returns — never write 'guarantee',
+'assure', or 'will deliver' in any form, however in-character it feels. Copy every number
+EXACTLY as the facts table formats it (sign, decimals, units); never restate '+9.0%' as '9%'.
+Name an event (a default, a gating, a rate move) only if the newsflow above reports it.
+Do not mention that this is a simulation. Output the letter body only, no headers.
 """
 
 T_NOTE = """\
@@ -62,12 +71,14 @@ DATA PANEL (only numbers permitted, verbatim): {{checkable_claims_table}}
 NEWSFLOW: {{chronicle_extracts}}
 THE OTHER HOUSE most recently said: "{{rival_stance_summary}}" — you may engage with it.
 
-WRITE: 220-350 words: title (<=12 words), rating from {overweight|neutral|underweight|no_rating},
+WRITE: 220-350 words: title (<=12 words, sentence case — capitalize only the first word
+and named entities), rating from {overweight|neutral|underweight|no_rating},
 2-4 paragraphs of argument READING THE SAME DATA THROUGH YOUR PRIOR, one explicitly stated
 risk to your own view. Your interpretation should plausibly differ from the rival's;
 your facts cannot.
 
-HARD RULES: identical to T-LETTER (entities, dateline, no simulation references, body only).
+HARD RULES: identical to T-LETTER (entities, dateline, exact number formats, no promises,
+events only from the newsflow, no simulation references, body only).
 """
 
 _PLACEHOLDER = re.compile(r"\{\{([a-z_.]+)\}\}")

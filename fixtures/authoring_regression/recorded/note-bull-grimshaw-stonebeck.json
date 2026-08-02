@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-bull-grimshaw-stonebeck",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Stonebeck: calm surface, unreconciled ledger\n\nRating: underweight\n\nStonebeck's tape reads as vindication for the sanguine camp. Drawdown sits at +0.0%, one_year_return has compounded to +15.0%, and ytd_return of +6.0% arrives without apparent friction. Calder & Root read this as policy support doing its job \u2014 stress \"resolved\" by the mere fact that spreads have not widened further. We would note, dryly, that resolution and remission are not the same clinical event.\u00b9\n\nThe reported_vs_public_gap of -0.8% is the detail that earns a footnote rather than a headline, which is precisely the problem. A negative gap of this size, persisting while equities extend gains and new issuance windows reopen, suggests that the public marks are being fed reassurance faster than the underlying book is generating it. Fragilities of this sort do not announce themselves; they accumulate in the space between what is reported and what is true, and that space is currently open and widening at the margin.\n\nConsider the chart we are not printing: hy_spread_now_bps at 320bps plotted against policy_rate_now of 4.50% over the past year would show two lines converging toward a narrow band even as issuance volume picks up \u2014 the classic shape of risk being repriced downward just as balance sheets take on more of it. That convergence is not evidence of health; it is evidence that the market has stopped discriminating, which is a different thing entirely, and cheaper to mistake for the same thing.\n\nCpi_now at 2.4% gives the policy narrative just enough cover to sound plausible. That is the risk to our own view: if disinflation holds and the rate path eases from here, the gap we're flagging may simply close on its own, and our caution will have cost a quarter or two of carry.\n\n\u00b9 Marks lag reality; they rarely lag it by admitting so.",
+ "violations": []
+}

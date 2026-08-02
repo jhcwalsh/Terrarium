@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-comp_gap-meridian",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "Dear Partners,\n\nThe quarter arrived with the kind of macro noise that makes for good copy and mediocre decision-making. Headline inflation has settled to 2.7%, the policy rate sits at 4.75%, and high-yield spreads have tightened to 380bps \u2014 a backdrop that, taken together, reads as a market normalizing rather than one in distress. Public equities agreed, rallying +9.0% on the quarter as risk appetite returned with some enthusiasm. We would simply note that enthusiasm and durability are not the same instrument, and we continue to underwrite to the latter.\n\nOur flagship reported +0.5% for the quarter, +1.0% year-to-date, and +28.0% since inception \u2014 a track record we regard as intact and directionally sound. We are aware that the gap between our marks and the public rally is the subject of conversation, including in The Ledger and The Simulated Wire, and we want to address it plainly rather than let it linger. Listed comparables have rerated sharply and quickly, in some cases on thin trading and reflexive positioning; private valuations, by construction and by discipline, do not chase a single quarter's tape. The NAV index at 101.0 reflects portfolio companies that are, operationally, performing in line with underwriting \u2014 we've had this confirmed independently through Kestrel Advisory's latest review cycle. What you are seeing is a temporary dislocation between how public and private markets price the same improving fundamentals, not a divergence in the fundamentals themselves. We would rather be right on timing than fast on optics.\n\nUnderneath the marks, the work continues. R. Okafor's operating team has pushed procurement consolidation across three portfolio companies this quarter, and J. Lindqvist's pricing initiatives at our industrials platform are ahead of plan \u2014 the kind of unglamorous execution that doesn't move a public comp overnight but does move a hold period. Stonebeck Credit remains a constructive partner on our capital structures as refinancing windows reopen at",
+ "violations": []
+}

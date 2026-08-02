@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-gate_event-grimshaw-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Title: Private credit's marks still owe reality a correction\n\nRating: underweight\n\nStonebeck Credit's gating of redemptions is not an isolated liquidity hiccup; it is the mechanism by which private credit reveals what its marks have been declining to say. The headline one_year_return of +6.0% sits awkwardly beside a ytd_return of -3.5%, and the reported_vs_public_gap of +1.0% is the footnote every allocator should read twice*: reported marks continue to run ahead of what public proxies imply, even as secondary bids are quoted in the low 80s. A discount of that magnitude does not appear in a healthy market; it appears in one where sellers know something the marking committee has not yet processed.\n\nConsider the chart one would draw here: hy_spread_now_bps at 640bps plotted against policy_rate_now of 5.25% and cpi_now of 3.8%, with the private-credit NAV line laid across it almost flat, drawdown a modest -3.0%. The public line lurches downward with each redemption headline; the private line glides. Two markets, one credit cycle \u2014 the gap between the lines is not evidence of insulation, it is evidence of lag.\n\nCalder & Root's view \u2014 that policy support resolves the stress \u2014 mistakes the absence of stated losses for the absence of losses. Policy rate stability does not repair impaired collateral or restore gated liquidity; it merely removes one variable from a still-fragile equation. Fragilities compound quietly in private structures precisely because marks lag reality, and gates are the first honest disclosure investors receive.\n\nThe risk to this view: if secondary bids in the low 80s reflect forced-seller distress rather than fundamental repricing, the eventual mark-to-market convergence could be shallower than implied here \u2014 a partial vindication of patience rather than a full unwind.\n\n*A habit worth cultivating before the next NAV print.",
+ "violations": []
+}

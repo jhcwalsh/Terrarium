@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-gate_event-stonebeck",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 0,
+ "text": "Partners,\n\nSpring came in noisy this year. The CPI print at 3.8% and a policy rate holding at 5.25% have kept every borrower's calculator busy, and high yield spreads widening to 640bps tells you underwriters are charging more to sleep at night. We don't begrudge them that. My grandfather used to say a fence built before the storm holds better than one built after \u2014 that's the spirit behind every credit agreement we sign, structural seniority first, features second. It's not the flashiest way to build a portfolio, but it's the way that lets you look your borrowers in the eye when the weather turns.\n\nAnd the weather has turned, some. Public equities were down -3.0% this quarter; our reported return came in at -2.0%, bringing us to -3.5% year-to-date, against a since-inception figure of +18.0% that we still believe reflects the character of this book more than any single quarter does. The NAV index sits at 96.5 \u2014 a mark",
+ "violations": []
+}

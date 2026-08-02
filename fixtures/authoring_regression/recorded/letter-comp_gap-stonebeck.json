@@ -1,0 +1,20 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [
+  [
+   {
+    "message": "no hedging language anywhere in the draft",
+    "rule": "G5"
+   }
+  ]
+ ],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "letter",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "letter-comp_gap-stonebeck",
+ "prompt_version": "author-prompt/letter@1.1",
+ "retry_count": 1,
+ "text": "Dear Partners,\n\nThere's an old saying where I grew up: the loudest thunder doesn't always bring the most rain. That's been the tenor of markets this quarter. Public equities put on a real show \u2014 up +9.0% \u2014 and the newswires (The Simulated Wire and The Ledger both ran versions of this) are full of talk about listed comps rerating sharply and the public rally leaving private marks behind. High yield spreads sit at 380bps, policy rates at 4.75%, and CPI at 2.7% \u2014 a backdrop that, in our judgment, still rewards patient, structurally senior capital over capital chasing the tape.\n\nWe want to be direct with you about our own numbers, because that's the kind of partnership we've tried to build. Stonebeck's reported return this quarter was +0.5%, bringing year-to-date to +1.0%, against a since-inception figure of +28.0%. Our NAV index sits at 101.0. We recognize the gap between that print and the public market's +9.0% quarter is wide \u2014 wider than we'd like to explain away with a shrug. Private credit marks, by design and by mandate, do not chase quarterly public sentiment; they reflect underlying cash flows, covenant positions, and our own underwriting discipline. We believe that discipline \u2014 anchored in structural seniority across the portfolio \u2014 is precisely why our marks lag rather than lead a public rally. Whether that gap closes, widens, or simply persists is not something we can promise you either way; it depends on how durable this rerating proves to be, and durability is a question the market itself hasn't answered yet.\n\nOn the portfolio itself: the constructive amendment work we described in prior quarters continues in the same spirit \u2014 borrowers and lenders finding workable paths rather than confrontations. J. Lindqvist's team and R. Okafor have both been active alongside our advisors at Kestrel Advisory in structuring these conversations, and Aline Vessey continues to represent The Harborlight Pension Trust's interests on our advisory council with the same steady hand she's always brought.\n\nLooking ahead, we remain constructive, though we'd be doing you a disservice if we didn't note the obvious: spread compression, public rerating, and rate stability don't always arrive together, and we can't rule out periods where our marks and the tape diverge further before they converge, if they converge at all. Meridian Capital Partners and Grimshaw Partners, as always, remain valued partners in sourcing and co-investment, and we expect that relationship to continue serving the portfolio well \u2014 expectation, not certainty.\n\nAs ever, our door and our numbers are open to you.\n\nWith appreciation,\n\nStonebeck Credit",
+ "violations": []
+}

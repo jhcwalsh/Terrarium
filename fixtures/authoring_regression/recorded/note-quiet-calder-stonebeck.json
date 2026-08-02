@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-quiet-calder-stonebeck",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Stonebeck advances quietly toward steadier ground\n\nRating: overweight\n\nCalder & Root reads today's stillness as confirmation, not concealment. Stonebeck enters March 15, 2028 with a one-year return of +11.0% and a year-to-date gain of +1.1%, a pairing that shows durable carry compounding beneath a calmer surface. Drawdown sits at +0.0%, and the tape offered nothing to disturb that: a quiet session on the wire, with data printing in line. In our structurally constructive framework, quiet sessions following in-line prints are not absence of signal \u2014 they are the signal. Markets that have digested a policy rate of 5.00% and CPI of 2.9% without incident are markets that have already priced the hard part.\n\nGrimshaw Partners suggests fragilities are compounding beneath stable marks. We read the same 400bps high-yield spread and see the opposite mechanism at work: spreads holding at 400bps through an unremarkable session reflect a market that has stopped demanding fresh compensation for policy risk, not one that is quietly deteriorating. The reported-vs-public gap of -0.2% is marginal by any standard \u2014 far too narrow to support a thesis of hidden stress. Where others see marks masking damage, we see a modest, explainable variance consistent with routine reporting lag. Growth and policy support have historically resolved exactly this kind of surface-level noise over time, and nothing in today's newsflow interrupts that pattern.\n\nThe risk to our own view: a genuinely quiet tape can also be a tape that hasn't yet been tested, and a small reported-vs-public gap could widen if underlying marks are more stressed than the -0.2% currently implies. We hold overweight while watching for that gap to move, rather than for the next headline.",
+ "violations": []
+}

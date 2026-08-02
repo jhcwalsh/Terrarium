@@ -1,0 +1,37 @@
+{
+ "artifact_type": "wire_item",
+ "checkable_claims_table": {
+  "cpi_now": "2.9%",
+  "drawdown": "+0.0%",
+  "hy_spread_now_bps": "400bps",
+  "one_year_return": "+11.0%",
+  "policy_rate_now": "5.00%",
+  "reported_vs_public_gap": "-0.2%",
+  "ytd_return": "+1.1%"
+ },
+ "chronicle_extracts": [
+  "A quiet session on the wire",
+  "Data prints in line"
+ ],
+ "dateline": "2028-03-15",
+ "dateline_quarter": 8,
+ "house": {
+  "coverage": [
+   "private_credit",
+   "stonebeck",
+   "credit"
+  ],
+  "id": "grimshaw",
+  "name": "Grimshaw Partners",
+  "prior": "structurally_cautious",
+  "voice": {
+   "register": "dry_academic",
+   "tics": [
+    "footnote-style asides",
+    "one chart described in words"
+   ]
+  }
+ },
+ "rival_stance_summary": "Calder & Root: policy support resolves the stress; stay the course.",
+ "subject": "stonebeck"
+}

@@ -1,0 +1,13 @@
+{
+ "asof": "2026-08-02",
+ "attempt_violations": [],
+ "author_tier": 2,
+ "gate_result": "pass",
+ "kind": "note",
+ "model_id": "claude-sonnet-5",
+ "payload_id": "note-crash-calder-private_credit",
+ "prompt_version": "author-prompt/note@1.2",
+ "retry_count": 0,
+ "text": "Private credit pushes through the drawdown toward a policy-led reset\n\nRating: overweight\n\nThe headline numbers look severe in isolation\u2014ytd_return of -12.0%, a drawdown of -18.0%, and hy_spread_now_bps at 780bps as spreads gap wider on default fears\u2014but Calder & Root reads this as the trough of a cycle that policy and growth will resolve, not the start of a structural unwind. The one_year_return of +3.3% is the more instructive figure: it shows the asset class already absorbing the equities bear market shock and recovering ground, even as cpi_now sits at 4.1% and policy_rate_now at 5.25%. Tight financial conditions are real, but they are also the mechanism by which excess is wrung out before support arrives.\n\nGrimshaw Partners frames the reported_vs_public_gap of +9.5% as evidence that fragilities are compounding beneath stable marks. We read the same gap as a lag, not a lie: private marks are conservative by construction and have simply not chased the public bear market lower in real time. As policy accommodation eventually eases and growth stabilizes, that gap should compress from the public side catching up\u2014via recovery\u2014rather than private marks capitulating downward. Wider spreads at 780bps reflect fear pricing ahead of fundamentals, which is precisely the dislocation constructive allocators are positioned to harvest.\n\nThe risk to this view is real and specific: if policy_rate_now proves stickier than the market currently expects given cpi_now at 4.1%, refinancing pressure on levered borrowers could force the reported_vs_public_gap to close through markdowns rather than recoveries, validating the fragility thesis rather than ours. We acknowledge that path but do not think current data confirms it yet.",
+ "violations": []
+}
