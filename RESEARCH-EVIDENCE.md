@@ -43,10 +43,45 @@ below:** *a policy that wins in the ensemble has been tested against the policy 
   exists with the decade in-sample. The reading is a recorded human
   judgement (S2-SEVERE-GATING); the L3 leg is structurally vacuous (0 blocks
   dropped) — stated in the evidence, not smoothed.
-- **The one-shot holdout (wp5-06) is UNSPENT.** It runs through the
-  explicit-purpose token path, once, on the owner's word only
-  (`Instructions/holdout-evaluation-spec.md`, sealed AM-2026-08-02-006). This
-  document will carry its result verbatim, whatever it says.
+- **THE ONE-SHOT HOLDOUT IS SPENT** (owner authorization verbatim "Go",
+  2026-08-03; spec sealed AM-2026-08-02-006; one generation at base_seed
+  20260000, one token read, one table --
+  `artifacts/wp56/holdout-evaluation.json`). The result, verbatim both ways:
+
+  - **Primary (drawdown surprise): -0.3952** -- realized max
+    drawdown 0.248 (the 2022 bear) against the
+    ensemble's p95 warning 0.644. Reality stayed
+    inside the warning: one sentence of support for decade-scale usability,
+    with the single-realization caveat stated (n=1 decade; confirmation, not
+    proof).
+  - **Realized terminal wealth sits at the 99.6%
+    percentile of the ensemble** -- the cone contained the downside and badly
+    under-spanned the realized upside. Reported as a finding, no footnote.
+  - **cpi band coverage 0.000**: the realized 2021-2023 inflation burst
+    escaped the bands every month -- the C3-accepted inflation-era limitation
+    (`Instructions/campaign2-regime-fix-options.md`) manifesting where its
+    documentation predicted. cape_v's zero is partly definitional (holdout-
+    span vs train+val demeaning centers). fx_usd went UNREAD (a reader
+    fallback bug, logged in the artifact); per the sealed spec nothing
+    re-runs -- the gap publishes as a gap.
+
+| factor | realized months | coverage in [p5, p95] |
+|---|---|---|
+| cape_v | 45 | 0.000 |
+| cpi | 65 | 0.000 |
+| equity_mkt | 65 | 0.785 |
+| equity_vol | 67 | 0.761 |
+| funding_spread | 12 | 0.000 |
+| hml | 65 | 0.708 |
+| hqm_curve | 66 | 0.682 |
+| hy_spread | 67 | 0.985 |
+| ig_spread | 66 | 0.803 |
+| mom | 65 | 0.908 |
+| policy_rate | 66 | 1.000 |
+| smb | 65 | 0.785 |
+| ust_10y | 67 | 0.776 |
+| ust_2y | 67 | 0.836 |
+
 
 ## RQ3 — Decision value: do ensemble-informed decisions beat benchmarks?
 

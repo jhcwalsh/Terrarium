@@ -31,6 +31,8 @@ def test_regenerates_byte_identical_and_carries_the_contract():
         "The negative results, collected",
         "INCONCLUSIVE",
         "2022 replay: FAIL",
-        "holdout (wp5-06) is UNSPENT",
+        "THE ONE-SHOT HOLDOUT IS SPENT",
+        "Primary (drawdown surprise)",
+        "cpi band coverage 0.000",
     ):
         assert marker in flat, marker

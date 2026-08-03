@@ -158,6 +158,11 @@ class JoineryConfig:
     two_pass: bool = False  # see the module docstring; one-pass is the certified default
     support_quantile: float = sp.EXTRAPOLATION_QUANTILE
     s0_date: str | None = None  # None -> the artifact's last fitted month
+    #: wp5-06 (the sealed holdout spec's "regime state at the boundary"): pin the
+    #: first spell's regime instead of drawing it from historical frequencies.
+    #: None keeps the default draw; generation-side conditioning only -- nothing
+    #: about the holdout enters here, the label comes from train+val data.
+    initial_regime: int | None = None
     reconcile: rc.ReconcileConfig = field(default_factory=rc.ReconcileConfig)
 
     #: WP2.10 ablation lever — DN-1.1 §II.7 system **B** (neural rollout).
@@ -194,6 +199,7 @@ class JoineryConfig:
             "two_pass": self.two_pass,
             "support_quantile": self.support_quantile,
             "s0_date": self.s0_date,
+            "initial_regime": self.initial_regime,
             "bind_waypoints": self.bind_waypoints,
             "use_climate": self.use_climate,
             "reconcile": {k: float(v) for k, v in self.reconcile.__dict__.items()},
@@ -455,7 +461,12 @@ class _DecadeFactory:
                 self.climate, months=self.months, s0_date=self.config.s0_date, seed=l1_seed
             )
         if self.world is None:
-            regimes = simulate_regimes(self.regimes_artifact, sim.states, seed=l2_seed)
+            regimes = simulate_regimes(
+                self.regimes_artifact,
+                sim.states,
+                seed=l2_seed,
+                initial_regime=self.config.initial_regime,
+            )
         else:
             regimes = regime_path_for_world(
                 self.regimes_artifact,
