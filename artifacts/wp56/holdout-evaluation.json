@@ -1,0 +1,115 @@
+{
+ "kind": "holdout-evaluation",
+ "spec": "Instructions/holdout-evaluation-spec.md (sealed AM-2026-08-02-006)",
+ "authorization": "owner, verbatim 'Go', 2026-08-03",
+ "created_at": "2026-08-03",
+ "token_purpose": "final-evaluation",
+ "per_factor_read_log": {
+  "equity_mkt": "manifest resolution",
+  "smb": "manifest resolution",
+  "hml": "manifest resolution",
+  "mom": "manifest resolution",
+  "equity_vol": "manifest resolution",
+  "commodities": "no data in span",
+  "ig_spread": "manifest resolution",
+  "hy_spread": "manifest resolution",
+  "policy_rate": "manifest resolution",
+  "ust_2y": "manifest resolution",
+  "ust_10y": "manifest resolution",
+  "cpi": "manifest resolution",
+  "hqm_curve": "manifest resolution",
+  "funding_spread": "manifest resolution",
+  "fx_usd": "no data in span",
+  "cape_v": "manifest resolution"
+ },
+ "generator": {
+  "id": "hier-flow-v1 (campaign-2 promoted pin)",
+  "checkpoint_hash": "c6addb5420723e59c9966dd65c1127d18eca46097049ff7434295cab512f9873",
+  "n_paths": 1024,
+  "horizon_months": 67,
+  "base_seed": 20260000,
+  "boundary_initial_regime": "REC"
+ },
+ "primary_drawdown_surprise": {
+  "value": -0.3952328239217262,
+  "realized_max_drawdown": 0.24844932247034712,
+  "ensemble_p95_drawdown": 0.6436821463920733,
+  "reading": "negative = reality stayed inside the p95 warning; positive = the world hurt more than warned"
+ },
+ "secondary_band_coverage_5_95": {
+  "cape_v": {
+   "months": 45,
+   "coverage_5_95": 0.0
+  },
+  "cpi": {
+   "months": 65,
+   "coverage_5_95": 0.0
+  },
+  "equity_mkt": {
+   "months": 65,
+   "coverage_5_95": 0.7846153846153846
+  },
+  "equity_vol": {
+   "months": 67,
+   "coverage_5_95": 0.7611940298507462
+  },
+  "funding_spread": {
+   "months": 12,
+   "coverage_5_95": 0.0
+  },
+  "hml": {
+   "months": 65,
+   "coverage_5_95": 0.7076923076923077
+  },
+  "hqm_curve": {
+   "months": 66,
+   "coverage_5_95": 0.6818181818181818
+  },
+  "hy_spread": {
+   "months": 67,
+   "coverage_5_95": 0.9850746268656716
+  },
+  "ig_spread": {
+   "months": 66,
+   "coverage_5_95": 0.803030303030303
+  },
+  "mom": {
+   "months": 65,
+   "coverage_5_95": 0.9076923076923077
+  },
+  "policy_rate": {
+   "months": 66,
+   "coverage_5_95": 1.0
+  },
+  "smb": {
+   "months": 65,
+   "coverage_5_95": 0.7846153846153846
+  },
+  "ust_10y": {
+   "months": 67,
+   "coverage_5_95": 0.7761194029850746
+  },
+  "ust_2y": {
+   "months": 67,
+   "coverage_5_95": 0.835820895522388
+  }
+ },
+ "secondary_terminal_wealth_percentile": 0.99609375,
+ "secondary_sign_of_mean_error": {
+  "cape_v": -1,
+  "cpi": 1,
+  "equity_mkt": 1,
+  "equity_vol": -1,
+  "funding_spread": -1,
+  "hml": 1,
+  "hqm_curve": -1,
+  "hy_spread": -1,
+  "ig_spread": -1,
+  "mom": -1,
+  "policy_rate": 1,
+  "smb": -1,
+  "ust_10y": -1,
+  "ust_2y": -1
+ },
+ "single_realization_caveat": "n=1 decade; whichever way any number falls, this is one realized path against a distribution -- confirmation or divergence, not proof"
+}

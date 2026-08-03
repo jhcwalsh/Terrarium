@@ -183,5 +183,10 @@ experiments/
 /artifacts/wp57/*
 !/artifacts/wp57/walkforward-final.json
 
+# wp5-06: THE one-shot holdout evaluation (spent 2026-08-03, owner "Go")
+!/artifacts/wp56/
+/artifacts/wp56/*
+!/artifacts/wp56/holdout-evaluation.json
+
 # wp3-00 scratch: regenerable measured fragment (embedded verbatim in pre-registration-g3.yaml)
 /g3-reference-measured.yaml
