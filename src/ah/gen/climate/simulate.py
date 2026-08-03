@@ -252,6 +252,61 @@ def simulate_decades(
     return SimulatedClimate(states=out, theta_index=idx, params=params, s0_date=ts, seed=seed)
 
 
+def simulate_decades_from_state(
+    artifact: ClimateArtifact,
+    n_decades: int,
+    *,
+    seed: int,
+    s0: np.ndarray,
+    theta_index: int,
+    months: int = 120,
+    cycle: np.ndarray | None = None,
+) -> SimulatedClimate:
+    """Simulate continuations from an EXPLICIT state vector (wp5-03 re-coning).
+
+    The mid-path conditioning entry point: the five-state dynamics are Markov in
+    ``s``, so continuing from a simulated path's own month-``m`` state is EXACT
+    -- the same :func:`_simulate_path` the fitted-date entry uses, handed the
+    observed state instead of a posterior smoothed one. ``theta_index`` is
+    REQUIRED, not drawn: a continuation conditions on the parameter draw the
+    original decade was simulated under (recorded in
+    :attr:`SimulatedClimate.theta_index`), because re-drawing theta mid-path
+    would change the world's physics halfway through a history. Each of the
+    ``n_decades`` continuation paths gets its own innovation stream
+    (``PCG64(seed + 7919*k)``), which is what makes the result a CONDITIONAL
+    ENSEMBLE from one state rather than one replay.
+
+    ``s0_date`` on the result is set to the artifact's last grid month purely to
+    satisfy the record's type; the state is the caller's, not a grid month's --
+    consumers of re-coned climates read states, never s0_date.
+    """
+    if n_decades < 1:
+        raise ValueError("n_decades must be >= 1")
+    if months < 1:
+        raise ValueError("months must be >= 1")
+    s0 = np.asarray(s0, dtype=np.float64).reshape(-1)
+    if s0.shape != (N_STATES,):
+        raise ValueError(f"s0 must have shape ({N_STATES},); got {s0.shape}")
+    if not np.all(np.isfinite(s0)):
+        raise ValueError("s0 must be finite")
+    if not (0 <= int(theta_index) < artifact.n_draws):
+        raise ValueError(f"theta_index {theta_index} outside [0, {artifact.n_draws})")
+
+    cyc = _validate_cycle(cycle, n_decades, months)
+    theta = {name: float(artifact.params[name][int(theta_index)]) for name in PARAM_NAMES}
+
+    out = np.empty((n_decades, months, N_STATES), dtype=np.float64)
+    for k in range(n_decades):
+        rng = np.random.Generator(np.random.PCG64(seed + SEED_STRIDE * k))
+        out[k] = _simulate_path(theta, s0, months, cyc[k], rng)
+
+    idx = np.full(n_decades, int(theta_index), dtype=np.int64)
+    params = {name: artifact.params[name][idx] for name in PARAM_NAMES}
+    return SimulatedClimate(
+        states=out, theta_index=idx, params=params, s0_date=artifact.dates[-1], seed=seed
+    )
+
+
 def _simulate_path(
     theta: Mapping[str, float],
     s0: np.ndarray,

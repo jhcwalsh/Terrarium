@@ -7,6 +7,28 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP5.3 — the counterfactual machinery: exact re-coning + the
+  was-it-a-good-call metric.** The kickoff's verification gate PASSED
+  before building: mid-path conditioning is supported EXACTLY, no
+  approximation anywhere (the halt condition never fired). Three exact
+  entry points: `simulate_decades_from_state` (L1 is Markov in the
+  five-state vector; theta stays the original decade's draw),
+  `simulate_regimes_from_spell` (the running spell continues via exact
+  truncated-NegBin remaining-sojourn arithmetic — pmf-recurrence CDF
+  inversion, no rejection stalls), and `assemble_continuation_path`
+  (prefix held fixed; h_t reads real history; cpi rebases to the
+  prefix's last level EXACTLY — tested to equality). `ah.gen.recone`
+  orchestrates: theta recovered bit-exactly from recorded lineage alone
+  (the PCG64 stream replay; no schema change), re-cone points on year
+  boundaries (= the decision grid; a scope choice, stated), and four
+  loud refusals where lineage cannot support exactness
+  (world-conditioned ensembles, non-semimarkov modes, acceptance-filter
+  replacements, missing records). `ah.eval.counterfactual.score_decision`
+  is the explicit metric: paired deltas on identical continuations
+  (DN-6's design advantage — shared shocks cancel, tested), win rate +
+  quantiles + the whole delta distribution (wp5-05 needs it). The
+  baseline twin is evaluated per cone path inside the metric — the
+  hold-course twin at scale, by construction. 17 new tests.
 - **WP5.2 — the `--inspect` renderer** (`ah inspect RUN_ID [--out PATH]`;
   MPP-A1's build item, whose WP2R.4 label this repo had reassigned). One
   code path: any RunRecord id → a static, self-contained HTML figure page

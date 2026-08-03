@@ -95,6 +95,8 @@ __all__ = [
     "load_config",
     "regime_path_for_world",
     "simulate_regimes",
+    "simulate_regimes_from_spell",
+    "spell_covariates",
     "spells_from_labels",
 ]
 
@@ -502,6 +504,138 @@ def simulate_regimes(
 # --------------------------------------------------------------------------- #
 # WorldSpec regime modes (DN-1.1 SS II.3 binding; schemas/ field names)
 # --------------------------------------------------------------------------- #
+
+
+def spell_covariates(artifact: RegimesArtifact, state_row: np.ndarray, regime: int) -> np.ndarray:
+    """The standardized z(s) at one month -- the public face of the private
+    covariate constructor, for wp5-03 re-coning: a continuation must reproduce
+    the ORIGINAL spell's sojourn covariates (z at the spell's first month, which
+    sits in the observed prefix), and computing them anywhere else would fork
+    the definition."""
+    psi0 = float(artifact.meta["slope_psi0"])
+    phi_c0 = float(artifact.meta["slope_phi_c0"])
+    return _sim_covariates(
+        artifact, np.asarray(state_row, dtype=np.float64), int(regime), psi0, phi_c0
+    )
+
+
+def _truncated_negbin_remaining(rng: np.random.Generator, r: float, p: float, elapsed: int) -> int:
+    """Sample the REMAINING sojourn months, exactly, given ``elapsed`` already run.
+
+    The spell's total is ``S = 1 + X`` with ``X ~ NegBin(r, p)``; a spell still
+    running after ``elapsed`` months means ``S > elapsed``, i.e.
+    ``X >= elapsed``. This inverts the conditional CDF ``X | X >= elapsed`` via
+    the pmf recurrence ``pmf(k+1) = pmf(k) * (k + r) / (k + 1) * (1 - p)``
+    (stable, no special functions) -- EXACT conditioning, no rejection loop to
+    stall in a deep tail and no truncation cap to bias one. Returns
+    ``S - elapsed >= 1``.
+    """
+    if elapsed < 1:
+        raise RegimesError(f"elapsed must be >= 1 (a running spell); got {elapsed}")
+    pmf = p**r  # pmf(0)
+    cdf = pmf
+    for k in range(elapsed - 1):
+        pmf *= (k + r) / (k + 1.0) * (1.0 - p)
+        cdf += pmf
+    # cdf = P(X <= elapsed - 1); condition on the tail beyond it
+    tail = 1.0 - cdf
+    if tail <= 0.0:  # numerically exhausted tail: the spell ends now
+        return 1
+    target = cdf + float(rng.random()) * tail
+    x = elapsed - 1
+    acc = cdf
+    while acc < target:
+        x += 1
+        pmf *= (x - 1 + r) / x * (1.0 - p)
+        acc += pmf
+        if pmf <= 0.0:
+            break
+    # The max-guard is the same "numerically exhausted tail" convention as the
+    # early return above: float underflow deep in the tail means the remaining
+    # mass is unrepresentable, and the spell ends now rather than at a made-up
+    # horizon. Unreachable in any regime the fitted sojourns actually occupy.
+    return max(1, 1 + x - elapsed)
+
+
+def simulate_regimes_from_spell(
+    artifact: RegimesArtifact,
+    states: np.ndarray,
+    *,
+    seed: int,
+    theta_index: int,
+    current_regime: int,
+    elapsed: int,
+    spell_start_state: np.ndarray,
+) -> RegimePaths:
+    """Continue regime paths from MID-SPELL (wp5-03 re-coning) -- exactly.
+
+    The conditioning state of a semi-Markov chain at month ``m`` is
+    ``(current regime, elapsed months in the running spell)`` plus the
+    covariates the running spell's sojourn was drawn against (z at the spell's
+    FIRST month -- ``spell_start_state`` is that month's L1 state row, read from
+    the observed prefix; both are derivable from an Ensemble's recorded labels
+    and slow states). The remaining sojourn is drawn from the exact truncated
+    NegBin (:func:`_truncated_negbin_remaining`); after the running spell ends,
+    the chain proceeds under the ordinary machinery against the CONTINUATION's
+    own states. ``theta_index`` is required: the continuation conditions on the
+    posterior draw the original decade ran under (recorded in
+    :attr:`RegimePaths.theta_index`).
+    """
+    arr = np.asarray(states, dtype=np.float64)
+    if arr.ndim != 3 or arr.shape[2] != N_STATES:
+        raise RegimesError(f"states must be (n_decades, months, {N_STATES}); got shape {arr.shape}")
+    n_decades, months = int(arr.shape[0]), int(arr.shape[1])
+    if not (0 <= int(theta_index) < artifact.n_draws):
+        raise RegimesError(f"theta_index {theta_index} outside [0, {artifact.n_draws})")
+    if not (0 <= int(current_regime) < N_REGIMES):
+        raise RegimesError(f"current_regime {current_regime} outside [0, {N_REGIMES})")
+
+    psi0 = float(artifact.meta["slope_psi0"])
+    phi_c0 = float(artifact.meta["slope_phi_c0"])
+    draw = int(theta_index)
+    alpha = artifact.alpha[draw]
+    gamma = artifact.gamma[draw]
+    r = artifact.r[draw]
+    trans_a = artifact.trans_a[draw]
+    b_dest = artifact.b_dest[draw]
+
+    z0 = spell_covariates(artifact, spell_start_state, int(current_regime))
+    logit_p = float(alpha[current_regime] + gamma[current_regime] @ z0)
+    p0 = 1.0 / (1.0 + np.exp(-logit_p))
+    p0 = min(max(p0, 1e-9), 1.0 - 1e-9)
+
+    labels = np.empty((n_decades, months), dtype=np.int64)
+    idx = np.full(n_decades, draw, dtype=np.int64)
+    for k in range(n_decades):
+        rng = np.random.Generator(np.random.PCG64(seed + SEED_STRIDE * k))
+        remaining = _truncated_negbin_remaining(rng, float(r[current_regime]), p0, int(elapsed))
+        regime = int(current_regime)
+        end = min(remaining, months)
+        labels[k, :end] = regime
+        t = end
+        while t < months:
+            z_tr = _sim_covariates(artifact, arr[k, t], regime, psi0, phi_c0)
+            logits = trans_a[regime] + b_dest @ z_tr
+            logits[regime] = -np.inf
+            regime = int(rng.choice(N_REGIMES, p=_softmax(logits)))
+            z = _sim_covariates(artifact, arr[k, t], regime, psi0, phi_c0)
+            logit = float(alpha[regime] + gamma[regime] @ z)
+            p = 1.0 / (1.0 + np.exp(-logit))
+            p = min(max(p, 1e-9), 1.0 - 1e-9)
+            duration = 1 + int(rng.negative_binomial(float(r[regime]), p))
+            spell_end = min(t + duration, months)
+            labels[k, t:spell_end] = regime
+            t = spell_end
+
+    cycle = artifact.cycle_by_regime[labels]
+    return RegimePaths(
+        labels=labels,
+        cycle=cycle,
+        theta_index=idx,
+        seed=int(seed),
+        mode="semimarkov",
+        ruleset_version=str(artifact.meta.get("ruleset_version", "unknown")),
+    )
 
 
 def regime_path_for_world(
