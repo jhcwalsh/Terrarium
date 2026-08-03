@@ -252,6 +252,24 @@ def replay_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) ->
         raise typer.Exit(1)
 
 
+@app.command("inspect")
+def inspect_cmd(
+    ctx: typer.Context,
+    run_id: str | None = typer.Argument(None),
+    out: Path | None = typer.Option(None, "--out", help="Output HTML path (default <run_id>.html)"),
+) -> None:
+    """Render a RunRecord's static figure page (wp5-02; regenerates + verifies)."""
+    from ah.inspect import render_inspect_page
+
+    conn = _db(ctx)
+    rid = run_id or _latest_run(conn)
+    page = render_inspect_page(conn, rid)
+    target = out if out is not None else Path(f"{rid}.html")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(page, encoding="utf-8", newline="\n")
+    typer.echo(str(target))
+
+
 @app.command("verify")
 def verify_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) -> None:
     """Verify a run reproduces its stored digest (prints True/False)."""
