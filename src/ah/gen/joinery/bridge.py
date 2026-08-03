@@ -553,6 +553,80 @@ def assemble_decade_path(
     return builder.assembled, builder.conds
 
 
+def assemble_continuation_path(
+    *,
+    prefix: np.ndarray,
+    months: int,
+    waypoints: DecadeWaypoints,
+    targets: MonthlyTargets | None,
+    states_row: np.ndarray,
+    sampler: BlockSampler,
+    stats: SourceStats,
+    rng: np.random.Generator,
+    stride: int = BLOCK_STRIDE,
+    guidance: GuidanceHook | None = None,
+) -> tuple[np.ndarray, list[BlockConditioning]]:
+    """A decade continuation seeded by an OBSERVED prefix (wp5-03 re-coning).
+
+    The builder's frame spans ``prefix + months``; the prefix rows are written
+    as data before any block is sampled, so every conditioning component reads
+    real history exactly: ``h_t`` for early continuation blocks summarizes the
+    prefix's own trailing year, chained factors rebase at the prefix's last
+    level, and ``waypoints``/``targets``/``states_row`` must span the FULL
+    padded frame (prefix months first -- built from the observed states and
+    labels -- then the continuation's).
+
+    THE PREFIX IS HELD FIXED. The first sampled block starts AT the seam, not
+    overlapping it: observed data is not blendable, so the seam carries no
+    cross-fade (interior continuation joins keep the standard one). The seam's
+    smoothness therefore rests on the same two mechanisms every block join
+    already rests on -- conditioning (h_t, Δw) and the chained-factor rebase --
+    plus per-year reconciliation downstream. Stated, not smuggled.
+
+    Returns ONLY the continuation ``(months, n_factors)`` and its conds.
+    """
+    names, eq_col, spread_col = _factor_columns(sampler)
+    n_factors = len(names)
+    block_months = int(sampler.block_months)
+    prefix = np.asarray(prefix, dtype=np.float64)
+    if prefix.ndim != 2 or prefix.shape[1] != n_factors:
+        raise JoineryError(
+            f"prefix must be (prefix_months, {n_factors}) in sampler factor order; "
+            f"got {prefix.shape}"
+        )
+    p = int(prefix.shape[0])
+    if p < 12:
+        raise JoineryError(f"prefix must cover at least 12 months (h_t's window); got {p}")
+    if p % stride != 0:
+        raise JoineryError(f"prefix length {p} must sit on the block stride grid ({stride})")
+    total = p + months
+
+    builder = _PathBuilder(
+        months=total,
+        spec=DecadeAssembly(waypoints=waypoints, targets=targets, states_row=states_row, rng=rng),
+        names=names,
+        eq_col=eq_col,
+        spread_col=spread_col,
+        block_months=block_months,
+        stats=stats,
+    )
+    builder.assembled[:p] = prefix
+    builder.written = p
+
+    for start in range(p, total, stride):
+        cond = builder.conditioning(start)
+        block = np.asarray(sampler.sample_block(cond, rng), dtype=np.float64)
+        if block.shape != (block_months, n_factors):
+            raise JoineryError(
+                f"sampler returned shape {block.shape}, expected {(block_months, n_factors)}"
+            )
+        if guidance is not None:
+            block = np.asarray(guidance.adjust(block, cond), dtype=np.float64)
+        builder.integrate(start, block)
+
+    return builder.assembled[p:], builder.conds
+
+
 def assemble_decade_paths(
     *,
     months: int,
