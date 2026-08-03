@@ -7,6 +7,26 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **CAMPAIGN-2 PROMOTION: PROMOTE, per-seed route** (owner-authorized
+  end to end). Three flow checkpoints trained on the sealed
+  fifteen-factor vintage (sealed WP2.9 selection config, no retuning;
+  C3: no residual drift, guidance 1.0; S −1.75/−1.72/−1.75, all
+  early-stopped at step 4000). Six criterion cells (1024×120, sealed
+  vintage, prereg verified) via `run_ablation_grid.run_cell` verbatim:
+  **both sides pass their full batteries clean**, and the challenger
+  beats `bootstrap-v1` in every seed on both sealed clauses
+  (elicitability −2.51..−2.56 vs −2.21; band exceedances 5–12 vs 11–13);
+  the pooled arm concurs (|mean d| 0.316 ≫ sd 0.026). The registry pin
+  moves to the campaign-2 seed-0 checkpoint (`c6addb54…`); the G2
+  artifact remains the generator of record for G2's claims. **The first
+  battery run was INVALID and is superseded** — its reference omitted
+  `resample_length=120` and the bootstrap "failing" dependence at 0.91
+  was the tell; all cells rerun at sealed parameters before any verdict.
+  RFR-96: `criterion_bearing` doesn't check reference parameters
+  (evaluation-layer close-out registered). Evidence:
+  `artifacts/campaign2/PROMOTION.md` + `promotion-verdict.json` +
+  `configs/campaign2-checkpoints.json`. The `benchmark_draw_span_bias`
+  disclosure applies verbatim and is quoted in the evidence.
 - **THE CAMPAIGN-2 SEAL** (owner-ratified end to end; amendments
   AM-2026-08-02-007/-008/-009, three locks re-minted, `verify()` clean).
   The vintage moves to `2026-08-02.4` and the generator factor set grows

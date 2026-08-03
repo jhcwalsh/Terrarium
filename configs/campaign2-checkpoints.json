@@ -1,0 +1,47 @@
+{
+  "flow:0": {
+    "best_s": -1.752265355190951,
+    "best_step": 4000,
+    "cb_fingerprint": "f97e9112ee9925aceb41dbb0521071ce2be5ec3bfd3b13da159153b5741c6a5b",
+    "checkpoint": "experiments/campaign2-flow-s0/checkpoint.pt",
+    "checkpoint_hash": "c6addb5420723e59c9966dd65c1127d18eca46097049ff7434295cab512f9873",
+    "config_hash": "cfg:468946039faa22f9",
+    "family": "flow",
+    "seed_index": 0,
+    "steps_run": 12000,
+    "stopped_early": true,
+    "train_seed": 20260728,
+    "vintage_id": "2026-08-02.4",
+    "wall_seconds": 774.5174231529236
+  },
+  "flow:1": {
+    "best_s": -1.7178203131001573,
+    "best_step": 4000,
+    "cb_fingerprint": "f97e9112ee9925aceb41dbb0521071ce2be5ec3bfd3b13da159153b5741c6a5b",
+    "checkpoint": "experiments/campaign2-flow-s1/checkpoint.pt",
+    "checkpoint_hash": "2362a5e8f18626317e8eb2a854ce5b6ab00f749fe4f5ecd3e76d3393161aa2fd",
+    "config_hash": "cfg:468946039faa22f9",
+    "family": "flow",
+    "seed_index": 1,
+    "steps_run": 12000,
+    "stopped_early": true,
+    "train_seed": 20268647,
+    "vintage_id": "2026-08-02.4",
+    "wall_seconds": 795.6689643859863
+  },
+  "flow:2": {
+    "best_s": -1.7450286574842608,
+    "best_step": 4000,
+    "cb_fingerprint": "f97e9112ee9925aceb41dbb0521071ce2be5ec3bfd3b13da159153b5741c6a5b",
+    "checkpoint": "experiments/campaign2-flow-s2/checkpoint.pt",
+    "checkpoint_hash": "3fa5471fb48ebf2736cc1d0eeb7c80c0287621d0eee1f8f6c6eb5239e00ebfe7",
+    "config_hash": "cfg:468946039faa22f9",
+    "family": "flow",
+    "seed_index": 2,
+    "steps_run": 12000,
+    "stopped_early": true,
+    "train_seed": 20276566,
+    "vintage_id": "2026-08-02.4",
+    "wall_seconds": 785.0158271789551
+  }
+}
