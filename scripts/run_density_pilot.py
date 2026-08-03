@@ -122,7 +122,7 @@ def main() -> None:
                 t0 = time.perf_counter()
                 attr = window_contributions(paths, decisions, use_reported=True)
                 timings["attribution_s"] += time.perf_counter() - t0
-                for j, (month, c) in enumerate(zip(attr.months, attr.contributions)):
+                for j, (month, c) in enumerate(zip(attr.months, attr.contributions, strict=True)):
                     rows.append(
                         {
                             "preset": preset_name,
