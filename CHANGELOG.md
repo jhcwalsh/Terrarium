@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP5.4 — the tournament harness** (`ah.tournament.run_tournament`).
+  Same world, same seed, N decision-makers, one revealed path, one twin —
+  differences are decisions and nothing else, made a harness invariant.
+  D-K5-5's **three temporal formats are configuration** (solo /
+  cohort-cadence / simultaneous) and a test pins score invariance across
+  them: scheduling must never move outcomes. The **information basis is
+  configuration too** (`reported` vs `true` — DN-6 §4.2's toggle arms,
+  surfaced where the tournament can randomize them at beta). Policies see
+  only a `WindowState` (revealed, causal — post-window actions cannot
+  reach it); the machine trio mirrors wp4-07's committee baselines at
+  this layer (band rule, seeded luck, hold-course — the last scores
+  exactly zero alpha by construction, tested). Scores land on the
+  retrofit R-1 leaderboard under its triple key; the cohort-exercise
+  export is the wargame record (ranked participants, decisions,
+  rationales verbatim, value paths, dispersion). 12 new tests.
 - **WP5.3 — the counterfactual machinery: exact re-coning + the
   was-it-a-good-call metric.** The kickoff's verification gate PASSED
   before building: mid-path conditioning is supported EXACTLY, no
