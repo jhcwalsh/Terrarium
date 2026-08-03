@@ -78,17 +78,15 @@ def main() -> None:
             try:
                 return catalog.read_observations(CAMPAIGN_VINTAGE_ID, series_id)
             except Exception:
-                return pd.DataFrame(
-                    {"date": pd.Series([], dtype="datetime64[ns]"), "value": []}
-                )
+                return pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]"), "value": []})
 
         access = DataAccess(reader)
-        reference = compute_reference(access, manifest, vintage_id=CAMPAIGN_VINTAGE_ID, seed=20260802)
+        reference = compute_reference(
+            access, manifest, vintage_id=CAMPAIGN_VINTAGE_ID, seed=20260802
+        )
 
     suite = build_horizon_suite(manifest, reference)
-    targets = [
-        s for s in suite if any(sub in s.name for sub in TARGET_SUBSTRINGS)
-    ]
+    targets = [s for s in suite if any(sub in s.name for sub in TARGET_SUBSTRINGS)]
     print(f"target metrics ({len(targets)}):", [s.name for s in targets])
 
     rows = []

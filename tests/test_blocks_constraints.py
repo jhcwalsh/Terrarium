@@ -88,6 +88,10 @@ class TestFloorsByConstruction:
             assert np.all(y[z > -700] >= tr.floor)
         elif tr.kind == "log":
             assert np.all(y >= 0.0)
+        elif tr.kind == "identity":
+            # campaign-2: cape_v is a signed demeaned log -- unbounded BY DESIGN,
+            # the identity map is the honest coordinate (no floor to enforce).
+            np.testing.assert_array_equal(y, z)
         else:
             assert np.all(y >= -1.0)
 

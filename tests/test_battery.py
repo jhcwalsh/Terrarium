@@ -181,10 +181,10 @@ def test_render_markdown_and_json() -> None:
 def test_report_records_active_blocks_from_factor_manifest() -> None:
     # WP2.1b Item 2: every battery report records active_blocks, read from factors.yaml.
     report = run_battery(_ensemble())
-    assert report.active_blocks == ("global", "us")
-    assert "active_blocks: global, us" in render_markdown(report)
+    assert report.active_blocks == ("global", "us", "fx", "valuation")
+    assert "active_blocks: global, us, fx, valuation" in render_markdown(report)
     payload = json.loads(render_json(report))
-    assert payload["active_blocks"] == ["global", "us"]
+    assert payload["active_blocks"] == ["global", "us", "fx", "valuation"]
 
 
 def test_main_returns_zero() -> None:

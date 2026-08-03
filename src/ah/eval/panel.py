@@ -113,6 +113,13 @@ class DerivedExpr:
     arity: int
     fn: Callable[[list[pd.DataFrame]], pd.DataFrame]
     units_rule: str = "same"
+    #: Positional inputs (0-based) that may legitimately read EMPTY without making
+    #: the factor missing -- the transform itself handles emptiness. Registered for
+    #: exactly one case today: a PINNED splice's target series, whose
+    #: train+validation read is empty BY CONSTRUCTION (every licensed observation
+    #: sits inside the holdout span; that is why the fit is pinned). A non-optional
+    #: input reading empty still marks the factor missing, unchanged.
+    optional_inputs: tuple[int, ...] = ()
 
 
 # Each derived expr's ah.data.derive helper and the exact number of positional
@@ -125,6 +132,24 @@ _DERIVED_EXPRS: dict[str, DerivedExpr] = {
     "add": DerivedExpr(2, lambda frames: derive.add(frames[0], frames[1])),
     "difference": DerivedExpr(2, lambda frames: derive.difference(frames[0], frames[1])),
     "funding_stress": DerivedExpr(1, lambda frames: derive.funding_stress(frames[0])),
+    # campaign-2 seal: the splice APPLICATION joins the read surface (RFR-50's
+    # re-entry condition -- splice.py is on the read path from here on and joins
+    # the seal scope). hy uses the PINNED fit (owner decision 2026-08-02); fx
+    # fits at read time from an overlap entirely inside train+validation.
+    "hy_oas_spliced": DerivedExpr(
+        3,
+        lambda frames: derive.hy_oas_spliced(frames[0], frames[1], frames[2]),
+        # input 0 (fred.HY_OAS, the pinned splice's target) is empty on every
+        # train+validation read -- see DerivedExpr.optional_inputs.
+        optional_inputs=(0,),
+    ),
+    "fx_usd_spliced": DerivedExpr(2, lambda frames: derive.fx_usd_spliced(frames[0], frames[1])),
+    # campaign-2 seal: DN-1's v_t as a generated factor (closes RFR-18's factor
+    # gap). Units algebra: log of a positive index, demeaned -- output units are
+    # "log", whatever single unit the input carries.
+    "demeaned_log_cape": DerivedExpr(
+        1, lambda frames: derive.demeaned_log_cape(frames[0]), units_rule="log_demeaned"
+    ),
 }
 
 
@@ -144,15 +169,19 @@ def expected_derived_units(expr: str, input_units: tuple[str, ...]) -> str:
         raise PanelError(
             f"derived expr '{expr}' expects {spec.arity} input(s), got {len(input_units)}"
         )
-    if spec.units_rule != "same":  # pragma: no cover - no other rule is registered yet
-        raise PanelError(f"derived expr '{expr}' has unknown units_rule '{spec.units_rule}'")
     distinct = sorted(set(input_units))
     if len(distinct) != 1:
         raise PanelError(
-            f"derived expr '{expr}' combines inputs of differing units {distinct}; its "
-            f"units rule is 'same', so every input must carry one unit"
+            f"derived expr '{expr}' combines inputs of differing units {distinct}; "
+            f"every registered units rule requires inputs sharing one unit"
         )
-    return distinct[0]
+    if spec.units_rule == "same":
+        return distinct[0]
+    if spec.units_rule == "log_demeaned":
+        # A log transform changes units (the docstring's promised registration
+        # route): the output is a demeaned natural log, declared as "log".
+        return "log"
+    raise PanelError(f"derived expr '{expr}' has unknown units_rule '{spec.units_rule}'")
 
 
 def _read_series(
@@ -284,13 +313,20 @@ def read_factor_frames(
             continue
 
         if source.kind == "derived":
+            spec = _DERIVED_EXPRS.get(source.expr or "")
+            optional = spec.optional_inputs if spec is not None else ()
             input_frames: list[pd.DataFrame] = []
             any_missing = False
-            for series_id in source.inputs:
+            for position, series_id in enumerate(source.inputs):
                 raw = _read_series(access, series_id, split_reader, factor=factor)
                 if raw is None:
-                    any_missing = True
-                    break
+                    if position in optional:
+                        raw = pd.DataFrame(
+                            {"date": pd.Series([], dtype="datetime64[ns]"), "value": []}
+                        )
+                    else:
+                        any_missing = True
+                        break
                 input_frames.append(raw)
             if any_missing:
                 missing.append(factor)

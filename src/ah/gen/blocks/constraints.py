@@ -55,6 +55,7 @@ if TYPE_CHECKING:  # torch is imported lazily so numpy-only callers stay light
     import torch
 
 __all__ = [
+    "IDENTITY_FACTORS",
     "LOG1P_FACTORS",
     "LOG_FACTORS",
     "TRANSFORMS",
@@ -66,7 +67,13 @@ __all__ = [
 ]
 
 #: Positive price-index / positive-level factors generated in log space.
-LOG_FACTORS: tuple[str, ...] = ("cpi", "equity_vol")
+#: fx_usd (campaign-2): a positive trade-weighted index level, same shape as cpi.
+LOG_FACTORS: tuple[str, ...] = ("cpi", "equity_vol", "fx_usd")
+
+#: Unbounded signed levels generated as-is (campaign-2): cape_v is ALREADY a
+#: demeaned natural log (ah.data.derive.demeaned_log_cape), so its honest
+#: unconstrained coordinate is itself -- re-logging a signed quantity is not a map.
+IDENTITY_FACTORS: tuple[str, ...] = ("cape_v",)
 
 #: Simple monthly returns generated in log1p space (r > -1 by construction).
 LOG1P_FACTORS: tuple[str, ...] = ("equity_mkt", "smb", "hml", "mom")
@@ -77,7 +84,7 @@ _SOFTPLUS_SATURATION = 30.0  # softplus(z) == z and softplus^-1(u) == u beyond t
 class FactorTransform:
     """One factor's (unconstrained <-> constrained) coordinate pair.
 
-    ``kind`` in {"softplus_floor", "log", "log1p"}; ``floor`` used only by
+    ``kind`` in {"softplus_floor", "log", "log1p", "identity"}; ``floor`` used only by
     ``softplus_floor``. Both directions exist in numpy (float64) and torch
     (dtype-preserving, differentiable).
     """
@@ -108,6 +115,8 @@ class FactorTransform:
             if np.any(y <= -1.0):
                 raise JoineryError(f"factor '{self.name}': log1p space needs returns > -1")
             return np.log1p(y)
+        if self.kind == "identity":
+            return y.copy()
         raise JoineryError(f"unknown transform kind '{self.kind}'")
 
     def to_constrained(self, z: np.ndarray) -> np.ndarray:
@@ -121,6 +130,8 @@ class FactorTransform:
             return np.exp(z)
         if self.kind == "log1p":
             return np.expm1(z)
+        if self.kind == "identity":
+            return z.copy()
         raise JoineryError(f"unknown transform kind '{self.kind}'")
 
     # -- torch (differentiable; used inside the training loss) -------------- #
@@ -134,6 +145,8 @@ class FactorTransform:
             return torch.exp(z)
         if self.kind == "log1p":
             return torch.expm1(z)
+        if self.kind == "identity":
+            return z
         raise JoineryError(f"unknown transform kind '{self.kind}'")
 
 
@@ -147,6 +160,8 @@ def _build_transforms() -> dict[str, FactorTransform]:
         out[name] = FactorTransform(name, "log")
     for name in LOG1P_FACTORS:
         out[name] = FactorTransform(name, "log1p")
+    for name in IDENTITY_FACTORS:
+        out[name] = FactorTransform(name, "identity")
     return out
 
 

@@ -196,6 +196,9 @@ from ah.eval.reference import (
     nonoverlapping_sums as reference_nonoverlapping_sums,
 )
 from ah.eval.reference import (
+    valuation_regression as reference_valuation_regression,
+)
+from ah.eval.reference import (
     variance_ratio_from_arrays as reference_variance_ratio_from_arrays,
 )
 from ah.factors import FactorManifest
@@ -371,6 +374,36 @@ def _long_inflation_era_frequency_metric(factor: str) -> MetricFn:
     return fn
 
 
+def _valuation_regression_metric(which: str) -> MetricFn:
+    """Ensemble-side ten_year_return_vs_valuation (campaign-2; closes RFR-18).
+
+    Per path: the STARTING valuation (``cape_v`` at month 0) and the decade's
+    compounded ``equity_mkt`` total return over the first 120 months. Across
+    paths: :func:`ah.eval.reference.valuation_regression`'s OLS slope / R^2 of
+    forward return on starting valuation -- the ensemble analog of the Shiller
+    forward-return regression, with each path contributing exactly one
+    (valuation, forward-return) pair, mirroring the one-window-per-decade-path
+    convention of the other 10yr metrics. Paths shorter than 120 months report
+    NaN (no full decade window exists), matching the window estimators above.
+    """
+    if which not in ("slope", "r2"):
+        raise ValueError(f"which must be 'slope' or 'r2', got {which!r}")
+
+    def fn(ensemble: Ensemble) -> float:
+        for needed in ("cape_v", "equity_mkt"):
+            if needed not in ensemble.factor_names:
+                return float("nan")
+        if ensemble.months < 120:
+            return float("nan")
+        cape0 = ensemble.factor("cape_v").astype(np.float64)[:, 0]
+        eq = ensemble.factor("equity_mkt").astype(np.float64)[:, :120]
+        forward = np.prod(1.0 + eq, axis=1) - 1.0
+        slope, r2 = reference_valuation_regression(cape0, forward)
+        return float(slope) if which == "slope" else float(r2)
+
+    return fn
+
+
 def _structural_gap_metric() -> MetricFn:
     """Always NaN -- see the module docstring's "Three structural gaps".
 
@@ -505,16 +538,26 @@ def build_horizon_suite(
                 metadata=regime_metadata,
             )
         )
-    for name in ("ten_year_return_vs_valuation_slope", "ten_year_return_vs_valuation_r2"):
-        specs.append(
-            _spec(
-                name,
-                TIER_10YR,
-                _structural_gap_metric(),
-                status=STRUCTURALLY_UNAVAILABLE,
-                metadata=(("gap", "RFR-18"),),
+    # Campaign-2 (owner: "include CAPE in this seal"): with `cape_v` active the
+    # RFR-18 structural gap CLOSES -- the metric computes instead of marking NaN.
+    # On a manifest without the valuation block the gap markers stand unchanged.
+    valuation_active = "cape_v" in active and "equity_mkt" in active
+    for name, which in (
+        ("ten_year_return_vs_valuation_slope", "slope"),
+        ("ten_year_return_vs_valuation_r2", "r2"),
+    ):
+        if valuation_active:
+            specs.append(_spec(name, TIER_10YR, _valuation_regression_metric(which)))
+        else:
+            specs.append(
+                _spec(
+                    name,
+                    TIER_10YR,
+                    _structural_gap_metric(),
+                    status=STRUCTURALLY_UNAVAILABLE,
+                    metadata=(("gap", "RFR-18"),),
+                )
             )
-        )
 
     return tuple(specs)
 

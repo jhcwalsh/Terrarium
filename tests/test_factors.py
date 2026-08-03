@@ -20,7 +20,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 def test_load_manifest_active_blocks_and_factors() -> None:
     manifest = load_manifest()
-    assert manifest.active_blocks == ("global", "us")
+    # campaign-2 block additions (fx, valuation) -- amendments AM-2026-08-02-*
+    assert manifest.active_blocks == ("global", "us", "fx", "valuation")
     factors = manifest.active_factors()
     for f in (
         "equity_mkt",
@@ -34,6 +35,8 @@ def test_load_manifest_active_blocks_and_factors() -> None:
     ):
         assert f in factors
     for f in ("policy_rate", "ust_2y", "ust_10y", "cpi", "hqm_curve", "funding_spread"):
+        assert f in factors
+    for f in ("fx_usd", "cape_v"):
         assert f in factors
     for f in ("bank_rate", "gilt_nominal_10y", "gilt_real_10y", "rpi", "cpi_uk"):
         assert f not in factors
@@ -54,13 +57,23 @@ def test_block_of_known_and_unknown_factor() -> None:
 
 def test_cross_block_pairs_on_real_manifest() -> None:
     manifest = load_manifest()
-    assert manifest.cross_block_pairs() == (("global", "us"),)
+    # sorted-pair order over the four campaign-2 active blocks
+    assert manifest.cross_block_pairs() == (
+        ("fx", "global"),
+        ("fx", "us"),
+        ("fx", "valuation"),
+        ("global", "us"),
+        ("global", "valuation"),
+        ("us", "valuation"),
+    )
 
 
 def test_is_active() -> None:
     manifest = load_manifest()
     assert manifest.is_active("global") is True
     assert manifest.is_active("us") is True
+    assert manifest.is_active("fx") is True
+    assert manifest.is_active("valuation") is True
     assert manifest.is_active("uk") is False
 
 

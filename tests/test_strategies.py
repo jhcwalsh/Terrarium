@@ -52,13 +52,13 @@ _DERIVED_BLOCK = """derived_series:
 # conventions-driven behaviour (level-factor rejection, rebalance cadences, ...). The
 # factor classification must cover exactly the REAL active factor set: `load_manifest()`
 # always reads the real repo-root `factors.yaml`, never a fixture-local one, so this
-# has to match it (global + us blocks, 14 factors) regardless of which
+# has to match it (the four campaign-2 blocks, 16 declared factors) regardless of which
 # `pre-registration.yaml` fixture it is embedded in.
 _CONVENTIONS_BLOCK = """conventions:
   percent_to_decimal: 0.01
   months_per_year: 12.0
   return_bearing_factors: [equity_mkt, smb, hml, mom, commodities]
-  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread, equity_vol]
+  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread, equity_vol, fx_usd, cape_v]
   rebalance_cadences: [monthly]
   static_weights_composition: fixture
 """
@@ -830,7 +830,7 @@ def test_conventions_classification_overlap_raises(tmp_path: Path) -> None:
         "  percent_to_decimal: 0.01\n"
         "  months_per_year: 12.0\n"
         "  return_bearing_factors: [equity_mkt, smb, hml, mom, commodities, ust_10y]\n"
-        "  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread, equity_vol]\n"
+        "  level_factors: [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, ig_spread, hy_spread, funding_spread, equity_vol, fx_usd, cape_v]\n"
         "  rebalance_cadences: [monthly]\n"
         "  static_weights_composition: fixture\n",
     )

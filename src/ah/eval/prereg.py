@@ -291,15 +291,17 @@ _REQUIRED_JUDGED_SOURCES = (
     # of these helper bodies, computed fresh on each read rather than stored in the
     # vintage. Sealing the BINDING (which helper, which units algebra) via `panel.py`
     # was not enough: an edit to `add`'s body would change what a sealed band is a band
-    # OF, with no lock violation. RFR-10's other half, `ah/data/splice.py`, is
-    # deliberately NOT here -- see `pre-registration.yaml`'s `seal_scope:` block for
-    # the argument (its PROXY_RULES are registered but not applied by
-    # `ah.data.refresh`, and `read_factor_frames` never calls it, so it cannot move a
-    # band; what the frozen vintage contains is pinned by the sealed
-    # `campaign_vintage_id`, not by that module -- demonstrated on the sealed vintage
-    # by `policy_rate` starting at fred.FEDFUNDS's own 1954-07 rather than at the
-    # splice rule's fred.TB3MS source, and by `hy_spread` having no history at all).
+    # OF, with no lock violation. RFR-10's other half, `ah/data/splice.py`, was
+    # deliberately NOT here at the WP2.3 seal (its PROXY_RULES were registered but not
+    # applied, and `read_factor_frames` never called it, so it could not move a band).
     ("src", "ah", "data", "derive.py"),
+    # CAMPAIGN-2: RFR-50's recorded re-entry condition FIRES. `derive.hy_oas_spliced`
+    # and `derive.fx_usd_spliced` call `ah.data.splice` at panel-read time, so its
+    # rule definitions, its fit arithmetic and -- above all -- its PINNED_FITS
+    # constants (the owner-frozen hy fit whose provenance is the holdout-adjacent
+    # 2023-2026 window) now shape sealed bands. An edit to the pinned constants
+    # without an amendment is exactly the failure this list exists to prevent.
+    ("src", "ah", "data", "splice.py"),
 )
 
 # Sealed threshold DATA read by a sealed judging module. `ah/battery/report.py`

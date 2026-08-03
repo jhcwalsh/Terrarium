@@ -349,6 +349,11 @@ def test_build_panel_over_real_manifest_end_to_end() -> None:
         sid: _synthetic_frame(i, starts[i % len(starts)], _END)
         for i, sid in enumerate(sorted(needed_series))
     }
+    # shiller.cape is a positive valuation ratio; a signed N(0,1) frame would hit
+    # demeaned_log_cape's positivity filter and manufacture gaps no real CAPE has.
+    frames["shiller.cape"] = frames["shiller.cape"].assign(
+        value=20.0 + frames["shiller.cape"]["value"]
+    )
     access = DataAccess(_reader_from(frames))
 
     panel = build_panel(access, manifest)
@@ -456,6 +461,9 @@ def test_read_factor_frames_is_the_surface_compute_reference_uses() -> None:
         elif source.kind == "derived":
             needed_series.update(source.inputs)
     frames = {sid: _synthetic_frame(i, _START, _END) for i, sid in enumerate(sorted(needed_series))}
+    frames["shiller.cape"] = frames["shiller.cape"].assign(
+        value=20.0 + frames["shiller.cape"]["value"]
+    )  # positive ratio, as in the end-to-end test above
     access = DataAccess(_reader_from(frames))
 
     panel = build_panel(access, manifest)

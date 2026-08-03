@@ -137,11 +137,11 @@ class TestAssembleDecades:
     def test_shapes_and_lineage_metadata(self, climate, regimes_artifact, source):
         ens = _assemble(climate, regimes_artifact, source)
         assert isinstance(ens, Ensemble)
-        assert ens.paths.shape == (8, MONTHS, 12)
+        assert ens.paths.shape == (8, MONTHS, 15)  # campaign-2 factor set
         assert ens.factor_names == list(source.factor_names)
         assert ens.meta.generator_id == asm.GENERATOR_ID
         assert ens.meta.vintage_id == source.vintage_id
-        assert ens.meta.active_blocks == ("global", "us")
+        assert ens.meta.active_blocks == ("global", "us", "fx", "valuation")
 
         cond = ens.meta.conditioning
         arts = cond["layer_artifacts"]
@@ -310,7 +310,7 @@ class TestGeneratorWrapper:
         gen = asm.JoineryBootstrapV0(climate, regimes_artifact, source)
         world = _fixture_world(MONTHS)
         ens = gen.sample(world, n_paths=3, seed=7)
-        assert ens.paths.shape == (3, MONTHS, 12)
+        assert ens.paths.shape == (3, MONTHS, 15)  # campaign-2 factor set
         assert ens.meta.generator_id == asm.GENERATOR_ID
 
     def test_generator_id_is_registered(self):

@@ -103,9 +103,17 @@ def test_load_real_file_explicit_path() -> None:
     # the fact this test exists to pin, and a sealed file that reads unsealed would be
     # the most consequential regression this repository could have.
     assert loaded.sealed is True
-    assert loaded.active_blocks == ("global", "us")
-    assert set(loaded.block_thresholds) == {"global", "us"}
-    assert set(loaded.cross_block_thresholds) == {("global", "us")}
+    # campaign-2 block additions (AM-2026-08-02-007/-008)
+    assert loaded.active_blocks == ("global", "us", "fx", "valuation")
+    assert set(loaded.block_thresholds) == {"global", "us", "fx", "valuation"}
+    assert set(loaded.cross_block_thresholds) == {
+        ("global", "us"),
+        ("fx", "global"),
+        ("fx", "us"),
+        ("fx", "valuation"),
+        ("global", "valuation"),
+        ("us", "valuation"),
+    }
     assert set(loaded.decisions) == {
         "R5",
         "J3",
@@ -1811,7 +1819,9 @@ def test_the_lock_records_what_it_hashed() -> None:
     # WP2.3's two seal-scope decisions (pre-registration.yaml's `seal_scope:` block).
     assert "src/ah/data/derive.py" in hashed
     assert "src/ah/battery/thresholds.yaml" in hashed
-    assert "src/ah/data/splice.py" not in hashed
+    # CAMPAIGN-2: splice.py JOINED the seal (seal_scope.splice_py: SEALED --
+    # RFR-50's re-entry condition fired; its PINNED_FITS now shape sealed bands).
+    assert "src/ah/data/splice.py" in hashed
     assert any(p.startswith("fixtures/worlds/conditional/") for p in hashed)
 
 
@@ -1912,8 +1922,12 @@ def test_verify_rejects_a_threshold_on_a_factor_with_no_data(tmp_path: Path) -> 
     the factor it is demonstrated on has moved to one that is genuinely absent.
     """
     doc = _load_real_doc()
-    assert "hy_spread" in doc["reference_run"]["missing_factors"]
-    doc["thresholds"]["blocks"]["global"]["hy_spread.excess_kurtosis"] = {
+    # CAMPAIGN-2: hy_spread left missing_factors (the pinned splice restored it --
+    # the "no refresh will ever" sentence above was true of refreshes and the
+    # splice is not one). commodities is now the sole, durable demonstration
+    # factor: declared unavailable, no candidate series free (RFR-8).
+    assert "commodities" in doc["reference_run"]["missing_factors"]
+    doc["thresholds"]["blocks"]["global"]["commodities.excess_kurtosis"] = {
         "min": -2.0,
         "max": 50.0,
         "severity": "enforce",
@@ -2248,19 +2262,29 @@ def test_the_sealed_splice_scope_rests_on_the_true_premise() -> None:
     doc = _load_real_doc()
     missing = doc["reference_run"]["missing_factors"]
     assert "policy_rate" not in missing
-    assert "hy_spread" in missing
+    # CAMPAIGN-2: hy_spread left missing_factors -- the hy_oas_pre1996 rule is
+    # applied at the read surface with a pinned fit, which is exactly the
+    # consequence clause the WP2.3 reasoning predicted. The premise this test
+    # pins is therefore the NEW one, in both directions: the factor resolves,
+    # splice.py is INSIDE the hash, and the pinned constants exist.
+    assert "hy_spread" not in missing
+    assert missing == ["commodities"]
 
-    reason = doc["seal_scope"]["splice_py_reason"]
-    assert doc["seal_scope"]["splice_py"] == "NOT-SEALED"
-    # The false premise survives ONLY as a quoted, labelled correction -- never as a
-    # claim. One occurrence, and it is the one inside the correction note.
-    assert reason.count("policy_rate and hy_spread appear in") == 1
-    assert 'previously read "policy_rate and hy_spread appear in' in reason
-    assert "policy_rate is NOT in missing_factors" in reason
-    # Each rule is demonstrated unapplied on its OWN evidence.
-    assert "hy_oas_pre1996" in reason and "missing_factors" in reason
-    assert "fedfunds_pre1954" in reason and "1954-07" in reason and "1934-01" in reason
-    assert "NEITHER backfill" in reason
+    assert doc["seal_scope"]["splice_py"] == "SEALED"
+    assert "SEALED AT CAMPAIGN-2" in doc["seal_scope"]["splice_py_reason"]
+    superseded = doc["seal_scope"]["splice_py_superseded_wp23_reason"]
+    # The superseded WP2.3 reasoning survives verbatim, corrections included --
+    # a reader can still see why it was out and what was said would bring it in.
+    assert 'previously read "policy_rate and hy_spread appear in' in superseded
+    assert "fedfunds_pre1954" in superseded and "NEITHER backfill" in superseded
+    assert "splice.py joins the seal" in superseded
+
+    from ah.eval.prereg import _REQUIRED_JUDGED_SOURCES
+
+    assert ("src", "ah", "data", "splice.py") in _REQUIRED_JUDGED_SOURCES
+    from ah.data.splice import PINNED_FITS
+
+    assert "hy_oas_pre1996" in PINNED_FITS
 
 
 def test_the_sealed_beats_clause_two_discloses_that_no_strategy_band_exists() -> None:

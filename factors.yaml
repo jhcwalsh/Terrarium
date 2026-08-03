@@ -47,7 +47,13 @@ factor_blocks:
   global:  [equity_mkt, smb, hml, mom, equity_vol, commodities, ig_spread, hy_spread]
   us:      [policy_rate, ust_2y, ust_10y, cpi, hqm_curve, funding_spread]
   uk:      [bank_rate, gilt_nominal_10y, gilt_real_10y, rpi, cpi_uk]
-active_blocks: [global, us]
+  # campaign-2 block additions (owner-ratified 2026-08-02): fx executes the R5
+  # re-entry (S2R-FX-NEXT-CAMPAIGN); valuation closes RFR-18's factor gap
+  # (S2-VALUATION-FACTOR) -- owner: "include CAPE in this seal". Each activated
+  # by its own block_addition amendment; see governance/amendment-log.yaml.
+  fx:        [fx_usd]
+  valuation: [cape_v]
+active_blocks: [global, us, fx, valuation]
 
 # --------------------------------------------------------------------------- #
 # factor_sources -- the factor -> Step-1 catalog series mapping (WP2.2 Task 1).
@@ -175,22 +181,24 @@ factor_sources:
       Baa minus Aaa investment-grade credit spread, in percentage points;
       ah.data.derive.difference(BAA, AAA).
   hy_spread:
-    kind: series
-    series_id: fred.HY_OAS
+    kind: derived
+    expr: hy_oas_spliced
+    inputs: [fred.HY_OAS, fred.BAA, fred.AAA]
     units: pct
     proxy: true
     proxy_for: >-
-      derived.baa_aaa_spread before 1996-12, via the ah.data.splice PROXY_RULES
-      ['hy_oas_pre1996'] rule (regression on the 1996-2005 overlap). REGISTERED BUT
-      NOT YET APPLIED: this rule is not run by ah.data.refresh today, so the panel
-      this factor sources from does not yet contain the spliced pre-1996-12
-      observations or any is_proxy flag -- read_factor_frames reads fred.HY_OAS
-      directly, unextended. WP2.3 CONFIRMED (2026-07-26) which the sealed campaign
-      vintage contains: NEITHER backfill. The rule stays unapplied, ah/data/splice.py
-      stays outside the seal for that reason (pre-registration.yaml's `seal_scope:`),
-      and `hy_spread` is in reference_run.missing_factors -- its ~3 years of licensed
-      fred.HY_OAS history all fall inside the HOLDOUT span, so its train+validation
-      sample is EMPTY, not merely short. See governance/retrofit-register.md RFR-48/50.
+      derived.baa_aaa_spread via the ah.data.splice PROXY_RULES['hy_oas_pre1996']
+      rule, APPLIED AT THE READ SURFACE as of the campaign-2 seal (this is RFR-50's
+      recorded re-entry condition firing: splice.py is now on the read path and
+      joins the seal scope). The fit is PINNED (splice.PINNED_FITS; owner decision
+      2026-08-02): the rule's only licensed fitting window (2023-08..2026-07, 36
+      obs, RFR-92) lies entirely inside the HOLDOUT span, so calibrating at read
+      time would breach the train_val-only read surface -- instead the two fitted
+      scalars (a=1.4068184862787785, b=2.53288508610114, overlap RMSE 0.206) were
+      frozen offline and their post-2020 provenance is the disclosed residual
+      information flow. On a train+validation read fred.HY_OAS is empty and every
+      observation is proxy (Baa-Aaa transformed); post-2020 actuals, where a read
+      is entitled to them, are never touched.
     notes: >-
       ICE BofA US High Yield OAS via FRED (BAMLH0A0HYM2). requirements.yaml notes FRED
       serves only ~3 years of history for this series under ICE licensing terms, so it
@@ -269,6 +277,49 @@ factor_sources:
       (sofr_basis) is omitted here rather than sourced from an unregistered series --
       this factor's train+validation history is honestly incomplete after 2022-01
       until such a series is registered under the requirements.yaml WP1.9 rule.
+
+  # --- fx block (campaign-2 block_addition; R5 re-entry) ---
+  fx_usd:
+    kind: derived
+    expr: fx_usd_spliced
+    inputs: [fred.DTWEXBGS, fred.DTWEXM]
+    units: index
+    proxy: true
+    proxy_for: >-
+      fred.DTWEXM (the discontinued major-currencies index) before 2006-01
+      (fred.DTWEXBGS's first observation), via the ah.data.splice
+      PROXY_RULES['fx_usd_pre2006'] rule, APPLIED AT THE READ SURFACE as of the
+      campaign-2 seal. Unlike hy_spread's rule this one fits at read time: its
+      2006-2019 overlap (the donor's full remaining life) lies entirely inside
+      train+validation, so the fit uses only sanctioned reads. Verified on
+      vintage 2026-08-02.4: 643 monthly observations 1973-01..2026-07, 396
+      proxy-flagged, overlap RMSE 2.04 index points.
+    notes: >-
+      Trade-weighted broad US dollar index (goods and services), a LEVEL. The
+      generator's first FX exposure factor (decision R5's re-entry;
+      S2R-FX-NEXT-CAMPAIGN). Institutions with unhedged foreign-currency
+      exposure remain out of scope until the institutional layer consumes this
+      factor -- this mapping puts the macro driver in the world, not the hedge
+      accounting in the twin.
+
+  # --- valuation block (campaign-2 block_addition; closes RFR-18's factor gap) ---
+  cape_v:
+    kind: derived
+    expr: demeaned_log_cape
+    inputs: [shiller.cape]
+    units: log
+    notes: >-
+      DN-1's v_t: log(CAPE) demeaned by its full-sample mean
+      (ah.data.derive.demeaned_log_cape -- registered in Step 1, mapped to a
+      generator factor by the campaign-2 seal at owner direction: "include CAPE
+      in this seal"). A LEVEL in log units, unbounded in both directions (the
+      demeaning makes it signed), hence the identity coordinate transform in
+      ah.gen.blocks.constraints. Activating this factor is what turns the
+      ten_year_return_vs_valuation_{slope,r2} metrics from STRUCTURALLY
+      UNAVAILABLE into judged statistics (RFR-18; RFR-81's discovery that only
+      the mapping was missing). Note the demeaning constant is computed over the
+      read span -- on a train+validation read that is train+validation only, so
+      no holdout information enters the training panel through the mean.
 
   # --- uk block (inactive; declared, never read -- see active_blocks above) ---
   bank_rate:

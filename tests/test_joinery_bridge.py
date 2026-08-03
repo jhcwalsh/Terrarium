@@ -172,7 +172,7 @@ class TestBootstrapBlockSampler:
         sampler = bridge.BootstrapBlockSampler(no_stag, block_months=6)
         rng = np.random.Generator(np.random.PCG64(1))
         block = sampler.sample_block(_cond("STAG"), rng)
-        assert block.shape == (6, 12)
+        assert block.shape == (6, 15)  # campaign-2 factor set
         assert sampler.fallback_counts == {"STAG": 1}
 
     def test_deterministic_given_rng_seed(self, source):
@@ -221,7 +221,7 @@ class TestAssembleDecadePath:
         path_b, conds_b = bridge.assemble_decade_path(
             rng=np.random.Generator(np.random.PCG64(3)), **args
         )
-        assert path_a.shape == (MONTHS, 12)
+        assert path_a.shape == (MONTHS, 15)  # campaign-2 factor set
         np.testing.assert_array_equal(path_a, path_b)
         assert len(conds_a) == len(conds_b) == len(range(0, MONTHS, 3))
 

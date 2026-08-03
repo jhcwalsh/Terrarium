@@ -492,4 +492,12 @@ class TestRegistry:
         assert meta["climate_sha256"] == PINNED_CLIMATE_SHA256
         assert meta["regimes_sha256"] == PINNED_REGIMES_SHA256
         assert meta["selection_lambda"] == 1.0
-        assert std.x_mean.shape == (len(FACTOR_SET),)
+        # The G2-promoted checkpoint is a TWELVE-factor artifact and remains the
+        # generator of record for G2's claims (AM-2026-08-02-009); campaign-2's
+        # fifteen-factor set applies to campaign-2 checkpoints, not this pin. The
+        # geometry asserted is the checkpoint's OWN recorded factor list.
+        assert std.x_mean.shape == (len(meta["factor_names"]),)
+        assert list(meta["factor_names"]) == [
+            "cpi", "equity_mkt", "equity_vol", "funding_spread", "hml", "hqm_curve",
+            "ig_spread", "mom", "policy_rate", "smb", "ust_10y", "ust_2y",
+        ]

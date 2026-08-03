@@ -148,7 +148,7 @@ def main() -> None:
     }
     hf_true = pd.Series(0.0, index=mkt.index)
     n_sleeves = 0
-    for sleeve, spec in mapping["sleeves"].items():
+    for _sleeve, spec in mapping["sleeves"].items():
         contribution = pd.Series(float(spec["alpha_monthly"]), index=mkt.index)
         for reg, beta in spec["loadings"].items():
             contribution = contribution + float(beta) * regressors_m[reg]

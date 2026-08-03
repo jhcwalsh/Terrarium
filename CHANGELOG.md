@@ -7,6 +7,31 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **THE CAMPAIGN-2 SEAL** (owner-ratified end to end; amendments
+  AM-2026-08-02-007/-008/-009, three locks re-minted, `verify()` clean).
+  The vintage moves to `2026-08-02.4` and the generator factor set grows
+  12 → 15. **hy_spread revived** through the `hy_oas_pre1996` splice
+  applied at the read surface with a PINNED fit (owner decision: the
+  rule's only licensed fitting window lies inside the holdout span, so
+  two frozen scalars — disclosed at full precision in the amendment, the
+  register (RFR-94) and `splice.PINNED_FITS` — replace any runtime read
+  of holdout-span data; 1224 proxy months back to 1919). **fx block
+  active** (R5 re-entry executed; `fx_usd` spliced to 1973, RFR-95) and
+  **valuation block active** (owner: "include CAPE in this seal";
+  `cape_v` = DN-1's v_t) — each a `block_addition` with thresholds
+  derived pre-hoc from the campaign-2 reference run at the sealed recipe
+  (persistence floors, kurtosis caps, five cross pairs of which three
+  are honestly vacuous both-null). With `cape_v` active the RFR-18
+  structural gap CLOSES: `ten_year_return_vs_valuation_{slope,r2}`
+  compute on ensembles (tested against exact linear ground truth) and
+  leave the sealed unavailable list (ten names remain). `splice.py`
+  JOINS the seal (RFR-50's re-entry fired, RFR-93); the panel/bootstrap
+  resolvers gain a declared optional-input contract for pinned-splice
+  targets. RFR-61 discipline on the move: every checked pre-existing
+  band recomputed BIT-IDENTICAL at the sealed seed. C3 is recorded in
+  AM-009: the accepted 10yr-tier limits carry
+  `Instructions/campaign2-regime-fix-options.md` as their mechanism
+  trace, and promotion trains without A' at guidance 1.0.
 - **Campaign-2 A' — residual drift parameterization** (owner escalation
   path "B then A if needed"; B' measured and MISSED first). The B' sweep
   proved classifier-free guidance moves persistence monotonically the

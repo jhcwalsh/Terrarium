@@ -117,11 +117,11 @@ def _sampler_for(config, resid):
 class TestSamplerAddBack:
     def test_sample_batch_restores_drift(self, resid):
         config = bflow.FlowConfig(
-            d_model=16, n_layers=1, n_heads=2, residual_drift=True, n_factors=12
+            d_model=16, n_layers=1, n_heads=2, residual_drift=True, n_factors=15
         )
         sampler = _sampler_for(config, resid)
         cond = resid.cond[:3]
-        noise = np.zeros((3, resid.block_months, 12))
+        noise = np.zeros((3, resid.block_months, 15))
         out = sampler.sample_batch(cond, noise)
         m = bridge.conditioning_drift_means(cond, resid.factor_names, resid.block_months)
         base = resid.standardization.destandardize_x(np.zeros_like(noise))
@@ -129,10 +129,10 @@ class TestSamplerAddBack:
         np.testing.assert_allclose(out, expected, atol=1e-12)
 
     def test_flag_off_means_no_add_back(self, resid):
-        config = bflow.FlowConfig(d_model=16, n_layers=1, n_heads=2, n_factors=12)
+        config = bflow.FlowConfig(d_model=16, n_layers=1, n_heads=2, n_factors=15)
         sampler = _sampler_for(config, resid)
         cond = resid.cond[:3]
-        noise = np.zeros((3, resid.block_months, 12))
+        noise = np.zeros((3, resid.block_months, 15))
         out = sampler.sample_batch(cond, noise)
         base = resid.standardization.destandardize_x(np.zeros_like(noise))
         np.testing.assert_allclose(
@@ -156,6 +156,6 @@ class TestConfigHashStability:
 
 class TestTrainGuard:
     def test_mismatched_flags_refused(self, resid):
-        config = bflow.FlowConfig(d_model=16, n_layers=1, n_heads=2, n_factors=12)
+        config = bflow.FlowConfig(d_model=16, n_layers=1, n_heads=2, n_factors=15)
         with pytest.raises(Exception, match="residual_drift"):
             tr.train_blocks(resid, config, seed=1, max_steps=1, eval_every=1, patience=1)

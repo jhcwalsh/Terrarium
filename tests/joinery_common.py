@@ -171,7 +171,7 @@ def make_source(
     start: str = "1990-01-01",
     labels: tuple[str, ...] | None = None,
 ) -> bs.BootstrapSource:
-    """A synthetic 12-factor source with regime-structured equity/spread columns.
+    """A synthetic source over the sealed factor set, regime-structured eq/spreads.
 
     Factor names are exactly the sealed ``bootstrap_v1.factor_set`` so joinery code
     that looks factors up by name works unchanged against the real source.
@@ -197,6 +197,12 @@ def make_source(
         "smb": 0.001 * np.sin(t / 6.0),
         "ust_10y": 4.0 + np.sin(t / 17.0),
         "ust_2y": 3.5 + np.sin(t / 15.0),
+        # campaign-2 factors. hy tracks the regime spread at the pinned-splice
+        # scale (a + b*(Baa-Aaa)-shaped); fx is a positive index level; cape_v is
+        # a signed demeaned log (identity coordinate), small-amplitude.
+        "hy_spread": 1.4 + 2.5 * spread + 0.1 * np.sin(t / 4.0),
+        "fx_usd": 100.0 + 8.0 * np.sin(t / 19.0),
+        "cape_v": 0.3 * np.sin(t / 23.0),
     }
     factor_names = bs.FACTOR_SET
     values = np.column_stack([columns[name] for name in factor_names])
@@ -207,7 +213,7 @@ def make_source(
         labels=tuple(labels),
         ruleset_version="regime_ruleset_v1",
         vintage_id="test-vintage",
-        active_blocks=("global", "us"),
+        active_blocks=("global", "us", "fx", "valuation"),
     )
 
 
