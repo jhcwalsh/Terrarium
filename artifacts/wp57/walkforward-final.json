@@ -1,0 +1,209 @@
+{
+ "kind": "walkforward-final",
+ "created_at": "2026-08-03",
+ "protocol_version": "g5-protocol-1.0",
+ "vintage_id": "2026-08-02.4",
+ "universe": {
+  "equity": "equity_mkt",
+  "bonds": "govt_tr_10y",
+  "credit": "credit_xs_hy"
+ },
+ "policies_run": [
+  "history_only_optimization",
+  "gaussian_monte_carlo",
+  "bootstrap_ensemble",
+  "static_60_40",
+  "fixed_heuristic_rules"
+ ],
+ "uncomputable_policies": {
+  "static_endowment_mix": "commodities leg unsourced (RFR-8); reported, not faked"
+ },
+ "per_policy": {
+  "history_only_optimization": {
+   "terminal_log_wealth_by_fold": [
+    0.054429,
+    0.074698,
+    0.040247,
+    0.045809,
+    -0.001212,
+    0.07903,
+    0.054098,
+    -0.010635,
+    0.100402,
+    0.075497
+   ],
+   "max_drawdown_by_fold": [
+    0.011222,
+    0.0,
+    0.016705,
+    0.007802,
+    0.020435,
+    0.003951,
+    0.002393,
+    0.01832,
+    0.0,
+    0.024256
+   ],
+   "mean_terminal_log_wealth": 0.05123629010569268
+  },
+  "gaussian_monte_carlo": {
+   "terminal_log_wealth_by_fold": [
+    0.049652,
+    0.077074,
+    0.042996,
+    0.048311,
+    -0.002883,
+    0.0777,
+    0.053649,
+    -0.013891,
+    0.100215,
+    0.076932
+   ],
+   "max_drawdown_by_fold": [
+    0.013094,
+    0.0,
+    0.014815,
+    0.007995,
+    0.023774,
+    0.005723,
+    0.002805,
+    0.020074,
+    0.001844,
+    0.022839
+   ],
+   "mean_terminal_log_wealth": 0.050975400964853854
+  },
+  "bootstrap_ensemble": {
+   "terminal_log_wealth_by_fold": [
+    0.053866,
+    0.075674,
+    0.040116,
+    0.046022,
+    -0.00122,
+    0.079912,
+    0.055011,
+    -0.010686,
+    0.101709,
+    0.079128
+   ],
+   "max_drawdown_by_fold": [
+    0.010713,
+    0.0,
+    0.016794,
+    0.007826,
+    0.020699,
+    0.003171,
+    0.002324,
+    0.018704,
+    0.0,
+    0.023643
+   ],
+   "mean_terminal_log_wealth": 0.05195309773825836
+  },
+  "static_60_40": {
+   "terminal_log_wealth_by_fold": [
+    0.063773,
+    0.10871,
+    0.151329,
+    0.101058,
+    0.010749,
+    0.077146,
+    0.133689,
+    -0.030935,
+    0.204139,
+    0.175178
+   ],
+   "max_drawdown_by_fold": [
+    0.060165,
+    0.028079,
+    0.020669,
+    0.017463,
+    0.050336,
+    0.028279,
+    0.000129,
+    0.081243,
+    0.034745,
+    0.094175
+   ],
+   "mean_terminal_log_wealth": 0.09948359588338641
+  },
+  "fixed_heuristic_rules": {
+   "terminal_log_wealth_by_fold": [
+    0.062121,
+    0.104052,
+    0.15587,
+    0.10148,
+    0.009366,
+    0.078649,
+    0.14112,
+    -0.034518,
+    0.200374,
+    0.164409
+   ],
+   "max_drawdown_by_fold": [
+    0.060955,
+    0.026613,
+    0.020669,
+    0.017463,
+    0.050888,
+    0.028016,
+    0.0,
+    0.089157,
+    0.035336,
+    0.104843
+   ],
+   "mean_terminal_log_wealth": 0.09829236679837215
+  }
+ },
+ "wilcoxon_vs_static_60_40": {
+  "history_only_optimization": {
+   "statistic": 5.0,
+   "p_value": 0.01953125,
+   "effect_size_rank_biserial": -0.8181818181818182
+  },
+  "gaussian_monte_carlo": {
+   "statistic": 5.0,
+   "p_value": 0.01953125,
+   "effect_size_rank_biserial": -0.8181818181818182
+  },
+  "bootstrap_ensemble": {
+   "statistic": 5.0,
+   "p_value": 0.01953125,
+   "effect_size_rank_biserial": -0.8181818181818182
+  },
+  "fixed_heuristic_rules": {
+   "statistic": 20.0,
+   "p_value": 0.4921875,
+   "effect_size_rank_biserial": -0.2727272727272727
+  }
+ },
+ "drawdown_surprise": {
+  "definition": "frozen primary; realized fold-year equity max drawdown minus cone p95",
+  "cone": {
+   "generator": "hier-flow-v1 (promoted campaign-2 pin)",
+   "checkpoint_hash": "c6addb5420723e59c9966dd65c1127d18eca46097049ff7434295cab512f9873",
+   "n_paths": 256,
+   "windows": "year-one months of unconditional decades",
+   "seed": 20260804
+  },
+  "by_fold": {
+   "1": -0.096522,
+   "2": -0.203523,
+   "3": -0.246,
+   "4": -0.2399,
+   "5": -0.184142,
+   "6": -0.215423,
+   "7": -0.2731,
+   "8": -0.127735,
+   "9": -0.206,
+   "10": -0.070939
+  },
+  "mean": -0.1863283313772281,
+  "max": -0.07093940347702743,
+  "n_folds_reality_exceeded_warning": 0
+ },
+ "stated_limits": {
+  "model_level_look_ahead": "the promoted generator trained on 1990-2020; folds test 2011-2020. The cone has seen the test years in fitting; benchmark policies see trailing data only. A per-fold-retrained generator variant is future work, named here.",
+  "pitfall_caveat_verbatim": "a policy that wins in the ensemble has been tested against the policy AND the generator together -- say so plainly."
+ }
+}
