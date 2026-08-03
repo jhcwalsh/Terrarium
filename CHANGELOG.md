@@ -7,6 +7,23 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP5.5 — the decision-density pilot** (D-K5-3: "hundreds of worlds to
+  start, note the time and cost"). `ah.density.window_contributions`
+  implements DN-5's ratified sequential chain-link decomposition (the
+  telescoping identity pinned by test — the research statistic and the
+  player-facing outcome card share one definition);
+  `scripts/run_density_pilot.py` ran 300 worlds × 4 deciders × 9 windows
+  (10,800 attributions, 16.8 s wall). **Findings at pilot scale**: 43%
+  of total |contribution| sits in the first two windows (the plan's
+  "consequence concentrates at t₀", supported) with a mid-decade bump at
+  windows 4–5 above the time-decay line where the presets' regime breaks
+  sit; the window×regime confound of fixed preset schedules is stated —
+  the generated-world full run breaks it. **The budget table is
+  measured**: 0.056 s/world at this decider set → the full 5000-world
+  toy-layer run is ~5 minutes; the generated-world variant's sampling is
+  ~0.94 h GPU at the measured campaign-2 rate; LLM-committee cost quoted
+  as an API-call rate, deliberately outside pilot compute. Report at
+  `artifacts/wp55/density-pilot.{md,json}`. 5 new tests.
 - **WP5.4 — the tournament harness** (`ah.tournament.run_tournament`).
   Same world, same seed, N decision-makers, one revealed path, one twin —
   differences are decisions and nothing else, made a harness invariant.

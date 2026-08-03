@@ -1,0 +1,149 @@
+{
+ "kind": "decision-density-pilot",
+ "created_at": "2026-08-03",
+ "information_basis": "reported",
+ "attribution": "DN-5 sequential chain-link (ah.density.window_contributions)",
+ "grid": {
+  "presets": [
+   "deflation_bust",
+   "goldilocks",
+   "reflation_boom",
+   "stagflation"
+  ],
+  "seeds_per_preset": 75,
+  "base_seed": 20260803,
+  "participants": [
+   "band-rule-10pct",
+   "band-rule-5pct",
+   "hold-course",
+   "luck"
+  ]
+ },
+ "by_window": {
+  "0": {
+   "mean_abs": 2.9826731393417436,
+   "p90_abs": 8.340178994065637,
+   "share": 0.2102647278321554,
+   "n": 1200
+  },
+  "1": {
+   "mean_abs": 3.1280434286800465,
+   "p90_abs": 8.316743961251234,
+   "share": 0.22051266412776496,
+   "n": 1200
+  },
+  "2": {
+   "mean_abs": 0.9519523125703885,
+   "p90_abs": 3.2936798265796883,
+   "share": 0.06710825644005301,
+   "n": 1200
+  },
+  "3": {
+   "mean_abs": 0.8170434247189816,
+   "p90_abs": 2.8751416985348897,
+   "share": 0.057597800798079725,
+   "n": 1200
+  },
+  "4": {
+   "mean_abs": 1.7586124679210404,
+   "p90_abs": 5.962648746032303,
+   "share": 0.12397408453923296,
+   "n": 1200
+  },
+  "5": {
+   "mean_abs": 1.6049867169797472,
+   "p90_abs": 4.953680720034919,
+   "share": 0.11314417619841813,
+   "n": 1200
+  },
+  "6": {
+   "mean_abs": 1.3392797055433632,
+   "p90_abs": 4.551520223800562,
+   "share": 0.09441305487444478,
+   "n": 1200
+  },
+  "7": {
+   "mean_abs": 1.004657690750583,
+   "p90_abs": 3.5310028684850723,
+   "share": 0.07082374301220727,
+   "n": 1200
+  },
+  "8": {
+   "mean_abs": 0.5980743966396886,
+   "p90_abs": 2.2496321117593214,
+   "share": 0.04216149217764363,
+   "n": 1200
+  }
+ },
+ "by_regime": {
+  "deflation_boom": {
+   "mean_abs": 1.2766004606048957,
+   "p90_abs": 4.551066458656648,
+   "share": 0.20248752735680156,
+   "n": 2700
+  },
+  "expansion": {
+   "mean_abs": 1.807330434013556,
+   "p90_abs": 5.875355806820663,
+   "share": 0.5733381461051567,
+   "n": 5400
+  },
+  "stagflation": {
+   "mean_abs": 1.413326797210473,
+   "p90_abs": 4.354579161632965,
+   "share": 0.22417432653804173,
+   "n": 2700
+  }
+ },
+ "by_participant": {
+  "band-rule-10pct": {
+   "mean_abs": 0.9974392757040683,
+   "p90_abs": 3.3596144662707697,
+   "share": 2693.0860444009845,
+   "n": 2700
+  },
+  "band-rule-5pct": {
+   "mean_abs": 1.903874983756071,
+   "p90_abs": 5.8677599292632925,
+   "share": 5140.462456141391,
+   "n": 2700
+  },
+  "hold-course": {
+   "mean_abs": 0.0,
+   "p90_abs": 0.0,
+   "share": 0.0,
+   "n": 2700
+  },
+  "luck": {
+   "mean_abs": 3.403273866382342,
+   "p90_abs": 8.373566084267466,
+   "share": 9188.839439232323,
+   "n": 2700
+  }
+ },
+ "budget": {
+  "pilot": {
+   "worlds": 300,
+   "participants": 4,
+   "windows_per_world": 9,
+   "wall_seconds": 16.8,
+   "seconds_per_world": 0.056,
+   "stage_seconds": {
+    "engine_s": 0.2,
+    "play_s": 8.0,
+    "attribution_s": 8.7
+   }
+  },
+  "full_run_toy_layer": {
+   "worlds": 5000,
+   "extrapolated_wall_minutes": 4.7,
+   "basis": "measured pilot rate, same participant set"
+  },
+  "full_run_generated_worlds": {
+   "worlds": 5000,
+   "sampling_wall_hours": 0.94,
+   "basis": "measured campaign-2 criterion-cell rate (~0.68 s/decade, GPU sampler block_batch 128); decision layer adds the toy-layer rate on top"
+  },
+  "committee_llm_rate_note": "an LLM committee decider costs ~1 API call per window per participant; at 10 windows x 5000 worlds that is 50k calls per persona -- priced from the provider table at run time, deliberately excluded from pilot compute"
+ }
+}
