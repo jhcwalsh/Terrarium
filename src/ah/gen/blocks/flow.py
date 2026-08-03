@@ -492,7 +492,15 @@ def load_checkpoint(path: str | Path, *, map_location: str = "cpu"):
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[4]
-DEFAULT_CHECKPOINT = _REPO_ROOT / "experiments" / "l3b-flow-final" / "checkpoint.pt"
+#: CAMPAIGN-2 PROMOTION (2026-08-03, verdict PROMOTE, per-seed route -- see
+#: artifacts/campaign2/promotion-verdict.json and PROMOTION.md): the primary
+#: checkpoint is the campaign-2 seed-0 artifact, trained on the sealed
+#: fifteen-factor vintage 2026-08-02.4 at the sealed WP2.9 selection config
+#: (n_factors following the sealed factor set; C3: no residual drift, guidance
+#: 1.0). The G2-era artifact (experiments/l3b-flow-final/checkpoint.pt,
+#: b1fe26e100678a26...) remains the generator of record FOR G2'S CLAIMS on
+#: vintage 2026-07-26.1 and is superseded, not invalidated.
+DEFAULT_CHECKPOINT = _REPO_ROOT / "experiments" / "campaign2-flow-s0" / "checkpoint.pt"
 
 #: The primary WP2.9 checkpoint: the sealed-selection config (cfg:5943f6cd2f6f1048
 #: — d_model 192 / 4 layers, euler at NFE 4, cond_dropout 0.2, guidance_scale 1.0,
@@ -504,7 +512,7 @@ DEFAULT_CHECKPOINT = _REPO_ROOT / "experiments" / "l3b-flow-final" / "checkpoint
 #: weights can be sampled with and without guidance, which is what the bake-off's
 #: guidance ablation uses.
 PINNED_CHECKPOINT_SHA256: str | None = (
-    "b1fe26e100678a26ae6702907c90ee1d51b0d482bbb23e6de97eed4d0053508e"
+    "c6addb5420723e59c9966dd65c1127d18eca46097049ff7434295cab512f9873"
 )
 
 #: Sampler construction defaults for the registry factory (which takes no
