@@ -150,8 +150,12 @@ _COMMON_PHRASES = {
     "net asset value",
     "net asset value index",
     # document furniture is not an entity reference (1.0.6)
-    "quarterly letter", "quarterly statement", "annual report",
-    "annual letter", "investor letter", "board pack",
+    "quarterly letter",
+    "quarterly statement",
+    "annual report",
+    "annual letter",
+    "investor letter",
+    "board pack",
 }
 _TITLE_STOPWORDS = {
     "The",

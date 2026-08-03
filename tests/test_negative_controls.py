@@ -928,13 +928,24 @@ def test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metric
             ensemble, reference=reference, prereg=prereg, manifest=manifest, seed=_SEED
         )
     tenyr = [r for r in rep.results if r.tier == "10yr"]
-    assert len(tenyr) == 22, len(tenyr)
+    # campaign-2 accounting: 24 rows, up from 22. ergodicity_gap registers per
+    # DECLARED active factor (sixteen now, up from fourteen -- fx_usd and cape_v
+    # joined), and the two ten_year_return_vs_valuation_* rows are still present
+    # but NO LONGER structurally unavailable: the valuation block closed RFR-18,
+    # so they compute (the point of the block addition) and leave `unavailable`.
+    assert len(tenyr) == 24, len(tenyr)
     unavailable = [r for r in tenyr if r.status == STRUCTURALLY_UNAVAILABLE]
     assert len(unavailable) == 16, sorted(r.name for r in unavailable)
     ergodicity = [r for r in unavailable if r.name.endswith(".ergodicity_gap")]
-    valuation = [r for r in unavailable if r.name.startswith("ten_year_return_vs_valuation_")]
-    assert len(ergodicity) == 14, sorted(r.name for r in ergodicity)
-    assert len(valuation) == 2, sorted(r.name for r in valuation)
+    valuation_unavailable = [
+        r for r in unavailable if r.name.startswith("ten_year_return_vs_valuation_")
+    ]
+    assert len(ergodicity) == 16, sorted(r.name for r in ergodicity)
+    assert valuation_unavailable == [], sorted(r.name for r in valuation_unavailable)
+    valuation_rows = [
+        r for r in tenyr if r.name.startswith("ten_year_return_vs_valuation_")
+    ]
+    assert len(valuation_rows) == 2, sorted(r.name for r in valuation_rows)
     assert not [r for r in tenyr if r.name.startswith("regime_duration_")], (
         "regime_duration_* must not appear in the 10yr tier"
     )

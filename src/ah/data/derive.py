@@ -55,6 +55,37 @@ def difference(a: pd.DataFrame, b: pd.DataFrame) -> pd.DataFrame:
     return _frame((sa.loc[common] - sb.loc[common]).sort_index())
 
 
+def hy_oas_spliced(hy: pd.DataFrame, baa: pd.DataFrame, aaa: pd.DataFrame) -> pd.DataFrame:
+    """HY OAS extended backward with the Baa-Aaa donor (campaign-2 seal).
+
+    Applies ``ah.data.splice.PROXY_RULES['hy_oas_pre1996']`` (RFR-92-corrected
+    overlap) at the factor read surface via its PINNED fit
+    (``splice.PINNED_FITS`` -- owner decision 2026-08-02: the rule's only
+    licensed fitting window lies inside the holdout span, so the fit is frozen
+    offline and no calibration happens at read time). On a train+validation
+    read ``hy`` is empty and every row is proxy; actuals, where present, are
+    never touched. The panel keeps its canonical ``(date, value)`` shape; proxy
+    provenance is documented in ``factors.yaml`` and the retrofit register.
+    """
+    from ah.data import splice as sp
+
+    result = sp.splice_pinned(sp.PROXY_RULES["hy_oas_pre1996"], hy, difference(baa, aaa))
+    return result.frame[["date", "value"]].copy()
+
+
+def fx_usd_spliced(broad: pd.DataFrame, major: pd.DataFrame) -> pd.DataFrame:
+    """Broad trade-weighted dollar extended backward with the DTWEXM donor.
+
+    Applies ``ah.data.splice.PROXY_RULES['fx_usd_pre2006']`` at the factor read
+    surface (campaign-2 fx block, S2R-FX-NEXT-CAMPAIGN / R5 re-entry). Same
+    contract as :func:`hy_oas_spliced`.
+    """
+    from ah.data import splice as sp
+
+    result = sp.splice(sp.PROXY_RULES["fx_usd_pre2006"], broad, major)
+    return result.frame[["date", "value"]].copy()
+
+
 def yoy(index_frame: pd.DataFrame, periods: int = 12) -> pd.DataFrame:
     """Year-on-year percent change of an index series."""
     s = _s(index_frame).sort_index()

@@ -134,9 +134,7 @@ def sleeve_returns(
     names = sorted(sleeves)
     n_paths, months = ensemble.n_paths, ensemble.months
 
-    corr = np.array(
-        [[float(artifact["residual_correlation"][a][b]) for b in names] for a in names]
-    )
+    corr = np.array([[float(artifact["residual_correlation"][a][b]) for b in names] for a in names])
     sigmas = np.array(
         [float(sleeves[name]["residual_sigma_annual"]) / np.sqrt(12.0) for name in names]
     )

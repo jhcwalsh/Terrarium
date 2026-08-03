@@ -242,6 +242,8 @@ def test_meta_pins_generator_vintage_seed_and_active_blocks() -> None:
     assert meta.seed == 42
     assert meta.n_paths == 16
     assert meta.months == 120
+    # the meta echoes the SOURCE's own declared blocks (this synthetic source
+    # declares two); the live-manifest case is the test below.
     assert meta.active_blocks == ("global", "us")
     assert meta.conditioning["stratification"] == bs.STRATIFICATION
     assert meta.conditioning["ruleset_version"] == "regime_ruleset_v1"
@@ -502,6 +504,13 @@ def _plausible_access(vix_start: str = "1990-01-01") -> DataAccess:
         "fred.DGS10": (long_dates, 4.5 + rng.normal(0.0, 1.0, size=n)),
         "treasury.hqm_curve": (long_dates, 5.5 + rng.normal(0.0, 0.8, size=n)),
         "fred.TEDRATE": (long_dates, 0.5 + rng.normal(0.0, 0.2, size=n)),
+        # campaign-2 factors: a positive dollar index + its (discontinued-shaped)
+        # donor, and a positive CAPE ratio. fred.HY_OAS stays EMPTY above -- the
+        # pinned hy_oas_pre1996 splice proxies every train+validation row from
+        # Baa-Aaa, exactly as on the real vintage.
+        "fred.DTWEXBGS": (long_dates, 100.0 + rng.normal(0.0, 5.0, size=n)),
+        "fred.DTWEXM": (long_dates, 95.0 + rng.normal(0.0, 5.0, size=n)),
+        "shiller.cape": (long_dates, 20.0 + rng.normal(0.0, 4.0, size=n)),
     }
 
     def reader(series_id: str) -> pd.DataFrame:

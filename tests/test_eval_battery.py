@@ -513,7 +513,7 @@ def test_run_battery_on_toy_engine_emits_both_formats(monkeypatch: pytest.Monkey
     assert isinstance(report, BatteryReport)
     assert report.system_id == "toy-v0"
     assert report.vintage_id == "toy-vintage-test"
-    assert report.active_blocks == ("global", "us")
+    assert report.active_blocks == ("global", "us", "fx", "valuation")
     assert report.prereg_digest.startswith("sha256:")
 
     result = next(r for r in report.results if r.name == "equity.dummy_mean")

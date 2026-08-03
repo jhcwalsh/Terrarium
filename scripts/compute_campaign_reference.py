@@ -36,7 +36,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 # The sealed reference-run parameters. These MUST match `pre-registration.yaml`'s
 # `reference_run:` block; `tests/test_prereg.py` asserts they do, so the script that
 # produced the bands and the file that seals them cannot silently diverge.
-CAMPAIGN_VINTAGE_ID = "2026-07-26.1"
+# Campaign-2 (AM-2026-08-02-009): vintage moved with the reference_run block; the
+# seed stays 20260726 so pre-existing factors' bands compare bit-for-bit (RFR-61).
+CAMPAIGN_VINTAGE_ID = "2026-08-02.4"
 REFERENCE_SEED = 20260726
 N_RESAMPLES = 1000
 LEVEL = 0.9

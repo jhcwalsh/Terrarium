@@ -611,6 +611,43 @@ def test_valuation_slope_r2_metrics_are_structurally_nan() -> None:
         assert spec.tier == "10yr"
 
 
+def test_valuation_metrics_activate_with_cape_v_active() -> None:
+    """Campaign-2: with cape_v + equity_mkt active, the RFR-18 gap CLOSES -- the
+    two valuation metrics compute (verified against an exact linear ground truth)
+    instead of marking structurally-unavailable NaN."""
+    blocks = {"global": ("equity_mkt",), "valuation": ("cape_v",)}
+    sources = {
+        "equity_mkt": FactorSource(
+            kind="series", units="ret", series_id="s.eq", numeraire="total_return"
+        ),
+        "cape_v": FactorSource(
+            kind="derived", units="log", expr="demeaned_log_cape", inputs=("s.cape",)
+        ),
+    }
+    manifest = FactorManifest(blocks=blocks, active_blocks=("global", "valuation"), sources=sources)
+    specs = build_horizon_suite(manifest, _empty_reference())
+    slope = _find_spec(specs, "ten_year_return_vs_valuation_slope")
+    r2 = _find_spec(specs, "ten_year_return_vs_valuation_r2")
+    assert slope.status == "ok" and r2.status == "ok"
+
+    rng = np.random.Generator(np.random.PCG64(7))
+    n = 128
+    cape0 = rng.normal(0.0, 0.5, n)
+    decade_return = 0.5 - 0.8 * cape0  # exact linear law: slope -0.8, R^2 1.0
+    monthly = (1.0 + decade_return) ** (1.0 / 120.0) - 1.0
+    paths = np.zeros((n, 120, 2))
+    paths[:, :, 0] = monthly[:, None]  # equity_mkt: constant monthly compounding
+    paths[:, :, 1] = cape0[:, None]  # cape_v: starting valuation, held flat
+    ensemble = Ensemble(paths=paths, factor_names=["equity_mkt", "cape_v"], meta=_meta(n, 120))
+    np.testing.assert_allclose(slope.fn(ensemble), -0.8, atol=1e-9)
+    np.testing.assert_allclose(r2.fn(ensemble), 1.0, atol=1e-9)
+
+    short = Ensemble(
+        paths=paths[:, :60, :], factor_names=["equity_mkt", "cape_v"], meta=_meta(n, 60)
+    )
+    assert np.isnan(slope.fn(short))  # no full decade window -> NaN, not a guess
+
+
 def test_absent_factor_is_nan_not_a_smaller_number() -> None:
     """A factor omitted from an ensemble entirely must NaN every metric registered
     under it -- never a suspiciously smaller/better number (Task 2's gaming lesson)."""

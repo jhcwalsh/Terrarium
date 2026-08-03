@@ -160,13 +160,19 @@ BLOCK_DRAW_SPAN_MONTHS = 372
 BLOCK_DRAW_SPAN_BINDING_FACTOR = "equity_vol"
 
 #: Every active factor with train+validation data on the sealed campaign vintage.
+#: Campaign-2 (2026-08-02, owner-ratified): hy_spread revived via the pinned
+#: hy_oas_pre1996 splice at the read surface; fx_usd and cape_v added by the fx
+#: and valuation block_addition amendments. commodities stays declared-unavailable.
 FACTOR_SET: tuple[str, ...] = (
+    "cape_v",
     "cpi",
     "equity_mkt",
     "equity_vol",
     "funding_spread",
+    "fx_usd",
     "hml",
     "hqm_curve",
+    "hy_spread",
     "ig_spread",
     "mom",
     "policy_rate",
@@ -176,7 +182,10 @@ FACTOR_SET: tuple[str, ...] = (
 )
 
 STRATIFICATION = "regime_ruleset_v1"
-CAMPAIGN_VINTAGE_ID = "2026-07-26.1"
+#: Campaign-2 vintage (S2-CAMPAIGN-VINTAGE-2): four iterations recorded in the
+#: retrofit register (RFR-91/92); the RFR-61 discipline applies -- pre-existing
+#: factors' bands are re-derived on this vintage and any movement is disclosed.
+CAMPAIGN_VINTAGE_ID = "2026-08-02.4"
 
 #: The sealed criterion ensemble size. A run at any other size -- or against any vintage
 #: other than `CAMPAIGN_VINTAGE_ID` -- is diagnostic only;
@@ -285,7 +294,17 @@ _DERIVED_EXPRS: dict[str, tuple[int, Any]] = {
     "add": (2, lambda frames: derive.add(frames[0], frames[1])),
     "difference": (2, lambda frames: derive.difference(frames[0], frames[1])),
     "funding_stress": (1, lambda frames: derive.funding_stress(frames[0])),
+    # campaign-2 seal additions -- mirrored from ah.eval.panel._DERIVED_EXPRS,
+    # kept identical by the equivalence test.
+    "hy_oas_spliced": (3, lambda frames: derive.hy_oas_spliced(frames[0], frames[1], frames[2])),
+    "fx_usd_spliced": (2, lambda frames: derive.fx_usd_spliced(frames[0], frames[1])),
+    "demeaned_log_cape": (1, lambda frames: derive.demeaned_log_cape(frames[0])),
 }
+
+#: Mirrors ah.eval.panel's DerivedExpr.optional_inputs for the one pinned-splice
+#: case: fred.HY_OAS's train+validation read is empty by construction and the
+#: transform handles it. The equivalence test pins this to panel's declaration.
+_OPTIONAL_INPUTS: dict[str, tuple[int, ...]] = {"hy_oas_spliced": (0,)}
 
 
 def _read_series(access: DataAccess, series_id: str) -> pd.DataFrame | None:
@@ -341,14 +360,21 @@ def read_factor_frames(access: DataAccess, manifest: FactorManifest) -> dict[str
                 frames[factor] = raw
             continue
         if source.kind == "derived":
+            optional = _OPTIONAL_INPUTS.get(source.expr or "", ())
             inputs: list[pd.DataFrame] = []
-            for series_id in source.inputs:
+            any_missing = False
+            for position, series_id in enumerate(source.inputs):
                 raw = _read_series(access, series_id)
                 if raw is None:
-                    inputs = []
-                    break
+                    if position in optional:
+                        raw = pd.DataFrame(
+                            {"date": pd.Series([], dtype="datetime64[ns]"), "value": []}
+                        )
+                    else:
+                        any_missing = True
+                        break
                 inputs.append(raw)
-            if not inputs:
+            if any_missing:
                 continue
             derived_frame = _resolve_derived(source, factor, inputs)
             if not derived_frame.empty:

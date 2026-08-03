@@ -83,9 +83,6 @@ class TestSpendingOffReported:
         engine.portfolio.liquid["liquid_public_equity"].apply_return(-0.40)
         crashed = engine.run_quarter(distributions=0.0, calls=0.0)
         # spending falls far less than the true value fell
-        true_fall = 1.0 - engine.portfolio.nav_true() / (
-            100.0 + 100.0 + engine.portfolio.cohorts["pm_buyout-2019"].nav_true
-        )
         spend_fall = 1.0 - crashed.spending_paid / calm.spending_paid
         assert spend_fall < 0.15  # trailing reported average barely moves
         assert crashed.spending_paid > 0.0

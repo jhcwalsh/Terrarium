@@ -155,9 +155,10 @@ class FlowConfig:
     # around bridge.conditioning_drift_means; the dataset must be built with the
     # matching flag and the sampler adds the means back from the raw c_b vector.
     residual_drift: bool = False
-    # data geometry
+    # data geometry (campaign-2: the sealed factor set is fifteen; pre-campaign
+    # checkpoints recorded n_factors explicitly, so their hashes are unaffected)
     block_months: int = bridge.BLOCK_MONTHS
-    n_factors: int = 12
+    n_factors: int = 15
     cond_dim: int = bridge.C_B_DIM
 
     def __post_init__(self) -> None:

@@ -171,7 +171,18 @@ sealed: true
 # cost precisely because no generator had been fitted and no G2 evidence existed: there
 # was nothing to re-do and nothing that could have been fitted to the new numbers.
 # Every band below was recomputed on `2026-07-26.1` from scratch.
-campaign_vintage_id: "2026-07-26.1"
+#
+# THE VINTAGE MOVED A SECOND TIME AT CAMPAIGN-2 (amendment AM-2026-08-02-009,
+# owner-ratified). `2026-07-26.1` -> `2026-08-02.4`: the campaign-2 refresh landed
+# fred.DTWEXBGS/DTWEXM (the fx block), corrected the hy_oas_pre1996 splice rule
+# (RFR-92) and re-served every pre-existing series. This IS a campaign restart in
+# the paragraph-above sense, taken deliberately: the Step-2 generator promoted at
+# G2 remains the generator of record FOR G2's claims on `2026-07-26.1`; campaign-2
+# retrains against this vintage under its own seal. The RFR-61 discipline applies:
+# pre-existing factors' bands are re-derived on the new vintage at the same seed
+# and any movement is disclosed in the campaign-2 reference-run artifact
+# (artifacts/campaign2/reference-run.json) rather than silently absorbed.
+campaign_vintage_id: "2026-08-02.4"
 
 # The sealed factor namespace (WP2.1b Task 1, ah.factors.load_manifest). Path is
 # relative to this file; ah.eval.prereg.seal() reads it to know which factors.yaml to
@@ -181,7 +192,11 @@ factor_manifest: factors.yaml
 # Must equal factors.yaml's active_blocks at seal time -- ah.eval.prereg.verify()
 # checks this exactly against the live FactorManifest, so the pre-registration can
 # never silently drift from the manifest it was authored against.
-active_blocks: [global, us]
+# Campaign-2: fx and valuation activated by block_addition amendments
+# AM-2026-08-02-007/-008; merged here as part of the campaign-2 re-seal (the
+# amendment payloads are the audit record; pre-existing blocks' thresholds are
+# byte-identical, which is the block_addition acceptance criterion).
+active_blocks: [global, us, fx, valuation]
 
 # --------------------------------------------------------------------------- #
 # splits -- the sealed train / validation / holdout boundaries.
@@ -238,7 +253,9 @@ splits:
 # same seed against the same vintage gives bit-identical bands.
 # --------------------------------------------------------------------------- #
 reference_run:
-  vintage_id: "2026-07-26.1"
+  # Campaign-2 (AM-2026-08-02-009): re-run on the new vintage at the SAME seed so
+  # pre-existing factors' bands are comparable bit-for-bit (RFR-61 discipline).
+  vintage_id: "2026-08-02.4"
   seed: 20260726
   n_resamples: 1000
   level: 0.9
@@ -258,17 +275,19 @@ reference_run:
   # the sealed vintage:
   #   commodities  -- DECLARED unavailable (factors.yaml `kind: unavailable`); no free,
   #                    already-connectored total-return series exists (RFR-8).
-  #   hy_spread    -- MAPPED to fred.HY_OAS, which IS in the vintage, but FRED serves
-  #                    only ~3 years of it under ICE licensing (37 monthly observations,
-  #                    2023-07 to 2026-07), and ALL of them fall inside the HOLDOUT span
-  #                    (2021-01-01 onward), so its train+validation sample is empty. The
-  #                    ah.data.splice `hy_oas_pre1996` rule that would extend it backward
-  #                    is REGISTERED BUT NOT APPLIED by ah.data.refresh (RFR-10), so the
-  #                    sealed vintage does not contain the backfill. Recorded here as the
-  #                    answer to RFR-10's question "WP2.3 must confirm which the campaign
-  #                    vintage actually contains": neither proxy rule is applied in it.
-  #                    THE LIVE REFRESH DID NOT AND COULD NOT FIX THIS -- it is a
-  #                    licensing limit on what FRED serves, not a stale snapshot.
+  #   hy_spread    -- RESTORED AT CAMPAIGN-2 (AM-2026-08-02-009; the paragraph below
+  #                    records the superseded state). The hy_oas_pre1996 splice rule is
+  #                    now APPLIED AT THE READ SURFACE (factors.yaml kind: derived,
+  #                    expr: hy_oas_spliced) with a PINNED fit -- the rule's only
+  #                    licensed fitting window lies inside the holdout span, so the two
+  #                    fitted scalars were frozen offline by owner decision (2026-08-02)
+  #                    rather than fit at read time (splice.PINNED_FITS; the residual
+  #                    post-2020 information flow is exactly those two published
+  #                    constants). Superseded state, kept for the record: FRED serves
+  #                    only ~3 licensed years of fred.HY_OAS (all inside the holdout
+  #                    span), the rule was REGISTERED BUT NOT APPLIED (RFR-10), and the
+  #                    2026-07-26.1 train+validation sample was empty -- a licensing
+  #                    limit, not a stale snapshot.
   #
   # WHAT THE VINTAGE MOVE FIXED, recorded here because the first seal recorded the
   # opposite: `policy_rate` was in this list at the first seal, with THREE names in it.
@@ -279,7 +298,9 @@ reference_run:
   # `policy_anchor_deviation`. Its train+validation coverage is 1954-07 to 2020-12,
   # n = 798 -- shorter than the equity factors' 1926, which has consequences of its own
   # (see decisions.S2-NUMERAIRE-BIAS).
-  missing_factors: [commodities, hy_spread]
+  # Campaign-2: hy_spread leaves this list (restored via the pinned splice above);
+  # commodities remains the one declared-unavailable factor (RFR-8).
+  missing_factors: [commodities]
 
   # CONSEQUENCE FOR D4. rationale.d4_commodities_consequence names TWO strategies as
   # unevaluable (eqw_factors, endowment_proxy) on the strength of `commodities` alone.
@@ -294,14 +315,26 @@ reference_run:
   # carry (govt_tr_10y<-ust_10y funded at cash_tr_1m<-policy_rate). Every sealed
   # thresholds.strategies entry is on one of those three, and verify() rejects one on
   # either of the two below.
+  # Campaign-2 note (AM-2026-08-02-009): hy_spread's restoration does NOT shrink
+  # this list -- commodities alone keeps both strategies uncomputable (0.20 in
+  # eqw_factors, 0.10 in endowment_proxy). The paragraph above's "if commodities
+  # were sourced tomorrow" hypothetical is now the LIVE condition: sourcing
+  # commodities would make endowment_proxy computable, since credit_xs_hy's
+  # hy_spread leg is restored.
   uncomputable_d4_strategies: [eqw_factors, endowment_proxy]
 
   # Per-factor train+validation coverage of the run, verbatim from its output. Sealed
   # because a band that does not say how much history it rests on is not auditable, and
   # the spread here is roughly threefold.
   coverage:
+    # campaign-2 additions (AM-2026-08-02-007/-008/-009), verbatim from the
+    # campaign-2 reference run (artifacts/campaign2/reference-run.json).
+    # hy_spread's 1224 months are ALL proxy on a train+validation read (the
+    # pinned splice; fred.HY_OAS itself has zero train+validation rows).
+    cape_v:         {first: "1881-01-01", last: "2020-12-01", n_obs: 1680}
     cpi:            {first: "1913-01-01", last: "2020-12-01", n_obs: 1296}
     ig_spread:      {first: "1919-01-01", last: "2020-12-01", n_obs: 1224}
+    hy_spread:      {first: "1919-01-01", last: "2020-12-01", n_obs: 1224}
     equity_mkt:     {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
     hml:            {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
     smb:            {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
@@ -309,6 +342,7 @@ reference_run:
     policy_rate:    {first: "1954-07-01", last: "2020-12-01", n_obs: 798}
     ust_10y:        {first: "1962-01-01", last: "2020-12-01", n_obs: 708}
     ust_2y:         {first: "1976-06-01", last: "2020-12-01", n_obs: 535}
+    fx_usd:         {first: "1973-01-01", last: "2020-12-01", n_obs: 576}
     hqm_curve:      {first: "1984-01-01", last: "2020-12-01", n_obs: 444}
     funding_spread: {first: "1986-01-01", last: "2020-12-01", n_obs: 420}
     equity_vol:     {first: "1990-01-01", last: "2020-12-01", n_obs: 372}
@@ -620,6 +654,15 @@ conventions:
     - funding_spread
     - cpi
     - equity_vol
+    # campaign-2 block additions (AM-2026-08-02-007/-008, the hand-edited half a
+    # block_addition requires -- see governance/amendment-log.yaml's header):
+    # fx_usd is a trade-weighted dollar INDEX level (factors.yaml units: index,
+    # derived fx_usd_spliced); cape_v is DN-1's v_t, a demeaned natural log of a
+    # valuation ratio (units: log, derived demeaned_log_cape) -- signed, unbounded,
+    # and a level in the exact "not a return" sense above. Neither declares a
+    # derived_series transform, so neither has a route into a D4 portfolio.
+    - fx_usd
+    - cape_v
 
   percent_to_decimal: 0.01
   months_per_year: 12.0
@@ -2437,6 +2480,35 @@ thresholds:
       "ust_10y.excess_kurtosis": {min: null, max: 3.4373, severity: report}
       # band [-1.545279, 2.006997]; historical point -0.699652. Same structural clip.
       "cpi.excess_kurtosis": {min: null, max: 7.3354, severity: report}
+    # ----------------------------------------------------------------------- #
+    # CAMPAIGN-2 BLOCK ADDITIONS (AM-2026-08-02-007/-008; merged here as part of
+    # the campaign-2 re-seal -- the amendment payloads are the audit record and a
+    # test asserts these entries equal them). Same recipe as every entry above:
+    # the campaign-2 reference run's own band (quoted per entry; provenance
+    # artifacts/campaign2/reference-run.json, sealed seed, RFR-61 outcome: every
+    # checked pre-existing band recomputed BIT-IDENTICAL), mid -+ 4 half-widths,
+    # a side sealed null where that leaves the statistic's structural range,
+    # severity report throughout -- no new enforce name, for the family-wise-error
+    # reason the section header states.
+    fx:
+      # band [0.916783, 0.987438]. Upper side NOT sealed: 4 half-widths reaches
+      # 1.0935, outside an autocorrelation's [-1, 1]. The surviving min says a
+      # trade-weighted dollar LEVEL must stay persistent -- the falsifiable content.
+      "fx_usd.acf_r_lag1": {min: 0.8108, max: null, severity: report}
+      # band [3.532848, 4.735283]. Upper side NOT sealed (4 half-widths reaches
+      # 6.5395, above the structural max of 5 for a sum of five autocorrelations).
+      "fx_usd.acf_r_sum": {min: 1.7292, max: null, severity: report}
+      # band [-1.540829, 1.349860]. Lower side NOT sealed (structural minimum -2).
+      "fx_usd.excess_kurtosis": {min: null, max: 5.6859, severity: report}
+    valuation:
+      # band [0.924902, 0.983156]. Upper side NOT sealed ([-1, 1] clip, as fx).
+      # cape_v is DN-1's v_t -- the min is a decade-scale persistence floor on the
+      # valuation state itself.
+      "cape_v.acf_r_lag1": {min: 0.8375, max: null, severity: report}
+      # band [3.770594, 4.696413]. Upper side NOT sealed (structural max 5).
+      "cape_v.acf_r_sum": {min: 2.3819, max: null, severity: report}
+      # band [-1.409280, 0.997569]. Lower side NOT sealed (structural minimum -2).
+      "cape_v.excess_kurtosis": {min: null, max: 4.6078, severity: report}
   cross_blocks:
     "global|us":
       # band [-0.479115, 0.479350]; historical point 0.033634. DN-1.1's crisis-
@@ -2454,6 +2526,32 @@ thresholds:
       # `correlation` is now covered as a family by moment_band_exceedance_fraction and
       # `crisis_corr_lift` is the DN-1.1-named statistic.)
       "equity_mkt~ust_10y.crisis_corr_lift": {min: -1.9168, max: 1.9170, severity: report}
+    # CAMPAIGN-2 PAIRS (AM-2026-08-02-007/-008). One representative
+    # crisis_corr_lift per pair, chosen PRE-HOC on macro grounds and mirroring
+    # the sealed convention above; same derivation, same weak-bound honesty.
+    # THREE of the five seal NULL ON BOTH SIDES: their historical bands are so
+    # wide that 4 half-widths exceeds the statistic's whole [-2, 2] range in both
+    # directions, so no side can bind. The entry exists because verify() requires
+    # every active pair to carry one, and a stated-vacuous bound is more honest
+    # than a pretend one -- the real cross-block judgment for these pairs, as for
+    # global|us above, is cross_block_corr_matrix_distance and the dependence gate.
+    "fx|global":
+      # band [-0.363019, 0.492506]; dollar~equity crisis interaction (flight to
+      # the dollar). Both sides bind, barely (range clip at -2/2 not reached).
+      "fx_usd~equity_mkt.crisis_corr_lift": {min: -1.6463, max: 1.7758, severity: report}
+    "fx|us":
+      # band [-0.881578, 0.659509]; 4 half-widths spans [-3.19, 2.97] -- vacuous.
+      "fx_usd~ust_10y.crisis_corr_lift": {min: null, max: null, severity: report}
+    "fx|valuation":
+      # band [-1.047624, 1.069450]; 4 half-widths spans [-4.22, 4.24] -- vacuous.
+      "fx_usd~cape_v.crisis_corr_lift": {min: null, max: null, severity: report}
+    "global|valuation":
+      # band [-0.469687, 0.459772]; valuation~equity, the DN-1-natural pair.
+      # Both sides bind, barely.
+      "equity_mkt~cape_v.crisis_corr_lift": {min: -1.8639, max: 1.854, severity: report}
+    "us|valuation":
+      # band [-0.905227, 1.246245]; 4 half-widths spans [-4.13, 4.47] -- vacuous.
+      "ust_10y~cape_v.crisis_corr_lift": {min: null, max: null, severity: report}
   panel:
     # NOT derived from a band, and cannot be: see the next sentence. The 10.0 is a
     # loose absolute ceiling on a Frobenius distance over the sealed cross-block pair
@@ -2907,15 +3005,15 @@ decisions:
 #
 # Before WP2.3 that status was VISIBLE on the metric but not ENFORCED on the threshold.
 # ah.eval.prereg.verify() now REJECTS `severity: enforce` on any statistic named here,
-# on every battery invocation. All TWELVE names below are sealed `report` or omitted
-# deliberately; none carries an enforce threshold. (Re-seal fix, review Minor 1: this
-# sentence said "eleven". The block has always listed twelve -- ergodicity_gap, three
-# regime_duration_*, six implied_sharpe_*, two ten_year_return_vs_valuation_* -- and
-# governance/retrofit-register.md RFR-55 says twelve. Counted, not estimated:
-# tests/test_prereg.py asserts the list against what a real suite registration marks,
-# in both directions, so the LIST was never wrong; only this count of it was.)
+# on every battery invocation. All TEN names below are sealed `report` or omitted
+# deliberately; none carries an enforce threshold. (Count history: a re-seal fix
+# corrected "eleven" to "twelve"; campaign-2 (AM-2026-08-02-008) removed the two
+# ten_year_return_vs_valuation_* names -- their factor gap closed -- leaving TEN:
+# ergodicity_gap, three regime_duration_*, six implied_sharpe_*. Counted, not
+# estimated: tests/test_prereg.py asserts the list against what a real suite
+# registration marks, in both directions.)
 #
-# NOTE ON THE VINTAGE MOVE: none of these twelve is restored by it. All twelve are
+# NOTE ON THE (first) VINTAGE MOVE: none of these is restored by a refresh alone. All twelve are
 # blocked by a missing factors.yaml MAPPING (usrec/growth_yoy for the regime names,
 # shiller.cape for the valuation names) or by a generator capability nothing implements
 # (a long path, for ergodicity_gap) -- never by a series being absent from a snapshot,
@@ -2986,22 +3084,17 @@ structurally_unavailable_statistics:
   implied_sharpe_REF:
     restored_by: WP2.6
     reason: same regime-label blocker as regime_duration_*; see RFR-27.
-  # Both ten_year_return_vs_valuation_* names share one blocker, and it is the only
-  # entry in this block with NO OWNER.
-  ten_year_return_vs_valuation_slope:
-    restored_by: unscheduled
-    reason: &valuation_reason >-
-      DN-1.1's decade row needs a starting-valuation input (demeaned log CAPE).
-      shiller.cape IS registered in requirements.yaml and IS in the sealed vintage, but
-      no factor in factors.yaml maps to it, so no generated path carries a valuation
-      state to regress against. ah.eval.reference.valuation_regression is the tested,
-      ready-to-wire OLS estimator; only the factor mapping is missing. UNSCHEDULED is
-      the honest owner: it is a Step-1 data/manifest item nobody owns today, and
-      governance/retrofit-register.md RFR-42 states it should be given one BEFORE G2,
-      because without it DN-1.1's decade row cannot be posed at all. See RFR-18.
-  ten_year_return_vs_valuation_r2:
-    restored_by: unscheduled
-    reason: *valuation_reason
+  # The two ten_year_return_vs_valuation_* names LEFT THIS LIST AT CAMPAIGN-2
+  # (AM-2026-08-02-008; owner: "include CAPE in this seal"). Their blocker was the
+  # only unowned one here -- RFR-42 asked that it be given an owner, RFR-81 found
+  # the raw series was registered all along and only the factors.yaml mapping was
+  # missing -- and the valuation block_addition supplied exactly that mapping
+  # (cape_v, derive.demeaned_log_cape over shiller.cape). With cape_v active the
+  # suite computes both statistics (ah.eval.metrics.horizon's ensemble-side wiring
+  # of the long-tested reference.valuation_regression estimator, one
+  # (starting-valuation, decade-forward-return) pair per path), so under the
+  # both-directions test that pins this list to what a real registration marks,
+  # keeping them here would itself be the defect. Ten names remain. RFR-18 closes.
 
 # --------------------------------------------------------------------------- #
 # seal_scope -- the two questions WP2.1b left explicitly open, decided here.
@@ -3046,8 +3139,19 @@ seal_scope:
     not enough: an edit to derive.add's body would change what a sealed band is a band
     OF, with no lock violation. The stated cost is accepted: a future Step-1 change to
     any of those three helpers is now a dated amendment.
-  splice_py: NOT-SEALED
+  # CAMPAIGN-2 (AM-2026-08-02-009): the consequence clause below FIRED exactly as
+  # written -- the hy_oas_pre1996 rule is applied at the read surface (with a
+  # PINNED fit; owner decision 2026-08-02), the vintage moved, and splice.py is
+  # on the read path. It therefore JOINS THE SEAL: it is in
+  # ah.eval.prereg._REQUIRED_JUDGED_SOURCES and hashed into every lock, because
+  # its PINNED_FITS constants and fit arithmetic now shape sealed bands. The
+  # superseded NOT-SEALED reasoning is kept verbatim below as the record of why
+  # it was out and what was said would bring it in.
+  splice_py: SEALED
   splice_py_reason: >-
+    SEALED AT CAMPAIGN-2; the paragraph below is the superseded WP2.3 state whose
+    own consequence clause predicted this change.
+  splice_py_superseded_wp23_reason: >-
     governance/retrofit-register.md RFR-10, second half. src/ah/data/splice.py's
     PROXY_RULES (fedfunds_pre1954, hy_oas_pre1996) are REGISTERED but not applied by
     ah.data.refresh, and ah.eval.panel.read_factor_frames never calls that module at
@@ -3229,6 +3333,20 @@ claims_with_tests:
         - tests/test_prereg.py::test_verify_fails_when_sealed_and_lock_file_is_missing
       status: pinned
 
+    every_active_pair_must_carry_a_cross_block_entry:
+      claim: >-
+        verify() requires a thresholds.cross_blocks entry for every active block
+        pair -- which is why campaign-2's three vacuous (both-null) pair entries
+        exist at all: the coverage requirement is machine-enforced, and a
+        stated-vacuous bound satisfies it honestly where 4 half-widths exceeds
+        the statistic's whole range.
+      covers:
+        - "# directions, so no side can bind. The entry exists because verify() requires"
+      pinned_by:
+        - tests/test_prereg.py::test_verify_fails_when_cross_block_entry_missing
+      status: pinned
+
+
     the_self_containment_rule_is_checked_by_tests:
       claim: >-
         The umbrella claim of the self-containment rule: where this document and the
@@ -3341,7 +3459,7 @@ claims_with_tests:
         - "#     `structurally_unavailable_statistics:` block, which verify() now enforces"
         - "# ah.eval.prereg.verify() enforces it mechanically). On campaign vintage"
         - "# ah.eval.prereg.verify() now REJECTS `severity: enforce` on any statistic named here,"
-        - "# tests/test_prereg.py asserts the list against what a real suite registration marks,"
+        - "# estimated: tests/test_prereg.py asserts the list against what a real suite"
         - "# tests/test_prereg.py asserts this list equals, in BOTH directions, the set a real"
       pinned_by:
         - tests/test_prereg.py::test_verify_rejects_enforce_on_a_structurally_unavailable_statistic
@@ -3706,6 +3824,14 @@ limitations:
     (a Baa-Aaa proxy) is the only route, and applying it is a campaign restart and a
     dated amendment. A reader who sees that the campaign vintage was refreshed once
     should not infer that the remaining gaps are one refresh away. They are not.
+    CAMPAIGN-2 SUPERSESSION (AM-2026-08-02-009): the hy_spread half of this paragraph
+    fired exactly as written -- the splice rule was applied (with a PINNED fit, since
+    its only licensed fitting window lies inside the holdout; owner decision
+    2026-08-02), the vintage moved to 2026-08-02.4, and hy_spread left
+    reference_run.missing_factors. The commodities half stands unchanged. The
+    fourteen-declared-factors count in this key's name is itself historical: the fx
+    and valuation block additions bring the declared active set to sixteen, fifteen
+    with data.
 
   pooled_vs_per_path_band_semantics: >-
     governance/retrofit-register.md RFR-15/RFR-26, sealed as a stated limitation rather
@@ -4026,8 +4152,10 @@ bootstrap_v1:
     admits factor-dependent availability (a genuinely new estimator). Any of the three
     is a dated amendment.
 
-  factor_set: [cpi, equity_mkt, equity_vol, funding_spread, hml, hqm_curve, ig_spread,
-               mom, policy_rate, smb, ust_10y, ust_2y]
+  # Campaign-2 (AM-2026-08-02-009): hy_spread restored (pinned splice), fx_usd and
+  # cape_v added by the fx / valuation block_addition amendments (-007/-008).
+  factor_set: [cape_v, cpi, equity_mkt, equity_vol, funding_spread, fx_usd, hml,
+               hqm_curve, hy_spread, ig_spread, mom, policy_rate, smb, ust_10y, ust_2y]
   factor_set_rule: >-
     Every active factor with train+validation data on the sealed campaign vintage --
     i.e. manifest.active_factors() minus reference_run.missing_factors. TWELVE of the

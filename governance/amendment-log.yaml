@@ -1337,3 +1337,137 @@ amendments:
     any standing authorization. post_hoc: false - no holdout evaluation of any kind
     has ever run.'
   type: protocol_change
+- amendment_id: AM-2026-08-02-007
+  date: '2026-08-02'
+  payload:
+    block: fx
+    block_thresholds:
+      fx_usd.acf_r_lag1:
+        max: null
+        min: 0.8108
+        severity: report
+      fx_usd.acf_r_sum:
+        max: null
+        min: 1.7292
+        severity: report
+      fx_usd.excess_kurtosis:
+        max: 5.6859
+        min: null
+        severity: report
+    cross_block_thresholds:
+      fx|global:
+        fx_usd~equity_mkt.crisis_corr_lift:
+          max: 1.7758
+          min: -1.6463
+          severity: report
+      fx|us:
+        fx_usd~ust_10y.crisis_corr_lift:
+          max: null
+          min: null
+          severity: report
+      fx|valuation:
+        fx_usd~cape_v.crisis_corr_lift:
+          max: null
+          min: null
+          severity: report
+    reference_run_artifact: artifacts/campaign2/reference-run.json
+  post_hoc: false
+  rationale: 'CAMPAIGN-2 FX BLOCK (owner-ratified; decision R5''s recorded re-entry,
+    S2R-FX-NEXT-CAMPAIGN; RFR-2 closes). fx_usd = trade-weighted broad dollar (fred.DTWEXBGS)
+    extended pre-2006 by the fx_usd_pre2006 splice (donor fred.DTWEXM, overlap 2006-2019
+    entirely inside train+validation, fit at read time from sanctioned reads). Thresholds
+    derived PRE-HOC from the campaign-2 reference run at the sealed recipe (mid -+
+    4 half-widths, structural clips, severity report); the representative cross statistics
+    mirror the sealed global|us convention (crisis_corr_lift on the block''s macro-natural
+    pairs: dollar~equity flight interaction, dollar~long-rate differentials). The
+    conventions block classifies fx_usd as a level in the same edit.'
+  type: block_addition
+- amendment_id: AM-2026-08-02-008
+  date: '2026-08-02'
+  payload:
+    block: valuation
+    block_thresholds:
+      cape_v.acf_r_lag1:
+        max: null
+        min: 0.8375
+        severity: report
+      cape_v.acf_r_sum:
+        max: null
+        min: 2.3819
+        severity: report
+      cape_v.excess_kurtosis:
+        max: 4.6078
+        min: null
+        severity: report
+    cross_block_thresholds:
+      fx|valuation:
+        fx_usd~cape_v.crisis_corr_lift:
+          max: null
+          min: null
+          severity: report
+      global|valuation:
+        equity_mkt~cape_v.crisis_corr_lift:
+          max: 1.854
+          min: -1.8639
+          severity: report
+      us|valuation:
+        ust_10y~cape_v.crisis_corr_lift:
+          max: null
+          min: null
+          severity: report
+    reference_run_artifact: artifacts/campaign2/reference-run.json
+  post_hoc: false
+  rationale: 'CAMPAIGN-2 VALUATION BLOCK (owner: ''include CAPE in this seal''; completes
+    S2-VALUATION-FACTOR, closes RFR-18''s factor gap -- RFR-81 found only the mapping
+    was missing). cape_v = DN-1''s v_t, demeaned log CAPE (derive.demeaned_log_cape
+    over shiller.cape), a signed level; activating it turns ten_year_return_vs_valuation_{slope,r2}
+    from STRUCTURALLY_UNAVAILABLE into computed 10yr-tier statistics (report tier;
+    no new enforce threshold -- selecting names after seeing a run is how a threshold
+    gets fitted, per the sealed blocks header). Thresholds derived PRE-HOC at the
+    sealed recipe, as AM-007.'
+  type: block_addition
+- amendment_id: AM-2026-08-02-009
+  date: '2026-08-02'
+  payload:
+    c3_mechanism_trace: Instructions/campaign2-regime-fix-options.md
+    campaign_vintage_id:
+      from: 2026-07-26.1
+      to: 2026-08-02.4
+    factor_set_n:
+      from: 12
+      to: 15
+    missing_factors:
+      from:
+      - commodities
+      - hy_spread
+      to:
+      - commodities
+    pinned_fit_hy_oas_pre1996:
+      a: 1.4068184862787785
+      b: 2.53288508610114
+      fit_window: 2023-08..2026-07 (36 obs; inside the holdout span)
+      overlap_rmse: 0.2058317839495792
+  post_hoc: false
+  rationale: 'CAMPAIGN-2 RE-SEAL (owner-ratified end to end: ''C3 - accept and document,
+    proceed with the campaign seal''; ''proceed with the amendments and re-mint when
+    the bands land''). One dated event, five connected changes: (1) campaign_vintage_id
+    2026-07-26.1 -> 2026-08-02.4 (RFR-91/92 data groundwork; RFR-61 discipline applied
+    -- every checked pre-existing band recomputed on the new vintage at the sealed
+    seed, outcome recorded in the reference-run artifact). (2) hy_spread restored:
+    the hy_oas_pre1996 splice is APPLIED AT THE READ SURFACE with a PINNED fit (splice.PINNED_FITS,
+    owner decision -- the rule''s only licensed fitting window lies inside the holdout
+    span, so the two scalars a=1.4068184862787785, b=2.53288508610114 were frozen
+    offline; the residual post-2020 information flow is exactly those two published
+    constants). reference_run.missing_factors [commodities, hy_spread] -> [commodities];
+    bootstrap_v1.factor_set grows to fifteen. (3) splice.py JOINS THE SEAL (RFR-50''s
+    recorded re-entry condition fires: it is on the read path). (4) judged code changed
+    and is re-hashed: panel.py (splice-aware derived exprs, optional-input contract),
+    derive.py (splice application helpers), reference.py unchanged in body but re-hashed
+    with the set, horizon.py (RFR-18 metric activation), factors.py surface untouched.
+    (5) The campaign proceeds under decision C3: the sealed 10yr-tier defects (level-factor
+    half-lives at the block-reassembly timescale; equity/hml lost-decade excess) are
+    ACCEPTED as documented limits with Instructions/campaign2-regime-fix-options.md
+    as the mechanism trace; promotion trains WITHOUT the A'' residual parameterization
+    and at guidance 1.0. This is a protocol_change: the lock is stale by design until
+    the campaign-2 re-mint that accompanies this amendment.'
+  type: protocol_change

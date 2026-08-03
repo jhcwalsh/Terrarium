@@ -112,6 +112,50 @@ def overlap_error(rule: ProxyRule, target: pd.DataFrame, donor: pd.DataFrame) ->
     return float(np.sqrt(np.mean(resid**2)))
 
 
+#: Campaign-2 PINNED fits (owner decision 2026-08-02, holdout-leakage containment).
+#: The hy_oas_pre1996 rule's only licensed fitting window (2023-08..2026-07, 36 obs)
+#: lies entirely inside the holdout span, so fitting it at read time would require a
+#: full-span read path inside sealed code -- a structural exception to the leakage
+#: guard ("DataAccess.train_val() is the only reference/normalization surface").
+#: Instead the fit was performed ONCE, offline, and its two scalars are frozen here:
+#: measured on vintage 2026-08-02.4 (overlap RMSE 0.2058317839495792). The residual
+#: information flow from the post-2020 span into the training panel is exactly these
+#: two published constants, disclosed in the campaign seal and the retrofit register.
+#: A pinned fit is re-frozen only by the same owner-decision route that froze it.
+PINNED_FITS: dict[str, SpliceFit] = {
+    "hy_oas_pre1996": SpliceFit("regression", a=1.4068184862787785, b=2.53288508610114),
+}
+
+
+def splice_pinned(rule: ProxyRule, target: pd.DataFrame, donor: pd.DataFrame) -> SpliceResult:
+    """:func:`splice` with the rule's PINNED fit -- no calibration at read time.
+
+    Unlike :func:`splice`, the target may be EMPTY: on a train+validation read the
+    pinned rules' targets have no observations at all (that is why they are pinned),
+    and then every donor row becomes a proxy observation. Actuals, where present,
+    are never touched, exactly as in :func:`splice`.
+    """
+    fit = PINNED_FITS.get(rule.rule_id)
+    if fit is None:
+        raise ValueError(f"rule {rule.rule_id} has no pinned fit; use splice() instead")
+
+    t = target.assign(date=pd.to_datetime(target["date"]))
+    d = donor.assign(date=pd.to_datetime(donor["date"]))
+
+    actual = t[["date", "value"]].copy()
+    actual["is_proxy"] = False
+
+    pre = d if t.empty else d[d["date"] < t["date"].min()].copy()
+    pre = pre.copy()
+    pre["value"] = apply_fit(fit, pd.to_numeric(pre["value"]).to_numpy())
+    proxy = pre[["date", "value"]].copy()
+    proxy["is_proxy"] = True
+
+    out = pd.concat([proxy, actual], ignore_index=True).sort_values(by="date", ignore_index=True)
+    out["rule_id"] = rule.rule_id
+    return SpliceResult(f"{rule.target}__extended", out, fit)
+
+
 # --------------------------------------------------------------------------- #
 # register rules (STEP1-DATA-PLAN §WP1.5 / data-requirements-register)
 # --------------------------------------------------------------------------- #

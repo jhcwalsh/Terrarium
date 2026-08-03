@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
@@ -138,6 +139,41 @@ def test_no_proxy_overwrites_actual() -> None:
         v = merged.loc[row["date"]]
         assert v["is_proxy"] == False  # noqa: E712
         assert v["value"] == row["value"]  # actual preserved exactly
+
+
+def test_splice_pinned_uses_frozen_fit_and_handles_empty_target() -> None:
+    """Campaign-2: the hy_oas_pre1996 fit is PINNED (owner decision 2026-08-02 --
+    its only licensed fitting window lies inside the holdout span). splice_pinned
+    must (a) never fit, (b) proxy every row when the target is empty (the
+    train+validation case), (c) leave actuals untouched when present."""
+    from ah.data.splice import PINNED_FITS, PROXY_RULES, splice_pinned
+
+    rule = PROXY_RULES["hy_oas_pre1996"]
+    fit = PINNED_FITS["hy_oas_pre1996"]
+    donor = _series([1.0, 2.0, 3.0], start="1990-01-01")
+
+    empty = pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]"), "value": []})
+    result = splice_pinned(rule, empty, donor)
+    assert len(result.frame) == 3
+    assert result.frame["is_proxy"].all()
+    expected = fit.a + fit.b * pd.Series([1.0, 2.0, 3.0])
+    assert (result.frame["value"].to_numpy() == expected.to_numpy()).all()
+    assert result.fit is fit  # the frozen object, not a re-fit
+
+    target = _series([9.9], start="1990-03-01")
+    with_actual = splice_pinned(rule, target, donor)
+    actuals = with_actual.frame[~with_actual.frame["is_proxy"]]
+    assert len(actuals) == 1 and actuals["value"].iloc[0] == 9.9
+    assert len(with_actual.frame[with_actual.frame["is_proxy"]]) == 2  # pre-target only
+
+
+def test_splice_pinned_refuses_a_rule_with_no_pinned_fit() -> None:
+    from ah.data.splice import PROXY_RULES, splice_pinned
+
+    donor = _series([1.0], start="1990-01-01")
+    empty = pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]"), "value": []})
+    with pytest.raises(ValueError, match="no pinned fit"):
+        splice_pinned(PROXY_RULES["fx_usd_pre2006"], empty, donor)
 
 
 def test_scale_transform_no_fit_needed() -> None:

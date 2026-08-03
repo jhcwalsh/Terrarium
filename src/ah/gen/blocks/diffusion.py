@@ -141,9 +141,10 @@ class DiffusionConfig:
     # A' residual parameterization (campaign-2) — same field as FlowConfig so
     # the bake-off compares like with like; see flow.py for the contract.
     residual_drift: bool = False
-    # data geometry
+    # data geometry (campaign-2: the sealed factor set is fifteen; pre-campaign
+    # checkpoints recorded n_factors explicitly, so their hashes are unaffected)
     block_months: int = bridge.BLOCK_MONTHS
-    n_factors: int = 12
+    n_factors: int = 15
     cond_dim: int = bridge.C_B_DIM
 
     def as_dict(self) -> dict[str, Any]:

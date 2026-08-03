@@ -1214,11 +1214,16 @@ def test_reference_splits_missing_declared_from_missing_no_data() -> None:
     """I3, from the reference side."""
     manifest = load_manifest()
     needed = _series_ids_of(manifest)
-    # drop one real series id: hy_spread becomes "declared available, no data"
-    hy_series = manifest.sources["hy_spread"].series_id
-    assert hy_series is not None
+    # Drop one real series id so a factor becomes "declared available, no data".
+    # Campaign-2 re-target: hy_spread no longer works as the example -- it is now
+    # kind: derived through the pinned splice, whose target input is DECLARED
+    # optional-empty, so dropping fred.HY_OAS no longer produces a missing factor
+    # (that is the fix working, not the test's premise). equity_vol (fred.VIX,
+    # kind: series) is the demonstration factor now.
+    vol_series = manifest.sources["equity_vol"].series_id
+    assert vol_series is not None
     reader = _make_reader(
-        {sid: i for i, sid in enumerate(sorted(needed - {hy_series}))},
+        {sid: i for i, sid in enumerate(sorted(needed - {vol_series}))},
         start="1980-01-01",
         end="2026-06-01",
     )
@@ -1229,8 +1234,8 @@ def test_reference_splits_missing_declared_from_missing_no_data() -> None:
     )
 
     assert ref.missing_declared == ("commodities",)
-    assert ref.missing_no_data == ("hy_spread",)
-    assert set(ref.missing_factors) == {"commodities", "hy_spread"}
+    assert ref.missing_no_data == ("equity_vol",)
+    assert set(ref.missing_factors) == {"commodities", "equity_vol"}
 
 
 # --------------------------------------------------------------------------- #

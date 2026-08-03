@@ -55,7 +55,12 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 # Must match `pre-registration.yaml`'s `reference_run:` block; the reference the gates
 # are judged against is the SAME object the bands come from.
-CAMPAIGN_VINTAGE_ID = "2026-07-26.1"
+# Campaign-2 (AM-2026-08-02-009): the sealed vintage moved; the constant moves
+# with it (tests pin the two equal). The block-length WINDOW itself was measured
+# at twelve factors on the prior vintage -- the sealed MEAN_BLOCK_MONTHS note
+# already states that scope, and re-measuring at fifteen is a re-run of this
+# script, not an edit to it.
+CAMPAIGN_VINTAGE_ID = "2026-08-02.4"
 REFERENCE_SEED = 20260726
 N_RESAMPLES = 1000
 LEVEL = 0.9

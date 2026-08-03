@@ -36,9 +36,7 @@ class TestDraftDocument:
         Pinned on a draft COPY (the real document sealed on 2026-08-01), so the
         refusal behavior stays tested after the mint, not only before it."""
         draft = tmp_path / "pre-registration-g3.yaml"
-        text = g3seal.G3_PREREG_PATH.read_text("utf-8").replace(
-            "sealed: true", "sealed: false", 1
-        )
+        text = g3seal.G3_PREREG_PATH.read_text("utf-8").replace("sealed: true", "sealed: false", 1)
         draft.write_text(text, encoding="utf-8")
         shutil.copy(ROOT / "factors.yaml", tmp_path / "factors.yaml")
         monkeypatch.setattr(g3seal, "G3_PREREG_PATH", draft)

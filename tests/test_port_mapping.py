@@ -52,7 +52,12 @@ class TestArtifact:
         assert doc["mapping_version"] == "map-2026.08"
         assert doc["desmoothing_method"].startswith("glm_ma")  # SM-10 pairing
         assert set(doc["sleeves"]) == {
-            "hf_credit", "hf_equity_ls", "hf_event", "hf_macro", "hf_multi", "hf_rv"
+            "hf_credit",
+            "hf_equity_ls",
+            "hf_event",
+            "hf_macro",
+            "hf_multi",
+            "hf_rv",
         }
         for spec in doc["sleeves"].values():
             assert set(spec["loadings"]) == set(doc["regressors"])
@@ -71,7 +76,13 @@ class TestApplier:
         a = mp.sleeve_returns(ens, seed=123)
         b = mp.sleeve_returns(ens, seed=123)
         assert set(a) == {
-            "hf_credit", "hf_cta", "hf_equity_ls", "hf_event", "hf_macro", "hf_multi", "hf_rv"
+            "hf_credit",
+            "hf_cta",
+            "hf_equity_ls",
+            "hf_event",
+            "hf_macro",
+            "hf_multi",
+            "hf_rv",
         }
         for name in a:
             assert a[name].shape == (6, 120)

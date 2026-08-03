@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:6b223aa903b175acaaa41eedc6370b03ecabadc18bacfa52e717c67c45b39610",
+  "digest": "sha256:601e3f826b089de171783eb397b6697ec2d5a967a606659a303ed47ba79ea615",
   "hashed_files": [
     "Instructions/holdout-evaluation-spec.md",
     "factors.yaml",
@@ -10,5 +10,5 @@
     "step5-evaluation-protocol.yaml"
   ],
   "prereg_path": "step5-evaluation-protocol.yaml",
-  "sealed_at": "2026-08-02T23:00:00+00:00"
+  "sealed_at": "2026-08-02"
 }

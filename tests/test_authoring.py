@@ -151,7 +151,6 @@ class TestGate:
         report = self._run(GOOD_DRAFT + " Defaults rose across the book.")
         assert any(v["rule"] == "G2" for v in report.violations)
 
-
     def test_g4_sentence_starters_before_allowed_entities(self):
         # run-6 fix: 'Where Grimshaw sees rot' is the rival plus an adverb
         report = self._run(GOOD_DRAFT + " Where Meridian Capital Partners leads, we watch.")
