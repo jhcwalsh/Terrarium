@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **WP5.2 — the `--inspect` renderer** (`ah inspect RUN_ID [--out PATH]`;
+  MPP-A1's build item, whose WP2R.4 label this repo had reassigned). One
+  code path: any RunRecord id → a static, self-contained HTML figure page
+  (`src/ah/inspect.py`, inline SVG per `build_artifact.py`'s precedent,
+  zero new dependencies). The page is derived from the RunRecord ALONE —
+  the ensemble is REGENERATED from stored world+seed+n_paths and the
+  digest recomputed on every render, so each figure page is also a
+  reproducibility check (a tampered record renders a loud DIGEST
+  MISMATCH badge rather than pretty pictures). Five panels per the
+  kickoff: per-asset percentile fans, hold-course-twin value + stacked
+  weights, reported-vs-true toggle for the smoothed sleeves (pure-CSS),
+  episode annotations (regime strip + display-only narrative
+  dispatches), and a value-labeled correlogram. Deterministic
+  (byte-identical re-render, tested); ASCII CLI output. This is the
+  figure pipeline for RQ1–RQ5 and the methodology note. 7 new tests.
 - **CAMPAIGN-2 PROMOTION: PROMOTE, per-seed route** (owner-authorized
   end to end). Three flow checkpoints trained on the sealed
   fifteen-factor vintage (sealed WP2.9 selection config, no retuning;
