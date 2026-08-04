@@ -167,16 +167,54 @@ class TestScoringIdentity:
         assert PLAY_ALPHA_VERSION != decision_metrics.DECISION_ALPHA_VERSION
         assert PLAY_ALPHA_VERSION
 
-    def test_play_does_not_import_the_toy_institution(self):
-        """It replaces ah.core.institution for scoring rather than wrapping
-        it; importing both would invite the two to drift into each other."""
+    def test_play_does_not_use_the_toy_simulator(self):
+        """It replaces ah.core.institution for SCORING rather than wrapping it.
+
+        The window calendar (`decision_months`) is shared on purpose — the
+        windows are the same windows. What must not be imported is the toy
+        simulator, because two value models in one scoring path is exactly the
+        drift this guard exists to prevent.
+        """
         import ast
 
         import ah.play as play_module
 
         tree = ast.parse(Path(play_module.__file__).read_text(encoding="utf-8"))
-        imported: set[str] = set()
+        names: set[str] = set()
         for node in ast.walk(tree):
             if isinstance(node, ast.ImportFrom) and node.module:
-                imported.add(node.module)
-        assert "ah.core.institution" not in imported
+                for alias in node.names:
+                    names.add(f"{node.module}.{alias.name}")
+        assert "ah.core.institution.simulate_institution" not in names
+        assert "ah.core.institution.hold_course_twin" not in names
+        assert "ah.core.institution.decision_months" in names
+
+
+class TestAttribution:
+    def test_contributions_sum_to_the_alpha_shown(self, stagflation):
+        """The property that made porting mandatory: what the reckoning
+        attributes to each window must add up to the alpha beside it."""
+        from ah.play import window_contributions_play
+
+        windows = decision_months(stagflation.months)
+        decisions = {windows[0]: "derisk", windows[3]: "secondary", windows[5]: "leanin"}
+        attr = window_contributions_play(stagflation, decisions)
+        assert sum(attr.contributions) == pytest.approx(attr.total_alpha, abs=1e-9)
+        assert attr.total_alpha == pytest.approx(play_alpha(stagflation, decisions), abs=1e-9)
+
+    def test_one_contribution_per_window_in_order(self, stagflation):
+        from ah.play import window_contributions_play
+
+        windows = decision_months(stagflation.months)
+        attr = window_contributions_play(stagflation, {windows[0]: "derisk"})
+        assert attr.months == tuple(windows)
+        assert len(attr.contributions) == len(windows)
+        assert attr.actions[0] == "derisk"
+        assert all(a == "hold" for a in attr.actions[1:])
+
+    def test_holding_throughout_attributes_nothing(self, stagflation):
+        from ah.play import window_contributions_play
+
+        attr = window_contributions_play(stagflation, {})
+        assert attr.contributions == tuple(0.0 for _ in attr.months)
+        assert attr.total_alpha == 0.0
