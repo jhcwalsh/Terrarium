@@ -37,7 +37,7 @@ class TestContract:
     def test_sections_and_provenance(self, stored_run):
         db, rid = stored_run
         doc = build_bundle(connect(db), rid)
-        assert doc["bundle_version"] == "world-bundle-0.1"
+        assert doc["bundle_version"] == "world-bundle-0.2"
         for section in ("meta", "revealed", "bands", "summary", "feed"):
             assert section in doc, section
         meta = doc["meta"]
@@ -60,6 +60,14 @@ class TestContract:
         assert doc["summary"]["decision_months"]
         assert doc["summary"]["episodes"]
         assert doc["feed"]["chronicle"]
+        # v0.2: the tier-1 wire rides in the bundle, every item in-horizon
+        artifacts = doc["feed"]["artifacts"]
+        assert artifacts and all(0 <= a["month"] < months for a in artifacts)
+        assert {a["type"] for a in artifacts} >= {
+            "cb_statement",
+            "release_page",
+            "quarterly_statement",
+        }
 
     def test_build_is_deterministic(self, stored_run):
         db, rid = stored_run

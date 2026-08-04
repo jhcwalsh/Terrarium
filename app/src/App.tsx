@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
 import { cacheGet, cacheList, cachePut } from "./lib/idb";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
+import { Feed } from "./components/Feed";
 import { Play } from "./Play";
 
 const HEADLINE_ASSETS = ["equity", "bonds", "pe"] as const;
@@ -150,6 +151,8 @@ export default function App() {
           revealedMonths={revealed}
         />
       ))}
+
+      <Feed artifacts={bundle.feed.artifacts ?? []} revealedMonths={revealed} />
     </main>
   );
 }

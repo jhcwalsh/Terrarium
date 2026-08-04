@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **su-app-03 — the wire, in-timeline** (bundle **v0.2** + `app` feed
+  surface; E2). `ah.feed.build_tier1_feed` generates the pre-authored
+  artifact feed at BUILD time (PD-4) from WP4.2's tier-1 templates —
+  pure functions of the tape, zero LLM/RNG/clock, byte-deterministic:
+  quarterly central-bank statements keyed on the tape's own rate moves,
+  quarterly CPI release pages (value + prior), the institution's
+  quarterly statement with **peer bands computed from sibling histories**
+  (every ensemble path run through the same hold-course institution —
+  the honest peer group this product has), and crisis-onset wire
+  digests. Every item carries its `month`; the app's Feed component
+  reveals items WITH the pointer — the wire lands in-timeline, never as
+  a lump, never ahead of the tape. `meta.artifact_tier` states the
+  tier-2 absence (letters join at the frozen ≥95% first-pass bar).
+  6 new Python tests + fixture regenerated as v0.2 (loader accepts both
+  versions); app 10/10 vitest.
 - **su-app-02 — the decision surface** (`app/src/Play.tsx`,
   `DecisionWindow.tsx`, `lib/session.ts`). Play mode binds the scaffold
   to the session service: the server's pointer is the authority (W5) —

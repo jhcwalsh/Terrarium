@@ -15,6 +15,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
+import { Feed } from "./components/Feed";
 import type { WorldBundle } from "./lib/bundle";
 import {
   advance,
@@ -202,6 +203,8 @@ export function Play({ bundle, basis = "reported", onExit }: PlayProps) {
           revealedMonths={revealed}
         />
       ))}
+
+      <Feed artifacts={bundle.feed.artifacts ?? []} revealedMonths={revealed} />
     </main>
   );
 }
