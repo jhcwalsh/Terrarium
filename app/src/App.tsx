@@ -16,10 +16,8 @@ import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
 import { cacheGet, cacheList, cachePut } from "./lib/idb";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
-import { Play } from "./Play";
+import { ASSET_LABELS, Play } from "./Play";
 import { RankedSetup, type PlayConfig } from "./RankedSetup";
-
-const HEADLINE_ASSETS = ["equity", "bonds", "pe"] as const;
 
 type Mode = "browse" | "setup" | "play";
 
@@ -159,15 +157,18 @@ export default function App() {
         <button onClick={() => setLoaded(null)}>close</button>
       </section>
 
-      {HEADLINE_ASSETS.map((asset) => (
-        <FanChart
-          key={asset}
-          label={asset}
-          bands={bundle.bands[asset]}
-          revealed={cumulativeGrowth(column(asset))}
-          revealedMonths={revealed}
-        />
-      ))}
+      <div className="chart-grid">
+        {ASSET_LABELS.filter(([key]) => bundle.bands[key]).map(([key, name]) => (
+          <FanChart
+            key={key}
+            label={name}
+            bands={bundle.bands[key]}
+            revealed={cumulativeGrowth(column(key))}
+            revealedMonths={revealed}
+            height={190}
+          />
+        ))}
+      </div>
 
       <Feed artifacts={bundle.feed.artifacts ?? []} revealedMonths={revealed} />
     </main>

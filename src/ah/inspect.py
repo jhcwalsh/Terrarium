@@ -149,8 +149,13 @@ def _regime_strip(segments: list[dict[str, Any]], months: int) -> str:
 
 
 def _cumulative(returns: np.ndarray) -> np.ndarray:
-    """(n_paths, NM) simple returns -> (n_paths, NM) growth of 1.0."""
-    return np.cumprod(1.0 + returns, axis=1)
+    """(n_paths, NM) engine PERCENT returns -> (n_paths, NM) growth of 1.0.
+
+    The divide-by-100 lives here because every caller feeds engine output,
+    which is in percent (the same live-found scale bug as the bundle bands:
+    compounding percent as decimal renders empty/negative cones).
+    """
+    return np.cumprod(1.0 + returns / 100.0, axis=1)
 
 
 def _factor_panel(ensemble: EnsembleResult) -> str:

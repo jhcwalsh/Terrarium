@@ -77,7 +77,49 @@ All notable changes to this project are documented here. The project follows
   framework. The pointer is display-only until su-app-02 binds it to the
   server session (W5). 4 vitest tests; `npm run test|typecheck|build`.
 
+### Added
+- **The vitrine remodel + the information the player was missing** (first
+  live play session feedback, three rounds). The app now wears the early
+  `terrarium-dashboard` design the owner preferred: dark teal vitrine,
+  Bricolage Grotesque / Archivo / IBM Plex Mono, header with world-clock
+  and month/window transport, a scrolling wire ticker, a stat rail, and
+  a charts-left / sleeves+wire+decision-right grid so the wire and the
+  charts are visible at once. Play renders **all eight asset classes**
+  (the bundle always carried the bands; the app showed three), each fan
+  chart gains axes on the growth-of-1 scale, year marks, a current-value
+  readout, and a hatched SEALED zone over the unrevealed future. New
+  **"Your book" allocation panel**: current target mix replayed from the
+  session's committed decisions (mirrors `institution.py` target
+  bookkeeping exactly, pinned by five vitest cases), so de-risk/lean-in
+  finally have a visible referent. New **plane switch** (as reported /
+  as true): flips the private sleeves' revealed lines between
+  appraisal-smoothed marks and true returns — display-only; scoring
+  basis stays fixed at session creation. The wire's quarterly statement
+  is labeled **BENCHMARK BOOK** (it is the hold-course twin's paper,
+  pre-authored at build time — not the player's active book). App
+  19/19 vitest, tsc clean.
+
 ### Fixed
+- **The fan cones rendered empty/negative on real worlds** (found live,
+  first played decade): `bundle.py` bands and `inspect.py` panels
+  compounded engine PERCENT returns as decimals —
+  `cumprod(1 + r)` instead of `cumprod(1 + r/100)` — exploding the cone
+  scale so the revealed path vanished (equity), collapsed visually to
+  zero (bonds), or went negative. Both call sites fixed; the bands
+  contract is now pinned by test (quantiles monotone, strictly
+  positive, median terminal on the growth-of-1 scale). The regenerated
+  bundle shrank 47→27 KB — the broken bands were carrying
+  astronomical digit strings. Both committed fixtures regenerated.
+- **The session service 500'd on the first real browser request**
+  (found live, minutes into the first play session): FastAPI's
+  threadpool can open the per-request SQLite connection on one worker
+  thread and run the endpoint on another, tripping SQLite's default
+  same-thread guard. Sequential test traffic reused a single worker
+  thread, so the suite AND the uvicorn smoke passed while the browser's
+  parallel requests failed. Service-layer connections now pass
+  `check_same_thread=False` (safe: one connection per request);
+  everywhere else keeps the guard. Regression test forces the thread
+  hop explicitly.
 - **`seal_tape` double-prefixed its digest** (`sha256:sha256:<hex>`):
   it re-prefixed `sha256_of_arrays`, which already prefixes. Caught while
   pinning the cross-language seal vector for the app's client-side

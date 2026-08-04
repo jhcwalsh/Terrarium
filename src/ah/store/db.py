@@ -104,9 +104,16 @@ _RUN_RECORD_STAMPS = (
 )
 
 
-def connect(path: str | Path = ":memory:") -> sqlite3.Connection:
-    """Open (and migrate) a database connection with WAL + foreign keys enabled."""
-    conn = sqlite3.connect(str(path))
+def connect(path: str | Path = ":memory:", *, check_same_thread: bool = True) -> sqlite3.Connection:
+    """Open (and migrate) a database connection with WAL + foreign keys enabled.
+
+    ``check_same_thread=False`` is for the service layer (ah.serve): FastAPI
+    runs sync endpoints in a threadpool, so a per-request connection may be
+    created and used on different worker threads. Safe there because each
+    connection belongs to exactly one request; everything else keeps
+    SQLite's default single-thread guard.
+    """
+    conn = sqlite3.connect(str(path), check_same_thread=check_same_thread)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA journal_mode=WAL;")  # no-op for :memory:
     conn.execute("PRAGMA foreign_keys=ON;")

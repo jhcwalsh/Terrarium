@@ -94,7 +94,10 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
 
     bands: dict[str, dict[str, list[float]]] = {}
     for asset in ASSETS:
-        growth = np.cumprod(1.0 + ensemble.returns[asset], axis=1)
+        # engine returns are in PERCENT (see ah.core.engine notes) — divide
+        # before compounding, or the cone explodes/goes negative (found live:
+        # the first played decade rendered empty fans at the broken scale)
+        growth = np.cumprod(1.0 + ensemble.returns[asset] / 100.0, axis=1)
         qs = np.percentile(growth, _QUANTILES, axis=0)
         bands[asset] = {f"p{q}": _round(qs[i]) for i, q in enumerate(_QUANTILES)}
 
