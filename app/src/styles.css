@@ -1,0 +1,98 @@
+:root {
+  color-scheme: light dark;
+  font-family: system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+}
+
+.shell {
+  max-width: 780px;
+  margin: 0 auto;
+  padding: 1.5rem 1rem 4rem;
+}
+
+.tagline {
+  color: color-mix(in srgb, currentColor 65%, transparent);
+  font-style: italic;
+}
+
+.provenance {
+  font-size: 0.85rem;
+}
+
+.provenance .ok {
+  color: #2e7d32;
+}
+
+.provenance .bad,
+.error {
+  color: #c62828;
+  font-weight: 600;
+}
+
+.time-control {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1rem 0;
+}
+
+.time-control label {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  font-size: 0.85rem;
+}
+
+.fan-chart {
+  margin: 1rem 0;
+}
+
+.fan-chart figcaption {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.fan-chart svg {
+  width: 100%;
+  height: auto;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  border-radius: 6px;
+}
+
+.fan-outer {
+  fill: color-mix(in srgb, steelblue 18%, transparent);
+}
+
+.fan-inner {
+  fill: color-mix(in srgb, steelblue 32%, transparent);
+}
+
+.fan-median {
+  stroke: steelblue;
+  stroke-width: 1.5;
+  stroke-dasharray: 4 3;
+}
+
+.fan-revealed {
+  stroke: #c62828;
+  stroke-width: 2;
+}
+
+.fan-pointer {
+  stroke: color-mix(in srgb, currentColor 45%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2 2;
+}
+
+.ok {
+  color: #2e7d32;
+}
+
+.bad {
+  color: #c62828;
+}

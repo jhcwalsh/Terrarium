@@ -6,6 +6,19 @@ All notable changes to this project are documented here. The project follows
 
 ## [Unreleased] — Step 1 (data layer)
 
+### Added
+- **su-app-01 — the app scaffold** (`app/`; PD-1: this repo, superseding
+  D-K4-2). Vite + React + TypeScript SPA, browse mode: load a world
+  bundle (file, URL, or IndexedDB cache — W8's offline replay), **re-seal
+  the numeric tape client-side** (WebCrypto SHA-256 over the row-major
+  float64 bytes — the same recipe as `sha256_of_arrays`, pinned to the
+  Python implementation by an exact shared test vector AND by the
+  committed fixture `app/fixtures/toy.bundle.gz`, which both suites
+  verify), and render hand-rolled SVG fan charts (p5–p95 cone, revealed
+  path clipped at the reveal pointer). No chart library, no state
+  framework. The pointer is display-only until su-app-02 binds it to the
+  server session (W5). 4 vitest tests; `npm run test|typecheck|build`.
+
 ### Fixed
 - **`seal_tape` double-prefixed its digest** (`sha256:sha256:<hex>`):
   it re-prefixed `sha256_of_arrays`, which already prefixes. Caught while
