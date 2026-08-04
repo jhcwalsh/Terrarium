@@ -4,7 +4,38 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
-## [Unreleased] — Step 1 (data layer)
+## [Unreleased] — Steps 1, 3, 4, 5 and the SU product track
+
+*Section title corrected 2026-08-04: this section opened as the Step 1 data
+layer and has accumulated every unreleased entry since — Step 3's translation
+layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
+SU single-user product slice. Newest first. Step 2's entries live in their own
+`[Unreleased]` section below, as they were written.*
+
+### Changed
+- **The experience-deltas register audited against the shipped surface**
+  (`Instructions/experience-deltas-register.md`). Every row still read
+  OPEN after the five `su-app-*` WPs and the play-surface cutover, which
+  broke the kickoff's standing constraint that rows close with pointers.
+  The audit was done by reading the app, not this changelog: **E7**
+  (three analysis series, drift slot reserved and legended) and **E8**
+  (the per-window annotation line in the register's exact shape) are
+  **CLOSED** with commit pointers. **E1, E2 and E4 are PARTIAL** — each
+  landed its headline piece and not its full obligation, and the missing
+  parts are now named: E1 has the hold-course affordance and coverage on
+  both bases but no vintage stack, no trailing distributions, no t₀
+  pacing plan, no tutorial, and — the reason it cannot close — **no
+  commitment lever in the action set**, so the row's own subject is not
+  a decision a player can take; E2 puts forced sales on the wire but
+  leaves three of five cashflow event classes written and unrendered;
+  E4 has the review screen but neither the flinch cost nor the
+  arithmetic warning, and both wait on E1's lever. **E3** stays open
+  because its obligation names an interpretation guide that does not
+  exist in the repo; its engine side is now genuinely live on the twin
+  (ER-3 closed), which makes `Reckoning.tsx`'s "join with the
+  institutional plane" copy stale — recorded in the row. Rows were not
+  ticked to match prose; the register exists to keep what is missing
+  visible.
 
 ### Added
 - **su-app-05 — ranked mode + the research log complete** (the last WP
