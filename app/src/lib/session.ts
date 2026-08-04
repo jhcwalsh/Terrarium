@@ -20,6 +20,10 @@ export interface Session {
   window_log: unknown[];
   status: "active" | "completed";
   decision_windows?: number[];
+  /** the book's value at the reveal pointer; null before the tape opens */
+  value?: number | null;
+  /** the hold-course twin's value at the same point — the bar to clear */
+  twin_value?: number | null;
 }
 
 export interface OutcomeWindow {

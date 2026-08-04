@@ -95,6 +95,59 @@ class TestEndpoints:
         assert got["status"] == "active"
         assert got["decision_windows"] == decision_months(got["months"])
 
+    def test_book_is_marked_to_market_at_the_pointer(self, service):
+        """The rail's headline number. The SERVER computes it, because the
+        institution simulator is the authority for value (W5) and a
+        client-side mirror would be a second implementation to drift.
+
+        Two properties matter: it equals the simulator truncated at the
+        pointer, and it leaks nothing — the value at month m is a function of
+        revealed months only, so replaying to the same pointer by a different
+        route gives the same number."""
+        from ah.core.engine import run_path
+        from ah.core.institution import simulate_institution
+        from ah.core.numericworld import project_numeric
+        from ah.core.worldspec import WorldSpec
+        from ah.store.db import connect
+        from ah.store.runrecords import get_run_record
+        from ah.store.worlds import get_world
+
+        client, db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+
+        # before the tape opens there is no mark, and the app shows 100
+        fresh = client.get(f"/sessions/{sid}").json()
+        assert fresh["value"] is None and fresh["twin_value"] is None
+
+        doc = client.post(f"/sessions/{sid}/advance", json={"to_month": 6}).json()
+        conn = connect(db)
+        rec = get_run_record(conn, rid)
+        assert rec is not None
+        world = get_world(conn, rec["world_id"])
+        assert world is not None
+        paths = run_path(project_numeric(WorldSpec.model_validate(world)), rec["seed"])
+        twin = simulate_institution(paths, None, use_reported=True)
+        assert doc["value"] == pytest.approx(float(twin.total[5]))
+        assert doc["twin_value"] == pytest.approx(float(twin.total[5]))
+
+        # advancing further moves the mark; the pointer is what selects it
+        later = client.post(f"/sessions/{sid}/advance", json={"to_month": 9}).json()
+        assert later["value"] == pytest.approx(float(twin.total[8]))
+
+    def test_a_decision_moves_the_book_away_from_the_twin(self, service):
+        """Hold-course and the twin agree by construction; acting must not."""
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(120)[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        doc = client.post(
+            f"/sessions/{sid}/decisions", json={"month": first, "action": "derisk"}
+        ).json()
+        # at the window itself the rebalance has just happened
+        after = client.post(f"/sessions/{sid}/advance", json={"to_month": first + 7}).json()
+        assert after["value"] != pytest.approx(after["twin_value"])
+        assert doc["value"] is not None
+
     def test_unknown_run_404(self, service):
         client, _db, _rid = service
         assert client.post("/sessions", json={"run_id": "nope"}).status_code == 404
