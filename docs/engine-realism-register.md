@@ -67,6 +67,46 @@ digest, the institution's totals, and the scored path. Needs a
 
 ---
 
+## ER-4 — Carry assets earn their carry almost risk-free
+
+**Status:** open
+**Found:** 2026-08-04, first run of the credibility console across all four
+presets — it is the same pattern in every world, which is what makes it
+structural rather than a preset's fault.
+
+**What happens.** Bonds, private credit and real estate all clear a decade
+Sharpe above 1.0, in worlds as different as `goldilocks` and `deflation_bust`:
+
+| preset | bonds med / vol | pc med / vol | re med / vol |
+|---|---|---|---|
+| stagflation | +5.4 / 2.7 (1.98) | +8.9 / 4.8 (1.88) | — |
+| goldilocks | +3.1 / 2.7 (1.12) | +7.7 / 3.5 (2.21) | +7.0 / 6.2 (1.13) |
+| deflation_bust | +4.5 / 2.7 (1.63) | — | — |
+| reflation_boom | +0.7 / 2.7 (—) | +7.4 / 4.0 (1.82) | +7.6 / 7.3 (1.04) |
+
+The mechanism is the same one as ER-1, generalised: these assets' returns are
+dominated by a near-deterministic carry term (`rate/12`, `(rate+4.5)/12`,
+`4.5/12`) with only a small idiosyncratic shock on top. Carry arrives every
+month; almost nothing takes it away.
+
+**Bond volatility is the sharpest tell.** It is **2.7%/yr in all four
+presets** — identical to two significant figures across worlds whose rate
+paths differ completely. That number is essentially the fixed `0.7 * z_b`
+idiosyncratic term (0.7% monthly ≈ 2.4%/yr); the duration term `-6.0 * d_rate`
+contributes almost nothing because the rate path is smooth by construction.
+A ten-year government bond with 5-6 years of duration should carry 5-8%
+annual volatility. Duration risk is in the formula but not in the numbers.
+
+**What a fix looks like.** Rate paths with real monthly innovation rather
+than a smooth glide (ER-2's meeting quantisation would help here too — actual
+policy moves in steps), and a loss/default term on the credit assets so that
+carry is compensation for something. The two together, not either alone: a
+noisier rate path without credit losses just moves the problem.
+
+**Consequences.** Touches every asset that prices off the rate. Digest-
+invalidating; alpha-version-bumping.
+
+
 ## ER-2 — The policy rate is a continuous drift, not committee decisions
 
 **Status:** open

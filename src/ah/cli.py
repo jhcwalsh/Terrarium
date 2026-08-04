@@ -287,6 +287,74 @@ def bundle_cmd(
     typer.echo(f"{target} ({size} bytes compressed)")
 
 
+@app.command("credibility")
+def credibility_cmd(
+    ctx: typer.Context,
+    run_ids: list[str] = typer.Argument(None, help="RunRecord ids (default: the latest run)"),
+    preset: list[str] = typer.Option(
+        [], "--preset", help="Also report a preset by name, built fresh (repeatable)"
+    ),
+    paths: int = typer.Option(400, "--paths", help="Ensemble size for the statistics"),
+    seed: int = typer.Option(771204, "--seed", help="Base seed for preset-built worlds"),
+    out: Path | None = typer.Option(
+        None, "--out", help="Output HTML path (default credibility.html)"
+    ),
+) -> None:
+    """Walk a set of worlds' numbers and flag what is not credible (admin).
+
+    Reports every named run plus every named preset. Nothing is written to the
+    store, nothing is scored, and a flag never fails: the page is for a human
+    to read before a world reaches a player.
+    """
+    from ah.credibility import build_report, render_credibility_page
+
+    conn = _db(ctx)
+    reports = []
+
+    ids = list(run_ids or [])
+    if not ids and not preset:
+        ids = [_latest_run(conn)]
+    for rid in ids:
+        rec = run_store.get_run_record(conn, rid)
+        if rec is None:
+            raise typer.BadParameter(f"no run with id {rid}")
+        world_doc = worlds_store.get_world(conn, rec["world_id"])
+        if world_doc is None:
+            raise typer.BadParameter(f"run {rid} references missing world {rec['world_id']}")
+        ws = WorldSpec.model_validate(world_doc)
+        narrative = world_doc.get("narrative") or {}
+        reports.append(
+            build_report(
+                project_numeric(ws),
+                base_seed=rec["seed"],
+                n_paths=paths,
+                title=f"{narrative.get('title') or rec['world_id']} - run {rid[:8]}",
+            )
+        )
+
+    for name in preset:
+        src = PRESETS_DIR / f"{name}.json"
+        if not src.exists():
+            raise typer.BadParameter(f"no preset named {name}")
+        doc = json.loads(src.read_text(encoding="utf-8"))
+        ws = WorldSpec.model_validate(doc)
+        narrative = doc.get("narrative") or {}
+        reports.append(
+            build_report(
+                project_numeric(ws),
+                base_seed=seed,
+                n_paths=paths,
+                title=f"{narrative.get('title') or name} - preset {name}",
+            )
+        )
+
+    target = out if out is not None else Path("credibility.html")
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_credibility_page(reports), encoding="utf-8", newline="\n")
+    flags = sum(r.flag_count for r in reports)
+    typer.echo(f"{target} ({len(reports)} worlds, {flags} flags)")
+
+
 @app.command("verify")
 def verify_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) -> None:
     """Verify a run reproduces its stored digest (prints True/False)."""
