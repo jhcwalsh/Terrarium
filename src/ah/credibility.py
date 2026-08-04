@@ -246,7 +246,9 @@ def factor_stats(paths: list[Any]) -> list[FactorStats]:
             float(crisis.mean()),
             0.0,
             1.0,
-            ("no crisis months at all",) if crisis.mean() == 0 else (),
+            # NOT a flag: a benign world may legitimately declare no crisis
+            # window, and flagging that taught the reader to skip the row.
+            (),
         )
     )
     return out

@@ -28,7 +28,47 @@ import numpy as np
 from ah.core.numericworld import NumericWorld
 
 TOY_GENERATOR_ID = "toy-v0"
+
+# The generator FAMILY is pinned by schemas/worldspec-*.schema.json's enum and
+# cannot change; the exact version is resolved at run time and recorded on the
+# RunRecord as `resolved_engine.generator_version` (the schema's own words:
+# "Exact trained version is resolved and pinned at run time"). Bump this
+# whenever the numbers a world produces change, so a RunRecord always says
+# which engine made it.
+#   v0.1  Step 0's original constants
+#   v0.2  unit coherence: carry/vol constants moved into percent space
+#   v0.3  register ER-1 + ER-4: credit losses, a spread cycle that clears,
+#         and a policy rate with enough innovation to make duration risky
+TOY_ENGINE_VERSION = "toy-v0.3"
+
 _ENSEMBLE_SEED_STRIDE = 7919  # run_ensemble uses base_seed + 7919*k
+
+# -- register ER-4: the policy rate has to move for duration to be a risk --- #
+_RATE_KAPPA = 0.08  # monthly pull back to the glide path
+_RATE_SHOCK_PCT = 0.22  # baseline monthly innovation, in percentage points
+# ...scaled by the inflation regime. A world fighting 6% inflation has a far
+# noisier policy path than one sitting at target, and if the shock is a global
+# constant then bond volatility comes out identical in every world - which is
+# the same tell ER-4 was opened for, one level further down.
+_RATE_SHOCK_INFLATION_SENSITIVITY = 0.10
+_RATE_SHOCK_INFLATION_ANCHOR = 2.0
+
+# -- register ER-1: the credit cycle -------------------------------------- #
+_SPREAD_KAPPA = 0.12  # monthly pull of the deviation back to zero
+_SPREAD_SHOCK_BPS = 35.0  # monthly innovation on the deviation
+_SPREAD_PULSE_WIDTH_DIVISOR = 20.0  # pulse width = horizon / this, in months
+_SPREAD_REFERENCE_BPS = 400.0  # the spread a "normal" credit market prices
+
+# Share of the gross spread that is expected DEFAULT LOSS rather than risk
+# premium. A spread is compensation for losses that arrive; booking it all as
+# carry is what let high yield print a decade Sharpe over 1.5.
+_HY_LOSS_SHARE = 0.45
+# Realized losses LAG the spreads that price them — the market marks the risk
+# roughly a year before the defaults land.
+_CREDIT_LOSS_LAG_MONTHS = 12
+# Defaults cluster: the same loss rate hurts more when everything else is
+# breaking too.
+_CRISIS_LOSS_AMPLIFIER = 1.6
 
 # Asset order is part of the contract (drives the golden digest); do not reorder.
 ASSETS: tuple[str, ...] = (
@@ -137,32 +177,68 @@ def _crisis_mask(world: NumericWorld, nm: int) -> np.ndarray:
 
 
 def _rate_path(world: NumericWorld, nm: int, z: np.ndarray) -> np.ndarray:
+    """Policy rate: a glide from start to end, with REAL monthly innovation.
+
+    Register ER-4. The innovation used to be 0.06%/month (6bp), which against
+    a mean reversion of 0.15 left the rate pinned within ~11bp of its glide
+    path. Duration risk is in the bond formula (``-6.0 * d_rate``) but with a
+    rate that never moves it could not reach the numbers: bond volatility came
+    out at 2.7%/yr in ALL FOUR presets, identical to two significant figures
+    across completely different rate paths, because what was actually being
+    measured was the fixed idiosyncratic term.
+
+    ``_RATE_SHOCK_BPS`` monthly innovation with slower reversion gives a
+    stationary spread of about 55bp around the glide — a decade in which the
+    rate wanders a point either side of its trend, which is what makes a bond
+    a risky asset. The rate remains a CONTINUOUS drift with no meeting
+    calendar and no 25bp quantisation; that is ER-2 and still open.
+    """
     pr = world.factor_conditions.policy_rate
     start = _f(pr, "start_pct", _DEF["policy_start"])
     end = _f(pr, "end_pct", _DEF["policy_end"])
+    infl_avg = _f(world.factor_conditions.inflation, "average_pct", _DEF["infl_avg"])
+    shock = _RATE_SHOCK_PCT * (
+        1.0 + _RATE_SHOCK_INFLATION_SENSITIVITY * max(0.0, infl_avg - _RATE_SHOCK_INFLATION_ANCHOR)
+    )
     rate = np.empty(nm)
     r = start
     for m in range(nm):
         target = start if nm == 1 else start + (end - start) * m / (nm - 1)
-        r = max(0.1, r + 0.15 * (target - r) + 0.06 * z[m])
+        r = max(0.1, r + _RATE_KAPPA * (target - r) + shock * z[m])
         rate[m] = r
     return rate
 
 
 def _spread_path(world: NumericWorld, nm: int, z: np.ndarray) -> np.ndarray:
+    """HY spread: a long-run level, a credit event that CLEARS, and noise.
+
+    Register ER-1's second half. This used to be a triangle — a straight ramp
+    to ``hy_spread_peak_bps`` at ``peak_quarter``, then a straight glide back
+    over the whole remaining horizon. On the stagflation preset that meant a
+    spread starting at 401bp, ending at 358bp, and *averaging 1279bp*: years
+    spent at levels that in reality clear in months. A decade-long plateau at
+    crisis spreads is not a credit cycle, and it was most of why high yield
+    printed 18.7%/yr.
+
+    The peak is now a Gaussian pulse centred on ``peak_quarter``: spreads blow
+    out to the declared level and come back in over a few quarters, on top of
+    a mean-reverting deviation around the long-run level. The WorldSpec fields
+    keep their meaning — the declared peak is still reached, at the declared
+    quarter — but the decade average now sits near the start level, where it
+    belongs.
+    """
     credit = world.factor_conditions.credit
     start = _f(credit, "hy_spread_start_bps", _DEF["hy_start"])
     peak = _f(credit, "hy_spread_peak_bps", _DEF["hy_peak"])
     peak_q = int(getattr(credit, "peak_quarter", None) or _DEF["hy_peak_q"])
     peak_m = min(max(0, peak_q * 3), nm - 1)
+    width = max(3.0, nm / _SPREAD_PULSE_WIDTH_DIVISOR)
     spread = np.empty(nm)
+    dev = 0.0
     for m in range(nm):
-        if m <= peak_m:
-            base = peak if peak_m == 0 else start + (peak - start) * (m / peak_m)
-        else:
-            denom = (nm - 1) - peak_m
-            base = peak if denom == 0 else peak + (0.9 * start - peak) * ((m - peak_m) / denom)
-        spread[m] = max(150.0, base + 14.0 * z[m])
+        pulse = (peak - start) * math.exp(-0.5 * ((m - peak_m) / width) ** 2)
+        dev = dev * (1.0 - _SPREAD_KAPPA) + _SPREAD_SHOCK_BPS * z[m]
+        spread[m] = max(150.0, start + pulse + dev)
     return spread
 
 
@@ -248,16 +324,50 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     corr_eb = 0.35 if infl_avg > 3.5 else -0.30
     z_b = corr_eb * z_m + math.sqrt(1.0 - corr_eb**2) * e_b
 
-    loss_m = pc_loss / 12.0
+    # Register ER-1: credit assets earn their spread NET of the defaults that
+    # spread is pricing. Losses key on the spread as it stood a year earlier —
+    # the market marks the risk before the defaults land — and cluster inside
+    # crisis months. Without this, high yield booked the full current spread as
+    # carry every month and cleared a decade Sharpe of 1.54.
+    lag = min(_CREDIT_LOSS_LAG_MONTHS, nm)
+    spread_lagged = np.concatenate([np.full(lag, spread[0]), spread[:-lag]])[:nm]
+    loss_amp = np.where(crisis > 0, _CRISIS_LOSS_AMPLIFIER, 1.0)
+    # gross spread in annual percent (bps -> pct), as at the loss lag
+    spread_ann = spread_lagged / 100.0
+    hy_loss_m = _HY_LOSS_SHARE * spread_ann / 12.0 * loss_amp
+    # Private credit is senior secured, so it loses less than high yield for
+    # the same cycle — but it does lose, and it loses MORE when spreads are
+    # wide. The old formula charged only 0.6x its own loss rate outside crisis
+    # months, which is why it cleared a Sharpe near 2 in every world.
+    pc_loss_m = (pc_loss / 12.0) * (0.7 + 0.6 * spread_lagged / _SPREAD_REFERENCE_BPS) * loss_amp
 
     eq = eq_drift / 12.0 + eq_vol_m * z_eq - 2.2 * crisis
     bonds = rate / 12.0 - 6.0 * d_rate + 0.7 * z_b
-    hy = rate / 12.0 + spread / 1200.0 - 3.5 * d_spread + 0.5 * eq_vol_m * z_hy - 0.6 * crisis
+    hy = (
+        rate / 12.0
+        + spread / 1200.0
+        - hy_loss_m
+        - 3.5 * d_spread
+        + 0.5 * eq_vol_m * z_hy
+        - 0.6 * crisis
+    )
     commodities = com_drift / 12.0 + max(0.0, infl_avg - 2.5) / 12.0 + 5.2 * z_com
     reits = 0.65 * eq - 2.5 * d_rate + 2.6 * e_reit
     pe = 1.4 * eq + (pe_illiq + pe_mult) / 12.0 + 2.0 * e_pe
-    pc = (rate + 4.5) / 12.0 - loss_m * np.where(crisis > 0, 3.2, 0.6) + 0.18 * eq + 0.7 * e_pc
-    re = 4.5 / 12.0 - re_cap / (100.0 * nm) * 2.2 + 0.35 * eq + 1.1 * e_re
+    # A private credit book reprices when public credit does - less than high
+    # yield, because it is senior secured, but it is not immune. Without a
+    # credit-cycle beta its only risk was idiosyncratic noise.
+    pc = (rate + 4.5) / 12.0 - pc_loss_m - 0.8 * d_spread + 0.18 * eq + 1.45 * e_pc
+    # Property is rate-sensitive (cap rates move with rates) and reprices hard
+    # in a crisis; both were missing, leaving it a near-riskless income stream.
+    re = (
+        4.5 / 12.0
+        - re_cap / (100.0 * nm) * 2.2
+        - 4.0 * d_rate
+        + 0.35 * eq
+        + 1.5 * e_re
+        - 1.0 * crisis
+    )
 
     returns = {
         "equity": eq,

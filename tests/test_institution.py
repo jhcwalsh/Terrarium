@@ -35,9 +35,12 @@ EXAMPLE_PATH = ROOT / "schemas" / "example-long-stagflation.worldspec.json"
 _EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 
 GOLDEN_SEED = 42
-# growth of 100, stagflation hold-course twin; regenerated with the engine's
-# unit-coherence fix (percent-space constants)
-GOLDEN_HOLD_FINAL = 65.155701
+# growth of 100, stagflation hold-course twin. Regenerated for toy-v0.3
+# (register ER-1 + ER-4): high yield now earns its spread net of defaults, the
+# credit cycle clears instead of plateauing, and the policy rate moves enough
+# for duration to be a real risk. The twin ends lower because the old engine
+# was paying the book unearned carry.
+GOLDEN_HOLD_FINAL = 57.923474
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

@@ -22,7 +22,7 @@ from ah.battery.report import BATTERY_VERSION, render_markdown, run_battery
 from ah.compiler.fixture_adapter import FixtureCompiler
 from ah.compiler.pipeline import process
 from ah.core.digest import digest_ensemble
-from ah.core.engine import TOY_GENERATOR_ID, run_ensemble
+from ah.core.engine import TOY_ENGINE_VERSION, run_ensemble
 from ah.core.institution import hold_course_twin
 from ah.core.numericworld import project_numeric
 from ah.core.validator import VALIDATOR_VERSION, stamp_validation, validate
@@ -210,7 +210,10 @@ def run_cmd(
         world_id=wid,
         resolved_engine={
             "generator_id": ed.generator_id,
-            "generator_version": TOY_GENERATOR_ID,
+            # the resolved VERSION, not the family — so a RunRecord always
+            # says which engine produced its numbers (schema: "Exact trained
+            # version is resolved and pinned at run time")
+            "generator_version": TOY_ENGINE_VERSION,
             "validator_version": VALIDATOR_VERSION,
             "battery_version": BATTERY_VERSION,
         },

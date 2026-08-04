@@ -39,7 +39,7 @@ _EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 # regeneration: the unit-coherence fix (percent-space constants restored from
 # the plan's decimal-convention literals; owner-approved deviation).
 GOLDEN_SEED = 42
-GOLDEN_DIGEST = "66e4ec08dc9de2cc90620b7b567c74cc281abbcf3e731024164cdee64596f4e8"
+GOLDEN_DIGEST = "d6da53bc277c9b95922f2e5f2912b94843892383b5198e9bb3624d3800de9180"
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

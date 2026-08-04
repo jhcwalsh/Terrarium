@@ -221,6 +221,68 @@ All notable changes to this project are documented here. The project follows
   drift. It uses revealed months only, so it leaks nothing — the same
   simulation the outcome runs, truncated at the pointer.
 
+- **Engine `toy-v0.3` — ER-1 and ER-4 closed: credit that can default, a
+  cycle that clears, and duration that is actually risky.** Owner-approved
+  engine work off the credibility console's first run.
+
+  - *High yield is paid net of defaults* (ER-1). `_HY_LOSS_SHARE = 0.45` of
+    the gross spread is booked as expected loss rather than carry, keyed on
+    the spread as it stood twelve months earlier — the market prices the risk
+    about a year before the defaults land — and amplified 1.6x inside crisis
+    months, because defaults cluster. Private credit gets the same mechanism
+    at lower severity, being senior secured.
+  - *The credit cycle clears* (ER-1). `_spread_path` is a long-run level plus
+    a Gaussian pulse on `peak_quarter` plus mean-reverting noise, replacing a
+    ramp-and-glide triangle that had the stagflation preset averaging 1279bp
+    against a 401bp start. The declared peak is still reached at the declared
+    quarter, so the WorldSpec fields keep their meaning.
+  - *Duration reaches the numbers* (ER-4). The policy rate's monthly
+    innovation went from 6bp to 22bp with slower reversion, **scaled by the
+    inflation regime**. A first pass used a global constant and bond
+    volatility came out identical in all four presets again — the same tell
+    ER-4 was opened for, one level further down. Caught by re-running the
+    console rather than by reasoning about it.
+  - *Carry assets carry risk* (ER-4). Private credit gained a credit-cycle
+    beta and a loss rate that rises with the spread instead of a flat 0.6x
+    discount outside crisis months; real estate gained rate sensitivity (cap
+    rates move with rates), a crisis repricing term, and more idiosyncratic
+    risk.
+
+  | | before | after |
+  |---|---|---|
+  | HY, stagflation | 18.7 %/yr, Sharpe 1.54 | **7.5 %/yr, Sharpe 0.53** |
+  | HY spread, decade mean | 1279bp | **626bp** (start 403, end 396) |
+  | bond vol, four presets | 2.7 / 2.7 / 2.7 / 2.7 | **7.1 / 5.2 / 5.2 / 5.8** |
+  | private credit Sharpe | 1.88 / 2.21 / 1.82 | **1.03 / 1.08 / 0.95** |
+  | console flags, all presets | 24 | **5** |
+
+  **Identity and provenance.** `generator_id` stays `toy-v0` — the family is
+  pinned by an enum in `schemas/`, which is read-only vendored truth. The
+  version now lives where the schema says it should: `TOY_ENGINE_VERSION`
+  is stamped on every RunRecord as `resolved_engine.generator_version`
+  ("Exact trained version is resolved and pinned at run time"), and the CLI
+  previously stamped the family there by mistake. `decision_alpha_version` is
+  NOT bumped: the alpha definition is unchanged, and it lives inside the
+  pre-registration seal where a change would need an amendment. World
+  identity carries the difference instead — the presets moved to the `3xx`
+  id block, so scores made under two engines cannot share a leaderboard row.
+  `G0-EVIDENCE.md` keeps citing the `001` world; that is a record of what G0
+  ran and must not be rewritten.
+
+  Deliberate golden regenerations, each with the reason at the constant:
+  engine snapshot digest, and the institution hold-course final
+  (65.156 → 57.923 — the twin ends lower because the old engine was paying
+  the book unearned carry). Two credibility tests were written the other way
+  up and now assert the fix; their docstrings keep the history.
+
+- **`docs/engine-realism-register.md`: ER-5 opened.** Pooled equity returns
+  show lag-1 autocorrelation of 0.364 against a declared [-0.2, 0.2], because
+  `_crisis_mask` is a rectangular block in which every path takes the same
+  deterministic hit over a contiguous run of months. Verified **pre-existing**
+  by running the battery on both engines — the value is byte-identical, so
+  the ER-1/ER-4 work observed it rather than caused it. Non-blocking: every
+  Step 0 battery gate is `status: todo` by design.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-
