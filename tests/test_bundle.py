@@ -44,12 +44,19 @@ class TestContract:
         assert meta["run_id"] == rid
         assert meta["digest_verified"] is True
         assert meta["decision_stamps"]["twin_definition"] == "policy"
-        # every asset gets a five-quantile fan of the right length
+        # every asset gets a five-quantile fan of the right length, on the
+        # GROWTH-OF-1 scale (regression, found live: percent returns
+        # compounded as decimals render empty/negative cones)
         months = meta["months"]
         for asset in ASSETS:
             fan = doc["bands"][asset]
             assert set(fan) == {"p5", "p25", "p50", "p75", "p95"}
             assert all(len(v) == months for v in fan.values())
+            for m in range(months):
+                column = [fan[q][m] for q in ("p5", "p25", "p50", "p75", "p95")]
+                assert column == sorted(column), f"{asset} quantiles cross at {m}"
+                assert column[0] > 0, f"{asset} p5 non-positive at {m} (percent bug)"
+            assert 0.05 < fan["p50"][-1] < 20, f"{asset} median terminal off-scale"
         # the numeric tape carries assets then reported columns, sealed at t0
         order = doc["revealed"]["series_order"]
         assert order == [*ASSETS, *(f"{s}_reported" for s in REPORTED_SLEEVES)]

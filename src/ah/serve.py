@@ -77,7 +77,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
 
     @contextmanager
     def _conn() -> Iterator[sqlite3.Connection]:
-        conn = connect(db_path)
+        # check_same_thread=False: FastAPI's threadpool may open and use this
+        # per-request connection on different worker threads (found live: the
+        # browser's first real request 500'd where sequential tests passed).
+        conn = connect(db_path, check_same_thread=False)
         try:
             yield conn
         finally:

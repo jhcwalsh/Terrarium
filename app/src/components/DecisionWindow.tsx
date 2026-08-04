@@ -16,23 +16,27 @@
 import { useEffect, useRef, useState } from "react";
 import { ACTIONS, type Action } from "../lib/session";
 
-const ACTION_COPY: Record<Action, { title: string; detail: string }> = {
+const ACTION_COPY: Record<Action, { title: string; detail: string; k: string }> = {
   hold: {
     title: "Hold course",
     detail: "Rebalance to the current target mix and carry on. A commitment, not a shrug.",
+    k: "NO TRADE",
   },
   derisk: {
     title: "De-risk",
     detail: "Shift 10pts from growth (equity, PE) into defensive (bonds, PC).",
+    k: "10PTS G→D",
   },
   leanin: {
     title: "Lean in",
     detail: "Shift 10pts from defensive into growth. Conviction has a price either way.",
+    k: "10PTS D→G",
   },
   secondary: {
     title: "Secondary sale",
     detail:
       "Sell up to 8pts of PE at an 18% discount for immediate liquidity; targets move PE to bonds.",
+    k: "−18% HAIRCUT",
   },
 };
 
@@ -74,7 +78,8 @@ export function DecisionWindow({ month, year, onCommit, busy }: DecisionWindowPr
               onChange={() => setSelected(action)}
             />
             <strong>{ACTION_COPY[action].title}</strong>
-            <span>{ACTION_COPY[action].detail}</span>
+            <span className="k">{ACTION_COPY[action].k}</span>
+            <span className="detail">{ACTION_COPY[action].detail}</span>
           </label>
         ))}
       </div>

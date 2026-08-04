@@ -67,6 +67,24 @@ def _play_through(client, rid: str, actions: dict[int, str], **create_kwargs):
     return sid
 
 
+def test_request_survives_a_threadpool_thread_hop(service):
+    """Regression (found live, not by tests): FastAPI's threadpool can open
+    the per-request connection on one worker thread and run the endpoint on
+    another; SQLite's default same-thread guard then 500s the first real
+    browser request while sequential tests pass. Force the hop explicitly."""
+    from concurrent.futures import ThreadPoolExecutor
+
+    _client, db, rid = service
+    conn = connect(db, check_same_thread=False)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        row = pool.submit(
+            lambda: conn.execute(
+                "SELECT run_id FROM run_records WHERE run_id = ?", (rid,)
+            ).fetchone()
+        ).result()
+    assert row["run_id"] == rid
+
+
 class TestEndpoints:
     def test_create_and_get(self, service):
         client, _db, rid = service

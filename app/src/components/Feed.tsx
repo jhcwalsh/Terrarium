@@ -11,7 +11,9 @@ import type { FeedArtifact } from "../lib/bundle";
 const TYPE_LABEL: Record<string, string> = {
   cb_statement: "CENTRAL BANK",
   release_page: "DATA RELEASE",
-  quarterly_statement: "STATEMENT",
+  // the bundle's statement is the HOLD-COURSE book (pre-authored at build
+  // time, so it cannot know the player's deviations) — label it as such
+  quarterly_statement: "BENCHMARK BOOK",
   wire_digest: "WIRE",
 };
 
@@ -41,36 +43,36 @@ export function Feed({
       <ol>
         {visible.map((a, i) => (
           <li key={`${a.month}-${a.type}-${i}`} className={`feed-item feed-${a.type}`}>
-            <header>
-              <span className="feed-tag">{TYPE_LABEL[a.type] ?? a.type.toUpperCase()}</span>
-              <span className="feed-dateline">{a.payload.dateline}</span>
-            </header>
-            {a.payload.title && <strong>{a.payload.title}</strong>}
-            {a.payload.headline && <strong>{a.payload.headline}</strong>}
-            {a.payload.release_name && (
-              <table>
-                <caption>{a.payload.release_name}</caption>
-                <thead>
-                  <tr>
-                    <th>series</th>
-                    <th>value</th>
-                    <th>prior</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {(a.payload.rows ?? []).map((r) => (
-                    <tr key={r.series}>
-                      <td>{r.series}</td>
-                      <td>{r.value}</td>
-                      <td>{r.prior}</td>
+            <span className="feed-dateline">{a.payload.dateline}</span>
+            <div className="feed-body">
+              {a.payload.title && <strong>{a.payload.title}</strong>}
+              {a.payload.headline && <strong>{a.payload.headline}</strong>}
+              {a.payload.release_name && (
+                <table>
+                  <caption>{a.payload.release_name}</caption>
+                  <thead>
+                    <tr>
+                      <th>series</th>
+                      <th>value</th>
+                      <th>prior</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            {(a.payload.lines ?? []).map((line, j) => (
-              <p key={j}>{line}</p>
-            ))}
+                  </thead>
+                  <tbody>
+                    {(a.payload.rows ?? []).map((r) => (
+                      <tr key={r.series}>
+                        <td>{r.series}</td>
+                        <td>{r.value}</td>
+                        <td>{r.prior}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              {(a.payload.lines ?? []).map((line, j) => (
+                <p key={j}>{line}</p>
+              ))}
+              <span className="feed-tag">{TYPE_LABEL[a.type] ?? a.type.toUpperCase()}</span>
+            </div>
           </li>
         ))}
       </ol>
