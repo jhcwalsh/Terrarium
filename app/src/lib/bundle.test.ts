@@ -29,10 +29,23 @@ function fixtureBytes(): ArrayBuffer {
 describe("parseBundle", () => {
   it("loads the committed fixture and verifies its seal", async () => {
     const { bundle, sealVerified } = await parseBundle(fixtureBytes());
-    expect(bundle.bundle_version).toBe("world-bundle-0.1");
+    expect(bundle.bundle_version).toBe("world-bundle-0.2");
     expect(sealVerified).toBe(true);
     expect(bundle.revealed.tape.length).toBe(bundle.meta.months);
     expect(bundle.summary.decision_months.length).toBeGreaterThan(0);
+  });
+
+  it("v0.2 carries the tier-1 wire, every item in-horizon (E2)", async () => {
+    const { bundle } = await parseBundle(fixtureBytes());
+    const artifacts = bundle.feed.artifacts ?? [];
+    expect(artifacts.length).toBeGreaterThan(0);
+    for (const a of artifacts) {
+      expect(a.month).toBeGreaterThanOrEqual(0);
+      expect(a.month).toBeLessThan(bundle.meta.months);
+      expect(a.payload.dateline).toBeTruthy();
+    }
+    // in-timeline reveal: nothing on the wire is visible at month 0
+    expect(artifacts.filter((a) => a.month < 0).length).toBe(0);
   });
 
   it("a doctored tape fails the seal, loudly", async () => {

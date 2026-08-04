@@ -15,7 +15,7 @@
  * hashing reproduces the seal exactly.
  */
 
-export const SUPPORTED_BUNDLE_VERSION = "world-bundle-0.1";
+export const SUPPORTED_BUNDLE_VERSIONS = ["world-bundle-0.1", "world-bundle-0.2"];
 
 export interface BundleMeta {
   world_id: string;
@@ -33,6 +33,20 @@ export interface BundleMeta {
   resolved_engine: Record<string, string>;
 }
 
+/** One tier-1 wire item (bundle v0.2); revealed with the pointer (E2). */
+export interface FeedArtifact {
+  month: number;
+  type: string;
+  payload: {
+    dateline: string;
+    title?: string;
+    headline?: string;
+    lines?: string[];
+    release_name?: string;
+    rows?: { series: string; value: string; prior: string; revision: string }[];
+  };
+}
+
 export interface WorldBundle {
   bundle_version: string;
   meta: BundleMeta;
@@ -44,7 +58,7 @@ export interface WorldBundle {
     episodes: unknown[];
     summary_stats: Record<string, number>;
   };
-  feed: { dispatches: unknown[]; chronicle: unknown[] };
+  feed: { artifacts?: FeedArtifact[]; dispatches: unknown[]; chronicle: unknown[] };
 }
 
 export class BundleFormatError extends Error {}
@@ -65,9 +79,9 @@ export async function sealTape(tape: number[][]): Promise<string> {
 }
 
 function shapeCheck(doc: WorldBundle): void {
-  if (doc.bundle_version !== SUPPORTED_BUNDLE_VERSION) {
+  if (!SUPPORTED_BUNDLE_VERSIONS.includes(doc.bundle_version)) {
     throw new BundleFormatError(
-      `unsupported bundle_version ${doc.bundle_version} (want ${SUPPORTED_BUNDLE_VERSION})`,
+      `unsupported bundle_version ${doc.bundle_version} (want one of ${SUPPORTED_BUNDLE_VERSIONS.join(", ")})`,
     );
   }
   for (const section of ["meta", "revealed", "bands", "summary", "feed"] as const) {

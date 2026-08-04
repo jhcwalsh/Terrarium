@@ -12,14 +12,14 @@ Contract v0.1, four sections plus provenance:
                    growth) drawn from the run's OWN regenerated ensemble.
 - ``summary``    — final twin value, decision-window schedule, episode
                    markers (the world's regime sequence), digest verification.
-- ``feed``       — the world's narrative dispatches (display-only surface)
-                   and the store chronicle. SCOPE, stated: the richer
-                   wire/letter feed (E2's tier-1 templates, tier-2 letters)
-                   joins in bundle v0.2 with the app's feed surface
-                   (su-app-03); v0.1 carries what every world already has.
-                   PD-4 stands: when tier-2 content is bundled it is authored
-                   at BUILD time, and ``meta.artifact_tier`` records what this
-                   bundle actually contains.
+- ``feed``       — the world's narrative dispatches, the store chronicle,
+                   and (v0.2, su-app-03) ``artifacts``: the tier-1 wire
+                   generated from the tape by ``ah.feed.build_tier1_feed``,
+                   each item carrying its ``month`` so the app reveals it
+                   with the pointer (E2). PD-4 stands: everything is authored
+                   at BUILD time; tier-2 letters join only at the frozen
+                   >=95% first-pass bar, and ``meta.artifact_tier`` records
+                   what this bundle actually contains.
 
 Determinism and lineage: the bundle is derived from the RunRecord ALONE via
 the same regenerate-and-verify path as ``ah inspect`` — a tampered record
@@ -45,13 +45,14 @@ from ah.core.engine import ASSETS, REPORTED_SLEEVES, run_ensemble, run_path
 from ah.core.institution import decision_months, hold_course_twin
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
+from ah.feed import build_tier1_feed
 from ah.store import chronicle as chronicle_store
 from ah.store.runrecords import get_run_record
 from ah.store.worlds import get_world
 
 __all__ = ["BUNDLE_VERSION", "MAX_COMPRESSED_BYTES", "BundleError", "build_bundle", "write_bundle"]
 
-BUNDLE_VERSION = "world-bundle-0.1"
+BUNDLE_VERSION = "world-bundle-0.2"
 MAX_COMPRESSED_BYTES = 1_000_000  # W2's budget: a complete world under 1 MB compressed
 _QUANTILES = (5, 25, 50, 75, 95)
 
@@ -116,7 +117,10 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
                 "decision_alpha_version": rec.get("decision_alpha_version"),
                 "twin_definition": rec.get("twin_definition"),
             },
-            "artifact_tier": "dispatches+chronicle (v0.1 scope; tier-1/2 feed in v0.2)",
+            "artifact_tier": (
+                "tier-1 templated wire (build-time, deterministic); "
+                "tier-2 letters await the frozen >=95% first-pass bar"
+            ),
             "digest_verified": bool(verified),
             "outputs_digest": rec["outputs_digest"],
             "title": narrative.get("title"),
@@ -135,6 +139,9 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
             "summary_stats": rec["summary_stats"],
         },
         "feed": {
+            "artifacts": build_tier1_feed(
+                nw, revealed, base_seed=rec["seed"], n_peer_paths=rec["n_paths"]
+            ),
             "dispatches": narrative.get("dispatches") or [],
             "chronicle": [
                 {
