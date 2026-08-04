@@ -51,6 +51,7 @@ from typing import Any
 import numpy as np
 
 from ah.core.engine import EnginePaths
+from ah.core.institution import decision_months
 from ah.port.cashflow_tier1 import f_call as tier1_f_call
 from ah.port.cashflow_tier1 import f_dist as tier1_f_dist
 from ah.port.cohort import ClosedEndCohort
@@ -63,10 +64,12 @@ __all__ = [
     "PLAY_ALPHA_VERSION",
     "PRIVATE_ASSETS",
     "START_TARGETS",
+    "PlayAttribution",
     "PlayQuarter",
     "PlayResult",
     "play_alpha",
     "simulate_play",
+    "window_contributions_play",
 ]
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -412,3 +415,62 @@ def play_alpha(
     active = simulate_play(paths, decisions, use_reported=use_reported, policy=policy)
     twin = simulate_play(paths, None, use_reported=use_reported, policy=policy)
     return active.final_value - twin.final_value
+
+
+@dataclass(frozen=True)
+class PlayAttribution:
+    """DN-5's chain-link decomposition, on the real twin.
+
+    ``contributions[j]`` is the j-th window's marginal effect: the value of
+    playing the decision prefix up to and including window j, minus the value
+    of the prefix before it. The chain telescopes to the terminal difference,
+    so the parts sum to the whole by construction rather than by luck.
+    """
+
+    months: tuple[int, ...]
+    actions: tuple[str, ...]
+    contributions: tuple[float, ...]
+    twin_final: float
+    final_value: float
+
+    @property
+    def total_alpha(self) -> float:
+        return self.final_value - self.twin_final
+
+
+def window_contributions_play(
+    paths: EnginePaths,
+    decisions: dict[int, str],
+    *,
+    use_reported: bool = True,
+    policy: Policy | None = None,
+) -> PlayAttribution:
+    """K+1 runs for K windows — exact, no sampling.
+
+    Windows the participant left unmapped default to hold inside
+    :func:`simulate_play` exactly as they did when the sequence was played, so
+    a partial decision map still decomposes correctly.
+    """
+    months_list = decision_months(paths.months)
+    twin = simulate_play(paths, None, use_reported=use_reported, policy=policy)
+    prev_final = float(twin.final_value)
+
+    contributions: list[float] = []
+    actions: list[str] = []
+    prefix: dict[int, str] = {}
+    for month in months_list:
+        action = decisions.get(month, "hold")
+        prefix[month] = action
+        run = simulate_play(paths, dict(prefix), use_reported=use_reported, policy=policy)
+        final = float(run.final_value)
+        contributions.append(final - prev_final)
+        actions.append(action)
+        prev_final = final
+
+    return PlayAttribution(
+        months=tuple(months_list),
+        actions=tuple(actions),
+        contributions=tuple(contributions),
+        twin_final=float(twin.final_value),
+        final_value=prev_final,
+    )

@@ -16,7 +16,7 @@ from typer.testing import CliRunner
 
 from ah.cli import app as cli_app
 from ah.core.engine import run_path
-from ah.core.institution import decision_months, simulate_institution
+from ah.core.institution import decision_months
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.serve import create_app
@@ -95,29 +95,19 @@ class TestEndpoints:
         assert got["status"] == "active"
         assert got["decision_windows"] == decision_months(got["months"])
 
-    def test_book_is_marked_to_market_at_the_pointer(self, service):
-        """The rail's headline number. The SERVER computes it, because the
-        institution simulator is the authority for value (W5) and a
-        client-side mirror would be a second implementation to drift.
-
-        Two properties matter: it equals the simulator truncated at the
-        pointer, and it leaks nothing — the value at month m is a function of
-        revealed months only, so replaying to the same pointer by a different
-        route gives the same number."""
+    def test_book_is_marked_to_market_on_the_real_twin(self, service):
+        """The rail's headline number, now with a cash account behind it."""
         from ah.core.engine import run_path
-        from ah.core.institution import simulate_institution
         from ah.core.numericworld import project_numeric
         from ah.core.worldspec import WorldSpec
+        from ah.play import simulate_play
         from ah.store.db import connect
         from ah.store.runrecords import get_run_record
         from ah.store.worlds import get_world
 
         client, db, rid = service
         sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-
-        # before the tape opens there is no mark, and the app shows 100
-        fresh = client.get(f"/sessions/{sid}").json()
-        assert fresh["value"] is None and fresh["twin_value"] is None
+        assert client.get(f"/sessions/{sid}").json()["value"] is None
 
         doc = client.post(f"/sessions/{sid}/advance", json={"to_month": 6}).json()
         conn = connect(db)
@@ -126,13 +116,40 @@ class TestEndpoints:
         world = get_world(conn, rec["world_id"])
         assert world is not None
         paths = run_path(project_numeric(WorldSpec.model_validate(world)), rec["seed"])
-        twin = simulate_institution(paths, None, use_reported=True)
-        assert doc["value"] == pytest.approx(float(twin.total[5]))
-        assert doc["twin_value"] == pytest.approx(float(twin.total[5]))
+        twin = simulate_play(paths, None, use_reported=True)
+        # month 6 revealed -> quarter index 1 closed (months 3,4,5)
+        assert doc["value"] == pytest.approx(twin.quarters[1].nav_reported)
+        assert doc["cash"] == pytest.approx(twin.quarters[1].cash)
+        assert doc["calls_paid"] >= 0.0
+        assert 0.0 <= doc["private_weight_true"] <= 1.0
 
-        # advancing further moves the mark; the pointer is what selects it
-        later = client.post(f"/sessions/{sid}/advance", json={"to_month": 9}).json()
-        assert later["value"] == pytest.approx(float(twin.total[8]))
+    def test_session_carries_the_product_alpha_version(self, service):
+        from ah.play import PLAY_ALPHA_VERSION
+
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        for month in decision_months(120):
+            client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1})
+            client.post(f"/sessions/{sid}/decisions", json={"month": month, "action": "hold"})
+        client.post(f"/sessions/{sid}/advance", json={"to_month": 120})
+        client.post(f"/sessions/{sid}/complete")
+        out = client.get(f"/sessions/{sid}/outcome").json()
+        assert out["decision_alpha_version"] == PLAY_ALPHA_VERSION
+        assert out["alpha"] == pytest.approx(0.0, abs=1e-9)
+
+    def test_attribution_sums_to_the_alpha_reported(self, service):
+        """The reckoning must add up on the surface, not just in the library."""
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        windows = decision_months(120)
+        for i, month in enumerate(windows):
+            client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1})
+            action = "derisk" if i == 0 else "hold"
+            client.post(f"/sessions/{sid}/decisions", json={"month": month, "action": action})
+        client.post(f"/sessions/{sid}/advance", json={"to_month": 120})
+        client.post(f"/sessions/{sid}/complete")
+        out = client.get(f"/sessions/{sid}/outcome").json()
+        assert sum(out["window_contributions"]) == pytest.approx(out["alpha"], abs=1e-9)
 
     def test_a_decision_moves_the_book_away_from_the_twin(self, service):
         """Hold-course and the twin agree by construction; acting must not."""
@@ -171,7 +188,12 @@ class TestEndpoints:
 
 
 class TestOutcome:
-    def test_outcome_matches_institution_sim_exactly(self, service):
+    def test_outcome_matches_the_twin_exactly(self, service):
+        """Same claim as before (WP2's toy-engine version), on the real twin:
+        the session's outcome must equal ``ah.play.simulate_play`` run
+        independently over the same tape and decisions."""
+        from ah.play import simulate_play
+
         client, db, rid = service
         actions = {11: "derisk", 35: "leanin"}
         sid = _play_through(client, rid, actions)
@@ -185,8 +207,8 @@ class TestOutcome:
         nw = project_numeric(WorldSpec.model_validate(world))
         paths = run_path(nw, rec["seed"])
         decisions = {m: actions.get(m, "hold") for m in decision_months(paths.months)}
-        active = simulate_institution(paths, decisions, use_reported=True)
-        twin = simulate_institution(paths, None, use_reported=True)
+        active = simulate_play(paths, decisions, use_reported=True)
+        twin = simulate_play(paths, None, use_reported=True)
 
         assert out["final_value"] == pytest.approx(active.final_value)
         assert out["twin_final_value"] == pytest.approx(twin.final_value)
@@ -196,16 +218,17 @@ class TestOutcome:
         assert [w["action"] for w in out["windows"]][:1] == ["derisk"]
 
     def test_outcome_series_carry_three_slots(self, service):
-        """E7 (DN-5 R-1): active + twin value series, month-aligned, with the
-        drift twin's slot EXPLICITLY null until its engine work lands — the
-        arrival must be a deliberate data change, not an interface change."""
+        """E7 (DN-5 R-1): active + twin value series, one point per CLOSED
+        quarter (the twin's own cadence), with the drift twin's slot
+        EXPLICITLY null until its engine work lands — the arrival must be a
+        deliberate data change, not an interface change."""
         client, _db, rid = service
         sid = _play_through(client, rid, {11: "derisk"})
         out = client.get(f"/sessions/{sid}/outcome").json()
         series = out["series"]
         months = client.get(f"/sessions/{sid}").json()["months"]
-        assert len(series["active"]) == months
-        assert len(series["twin"]) == months
+        assert len(series["active"]) == months // 3
+        assert len(series["twin"]) == months // 3
         assert series["active"][-1] == pytest.approx(out["final_value"], abs=1e-3)
         assert series["twin"][-1] == pytest.approx(out["twin_final_value"], abs=1e-3)
         assert series["drift_twin"] is None

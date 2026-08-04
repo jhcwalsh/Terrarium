@@ -18,9 +18,13 @@
 export const SUPPORTED_BUNDLE_VERSIONS = [
   "world-bundle-0.1",
   "world-bundle-0.2",
-  // 0.3 adds `private`: the display-only pacing ledger. Older bundles still
+  // 0.3 added `private`: the display-only pacing ledger. Older bundles still
   // load — the panel simply has nothing to draw.
   "world-bundle-0.3",
+  // 0.4 replaces `private` with `twin_ledger`: the hold-course twin's
+  // quarterly cashflows, now that the play surface runs on the real
+  // institutional twin instead of a toy target-mix simulator.
+  "world-bundle-0.4",
 ];
 
 export interface BundleMeta {
@@ -53,16 +57,18 @@ export interface FeedArtifact {
   };
 }
 
-/** One private-market programme's pacing ledger, quarter by quarter. */
-export interface PrivateLedger {
-  commitment: number;
+/** The hold-course twin's quarterly cashflows, carried in the bundle.
+ *  Decision-independent by construction, which is why it can be
+ *  pre-authored; the player's own ledger comes from the session. */
+export interface TwinLedger {
   quarter_months: number[];
-  called: number[];
-  distributed: number[];
+  calls: number[];
+  distributions: number[];
+  nav_true: number[];
+  nav_reported: number[];
+  cash: number[];
   unfunded: number[];
-  nav: number[];
-  dpi: number[];
-  tvpi: number[];
+  private_weight_true: number[];
 }
 
 export interface WorldBundle {
@@ -70,8 +76,8 @@ export interface WorldBundle {
   meta: BundleMeta;
   revealed: { series_order: string[]; tape: number[][]; tape_seal: string };
   bands: Record<string, Record<string, number[]>>;
-  /** present from world-bundle-0.3; absent in older bundles */
-  private?: Record<string, PrivateLedger>;
+  /** present from world-bundle-0.4; absent in older bundles */
+  twin_ledger?: TwinLedger;
   summary: {
     twin_final_value: number;
     decision_months: number[];

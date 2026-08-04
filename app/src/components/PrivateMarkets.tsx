@@ -4,24 +4,20 @@
  * these, with the payout and returns will drive actions such as secondary
  * sales").
  *
- * Reads the pacing ledger the bundle carries, revealed with the pointer like
- * everything else: a quarter's row exists for the player only once its month
- * is on the tape.
+ * Reads the hold-course twin's ledger the bundle carries (world-bundle-0.4,
+ * `TwinLedger`), revealed with the pointer like everything else: a quarter's
+ * row exists only once its closing month is on the tape.
  *
- * INFORMATIONAL. The engine has no cash account, so these calls are not
- * funded from anywhere and cannot force a sale — binding them to the
- * portfolio is Step 3's institutional twin (register ER-3). The panel says so
- * on its face, because a player who believes this money is moving is being
- * misled.
+ * Once a session exists, the player's OWN numbers for the current quarter
+ * win over the twin's — `pickLedgerRow` is the one place that decision is
+ * made, and it always labels which book a number came from. The twin's
+ * ledger is decision-independent and ships in the bundle, so it is what
+ * browse mode and offline replay (no session) fall back to; it must never
+ * be shown as if it were the player's.
  */
 
-import type { PrivateLedger } from "../lib/bundle";
-
-const LABELS: Record<string, string> = {
-  pe: "Private equity",
-  pc: "Private credit",
-  re: "Real estate",
-};
+import type { TwinLedger } from "../lib/bundle";
+import type { Session } from "../lib/session";
 
 /** The last quarter whose closing month has been revealed, or -1. */
 export function lastRevealedQuarter(quarterMonths: number[], revealedMonths: number): number {
@@ -32,64 +28,88 @@ export function lastRevealedQuarter(quarterMonths: number[], revealedMonths: num
   return idx;
 }
 
-const n1 = (v: number) => v.toFixed(1);
+interface LedgerRow {
+  calls: number;
+  distributions: number;
+  source: "yours" | "twin";
+}
+
+/** The player's own numbers when a session exists; the twin's otherwise.
+ *  Browse mode and offline replay (W8) both land on the twin, which is the
+ *  honest thing to show when nobody has made a decision yet. */
+export function pickLedgerRow(
+  twin: { calls: number[]; distributions: number[] } | undefined,
+  session: { calls_paid?: number | null; distributions_received?: number | null } | null,
+  quarter: number,
+): LedgerRow | null {
+  if (session && session.calls_paid != null && session.distributions_received != null) {
+    return {
+      calls: session.calls_paid,
+      distributions: session.distributions_received,
+      source: "yours",
+    };
+  }
+  if (twin && quarter >= 0 && quarter < twin.calls.length) {
+    return {
+      calls: twin.calls[quarter],
+      distributions: twin.distributions[quarter],
+      source: "twin",
+    };
+  }
+  return null;
+}
+
+const SOURCE_LABEL: Record<LedgerRow["source"], string> = {
+  yours: "your book",
+  twin: "hold-course twin",
+};
+
 const n2 = (v: number) => v.toFixed(2);
 
 export function PrivateMarkets({
-  ledgers,
+  ledger,
+  session,
   revealedMonths,
 }: {
-  ledgers: Record<string, PrivateLedger>;
+  ledger?: TwinLedger;
+  session: Session | null;
   revealedMonths: number;
 }) {
-  const keys = Object.keys(LABELS).filter((k) => ledgers[k]);
-  if (keys.length === 0) return null;
+  const quarter = ledger ? lastRevealedQuarter(ledger.quarter_months, revealedMonths) : -1;
+  const row = pickLedgerRow(ledger, session, quarter);
+
+  if (!row) {
+    return (
+      <div className="privates" aria-label="private markets ledger">
+        <p className="privates-note">Nothing yet — advance time.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="privates" aria-label="private markets ledger">
       <table>
         <thead>
           <tr>
-            <th>programme</th>
-            <th>commit</th>
-            <th>unfunded</th>
             <th>called qtr</th>
             <th>dist qtr</th>
-            <th>NAV</th>
-            <th>DPI</th>
-            <th>TVPI</th>
+            <th>source</th>
           </tr>
         </thead>
         <tbody>
-          {keys.map((k) => {
-            const l = ledgers[k];
-            const q = lastRevealedQuarter(l.quarter_months, revealedMonths);
-            const at = (xs: number[]) => (q >= 0 ? xs[q] : 0);
-            return (
-              <tr key={k}>
-                <td>
-                  <span className={`alloc-dot alloc-${k}`} /> {LABELS[k]}
-                </td>
-                <td>{n1(l.commitment)}</td>
-                <td>{q >= 0 ? n1(at(l.unfunded)) : n1(l.commitment)}</td>
-                <td className={at(l.called) > 0 ? "call" : ""}>
-                  {q >= 0 ? n2(at(l.called)) : "—"}
-                </td>
-                <td className={at(l.distributed) > 0 ? "dist" : ""}>
-                  {q >= 0 && at(l.distributed) > 0 ? n2(at(l.distributed)) : "—"}
-                </td>
-                <td>{q >= 0 ? n1(at(l.nav)) : "—"}</td>
-                <td>{q >= 0 ? n2(at(l.dpi)) : "—"}</td>
-                <td>{q >= 0 ? n2(at(l.tvpi)) : "—"}</td>
-              </tr>
-            );
-          })}
+          <tr>
+            <td className={row.calls > 0 ? "call" : ""}>{n2(row.calls)}</td>
+            <td className={row.distributions > 0 ? "dist" : ""}>
+              {row.distributions > 0 ? n2(row.distributions) : "—"}
+            </td>
+            <td>{SOURCE_LABEL[row.source]}</td>
+          </tr>
         </tbody>
       </table>
       <p className="privates-note">
-        Points of the starting book. Commitments run at 1.5x target — capital
-        comes back before it is all drawn. Informational: the toy engine has no
-        cash account, so calls are not funded and cannot force a sale.
+        {row.source === "twin"
+          ? "No session yet — these are the hold-course twin's cashflows, not yours."
+          : "Your book's calls and distributions for the quarter just closed."}
       </p>
     </div>
   );

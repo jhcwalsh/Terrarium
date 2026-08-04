@@ -52,9 +52,7 @@ class TestAttribution:
         decisions = {windows[0]: "derisk", windows[3]: "secondary", windows[5]: "leanin"}
         attr = window_contributions_play(stagflation, decisions)
         assert sum(attr.contributions) == pytest.approx(attr.total_alpha, abs=1e-9)
-        assert attr.total_alpha == pytest.approx(
-            play_alpha(stagflation, decisions), abs=1e-9
-        )
+        assert attr.total_alpha == pytest.approx(play_alpha(stagflation, decisions), abs=1e-9)
 
     def test_one_contribution_per_window_in_order(self, stagflation):
         from ah.play import window_contributions_play
@@ -211,61 +209,63 @@ git commit -m "feat: port DN-5's chain-link decomposition onto the real twin"
 Replace `test_book_is_marked_to_market_at_the_pointer` in `tests/test_serve.py` and add:
 
 ```python
-    def test_book_is_marked_to_market_on_the_real_twin(self, service):
-        """The rail's headline number, now with a cash account behind it."""
-        from ah.core.engine import run_path
-        from ah.core.numericworld import project_numeric
-        from ah.core.worldspec import WorldSpec
-        from ah.play import simulate_play
-        from ah.store.db import connect
-        from ah.store.runrecords import get_run_record
-        from ah.store.worlds import get_world
+def test_book_is_marked_to_market_on_the_real_twin(self, service):
+    """The rail's headline number, now with a cash account behind it."""
+    from ah.core.engine import run_path
+    from ah.core.numericworld import project_numeric
+    from ah.core.worldspec import WorldSpec
+    from ah.play import simulate_play
+    from ah.store.db import connect
+    from ah.store.runrecords import get_run_record
+    from ah.store.worlds import get_world
 
-        client, db, rid = service
-        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        assert client.get(f"/sessions/{sid}").json()["value"] is None
+    client, db, rid = service
+    sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+    assert client.get(f"/sessions/{sid}").json()["value"] is None
 
-        doc = client.post(f"/sessions/{sid}/advance", json={"to_month": 6}).json()
-        conn = connect(db)
-        rec = get_run_record(conn, rid)
-        assert rec is not None
-        world = get_world(conn, rec["world_id"])
-        assert world is not None
-        paths = run_path(project_numeric(WorldSpec.model_validate(world)), rec["seed"])
-        twin = simulate_play(paths, None, use_reported=True)
-        # month 6 revealed -> quarter index 1 closed (months 3,4,5)
-        assert doc["value"] == pytest.approx(twin.quarters[1].nav_reported)
-        assert doc["cash"] == pytest.approx(twin.quarters[1].cash)
-        assert doc["calls_paid"] >= 0.0
-        assert 0.0 <= doc["private_weight_true"] <= 1.0
+    doc = client.post(f"/sessions/{sid}/advance", json={"to_month": 6}).json()
+    conn = connect(db)
+    rec = get_run_record(conn, rid)
+    assert rec is not None
+    world = get_world(conn, rec["world_id"])
+    assert world is not None
+    paths = run_path(project_numeric(WorldSpec.model_validate(world)), rec["seed"])
+    twin = simulate_play(paths, None, use_reported=True)
+    # month 6 revealed -> quarter index 1 closed (months 3,4,5)
+    assert doc["value"] == pytest.approx(twin.quarters[1].nav_reported)
+    assert doc["cash"] == pytest.approx(twin.quarters[1].cash)
+    assert doc["calls_paid"] >= 0.0
+    assert 0.0 <= doc["private_weight_true"] <= 1.0
 
-    def test_session_carries_the_product_alpha_version(self, service):
-        from ah.play import PLAY_ALPHA_VERSION
 
-        client, _db, rid = service
-        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        for month in decision_months(120):
-            client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1})
-            client.post(f"/sessions/{sid}/decisions", json={"month": month, "action": "hold"})
-        client.post(f"/sessions/{sid}/advance", json={"to_month": 120})
-        client.post(f"/sessions/{sid}/complete")
-        out = client.get(f"/sessions/{sid}/outcome").json()
-        assert out["decision_alpha_version"] == PLAY_ALPHA_VERSION
-        assert out["alpha"] == pytest.approx(0.0, abs=1e-9)
+def test_session_carries_the_product_alpha_version(self, service):
+    from ah.play import PLAY_ALPHA_VERSION
 
-    def test_attribution_sums_to_the_alpha_reported(self, service):
-        """The reckoning must add up on the surface, not just in the library."""
-        client, _db, rid = service
-        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        windows = decision_months(120)
-        for i, month in enumerate(windows):
-            client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1})
-            action = "derisk" if i == 0 else "hold"
-            client.post(f"/sessions/{sid}/decisions", json={"month": month, "action": action})
-        client.post(f"/sessions/{sid}/advance", json={"to_month": 120})
-        client.post(f"/sessions/{sid}/complete")
-        out = client.get(f"/sessions/{sid}/outcome").json()
-        assert sum(out["window_contributions"]) == pytest.approx(out["alpha"], abs=1e-9)
+    client, _db, rid = service
+    sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+    for month in decision_months(120):
+        client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1})
+        client.post(f"/sessions/{sid}/decisions", json={"month": month, "action": "hold"})
+    client.post(f"/sessions/{sid}/advance", json={"to_month": 120})
+    client.post(f"/sessions/{sid}/complete")
+    out = client.get(f"/sessions/{sid}/outcome").json()
+    assert out["decision_alpha_version"] == PLAY_ALPHA_VERSION
+    assert out["alpha"] == pytest.approx(0.0, abs=1e-9)
+
+
+def test_attribution_sums_to_the_alpha_reported(self, service):
+    """The reckoning must add up on the surface, not just in the library."""
+    client, _db, rid = service
+    sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+    windows = decision_months(120)
+    for i, month in enumerate(windows):
+        client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1})
+        action = "derisk" if i == 0 else "hold"
+        client.post(f"/sessions/{sid}/decisions", json={"month": month, "action": action})
+    client.post(f"/sessions/{sid}/advance", json={"to_month": 120})
+    client.post(f"/sessions/{sid}/complete")
+    out = client.get(f"/sessions/{sid}/outcome").json()
+    assert sum(out["window_contributions"]) == pytest.approx(out["alpha"], abs=1e-9)
 ```
 
 - [ ] **Step 2: Run tests to verify they fail**
@@ -278,45 +278,52 @@ Expected: FAIL — `KeyError: 'cash'` / assertion on `decision_alpha_version`
 In `src/ah/serve.py`, replace the whole `_mark_to_market` function body below its docstring with:
 
 ```python
-        revealed = int(doc.get("revealed_months") or 0)
-        for key in (
-            "value", "twin_value", "cash", "coverage_true", "coverage_reported",
-            "private_weight_true", "calls_paid", "distributions_received",
-            "spending_paid", "forced_sale_total",
-        ):
-            doc[key] = None
-        doc["forced_sales"] = []
-        if revealed < 3:  # nothing closes before the first quarter ends
-            return doc
-        rec = get_run_record(conn, doc["run_id"])
-        if rec is None:  # pragma: no cover - FK'd at creation
-            return doc
-        world = get_world(conn, rec["world_id"])
-        if world is None:  # pragma: no cover - FK'd at creation
-            return doc
-        nw = project_numeric(WorldSpec.model_validate(world))
-        paths = run_path(nw, rec["seed"])
-        use_reported = doc["basis"] == "reported"
-        decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported)
-        twin = simulate_play(paths, None, use_reported=use_reported)
-        # only quarters that have CLOSED inside the revealed window
-        q = min(revealed // 3, len(active.quarters)) - 1
-        here, twin_here = active.quarters[q], twin.quarters[q]
-        doc["value"] = here.nav_reported if use_reported else here.nav_true
-        doc["twin_value"] = twin_here.nav_reported if use_reported else twin_here.nav_true
-        doc["cash"] = here.cash
-        doc["coverage_true"] = here.unfunded_total / here.nav_true if here.nav_true > 0 else None
-        doc["coverage_reported"] = (
-            here.unfunded_total / here.nav_reported if here.nav_reported > 0 else None
-        )
-        doc["private_weight_true"] = here.private_weight_true
-        doc["calls_paid"] = here.calls_paid
-        doc["distributions_received"] = here.distributions_received
-        doc["spending_paid"] = here.spending_paid
-        doc["forced_sale_total"] = here.forced_sale_total
-        doc["forced_sales"] = [e for e in active.sale_log if int(e["period"]) <= q + 1]
-        return doc
+revealed = int(doc.get("revealed_months") or 0)
+for key in (
+    "value",
+    "twin_value",
+    "cash",
+    "coverage_true",
+    "coverage_reported",
+    "private_weight_true",
+    "calls_paid",
+    "distributions_received",
+    "spending_paid",
+    "forced_sale_total",
+):
+    doc[key] = None
+doc["forced_sales"] = []
+if revealed < 3:  # nothing closes before the first quarter ends
+    return doc
+rec = get_run_record(conn, doc["run_id"])
+if rec is None:  # pragma: no cover - FK'd at creation
+    return doc
+world = get_world(conn, rec["world_id"])
+if world is None:  # pragma: no cover - FK'd at creation
+    return doc
+nw = project_numeric(WorldSpec.model_validate(world))
+paths = run_path(nw, rec["seed"])
+use_reported = doc["basis"] == "reported"
+decisions = {int(m): a for m, a in doc["decisions"].items()}
+active = simulate_play(paths, decisions, use_reported=use_reported)
+twin = simulate_play(paths, None, use_reported=use_reported)
+# only quarters that have CLOSED inside the revealed window
+q = min(revealed // 3, len(active.quarters)) - 1
+here, twin_here = active.quarters[q], twin.quarters[q]
+doc["value"] = here.nav_reported if use_reported else here.nav_true
+doc["twin_value"] = twin_here.nav_reported if use_reported else twin_here.nav_true
+doc["cash"] = here.cash
+doc["coverage_true"] = here.unfunded_total / here.nav_true if here.nav_true > 0 else None
+doc["coverage_reported"] = (
+    here.unfunded_total / here.nav_reported if here.nav_reported > 0 else None
+)
+doc["private_weight_true"] = here.private_weight_true
+doc["calls_paid"] = here.calls_paid
+doc["distributions_received"] = here.distributions_received
+doc["spending_paid"] = here.spending_paid
+doc["forced_sale_total"] = here.forced_sale_total
+doc["forced_sales"] = [e for e in active.sale_log if int(e["period"]) <= q + 1]
+return doc
 ```
 
 - [ ] **Step 4: Rewrite the outcome block**
@@ -378,26 +385,31 @@ git commit -m "feat: score sessions on the Step-3 twin, with attribution that su
 In `tests/test_bundle.py`, change the version assertion to `"world-bundle-0.4"` and replace `test_private_ledger_rides_along` with:
 
 ```python
-    def test_twin_ledger_rides_along(self, stored_run):
-        """0.4 carries the HOLD-COURSE TWIN's cashflows, not the player's.
+def test_twin_ledger_rides_along(self, stored_run):
+    """0.4 carries the HOLD-COURSE TWIN's cashflows, not the player's.
 
-        The twin never acts, so its ledger is decision-independent and stays
-        honestly pre-authorable (PD-4). The player's own ledger depends on what
-        they did and comes from the session service instead.
-        """
-        db, rid = stored_run
-        doc = build_bundle(connect(db), rid)
-        assert "private" not in doc
-        led = doc["twin_ledger"]
-        n = len(led["quarter_months"])
-        assert n == doc["meta"]["months"] // 3
-        for key in (
-            "calls", "distributions", "nav_true", "nav_reported",
-            "cash", "unfunded", "private_weight_true",
-        ):
-            assert len(led[key]) == n, key
-        assert led["quarter_months"] == [q * 3 + 2 for q in range(n)]
-        assert all(c >= 0.0 for c in led["cash"])
+    The twin never acts, so its ledger is decision-independent and stays
+    honestly pre-authorable (PD-4). The player's own ledger depends on what
+    they did and comes from the session service instead.
+    """
+    db, rid = stored_run
+    doc = build_bundle(connect(db), rid)
+    assert "private" not in doc
+    led = doc["twin_ledger"]
+    n = len(led["quarter_months"])
+    assert n == doc["meta"]["months"] // 3
+    for key in (
+        "calls",
+        "distributions",
+        "nav_true",
+        "nav_reported",
+        "cash",
+        "unfunded",
+        "private_weight_true",
+    ):
+        assert len(led[key]) == n, key
+    assert led["quarter_months"] == [q * 3 + 2 for q in range(n)]
+    assert all(c >= 0.0 for c in led["cash"])
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -431,9 +443,7 @@ def _twin_ledger(revealed: EnginePaths) -> dict[str, list[float] | list[int]]:
         "nav_reported": _round(np.array([q.nav_reported for q in result.quarters])),
         "cash": _round(np.array([q.cash for q in result.quarters])),
         "unfunded": _round(np.array([q.unfunded_total for q in result.quarters])),
-        "private_weight_true": _round(
-            np.array([q.private_weight_true for q in result.quarters])
-        ),
+        "private_weight_true": _round(np.array([q.private_weight_true for q in result.quarters])),
     }
 ```
 

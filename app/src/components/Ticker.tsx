@@ -16,6 +16,7 @@ const TAG: Record<string, string> = {
   quarterly_statement: "BOOK",
   wire_digest: "WIRE",
   newspaper: "PRESS",
+  forced_sale: "SALE",
 };
 
 function fragment(a: FeedArtifact): string {

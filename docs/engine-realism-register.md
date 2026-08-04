@@ -215,8 +215,7 @@ credit all move. Digest-invalidating; alpha-version-bumping.
 
 ## ER-3 — Assets have no cashflow, so private markets have no calls
 
-**Status:** open (partly addressed by the display-only pacing ledger, see
-CHANGELOG for the player-portal work)
+**Status:** CLOSED in the play surface (wire-play-surface branch)
 **Found:** 2026-08-03, owner request for commitments/calls/distributions to
 drive secondary sales.
 
@@ -235,3 +234,24 @@ forced sale, secondary discount) are written and waiting for it.
 
 **Consequences.** Scoring becomes path-dependent on liquidity, which is the
 point. Full alpha redefinition.
+
+**What shipped.** The play surface now scores through `ah/play.py`, which
+drives Step 3's real institutional twin (`ah/port/`) quarterly off a
+toy-engine tape, replacing the display-only pacing ledger entirely
+(`ah/pacing.py` is deleted, along with its tests). Capital calls must now be
+funded from a real cash account; when cash is short the waterfall sells
+liquid holdings first and private interests second, at the policy haircut,
+and a forced sale is a logged event that reaches the player on the wire (and
+the ticker) rather than a number that only moves in a table. Scoring carries
+a distinct `PLAY_ALPHA_VERSION` (`"port-v1-cashflow"`) so cashflow-scored
+sessions cannot share a leaderboard row with anything scored before this
+work.
+
+**What is still open.** The toy market engine itself still has no cashflow
+of its own — it emits returns only, exactly as this entry originally found.
+What closed ER-3 is the *institution* consuming the engine's tape and
+imposing commitments, calls, distributions and a cash constraint on top of
+it, not the engine generating any of that internally. An engine that priced
+its own cashflow-bearing instruments (e.g. bonds with coupons and maturities,
+private funds with engine-native capital schedules) would be a different,
+larger change, and is not what shipped here.

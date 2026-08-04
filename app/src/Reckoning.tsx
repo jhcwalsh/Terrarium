@@ -79,7 +79,10 @@ export function Reckoning({
       {series && (
         <AnalysisChart
           series={series}
-          decisionMonths={outcome.windows.map((w) => w.month)}
+          // outcome.series is one point per closed QUARTER (not month), so the
+          // decision-window markers must be converted from month index to
+          // quarter index before they're handed to the chart's x-scale.
+          decisionMonths={outcome.windows.map((w) => Math.floor(w.month / 3))}
         />
       )}
 

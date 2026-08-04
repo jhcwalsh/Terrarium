@@ -37,7 +37,7 @@ class TestContract:
     def test_sections_and_provenance(self, stored_run):
         db, rid = stored_run
         doc = build_bundle(connect(db), rid)
-        assert doc["bundle_version"] == "world-bundle-0.3"
+        assert doc["bundle_version"] == "world-bundle-0.4"
         for section in ("meta", "revealed", "bands", "summary", "feed"):
             assert section in doc, section
         meta = doc["meta"]
@@ -76,24 +76,31 @@ class TestContract:
             "quarterly_statement",
         }
 
-    def test_private_ledger_rides_along(self, stored_run):
-        """0.3's addition: the pacing ledger, one entry per private asset,
-        every series the same length as the quarter index. Display-only, so
-        it lives beside the bands rather than inside the sealed tape."""
-        from ah.core.engine import REPORTED_SLEEVES
+    def test_twin_ledger_rides_along(self, stored_run):
+        """0.4 carries the HOLD-COURSE TWIN's cashflows, not the player's.
 
+        The twin never acts, so its ledger is decision-independent and stays
+        honestly pre-authorable (PD-4). The player's own ledger depends on what
+        they did and comes from the session service instead.
+        """
         db, rid = stored_run
-        bundle_doc = build_bundle(connect(db), rid)
-        priv = bundle_doc["private"]
-        assert set(priv) == set(REPORTED_SLEEVES)
-        for led in priv.values():
-            n = len(led["quarter_months"])
-            assert n > 0
-            for key in ("called", "distributed", "unfunded", "nav", "dpi", "tvpi"):
-                assert len(led[key]) == n, key
-            assert led["commitment"] > 0
-            # the ledger is NOT sealed: it must not appear in the tape's order
-            assert "commitment" not in bundle_doc["revealed"]["series_order"]
+        doc = build_bundle(connect(db), rid)
+        assert "private" not in doc
+        led = doc["twin_ledger"]
+        n = len(led["quarter_months"])
+        assert n == doc["meta"]["months"] // 3
+        for key in (
+            "calls",
+            "distributions",
+            "nav_true",
+            "nav_reported",
+            "cash",
+            "unfunded",
+            "private_weight_true",
+        ):
+            assert len(led[key]) == n, key
+        assert led["quarter_months"] == [q * 3 + 2 for q in range(n)]
+        assert all(c >= 0.0 for c in led["cash"])
 
     def test_build_is_deterministic(self, stored_run):
         db, rid = stored_run
@@ -140,3 +147,35 @@ class TestSizeAndCli:
         assert result.exit_code == 0, result.stdout
         assert out.exists()
         assert result.stdout.strip().isascii()
+
+
+def test_nothing_imports_the_retired_pacing_shim():
+    """The retired pacing module was a display-only miniature of what
+    ah.play now does properly. Two ledgers computed different ways is the
+    drift this deletion exists to prevent.
+
+    Anchored on import syntax (``from ... import`` / ``import ...``) rather
+    than a bare substring, so it catches a real regression without ever
+    self-matching prose or comments that merely name the retired module --
+    this docstring included.
+    """
+    import subprocess
+
+    root = Path(__file__).resolve().parents[1]
+    hits = subprocess.run(
+        [
+            "git",
+            "grep",
+            "-E",
+            "-l",
+            r"^\s*(from ah\.pacing import|import ah\.pacing)\b",
+            "--",
+            "src",
+            "tests",
+            "app/src",
+        ],
+        cwd=root,
+        capture_output=True,
+        text=True,
+    )
+    assert hits.stdout.strip() == "", hits.stdout

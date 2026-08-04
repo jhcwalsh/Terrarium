@@ -33,6 +33,9 @@ export function AnalysisChart({
   height = 280,
 }: {
   series: AnalysisSeries[];
+  // NB despite the name, these are indices into `series` (one point per
+  // closed quarter, not per month) — callers must convert a raw month
+  // index to its quarter index before passing it in here.
   decisionMonths: number[];
   width?: number;
   height?: number;
