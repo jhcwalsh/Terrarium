@@ -35,9 +35,11 @@ EXAMPLE_PATH = ROOT / "schemas" / "example-long-stagflation.worldspec.json"
 _EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 
 # Frozen golden digest for seed 42 on the stagflation world (toy-v0). Regenerate
-# deliberately only when an intended engine change alters output.
+# deliberately only when an intended engine change alters output. Last
+# regeneration: the unit-coherence fix (percent-space constants restored from
+# the plan's decimal-convention literals; owner-approved deviation).
 GOLDEN_SEED = 42
-GOLDEN_DIGEST = "aea5b731c90d379a5d219e5b08291425666c821cfd240e5adc568027bc575ae7"
+GOLDEN_DIGEST = "66e4ec08dc9de2cc90620b7b567c74cc281abbcf3e731024164cdee64596f4e8"
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

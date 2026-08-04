@@ -35,7 +35,9 @@ EXAMPLE_PATH = ROOT / "schemas" / "example-long-stagflation.worldspec.json"
 _EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 
 GOLDEN_SEED = 42
-GOLDEN_HOLD_FINAL = 65.226660  # growth of 100, stagflation hold-course twin
+# growth of 100, stagflation hold-course twin; regenerated with the engine's
+# unit-coherence fix (percent-space constants)
+GOLDEN_HOLD_FINAL = 65.155701
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

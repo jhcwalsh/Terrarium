@@ -213,6 +213,16 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # its own vol term and every other asset's monthly return (resolving a spec
     # inconsistency: the spread PATH is defined in bps, but the "3.5*Δspread"
     # coefficient only yields sane monthly returns when Δspread is in pp).
+    #
+    # Units audit (unit-coherence fix, found live): every return below is a
+    # MONTHLY PERCENT (1.5 == 1.5%). STEP0-PLAN's formula set mixed decimal-
+    # convention constants (0.007 vol, rate/1200 carry) into percent-space
+    # expressions, leaving bonds/commodities with ~zero carry and vol — a
+    # ruler-straight commodity line and a deterministic bond slide in the
+    # first played decade. All carry terms are now annual-percent/12 and all
+    # vol/drag constants are percent-scale; the drift/beta/duration terms
+    # were already correct. Deliberate deviation from the plan's literal
+    # constants, recorded in the WP commit; golden digest regenerated.
     d_rate = np.diff(rate, prepend=rate[0])
     d_spread = np.diff(spread, prepend=spread[0]) / 100.0
 
@@ -238,16 +248,16 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     corr_eb = 0.35 if infl_avg > 3.5 else -0.30
     z_b = corr_eb * z_m + math.sqrt(1.0 - corr_eb**2) * e_b
 
-    loss_m = pc_loss / 1200.0
+    loss_m = pc_loss / 12.0
 
-    eq = eq_drift / 12.0 + eq_vol_m * z_eq - 0.022 * crisis
-    bonds = rate / 1200.0 - 6.0 * d_rate + 0.007 * z_b
-    hy = rate / 1200.0 + spread / 120000.0 - 3.5 * d_spread + 0.5 * eq_vol_m * z_hy - 0.006 * crisis
-    commodities = com_drift / 12.0 + max(0.0, infl_avg - 2.5) / 1200.0 + 0.052 * z_com
-    reits = 0.65 * eq - 2.5 * d_rate + 0.026 * e_reit
-    pe = 1.4 * eq + (pe_illiq + pe_mult) / 1200.0 + 0.02 * e_pe
-    pc = (rate + 4.5) / 1200.0 - loss_m * np.where(crisis > 0, 3.2, 0.6) + 0.18 * eq + 0.007 * e_pc
-    re = 0.045 / 12.0 - re_cap / (10000.0 * nm) * 2.2 + 0.35 * eq + 0.011 * e_re
+    eq = eq_drift / 12.0 + eq_vol_m * z_eq - 2.2 * crisis
+    bonds = rate / 12.0 - 6.0 * d_rate + 0.7 * z_b
+    hy = rate / 12.0 + spread / 1200.0 - 3.5 * d_spread + 0.5 * eq_vol_m * z_hy - 0.6 * crisis
+    commodities = com_drift / 12.0 + max(0.0, infl_avg - 2.5) / 12.0 + 5.2 * z_com
+    reits = 0.65 * eq - 2.5 * d_rate + 2.6 * e_reit
+    pe = 1.4 * eq + (pe_illiq + pe_mult) / 12.0 + 2.0 * e_pe
+    pc = (rate + 4.5) / 12.0 - loss_m * np.where(crisis > 0, 3.2, 0.6) + 0.18 * eq + 0.7 * e_pc
+    re = 4.5 / 12.0 - re_cap / (100.0 * nm) * 2.2 + 0.35 * eq + 1.1 * e_re
 
     returns = {
         "equity": eq,

@@ -77,6 +77,32 @@ All notable changes to this project are documented here. The project follows
   framework. The pointer is display-only until su-app-02 binds it to the
   server session (W5). 4 vitest tests; `npm run test|typecheck|build`.
 
+### Fixed
+- **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
+  literal formula constants). The plan's return formulas mixed decimal-
+  convention constants (`0.007` vol, `rate/1200` carry) into percent-space
+  expressions, so on the percent scale the engine actually emits, bonds
+  and commodities had ~zero carry and vol — a ruler-straight commodity
+  line and a deterministic bond slide, spotted live in the first played
+  decade. Every carry term is now annual-percent/12 and every vol/drag
+  constant percent-scale (the same magnitudes the spec intended in
+  decimal, ×100); drift/beta/duration terms were already correct and are
+  untouched. Deliberate golden regenerations: engine snapshot digest,
+  institution hold-course final (65.16), the app fixture bundle. Battery
+  on the stagflation preset: 0 enforce failures. `ah/core/engine.py` is
+  NOT in the pre-registration seal's `hashed_files` (verified against
+  the lock) — no amendment required. Stagflation seed-42 decade now
+  reads: bonds +5%/yr grinding against rising rates, commodities 18%
+  vol, HY carrying its spread through the hump, equity/PE eating the
+  crisis.
+- **CB statements no longer announce decisions nobody took** (live
+  feedback: a 0.07% "hike" reads as a bug, because it is one — the toy
+  rate is a continuous drift, not meeting-quantized moves). The
+  statement now narrates the stance: tightened/eased over the quarter
+  with the bp move and the level, or "little changed" under 5bp.
+  Discrete 25bp policy decisions are recorded as a realism requirement
+  for the post-G2 engine, not faked in narration.
+
 ### Added
 - **The vitrine remodel + the information the player was missing** (first
   live play session feedback, three rounds). The app now wears the early
