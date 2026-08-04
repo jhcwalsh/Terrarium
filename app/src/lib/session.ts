@@ -1,0 +1,117 @@
+/**
+ * Session-service client (su-app-02; DN-3 W5).
+ *
+ * Everything that scores round-trips the server: the reveal pointer during
+ * play, decisions, completion, the outcome. This module is a thin, typed
+ * fetch wrapper over ah.serve — it holds NO game logic, because the server
+ * refusing an illegal move is the mechanic, not a UI convention.
+ */
+
+export interface Session {
+  session_id: string;
+  run_id: string;
+  world_id: string;
+  months: number;
+  revealed_months: number;
+  basis: "reported" | "actual";
+  ranked: boolean;
+  participant: string | null;
+  decisions: Record<string, string>;
+  window_log: unknown[];
+  status: "active" | "completed";
+  decision_windows?: number[];
+}
+
+export interface OutcomeWindow {
+  month: number;
+  action: string;
+  contribution: number;
+}
+
+export interface Outcome {
+  session_id: string;
+  basis: string;
+  ranked: boolean;
+  decision_alpha_version: string;
+  final_value: number;
+  twin_final_value: number;
+  alpha: number;
+  windows: OutcomeWindow[];
+}
+
+export type Action = "hold" | "derisk" | "leanin" | "secondary";
+
+export const ACTIONS: readonly Action[] = ["hold", "derisk", "leanin", "secondary"];
+
+export class SessionApiError extends Error {
+  constructor(
+    public readonly status: number,
+    detail: string,
+  ) {
+    super(detail);
+  }
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const res = await fetch(path, {
+    headers: { "content-type": "application/json" },
+    ...init,
+  });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try {
+      detail = (await res.json()).detail ?? detail;
+    } catch {
+      /* non-JSON error body; statusText stands */
+    }
+    throw new SessionApiError(res.status, detail);
+  }
+  return (await res.json()) as T;
+}
+
+export function createSession(body: {
+  run_id: string;
+  basis?: "reported" | "actual";
+  ranked?: boolean;
+  participant?: string;
+}): Promise<Session> {
+  return request("/sessions", { method: "POST", body: JSON.stringify(body) });
+}
+
+export function getSession(sid: string): Promise<Session> {
+  return request(`/sessions/${sid}`);
+}
+
+export function advance(sid: string, toMonth: number): Promise<Session> {
+  return request(`/sessions/${sid}/advance`, {
+    method: "POST",
+    body: JSON.stringify({ to_month: toMonth }),
+  });
+}
+
+/** DN-6 §8 client telemetry riding along with a decision (never scored). */
+export interface ClientLog {
+  time_on_window_ms?: number;
+  basis_toggles?: number;
+  ui_version?: string;
+}
+
+export function decide(
+  sid: string,
+  month: number,
+  action: Action,
+  clientLog: ClientLog = {},
+): Promise<Session> {
+  return request(`/sessions/${sid}/decisions`, {
+    method: "POST",
+    body: JSON.stringify({ month, action, client_log: clientLog }),
+  });
+}
+
+export function complete(sid: string): Promise<Session> {
+  return request(`/sessions/${sid}/complete`, { method: "POST" });
+}
+
+export function getOutcome(sid: string): Promise<Outcome> {
+  return request(`/sessions/${sid}/outcome`);
+}

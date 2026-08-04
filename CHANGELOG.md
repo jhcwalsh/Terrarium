@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **su-app-02 — the decision surface** (`app/src/Play.tsx`,
+  `DecisionWindow.tsx`, `lib/session.ts`). Play mode binds the scaffold
+  to the session service: the server's pointer is the authority (W5) —
+  the decade STOPS at each annual window because advancing past an
+  undecided window is a server 409, and the UI treats the refusal as the
+  mechanic. E1 as ratified: the commit button is dead until an action is
+  explicitly chosen, and **hold course is a selection with the same
+  weight as acting** — never a click-through default (pinned by
+  component test). Time-on-window telemetry rides with each decision
+  (DN-6 §8, client field, never scored). Outcome view shows alpha vs
+  twin with per-window chain-link contributions. Verified three ways:
+  9 vitest tests (client contract + E1 affordance), tsc + build clean,
+  and an end-to-end HTTP smoke over real uvicorn (full decade, outcome
+  telescoping to the penny). su-app-04 deepens this into the full
+  reckoning.
 - **su-app-01 — the app scaffold** (`app/`; PD-1: this repo, superseding
   D-K4-2). Vite + React + TypeScript SPA, browse mode: load a world
   bundle (file, URL, or IndexedDB cache — W8's offline replay), **re-seal
