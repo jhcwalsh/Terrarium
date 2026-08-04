@@ -35,10 +35,14 @@ from fastapi import Depends, FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 from ah.core.engine import run_path
-from ah.core.institution import decision_months, simulate_institution
+from ah.core.institution import decision_months
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
-from ah.density import window_contributions
+from ah.play import (
+    PLAY_ALPHA_VERSION,
+    simulate_play,
+    window_contributions_play,
+)
 from ah.store import sessions as session_store
 from ah.store.db import connect
 from ah.store.runrecords import get_run_record
@@ -46,11 +50,6 @@ from ah.store.worlds import get_world
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
-
-# DN-5's board key includes the alpha definition; runs stamped before the
-# retrofit carry NULL, so ranked outcomes computed by THIS module declare the
-# definition they actually used.
-_ALPHA_VERSION_FALLBACK = "dn5-v0.2-chainlink"
 
 
 class CreateSession(BaseModel):
@@ -129,9 +128,21 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         simulation the outcome runs, truncated at the pointer.
         """
         revealed = int(doc.get("revealed_months") or 0)
-        doc["value"] = None
-        doc["twin_value"] = None
-        if revealed <= 0:
+        for key in (
+            "value",
+            "twin_value",
+            "cash",
+            "coverage_true",
+            "coverage_reported",
+            "private_weight_true",
+            "calls_paid",
+            "distributions_received",
+            "spending_paid",
+            "forced_sale_total",
+        ):
+            doc[key] = None
+        doc["forced_sales"] = []
+        if revealed < 3:  # nothing closes before the first quarter ends
             return doc
         rec = get_run_record(conn, doc["run_id"])
         if rec is None:  # pragma: no cover - FK'd at creation
@@ -143,11 +154,24 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths = run_path(nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_institution(paths, decisions, use_reported=use_reported)
-        twin = simulate_institution(paths, None, use_reported=use_reported)
-        at = min(revealed, int(paths.months)) - 1
-        doc["value"] = float(active.total[at])
-        doc["twin_value"] = float(twin.total[at])
+        active = simulate_play(paths, decisions, use_reported=use_reported)
+        twin = simulate_play(paths, None, use_reported=use_reported)
+        # only quarters that have CLOSED inside the revealed window
+        q = min(revealed // 3, len(active.quarters)) - 1
+        here, twin_here = active.quarters[q], twin.quarters[q]
+        doc["value"] = here.nav_reported if use_reported else here.nav_true
+        doc["twin_value"] = twin_here.nav_reported if use_reported else twin_here.nav_true
+        doc["cash"] = here.cash
+        doc["coverage_true"] = here.unfunded_total / here.nav_true if here.nav_true > 0 else None
+        doc["coverage_reported"] = (
+            here.unfunded_total / here.nav_reported if here.nav_reported > 0 else None
+        )
+        doc["private_weight_true"] = here.private_weight_true
+        doc["calls_paid"] = here.calls_paid
+        doc["distributions_received"] = here.distributions_received
+        doc["spending_paid"] = here.spending_paid
+        doc["forced_sale_total"] = here.forced_sale_total
+        doc["forced_sales"] = [e for e in active.sale_log if int(e["period"]) <= q + 1]
         return doc
 
     @app.get("/sessions/{sid}")
@@ -225,12 +249,12 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths = run_path(nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_institution(paths, decisions, use_reported=use_reported)
-        twin = simulate_institution(paths, None, use_reported=use_reported)
-        attribution = window_contributions(paths, decisions, use_reported=use_reported)
+        active = simulate_play(paths, decisions, use_reported=use_reported)
+        twin = simulate_play(paths, None, use_reported=use_reported)
+        attribution = window_contributions_play(paths, decisions, use_reported=use_reported)
 
         alpha = active.final_value - twin.final_value
-        alpha_version = rec.get("decision_alpha_version") or _ALPHA_VERSION_FALLBACK
+        alpha_version = PLAY_ALPHA_VERSION
 
         if doc["ranked"] and doc["participant"]:
             # One row per (world, seed, alpha-version, participant): a replayed
@@ -262,10 +286,17 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "alpha": alpha,
             # E7 (DN-5 R-1): THREE series by contract — the drift twin's slot
             # exists before its data, so its arrival is a data change, not an
-            # interface change.
+            # interface change. One point per CLOSED quarter, on the twin's
+            # own cadence (nav_reported/nav_true per the session's basis).
             "series": {
-                "active": [round(float(v), 4) for v in active.total],
-                "twin": [round(float(v), 4) for v in twin.total],
+                "active": [
+                    round(float(q.nav_reported if use_reported else q.nav_true), 4)
+                    for q in active.quarters
+                ],
+                "twin": [
+                    round(float(q.nav_reported if use_reported else q.nav_true), 4)
+                    for q in twin.quarters
+                ],
                 "drift_twin": None,
             },
             "windows": [
@@ -277,6 +308,8 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                     strict=True,
                 )
             ],
+            "window_contributions": list(attribution.contributions),
+            "forced_secondaries": active.forced_secondaries,
         }
 
     return app
