@@ -6,7 +6,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
 import { AnalysisChart, threeSeries } from "./components/AnalysisChart";
-import { annotationLine } from "./Reckoning";
+import { annotationLine, Reckoning } from "./Reckoning";
+import type { Outcome } from "./lib/session";
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
@@ -43,5 +44,44 @@ describe("AnalysisChart (E7)", () => {
     expect(legend[2].textContent).toContain("pending");
     // two polylines drawn, the third awaits its data
     expect(host!.querySelectorAll("polyline").length).toBe(2);
+  });
+});
+
+describe("Reckoning wires decision-window markers onto a quarterly chart", () => {
+  // Regression: outcome.series is one point per closed QUARTER, not per
+  // month (a 10-year/120-month world -> 40-point series). Reckoning must
+  // convert each window's raw month index to a quarter index before handing
+  // it to AnalysisChart, whose x-scale divides by (series.length - 1).
+  // Passing raw months through made the later markers compute x-coordinates
+  // several times the chart's width — clipped off-canvas entirely.
+  it("keeps every decision-window marker within the chart's plotted width", () => {
+    const quarters = 40; // 120 months / 3
+    const active = Array.from({ length: quarters }, (_, i) => 100 + i);
+    const twin = Array.from({ length: quarters }, (_, i) => 100 + i * 0.5);
+    const windowMonths = [11, 23, 35, 47, 59, 71, 83, 95, 107];
+    const outcome: Outcome = {
+      session_id: "s1",
+      basis: "actual",
+      ranked: false,
+      decision_alpha_version: "v1",
+      final_value: active[active.length - 1],
+      twin_final_value: twin[twin.length - 1],
+      alpha: active[active.length - 1] - twin[twin.length - 1],
+      windows: windowMonths.map((month) => ({ month, action: "hold", contribution: 0 })),
+      series: { active, twin, drift_twin: null },
+      window_contributions: windowMonths.map(() => 0),
+      forced_secondaries: 0,
+    };
+
+    render(<Reckoning outcome={outcome} onExit={() => {}} />);
+
+    const width = 720; // AnalysisChart's default width
+    const lines = host!.querySelectorAll(".analysis-window-line");
+    expect(lines.length).toBe(windowMonths.length);
+    for (const line of Array.from(lines)) {
+      const x1 = Number(line.getAttribute("x1"));
+      expect(x1).toBeGreaterThanOrEqual(0);
+      expect(x1).toBeLessThanOrEqual(width);
+    }
   });
 });

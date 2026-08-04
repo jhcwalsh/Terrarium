@@ -820,39 +820,6 @@ button.t {
 .band-ok { color: var(--dim); }
 .book-note { font-size: 11px; color: var(--dim); line-height: 1.45; margin: 8px 0 0; }
 
-.alloc-bar {
-  display: flex;
-  height: 7px;
-  border-radius: 4px;
-  overflow: hidden;
-  margin-bottom: 12px;
-  background: #173539;
-}
-
-.alloc-seg {
-  display: block;
-  flex-basis: 0;
-}
-
-.alloc-dot {
-  display: inline-block;
-  width: 0.65em;
-  height: 0.65em;
-  border-radius: 2px;
-  margin-right: 2px;
-}
-
-.alloc-equity { background: #4fc3a1; }
-.alloc-pe { background: #7b5cd6; }
-.alloc-bonds { background: #5b8dd6; }
-.alloc-pc { background: #7cb342; }
-.alloc-hy { background: #d6a24a; }
-.alloc-commodities { background: #ef6c00; }
-.alloc-reits { background: #d81b60; }
-.alloc-re { background: #8d6e63; }
-
-
-
 /* the wire --------------------------------------------------------------- */
 .feed h2 {
   display: none;

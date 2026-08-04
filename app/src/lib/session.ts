@@ -67,6 +67,10 @@ export interface Outcome {
   windows: OutcomeWindow[];
   /** E7: three series by contract; drift_twin is null until its engine work lands. */
   series?: { active: number[]; twin: number[]; drift_twin: number[] | null };
+  /** per-window chain-link contribution, in window order; sums exactly to `alpha`. */
+  window_contributions: number[];
+  /** count of forced-secondary sales over the whole run. */
+  forced_secondaries: number;
 }
 
 export type Action = "hold" | "derisk" | "leanin" | "secondary";
