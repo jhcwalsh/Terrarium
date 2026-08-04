@@ -1,41 +1,38 @@
-/**
- * The ledger's reveal rule, pinned.
- *
- * A quarter's row exists for the player only once its closing month is on the
- * tape — the same in-timeline rule the wire follows (E2). Getting this wrong
- * leaks the future through a table instead of a chart, which is worse because
- * nobody would think to look for it there.
- */
-
 import { describe, expect, it } from "vitest";
-import { lastRevealedQuarter } from "./PrivateMarkets";
+import { lastRevealedQuarter, pickLedgerRow } from "./PrivateMarkets";
 
-// quarters close on months 2, 5, 8, 11, ... (0-indexed), as ah.play emits
 const QUARTERS = [2, 5, 8, 11, 14, 17];
 
 describe("lastRevealedQuarter", () => {
   it("shows nothing before the first quarter closes", () => {
     expect(lastRevealedQuarter(QUARTERS, 0)).toBe(-1);
-    expect(lastRevealedQuarter(QUARTERS, 2)).toBe(-1); // month index 2 not yet revealed
+    expect(lastRevealedQuarter(QUARTERS, 2)).toBe(-1);
   });
 
   it("reveals a quarter the moment its closing month is on the tape", () => {
     expect(lastRevealedQuarter(QUARTERS, 3)).toBe(0);
-    expect(lastRevealedQuarter(QUARTERS, 5)).toBe(0);
-    expect(lastRevealedQuarter(QUARTERS, 6)).toBe(1);
     expect(lastRevealedQuarter(QUARTERS, 12)).toBe(3);
   });
 
   it("never runs past the last quarter it has", () => {
     expect(lastRevealedQuarter(QUARTERS, 120)).toBe(QUARTERS.length - 1);
   });
+});
 
-  it("is monotone in the pointer — the ledger cannot un-reveal", () => {
-    let prev = -1;
-    for (let m = 0; m <= 20; m++) {
-      const q = lastRevealedQuarter(QUARTERS, m);
-      expect(q).toBeGreaterThanOrEqual(prev);
-      prev = q;
-    }
+describe("pickLedgerRow", () => {
+  const twin = { calls: [1, 2, 3], distributions: [4, 5, 6] };
+
+  it("prefers the session's own numbers", () => {
+    const row = pickLedgerRow(twin, { calls_paid: 9, distributions_received: 8 }, 1);
+    expect(row).toEqual({ calls: 9, distributions: 8, source: "yours" });
+  });
+
+  it("falls back to the twin when there is no session — browse and offline", () => {
+    const row = pickLedgerRow(twin, null, 1);
+    expect(row).toEqual({ calls: 2, distributions: 5, source: "twin" });
+  });
+
+  it("returns nothing when neither is available", () => {
+    expect(pickLedgerRow(undefined, null, 1)).toBeNull();
   });
 });

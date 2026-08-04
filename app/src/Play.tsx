@@ -21,6 +21,7 @@ import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import { Leaderboard } from "./components/Leaderboard";
+import { PrivateMarkets } from "./components/PrivateMarkets";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
 import type { PlayConfig } from "./RankedSetup";
@@ -195,6 +196,24 @@ export function Play({ bundle, config, onExit }: PlayProps) {
     );
   }
 
+  // Forced sales are a liquidity event on the player's OWN book (the twin
+  // never forces a sale — it holds course by construction), so they come
+  // from the session, not the bundle. Merged into the same feed the bundle
+  // ships so Feed/Ticker's existing reveal filter (month < revealedMonths)
+  // is the one gate for both — no separate discipline to get wrong here.
+  const forcedItems = (session.forced_sales ?? []).map((e) => ({
+    month: e.period * 3 - 1,
+    type: "forced_sale",
+    payload: {
+      dateline: `Y${Math.floor((e.period * 3 - 1) / 12) + 1}M${(((e.period * 3 - 1) % 12) + 1)}`,
+      headline:
+        e.kind === "forced_secondary"
+          ? `FORCED SALE: ${e.amount.toFixed(1)} raised at a discount — ${e.cause}`
+          : `Holdings sold to cover the shortfall: ${e.amount.toFixed(1)}`,
+    },
+  }));
+  const wire = [...(bundle.feed.artifacts ?? []), ...forcedItems];
+
   const decided = windows.filter((m) => String(m) in session.decisions).length;
   const yearNow = revealed === 0 ? 1 : Math.floor((revealed - 1) / 12) + 1;
   // the play rhythm is quarterly, so the clock reads in quarters
@@ -282,7 +301,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
         </button>
       </header>
 
-      <Ticker artifacts={bundle.feed.artifacts ?? []} revealedMonths={revealed} />
+      <Ticker artifacts={wire} revealedMonths={revealed} />
 
       <div className="rail">
         <div className="stat">
@@ -373,22 +392,31 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                   />
                 );
               })}
-              {/* bundle.private (the per-programme pacing ledger) is gone as of
-                  world-bundle-0.4 — the twin_ledger it was replaced with is a
-                  single book, not per-asset, so this slot has no ledger to
-                  show yet. PrivateMarkets stays intact for the next task,
-                  which rewires it onto the session's own book. */}
-              <p className="fan-key stacked">
-                <span className="key-swatch key-revealed" /> this world, as
-                revealed
-                <br />
-                <span className="key-swatch key-inner" /> middle half of{" "}
-                {bundle.meta.n_paths} sibling runs
-                <br />
-                <span className="key-swatch key-outer" /> 5–95% of siblings
-                <br />
-                <span className="key-swatch key-median" /> median sibling
-              </p>
+              {bundle.twin_ledger ? (
+                <div className="ninth">
+                  <div className="eyebrow">
+                    <span>Private markets</span>
+                    <span>quarterly pacing</span>
+                  </div>
+                  <PrivateMarkets
+                    ledger={bundle.twin_ledger}
+                    session={session}
+                    revealedMonths={revealed}
+                  />
+                </div>
+              ) : (
+                <p className="fan-key stacked">
+                  <span className="key-swatch key-revealed" /> this world, as
+                  revealed
+                  <br />
+                  <span className="key-swatch key-inner" /> middle half of{" "}
+                  {bundle.meta.n_paths} sibling runs
+                  <br />
+                  <span className="key-swatch key-outer" /> 5–95% of siblings
+                  <br />
+                  <span className="key-swatch key-median" /> median sibling
+                </p>
+              )}
             </div>
           </section>
         </div>
@@ -407,7 +435,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               <span>The wire</span>
               <span>{dateNow}</span>
             </div>
-            <Feed artifacts={bundle.feed.artifacts ?? []} revealedMonths={revealed} />
+            <Feed artifacts={wire} revealedMonths={revealed} />
           </section>
 
           <section className="decision-panel">

@@ -925,6 +925,10 @@ button.t {
   color: var(--clay);
 }
 
+.feed-forced_sale .feed-body strong {
+  color: var(--clay);
+}
+
 .feed-item table {
   border-collapse: collapse;
   font-size: 14.5px;

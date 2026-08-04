@@ -16,6 +16,7 @@ const TYPE_LABEL: Record<string, string> = {
   quarterly_statement: "BENCHMARK BOOK",
   wire_digest: "WIRE",
   newspaper: "THE MARKET RECORD",
+  forced_sale: "FORCED SALE",
 };
 
 export function Feed({
