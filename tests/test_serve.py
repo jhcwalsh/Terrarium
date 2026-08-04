@@ -123,6 +123,21 @@ class TestOutcome:
         assert sum(w["contribution"] for w in out["windows"]) == pytest.approx(out["alpha"])
         assert [w["action"] for w in out["windows"]][:1] == ["derisk"]
 
+    def test_outcome_series_carry_three_slots(self, service):
+        """E7 (DN-5 R-1): active + twin value series, month-aligned, with the
+        drift twin's slot EXPLICITLY null until its engine work lands — the
+        arrival must be a deliberate data change, not an interface change."""
+        client, _db, rid = service
+        sid = _play_through(client, rid, {11: "derisk"})
+        out = client.get(f"/sessions/{sid}/outcome").json()
+        series = out["series"]
+        months = client.get(f"/sessions/{sid}").json()["months"]
+        assert len(series["active"]) == months
+        assert len(series["twin"]) == months
+        assert series["active"][-1] == pytest.approx(out["final_value"], abs=1e-3)
+        assert series["twin"][-1] == pytest.approx(out["twin_final_value"], abs=1e-3)
+        assert series["drift_twin"] is None
+
     def test_ranked_completion_writes_the_board_once(self, service):
         client, db, rid = service
         sid = _play_through(client, rid, {11: "leanin"}, ranked=True, participant="james")

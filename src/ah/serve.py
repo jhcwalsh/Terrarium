@@ -196,6 +196,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "final_value": active.final_value,
             "twin_final_value": twin.final_value,
             "alpha": alpha,
+            # E7 (DN-5 R-1): THREE series by contract — the drift twin's slot
+            # exists before its data, so its arrival is a data change, not an
+            # interface change.
+            "series": {
+                "active": [round(float(v), 4) for v in active.total],
+                "twin": [round(float(v), 4) for v in twin.total],
+                "drift_twin": None,
+            },
             "windows": [
                 {"month": m, "action": a, "contribution": c}
                 for m, a, c in zip(

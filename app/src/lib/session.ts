@@ -37,6 +37,8 @@ export interface Outcome {
   twin_final_value: number;
   alpha: number;
   windows: OutcomeWindow[];
+  /** E7: three series by contract; drift_twin is null until its engine work lands. */
+  series?: { active: number[]; twin: number[]; drift_twin: number[] | null };
 }
 
 export type Action = "hold" | "derisk" | "leanin" | "secondary";

@@ -7,6 +7,19 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **su-app-04 — the reckoning** (outcome card, three-series analysis,
+  chess-style review). The outcome endpoint now returns the active and
+  policy-twin **value series** with the drift twin's slot explicitly
+  `null` (E7 as ratified: the layout, legend, and colour set carry THREE
+  series from birth so the drift twin's arrival is a data change, not a
+  redesign — pinned by test on both sides). The review screen (E4)
+  steps window by window, each carrying its E8 annotation line in the
+  register's exact shape (`Year 4, de-risked: -2.1 points`) computed
+  from the chain-link decomposition — the lines sum exactly to the
+  player's alpha, and the copy says so. Outcome card scope stated in
+  the card: forced-sale counts and coverage-on-both-bases join with the
+  institutional plane (E3's engine side is done; the card metric is
+  consider-not-commit pending I5). App 12/12 vitest.
 - **su-app-03 — the wire, in-timeline** (bundle **v0.2** + `app` feed
   surface; E2). `ah.feed.build_tier1_feed` generates the pre-authored
   artifact feed at BUILD time (PD-4) from WP4.2's tier-1 templates —
