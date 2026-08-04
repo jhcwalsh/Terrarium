@@ -330,6 +330,40 @@ All notable changes to this project are documented here. The project follows
   secondary is not automatically a loss. The test now checks the mechanism
   directly and the finding is pinned separately.
 
+- **`ah.play` finishes the cutover: it is now the only product scoring path**
+  (register ER-3, second half). `src/ah/serve.py`'s `_mark_to_market` and
+  `outcome` endpoints score exclusively through `ah.play.simulate_play` —
+  there is no toy-engine fallback left to drop into, by construction, so a
+  scoring failure is a 500, not a silent downgrade. Bundle `world-bundle-0.4`
+  carries the twin's `twin_ledger` (the hold-course twin's own quarterly
+  `calls`, `distributions`, `nav_true`, `nav_reported`, `cash`, `unfunded`,
+  `private_weight_true`, one row per closed quarter) in place of the retired
+  v0.3 pacing block; `src/ah/pacing.py` and its tests are deleted.
+
+  The app's allocation panel is now **the book**: cash, coverage (true and
+  reported), the private-weight-vs-policy-band row, and quarterly
+  calls/distributions/spending, rendered from the session's own
+  server-computed fields rather than replayed client-side. The ninth grid
+  cell shows the latest closed quarter's call/distribution row, preferring
+  the player's own session-scoped numbers over the twin's when both exist.
+  Forced sales are logged events that appear on the wire and the ticker
+  (`FORCED SALE` / `SALE`), reveal-gated exactly like every other feed item —
+  a `deflation_bust` decade produces one; `goldilocks` produces none.
+
+  **Two consequences, stated because they are easy to miss:**
+  1. `alpha_version` is computed at outcome time from the live
+     `PLAY_ALPHA_VERSION` constant, not stored per session at creation. A
+     session opened before this cutover, if reopened now, is re-scored on the
+     twin — its value, alpha and attribution move, because they are computed
+     fresh against the current scoring path rather than replayed from
+     whatever the toy engine said at the time.
+  2. Leaderboard rows are written **once**, at ranked completion, under the
+     alpha-version string current at that moment (the triple key is
+     `world_id`/`seed`/`decision_alpha_version`, enforced unique). Completed
+     ranked rows already on the board keep their original version string
+     forever; nothing already scored is restated. New completions land under
+     `port-v1-cashflow`, and the two cannot share a board.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-
