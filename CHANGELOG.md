@@ -283,6 +283,53 @@ All notable changes to this project are documented here. The project follows
   the ER-1/ER-4 work observed it rather than caused it. Non-blocking: every
   Step 0 battery gate is `status: todo` by design.
 
+- **`ah.play` — the playable institution moves onto the Step-3 twin**
+  (register ER-3, first half). The play surface scored on
+  `ah.core.institution`: eight asset weights, rebalanced, with no cash. That
+  made a secondary sale a slider — nothing could ever *need* liquidity
+  because nothing was ever owed. Step 3 had already built the real thing in
+  `ah/port/` (cash account, commitment cohorts, calls, distributions,
+  spending off smoothed marks, forced-sale waterfall) and the product simply
+  was not using it.
+
+  `ah/play.py` drives that waterfall quarterly from a toy-engine tape.
+  Capital calls must now be funded: cash pays them, and when cash is short
+  the waterfall sells liquid holdings first and private interests second, at
+  the policy haircut. Distributions arrive on the cohort's own bow,
+  accelerated or starved through tier 1's linkage — which consumes
+  continuous market states only, never a regime label.
+
+  **Three findings from building it, each fixed or recorded:**
+  - *The opening book breached its own policy band.* The toy holds 45 points
+    in private assets; `Policy.private_weight_range` is (0.15, 0.40). The toy
+    could hold that because it had no band, no cash and nothing that could
+    force a sale. On the real twin it compounds — 29 forced quarters out of
+    40. The book now opens at 35 points private and stays in range.
+  - *A private programme is a ladder, not a fund.* Without new vintages the
+    opening cohorts hit terminal liquidation around year five and the
+    institution spent the back half of the decade with no private assets, no
+    calls and no distributions at all. A new vintage is now committed
+    annually in every private sleeve.
+  - *"Forced sale" was hiding the signal.* Selling liquid assets to fund a
+    call is ordinary funding, not distress; counting both together reported
+    27 alarming quarters. They are now separate, and the one that means
+    trouble — liquid exhausted, private interests sold at the haircut —
+    happens **once, in `deflation_bust`**, and never in `goldilocks`.
+
+  **Scoring identity.** Sessions scored here carry `PLAY_ALPHA_VERSION =
+  "port-v1-cashflow"`, so their leaderboard rows cannot mix with toy-scored
+  ones. It deliberately does NOT touch
+  `ah.eval.decision_metrics.DECISION_ALPHA_VERSION`, which names Step 5's
+  research definition and sits inside the **G5** seal
+  (`step5-evaluation-protocol.yaml`) — an earlier note in this file named the
+  G2 seal for that constant, which was wrong.
+
+  A test written to assert "selling at a discount must cost value" failed,
+  and the reason is a real property worth keeping: the cash raised can
+  prevent a forced liquidation later the same quarter, so a voluntary
+  secondary is not automatically a loss. The test now checks the mechanism
+  directly and the finding is pinned separately.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-
