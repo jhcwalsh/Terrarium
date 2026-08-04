@@ -210,16 +210,31 @@ def central_bank_statement(
     policy_rate: float,
     previous_rate: float,
 ) -> dict[str, Any]:
-    """Deterministic stance language keyed on the tape — no RNG, no adjectives."""
+    """Deterministic stance language keyed on the tape — no RNG, no adjectives.
+
+    The toy engine's policy rate is a continuous drift, not a sequence of
+    meeting-quantized decisions — so the statement narrates how conditions
+    MOVED over the quarter and where the rate stands, and never announces a
+    discrete "raised by X" decision that no committee took (found live: a
+    0.07% "hike" reads as a bug, because it is one). Moves under 5bp read as
+    little changed. Discrete 25bp policy decisions are a realism requirement
+    recorded for the post-G2 engine, not something to fake in narration.
+    """
     move = policy_rate - previous_rate
-    action = "hike" if move > 1e-12 else ("cut" if move < -1e-12 else "hold")
-    if action == "hold":
-        first = f"The policy rate remains at {fmt_level_pct(policy_rate, 2)}."
-    else:
-        verb = "raised" if action == "hike" else "lowered"
+    bp = round(abs(move) * 10000)
+    if bp < 5:
+        action = "hold"
         first = (
-            f"The policy rate is {verb} by {fmt_level_pct(abs(move), 2)} to "
-            f"{fmt_level_pct(policy_rate, 2)}."
+            f"The policy rate stands at {fmt_level_pct(policy_rate, 2)}, "
+            "little changed over the quarter."
+        )
+    else:
+        action = "hike" if move > 0 else "cut"
+        verb = "tightened" if move > 0 else "eased"
+        direction = "up" if move > 0 else "down"
+        first = (
+            f"Policy conditions {verb} over the quarter; the rate stands at "
+            f"{fmt_level_pct(policy_rate, 2)} ({direction} {bp}bp)."
         )
     return {
         "world_id": world_id,

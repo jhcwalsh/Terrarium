@@ -118,19 +118,26 @@ class TestFurniture:
             )
 
     def test_cb_statement_stance_is_keyed_on_the_move(self):
+        """Narrates drift, never announces a decision: the toy rate is a
+        continuous stance, so the statement reports the quarter's move in bp
+        and the level — and moves under 5bp read as little changed."""
         hike = tpl.central_bank_statement(
             world_id="w1", dateline="d", policy_rate=0.0525, previous_rate=0.05
         )
-        assert "raised by 0.25%" in hike["lines"][0]
+        assert "tightened" in hike["lines"][0]
+        assert "5.25%" in hike["lines"][0]
+        assert "up 25bp" in hike["lines"][0]
         assert "firmer policy" in hike["lines"][1]
         hold = tpl.central_bank_statement(
-            world_id="w1", dateline="d", policy_rate=0.05, previous_rate=0.05
+            world_id="w1", dateline="d", policy_rate=0.0503, previous_rate=0.05
         )
-        assert "remains at 5.00%" in hold["lines"][0]
+        assert "little changed" in hold["lines"][0]
+        assert "5.03%" in hold["lines"][0]
         cut = tpl.central_bank_statement(
             world_id="w1", dateline="d", policy_rate=0.0475, previous_rate=0.05
         )
-        assert "lowered" in cut["lines"][0]
+        assert "eased" in cut["lines"][0]
+        assert "down 25bp" in cut["lines"][0]
 
 
 class TestStatementAndBoardPack:

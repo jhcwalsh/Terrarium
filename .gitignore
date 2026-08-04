@@ -190,3 +190,7 @@ experiments/
 
 # wp3-00 scratch: regenerable measured fragment (embedded verbatim in pre-registration-g3.yaml)
 /g3-reference-measured.yaml
+
+# local gate logs and scratch bundles (root only)
+/gate*.log
+/*.bundle.gz

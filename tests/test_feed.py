@@ -46,21 +46,23 @@ class TestTier1Feed:
 
     def test_cb_statement_tracks_the_tape(self, feed_and_paths):
         """The stance line is keyed on the tape's own rate move — no adjectives,
-        no RNG. Check one hike/cut/hold against the raw rate path."""
+        no RNG. Drift narration: tightened/eased with the bp move, or little
+        changed under the 5bp threshold. Check every statement against the
+        raw rate path (rate is in engine percent; the template takes decimal)."""
         _nw, paths, feed = feed_and_paths
         for item in feed:
             if item["type"] != "cb_statement":
                 continue
             m = item["month"]
             prev = m - 3
-            move = float(paths.rate[m]) - float(paths.rate[prev]) if prev >= 0 else 0.0
+            move = (float(paths.rate[m]) - float(paths.rate[prev])) / 100.0 if prev >= 0 else 0.0
             first_line = item["payload"]["lines"][0]
-            if abs(move) < 1e-12:
-                assert "remains" in first_line
+            if round(abs(move) * 10000) < 5:
+                assert "little changed" in first_line
             elif move > 0:
-                assert "raised" in first_line
+                assert "tightened" in first_line
             else:
-                assert "lowered" in first_line
+                assert "eased" in first_line
 
     def test_deterministic(self, feed_and_paths):
         nw, paths, feed = feed_and_paths
