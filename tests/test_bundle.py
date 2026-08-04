@@ -150,30 +150,29 @@ class TestSizeAndCli:
 
 
 def test_nothing_imports_the_retired_pacing_shim():
-    """ah.pacing was a display-only miniature of what ah.play now does
-    properly. Two ledgers computed different ways is the drift this deletion
-    exists to prevent."""
+    """The retired pacing module was a display-only miniature of what
+    ah.play now does properly. Two ledgers computed different ways is the
+    drift this deletion exists to prevent.
+
+    Anchored on import syntax (``from ... import`` / ``import ...``) rather
+    than a bare substring, so it catches a real regression without ever
+    self-matching prose or comments that merely name the retired module --
+    this docstring included.
+    """
     import subprocess
 
     root = Path(__file__).resolve().parents[1]
     hits = subprocess.run(
-        # exclude this file itself: its own docstring and this literal search
-        # pattern both contain the string "ah.pacing", which would otherwise
-        # make the guard self-match every time it runs. Also exclude
-        # PrivateMarkets.test.ts, which still carries a historical comment
-        # naming the retired module (out of scope for this deletion; a later
-        # task owns that file).
         [
             "git",
             "grep",
+            "-E",
             "-l",
-            "ah.pacing",
+            r"^\s*(from ah\.pacing import|import ah\.pacing)\b",
             "--",
             "src",
             "tests",
             "app/src",
-            ":(exclude)tests/test_bundle.py",
-            ":(exclude)app/src/components/PrivateMarkets.test.ts",
         ],
         cwd=root,
         capture_output=True,
