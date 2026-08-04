@@ -8,8 +8,8 @@
  * and completes into the outcome view.
  *
  * Layout is the vitrine: header with clock + transport + plane switch,
- * wire ticker, stat rail, then charts left / sleeves + wire + decision
- * right. The plane switch flips the PRIVATE sleeves' revealed lines
+ * wire ticker, stat rail, then charts left / allocation + wire + decision
+ * right. The plane switch flips the PRIVATE assets' revealed lines
  * between appraisal-smoothed marks (as reported, brass) and true returns
  * (as true, jade) — display only; the scoring basis is fixed at session
  * creation and shown in the rail.
@@ -50,7 +50,7 @@ export const ASSET_LABELS: ReadonlyArray<readonly [string, string]> = [
   ["re", "Real estate"],
 ];
 
-const PRIVATE_SLEEVES = new Set(["pe", "pc", "re"]);
+const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 
 type Plane = "reported" | "true";
 
@@ -121,10 +121,22 @@ export function Play({ bundle, config, onExit }: PlayProps) {
     void advanceTo(nextWindow !== null ? Math.min(nextWindow + 1, months) : months);
   }, [advanceTo, nextWindow, months]);
 
-  /** One month at a time — watch the wire land. */
-  const stepMonth = useCallback(() => {
-    if (session) void advanceTo(session.revealed_months + 1);
-  }, [advanceTo, session]);
+  /**
+   * A quarter at a time — the play rhythm (owner: "let's change the play to
+   * quarterly, not annual"). Clamped to the next undecided window because the
+   * server refuses to reveal past one (409) and windows sit at month 11, 23,
+   * ... — a naive +3 from month 9 would jump the stop.
+   *
+   * DECISIONS stay annual. Moving them to quarterly would redefine
+   * decision_alpha, the DN-5 chain-link decomposition and leaderboard
+   * comparability; that needs a decision_alpha_version bump and its own WP.
+   */
+  const stepQuarter = useCallback(() => {
+    if (!session) return;
+    const target = session.revealed_months + 3;
+    const stop = nextWindow !== null ? nextWindow + 1 : months;
+    void advanceTo(Math.min(target, stop, months));
+  }, [advanceTo, session, nextWindow, months]);
 
   const commit = useCallback(
     async (action: Action, timeOnWindowMs: number) => {
@@ -185,7 +197,12 @@ export function Play({ bundle, config, onExit }: PlayProps) {
 
   const decided = windows.filter((m) => String(m) in session.decisions).length;
   const yearNow = revealed === 0 ? 1 : Math.floor((revealed - 1) / 12) + 1;
-  const dateNow = revealed === 0 ? "T0" : `Y${yearNow} · M${((revealed - 1) % 12) + 1}`;
+  // the play rhythm is quarterly, so the clock reads in quarters
+  const quarterNow = revealed === 0 ? 0 : Math.floor(((revealed - 1) % 12) / 3) + 1;
+  const dateNow = revealed === 0 ? "T0" : `Y${yearNow} Q${quarterNow}`;
+  const monthNow =
+    revealed === 0 ? "before the tape opens" : `month ${((revealed - 1) % 12) + 1} of the year`;
+  const nextYear = nextWindow !== null ? Math.floor((nextWindow + 1) / 12) : null;
   const transportLocked = busy || atWindow !== null || revealed >= months;
 
   return (
@@ -215,22 +232,18 @@ export function Play({ bundle, config, onExit }: PlayProps) {
           <div className="transport">
             <button
               className="t"
-              onClick={stepMonth}
+              onClick={stepQuarter}
               disabled={transportLocked}
-              title="Advance one month"
-              aria-label="Advance one month"
+              title="Advance one quarter"
+              aria-label="Advance one quarter"
             >
-              ›
+              »
             </button>
             <button
               className="t"
               onClick={playAhead}
               disabled={transportLocked}
-              title={
-                nextWindow !== null
-                  ? `Play to year ${Math.floor((nextWindow + 1) / 12)}`
-                  : "Play out the decade"
-              }
+              title={nextYear !== null ? `Play to year ${nextYear}` : "Play out the decade"}
               aria-label="Play to the next stop"
             >
               ▶
@@ -243,7 +256,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
           role="switch"
           aria-checked={plane === "true"}
           tabIndex={0}
-          aria-label="Show private sleeves as reported or as true"
+          aria-label="Show private assets as reported or as true"
           onClick={() => setPlane(plane === "true" ? "reported" : "true")}
           onKeyDown={(e) => {
             if (e.key === " " || e.key === "Enter") {
@@ -268,7 +281,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
         <div className="stat">
           <div className="k">Revealed</div>
           <div className="v">{revealed}</div>
-          <div className="s">of {months} months</div>
+          <div className="s">of {months} months &middot; {monthNow}</div>
         </div>
         <div className="stat">
           <div className="k">Windows decided</div>
@@ -276,8 +289,8 @@ export function Play({ bundle, config, onExit }: PlayProps) {
             {decided}/{windows.length}
           </div>
           <div className="s">
-            {nextWindow !== null
-              ? `next stops at year ${Math.floor((nextWindow + 1) / 12)}`
+            {nextYear !== null
+              ? `annual windows — next stops at year ${nextYear}`
               : "all decided — play it out"}
           </div>
         </div>
@@ -312,23 +325,9 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                 {revealed} of {months} months revealed
               </span>
             </div>
-            <p className="fan-key">
-              <span className="key-swatch key-revealed" /> this world, as revealed
-              {" · "}
-              <span className="key-swatch key-inner" /> middle half of{" "}
-              {bundle.meta.n_paths} sibling runs
-              {" · "}
-              <span className="key-swatch key-outer" /> 5–95% of siblings
-              {" · "}
-              <span className="key-swatch key-median" /> median sibling
-              <br />
-              Growth of 1 invested at t0. Hatched region is sealed — the future
-              exists but is withheld. Private sleeves follow the reported/true
-              switch, top right.
-            </p>
             <div className="chart-grid">
               {ASSET_LABELS.filter(([key]) => bundle.bands[key]).map(([key, name]) => {
-                const isPrivate = PRIVATE_SLEEVES.has(key);
+                const isPrivate = PRIVATE_ASSETS.has(key);
                 const source =
                   isPrivate && plane === "reported" ? `${key}_reported` : key;
                 return (
@@ -339,19 +338,35 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                     bands={bundle.bands[key]}
                     revealed={cumulativeGrowth(column(source))}
                     revealedMonths={revealed}
-                    height={190}
                   />
                 );
               })}
+              <p className="fan-key">
+                <span className="key-swatch key-revealed" /> this world, as
+                revealed
+                <br />
+                <span className="key-swatch key-inner" /> middle half of{" "}
+                {bundle.meta.n_paths} sibling runs
+                <br />
+                <span className="key-swatch key-outer" /> 5–95% of siblings
+                <br />
+                <span className="key-swatch key-median" /> median sibling
+                <br />
+                <br />
+                Scale is cumulative return since t0; the figure beside each name
+                is the annualized return to date. The hatched region is sealed —
+                the future exists but is withheld. Private assets follow the
+                reported/true switch, top right.
+              </p>
             </div>
           </section>
         </div>
 
-        <div className="right">
+        <div className={`right${atWindow !== null ? " deciding" : ""}`}>
           <section>
             <div className="eyebrow">
-              <span>Sleeves — your targets</span>
-              <span>rebalanced yearly</span>
+              <span>Allocation</span>
+              <span>targets, rebalanced at each window</span>
             </div>
             <Allocation decisions={session.decisions} />
           </section>
@@ -365,30 +380,18 @@ export function Play({ bundle, config, onExit }: PlayProps) {
           </section>
 
           <section className="decision-panel">
-            {atWindow !== null ? (
-              <>
-                <div className="eyebrow">
-                  <span>Committee in session</span>
-                </div>
-                <DecisionWindow
-                  month={atWindow}
-                  year={Math.floor((atWindow + 1) / 12)}
-                  onCommit={commit}
-                  busy={busy}
-                />
-              </>
-            ) : (
-              <>
-                <div className="eyebrow">
-                  <span>Next decision</span>
-                </div>
-                <p className="idle-note">
-                  {nextWindow !== null
-                    ? `Time is yours. Advance the tape (› one month, ▶ to the stop) — the decade halts at year ${Math.floor((nextWindow + 1) / 12)} until you commit.`
-                    : "All windows are decided. Play out the decade to face the reckoning."}
-                </p>
-              </>
-            )}
+            <div className="eyebrow">
+              <span>{atWindow !== null ? "Committee in session" : "Actions"}</span>
+              <span>{atWindow !== null ? "commit to continue" : `next window · year ${nextYear ?? "—"}`}</span>
+            </div>
+            <DecisionWindow
+              open={atWindow !== null}
+              month={atWindow ?? (nextWindow ?? 0)}
+              year={Math.floor(((atWindow ?? nextWindow ?? 0) + 1) / 12)}
+              nextYear={nextYear}
+              onCommit={commit}
+              busy={busy}
+            />
           </section>
         </div>
       </div>

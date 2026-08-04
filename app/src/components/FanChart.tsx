@@ -6,11 +6,16 @@
  * (p5–p95, p25–p75) plus the median line; the revealed path draws only up to
  * `revealedMonths`, because the future does not exist yet for the player.
  *
- * Axes and the current-value marker were added after the first live play:
- * a cone with no scale reads as decoration, not information. Everything is
- * on the growth-of-1 scale — ×1.40 means 1 invested at t0 is now 1.40.
+ * Units are the ones an investor actually quotes (owner, on the first build:
+ * "what does x1.29 on equities mean — just use annualized returns"). The axis
+ * is CUMULATIVE RETURN since t0 (+29%, −15%), zero-anchored; the readout beside
+ * the label is the ANNUALIZED return over the months revealed so far, which is
+ * only meaningful once a year is on the tape — under twelve months it reports
+ * the cumulative figure and says so.
+ *
  * The unrevealed region is drawn as a hatched SEALED zone (vitrine remodel):
- * the future is not blank, it is withheld.
+ * the future is not blank, it is withheld. The SVG fills its grid cell so the
+ * whole vitrine can be sized to one screen without scrolling.
  */
 
 import { useId } from "react";
@@ -27,9 +32,9 @@ interface FanChartProps {
   className?: string;
 }
 
-// plot margins: room for the ×-scale on the left, year marks below
-const ML = 48;
-const MR = 12;
+// plot margins: room for the return scale on the left, year marks below
+const ML = 52;
+const MR = 10;
 const MT = 8;
 const MB = 20;
 
@@ -69,14 +74,25 @@ function ticks(min: number, max: number): number[] {
   return out;
 }
 
-const fmt = (v: number) => `×${v >= 10 ? v.toFixed(1) : v.toFixed(2)}`;
+/** Growth-of-1 -> cumulative return, in the units an investor quotes. */
+export function fmtCumulative(growth: number, decimals = 0): string {
+  const pct = (growth - 1) * 100;
+  const sign = pct < -0.05 ? "−" : "+";
+  return `${sign}${Math.abs(pct).toFixed(decimals)}%`;
+}
+
+/** Growth-of-1 over `months` -> annualized return. */
+export function annualized(growth: number, months: number): number | null {
+  if (months <= 0 || growth <= 0) return null;
+  return growth ** (12 / months) - 1;
+}
 
 export function FanChart({
   bands,
   revealed,
   revealedMonths,
-  width = 720,
-  height = 240,
+  width = 560,
+  height = 230,
   label,
   className,
 }: FanChartProps) {
@@ -99,10 +115,14 @@ export function FanChart({
       .map((v, m) => `${x(m)},${y(v)}`)
       .join(" ");
 
-  const yTicks = ticks(min, max);
+  // ticks are chosen on the RETURN scale (what the axis says), then mapped
+  // back through the growth scale the series live on.
+  const retTicks = ticks(min - 1, max - 1);
+  const tickDecimals = retTicks.length > 1 && Math.abs(retTicks[1] - retTicks[0]) < 0.05 ? 1 : 0;
   const yearMarks: number[] = [];
   for (let yr = 2; yr * 12 <= months; yr += 2) yearMarks.push(yr);
   const now = revealedMonths > 0 ? revealed[revealedMonths - 1] : null;
+  const ann = now !== null ? annualized(now, revealedMonths) : null;
 
   const sealX = revealedMonths > 0 ? x(revealedMonths - 1) : ML;
   const sealW = width - MR - sealX;
@@ -112,7 +132,13 @@ export function FanChart({
       {label && (
         <figcaption>
           {label}
-          {now !== null && <span className="fan-now">{fmt(now)}</span>}
+          {now !== null && (
+            <span className={`fan-now${now < 1 ? " neg" : ""}`}>
+              {revealedMonths >= 12 && ann !== null
+                ? `${ann < 0 ? "−" : "+"}${Math.abs(ann * 100).toFixed(1)}%/yr`
+                : `${fmtCumulative(now, 1)} to date`}
+            </span>
+          )}
         </figcaption>
       )}
       <svg viewBox={`0 0 ${width} ${height}`} role="img" aria-label={label ?? "fan chart"}>
@@ -144,17 +170,17 @@ export function FanChart({
             )}
           </g>
         )}
-        {yTicks.map((v) => (
-          <g key={v}>
+        {retTicks.map((r) => (
+          <g key={r}>
             <line
               x1={ML}
-              y1={y(v)}
+              y1={y(1 + r)}
               x2={width - MR}
-              y2={y(v)}
-              className={v === 1 ? "fan-baseline" : "fan-grid"}
+              y2={y(1 + r)}
+              className={Math.abs(r) < 1e-9 ? "fan-baseline" : "fan-grid"}
             />
-            <text x={ML - 5} y={y(v) + 3} className="fan-tick" textAnchor="end">
-              {fmt(v)}
+            <text x={ML - 5} y={y(1 + r) + 3} className="fan-tick" textAnchor="end">
+              {fmtCumulative(1 + r, tickDecimals)}
             </text>
           </g>
         ))}

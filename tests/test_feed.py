@@ -10,7 +10,7 @@ import pytest
 from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
-from ah.feed import build_tier1_feed
+from ah.feed import build_tier1_feed, headline_events
 
 PRESET = Path(__file__).resolve().parents[1] / "src" / "ah" / "presets" / "stagflation.json"
 
@@ -35,14 +35,32 @@ class TestTier1Feed:
                 "release_page",
                 "quarterly_statement",
                 "wire_digest",
+                "newspaper",
             }
 
-    def test_quarterly_cadence(self, feed_and_paths):
+    def test_calendar_cadence(self, feed_and_paths):
+        """Releases are MONTHLY; the committee and the book stay quarterly.
+
+        The split is the point (owner: "show the three monthly announcements
+        - remember the FOMC doesn't meet monthly"). The central bank stays
+        quarterly because the toy rate is a continuous drift with no meeting
+        calendar; see docs/engine-realism-register.md ER-2.
+        """
         _nw, paths, feed = feed_and_paths
         quarters = [m for m in range(paths.months) if (m + 1) % 3 == 0]
-        for t in ("cb_statement", "release_page", "quarterly_statement"):
+        for t in ("cb_statement", "quarterly_statement"):
             months = [i["month"] for i in feed if i["type"] == t]
             assert months == quarters, t
+        releases = [i["month"] for i in feed if i["type"] == "release_page"]
+        assert releases == list(range(paths.months))
+
+    def test_release_carries_both_series_with_priors(self, feed_and_paths):
+        _nw, paths, feed = feed_and_paths
+        page = next(i for i in feed if i["type"] == "release_page" and i["month"] == 7)
+        rows = page["payload"]["rows"]
+        assert [r["series"] for r in rows] == ["CPI inflation", "High yield spread"]
+        assert rows[0]["prior"] == f"{float(paths.inflation[6]):.1f}%"
+        assert rows[1]["value"] == f"{float(paths.spread[7]):.0f}bp"
 
     def test_cb_statement_tracks_the_tape(self, feed_and_paths):
         """The stance line is keyed on the tape's own rate move — no adjectives,
@@ -80,6 +98,43 @@ class TestTier1Feed:
         ]
         digest_months = [i["month"] for i in feed if i["type"] == "wire_digest"]
         assert digest_months == onsets
+
+    def test_front_pages_only_when_the_tape_earns_them(self, feed_and_paths):
+        """A newspaper exists exactly where a headline rule fired, at most one
+        per month, and every page leads with a story."""
+        _nw, paths, feed = feed_and_paths
+        events = headline_events(paths)
+        papers = [i for i in feed if i["type"] == "newspaper"]
+        assert [p["month"] for p in papers] == sorted(events)
+        assert papers, "a stagflation decade should make the news at least once"
+        for p in papers:
+            lines = p["payload"]["lines"]
+            assert lines and lines[0].strip()
+            assert lines[0] == events[p["month"]][0]
+            assert len(lines) <= 4  # lead + at most three secondary stories
+
+    def test_headlines_are_keyed_to_real_crossings(self, feed_and_paths):
+        """Spot-check one rule end to end: an inflation headline may only
+        appear on a month where the tape actually crossed the level."""
+        _nw, paths, _feed = feed_and_paths
+        for m, stories in headline_events(paths).items():
+            for text in stories:
+                if not text.startswith("Inflation tops"):
+                    continue
+                level = float(text.split()[2].rstrip("%"))
+                assert paths.inflation[m - 1] < level <= paths.inflation[m]
+
+    def test_drawdown_milestones_fire_once(self, feed_and_paths):
+        """A 20% drawdown is news the first time. The market oscillating back
+        and forth across the level is not three separate stories."""
+        _nw, paths, _feed = feed_and_paths
+        texts = [t for stories in headline_events(paths).values() for t in stories]
+        dd = [t for t in texts if "off their peak" in t]
+        assert len(dd) == len(set(dd))
+
+    def test_headline_events_are_deterministic(self, feed_and_paths):
+        _nw, paths, _feed = feed_and_paths
+        assert headline_events(paths) == headline_events(paths)
 
     def test_peer_bands_are_monotone(self, feed_and_paths):
         _nw, _paths, feed = feed_and_paths

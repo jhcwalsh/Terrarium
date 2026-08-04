@@ -3,6 +3,9 @@
  * recent revealed feed items. Pure derivation from the bundle feed — same
  * reveal rule as the wire panel (month < revealedMonths), compressed to
  * tag + fragment. Content is duplicated once so the CSS loop is seamless.
+ *
+ * The track scrolls inside its own clipping window so the WIRE label stays
+ * put — without it the translate carries items straight over the label.
  */
 
 import type { FeedArtifact } from "../lib/bundle";
@@ -12,6 +15,7 @@ const TAG: Record<string, string> = {
   release_page: "DATA",
   quarterly_statement: "BOOK",
   wire_digest: "WIRE",
+  newspaper: "PRESS",
 };
 
 function fragment(a: FeedArtifact): string {
@@ -37,26 +41,23 @@ export function Ticker({
     .slice(0, 8)
     .map((a) => ({ tag: TAG[a.type] ?? a.type.toUpperCase(), text: fragment(a) }));
 
-  if (items.length === 0) {
-    return (
-      <div className="tape">
-        <div className="lbl">WIRE</div>
-        <div className="tapetrack" style={{ animation: "none" }}>
-          <span>Awaiting the first releases — advance the tape.</span>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="tape">
       <div className="lbl">WIRE</div>
-      <div className="tapetrack">
-        {[...items, ...items].map((it, i) => (
-          <span key={i}>
-            <b>{it.tag}</b> {it.text}
-          </span>
-        ))}
+      <div className="tapewin">
+        {items.length === 0 ? (
+          <div className="tapetrack" style={{ animation: "none" }}>
+            <span>Awaiting the first releases — advance the tape.</span>
+          </div>
+        ) : (
+          <div className="tapetrack">
+            {[...items, ...items].map((it, i) => (
+              <span key={i}>
+                <b>{it.tag}</b> {it.text}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

@@ -93,7 +93,7 @@ export function Allocation({ decisions }: { decisions: Record<string, string> })
       <table>
         <thead>
           <tr>
-            <th>sleeve</th>
+            <th>asset class</th>
             <th>target</th>
             <th />
             <th>vs start</th>
@@ -107,8 +107,6 @@ export function Allocation({ decisions }: { decisions: Record<string, string> })
               <tr key={k}>
                 <td>
                   <span className={`alloc-dot alloc-${k}`} /> {LABELS[k]}
-                  {GROWTH.includes(k) && <em className="alloc-group"> growth</em>}
-                  {DEFENSIVE.includes(k) && <em className="alloc-group"> defensive</em>}
                 </td>
                 <td>{pct(targets[k])}</td>
                 <td style={{ width: 90, paddingLeft: 12 }}>
@@ -127,11 +125,6 @@ export function Allocation({ decisions }: { decisions: Record<string, string> })
           })}
         </tbody>
       </table>
-      <p className="alloc-note">
-        Rebalanced to these targets at every yearly window. De-risk moves 10pts
-        growth→defensive, lean in moves 10pts back, a secondary sale moves 8pts
-        PE→bonds and takes an 18% haircut on the slice sold.
-      </p>
     </section>
   );
 }

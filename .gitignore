@@ -194,3 +194,6 @@ experiments/
 # local gate logs and scratch bundles (root only)
 /gate*.log
 /*.bundle.gz
+app/public/*.bundle.gz
+app/public/*.bundle.bin
+/uvicorn.log

@@ -77,6 +77,88 @@ All notable changes to this project are documented here. The project follows
   framework. The pointer is display-only until su-app-02 binds it to the
   server session (W5). 4 vitest tests; `npm run test|typecheck|build`.
 
+### Changed
+- **The play surface speaks the owner's language, and fits one screen**
+  (second round of live-play feedback). Six changes, all app-side:
+  - *No more "sleeves".* The word is gone from every player-facing
+    string; the panel header is "Allocation — your targets" and the table
+    column is "asset class". (`_reported` stays in the bundle's
+    `series_order` — that is the data contract, not copy.)
+  - *No more "growth" / "defensive" labels.* These are institutional
+    allocators; the action cards now name the assets they move ("Move
+    10pts from equities and private equity into bonds and private
+    credit") instead of teaching taxonomy. `GROWTH`/`DEFENSIVE` survive
+    as internal constants because they mirror `ah.core.institution`.
+  - *Investor units, not multiples.* "×1.29" is gone. Chart axes are
+    cumulative return since t0 (+29%, −34%), zero-anchored; the figure
+    beside each asset name is the **annualized** return over the months
+    revealed so far, falling back to the cumulative figure under twelve
+    months where an annual number would be nonsense. Two exported
+    helpers (`fmtCumulative`, `annualized`) carry the units and are
+    pinned by five new vitest cases.
+  - *One screen, no scrolling.* The vitrine is pinned to the viewport and
+    laid out as flex bands; the chart grid takes the slack and sizes
+    itself from what is left rather than a fixed pixel height. Only the
+    wire scrolls, because a feed should. A `max-height` query sheds
+    chrome on short viewports, and below 1180px wide the frame gives up
+    and scrolls rather than crushing the charts.
+  - *Everything visible at once.* Asset classes left in a 3x3 grid (the
+    cell aspect now matches the chart viewBox, so the SVG no longer
+    letterboxes into half its cell), the legend in the ninth cell, the
+    wire full-height on the right with the allocation above it and the
+    decision panel always in view.
+  - *Type scale up 25%.* The owner was running the browser at 125% to
+    make the screen usable; every CSS font size is scaled to match, so
+    100% is now the design size. Chart SVG text is excluded — it lives in
+    viewBox units and already grew when the viewBox narrowed.
+  - The ticker track now scrolls inside its own clipping window, so the
+    WIRE label stays put instead of being run over by the marquee.
+
+- **The calendar the world runs on, and a press that reports it.**
+  - *Quarterly play, annual decisions.* The transport advances a quarter at a
+    time and the clock reads `Y2 Q3`, clamped so a step can never jump an
+    undecided window (the server 409s, and windows sit at month 11, 23, ...).
+    Decision windows stay ANNUAL on purpose: moving them would redefine
+    `decision_alpha`, the DN-5 chain-link decomposition and leaderboard
+    comparability, which needs a `decision_alpha_version` bump and its own
+    WP. The rail says so rather than leaving the player to infer it.
+  - *Monthly releases, quarterly committee.* `release_page` now lands every
+    month carrying CPI **and** the HY credit spread, each with its prior, so
+    a player advancing a quarter finds three releases waiting. The central
+    bank stays quarterly — a real committee meets eight times a year, but
+    the toy policy rate is a continuous drift with no meeting calendar, so
+    quarterly stance narration is the honest cadence until the engine
+    quantises policy into decisions.
+  - *Newspaper front pages.* A new Tier-1 template, `newspaper_front_page`,
+    rendered from rules keyed to the tape: inflation crossing 5/8/10%, a
+    year-on-year policy swing past 100bp, HY spreads through 800/1200/1600bp
+    in either direction, equity drawdown milestones at 10/20/30%, and the
+    stress regime opening and closing. One page per month at most, only when
+    the tape earns it — a quiet month gets no edition, which is itself
+    information. Drawdown levels fire once (a milestone, not a crossing);
+    reporting every re-crossing printed the same headline three times in a
+    decade. Zero LLM, zero RNG, zero clock: same tape, same paper. The
+    stagflation decade yields twelve editions, from "Equities 10% off their
+    peak" through three stages of spread blowout to "Stress regime declared
+    over".
+  - *The four levers are always on screen* (owner: "need to make sure the
+    actions are visible on the main page"). Between windows they show as
+    compact inert rows with their effect tags; when the window opens they
+    become the full selectable cards, the briefing and commit button pin to
+    the panel and only the cards scroll, so Commit is never below the fold.
+
+- **`docs/engine-realism-register.md`** — the post-G2 list of places where
+  the toy engine is faithful to its plan but not to an allocator's
+  expectations, each with what was found, what a fix looks like, and what a
+  fix would invalidate. Opens with three entries: high yield earning gross
+  spread with no default losses (median 18.7%/yr at 12.1% vol over the
+  stagflation decade, against a spread path averaging 1278bp from a 401bp
+  start), the policy rate having no meeting calendar or 25bp quantisation,
+  and assets having no cashflow so private markets have no calls. Nothing
+  here is fixed in place: each entry invalidates stored digests and most
+  need a `decision_alpha_version` bump, so they are release events and the
+  owner's call.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-

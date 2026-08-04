@@ -140,6 +140,29 @@ class TestFurniture:
         assert "down 25bp" in cut["lines"][0]
 
 
+class TestNewspaper:
+    def test_front_page_leads_with_its_lead(self):
+        page = tpl.newspaper_front_page(
+            world_id="w1",
+            dateline="Y2M4",
+            lead="Inflation tops 8% as price pressure broadens",
+            stories=["Credit spreads blow through 800bp; borrowers priced out"],
+        )
+        assert page["title"] == "THE MARKET RECORD — Y2M4"
+        assert page["lines"][0].startswith("Inflation tops 8%")
+        assert len(page["lines"]) == 2
+
+    def test_a_page_with_no_lead_is_refused(self):
+        with pytest.raises(tpl.TemplateError, match="lead"):
+            tpl.newspaper_front_page(world_id="w1", dateline="d", lead="   ")
+
+    def test_secondary_stories_are_optional_and_deterministic(self):
+        once = tpl.newspaper_front_page(world_id="w1", dateline="d", lead="Something happened")
+        twice = tpl.newspaper_front_page(world_id="w1", dateline="d", lead="Something happened")
+        assert once == twice
+        assert once["lines"] == ["Something happened"]
+
+
 class TestStatementAndBoardPack:
     BANDS: ClassVar[dict[str, float]] = {
         "p5": -0.10,

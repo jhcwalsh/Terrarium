@@ -244,6 +244,35 @@ def central_bank_statement(
     }
 
 
+def newspaper_front_page(
+    *,
+    world_id: str,
+    dateline: str,
+    lead: str,
+    stories: list[str] | None = None,
+    masthead: str = "THE MARKET RECORD",
+) -> dict[str, Any]:
+    """The economic backdrop, as the world's press reports it.
+
+    Owner's ask after the second live-play round: the player needs context,
+    not just instrument prices. This is the cheapest honest way to give it —
+    a front page whose every line is keyed to something the tape actually
+    did (a threshold crossed, a regime opening), rule-generated like every
+    other Tier-1 artifact. No LLM, no RNG, no clock: same tape, same paper.
+
+    A front page with no lead is not a front page; a quiet month simply gets
+    no edition, which is itself information.
+    """
+    if not lead.strip():
+        raise TemplateError("a front page needs a lead story")
+    return {
+        "world_id": world_id,
+        "dateline": dateline,
+        "title": f"{masthead} — {dateline}",
+        "lines": [lead, *(stories or [])],
+    }
+
+
 # -- the institution's own paper ------------------------------------------- #
 
 

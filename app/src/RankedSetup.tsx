@@ -73,7 +73,7 @@ export function RankedSetup({
             value={basis}
             onChange={(e) => setBasis(e.target.value as "reported" | "actual")}
           >
-            <option value="reported">reported (smoothed, as the sleeves report)</option>
+            <option value="reported">as reported (appraisal-smoothed marks)</option>
             <option value="actual">actual (true marks)</option>
           </select>
         </label>
