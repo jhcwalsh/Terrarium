@@ -29,7 +29,7 @@ afterEach(() => {
 describe("DecisionWindow (E1)", () => {
   it("commit is disabled until an action is explicitly chosen — hold included", () => {
     const onCommit = vi.fn();
-    render(<DecisionWindow month={11} year={1} onCommit={onCommit} />);
+    render(<DecisionWindow open month={11} year={1} onCommit={onCommit} />);
     const commit = host!.querySelector<HTMLButtonElement>("button.commit")!;
     expect(commit.disabled).toBe(true);
     act(() => commit.click());
@@ -47,10 +47,26 @@ describe("DecisionWindow (E1)", () => {
   });
 
   it("all four actions are on the card", () => {
-    render(<DecisionWindow month={11} year={1} onCommit={() => {}} />);
+    render(<DecisionWindow open month={11} year={1} onCommit={() => {}} />);
     const labels = [...host!.querySelectorAll(".action-card strong")].map(
       (el) => el.textContent,
     );
     expect(labels).toEqual(["Hold course", "De-risk", "Lean in", "Secondary sale"]);
+  });
+
+  it("the four levers stay on the main page between windows, inert", () => {
+    const onCommit = vi.fn();
+    render(
+      <DecisionWindow open={false} month={23} year={2} nextYear={2} onCommit={onCommit} />,
+    );
+    const labels = [...host!.querySelectorAll(".action-card strong")].map(
+      (el) => el.textContent,
+    );
+    expect(labels).toEqual(["Hold course", "De-risk", "Lean in", "Secondary sale"]);
+    // visible, but there is nothing to commit and nothing to select
+    expect(host!.querySelector("button.commit")).toBeNull();
+    expect(host!.querySelectorAll('input[type="radio"]').length).toBe(0);
+    expect(host!.querySelectorAll(".action-card.inert").length).toBe(4);
+    expect(onCommit).not.toHaveBeenCalled();
   });
 });

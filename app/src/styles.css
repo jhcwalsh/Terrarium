@@ -495,9 +495,6 @@ button.t {
   .allocation td {
     padding: 4px 0;
   }
-  .alloc-note {
-    display: none;
-  }
   .eyebrow {
     margin-bottom: 7px;
   }
@@ -774,12 +771,6 @@ button.t {
 .alloc-re { background: #8d6e63; }
 
 
-.alloc-note {
-  font-size: 14px;
-  color: var(--dim);
-  margin: 10px 0 0;
-  line-height: 1.5;
-}
 
 /* the wire --------------------------------------------------------------- */
 .feed h2 {
@@ -833,6 +824,20 @@ button.t {
   letter-spacing: 0.08em;
   display: block;
   margin-top: 3px;
+}
+
+/* the front page: the lead story reads like a lead story */
+.feed-newspaper .feed-body strong {
+  font-family: "Bricolage Grotesque", sans-serif;
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.25;
+  color: var(--ice);
+}
+
+.feed-newspaper .feed-tag {
+  color: var(--brass);
+  letter-spacing: 0.16em;
 }
 
 .feed-wire_digest .feed-body strong {
@@ -983,6 +988,89 @@ button.commit {
   border-radius: 99px;
   background: var(--jade);
   flex: none;
+}
+
+/* The four levers between windows: always on the page, but compact — one
+   line each, so the wire above them keeps its room. The full effect text
+   comes back the moment the window opens and the choice is real. */
+.action-card.inert {
+  cursor: default;
+  background: #0c2427;
+  border-color: var(--hair);
+  padding: 6px 12px;
+}
+
+.action-card.inert strong {
+  color: var(--ice);
+  font-weight: 500;
+}
+
+.action-card.inert .detail {
+  display: none;
+}
+
+.action-card.inert .k {
+  top: 7px;
+}
+
+.decision-window.closed .actions {
+  gap: 5px;
+}
+
+.decision-window.closed h2 {
+  color: #a9c9c2;
+  font-size: 16px;
+}
+
+.decision-window.closed > header > p {
+  margin-bottom: 9px;
+}
+
+/* the wire keeps a floor: it is the reason the right column exists */
+.vgrid .right > section:nth-child(2) {
+  min-height: 150px;
+}
+
+/* When a window is open the decision IS the screen: the wire gives up most
+   of its room, and the panel scrolls inside itself rather than spilling over
+   the footer if a viewport is still too short for it. */
+.vgrid .right.deciding {
+  grid-template-rows: auto minmax(0, 0.3fr) minmax(0, 1fr);
+}
+
+.vgrid .right.deciding > section:nth-child(2) {
+  min-height: 84px;
+}
+
+/* Commit is never below the fold. The panel itself does not scroll: the
+   briefing and the commit button are pinned, and the CARDS scroll between
+   them if a viewport is too short. (A sticky footer cannot work here — as
+   the last child it already sits at its parent's bottom, so sticky has
+   nothing to stick past.) */
+.vgrid .right > section:nth-child(3) {
+  overflow: hidden;
+}
+
+.decision-window {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+}
+
+.decision-window > header,
+.decision-window > footer {
+  flex: none;
+}
+
+.decision-window .actions {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.vgrid .right.deciding .allocation td {
+  padding: 3px 0;
 }
 
 .idle-note {

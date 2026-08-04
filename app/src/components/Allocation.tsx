@@ -125,12 +125,6 @@ export function Allocation({ decisions }: { decisions: Record<string, string> })
           })}
         </tbody>
       </table>
-      <p className="alloc-note">
-        Rebalanced to these targets at every window. De-risk moves 10pts from
-        equities and private equity into bonds and private credit; lean in moves
-        10pts the other way; a secondary sale moves 8pts from private equity to
-        bonds and takes an 18% discount on the slice sold.
-      </p>
     </section>
   );
 }

@@ -114,6 +114,51 @@ All notable changes to this project are documented here. The project follows
   - The ticker track now scrolls inside its own clipping window, so the
     WIRE label stays put instead of being run over by the marquee.
 
+- **The calendar the world runs on, and a press that reports it.**
+  - *Quarterly play, annual decisions.* The transport advances a quarter at a
+    time and the clock reads `Y2 Q3`, clamped so a step can never jump an
+    undecided window (the server 409s, and windows sit at month 11, 23, ...).
+    Decision windows stay ANNUAL on purpose: moving them would redefine
+    `decision_alpha`, the DN-5 chain-link decomposition and leaderboard
+    comparability, which needs a `decision_alpha_version` bump and its own
+    WP. The rail says so rather than leaving the player to infer it.
+  - *Monthly releases, quarterly committee.* `release_page` now lands every
+    month carrying CPI **and** the HY credit spread, each with its prior, so
+    a player advancing a quarter finds three releases waiting. The central
+    bank stays quarterly — a real committee meets eight times a year, but
+    the toy policy rate is a continuous drift with no meeting calendar, so
+    quarterly stance narration is the honest cadence until the engine
+    quantises policy into decisions.
+  - *Newspaper front pages.* A new Tier-1 template, `newspaper_front_page`,
+    rendered from rules keyed to the tape: inflation crossing 5/8/10%, a
+    year-on-year policy swing past 100bp, HY spreads through 800/1200/1600bp
+    in either direction, equity drawdown milestones at 10/20/30%, and the
+    stress regime opening and closing. One page per month at most, only when
+    the tape earns it — a quiet month gets no edition, which is itself
+    information. Drawdown levels fire once (a milestone, not a crossing);
+    reporting every re-crossing printed the same headline three times in a
+    decade. Zero LLM, zero RNG, zero clock: same tape, same paper. The
+    stagflation decade yields twelve editions, from "Equities 10% off their
+    peak" through three stages of spread blowout to "Stress regime declared
+    over".
+  - *The four levers are always on screen* (owner: "need to make sure the
+    actions are visible on the main page"). Between windows they show as
+    compact inert rows with their effect tags; when the window opens they
+    become the full selectable cards, the briefing and commit button pin to
+    the panel and only the cards scroll, so Commit is never below the fold.
+
+- **`docs/engine-realism-register.md`** — the post-G2 list of places where
+  the toy engine is faithful to its plan but not to an allocator's
+  expectations, each with what was found, what a fix looks like, and what a
+  fix would invalidate. Opens with three entries: high yield earning gross
+  spread with no default losses (median 18.7%/yr at 12.1% vol over the
+  stagflation decade, against a spread path averaging 1278bp from a 401bp
+  start), the policy rate having no meeting calendar or 25bp quantisation,
+  and assets having no cashflow so private markets have no calls. Nothing
+  here is fixed in place: each entry invalidates stored digests and most
+  need a `decision_alpha_version` bump, so they are release events and the
+  owner's call.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-

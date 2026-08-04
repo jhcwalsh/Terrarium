@@ -15,6 +15,7 @@ const TYPE_LABEL: Record<string, string> = {
   // time, so it cannot know the player's deviations) — label it as such
   quarterly_statement: "BENCHMARK BOOK",
   wire_digest: "WIRE",
+  newspaper: "THE MARKET RECORD",
 };
 
 export function Feed({
@@ -41,11 +42,18 @@ export function Feed({
     <section className="feed" aria-label="the wire">
       <h2>The wire</h2>
       <ol>
-        {visible.map((a, i) => (
+        {visible.map((a, i) => {
+          // a front page leads with its lead story, not with its masthead —
+          // the masthead is the tag at the foot of the item
+          const paper = a.type === "newspaper";
+          const lines = a.payload.lines ?? [];
+          const body = paper ? lines.slice(1) : lines;
+          return (
           <li key={`${a.month}-${a.type}-${i}`} className={`feed-item feed-${a.type}`}>
             <span className="feed-dateline">{a.payload.dateline}</span>
             <div className="feed-body">
-              {a.payload.title && <strong>{a.payload.title}</strong>}
+              {paper && lines.length > 0 && <strong>{lines[0]}</strong>}
+              {!paper && a.payload.title && <strong>{a.payload.title}</strong>}
               {a.payload.headline && <strong>{a.payload.headline}</strong>}
               {a.payload.release_name && (
                 <table>
@@ -68,13 +76,14 @@ export function Feed({
                   </tbody>
                 </table>
               )}
-              {(a.payload.lines ?? []).map((line, j) => (
+              {body.map((line, j) => (
                 <p key={j}>{line}</p>
               ))}
               <span className="feed-tag">{TYPE_LABEL[a.type] ?? a.type.toUpperCase()}</span>
             </div>
           </li>
-        ))}
+          );
+        })}
       </ol>
     </section>
   );
