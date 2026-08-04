@@ -15,6 +15,7 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
 import { cacheGet, cacheList, cachePut } from "./lib/idb";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
+import { Play } from "./Play";
 
 const HEADLINE_ASSETS = ["equity", "bonds", "pe"] as const;
 
@@ -23,6 +24,7 @@ export default function App() {
   const [revealed, setRevealed] = useState(0);
   const [cached, setCached] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
+  const [playing, setPlaying] = useState(false);
 
   useEffect(() => {
     cacheList().then(setCached).catch(() => setCached([]));
@@ -94,6 +96,10 @@ export default function App() {
     );
   }
 
+  if (playing) {
+    return <Play bundle={loaded.bundle} onExit={() => setPlaying(false)} />;
+  }
+
   const { bundle, sealVerified } = loaded;
   const { months } = bundle.meta;
   const order = bundle.revealed.series_order;
@@ -131,6 +137,7 @@ export default function App() {
         <button onClick={() => setRevealed(Math.min(months, revealed + 12))}>
           +1 year
         </button>
+        <button onClick={() => setPlaying(true)}>play this world</button>
         <button onClick={() => setLoaded(null)}>close</button>
       </section>
 
