@@ -20,6 +20,7 @@ from ah.core.institution import decision_months, simulate_institution
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.serve import create_app
+from ah.store import sessions as session_store
 from ah.store.db import connect
 from ah.store.runrecords import get_run_record
 from ah.store.worlds import get_world
@@ -151,6 +152,46 @@ class TestOutcome:
         assert len(rows) == 1
         assert rows[0]["participant"] == "james"
         assert rows[0]["score"] == pytest.approx(out1["alpha"])
+
+    def test_leaderboard_reads_under_the_triple_key(self, service):
+        """DN-5 R-1 read-side: the board query REQUIRES world+seed+alpha —
+        and a different alpha version is a different (empty) board."""
+        client, db, rid = service
+        conn = connect(db)
+        rec = get_run_record(conn, rid)
+        assert rec is not None
+        sid = _play_through(client, rid, {11: "derisk"}, ranked=True, participant="ada")
+        out = client.get(f"/sessions/{sid}/outcome").json()
+        board = client.get(
+            f"/leaderboard/{rec['world_id']}",
+            params={"seed": rec["seed"], "alpha_version": out["decision_alpha_version"]},
+        ).json()
+        assert any(r["participant"] == "ada" for r in board["rows"])
+        scores = [r["score"] for r in board["rows"]]
+        assert scores == sorted(scores, reverse=True)
+        other = client.get(
+            f"/leaderboard/{rec['world_id']}",
+            params={"seed": rec["seed"], "alpha_version": "some-other-alpha"},
+        ).json()
+        assert other["rows"] == []  # boards never mix scoring versions
+        missing_key = client.get(f"/leaderboard/{rec['world_id']}")
+        assert missing_key.status_code == 422  # the triple key is not optional
+
+    def test_dn6_s8_log_is_complete_on_a_ranked_run(self, service):
+        """The register's requirement: full research logging from the FIRST
+        ranked run. Every window row must carry the arm assignment (basis,
+        ranked), the authoritative server timestamp, and the client telemetry
+        fields — the analysis dataset is not recoverable retroactively."""
+        client, db, rid = service
+        sid = _play_through(client, rid, {}, ranked=True, participant="grace")
+        conn = connect(db)
+        doc = session_store.get_session(conn, sid)
+        assert len(doc["window_log"]) == len(decision_months(doc["months"]))
+        for row in doc["window_log"]:
+            assert set(row) >= {"month", "action", "server_received_at", "basis", "ranked"}
+            assert row["ranked"] is True and row["basis"] == "reported"
+            assert row["server_received_at"]
+            assert "time_on_window_ms" in row["client"]
 
     def test_practice_never_touches_the_board(self, service):
         client, db, rid = service

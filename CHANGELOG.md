@@ -7,6 +7,21 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **su-app-05 — ranked mode + the research log complete** (the last WP
+  of the single-user vertical slice). RankedSetup is the arm-assignment
+  screen (DN-6 §8): practice or ranked chosen before the decade begins,
+  immutable for the session, ranked requires a name, basis is part of
+  the arm — all recorded server-side with every decision. The
+  leaderboard endpoint reads under the **required triple key**
+  (world_id, seed, decision_alpha_version — DN-5 R-1 enforced
+  write-side by UNIQUE and read-side by the query contract; a missing
+  key is a 422, a different alpha version is a different board). A new
+  test pins DN-6 §8 completeness on a ranked run: every window row
+  carries the arm, the authoritative server timestamp, and the client
+  telemetry — because the analysis dataset is not recoverable
+  retroactively. M4 boundary stated: ranked is self-declared and local;
+  no external users before I5 + the consent clause (PD-3 stands).
+  App 14/14 vitest.
 - **su-app-04 — the reckoning** (outcome card, three-series analysis,
   chess-style review). The outcome endpoint now returns the active and
   policy-twin **value series** with the drift twin's slot explicitly

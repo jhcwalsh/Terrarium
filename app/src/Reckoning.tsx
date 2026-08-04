@@ -33,7 +33,15 @@ export function annotationLine(w: { month: number; action: string; contribution:
   return `Year ${year}, ${phrase}: ${pts}`;
 }
 
-export function Reckoning({ outcome, onExit }: { outcome: Outcome; onExit: () => void }) {
+export function Reckoning({
+  outcome,
+  onExit,
+  board,
+}: {
+  outcome: Outcome;
+  onExit: () => void;
+  board?: React.ReactNode;
+}) {
   const [reviewIdx, setReviewIdx] = useState<number | null>(null);
   const series = outcome.series
     ? threeSeries(outcome.series.active, outcome.series.twin, outcome.series.drift_twin)
@@ -97,6 +105,8 @@ export function Reckoning({ outcome, onExit }: { outcome: Outcome; onExit: () =>
           </p>
         )}
       </section>
+
+      {board}
 
       <button onClick={onExit}>back to browse</button>
     </main>

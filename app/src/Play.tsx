@@ -16,7 +16,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
+import { Leaderboard } from "./components/Leaderboard";
 import { Reckoning } from "./Reckoning";
+import type { PlayConfig } from "./RankedSetup";
 import type { WorldBundle } from "./lib/bundle";
 import {
   advance,
@@ -34,11 +36,12 @@ const HEADLINE_ASSETS = ["equity", "bonds", "pe"] as const;
 
 interface PlayProps {
   bundle: WorldBundle;
-  basis?: "reported" | "actual";
+  config?: PlayConfig;
   onExit: () => void;
 }
 
-export function Play({ bundle, basis = "reported", onExit }: PlayProps) {
+export function Play({ bundle, config, onExit }: PlayProps) {
+  const basis = config?.basis ?? "reported";
   const [session, setSession] = useState<Session | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -48,10 +51,15 @@ export function Play({ bundle, basis = "reported", onExit }: PlayProps) {
   const windows = bundle.summary.decision_months;
 
   useEffect(() => {
-    createSession({ run_id: bundle.meta.run_id, basis })
+    createSession({
+      run_id: bundle.meta.run_id,
+      basis,
+      ranked: config?.ranked ?? false,
+      participant: config?.participant,
+    })
       .then(setSession)
       .catch((e) => setError(String(e)));
-  }, [bundle.meta.run_id, basis]);
+  }, [bundle.meta.run_id, basis, config?.ranked, config?.participant]);
 
   /** The next undecided window, or null when all are decided. */
   const nextWindow = useMemo(() => {
@@ -128,7 +136,22 @@ export function Play({ bundle, basis = "reported", onExit }: PlayProps) {
     bundle.revealed.tape.map((row) => row[order.indexOf(name)]);
 
   if (outcome) {
-    return <Reckoning outcome={outcome} onExit={onExit} />;
+    return (
+      <Reckoning
+        outcome={outcome}
+        onExit={onExit}
+        board={
+          session?.ranked ? (
+            <Leaderboard
+              worldId={bundle.meta.world_id}
+              seed={bundle.meta.seed}
+              alphaVersion={outcome.decision_alpha_version}
+              highlight={session.participant ?? undefined}
+            />
+          ) : undefined
+        }
+      />
+    );
   }
 
   return (

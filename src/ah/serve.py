@@ -146,6 +146,31 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         except session_store.SessionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
+    @app.get("/leaderboard/{world_id}")
+    def leaderboard(
+        world_id: str,
+        seed: int,
+        alpha_version: str,
+        conn: sqlite3.Connection = Depends(db),
+    ):
+        """One board per (world, seed, alpha-version) — the triple key is in
+        the query, REQUIRED (DN-5 R-1): scores produced under different alpha
+        definitions or different histories never share a table. The UNIQUE
+        constraint enforces this write-side; this endpoint enforces it
+        read-side by refusing to aggregate."""
+        rows = conn.execute(
+            "SELECT participant, score, created_at FROM leaderboard "
+            "WHERE world_id = ? AND seed = ? AND decision_alpha_version = ? "
+            "ORDER BY score DESC, created_at ASC",
+            (world_id, seed, alpha_version),
+        ).fetchall()
+        return {
+            "world_id": world_id,
+            "seed": seed,
+            "decision_alpha_version": alpha_version,
+            "rows": [dict(r) for r in rows],
+        }
+
     @app.get("/sessions/{sid}/outcome")
     def outcome(sid: str, conn: sqlite3.Connection = Depends(db)):
         doc = _get(conn, sid)
