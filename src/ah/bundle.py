@@ -41,19 +41,19 @@ import numpy as np
 
 from ah.artifacts.live import seal_tape
 from ah.core.digest import digest_ensemble
-from ah.core.engine import ASSETS, REPORTED_SLEEVES, run_ensemble, run_path
+from ah.core.engine import ASSETS, REPORTED_SLEEVES, EnginePaths, run_ensemble, run_path
 from ah.core.institution import decision_months, hold_course_twin
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.feed import build_tier1_feed
-from ah.pacing import build_ledgers
+from ah.play import simulate_play
 from ah.store import chronicle as chronicle_store
 from ah.store.runrecords import get_run_record
 from ah.store.worlds import get_world
 
 __all__ = ["BUNDLE_VERSION", "MAX_COMPRESSED_BYTES", "BundleError", "build_bundle", "write_bundle"]
 
-BUNDLE_VERSION = "world-bundle-0.3"  # 0.3 adds the private-markets pacing ledger
+BUNDLE_VERSION = "world-bundle-0.4"  # 0.4: the twin's ledger replaces the pacing preview
 MAX_COMPRESSED_BYTES = 1_000_000  # W2's budget: a complete world under 1 MB compressed
 _QUANTILES = (5, 25, 50, 75, 95)
 
@@ -64,6 +64,21 @@ class BundleError(RuntimeError):
 
 def _round(values: np.ndarray, places: int = 6) -> list[float]:
     return [round(float(v), places) for v in values]
+
+
+def _twin_ledger(revealed: EnginePaths) -> dict[str, list[float] | list[int]]:
+    """The hold-course institution's quarterly cashflows, for the bundle."""
+    result = simulate_play(revealed, None)
+    return {
+        "quarter_months": [q.month for q in result.quarters],
+        "calls": _round(np.array([q.calls_paid for q in result.quarters])),
+        "distributions": _round(np.array([q.distributions_received for q in result.quarters])),
+        "nav_true": _round(np.array([q.nav_true for q in result.quarters])),
+        "nav_reported": _round(np.array([q.nav_reported for q in result.quarters])),
+        "cash": _round(np.array([q.cash for q in result.quarters])),
+        "unfunded": _round(np.array([q.unfunded_total for q in result.quarters])),
+        "private_weight_true": _round(np.array([q.private_weight_true for q in result.quarters])),
+    }
 
 
 def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
@@ -136,22 +151,11 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
             "tape_seal": seal_tape(tape),
         },
         "bands": bands,
-        # The private-markets pacing ledger (display-only; ah.pacing says why).
-        # Rounded here rather than inside the ledger so its own arithmetic
-        # stays exact and only the shipped bytes are quantised.
-        "private": {
-            asset: {
-                "commitment": round(led.commitment, 6),
-                "quarter_months": led.quarter_months,
-                "called": _round(np.asarray(led.called)),
-                "distributed": _round(np.asarray(led.distributed)),
-                "unfunded": _round(np.asarray(led.unfunded)),
-                "nav": _round(np.asarray(led.nav)),
-                "dpi": _round(np.asarray(led.dpi)),
-                "tvpi": _round(np.asarray(led.tvpi)),
-            }
-            for asset, led in build_ledgers(revealed).items()
-        },
+        # The HOLD-COURSE TWIN's cashflows. Decision-independent by
+        # construction — the twin never acts — so it stays pre-authorable at
+        # build time (PD-4). The player's own ledger depends on their
+        # decisions and is served per-session instead.
+        "twin_ledger": _twin_ledger(revealed),
         "summary": {
             "twin_final_value": float(twin.final_value),
             "decision_months": decision_months(revealed.months),
