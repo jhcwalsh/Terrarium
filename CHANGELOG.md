@@ -6,7 +6,34 @@ All notable changes to this project are documented here. The project follows
 
 ## [Unreleased] — Step 1 (data layer)
 
+### Fixed
+- **`seal_tape` double-prefixed its digest** (`sha256:sha256:<hex>`):
+  it re-prefixed `sha256_of_arrays`, which already prefixes. Caught while
+  pinning the cross-language seal vector for the app's client-side
+  verifier; no committed artifact carried the doubled form (verified by
+  sweep), so the format is corrected before any consumer shipped. The
+  seal format is now pinned by an exact-vector test shared by value with
+  the TypeScript implementation.
+
 ### Added
+- **su-eng-02 — the session service** (`src/ah/serve.py` +
+  `src/ah/store/sessions.py`; run with `uv run uvicorn ah.serve:app`).
+  The client-plane server DN-3 W1/W5 ratified: sessions are
+  server-authoritative game state over one RunRecord — the reveal
+  pointer is **monotonic and capped at the earliest undecided window**
+  (the commitment mechanic enforced at the storage surface, not by UI
+  honesty), decisions are **final, in-order, and refused for unrevealed
+  windows**, and every decision records its DN-6 §8 research row
+  (server timestamp authoritative; client telemetry passthrough, never
+  scored). The outcome endpoint computes alpha against the hold-course
+  twin plus DN-5's chain-link per-window contributions (telescoping
+  identity pinned by test against `ah.density`); ranked completions
+  write the leaderboard under its triple key exactly once (first play
+  stands). New deps per the ratified architecture: fastapi + uvicorn
+  (runtime), httpx2 (dev, TestClient transport). Sessions table added
+  additively; `enable_socket` opt-in documented in the HTTP tests
+  (in-process ASGI; asyncio's wakeup socketpair, no network).
+  20 new tests.
 - **su-eng-01 — the world bundle** (`ah bundle RUN_ID [--out]`;
   `src/ah/bundle.py`; the product build's first engine piece, per the
   resolved kickoff). DN-3 W2's contract at v0.1: the revealed path as a

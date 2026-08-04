@@ -26,6 +26,14 @@ class TestSeal:
         tampered[60, 0] += 1e-6  # one mark, one month, barely
         assert not live.verify_tape(tampered, sealed)
 
+    def test_seal_format_is_singly_prefixed_and_cross_language_pinned(self):
+        """The seal is exactly ``sha256:<64 hex>`` — a doubled prefix once
+        shipped here — and the literal vector below is the SAME tape the
+        app's TypeScript verifier hashes (app/src/lib/bundle.test.ts), so
+        the two implementations are pinned to each other by value."""
+        sealed = live.seal_tape(np.array([[1.5, -2.25], [0.125, 3.0]]))
+        assert sealed == ("sha256:7e327e9a0eb36f457386e18c60046f8a51ef4097be849fcfa1e387e90f57017b")
+
     def test_waypoints_seal_at_t0(self):
         waypoints = [{"chapter": 1, "regime": "stress"}, {"chapter": 2, "regime": "recovery"}]
         sealed = live.seal_waypoints(waypoints)

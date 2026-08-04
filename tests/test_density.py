@@ -30,7 +30,10 @@ def paths():
 class TestChainLink:
     def test_telescopes_exactly_to_the_terminal_difference(self, paths):
         months = decision_months(paths.months)
-        decisions = {m: a for m, a in zip(months, (["derisk", "hold", "leanin"] * 4)[: len(months)], strict=True)}
+        decisions = {
+            m: a
+            for m, a in zip(months, (["derisk", "hold", "leanin"] * 4)[: len(months)], strict=True)
+        }
         attr = window_contributions(paths, decisions)
         twin = simulate_institution(paths, None)
         full = simulate_institution(paths, decisions)

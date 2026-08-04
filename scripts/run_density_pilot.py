@@ -47,6 +47,7 @@ PRESETS_DIR = _REPO_ROOT / "src" / "ah" / "presets"
 BASE_SEED = 20260803
 N_SEEDS_PER_PRESET = 75  # 4 presets x 75 = 300 worlds (the "hundreds" pilot)
 
+
 #: The cheap decider set (D-K5-3: "ablations + committee sparingly"): the
 #: band rule at two thresholds (the ablation pair), the seeded luck baseline,
 #: and hold-course. The LLM committee is deliberately absent at pilot scale --
