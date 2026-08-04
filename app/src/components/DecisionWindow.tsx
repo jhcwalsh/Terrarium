@@ -24,19 +24,20 @@ const ACTION_COPY: Record<Action, { title: string; detail: string; k: string }> 
   },
   derisk: {
     title: "De-risk",
-    detail: "Shift 10pts from growth (equity, PE) into defensive (bonds, PC).",
-    k: "10PTS G→D",
+    detail: "Move 10pts from equities and private equity into bonds and private credit.",
+    k: "10PTS → BONDS/PC",
   },
   leanin: {
     title: "Lean in",
-    detail: "Shift 10pts from defensive into growth. Conviction has a price either way.",
-    k: "10PTS D→G",
+    detail:
+      "Move 10pts from bonds and private credit into equities and private equity. Conviction has a price either way.",
+    k: "10PTS → EQ/PE",
   },
   secondary: {
     title: "Secondary sale",
     detail:
-      "Sell up to 8pts of PE at an 18% discount for immediate liquidity; targets move PE to bonds.",
-    k: "−18% HAIRCUT",
+      "Sell up to 8pts of private equity at an 18% discount for immediate liquidity; the proceeds move to bonds.",
+    k: "−18% DISCOUNT",
   },
 };
 

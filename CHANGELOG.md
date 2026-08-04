@@ -77,6 +77,43 @@ All notable changes to this project are documented here. The project follows
   framework. The pointer is display-only until su-app-02 binds it to the
   server session (W5). 4 vitest tests; `npm run test|typecheck|build`.
 
+### Changed
+- **The play surface speaks the owner's language, and fits one screen**
+  (second round of live-play feedback). Six changes, all app-side:
+  - *No more "sleeves".* The word is gone from every player-facing
+    string; the panel header is "Allocation — your targets" and the table
+    column is "asset class". (`_reported` stays in the bundle's
+    `series_order` — that is the data contract, not copy.)
+  - *No more "growth" / "defensive" labels.* These are institutional
+    allocators; the action cards now name the assets they move ("Move
+    10pts from equities and private equity into bonds and private
+    credit") instead of teaching taxonomy. `GROWTH`/`DEFENSIVE` survive
+    as internal constants because they mirror `ah.core.institution`.
+  - *Investor units, not multiples.* "×1.29" is gone. Chart axes are
+    cumulative return since t0 (+29%, −34%), zero-anchored; the figure
+    beside each asset name is the **annualized** return over the months
+    revealed so far, falling back to the cumulative figure under twelve
+    months where an annual number would be nonsense. Two exported
+    helpers (`fmtCumulative`, `annualized`) carry the units and are
+    pinned by five new vitest cases.
+  - *One screen, no scrolling.* The vitrine is pinned to the viewport and
+    laid out as flex bands; the chart grid takes the slack and sizes
+    itself from what is left rather than a fixed pixel height. Only the
+    wire scrolls, because a feed should. A `max-height` query sheds
+    chrome on short viewports, and below 1180px wide the frame gives up
+    and scrolls rather than crushing the charts.
+  - *Everything visible at once.* Asset classes left in a 3x3 grid (the
+    cell aspect now matches the chart viewBox, so the SVG no longer
+    letterboxes into half its cell), the legend in the ninth cell, the
+    wire full-height on the right with the allocation above it and the
+    decision panel always in view.
+  - *Type scale up 25%.* The owner was running the browser at 125% to
+    make the screen usable; every CSS font size is scaled to match, so
+    100% is now the design size. Chart SVG text is excluded — it lives in
+    viewBox units and already grew when the viewBox narrowed.
+  - The ticker track now scrolls inside its own clipping window, so the
+    WIRE label stays put instead of being run over by the marquee.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-

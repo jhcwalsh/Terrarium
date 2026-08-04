@@ -8,8 +8,8 @@
  * and completes into the outcome view.
  *
  * Layout is the vitrine: header with clock + transport + plane switch,
- * wire ticker, stat rail, then charts left / sleeves + wire + decision
- * right. The plane switch flips the PRIVATE sleeves' revealed lines
+ * wire ticker, stat rail, then charts left / allocation + wire + decision
+ * right. The plane switch flips the PRIVATE assets' revealed lines
  * between appraisal-smoothed marks (as reported, brass) and true returns
  * (as true, jade) — display only; the scoring basis is fixed at session
  * creation and shown in the rail.
@@ -50,7 +50,7 @@ export const ASSET_LABELS: ReadonlyArray<readonly [string, string]> = [
   ["re", "Real estate"],
 ];
 
-const PRIVATE_SLEEVES = new Set(["pe", "pc", "re"]);
+const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 
 type Plane = "reported" | "true";
 
@@ -243,7 +243,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
           role="switch"
           aria-checked={plane === "true"}
           tabIndex={0}
-          aria-label="Show private sleeves as reported or as true"
+          aria-label="Show private assets as reported or as true"
           onClick={() => setPlane(plane === "true" ? "reported" : "true")}
           onKeyDown={(e) => {
             if (e.key === " " || e.key === "Enter") {
@@ -312,23 +312,9 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                 {revealed} of {months} months revealed
               </span>
             </div>
-            <p className="fan-key">
-              <span className="key-swatch key-revealed" /> this world, as revealed
-              {" · "}
-              <span className="key-swatch key-inner" /> middle half of{" "}
-              {bundle.meta.n_paths} sibling runs
-              {" · "}
-              <span className="key-swatch key-outer" /> 5–95% of siblings
-              {" · "}
-              <span className="key-swatch key-median" /> median sibling
-              <br />
-              Growth of 1 invested at t0. Hatched region is sealed — the future
-              exists but is withheld. Private sleeves follow the reported/true
-              switch, top right.
-            </p>
             <div className="chart-grid">
               {ASSET_LABELS.filter(([key]) => bundle.bands[key]).map(([key, name]) => {
-                const isPrivate = PRIVATE_SLEEVES.has(key);
+                const isPrivate = PRIVATE_ASSETS.has(key);
                 const source =
                   isPrivate && plane === "reported" ? `${key}_reported` : key;
                 return (
@@ -339,10 +325,26 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                     bands={bundle.bands[key]}
                     revealed={cumulativeGrowth(column(source))}
                     revealedMonths={revealed}
-                    height={190}
                   />
                 );
               })}
+              <p className="fan-key">
+                <span className="key-swatch key-revealed" /> this world, as
+                revealed
+                <br />
+                <span className="key-swatch key-inner" /> middle half of{" "}
+                {bundle.meta.n_paths} sibling runs
+                <br />
+                <span className="key-swatch key-outer" /> 5–95% of siblings
+                <br />
+                <span className="key-swatch key-median" /> median sibling
+                <br />
+                <br />
+                Scale is cumulative return since t0; the figure beside each name
+                is the annualized return to date. The hatched region is sealed —
+                the future exists but is withheld. Private assets follow the
+                reported/true switch, top right.
+              </p>
             </div>
           </section>
         </div>
@@ -350,8 +352,8 @@ export function Play({ bundle, config, onExit }: PlayProps) {
         <div className="right">
           <section>
             <div className="eyebrow">
-              <span>Sleeves — your targets</span>
-              <span>rebalanced yearly</span>
+              <span>Allocation — your targets</span>
+              <span>rebalanced at each window</span>
             </div>
             <Allocation decisions={session.decisions} />
           </section>
