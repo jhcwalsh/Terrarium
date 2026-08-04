@@ -16,6 +16,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
+import { Reckoning } from "./Reckoning";
 import type { WorldBundle } from "./lib/bundle";
 import {
   advance,
@@ -127,42 +128,7 @@ export function Play({ bundle, basis = "reported", onExit }: PlayProps) {
     bundle.revealed.tape.map((row) => row[order.indexOf(name)]);
 
   if (outcome) {
-    return (
-      <main className="shell">
-        <h1>The reckoning</h1>
-        <p>
-          You finished at <strong>{outcome.final_value.toFixed(2)}</strong>; the
-          hold-course twin finished at{" "}
-          <strong>{outcome.twin_final_value.toFixed(2)}</strong>.
-        </p>
-        <p className={outcome.alpha >= 0 ? "ok" : "bad"}>
-          Decision alpha: {outcome.alpha >= 0 ? "+" : ""}
-          {outcome.alpha.toFixed(2)}
-        </p>
-        <table>
-          <thead>
-            <tr>
-              <th>year</th>
-              <th>action</th>
-              <th>contribution</th>
-            </tr>
-          </thead>
-          <tbody>
-            {outcome.windows.map((w) => (
-              <tr key={w.month}>
-                <td>{Math.floor((w.month + 1) / 12)}</td>
-                <td>{w.action}</td>
-                <td>
-                  {w.contribution >= 0 ? "+" : ""}
-                  {w.contribution.toFixed(2)}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        <button onClick={onExit}>back to browse</button>
-      </main>
-    );
+    return <Reckoning outcome={outcome} onExit={onExit} />;
   }
 
   return (

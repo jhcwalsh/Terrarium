@@ -202,3 +202,67 @@ button.commit {
 .feed-empty {
   color: color-mix(in srgb, currentColor 55%, transparent);
 }
+
+.outcome-headline {
+  display: flex;
+  gap: 2rem;
+  margin: 1rem 0;
+}
+
+.outcome-headline strong {
+  display: block;
+  font-size: 1.6rem;
+}
+
+.outcome-label {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: color-mix(in srgb, currentColor 60%, transparent);
+}
+
+.outcome-note {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
+
+.analysis-chart svg {
+  width: 100%;
+  height: auto;
+  background: color-mix(in srgb, currentColor 4%, transparent);
+  border-radius: 6px;
+}
+
+.analysis-window-line {
+  stroke: color-mix(in srgb, currentColor 20%, transparent);
+  stroke-width: 1;
+  stroke-dasharray: 2 3;
+}
+
+.analysis-legend {
+  display: flex;
+  gap: 1.25rem;
+  font-size: 0.85rem;
+  margin-top: 0.25rem;
+}
+
+.review-lines {
+  list-style: none;
+  padding: 0;
+}
+
+.review-lines li {
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  border-left: 3px solid transparent;
+}
+
+.review-lines li.selected {
+  border-left-color: steelblue;
+  background: color-mix(in srgb, steelblue 8%, transparent);
+}
+
+.review-detail {
+  font-size: 0.85rem;
+  color: color-mix(in srgb, currentColor 70%, transparent);
+}
