@@ -21,7 +21,7 @@ Status values: `open` (agreed, not scheduled), `scheduled` (has a WP),
 
 ## ER-1 — High yield earns its full spread with no default losses
 
-**Status:** open
+**Status:** CLOSED in `toy-v0.3` (engine-er1-er4 branch)
 **Found:** 2026-08-04, auditing the rebuilt stagflation world after the
 unit-coherence fix (the app's new annualized readouts made it visible).
 
@@ -61,15 +61,37 @@ needed to make HY credible:
    that decay over quarters, not a decade-long plateau), instead of a
    deterministic triangle.
 
-**Consequences.** Changes every world's HY path and therefore every stored
-digest, the institution's totals, and the scored path. Needs a
-`decision_alpha_version` bump and a full bundle rebuild.
+**Consequences.** Changed every world's HY path and therefore every stored
+digest, the institution's totals, and the scored path.
+
+**What shipped.** Both halves, as the entry said were needed:
+
+1. A realized-loss term. `_HY_LOSS_SHARE = 0.45` of the gross spread is booked
+   as expected default loss rather than carry, keyed on the spread as it stood
+   `_CREDIT_LOSS_LAG_MONTHS = 12` earlier (the market prices the risk about a
+   year before the defaults land) and amplified `1.6x` inside crisis months
+   because defaults cluster. Private credit gets the same mechanism at a lower
+   severity, being senior secured.
+2. A credit cycle that clears. `_spread_path` is now a long-run level plus a
+   Gaussian pulse centred on `peak_quarter` plus mean-reverting noise, instead
+   of a ramp-and-glide triangle. The declared peak is still reached at the
+   declared quarter — the WorldSpec fields keep their meaning — but the decade
+   no longer sits at crisis spreads.
+
+**Result on the stagflation preset:** high yield **18.7 → 7.5 %/yr** on 14.0%
+vol, a decade Sharpe of **1.54 → 0.53**; spread mean **1279 → 626bp** against a
+403bp start and 396bp end. No leaderboard implication: the alpha DEFINITION is
+unchanged, so `decision_alpha_version` is untouched (it lives in
+`eval/decision_metrics.py`, inside the pre-registration seal, and bumping it
+would need an amendment). World identity carries the difference instead — the
+presets moved to the `3xx` id block so scores made under two engines cannot
+share a board.
 
 ---
 
 ## ER-4 — Carry assets earn their carry almost risk-free
 
-**Status:** open
+**Status:** CLOSED in `toy-v0.3` (engine-er1-er4 branch)
 **Found:** 2026-08-04, first run of the credibility console across all four
 presets — it is the same pattern in every world, which is what makes it
 structural rather than a preset's fault.
@@ -103,8 +125,64 @@ policy moves in steps), and a loss/default term on the credit assets so that
 carry is compensation for something. The two together, not either alone: a
 noisier rate path without credit losses just moves the problem.
 
-**Consequences.** Touches every asset that prices off the rate. Digest-
-invalidating; alpha-version-bumping.
+**Consequences.** Touched every asset that prices off the rate.
+
+**What shipped.**
+
+- The policy rate's monthly innovation went from **6bp to 22bp** with slower
+  reversion (`_RATE_KAPPA` 0.15 → 0.08), so duration risk reaches the numbers.
+  Crucially the shock now **scales with the inflation regime** — a first pass
+  used a global constant and bond volatility came out identical in all four
+  presets again, which is the same tell one level down.
+- Private credit gained a credit-cycle beta (`-0.8 * d_spread`), a loss rate
+  that rises with the spread rather than a flat 0.6x discount outside crisis
+  months, and more idiosyncratic risk.
+- Real estate gained rate sensitivity (`-4.0 * d_rate`, cap rates move with
+  rates), a crisis repricing term, and more idiosyncratic risk.
+
+**Result:** bond volatility **2.7 %/yr in every world → 7.1 / 5.2 / 5.2 / 5.8**
+across stagflation / goldilocks / deflation_bust / reflation_boom, and it now
+*varies with the world*, which was the diagnostic that opened this entry.
+Private credit's decade Sharpe fell from **1.88 / 2.21 / 1.82** to **1.03 /
+1.08 / 0.95**. Across all four presets the console's flag count went **24 → 5**.
+
+**Still slightly hot, and left honest.** Private credit sits at ~1.05 in the
+two benign worlds, just above the declared 1.0 ceiling. That is a defensible
+number for senior secured lending and the flag is left standing rather than
+tuned away — moving the threshold to silence a flag we set ourselves would
+make the console worthless.
+
+
+## ER-5 — Equity returns are autocorrelated because the crisis is a block
+
+**Status:** open (pre-existing; observed, not introduced, by the ER-1/ER-4 work)
+**Found:** 2026-08-04, running the validation battery before and after the
+ER-1/ER-4 change — the value is byte-identical across both, so it predates
+them.
+
+**What happens.** The battery's `acf_r_lag1` on pooled equity returns reads
+**0.364**, against a declared band of [-0.2, 0.2]. Returns at monthly
+frequency should be close to uncorrelated; +0.36 is momentum a real index does
+not have.
+
+The cause is `_crisis_mask`: a crisis is a rectangular block of months in
+which every path takes the same deterministic `-2.2` hit. Pooled across
+paths, that block is a constant shift over a contiguous run of months, which
+is exactly what lag-1 autocorrelation measures.
+
+**Why it has not failed anything.** Every battery gate is `status: todo` in
+Step 0 by design — "Step 0 ships plumbing only... placeholders documenting
+intent, not ratified thresholds" — so this has been recorded and non-blocking
+since the battery was written.
+
+**What a fix looks like.** A crisis with an onset and a decay rather than a
+step: severity that ramps in over a quarter or two, peaks, and fades, with
+per-path timing jitter so the block is not identical across the ensemble.
+That also makes crisis onset something a player can see coming, which the
+newspaper front pages would benefit from.
+
+**Consequences.** Digest-invalidating. Would move the battery's headline
+stylized fact, which is the point.
 
 
 ## ER-2 — The policy rate is a continuous drift, not committee decisions

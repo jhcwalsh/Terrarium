@@ -63,16 +63,33 @@ class TestAssetStats:
             assert s.vol >= 0.0
             assert 0.0 <= s.worst_drawdown <= 100.0
 
-    def test_high_yield_is_flagged_on_the_stagflation_preset(self, ensemble):
-        """The finding that motivated the console (register ER-1). If a fix
-        lands, this test fails and the register entry should close."""
-        hy = next(s for s in asset_stats(ensemble) if s.asset == "hy")
-        assert hy.flags, "HY earning gross spread with no defaults should flag"
-        assert hy.ann_median / hy.vol > MAX_PLAUSIBLE_SHARPE
+    def test_high_yield_is_paid_net_of_defaults(self, ensemble):
+        """Register ER-1, now CLOSED — and this test is what closed it.
 
-    def test_a_flag_names_the_number_and_the_declared_edge(self, ensemble):
-        flagged = [s for s in asset_stats(ensemble) if s.flags]
-        assert flagged, "a stressed toy world should trip at least one prior"
+        It was written the other way up: when high yield booked the full
+        current spread as carry with no loss offset, it printed 18.7%/yr on
+        12.1% vol, a decade Sharpe of 1.54, and this asserted the flag fired.
+        toy-v0.3 charges the defaults the spread is pricing, so the assertion
+        inverts. If a future change reintroduces free carry, this fails."""
+        hy = next(s for s in asset_stats(ensemble) if s.asset == "hy")
+        assert hy.ann_median / hy.vol <= MAX_PLAUSIBLE_SHARPE, hy
+        assert not hy.flags, hy.flags
+
+    def test_a_flag_names_the_number_and_the_declared_edge(self):
+        """Flag TEXT must carry the number and the edge it crossed. Checked
+        against a deliberately impossible band rather than a real world, so
+        the test survives the engine being fixed."""
+        import ah.credibility as cred
+
+        ens = run_ensemble(_world(8), 8, base_seed=SEED)
+        original = dict(cred.PLAUSIBLE)
+        try:
+            cred.PLAUSIBLE["bonds"] = cred.Band(90.0, 99.0, 90.0, 99.0, "impossible")
+            flagged = [s for s in asset_stats(ens) if s.flags]
+        finally:
+            cred.PLAUSIBLE.clear()
+            cred.PLAUSIBLE.update(original)
+        assert flagged
         for s in flagged:
             for f in s.flags:
                 assert "%" in f or "return/vol" in f
@@ -85,16 +102,23 @@ class TestAssetStats:
 
 
 class TestFactorStats:
-    def test_spread_hump_is_visible_as_a_mean_far_from_its_ends(self):
-        """ER-1's second half: the spread starts and ends near 400bp but
-        averages far above it. The console must show that, not just the
-        endpoints an eyeball would check."""
+    def test_the_credit_cycle_clears_instead_of_plateauing(self):
+        """Register ER-1's second half, now CLOSED.
+
+        The old triangular path started at 401bp, ended at 358bp and AVERAGED
+        1279bp — years spent at levels that clear in months. This test used to
+        assert that gap, because the console has to show where a path spends
+        its time rather than just the endpoints an eyeball would check. The
+        pulse still reaches the declared peak at the declared quarter, but the
+        decade now averages near its long-run level."""
         from ah.core.engine import run_path
 
         paths = [run_path(_world(), SEED + 7919 * k) for k in range(8)]
         spread = next(f for f in factor_stats(paths) if f.name.startswith("HY spread"))
-        assert spread.mean > 2.0 * max(abs(spread.start), abs(spread.end))
-        assert spread.flags
+        assert spread.mean < 2.0 * max(abs(spread.start), abs(spread.end))
+        assert not spread.flags, spread.flags
+        # the declared peak is still reached — the spec field kept its meaning
+        assert spread.hi > 1800.0
 
     def test_crisis_share_is_a_fraction(self):
         from ah.core.engine import run_path
