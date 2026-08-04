@@ -159,6 +159,36 @@ All notable changes to this project are documented here. The project follows
   need a `decision_alpha_version` bump, so they are release events and the
   owner's call.
 
+- **The credibility console** (`ah credibility`, `src/ah/credibility.py`) —
+  an admin page that walks a set of worlds' numbers so they can be checked
+  before anyone plays them. Per-asset annualized median/p5/p95, volatility
+  and worst drawdown over the ensemble; where the factor paths actually
+  spend their time (the mean matters as much as the endpoints); reported vs
+  true volatility and autocorrelation for the private assets; and the pooled
+  correlation matrix. Each row sits next to a DECLARED PRIOR — one
+  allocator's plausible range, written down so disagreement is about a
+  number rather than a vibe — and anything outside it is flagged in the open.
+  Nothing is sealed, nothing is scored, no flag can fail a build, and the
+  module structurally cannot reach the store (a test parses its imports).
+  Self-contained HTML, no external assets, byte-stable.
+
+  Its first run across all four presets found 24 flags and two register
+  entries' worth of substance: ER-1's high yield, and ER-4 — bonds, private
+  credit and real estate all clearing a decade Sharpe above 1.0 in every
+  world, with bond volatility pinned at 2.7%/yr across four completely
+  different rate paths because the duration term contributes almost nothing
+  next to a fixed idiosyncratic shock.
+
+  It also caught a fault of its own, which is recorded because it is the
+  more useful lesson: the first version measured private-asset smoothing on
+  the MONTHLY reported series and reported zero autocorrelation. Private
+  assets mark at quarter ends, so that series is two zeros and a number —
+  the statistic was reading the reporting calendar, not the smoothing.
+  Measured in quarter space the reported marks come out at 0.25x true
+  volatility with +0.65 to +0.74 autocorrelation, which is exactly what
+  appraisal smoothing should look like. A test now pins the measurement to
+  where the marks actually land.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-

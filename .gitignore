@@ -197,3 +197,4 @@ experiments/
 app/public/*.bundle.gz
 app/public/*.bundle.bin
 /uvicorn.log
+/credibility.html
