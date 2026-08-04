@@ -7,6 +7,20 @@ All notable changes to this project are documented here. The project follows
 ## [Unreleased] — Step 1 (data layer)
 
 ### Added
+- **su-eng-01 — the world bundle** (`ah bundle RUN_ID [--out]`;
+  `src/ah/bundle.py`; the product build's first engine piece, per the
+  resolved kickoff). DN-3 W2's contract at v0.1: the revealed path as a
+  numeric tape with its **t0 seal covering exactly the shipped bytes**
+  (round-then-seal — a client re-sealing what it received reproduces the
+  hash), per-asset fan quantiles from the run's own regenerated
+  ensemble, the twin/windows/episodes summary, and the v0.1 feed scope
+  (dispatches + chronicle; the tier-1/2 artifact feed joins in v0.2
+  with the app's feed surface — stated in the contract, not implied).
+  Derived from the RunRecord alone via the regenerate-and-verify
+  discipline (a tampered record ships `digest_verified: false`, loudly);
+  byte-deterministic including the gzip (mtime=0); W2's 1 MB compressed
+  budget ENFORCED at write (a bundle over budget fails its build).
+  6 new tests.
 - **WP5.6 — THE ONE-SHOT HOLDOUT IS SPENT** (owner authorization
   verbatim "Go", 2026-08-03; spec sealed AM-2026-08-02-006, executed
   exactly). One generation (1024 × 67 months from the promoted pin,

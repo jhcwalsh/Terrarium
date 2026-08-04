@@ -270,6 +270,23 @@ def inspect_cmd(
     typer.echo(str(target))
 
 
+@app.command("bundle")
+def bundle_cmd(
+    ctx: typer.Context,
+    run_id: str | None = typer.Argument(None),
+    out: Path | None = typer.Option(None, "--out", help="Output path (default <run_id>.bundle.gz)"),
+) -> None:
+    """Build the world bundle for a RunRecord (su-eng-01; DN-3 W2 contract)."""
+    from ah.bundle import build_bundle, write_bundle
+
+    conn = _db(ctx)
+    rid = run_id or _latest_run(conn)
+    doc = build_bundle(conn, rid)
+    target = out if out is not None else Path(f"{rid}.bundle.gz")
+    size = write_bundle(doc, target)
+    typer.echo(f"{target} ({size} bytes compressed)")
+
+
 @app.command("verify")
 def verify_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) -> None:
     """Verify a run reproduces its stored digest (prints True/False)."""
