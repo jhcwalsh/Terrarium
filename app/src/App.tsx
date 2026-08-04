@@ -17,15 +17,19 @@ import { cacheGet, cacheList, cachePut } from "./lib/idb";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import { Play } from "./Play";
+import { RankedSetup, type PlayConfig } from "./RankedSetup";
 
 const HEADLINE_ASSETS = ["equity", "bonds", "pe"] as const;
+
+type Mode = "browse" | "setup" | "play";
 
 export default function App() {
   const [loaded, setLoaded] = useState<LoadedBundle | null>(null);
   const [revealed, setRevealed] = useState(0);
   const [cached, setCached] = useState<string[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [playing, setPlaying] = useState(false);
+  const [mode, setMode] = useState<Mode>("browse");
+  const [playConfig, setPlayConfig] = useState<PlayConfig | undefined>();
 
   useEffect(() => {
     cacheList().then(setCached).catch(() => setCached([]));
@@ -97,8 +101,21 @@ export default function App() {
     );
   }
 
-  if (playing) {
-    return <Play bundle={loaded.bundle} onExit={() => setPlaying(false)} />;
+  if (mode === "setup") {
+    return (
+      <RankedSetup
+        onStart={(config) => {
+          setPlayConfig(config);
+          setMode("play");
+        }}
+        onCancel={() => setMode("browse")}
+      />
+    );
+  }
+  if (mode === "play") {
+    return (
+      <Play bundle={loaded.bundle} config={playConfig} onExit={() => setMode("browse")} />
+    );
   }
 
   const { bundle, sealVerified } = loaded;
@@ -138,7 +155,7 @@ export default function App() {
         <button onClick={() => setRevealed(Math.min(months, revealed + 12))}>
           +1 year
         </button>
-        <button onClick={() => setPlaying(true)}>play this world</button>
+        <button onClick={() => setMode("setup")}>play this world</button>
         <button onClick={() => setLoaded(null)}>close</button>
       </section>
 

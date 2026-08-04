@@ -117,3 +117,29 @@ export function complete(sid: string): Promise<Session> {
 export function getOutcome(sid: string): Promise<Outcome> {
   return request(`/sessions/${sid}/outcome`);
 }
+
+export interface LeaderboardRow {
+  participant: string;
+  score: number;
+  created_at: string;
+}
+
+export interface Board {
+  world_id: string;
+  seed: number;
+  decision_alpha_version: string;
+  rows: LeaderboardRow[];
+}
+
+/** The triple key is required — boards never mix worlds, seeds, or scoring versions. */
+export function getLeaderboard(
+  worldId: string,
+  seed: number,
+  alphaVersion: string,
+): Promise<Board> {
+  const params = new URLSearchParams({
+    seed: String(seed),
+    alpha_version: alphaVersion,
+  });
+  return request(`/leaderboard/${worldId}?${params}`);
+}
