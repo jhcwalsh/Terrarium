@@ -60,6 +60,27 @@ END;
 -- Leaderboard (retrofit R-1, DN-5): created BEFORE any rows exist, with
 -- decision_alpha_version in the scope key from birth -- scores produced
 -- under different decision-alpha definitions never share a board.
+-- Sessions (su-eng-02): server-authoritative game state over one RunRecord.
+-- Mutable BY DESIGN (unlike the chronicle): the reveal pointer and decision
+-- log evolve during play. The invariants (pointer monotonic + capped by
+-- undecided windows, decisions final) are enforced by the repository surface
+-- in sessions.py, which is the only writer.
+CREATE TABLE IF NOT EXISTS sessions (
+    session_id      TEXT PRIMARY KEY,
+    run_id          TEXT NOT NULL REFERENCES run_records(run_id),
+    world_id        TEXT NOT NULL REFERENCES worlds(world_id),
+    months          INTEGER NOT NULL,
+    revealed_months INTEGER NOT NULL DEFAULT 0,
+    basis           TEXT NOT NULL,              -- 'reported' | 'actual'
+    ranked          INTEGER NOT NULL DEFAULT 0,
+    participant     TEXT,
+    decisions       TEXT NOT NULL DEFAULT '{}', -- {month: action}
+    window_log      TEXT NOT NULL DEFAULT '[]', -- DN-6 s8 rows, append-only in repo
+    status          TEXT NOT NULL DEFAULT 'active',
+    created_at      TEXT NOT NULL,
+    updated_at      TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS leaderboard (
     id                     INTEGER PRIMARY KEY AUTOINCREMENT,
     world_id               TEXT NOT NULL,

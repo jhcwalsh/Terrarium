@@ -94,9 +94,7 @@ def phase_train(args: argparse.Namespace) -> None:
     selection = json.loads(SELECTION.read_text("utf-8"))
     config = FlowConfig(**{**selection["config"], "n_factors": n_factors})
     final_budget = yaml.safe_load(SPACE.read_text("utf-8"))["final"]
-    manifest_doc = (
-        json.loads(MANIFEST_PATH.read_text("utf-8")) if MANIFEST_PATH.exists() else {}
-    )
+    manifest_doc = json.loads(MANIFEST_PATH.read_text("utf-8")) if MANIFEST_PATH.exists() else {}
 
     for k in SEEDS:
         key = f"flow:{k}"
@@ -158,9 +156,7 @@ def phase_train(args: argparse.Namespace) -> None:
             "cb_fingerprint": meta["cb_fingerprint"],
             "vintage_id": CAMPAIGN_VINTAGE_ID,
         }
-        MANIFEST_PATH.write_text(
-            json.dumps(manifest_doc, indent=2, sort_keys=True) + "\n", "utf-8"
-        )
+        MANIFEST_PATH.write_text(json.dumps(manifest_doc, indent=2, sort_keys=True) + "\n", "utf-8")
         print(
             f"[{key}] {result.steps_run} steps in {wall:.1f}s "
             f"(best {result.best_step}, early={result.stopped_early}); S {result.best_s:.6f}",

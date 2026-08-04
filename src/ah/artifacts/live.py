@@ -35,10 +35,15 @@ class LiveModeError(ValueError):
 
 
 def seal_tape(tape: np.ndarray) -> str:
-    """The t0 seal: SHA-256 over the float64 tape (months x series)."""
+    """The t0 seal: SHA-256 over the float64 tape (months x series).
+
+    ``sha256_of_arrays`` already returns the ``sha256:``-prefixed digest —
+    caught (as a double prefix) while pinning the cross-language seal vector
+    for the app's client-side verifier, before any consumer shipped.
+    """
     if tape.ndim != 2:
         raise LiveModeError("a tape is months x series")
-    return "sha256:" + sha256_of_arrays([np.asarray(tape, dtype=np.float64)])
+    return sha256_of_arrays([np.asarray(tape, dtype=np.float64)])
 
 
 def verify_tape(tape: np.ndarray, sealed_hash: str) -> bool:

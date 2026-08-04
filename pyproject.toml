@@ -25,6 +25,10 @@ dependencies = [
     "numpyro>=0.15",          # L1 climate model + L2 semi-Markov skeleton
     # Step 2 generator layer, L3 runtime (STEP2-GENERATOR-PLAN §1: PyTorch 2.x)
     "torch>=2.4",             # cu126 wheels verified on this machine (RTX 3080, driver 591.86)
+    # Single-user product, client-plane server (KICKOFF-PRODUCT-SU su-eng-02;
+    # justified by ratified DN-3 decision W1: FastAPI session service)
+    "fastapi>=0.115",
+    "uvicorn>=0.30",
 ]
 
 [project.scripts]
@@ -38,6 +42,7 @@ dev = [
     "hypothesis>=6.100",      # property tests for the engine
     "ruff>=0.5",              # lint + format
     "pyright>=1.1.370",       # type-check (basic mode)
+    "httpx2>=0.1",            # starlette TestClient transport (su-eng-02 tests)
 ]
 
 [build-system]
@@ -92,8 +97,9 @@ ignore = [
 "scripts/build_artifact.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.flake8-bugbear]
-# Typer's function-call-in-default is the intended idiom, not a B008 mutable default.
-extend-immutable-calls = ["typer.Option", "typer.Argument"]
+# Typer's (and FastAPI's) function-call-in-default is the intended idiom,
+# not a B008 mutable default.
+extend-immutable-calls = ["typer.Option", "typer.Argument", "fastapi.Depends"]
 
 [tool.pyright]
 include = ["src", "tests"]

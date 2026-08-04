@@ -158,7 +158,11 @@ class TestReconeEndToEnd:
             assert float(cone.paths[k, 0, cpi]) == pytest.approx(anchor, rel=1e-9)
 
     def test_regime_continuation_starts_in_the_running_spell(self, system, ensemble):
+        from ah.gen.base import RegimeRecord
+
         cone = rc.recone(system, ensemble, path_index=2, at_month=72, n_paths=4, seed=13)
+        assert isinstance(ensemble.regimes, RegimeRecord)
+        assert isinstance(cone.regimes, RegimeRecord)
         current = int(ensemble.regimes.labels[2, 71])
         assert all(int(cone.regimes.labels[k, 0]) == current for k in range(4))
 

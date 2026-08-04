@@ -498,6 +498,16 @@ class TestRegistry:
         # geometry asserted is the checkpoint's OWN recorded factor list.
         assert std.x_mean.shape == (len(meta["factor_names"]),)
         assert list(meta["factor_names"]) == [
-            "cpi", "equity_mkt", "equity_vol", "funding_spread", "hml", "hqm_curve",
-            "ig_spread", "mom", "policy_rate", "smb", "ust_10y", "ust_2y",
+            "cpi",
+            "equity_mkt",
+            "equity_vol",
+            "funding_spread",
+            "hml",
+            "hqm_curve",
+            "ig_spread",
+            "mom",
+            "policy_rate",
+            "smb",
+            "ust_10y",
+            "ust_2y",
         ]

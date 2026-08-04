@@ -942,9 +942,7 @@ def test_finding_the_10yr_tier_is_structurally_unavailable_on_most_of_its_metric
     ]
     assert len(ergodicity) == 16, sorted(r.name for r in ergodicity)
     assert valuation_unavailable == [], sorted(r.name for r in valuation_unavailable)
-    valuation_rows = [
-        r for r in tenyr if r.name.startswith("ten_year_return_vs_valuation_")
-    ]
+    valuation_rows = [r for r in tenyr if r.name.startswith("ten_year_return_vs_valuation_")]
     assert len(valuation_rows) == 2, sorted(r.name for r in valuation_rows)
     assert not [r for r in tenyr if r.name.startswith("regime_duration_")], (
         "regime_duration_* must not appear in the 10yr tier"

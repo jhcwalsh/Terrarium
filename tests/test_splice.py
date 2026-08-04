@@ -155,14 +155,14 @@ def test_splice_pinned_uses_frozen_fit_and_handles_empty_target() -> None:
     empty = pd.DataFrame({"date": pd.Series([], dtype="datetime64[ns]"), "value": []})
     result = splice_pinned(rule, empty, donor)
     assert len(result.frame) == 3
-    assert result.frame["is_proxy"].all()
-    expected = fit.a + fit.b * pd.Series([1.0, 2.0, 3.0])
+    assert bool(result.frame["is_proxy"].all())
+    expected = pd.Series([1.0, 2.0, 3.0]) * fit.b + fit.a
     assert (result.frame["value"].to_numpy() == expected.to_numpy()).all()
     assert result.fit is fit  # the frozen object, not a re-fit
 
     target = _series([9.9], start="1990-03-01")
     with_actual = splice_pinned(rule, target, donor)
-    actuals = with_actual.frame[~with_actual.frame["is_proxy"]]
+    actuals = with_actual.frame.loc[~with_actual.frame["is_proxy"]]
     assert len(actuals) == 1 and actuals["value"].iloc[0] == 9.9
     assert len(with_actual.frame[with_actual.frame["is_proxy"]]) == 2  # pre-target only
 
