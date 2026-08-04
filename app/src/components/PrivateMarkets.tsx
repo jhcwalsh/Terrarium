@@ -15,7 +15,23 @@
  * misled.
  */
 
-import type { PrivateLedger } from "../lib/bundle";
+/**
+ * One private-market programme's pacing ledger, quarter by quarter.
+ *
+ * This shape predates the twin_ledger contract (world-bundle-0.4) and has no
+ * bundle source anymore — bundle.private is gone. Kept local to this
+ * component until the next task rewires it onto the twin's per-session data.
+ */
+export interface PrivateLedger {
+  commitment: number;
+  quarter_months: number[];
+  called: number[];
+  distributed: number[];
+  unfunded: number[];
+  nav: number[];
+  dpi: number[];
+  tvpi: number[];
+}
 
 const LABELS: Record<string, string> = {
   pe: "Private equity",

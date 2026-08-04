@@ -10,7 +10,7 @@
 import { describe, expect, it } from "vitest";
 import { lastRevealedQuarter } from "./PrivateMarkets";
 
-// quarters close on months 2, 5, 8, 11, ... (0-indexed), as ah.pacing emits
+// quarters close on months 2, 5, 8, 11, ... (0-indexed), as ah.play emits
 const QUARTERS = [2, 5, 8, 11, 14, 17];
 
 describe("lastRevealedQuarter", () => {

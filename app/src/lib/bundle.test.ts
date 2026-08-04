@@ -29,28 +29,32 @@ function fixtureBytes(): ArrayBuffer {
 describe("parseBundle", () => {
   it("loads the committed fixture and verifies its seal", async () => {
     const { bundle, sealVerified } = await parseBundle(fixtureBytes());
-    expect(bundle.bundle_version).toBe("world-bundle-0.3");
+    expect(bundle.bundle_version).toBe("world-bundle-0.4");
     expect(sealVerified).toBe(true);
     expect(bundle.revealed.tape.length).toBe(bundle.meta.months);
     expect(bundle.summary.decision_months.length).toBeGreaterThan(0);
   });
 
-  it("v0.3 carries the private-markets ledger, aligned to quarter ends", async () => {
+  it("v0.4 carries the twin's ledger, aligned to quarter ends", async () => {
     const { bundle } = await parseBundle(fixtureBytes());
-    const priv = bundle.private!;
-    expect(Object.keys(priv).sort()).toEqual(["pc", "pe", "re"]);
-    for (const led of Object.values(priv)) {
-      const n = led.quarter_months.length;
-      expect(n).toBeGreaterThan(0);
-      // quarters close on months 2, 5, 8, ... and stay inside the horizon
-      led.quarter_months.forEach((m, i) => {
-        expect(m).toBe(i * 3 + 2);
-        expect(m).toBeLessThan(bundle.meta.months);
-      });
-      for (const series of [led.called, led.distributed, led.unfunded, led.nav, led.dpi, led.tvpi]) {
-        expect(series.length).toBe(n);
-      }
-      expect(led.commitment).toBeGreaterThan(0);
+    const led = bundle.twin_ledger!;
+    const n = led.quarter_months.length;
+    expect(n).toBeGreaterThan(0);
+    // quarters close on months 2, 5, 8, ... and stay inside the horizon
+    led.quarter_months.forEach((m, i) => {
+      expect(m).toBe(i * 3 + 2);
+      expect(m).toBeLessThan(bundle.meta.months);
+    });
+    for (const series of [
+      led.calls,
+      led.distributions,
+      led.nav_true,
+      led.nav_reported,
+      led.cash,
+      led.unfunded,
+      led.private_weight_true,
+    ]) {
+      expect(series.length).toBe(n);
     }
   });
 

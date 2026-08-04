@@ -413,7 +413,7 @@ button.t {
   flex-direction: column;
 }
 
-/* right column: allocation and the decision keep their height, the wire
+/* right column: the book and the decision keep their height, the wire
    takes the slack and scrolls inside itself */
 .vgrid .right {
   min-width: 0;
@@ -434,7 +434,7 @@ button.t {
 }
 
 /* only the layout's own bands are padded panels; the components' inner
-   <section>s (the wire, the allocation, the decision window) are content */
+   <section>s (the wire, the book, the decision window) are content */
 .vitrine > section,
 .vgrid > div > section {
   padding: 12px 16px;
@@ -471,7 +471,7 @@ button.t {
   border-top: 1px solid var(--line);
 }
 
-/* Short viewports: shed chrome, not information — the charts, the allocation
+/* Short viewports: shed chrome, not information — the charts, the book
    and the decision panel all stay on screen; only the ornament shrinks. */
 @media (max-height: 900px) {
   .topbar {
@@ -492,7 +492,7 @@ button.t {
   .vgrid > div > section {
     padding: 8px 12px;
   }
-  .allocation td {
+  .book td {
     padding: 4px 0;
   }
   .eyebrow {
@@ -770,18 +770,18 @@ button.t {
   fill: var(--brass);
 }
 
-/* the allocation panel --------------------------------------------------- */
-.allocation h2 {
+/* the book panel ----------------------------------------------------------- */
+.book h2 {
   display: none;
 }
 
-.allocation table {
+.book table {
   width: 100%;
   border-collapse: collapse;
   font-size: 15.5px;
 }
 
-.allocation th {
+.book th {
   font-family: "IBM Plex Mono", monospace;
   font-size: 12px;
   letter-spacing: 0.14em;
@@ -792,11 +792,11 @@ button.t {
   font-weight: 500;
 }
 
-.allocation th:first-child {
+.book th:first-child {
   text-align: left;
 }
 
-.allocation td {
+.book td {
   padding: 7px 0;
   border-top: 1px solid var(--hair);
   text-align: right;
@@ -804,12 +804,21 @@ button.t {
   font-size: 14.5px;
 }
 
-.allocation td:first-child {
+.book td:first-child {
   text-align: left;
   color: var(--ice);
   font-family: Archivo, sans-serif;
   font-size: 15.5px;
 }
+
+.book-rail { display: flex; gap: 18px; margin-bottom: 10px; }
+.book-rail .k { display: block; font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--dim); }
+.book-rail .v { font-family: "IBM Plex Mono", monospace; font-size: 20px; }
+.book-rail .v.tight { color: var(--clay); }
+.band-breach { color: var(--clay); }
+.band-ok { color: var(--dim); }
+.book-note { font-size: 11px; color: var(--dim); line-height: 1.45; margin: 8px 0 0; }
 
 .alloc-bar {
   display: flex;
@@ -1141,7 +1150,7 @@ button.commit {
   overflow-y: auto;
 }
 
-.vgrid .right.deciding .allocation td {
+.vgrid .right.deciding .book td {
   padding: 3px 0;
 }
 

@@ -16,11 +16,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Allocation } from "./components/Allocation";
+import { Book } from "./components/Book";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
-import { PrivateMarkets } from "./components/PrivateMarkets";
 import { Leaderboard } from "./components/Leaderboard";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
@@ -374,27 +373,22 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                   />
                 );
               })}
-              {bundle.private ? (
-                <div className="ninth">
-                  <div className="eyebrow">
-                    <span>Private programmes</span>
-                    <span>points of the starting book</span>
-                  </div>
-                  <PrivateMarkets ledgers={bundle.private} revealedMonths={revealed} />
-                </div>
-              ) : (
-                <p className="fan-key stacked">
-                  <span className="key-swatch key-revealed" /> this world, as
-                  revealed
-                  <br />
-                  <span className="key-swatch key-inner" /> middle half of{" "}
-                  {bundle.meta.n_paths} sibling runs
-                  <br />
-                  <span className="key-swatch key-outer" /> 5–95% of siblings
-                  <br />
-                  <span className="key-swatch key-median" /> median sibling
-                </p>
-              )}
+              {/* bundle.private (the per-programme pacing ledger) is gone as of
+                  world-bundle-0.4 — the twin_ledger it was replaced with is a
+                  single book, not per-asset, so this slot has no ledger to
+                  show yet. PrivateMarkets stays intact for the next task,
+                  which rewires it onto the session's own book. */}
+              <p className="fan-key stacked">
+                <span className="key-swatch key-revealed" /> this world, as
+                revealed
+                <br />
+                <span className="key-swatch key-inner" /> middle half of{" "}
+                {bundle.meta.n_paths} sibling runs
+                <br />
+                <span className="key-swatch key-outer" /> 5–95% of siblings
+                <br />
+                <span className="key-swatch key-median" /> median sibling
+              </p>
             </div>
           </section>
         </div>
@@ -402,10 +396,10 @@ export function Play({ bundle, config, onExit }: PlayProps) {
         <div className={`right${atWindow !== null ? " deciding" : ""}`}>
           <section>
             <div className="eyebrow">
-              <span>Allocation</span>
-              <span>targets, rebalanced at each window</span>
+              <span>The book</span>
+              <span>cash, coverage, policy band</span>
             </div>
-            <Allocation decisions={session.decisions} />
+            <Book session={session} />
           </section>
 
           <section>

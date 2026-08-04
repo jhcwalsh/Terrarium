@@ -24,6 +24,30 @@ export interface Session {
   value?: number | null;
   /** the hold-course twin's value at the same point — the bar to clear */
   twin_value?: number | null;
+  /** cash on hand at the reveal pointer */
+  cash?: number | null;
+  /** unfunded commitments over TRUE assets — the honest denominator */
+  coverage_true?: number | null;
+  /** the same ratio on appraisal-smoothed marks — reads healthiest when it isn't */
+  coverage_reported?: number | null;
+  /** the private sleeve's true weight of the book, for the policy-band check */
+  private_weight_true?: number | null;
+  calls_paid?: number | null;
+  distributions_received?: number | null;
+  spending_paid?: number | null;
+  /** sum of every forced sale this quarter, across cause and kind */
+  forced_sale_total?: number | null;
+  forced_sales?: {
+    period: number;
+    amount: number;
+    cause: string;
+    kind: string;
+    sleeves_sold: string[];
+    /** forced-secondary entries only */
+    nav_sold?: number;
+    /** forced-secondary entries only */
+    haircut?: number;
+  }[];
 }
 
 export interface OutcomeWindow {
