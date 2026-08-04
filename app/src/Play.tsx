@@ -20,6 +20,7 @@ import { Allocation } from "./components/Allocation";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
+import { PrivateMarkets } from "./components/PrivateMarkets";
 import { Leaderboard } from "./components/Leaderboard";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
@@ -203,6 +204,13 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const monthNow =
     revealed === 0 ? "before the tape opens" : `month ${((revealed - 1) % 12) + 1} of the year`;
   const nextYear = nextWindow !== null ? Math.floor((nextWindow + 1) / 12) : null;
+  // The server marks the book to market at the pointer and sends the twin's
+  // value beside it; the difference is decision alpha SO FAR, which is the
+  // only number that tells a player whether their choices are working.
+  const aheadOfTwin =
+    session.value != null && session.twin_value != null
+      ? session.value - session.twin_value
+      : null;
   const transportLocked = busy || atWindow !== null || revealed >= months;
 
   return (
@@ -279,6 +287,17 @@ export function Play({ bundle, config, onExit }: PlayProps) {
 
       <div className="rail">
         <div className="stat">
+          <div className="k">Your book</div>
+          <div className={`v ${aheadOfTwin === null ? "" : aheadOfTwin >= 0 ? "pos" : "neg"}`}>
+            {session.value == null ? "100.0" : session.value.toFixed(1)}
+          </div>
+          <div className="s">
+            {aheadOfTwin === null
+              ? `started at 100 · ${monthNow}`
+              : `${aheadOfTwin >= 0 ? "+" : "−"}${Math.abs(aheadOfTwin).toFixed(2)} vs hold-course twin`}
+          </div>
+        </div>
+        <div className="stat">
           <div className="k">Revealed</div>
           <div className="v">{revealed}</div>
           <div className="s">of {months} months &middot; {monthNow}</div>
@@ -325,6 +344,20 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                 {revealed} of {months} months revealed
               </span>
             </div>
+            <p className="fan-key">
+              <span className="key-swatch key-revealed" /> this world
+              {" · "}
+              <span className="key-swatch key-inner" /> middle half of{" "}
+              {bundle.meta.n_paths} siblings
+              {" · "}
+              <span className="key-swatch key-outer" /> 5–95%
+              {" · "}
+              <span className="key-swatch key-median" /> median
+              {" · "}
+              cumulative return since t0, annualized figure beside each name
+              {" · "}
+              hatched is sealed
+            </p>
             <div className="chart-grid">
               {ASSET_LABELS.filter(([key]) => bundle.bands[key]).map(([key, name]) => {
                 const isPrivate = PRIVATE_ASSETS.has(key);
@@ -341,23 +374,27 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                   />
                 );
               })}
-              <p className="fan-key">
-                <span className="key-swatch key-revealed" /> this world, as
-                revealed
-                <br />
-                <span className="key-swatch key-inner" /> middle half of{" "}
-                {bundle.meta.n_paths} sibling runs
-                <br />
-                <span className="key-swatch key-outer" /> 5–95% of siblings
-                <br />
-                <span className="key-swatch key-median" /> median sibling
-                <br />
-                <br />
-                Scale is cumulative return since t0; the figure beside each name
-                is the annualized return to date. The hatched region is sealed —
-                the future exists but is withheld. Private assets follow the
-                reported/true switch, top right.
-              </p>
+              {bundle.private ? (
+                <div className="ninth">
+                  <div className="eyebrow">
+                    <span>Private programmes</span>
+                    <span>points of the starting book</span>
+                  </div>
+                  <PrivateMarkets ledgers={bundle.private} revealedMonths={revealed} />
+                </div>
+              ) : (
+                <p className="fan-key stacked">
+                  <span className="key-swatch key-revealed" /> this world, as
+                  revealed
+                  <br />
+                  <span className="key-swatch key-inner" /> middle half of{" "}
+                  {bundle.meta.n_paths} sibling runs
+                  <br />
+                  <span className="key-swatch key-outer" /> 5–95% of siblings
+                  <br />
+                  <span className="key-swatch key-median" /> median sibling
+                </p>
+              )}
             </div>
           </section>
         </div>

@@ -15,7 +15,13 @@
  * hashing reproduces the seal exactly.
  */
 
-export const SUPPORTED_BUNDLE_VERSIONS = ["world-bundle-0.1", "world-bundle-0.2"];
+export const SUPPORTED_BUNDLE_VERSIONS = [
+  "world-bundle-0.1",
+  "world-bundle-0.2",
+  // 0.3 adds `private`: the display-only pacing ledger. Older bundles still
+  // load — the panel simply has nothing to draw.
+  "world-bundle-0.3",
+];
 
 export interface BundleMeta {
   world_id: string;
@@ -47,11 +53,25 @@ export interface FeedArtifact {
   };
 }
 
+/** One private-market programme's pacing ledger, quarter by quarter. */
+export interface PrivateLedger {
+  commitment: number;
+  quarter_months: number[];
+  called: number[];
+  distributed: number[];
+  unfunded: number[];
+  nav: number[];
+  dpi: number[];
+  tvpi: number[];
+}
+
 export interface WorldBundle {
   bundle_version: string;
   meta: BundleMeta;
   revealed: { series_order: string[]; tape: number[][]; tape_seal: string };
   bands: Record<string, Record<string, number[]>>;
+  /** present from world-bundle-0.3; absent in older bundles */
+  private?: Record<string, PrivateLedger>;
   summary: {
     twin_final_value: number;
     decision_months: number[];

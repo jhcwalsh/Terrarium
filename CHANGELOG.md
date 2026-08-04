@@ -189,6 +189,38 @@ All notable changes to this project are documented here. The project follows
   appraisal smoothing should look like. A test now pins the measurement to
   where the marks actually land.
 
+- **Private-market pacing on the player portal** (`ah.pacing`, bundle
+  `world-bundle-0.3`). Commitments, calls, distributions, unfunded, NAV, DPI
+  and TVPI for each private programme, derived from the tape at build time
+  and carried in the bundle, revealed with the pointer like everything else.
+  It takes the chart grid's ninth cell; the fan legend compresses to one line
+  under the eyebrow. Classic pacing with every constant stated rather than
+  derived: commit 1.5x target, draw 9% of remaining unfunded a quarter
+  falling to 4.5% after three years, nothing back until the J-curve turns at
+  quarter 10, then 5% of NAV. NAV grows on the REPORTED marks, because NAV is
+  an appraisal.
+
+  **Informational, and it says so on its face.** The engine emits returns
+  only — there is no cash account, calls are not funded from anywhere, and
+  nothing here can force a sale. A test parses the module's imports and
+  asserts it cannot reach the store or the simulator, and another asserts the
+  institution's value is identical whether or not a ledger has been built.
+  Binding cashflows to the portfolio is Step 3's institutional twin
+  (register ER-3) and redefines `decision_alpha`.
+
+  Bundle 0.3 adds `private` beside `bands`, outside the sealed tape. Older
+  bundles still load: the app treats the key as optional and simply has
+  nothing to draw.
+
+- **The book's value, live, during play.** The rail leads with YOUR BOOK —
+  the portfolio marked to market at the reveal pointer — and the hold-course
+  twin's value beside it as the difference, which is decision alpha so far
+  and the only number that tells a player whether their choices are working.
+  Computed **server-side**: the institution simulator is the authority for
+  value (W5), and a client-side mirror would be a second implementation to
+  drift. It uses revealed months only, so it leaks nothing — the same
+  simulation the outcome runs, truncated at the pointer.
+
 ### Fixed
 - **toy-v0 unit coherence** (owner-approved deviation from STEP0-PLAN's
   literal formula constants). The plan's return formulas mixed decimal-

@@ -37,7 +37,7 @@ class TestContract:
     def test_sections_and_provenance(self, stored_run):
         db, rid = stored_run
         doc = build_bundle(connect(db), rid)
-        assert doc["bundle_version"] == "world-bundle-0.2"
+        assert doc["bundle_version"] == "world-bundle-0.3"
         for section in ("meta", "revealed", "bands", "summary", "feed"):
             assert section in doc, section
         meta = doc["meta"]
@@ -75,6 +75,25 @@ class TestContract:
             "release_page",
             "quarterly_statement",
         }
+
+    def test_private_ledger_rides_along(self, stored_run):
+        """0.3's addition: the pacing ledger, one entry per private asset,
+        every series the same length as the quarter index. Display-only, so
+        it lives beside the bands rather than inside the sealed tape."""
+        from ah.core.engine import REPORTED_SLEEVES
+
+        db, rid = stored_run
+        bundle_doc = build_bundle(connect(db), rid)
+        priv = bundle_doc["private"]
+        assert set(priv) == set(REPORTED_SLEEVES)
+        for led in priv.values():
+            n = len(led["quarter_months"])
+            assert n > 0
+            for key in ("called", "distributed", "unfunded", "nav", "dpi", "tvpi"):
+                assert len(led[key]) == n, key
+            assert led["commitment"] > 0
+            # the ledger is NOT sealed: it must not appear in the tape's order
+            assert "commitment" not in bundle_doc["revealed"]["series_order"]
 
     def test_build_is_deterministic(self, stored_run):
         db, rid = stored_run

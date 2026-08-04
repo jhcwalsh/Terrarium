@@ -117,17 +117,50 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         except session_store.SessionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    def _mark_to_market(conn: sqlite3.Connection, doc: dict[str, Any]) -> dict[str, Any]:
+        """Attach the book's value AS AT the reveal pointer, and the twin's.
+
+        Computed here rather than in the browser on purpose: the institution
+        simulator is the authority for value (W5), and a client-side mirror of
+        it would be a second implementation to drift. The app already mirrors
+        the TARGET weights, which are simple bookkeeping; value is not.
+
+        Only revealed months are used, so this leaks nothing: it is the same
+        simulation the outcome runs, truncated at the pointer.
+        """
+        revealed = int(doc.get("revealed_months") or 0)
+        doc["value"] = None
+        doc["twin_value"] = None
+        if revealed <= 0:
+            return doc
+        rec = get_run_record(conn, doc["run_id"])
+        if rec is None:  # pragma: no cover - FK'd at creation
+            return doc
+        world = get_world(conn, rec["world_id"])
+        if world is None:  # pragma: no cover - FK'd at creation
+            return doc
+        nw = project_numeric(WorldSpec.model_validate(world))
+        paths = run_path(nw, rec["seed"])
+        use_reported = doc["basis"] == "reported"
+        decisions = {int(m): a for m, a in doc["decisions"].items()}
+        active = simulate_institution(paths, decisions, use_reported=use_reported)
+        twin = simulate_institution(paths, None, use_reported=use_reported)
+        at = min(revealed, int(paths.months)) - 1
+        doc["value"] = float(active.total[at])
+        doc["twin_value"] = float(twin.total[at])
+        return doc
+
     @app.get("/sessions/{sid}")
     def get_session(sid: str, conn: sqlite3.Connection = Depends(db)):
         doc = _get(conn, sid)
         doc["decision_windows"] = decision_months(doc["months"])
-        return doc
+        return _mark_to_market(conn, doc)
 
     @app.post("/sessions/{sid}/advance")
     def advance(sid: str, body: Advance, conn: sqlite3.Connection = Depends(db)):
         _get(conn, sid)
         try:
-            return session_store.advance_reveal(conn, sid, body.to_month)
+            return _mark_to_market(conn, session_store.advance_reveal(conn, sid, body.to_month))
         except session_store.SessionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc
 
@@ -135,8 +168,11 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     def decide(sid: str, body: Decide, conn: sqlite3.Connection = Depends(db)):
         _get(conn, sid)
         try:
-            return session_store.record_decision(
-                conn, sid, month=body.month, action=body.action, client_log=body.client_log
+            return _mark_to_market(
+                conn,
+                session_store.record_decision(
+                    conn, sid, month=body.month, action=body.action, client_log=body.client_log
+                ),
             )
         except session_store.SessionError as exc:
             raise HTTPException(status_code=409, detail=str(exc)) from exc

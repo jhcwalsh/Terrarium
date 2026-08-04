@@ -46,13 +46,14 @@ from ah.core.institution import decision_months, hold_course_twin
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.feed import build_tier1_feed
+from ah.pacing import build_ledgers
 from ah.store import chronicle as chronicle_store
 from ah.store.runrecords import get_run_record
 from ah.store.worlds import get_world
 
 __all__ = ["BUNDLE_VERSION", "MAX_COMPRESSED_BYTES", "BundleError", "build_bundle", "write_bundle"]
 
-BUNDLE_VERSION = "world-bundle-0.2"
+BUNDLE_VERSION = "world-bundle-0.3"  # 0.3 adds the private-markets pacing ledger
 MAX_COMPRESSED_BYTES = 1_000_000  # W2's budget: a complete world under 1 MB compressed
 _QUANTILES = (5, 25, 50, 75, 95)
 
@@ -135,6 +136,22 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
             "tape_seal": seal_tape(tape),
         },
         "bands": bands,
+        # The private-markets pacing ledger (display-only; ah.pacing says why).
+        # Rounded here rather than inside the ledger so its own arithmetic
+        # stays exact and only the shipped bytes are quantised.
+        "private": {
+            asset: {
+                "commitment": round(led.commitment, 6),
+                "quarter_months": led.quarter_months,
+                "called": _round(np.asarray(led.called)),
+                "distributed": _round(np.asarray(led.distributed)),
+                "unfunded": _round(np.asarray(led.unfunded)),
+                "nav": _round(np.asarray(led.nav)),
+                "dpi": _round(np.asarray(led.dpi)),
+                "tvpi": _round(np.asarray(led.tvpi)),
+            }
+            for asset, led in build_ledgers(revealed).items()
+        },
         "summary": {
             "twin_final_value": float(twin.final_value),
             "decision_months": decision_months(revealed.months),
