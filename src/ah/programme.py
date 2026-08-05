@@ -21,15 +21,26 @@ bytes.
 
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass
+from pathlib import Path
+
+import numpy as np
 
 from ah.play import PlayResult
+from ah.port.cashflow_tier1 import run_tier1
 
 __all__ = [
+    "PROGRAMME_PLAUSIBLE",
+    "Band",
     "LadderYear",
     "ProgrammeQuarter",
+    "ProgrammeStat",
     "ladder_years",
+    "path_stats",
     "programme_quarters",
+    "programme_stats",
+    "vintage_stats",
 ]
 
 _QUARTERS_PER_YEAR = 4
@@ -144,3 +155,134 @@ def ladder_years(quarters: list[ProgrammeQuarter], linked: PlayResult) -> list[L
             )
         )
     return years
+
+
+_REPO_ROOT = Path(__file__).resolve().parents[2]
+_COHORT_DOC = _REPO_ROOT / "fixtures" / "state" / "closed-end-cohort.example.json"
+
+
+@dataclass(frozen=True)
+class Band:
+    """A declared plausible range. A prior written down for argument, not truth."""
+
+    lo: float
+    hi: float
+    question: str
+
+
+#: DECLARED PRIORS — edit them, that is the point. A flag is an invitation to
+#: look; nothing here can fail a build. Single-cohort statistics are defined
+#: against the vintage committed in YEAR 1, at the stated age: "DPI at year 10"
+#: is meaningless in a ten-year decade, because that vintage only reaches 9.
+PROGRAMME_PLAUSIBLE: dict[str, Band] = {
+    "peak_unfunded_ratio": Band(0.25, 0.75, "is the ladder over- or under-committed"),
+    "call_rate_y1_3": Band(0.15, 0.45, "do funds draw at a realistic speed"),
+    "crossover_years": Band(4.0, 8.0, "the J-curve crossover"),
+    "dpi_age9": Band(0.7, 2.0, "does a fund actually return capital"),
+    "linkage_bite": Band(0.30, 0.80, "how hard the linkage bites, as a rate not a level"),
+    "linkage_shortfall": Band(0.05, 0.35, "the linkage's total decade cost"),
+    "forced_secondaries": Band(0.0, 1.0, "is distress rare enough to mean something"),
+}
+
+
+@dataclass(frozen=True)
+class ProgrammeStat:
+    """One statistic across the ensemble, against its declared band."""
+
+    name: str
+    median: float
+    p10: float
+    p90: float
+    path0: float
+    band: Band
+    flagged: bool
+
+
+def vintage_stats(
+    drawdown_depth: np.ndarray, spread_ratio: np.ndarray, quarters: int
+) -> dict[str, float]:
+    """The single-cohort statistics for a vintage committed in year 1.
+
+    Run through ``run_tier1`` rather than read out of the play run: these are
+    questions about the MODEL's fund, and tier 1 is the module that answers
+    them. Committed is 1.0 so every output is a ratio.
+    """
+    base = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+    n = min(quarters, len(drawdown_depth))
+    if n < _QUARTERS_PER_YEAR:
+        return {}
+    result = run_tier1(
+        base,
+        committed=1.0,
+        vintage_year=int(base["identity"]["vintage_year"]) + 1,
+        sleeve_returns=np.zeros(n),
+        drawdown_depth=np.asarray(drawdown_depth[:n], dtype=float),
+        spread_ratio=np.asarray(spread_ratio[:n], dtype=float),
+        fees_on=False,
+    )
+    calls = np.array([f.call for f in result.flows])
+    dists = np.array([f.distribution_total for f in result.flows])
+    paid_in = float(calls.sum())
+    out: dict[str, float] = {"first_call": float(calls[0])}
+    if paid_in > 0.0:
+        out["dpi_age9"] = float(dists.sum()) / paid_in
+        first_three = calls[: 3 * _QUARTERS_PER_YEAR].sum()
+        out["call_rate_y1_3"] = float(first_three) / 3.0  # committed = 1.0
+    cum = np.cumsum(dists - calls)
+    crossed = np.flatnonzero(cum > 0.0)
+    if crossed.size:
+        out["crossover_years"] = float(crossed[0] + 1) / _QUARTERS_PER_YEAR
+    return out
+
+
+def path_stats(quarters: list[ProgrammeQuarter], result: PlayResult) -> dict[str, float]:
+    """The programme-level statistics for ONE path."""
+    out: dict[str, float] = {}
+    ratios = [q.unfunded / q.private_nav for q in quarters if q.private_nav > 0.0]
+    if ratios:
+        out["peak_unfunded_ratio"] = max(ratios)
+
+    rates = [
+        (q.distributions / q.private_nav, q.drawdown_depth) for q in quarters if q.private_nav > 0.0
+    ]
+    if rates:
+        worst = max(rates, key=lambda pair: pair[1])[0]
+        median = float(np.median([r for r, _ in rates]))
+        if median > 0.0:
+            out["linkage_bite"] = worst / median
+
+    unlinked_total = sum(q.distributions_unlinked for q in quarters)
+    if unlinked_total > 0.0:
+        linked_total = sum(q.distributions for q in quarters)
+        out["linkage_shortfall"] = (unlinked_total - linked_total) / unlinked_total
+
+    out["forced_secondaries"] = float(result.forced_secondaries)
+    return out
+
+
+def programme_stats(
+    per_path: list[dict[str, float]], path0: dict[str, float]
+) -> list[ProgrammeStat]:
+    """Median and 10-90 spread across paths, flagged against the declared band.
+
+    One path can be unlucky; a flag should mean the WORLD does this, so the
+    flag fires on the median, with path 0's own value shown beside it.
+    """
+    stats: list[ProgrammeStat] = []
+    for name, band in PROGRAMME_PLAUSIBLE.items():
+        values = [row[name] for row in per_path if name in row]
+        if not values:
+            continue
+        median = float(np.median(values))
+        stats.append(
+            ProgrammeStat(
+                name=name,
+                median=median,
+                p10=float(np.percentile(values, 10)),
+                p90=float(np.percentile(values, 90)),
+                path0=float(path0.get(name, median)),
+                band=band,
+                flagged=not (band.lo <= median <= band.hi),
+            )
+        )
+    return stats
