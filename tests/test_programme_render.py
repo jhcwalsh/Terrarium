@@ -3,11 +3,14 @@
 from __future__ import annotations
 
 import json
+import math
 from pathlib import Path
+
+import pytest
 
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
-from ah.programme import model_block
+from ah.programme import _model_curves, model_block
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -42,3 +45,56 @@ def test_model_block_is_self_contained():
 
 def test_model_block_is_deterministic():
     assert model_block() == model_block()
+
+
+# ---------------------------------------------------------------------------
+# The curve VALUES, pinned directly -- substring assertions on the rendered
+# HTML (above) cannot catch a swapped parameter, a flipped sign, a mis-indexed
+# rc_curve, or a dropped age/life clamp on the bow. These can.
+
+
+def test_model_curves_call_rate_matches_frozen_rc_curve():
+    # rc_curve straight from fixtures/state/closed-end-cohort.example.json:
+    # [0.25, 0.3, 0.2, 0.12, 0.08, 0.05]
+    curves = _model_curves()
+    assert curves["call_rate"][0] == 0.25
+    assert curves["call_rate"][5] == 0.05
+
+
+def test_model_curves_bow_reaches_yield_rate_at_terminal_age():
+    # Y(age/L)^B at age == L: min(1.0, L/L) ** B == 1, so the curve's
+    # terminal value is exactly Y (yield_rate = 0.55) -- the plateau
+    # src/ah/port/cohort.py's step docstring claims.
+    curves = _model_curves()
+    assert curves["bow"][-1] == 0.55
+
+
+def test_model_curves_f_dist_matches_frozen_linkage():
+    # dd == 0.0 -> exp(0) == 1.0, inside [floor, ceiling], unclipped.
+    # dd == 0.5 (index 20 of 41, since _DD_DOMAIN steps by 1/40) ->
+    # exp(-1.540688 * 0.5) = exp(-0.770344) ~= 0.462869..., inside
+    # [0.3, 1.5] so unclipped -- computed directly from the frozen a_drawdown.
+    curves = _model_curves()
+    assert curves["f_dist"][0] == 1.0
+    expected_at_half_drawdown = math.exp(-1.540688 * 0.5)
+    assert curves["f_dist"][20] == pytest.approx(expected_at_half_drawdown)
+
+
+def test_model_curves_f_call_matches_frozen_linkage_and_respects_clip_bounds():
+    # dd == 1.0 -> 1.0 - 0.1 * 1.0 == 0.9, inside [0.5, 1.2], unclipped.
+    curves = _model_curves()
+    assert curves["f_call"][-1] == pytest.approx(0.9)
+    # the clip floor (0.5) and ceiling (1.2) are never breached over the domain
+    assert all(0.5 <= v <= 1.2 for v in curves["f_call"])
+
+
+def test_model_curves_f_call_span_is_narrower_than_f_dist_span():
+    # The asymmetry the section exists to show, as a number rather than prose:
+    # f_call moves ~10% over the plotted domain (1.0 -> 0.9), f_dist moves
+    # ~70% (1.0 -> its 0.3 floor). f_call's span must stay materially
+    # narrower -- this is what "f_call is clipped near-flat while f_dist can
+    # fall to its floor" means, made falsifiable.
+    curves = _model_curves()
+    fc_span = max(curves["f_call"]) - min(curves["f_call"])
+    fd_span = max(curves["f_dist"]) - min(curves["f_dist"])
+    assert fc_span < fd_span * 0.5

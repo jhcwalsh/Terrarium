@@ -279,11 +279,35 @@ def _f(value: float, places: int = 2) -> str:
     return f"{value:.{places}f}"
 
 
+#: f_call's clip bounds are NOT separate keys in mappings/cashflow-tier1-v1.0.yaml
+#: (they live inside the `form` string and in cashflow_tier1.py's own clip call) --
+#: named here explicitly so the duplication is visible rather than silent.
+#: Source of truth: src/ah/port/cashflow_tier1.py:66, `np.clip(1 - c*dd, 0.5, 1.2)`.
+_F_CALL_LO = 0.5
+_F_CALL_HI = 1.2
+
+_DD_DOMAIN = [i / 40.0 for i in range(41)]  # 0 .. 1.0 drawdown, the x-axis both f_* share
+
+
 def _sparkline(
-    values: list[float], *, width: int = 150, height: int = 34, color: str, extra: str = ""
+    values: list[float],
+    *,
+    width: int = 150,
+    height: int = 34,
+    color: str,
+    domain: tuple[float, float] | None = None,
+    extra: str = "",
 ) -> str:
     """A minimal polyline. No axes: these curves are about SHAPE, and every
     one of them has its numbers printed beside it.
+
+    ``domain``, when given, fixes the y-range to the model's OWN declared
+    bounds (e.g. a linkage function's floor/ceiling) instead of the values'
+    realised min/max -- two curves plotted against their own min/max look
+    equally steep regardless of how far either actually moves, which is
+    exactly the asymmetry this block exists to show. ``None`` keeps the
+    auto-scaling behaviour, used for curves with no declared bound (the call
+    rate, the bow).
 
     ``extra`` is rendered inside the ``<svg>``, after the polyline — the rug
     overlay (Task 4 ambiguity #2) uses it instead of string-splicing the
@@ -291,7 +315,7 @@ def _sparkline(
     """
     if not values:
         return ""
-    lo, hi = min(values), max(values)
+    lo, hi = domain if domain is not None else (min(values), max(values))
     span = (hi - lo) or 1.0
     step = width / max(1, len(values) - 1)
     points = " ".join(
@@ -307,12 +331,24 @@ def _sparkline(
     )
 
 
-def _rug(xs: list[float], ys: list[float], *, width: int = 150, height: int = 34) -> str:
-    """Where this world's quarters actually landed on a response curve."""
+def _rug(
+    xs: list[float],
+    ys: list[float],
+    *,
+    width: int = 150,
+    height: int = 34,
+    domain: tuple[float, float] | None = None,
+) -> str:
+    """Where this world's quarters actually landed on a response curve.
+
+    ``domain`` MUST match the ``domain`` passed to the ``_sparkline`` call for
+    the curve this rug overlays -- a rug plotted on a different y-range than
+    its curve lands its dots at the wrong height, which is worse than no rug.
+    """
     if not xs:
         return ""
     x_hi = max(xs) or 1.0
-    y_lo, y_hi = min(ys), max(ys)
+    y_lo, y_hi = domain if domain is not None else (min(ys), max(ys))
     span = (y_hi - y_lo) or 1.0
     dots = "".join(
         f'<circle cx="{x / x_hi * width:.1f}" '
@@ -322,11 +358,13 @@ def _rug(xs: list[float], ys: list[float], *, width: int = 150, height: int = 34
     return f'<g class="rug" fill="var(--brass)" opacity="0.75">{dots}</g>'
 
 
-def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
-    """The model's own curves, before any world touches them.
+def _model_curves() -> dict[str, list[float]]:
+    """The four curves ``model_block`` renders, isolated so their VALUES are
+    directly testable -- not just their presence as substrings in HTML.
 
-    World-independent except for the optional rug, which marks where the
-    decade's quarters landed on the two response curves.
+    Keys: ``call_rate`` (RC(age), from the cohort's own ``rc_curve``),
+    ``bow`` (the distribution bow Y(age/L)^B), ``f_dist`` and ``f_call``
+    (the two linkage responses over drawdown depth, at spread_ratio = 1).
     """
     doc = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
     params = doc["parameters"]
@@ -338,20 +376,48 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
 
     ages = [i * 0.25 for i in range(int(life * 4) + 1)]
     bow_curve = [yield_rate * (min(1.0, a / life) ** bow) for a in ages]
-    dds = [i / 40.0 for i in range(41)]  # 0 .. 1.0 drawdown
     fd_curve = [
         min(
             fd_spec["ceiling"],
             max(fd_spec["floor"], float(np.exp(-fd_spec["a_drawdown"] * d))),
         )
-        for d in dds
+        for d in _DD_DOMAIN
     ]
-    fc_curve = [min(1.2, max(0.5, 1.0 - fc_spec["c"] * d)) for d in dds]
+    fc_curve = [min(_F_CALL_HI, max(_F_CALL_LO, 1.0 - fc_spec["c"] * d)) for d in _DD_DOMAIN]
+    return {"call_rate": rc_curve, "bow": bow_curve, "f_dist": fd_curve, "f_call": fc_curve}
+
+
+def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
+    """The model's own curves, before any world touches them.
+
+    World-independent except for the optional rug, which marks where the
+    decade's quarters landed on the two response curves.
+    """
+    doc = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+    params = doc["parameters"]
+    life = float(doc["lifecycle"]["contractual_life_years"])
+    bow, yield_rate = float(params["bow"]), float(params["yield_rate"])
+    link = load_linkage()
+    fd_spec, fc_spec = link["f_dist"], link["f_call"]
+    fd_domain = (float(fd_spec["floor"]), float(fd_spec["ceiling"]))
+    fc_domain = (_F_CALL_LO, _F_CALL_HI)
+
+    curves = _model_curves()
+    rc_curve, bow_curve = curves["call_rate"], curves["bow"]
+    fd_curve, fc_curve = curves["f_dist"], curves["f_call"]
 
     rug_dist = rug_call = ""
     if realised:
-        rug_dist = _rug([q.drawdown_depth for q in realised], [q.f_dist for q in realised])
-        rug_call = _rug([q.drawdown_depth for q in realised], [q.f_call for q in realised])
+        rug_dist = _rug(
+            [q.drawdown_depth for q in realised],
+            [q.f_dist for q in realised],
+            domain=fd_domain,
+        )
+        rug_call = _rug(
+            [q.drawdown_depth for q in realised],
+            [q.f_call for q in realised],
+            domain=fc_domain,
+        )
 
     rows = [
         (
@@ -367,16 +433,17 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
         ),
         (
             "f_dist(drawdown)",
-            _sparkline(fd_curve, color="var(--clay)", extra=rug_dist),
+            _sparkline(fd_curve, color="var(--clay)", domain=fd_domain, extra=rug_dist),
             f"a={_f(fd_spec['a_drawdown'], 6)}, b={_f(fd_spec['b_log_spread'], 6)} "
             "(log spread), "
             f"floor {fd_spec['floor']}, ceiling {fd_spec['ceiling']} "
-            "- shown at spread_ratio = 1",
+            "- shown at spread_ratio = 1, plotted against its own declared bounds",
         ),
         (
             "f_call(drawdown)",
-            _sparkline(fc_curve, color="var(--clay)", extra=rug_call),
-            f"c={fc_spec['c']}, clipped to [0.5, 1.2]",
+            _sparkline(fc_curve, color="var(--clay)", domain=fc_domain, extra=rug_call),
+            f"c={fc_spec['c']}, clipped to [{_F_CALL_LO}, {_F_CALL_HI}] "
+            "(cashflow_tier1.py:66) - plotted against its own declared bounds",
         ),
     ]
     body = "".join(
@@ -388,7 +455,10 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
         f"<table><tbody>{body}</tbody></table>"
         "<p class='note'>Both linkage functions consume <strong>continuous</strong> "
         "market states only - drawdown depth and a spread ratio - and never a regime "
-        "label (DN-5 Delta 3, structural). The asymmetry is the mechanic: f_call is "
+        "label (DN-5 Delta 3, structural). Both are drawn against their own declared "
+        "clip bounds, not their realised min/max, so the vertical scale is the "
+        "model's own range: f_dist spans floor to ceiling, f_call spans "
+        f"[{_F_CALL_LO}, {_F_CALL_HI}]. The asymmetry is the mechanic: f_call is "
         "clipped near-flat while f_dist can fall to its floor, so calls keep arriving "
         "while distributions stop. That, not the drawdown itself, is what empties the "
         "cash account. Brass dots mark where this world's quarters actually landed.</p>"
