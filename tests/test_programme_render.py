@@ -253,3 +253,266 @@ def test_programme_stats_reports_how_many_paths_a_statistic_came_from():
 def test_stats_table_shows_the_present_count(report):
     html = render_programme_section([report])
     assert " of 4" in html
+
+
+# ---------------------------------------------------------------------------
+# Review round 1, C1: the linkage table's directional column must agree in
+# SIGN with path_stats.linkage_shortfall ((unlinked - linked) / unlinked),
+# and its CSS class must follow the value's sign, not a hardcoded 'neg'.
+# f_dist's ceiling (1.5, mappings/cashflow-tier1-v1.0.yaml) means the
+# linkage routinely RAISES distributions -- the old
+# "distributions - distributions_unlinked" rendered unconditionally red
+# under a "shortfall" header painted that benefit as harm.
+
+
+def _q(**overrides):
+    from ah.programme import ProgrammeQuarter
+
+    fields = {
+        "quarter": 0,
+        "month": 2,
+        "drawdown_depth": 0.0,
+        "spread_ratio": 1.0,
+        "f_dist": 1.0,
+        "f_call": 1.0,
+        "calls": 0.0,
+        "distributions": 0.0,
+        "distributions_unlinked": 0.0,
+        "cash": 0.0,
+        "nav_true": 0.0,
+        "nav_reported": 0.0,
+        "private_nav": 0.0,
+        "unfunded": 0.0,
+        "private_weight_true": 0.0,
+        "coverage_true": 0.0,
+        "coverage_reported": 0.0,
+        "forced_sale_total": 0.0,
+    }
+    fields.update(overrides)
+    return ProgrammeQuarter(**fields)
+
+
+def test_linkage_effect_sign_matches_linkage_shortfall_convention():
+    from ah.programme import _linkage_effect
+
+    # the linkage HELPED this quarter (f_dist's ceiling let it raise
+    # distributions above the unlinked counterfactual) -- must be NEGATIVE,
+    # matching linkage_shortfall's (unlinked - linked) / unlinked sign.
+    helped = _q(distributions=12.0, distributions_unlinked=8.0)
+    assert _linkage_effect(helped) == -4.0
+
+    # the linkage HURT this quarter -- must be POSITIVE.
+    hurt = _q(distributions=3.0, distributions_unlinked=10.0)
+    assert _linkage_effect(hurt) == 7.0
+
+
+def test_linkage_table_css_class_follows_the_effect_sign_not_a_constant():
+    from ah.programme import ProgrammeReport, _linkage_table
+
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[
+            _q(quarter=0, distributions=12.0, distributions_unlinked=8.0),  # helped
+            _q(quarter=1, month=5, distributions=3.0, distributions_unlinked=10.0),  # hurt
+        ],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _linkage_table(rep)
+    assert "class='pos'>-4.00</td>" in html
+    assert "class='neg'>7.00</td>" in html
+    assert "shortfall" not in html.split("<p class='note'>")[0].lower()  # not the header
+    assert "unlinked minus linked" in html.lower()
+
+
+# ---------------------------------------------------------------------------
+# Review round 1, C2: the "alive" count must be cohorts with a positive
+# final NAV, not every cohort id that ever appeared -- play.py logs a
+# vintage_nav entry every quarter a cohort's ladder exists in, including
+# quarters after it has been fully liquidated.
+
+
+def test_stack_block_counts_only_cohorts_with_positive_final_nav():
+    from ah.programme import ProgrammeReport, _stack_block
+
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[],
+        ladder=[],
+        stats=[],
+        vintage_stack=[
+            ("opener-a", [10.0, 5.0, 0.0, 0.0]),  # liquidated before the end
+            ("opener-b", [8.0, 6.0, 3.0, 4.0]),  # still alive
+        ],
+        forced_sales=[],
+    )
+    html = _stack_block(rep)
+    assert "1 of 2" in html
+
+
+# ---------------------------------------------------------------------------
+# Review round 1, I1: the sale log's period (PortfolioEngine._period,
+# src/ah/port/engine.py:75,90 -- 1-based, incremented at the top of
+# run_quarter) must be converted to the page's 0-based quarter convention
+# (PlayQuarter.quarter/ProgrammeQuarter.quarter) before display.
+
+
+def test_sale_row_converts_the_1based_period_to_the_pages_0based_quarter():
+    from ah.programme import _sale_row
+
+    # PortfolioEngine logs period=1 for its FIRST quarter, which is quarter
+    # 0 everywhere else on the page.
+    sale = {
+        "period": 1,
+        "amount": 5.0,
+        "cause": "x",
+        "kind": "liquid_pro_rata",
+        "sleeves_sold": [],
+    }
+    html = _sale_row(sale)
+    assert "<td>Q0</td>" in html
+    assert "<td>Q1</td>" not in html
+
+
+# ---------------------------------------------------------------------------
+# Review round 1, I2: no test constrained any COLUMN mapping -- the reviewer
+# proved this by mutation (swapping f_dist/f_call in the linkage table, and
+# called_to_date/unfunded_end in the ladder table, left every existing test
+# green). These pin cell ORDER with all-distinguishable values, so a swap
+# breaks them -- verified locally by making both swaps and confirming these
+# two fail, then reverting (see the task report).
+
+
+def test_ladder_table_columns_are_not_swapped():
+    from ah.programme import LadderYear, ProgrammeReport, _ladder_table
+
+    year = LadderYear(
+        year=3,
+        committed=10.0,
+        called=20.0,
+        distributed=30.0,
+        net=99.0,
+        called_to_date=40.0,
+        unfunded_end=50.0,
+        private_nav_end=60.0,
+    )
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[],
+        ladder=[year],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _ladder_table(rep)
+    body = html[html.index("<tbody>") : html.index("</tbody>")]
+    order = ["10.00", "20.00", "30.00", "99.00", "40.00", "50.00", "60.00"]
+    positions = [body.index(v) for v in order]
+    assert positions == sorted(positions)
+
+
+def test_linkage_table_columns_are_not_swapped():
+    from ah.programme import ProgrammeReport, _linkage_table
+
+    q = _q(
+        quarter=7,
+        month=23,
+        drawdown_depth=0.11,
+        spread_ratio=0.22,
+        f_dist=0.33,
+        f_call=0.44,
+        distributions=55.0,
+        distributions_unlinked=66.0,
+    )
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[q],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _linkage_table(rep)
+    body = html[html.index("<tbody>") : html.index("</tbody>")]
+    order = ["0.110", "0.220", "0.330", "0.440", "55.00", "66.00", "11.00"]
+    positions = [body.index(v) for v in order]
+    assert positions == sorted(positions)
+
+
+def test_stats_table_columns_are_not_swapped():
+    from ah.programme import Band, ProgrammeReport, ProgrammeStat, _stats_table
+
+    stat = ProgrammeStat(
+        name="z",
+        median=1.0,
+        p10=2.0,
+        p90=3.0,
+        path0=4.0,
+        band=Band(5.0, 6.0, "q"),
+        flagged=False,
+        n_present=7,
+        n_total=8,
+    )
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[],
+        ladder=[],
+        stats=[stat],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _stats_table(rep)
+    body = html[html.index("<tbody>") : html.index("</tbody>")]
+    order = ["1.000", "2.000", "3.000", "4.000", "7 of 8", "5.00", "6.00"]
+    positions = [body.index(v) for v in order]
+    assert positions == sorted(positions)
+
+
+# ---------------------------------------------------------------------------
+# Review round 1, I3: path 0's own value must not silently fall back to the
+# median when path 0 never computed the statistic -- especially now that the
+# adjacent "paths" column can read "1 of 20".
+
+
+def test_programme_stat_path0_is_none_when_absent_from_path0():
+    from ah.programme import PROGRAMME_PLAUSIBLE, programme_stats
+
+    name = next(iter(PROGRAMME_PLAUSIBLE))
+    per_path = [{name: 0.5}, {name: 0.6}]
+    stats = programme_stats(per_path, {})  # path 0 never has the key
+    stat = next(s for s in stats if s.name == name)
+    assert stat.path0 is None
+
+
+def test_stats_table_renders_a_dash_when_path0_is_missing():
+    from ah.programme import Band, ProgrammeReport, ProgrammeStat, _stats_table
+
+    stat = ProgrammeStat(
+        name="crossover_years",
+        median=5.0,
+        p10=4.0,
+        p90=6.0,
+        path0=None,
+        band=Band(4.0, 8.0, "q"),
+        flagged=False,
+        n_present=2,
+        n_total=4,
+    )
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[],
+        ladder=[],
+        stats=[stat],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _stats_table(rep)
+    assert "<td>-</td>" in html

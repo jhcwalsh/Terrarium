@@ -12,6 +12,7 @@ import numpy as np
 
 from ah.play import PlayResult
 from ah.programme import (
+    _QUARTERS_PER_YEAR,
     PROGRAMME_PLAUSIBLE,
     ProgrammeQuarter,
     path_stats,
@@ -102,10 +103,28 @@ def test_vintage_stats_at_tier0_benchmark_growth_are_hand_checkable():
     makes the J-curve crossover arithmetically impossible (NAV can never
     outgrow calls net of distributions without growth) and caps DPI below
     1.0 structurally -- an artifact of a lazy test tape, not a finding
-    about the model."""
+    about the model.
+
+    The input arrays are 40 quarters long, not 36: ``vintage_stats`` reads
+    world quarters ``_QUARTERS_PER_YEAR`` (4) through ``4 + quarters - 1``
+    (the vintage's own life, starting at the programme's year-1 anniversary),
+    not the world's first ``quarters`` quarters (review round 1, M1 -- a
+    36-length array was silently truncated to 32 usable quarters by the
+    fix, shifting every statistic below). The four padding quarters at the
+    front stand in for the world's OWN opening year, before this vintage
+    exists.
+
+    The padding is uniform (dd=0, spread=1), same as the rest of the array,
+    so -- verified directly, not assumed -- the pinned numbers below are
+    UNCHANGED from before the alignment fix: a uniform sequence is
+    invariant to which contiguous 36-quarter window of it you take. Only a
+    genuinely non-uniform tape (see
+    ``test_vintage_stats_uses_the_vintage_s_own_window_not_the_world_s_opening_years``
+    below) can actually distinguish the fixed alignment from the bug.
+    """
     n = 36
-    calm_dd = np.zeros(n)
-    calm_spread = np.ones(n)
+    calm_dd = np.zeros(_QUARTERS_PER_YEAR + n)
+    calm_spread = np.ones(_QUARTERS_PER_YEAR + n)
     out = vintage_stats(calm_dd, calm_spread, n)
     # rc_curve[0] = 0.25 annual on unfunded, quarterly => 6.25% of 1.0
     # committed. Returns don't affect the first call, so this is unchanged
@@ -114,10 +133,35 @@ def test_vintage_stats_at_tier0_benchmark_growth_are_hand_checkable():
     # paid_in=0.6924, cumulative distributions=0.7729 over 36 quarters of
     # tier-0 constant growth => dpi_age9 = 0.7729 / 0.6924 = 1.116.
     assert np.isclose(out["dpi_age9"], 1.116, atol=1e-3)
-    assert 0.0 < out["call_rate_y1_3"] < 1.0
+    assert np.isclose(out["call_rate_y1_3"], 0.1798, atol=1e-3)
     # cumulative (distributions - calls) first turns positive at quarter
-    # index 34 (0-based) => crossover_years = (34 + 1) / 4 = 8.75.
+    # index 34 (0-based, within the vintage's OWN 36-quarter window)
+    # => crossover_years = (34 + 1) / 4 = 8.75.
     assert out["crossover_years"] == 8.75
+
+
+def test_vintage_stats_uses_the_vintage_s_own_window_not_the_world_s_opening_years():
+    """Review round 1, M1: a shock placed in the world's first 4 quarters --
+    BEFORE the year-1 vintage is even committed -- must be invisible to this
+    statistic, and the identical shock placed in the vintage's own final
+    quarters (the world's last 4, still inside its 36-quarter life) must
+    move it. This is the only kind of tape that can actually tell the
+    fixed alignment apart from the ``[:36]`` bug it replaced -- the
+    hand-checkable calm test above uses a uniform tape and is provably
+    insensitive to the window's position, only its length.
+    """
+    n = 36
+    baseline = vintage_stats(np.zeros(_QUARTERS_PER_YEAR + n), np.ones(_QUARTERS_PER_YEAR + n), n)
+
+    dd_front_shock = np.zeros(_QUARTERS_PER_YEAR + n)
+    dd_front_shock[:_QUARTERS_PER_YEAR] = 0.9  # world quarters 0-3: pre-commitment
+    out_front = vintage_stats(dd_front_shock, np.ones(_QUARTERS_PER_YEAR + n), n)
+    assert out_front == baseline
+
+    dd_back_shock = np.zeros(_QUARTERS_PER_YEAR + n)
+    dd_back_shock[-_QUARTERS_PER_YEAR:] = 0.9  # the vintage's own last 4 quarters
+    out_back = vintage_stats(dd_back_shock, np.ones(_QUARTERS_PER_YEAR + n), n)
+    assert out_back["dpi_age9"] != baseline["dpi_age9"]
 
 
 def test_path_stats_linkage_bite_is_a_rate_not_a_level():

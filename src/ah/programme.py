@@ -209,13 +209,18 @@ class ProgrammeStat:
     subset silently describes a biased sample, not the world. Showing the
     count as "n of N paths" on the page makes that visible instead of
     hidden behind a single clean-looking number.
+
+    ``path0`` is ``None`` when path 0 itself never computed this statistic.
+    Review round 1, I3: it used to fall back to the median, which -- now
+    that the adjacent column can read "1 of 20" -- would silently show a
+    made-up "path 0" value for a statistic path 0 never had.
     """
 
     name: str
     median: float
     p10: float
     p90: float
-    path0: float
+    path0: float | None
     band: Band
     flagged: bool
     n_present: int
@@ -237,9 +242,20 @@ def vintage_stats(
     calls net of distributions without growth) and left DPI structurally
     capped below 1.0, which is a defect of the test harness, not a question
     about the model. Committed is 1.0 so every output is a ratio.
+
+    ``drawdown_depth``/``spread_ratio`` are the WORLD's full market-state path,
+    world quarter 0 first -- the same convention ``ProgrammeQuarter`` uses
+    everywhere else on this page. A vintage "committed in year 1" is not
+    committed until the programme's own year-1 anniversary (world quarter
+    index ``_QUARTERS_PER_YEAR``, matching ``ah.play``'s own annual
+    commitment cadence), so ITS quarters are the world's quarters
+    ``_QUARTERS_PER_YEAR`` through ``_QUARTERS_PER_YEAR + quarters - 1`` --
+    NOT the world's first ``quarters`` quarters, which is mostly the
+    programme's opening years, before this vintage exists at all.
     """
     base = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
-    n = min(quarters, len(drawdown_depth))
+    start = _QUARTERS_PER_YEAR
+    n = min(quarters, max(0, len(drawdown_depth) - start))
     if n < _QUARTERS_PER_YEAR:
         return {}
     g_quarterly = (1.0 + float(load_spec()["g_annual"])) ** 0.25 - 1.0
@@ -248,8 +264,8 @@ def vintage_stats(
         committed=1.0,
         vintage_year=int(base["identity"]["vintage_year"]) + 1,
         sleeve_returns=np.full(n, g_quarterly),
-        drawdown_depth=np.asarray(drawdown_depth[:n], dtype=float),
-        spread_ratio=np.asarray(spread_ratio[:n], dtype=float),
+        drawdown_depth=np.asarray(drawdown_depth[start : start + n], dtype=float),
+        spread_ratio=np.asarray(spread_ratio[start : start + n], dtype=float),
         fees_on=False,
     )
     calls = np.array([f.call for f in result.flows])
@@ -507,7 +523,7 @@ def programme_stats(
                 median=median,
                 p10=float(np.percentile(values, 10)),
                 p90=float(np.percentile(values, 90)),
-                path0=float(path0.get(name, median)),
+                path0=float(path0[name]) if name in path0 else None,
                 band=band,
                 flagged=not (band.lo <= median <= band.hi),
                 n_present=len(values),
@@ -618,27 +634,59 @@ def _ladder_table(rep: ProgrammeReport) -> str:
     return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
 
 
+def _linkage_effect(q: ProgrammeQuarter) -> float:
+    """``distributions_unlinked - distributions``, matching the sign
+    ``path_stats``'s ``linkage_shortfall`` uses (``(unlinked - linked) /
+    unlinked``, sealed in the declared bands): positive means the linkage
+    SUPPRESSED distributions below the unlinked counterfactual (a cost),
+    negative means it RAISED them above it (a benefit).
+
+    ``f_dist``'s ceiling is 1.5 (``mappings/cashflow-tier1-v1.0.yaml``), so
+    the linkage routinely raises distributions rather than only ever
+    cutting them -- review round 1, C1: the previous
+    ``distributions - distributions_unlinked`` rendered unconditionally
+    under a "shortfall" header painted that benefit red and disagreed in
+    sign with ``linkage_shortfall`` on the very same page.
+    """
+    return q.distributions_unlinked - q.distributions
+
+
 def _linkage_table(rep: ProgrammeReport) -> str:
     head = (
         "<tr><th>qtr</th><th>drawdown</th><th>spread ratio</th><th>f_dist</th>"
         "<th>f_call</th><th>distributions</th><th>linkage off</th>"
-        "<th>shortfall</th></tr>"
+        "<th>unlinked minus linked</th></tr>"
     )
     rows = "".join(
         f"<tr><td>{q.quarter}</td><td>{_f(q.drawdown_depth, 3)}</td>"
         f"<td>{_f(q.spread_ratio, 3)}</td><td>{_f(q.f_dist, 3)}</td>"
         f"<td>{_f(q.f_call, 3)}</td><td>{_f(q.distributions)}</td>"
         f"<td>{_f(q.distributions_unlinked)}</td>"
-        f"<td class='neg'>{_f(q.distributions - q.distributions_unlinked)}</td></tr>"
+        # positive == the linkage suppressed cash (a cost, painted clay);
+        # negative == it raised cash above the unlinked counterfactual (a
+        # benefit, painted jade) -- inverted from _ladder_table's net
+        # column because here positive is the unwelcome direction.
+        f"<td class='{'neg' if _linkage_effect(q) > 0.0 else 'pos'}'>"
+        f"{_f(_linkage_effect(q))}</td></tr>"
         for q in rep.quarters
     )
     linked = sum(q.distributions for q in rep.quarters)
     unlinked = sum(q.distributions_unlinked for q in rep.quarters)
+    if unlinked > linked:
+        direction = "suppressed distributions below"
+    elif unlinked < linked:
+        direction = "raised distributions above"
+    else:
+        direction = "left distributions level with"
     return (
         f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
         f"<p class='note'>Decade total: {_f(linked)} received against {_f(unlinked)} "
-        "with the linkage off - the difference is what the market environment did to "
-        "this programme's cash.</p>"
+        f"with the linkage off - over the decade the linkage {direction} "
+        "what an unlinked tape would have paid; it can go either way, since "
+        "f_dist has a ceiling (1.5) as well as a floor. Positive cells: the "
+        "linkage suppressed that quarter's cash (a cost). Negative cells: it "
+        "raised it (a benefit) -- the same sign convention as the stats "
+        "table's linkage_shortfall.</p>"
     )
 
 
@@ -660,13 +708,23 @@ def _sale_row(s: dict[str, object]) -> str:
     amount, cause, and the sleeves sold -- typed as ``object`` because the log
     is a heterogeneous dict, so the values are narrowed here rather than at
     the call site.
+
+    ``PortfolioEngine._period`` (``src/ah/port/engine.py:75,90``) starts at 0
+    and increments at the TOP of ``run_quarter``, before that quarter's own
+    work -- so it is 1-based (the first quarter logs period 1). Every other
+    quarter number on this page is ``PlayQuarter.quarter``/
+    ``ProgrammeQuarter.quarter``, 0-based. Review round 1, I1: rendering the
+    sale log's period unconverted made a forced sale line up one quarter
+    early against the linkage table's row for the same event.
     """
     sleeves_sold = s.get("sleeves_sold", [])
     sleeves = ", ".join(str(x) for x in sleeves_sold) if isinstance(sleeves_sold, list) else ""
     amount = s.get("amount", 0.0)
     amount_f = float(amount) if isinstance(amount, int | float) else 0.0
+    period = s.get("period", 0)
+    period0 = int(period) - 1 if isinstance(period, int | float) else period
     return (
-        f"<tr><td>Q{_e(s.get('period'))}</td><td>{_e(s.get('kind'))}</td>"
+        f"<tr><td>Q{_e(period0)}</td><td>{_e(s.get('kind'))}</td>"
         f"<td>{_e(s.get('cause'))}</td><td>{_e(sleeves)}</td>"
         f"<td>{_f(amount_f)}</td></tr>"
     )
@@ -697,11 +755,35 @@ def _stack_block(rep: ProgrammeReport) -> str:
         f"<i style='height:{min(100.0, series[-1] * 4.0):.0f}%'></i>"
         for _, series in rep.vintage_stack
     )
+    # ``_vintage_stack`` collects every cohort id ``play.py`` ever wrote a
+    # ``vintage_nav`` entry for, including ones fully liquidated (terminal
+    # distribution or a forced secondary sold to zero) long before the
+    # decade's end -- review round 1, C2: the heading's own "alive" claim
+    # must count only cohorts with a positive final NAV, not every cohort
+    # ever committed.
+    alive = sum(1 for _, series in rep.vintage_stack if series and series[-1] > 0.0)
     return (
         f"<div class='stack'>{bars}</div>"
-        f"<p class='note'>{len(rep.vintage_stack)} cohorts alive at the decade's end, "
-        "newest on the right. A programme with nothing on the right has stopped "
-        "committing; one with nothing on the left has run its openers to term.</p>"
+        f"<p class='note'>{alive} of {len(rep.vintage_stack)} cohorts ever committed are "
+        "still alive (positive NAV) at the decade's end, newest on the right. A "
+        "programme with nothing on the right has stopped committing; one with "
+        "nothing on the left has run its openers to term.</p>"
+    )
+
+
+def _stat_row(s: ProgrammeStat) -> str:
+    # "-" rather than a value when path 0 never computed this statistic --
+    # review round 1, I3: falling back to the median here silently invented
+    # a "path 0" number for a statistic path 0 didn't have, right beside a
+    # present-count column that would otherwise make the gap visible.
+    path0_str = _f(s.path0, 3) if s.path0 is not None else "-"
+    return (
+        f"<tr class='{'flagged' if s.flagged else ''}'><td>{_e(s.name)}</td>"
+        f"<td>{_f(s.median, 3)}</td><td>{_f(s.p10, 3)} - {_f(s.p90, 3)}</td>"
+        f"<td>{path0_str}</td>"
+        f"<td>{s.n_present} of {s.n_total}</td>"
+        f"<td>{_f(s.band.lo, 2)} - {_f(s.band.hi, 2)}</td>"
+        f"<td class='note'>{_e(s.band.question)}</td></tr>"
     )
 
 
@@ -710,15 +792,7 @@ def _stats_table(rep: ProgrammeReport) -> str:
         "<tr><th>statistic</th><th>median</th><th>p10-p90</th><th>path 0</th>"
         "<th>paths</th><th>declared</th><th>the question</th></tr>"
     )
-    rows = "".join(
-        f"<tr class='{'flagged' if s.flagged else ''}'><td>{_e(s.name)}</td>"
-        f"<td>{_f(s.median, 3)}</td><td>{_f(s.p10, 3)} - {_f(s.p90, 3)}</td>"
-        f"<td>{_f(s.path0, 3)}</td>"
-        f"<td>{s.n_present} of {s.n_total}</td>"
-        f"<td>{_f(s.band.lo, 2)} - {_f(s.band.hi, 2)}</td>"
-        f"<td class='note'>{_e(s.band.question)}</td></tr>"
-        for s in rep.stats
-    )
+    rows = "".join(_stat_row(s) for s in rep.stats)
     return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
 
 
