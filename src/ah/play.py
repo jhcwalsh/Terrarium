@@ -141,6 +141,23 @@ class PlayQuarter:
     forced_sale_total: float
     private_weight_true: float
     unfunded_total: float
+    #: The two CONTINUOUS market states tier 1's linkage consumes, and the
+    #: multipliers they produced. Records only — computed here already, and
+    #: discarded until the credibility console needed to show the mechanism.
+    #: No regime label reaches the linkage (DN-5 Delta 3, structural).
+    drawdown_depth: float = 0.0
+    spread_ratio: float = 1.0
+    f_dist: float = 1.0
+    f_call: float = 1.0
+    #: New commitments made into the ladder this quarter (the pacing plan).
+    new_commitments: float = 0.0
+    #: NAV by cohort id at quarter close, for the per-vintage stack.
+    #:
+    #: Snapshotted BEFORE ``engine.run_quarter`` runs, so a forced secondary
+    #: in this same quarter reduces cohort NAV after this snapshot was taken.
+    #: Deliberate: the stack shows the programme's own NAV, and the
+    #: forced-sale block shows what liquidity did to it afterward.
+    vintage_nav: dict[str, float] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -296,12 +313,18 @@ def simulate_play(
     *,
     use_reported: bool = True,
     policy: Policy | None = None,
+    linkage: bool = True,
 ) -> PlayResult:
     """Run the institution over a tape, quarter by quarter, with consequences.
 
     ``decisions`` maps a decision MONTH to one of hold / derisk / leanin /
     secondary, exactly as the session service records them. Pure and
     deterministic: the same tape and the same decisions give the same result.
+
+    ``linkage=False`` runs the SAME recursion with ``f_call = f_dist = 1`` —
+    tier 0's benchmark, the sealed "one model, linkage on or off" identity.
+    It exists for the credibility console's counterfactual and is never used
+    on the scored path.
     """
     policy = policy or Policy()
     decisions = decisions or {}
@@ -344,26 +367,32 @@ def simulate_play(
             portfolio.liquid[asset].apply_return(float(q_returns[asset][q]))
 
         # the pacing plan: a new vintage every year, in every private sleeve
+        committed_this_quarter = 0.0
         if q > 0 and q % _COMMITMENT_QUARTERS == 0:
             for asset in PRIVATE_ASSETS:
                 _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4)
+                committed_this_quarter += START_TARGETS[asset] * _ANNUAL_COMMITMENT_RATE
 
         calls = 0.0
         distributions = 0.0
         dd = float(depth[q])
         sr = float(spread_ratio[q])
+        fc = tier1_f_call(dd) if linkage else 1.0
+        fd = tier1_f_dist(dd, sr) if linkage else 1.0
+        vintage_nav: dict[str, float] = {}
         for asset in PRIVATE_ASSETS:
             for cohort in ladders[asset]:
                 step = cohort.step(
                     float(q_returns[asset][q]),
-                    f_call=tier1_f_call(dd),
-                    f_dist=tier1_f_dist(dd, sr),
+                    f_call=fc,
+                    f_dist=fd,
                 )
                 calls += step.call
                 distributions += step.distribution_total
                 # the reported mark follows the tape the player is shown
                 grown = cohort.nav_reported * (1.0 + float(q_reported[asset][q]))
                 cohort.report(max(0.0, grown + step.call - step.distribution_total))
+                vintage_nav[cohort.contract.identity.cohort_id] = cohort.nav_true
 
         report = engine.run_quarter(distributions=distributions, calls=calls)
         if report.forced_sale_total > 0.0:
@@ -383,6 +412,12 @@ def simulate_play(
                 forced_sale_total=report.forced_sale_total,
                 private_weight_true=report.private_weight_true,
                 unfunded_total=portfolio.total_unfunded(),
+                drawdown_depth=dd,
+                spread_ratio=sr,
+                f_dist=fd,
+                f_call=fc,
+                new_commitments=committed_this_quarter,
+                vintage_nav=vintage_nav,
             )
         )
 

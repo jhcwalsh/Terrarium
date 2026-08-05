@@ -236,3 +236,21 @@ def test_correlations_are_symmetric_with_unit_diagonal(ensemble):
         for b in ASSETS:
             assert rep.correlations[a][b] == pytest.approx(rep.correlations[b][a])
     assert np.isfinite(list(rep.correlations["equity"].values())).all()
+
+
+def test_credibility_page_carries_the_programme_section():
+    # NOTE: the plan's snippet called render_credibility_page([rep]) with no
+    # programme list and still expected the section to appear. That cannot
+    # pass: render_programme_section([]) renders nothing when nothing is
+    # passed in, and WorldReport itself carries no NumericWorld for the page
+    # to build one from. Building and passing a ProgrammeReport, as
+    # credibility_cmd now does, is the only way this assertion can be true.
+    from ah.credibility import build_report, render_credibility_page
+    from ah.programme import build_programme_report
+
+    world = _world()
+    rep = build_report(world, base_seed=771204, n_paths=8)
+    prog = build_programme_report(world, base_seed=771204, n_paths=2)
+    page = render_credibility_page([rep], [prog])
+    assert "the private programme" in page.lower()
+    assert "linkage off" in page.lower()

@@ -32,6 +32,7 @@ import numpy as np
 
 from ah.core.engine import ASSETS, REPORTED_SLEEVES, EnsembleResult, run_ensemble
 from ah.core.numericworld import NumericWorld
+from ah.programme import PROGRAMME_CSS, ProgrammeReport, render_programme_section
 
 __all__ = [
     "PLAUSIBLE",
@@ -429,7 +430,9 @@ def _corr_table(rep: WorldReport) -> str:
     )
 
 
-def render_credibility_page(reports: list[WorldReport]) -> str:
+def render_credibility_page(
+    reports: list[WorldReport], programme: list[ProgrammeReport] | None = None
+) -> str:
     """A self-contained HTML page: one section per world, flags in the open."""
     total = sum(r.flag_count for r in reports)
     tag = (
@@ -459,7 +462,7 @@ def render_credibility_page(reports: list[WorldReport]) -> str:
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         "<title>Terrarium - credibility console</title>"
-        f"<style>{_CSS}</style></head><body>"
+        f"<style>{_CSS}{PROGRAMME_CSS}</style></head><body>"
         "<h1>Credibility console</h1>"
         f'<p class="lede">{tag}<br>Every figure is regenerated from the world\'s own '
         "seed lineage, so it is what a player would get. The declared columns are "
@@ -467,6 +470,7 @@ def render_credibility_page(reports: list[WorldReport]) -> str:
         "invitation to look, and nothing here can fail a build. Judgements that "
         "survive review belong in <code>docs/engine-realism-register.md</code>.</p>"
         + "".join(blocks)
+        + render_programme_section(programme or [])
         + "<footer>Admin surface. Not sealed, not scored, never shown to a player."
         "</footer></body></html>"
     )

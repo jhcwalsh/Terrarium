@@ -12,6 +12,120 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Added
+- **The private-programme section lands in the credibility console**
+  (`ah/programme.py`, wired into `ah/credibility.py` and `ah credibility`).
+  Admin-only diagnostic: the model's own call-rate/distribution-bow/linkage
+  curves before any world touches them, the commitment ladder year by year,
+  a vintage-NAV stack, the market linkage made explicit (both continuous
+  states, both multipliers, a same-tape linkage-off counterfactual),
+  liquidity and forced sales, and statistics judged against declared bands.
+  An import-graph test (`tests/test_programme_guard.py`) enforces read-only
+  by construction: the module cannot import `ah.store`, `ah.serve`, or
+  `sqlite3`, so it cannot write regardless of what any docstring promises.
+  Not in the pre-registration seal, no scored-path arithmetic touched, no
+  `PLAY_ALPHA_VERSION`/`DECISION_ALPHA_VERSION` bump.
+  - **Deviation from the plan, six fields not four**: `PlayQuarter` gained
+    `drawdown_depth`, `spread_ratio`, `f_dist`, `f_call`, `new_commitments`,
+    and `vintage_nav` (`ah/play.py`, commit `ee9e85a`) — additive,
+    record-only, defaulted, no existing field's meaning changed.
+    `private_weight_true` and `forced_sale_total` already existed on
+    `PlayQuarter` before this branch; `coverage_true`, `coverage_reported`,
+    and `distributions_unlinked` are derived fields of `programme.py`'s own
+    `ProgrammeQuarter`, not additions to `PlayQuarter`.
+  - **Coverage at NAV<=0 renders `float("inf")`**, matching
+    `Portfolio.coverage_true`'s own convention (an institution with
+    unfunded obligations and no assets is infinitely uncovered, not
+    perfectly covered) — the page spells this out as "NAV wiped" rather
+    than printing the literal string `inf`.
+  - **Single-cohort statistics (`vintage_stats`) run the vintage's sleeve
+    returns at tier 0's frozen `g_annual`**, not a zero-return tape: zero
+    growth makes the J-curve crossover arithmetically impossible (NAV
+    cannot outgrow calls net of distributions without growth), which is a
+    defect of the test harness, not a finding about the model.
+  - **Both linkage curves plot against their own declared clip bounds**
+    (f_dist: floor/ceiling from `mappings/cashflow-tier1-v1.0.yaml`;
+    f_call: `[0.5, 1.2]` from `cashflow_tier1.py`'s own clip call), not
+    their realised min/max — two curves auto-scaled to their own range
+    look equally steep regardless of how far either actually moves, which
+    hides the exact asymmetry (`f_call` near-flat, `f_dist` reaching its
+    floor) this block exists to show.
+  - **The linkage-effect column is signed to agree with `linkage_shortfall`**
+    (`unlinked minus linked`, positive = the linkage suppressed cash, a
+    cost) because `f_dist`'s ceiling (1.5) means the linkage can raise
+    distributions above the unlinked counterfactual as well as cut them —
+    an earlier `distributions - distributions_unlinked` under a
+    "shortfall" header would have painted a benefit red and disagreed in
+    sign with the stats table on the same page. The linkage table's
+    caption also now names a limitation found in review: "linkage off" is
+    a separate `simulate_play(linkage=False)` run on the same tape, so the
+    decade total is a sound comparison but each quarter's cell mixes the
+    linkage's direct effect with however far the two runs' NAV paths have
+    already diverged by then.
+  - **Final review, two Critical fixes.** Both were plausible-looking wrong
+    numbers rather than crashes, which on a page whose entire value is that
+    its numbers can be trusted is the worse failure — a crash is visible.
+    - **The rug's x-axis did not match its curve's x-axis** (`_rug`). `_rug`
+      normalised x by `max(xs)` while `_sparkline` drew the curve across the
+      full `0…1.0` drawdown domain, so every dot was stretched horizontally
+      by `1/max(drawdown)`: measured on goldilocks (max drawdown 0.278), a
+      quarter whose drawdown was 0.109 was drawn where the curve reads 0.392,
+      3.6x wrong, with a peak 24px vertical mismatch on a 34px plot. The rug
+      was a scatter cloud unrelated to the curve it overlaid. `_rug` now takes
+      an explicit `x_domain` parallel to its existing (y-)`domain`, and
+      `model_block` passes the curves' own `_DD_DOMAIN`. This is the same
+      defect class an earlier round fixed for the Y axis; X was missed
+      because nothing pinned either domain — a geometry test now does, and
+      its teeth were verified by reverting each axis in turn.
+    - **`linkage_bite` was dominated by cohort terminal liquidation.**
+      Dividing the deepest-drawdown quarter's distribution rate by the median
+      quarter's meant a cohort winding up in that quarter paid a whole
+      cohort's NAV out at once against a private NAV the payout had itself
+      collapsed. Measured, `deflation_bust` path 0 quarter 19 reported
+      `linkage_bite = 110.65` — a 110x *increase* in distributions at the
+      exact quarter `f_dist` was pinned to its 0.300 floor, i.e. maximum
+      suppression — beside an UNFLAGGED median of 0.683. Stagflation path 0
+      read 73.2. The statistic is kept and made robust on the owner's ruling:
+      the rate is now a **trailing four-quarter** figure (four quarters of
+      distributions over the private NAV the window opened with), and any
+      window overlapping a **terminal liquidation** is excluded from both the
+      worst-quarter selection and the median. Wind-ups are detected from the
+      per-cohort NAV `ah/play.py` already records. The worst quarter is still
+      selected on drawdown depth and never on the distribution value. Path 0
+      now reads 1.123 (stagflation) and 1.445 (deflation_bust).
+    - **`linkage_bite`'s declared band re-declared 0.30–0.80 → 0.50–1.20.**
+      The old band was a prior about a *single* quarter's rate; a trailing
+      window necessarily reads closer to 1.0, and the decade median it is
+      divided by includes the opening years when the ladder has barely begun
+      distributing. All four presets now read 0.74–0.85 (unflagged); the old
+      band split them arbitrarily across its 0.80 edge on indistinguishable
+      behaviour. Bands are declared priors and are meant to be edited — the
+      arithmetic was not tuned to hit one.
+  - **Also from final review**: the model block's rug caption now names the
+    world it came from (it is rendered once above *every* world, so "this
+    world's quarters" was false for every section but the first on a
+    multi-world page) and explains why f_dist's dots scatter off their curve
+    while f_call's sit exactly on it (f_dist also responds to the spread
+    ratio, which the curve holds at 1); a statistic absent on **every** path
+    now renders as a flagged `0 of N` row with dashes instead of vanishing
+    (`deflation_bust` silently had no `crossover_years` row, leaving "never
+    happened" indistinguishable from "forgotten"); "coverage" is defined on
+    the page as unfunded ÷ NAV with the direction stated, since *higher is
+    worse* and a newcomer reads "coverage 0.58" as the opposite; the cash
+    sparkline prints its peak, low and final, since it auto-scales and every
+    preset ends the decade at 0.000; and `ladder_years` slices its source run
+    by the block's own length rather than a fixed four-quarter stride, so a
+    truncated rows list cannot desync `committed` from `called`.
+  - **Runtime cost**: `build_programme_report` at the default 20 paths
+    measured ~1.8s/world (20 full waterfall simulations + 20 `run_tier1`
+    calls); `ah credibility --preset stagflation --preset deflation_bust`
+    end to end (400-path `WorldReport` ensembles included) measured ~4.8s
+    for two worlds — four presets is comfortably under the 3-minute budget
+    without caching. The cohort fixture JSON (previously re-read and
+    re-parsed on every `vintage_stats`/`model_block` call) is now behind
+    an `lru_cache`d loader regardless, since the fixture is frozen and
+    committed and the redundant I/O was free to remove.
+
 ### Changed
 - **The experience-deltas register audited against the shipped surface**
   (`Instructions/experience-deltas-register.md`). Every row still read
