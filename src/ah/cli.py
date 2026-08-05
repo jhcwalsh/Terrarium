@@ -310,9 +310,11 @@ def credibility_cmd(
     to read before a world reaches a player.
     """
     from ah.credibility import build_report, render_credibility_page
+    from ah.programme import build_programme_report
 
     conn = _db(ctx)
     reports = []
+    programme = []
 
     ids = list(run_ids or [])
     if not ids and not preset:
@@ -326,14 +328,10 @@ def credibility_cmd(
             raise typer.BadParameter(f"run {rid} references missing world {rec['world_id']}")
         ws = WorldSpec.model_validate(world_doc)
         narrative = world_doc.get("narrative") or {}
-        reports.append(
-            build_report(
-                project_numeric(ws),
-                base_seed=rec["seed"],
-                n_paths=paths,
-                title=f"{narrative.get('title') or rec['world_id']} - run {rid[:8]}",
-            )
-        )
+        world = project_numeric(ws)
+        title = f"{narrative.get('title') or rec['world_id']} - run {rid[:8]}"
+        reports.append(build_report(world, base_seed=rec["seed"], n_paths=paths, title=title))
+        programme.append(build_programme_report(world, base_seed=rec["seed"], title=title))
 
     for name in preset:
         src = PRESETS_DIR / f"{name}.json"
@@ -342,18 +340,14 @@ def credibility_cmd(
         doc = json.loads(src.read_text(encoding="utf-8"))
         ws = WorldSpec.model_validate(doc)
         narrative = doc.get("narrative") or {}
-        reports.append(
-            build_report(
-                project_numeric(ws),
-                base_seed=seed,
-                n_paths=paths,
-                title=f"{narrative.get('title') or name} - preset {name}",
-            )
-        )
+        world = project_numeric(ws)
+        title = f"{narrative.get('title') or name} - preset {name}"
+        reports.append(build_report(world, base_seed=seed, n_paths=paths, title=title))
+        programme.append(build_programme_report(world, base_seed=seed, title=title))
 
     target = out if out is not None else Path("credibility.html")
     target.parent.mkdir(parents=True, exist_ok=True)
-    target.write_text(render_credibility_page(reports), encoding="utf-8", newline="\n")
+    target.write_text(render_credibility_page(reports, programme), encoding="utf-8", newline="\n")
     flags = sum(r.flag_count for r in reports)
     typer.echo(f"{target} ({len(reports)} worlds, {flags} flags)")
 

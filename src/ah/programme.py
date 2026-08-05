@@ -24,7 +24,9 @@ from __future__ import annotations
 import html as _html
 import json
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -171,6 +173,19 @@ _REPO_ROOT = Path(__file__).resolve().parents[2]
 _COHORT_DOC = _REPO_ROOT / "fixtures" / "state" / "closed-end-cohort.example.json"
 
 
+@lru_cache(maxsize=1)
+def _cohort_doc() -> dict[str, Any]:
+    """The frozen cohort fixture, read once.
+
+    ``vintage_stats`` re-reads this per path (20 paths/world) and
+    ``_model_curves``/``model_block`` read it again per report; none of it
+    ever changes within a process, so ``lru_cache`` is safe -- the fixture is
+    a committed, read-only file (``fixtures/state/closed-end-cohort.example.json``),
+    not something a running console could mutate underneath itself.
+    """
+    return json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+
+
 @dataclass(frozen=True)
 class Band:
     """A declared plausible range. A prior written down for argument, not truth."""
@@ -253,7 +268,7 @@ def vintage_stats(
     NOT the world's first ``quarters`` quarters, which is mostly the
     programme's opening years, before this vintage exists at all.
     """
-    base = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+    base = _cohort_doc()
     start = _QUARTERS_PER_YEAR
     n = min(quarters, max(0, len(drawdown_depth) - start))
     if n < _QUARTERS_PER_YEAR:
@@ -403,7 +418,7 @@ def _model_curves() -> dict[str, list[float]]:
     ``bow`` (the distribution bow Y(age/L)^B), ``f_dist`` and ``f_call``
     (the two linkage responses over drawdown depth, at spread_ratio = 1).
     """
-    doc = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+    doc = _cohort_doc()
     params = doc["parameters"]
     life = float(doc["lifecycle"]["contractual_life_years"])
     rc_curve = [float(v) for v in params["rc_curve"]]
@@ -430,7 +445,7 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
     World-independent except for the optional rug, which marks where the
     decade's quarters landed on the two response curves.
     """
-    doc = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+    doc = _cohort_doc()
     params = doc["parameters"]
     life = float(doc["lifecycle"]["contractual_life_years"])
     bow, yield_rate = float(params["bow"]), float(params["yield_rate"])
@@ -686,7 +701,12 @@ def _linkage_table(rep: ProgrammeReport) -> str:
         "f_dist has a ceiling (1.5) as well as a floor. Positive cells: the "
         "linkage suppressed that quarter's cash (a cost). Negative cells: it "
         "raised it (a benefit) -- the same sign convention as the stats "
-        "table's linkage_shortfall.</p>"
+        "table's linkage_shortfall. Caveat: 'linkage off' is a SEPARATE "
+        "simulate_play run on the same tape, not the linked run with the "
+        "linkage subtracted out -- so the decade total is a sound comparison, "
+        "but each quarter's 'unlinked minus linked' cell mixes the linkage's "
+        "direct effect with however far the two runs' NAV paths have already "
+        "diverged by that quarter, and is approximate for that reason.</p>"
     )
 
 
