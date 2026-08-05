@@ -10,11 +10,12 @@ from typing import Any
 
 import numpy as np
 
-from ah.play import PlayResult
+from ah.play import PlayQuarter, PlayResult
 from ah.programme import (
     _QUARTERS_PER_YEAR,
     PROGRAMME_PLAUSIBLE,
     ProgrammeQuarter,
+    _terminal_liquidation_quarters,
     path_stats,
     programme_stats,
     vintage_stats,
@@ -89,10 +90,31 @@ def test_stats_report_median_and_the_ten_ninety_spread():
     assert dpi.path0 == 3.0
 
 
-def test_a_missing_statistic_does_not_crash_the_report():
-    """A world too short to define a statistic omits it rather than raising."""
+def test_a_statistic_no_path_could_compute_is_rendered_as_zero_of_n_not_dropped():
+    """Review round 2, I2: this used to assert ``stats == []`` -- the row was
+    dropped when NO path computed the statistic.
+
+    That is backwards. Partial presence was already visible through the
+    "n of N" count column; TOTAL absence, the case a reader most needs to
+    see, disappeared without trace and left "this never happened in any of
+    the 20 paths" indistinguishable from "somebody forgot to compute it".
+    Confirmed live before the fix: deflation_bust rendered no
+    ``crossover_years`` row at all.
+
+    The "does not crash" half of the original test is preserved -- an empty
+    per-path lineage still returns cleanly rather than raising -- while the
+    assertion is inverted to the behaviour the fix requires.
+    """
     stats = programme_stats([{}, {}], {})
-    assert stats == []
+    assert len(stats) == len(PROGRAMME_PLAUSIBLE)
+    for s in stats:
+        assert s.n_present == 0
+        assert s.n_total == 2
+        assert s.median is None
+        assert s.p10 is None
+        assert s.p90 is None
+        assert s.path0 is None
+        assert s.flagged, "a band with nothing to judge is an unanswered question"
 
 
 def test_vintage_stats_at_tier0_benchmark_growth_are_hand_checkable():
@@ -171,22 +193,29 @@ def test_path_stats_linkage_bite_is_a_rate_not_a_level():
     linkage effect. A level-based implementation would instead compare the
     raw distribution amounts and land far from 1.0.
 
-    private_nav = 1, 2, 3, 4, 5; rate is constant at 0.2, so
-    distributions = 0.2, 0.4, 0.6, 0.8, 1.0. Deepest drawdown is quarter 3
-    (private_nav=4, distribution=0.8), NOT the median-value quarter.
+    Review round 2, C2: the tape is now 12 quarters of GEOMETRIC growth
+    rather than 5 of linear growth. The assertion (bite == 1.0 exactly) and
+    the property it pins are unchanged; the tape had to change because
+    ``linkage_bite`` now compares TRAILING four-quarter rates, and a
+    trailing rate is only exactly constant under a constant NAV growth
+    RATE. Four quarters of distributions over the NAV the window opened
+    with is ``0.2 * (g + g^2 + g^3 + g^4)`` at every quarter, independent
+    of where in the decade the window sits.
 
-    Rate-based: every quarter's rate is exactly 0.2, so worst rate (0.2) /
-    median rate (0.2) = 1.0 exactly, regardless of which quarter is "worst".
-    Level-based (wrong): median distribution level = median(0.2,0.4,0.6,0.8,
-    1.0) = 0.6; worst-quarter (deepest drawdown, q3) level = 0.8;
-    0.8 / 0.6 = 1.333..., far from 1.0.
+    private_nav = 1.05^i, distributions = 0.2 * private_nav, deepest
+    drawdown at the LAST quarter (not the middle one) so a level-based
+    implementation cannot accidentally agree: comparing raw trailing SUMS
+    would give the last window's sum over the median window's sum =
+    1.05^4 = 1.2155, not 1.0.
     """
-    private_navs = [1.0, 2.0, 3.0, 4.0, 5.0]
-    rate = 0.2
-    depths = [0.10, 0.05, 0.02, 0.50, 0.01]  # deepest at index 3
+    g = 1.05
+    n = 12
+    navs = [g**i for i in range(n)]
+    depths = [0.01] * n
+    depths[-1] = 0.9  # deepest at the last quarter
     rows = [
-        _pq(quarter=i, private_nav=nav, distributions=rate * nav, drawdown_depth=dd)
-        for i, (nav, dd) in enumerate(zip(private_navs, depths, strict=True))
+        _pq(quarter=i, private_nav=nav, distributions=0.2 * nav, drawdown_depth=dd)
+        for i, (nav, dd) in enumerate(zip(navs, depths, strict=True))
     ]
     out = path_stats(rows, _play_result())
     assert np.isclose(out["linkage_bite"], 1.0, atol=1e-9)
@@ -199,24 +228,144 @@ def test_path_stats_worst_quarter_is_selected_by_drawdown_not_distribution():
     statistic circular ("the quarter with the lowest distributions has a
     low distribution rate").
 
-    private_nav is constant at 1.0 so rate == distributions exactly, with
-    no rate-vs-level confound. Rates (in quarter order): 0.5, 0.1, 0.9, 0.05.
-    Deepest drawdown is quarter 2 (depth 0.9), whose rate (0.9) is the
-    HIGHEST, not the lowest -- so a bug that picked the min-distribution
-    quarter (quarter 3, rate 0.05) would be caught by this test.
+    Review round 2, C2: the tape is now 12 quarters rather than 4. The
+    property and the pinned answer (3.0) are unchanged; four quarters no
+    longer produce more than one trailing window, so the old tape could not
+    express "worst" and "median" as different quarters at all.
 
-    median(0.5, 0.1, 0.9, 0.05) = (0.1 + 0.5) / 2 = 0.3.
-    linkage_bite = worst (0.9, picked by depth) / median (0.3) = 3.0.
-    A min-distribution-selecting bug would instead compute 0.05 / 0.3 = 0.1667.
+    private_nav is constant at 1.0, so a trailing rate is just the sum of
+    its four quarters' distributions. Distributions are 0.05 everywhere
+    except quarter 5, which pays 0.45 -- so trailing rates are 0.20 for the
+    windows that miss quarter 5 (i = 3, 4, 9, 10, 11) and 0.60 for the four
+    that contain it (i = 5, 6, 7, 8). median(0.20 x5, 0.60 x4) = 0.20.
+
+    The deepest drawdown is at quarter 5, whose trailing rate (0.60) is the
+    HIGHEST, not the lowest: linkage_bite = 0.60 / 0.20 = 3.0. A bug that
+    selected the minimum-distribution window instead would compute
+    0.20 / 0.20 = 1.0.
     """
-    rates = [0.5, 0.1, 0.9, 0.05]
-    depths = [0.01, 0.02, 0.90, 0.01]  # deepest at index 2
+    n = 12
+    dists = [0.05] * n
+    dists[5] = 0.45
+    depths = [0.01] * n
+    depths[5] = 0.90  # deepest at index 5
     rows = [
-        _pq(quarter=i, private_nav=1.0, distributions=rate, drawdown_depth=dd)
-        for i, (rate, dd) in enumerate(zip(rates, depths, strict=True))
+        _pq(quarter=i, private_nav=1.0, distributions=d, drawdown_depth=dd)
+        for i, (d, dd) in enumerate(zip(dists, depths, strict=True))
     ]
     out = path_stats(rows, _play_result())
     assert np.isclose(out["linkage_bite"], 3.0, atol=1e-9)
+
+
+def _play_result_with_navs(navs: list[dict[str, float]]) -> PlayResult:
+    """A PlayResult carrying per-cohort NAV, which is all
+    ``_terminal_liquidation_quarters`` reads."""
+    return PlayResult(
+        quarters=[
+            PlayQuarter(
+                quarter=i,
+                month=i * 3 + 2,
+                cash=0.0,
+                nav_true=0.0,
+                nav_reported=0.0,
+                calls_paid=0.0,
+                distributions_received=0.0,
+                spending_paid=0.0,
+                forced_sale_total=0.0,
+                private_weight_true=0.0,
+                unfunded_total=0.0,
+                vintage_nav=dict(nav),
+            )
+            for i, nav in enumerate(navs)
+        ],
+        final_value=0.0,
+        forced_sale_quarters=0,
+        total_forced_sales=0.0,
+    )
+
+
+def test_terminal_liquidation_quarters_finds_the_quarter_a_cohort_wound_up():
+    """A cohort with positive NAV in one quarter and zero (or no entry) in
+    the next has wound up IN that next quarter -- review round 2, C2."""
+    navs: list[dict[str, float]] = [{"c0": 10.0}] * 6 + [{"c0": 0.0}] * 6
+    assert _terminal_liquidation_quarters(_play_result_with_navs(navs)) == {6}
+
+    # a cohort that simply vanishes from the dict counts the same way
+    dropped: list[dict[str, float]] = [{"c0": 10.0}] * 3 + [{}] * 3
+    assert _terminal_liquidation_quarters(_play_result_with_navs(dropped)) == {3}
+
+    # a programme where nothing ever winds up has no such quarters
+    steady: list[dict[str, float]] = [{"c0": 10.0}] * 8
+    assert _terminal_liquidation_quarters(_play_result_with_navs(steady)) == set()
+
+
+def test_path_stats_linkage_bite_excludes_a_cohort_wind_up_lump():
+    """Review round 2, C2: the defect this exists to prevent.
+
+    A cohort winds up in quarter 6, paying its whole remaining NAV out as a
+    10.0 lump against a baseline of 0.05 a quarter -- and quarter 6 is also
+    the deepest drawdown, exactly the coincidence that produced
+    linkage_bite = 110.65 on deflation_bust path 0 before the fix.
+
+    With the lump included, the trailing windows containing quarter 6
+    (i = 6, 7, 8, 9) read 0.15 + 10.0 = 10.15 against 0.20 elsewhere;
+    median(0.20 x5, 10.15 x4) = 0.20 and the worst-drawdown window is the
+    lump's own, giving 10.15 / 0.20 = 50.75 -- a report that distributions
+    ROSE fifty-fold in the worst quarter of the decade.
+
+    With those four windows excluded, every surviving window reads 0.20,
+    the deepest REMAINING drawdown is quarter 5, and the answer is 1.0.
+    """
+    n = 12
+    dists = [0.05] * n
+    dists[6] = 10.0  # the wind-up lump
+    depths = [0.01] * n
+    depths[6] = 0.90  # deepest drawdown lands on the wind-up
+    depths[5] = 0.50  # deepest of what survives the exclusion
+    rows = [
+        _pq(quarter=i, private_nav=1.0, distributions=d, drawdown_depth=dd)
+        for i, (d, dd) in enumerate(zip(dists, depths, strict=True))
+    ]
+    navs: list[dict[str, float]] = [{"c0": 10.0}] * 6 + [{"c0": 0.0}] * 6
+    out = path_stats(rows, _play_result_with_navs(navs))
+    assert np.isclose(out["linkage_bite"], 1.0, atol=1e-9)
+    assert out["linkage_bite"] < 2.0, "the 50.75 the lump would have produced is gone"
+
+    # and the lump is only excluded because it was DETECTED: hand the same
+    # tape a PlayResult in which nothing winds up, and it comes straight back.
+    steady: list[dict[str, float]] = [{"c0": 10.0}] * n
+    unguarded = path_stats(rows, _play_result_with_navs(steady))
+    assert np.isclose(unguarded["linkage_bite"], 50.75, atol=1e-9)
+
+
+def test_path_stats_linkage_bite_averages_a_spike_rather_than_propagating_it():
+    """The trailing window's other half: a single loud quarter that is NOT a
+    wind-up is diluted to a quarter of the numerator rather than becoming
+    all of it -- review round 2, C2.
+
+    private_nav is constant at 1.0. Distributions are 0.1 a quarter except
+    quarter 5, which pays 1.6, and quarter 5 is the deepest drawdown.
+
+    Single-quarter (the old definition): worst rate = 1.6, median rate =
+    0.1, bite = 16.0.
+    Trailing four-quarter: the windows containing quarter 5 (i = 5, 6, 7, 8)
+    read 0.3 + 1.6 = 1.9, the other five read 0.4, median = 0.4, and
+    bite = 1.9 / 0.4 = 4.75 -- the spike still shows, at a quarter of the
+    weight, which is the point.
+    """
+    n = 12
+    dists = [0.1] * n
+    dists[5] = 1.6
+    depths = [0.01] * n
+    depths[5] = 0.90
+    rows = [
+        _pq(quarter=i, private_nav=1.0, distributions=d, drawdown_depth=dd)
+        for i, (d, dd) in enumerate(zip(dists, depths, strict=True))
+    ]
+    out = path_stats(rows, _play_result())
+    assert np.isclose(out["linkage_bite"], 4.75, atol=1e-9)
+    single_quarter_equivalent = 1.6 / 0.1
+    assert out["linkage_bite"] < single_quarter_equivalent / 3.0
 
 
 def test_path_stats_linkage_shortfall_is_the_share_of_the_unlinked_total():

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import math
+import re
 from pathlib import Path
 
 import pytest
@@ -489,6 +490,249 @@ def test_programme_stat_path0_is_none_when_absent_from_path0():
     stats = programme_stats(per_path, {})  # path 0 never has the key
     stat = next(s for s in stats if s.name == name)
     assert stat.path0 is None
+
+
+def _svg_for(html: str, row_label: str) -> str:
+    """The one <svg> belonging to a named row of the model block's table."""
+    row = next(r for r in html.split("<tr>") if row_label in r)
+    return row[row.index("<svg") : row.index("</svg>")]
+
+
+def _polyline_points(svg: str) -> list[tuple[float, float]]:
+    raw = re.search(r'points="([^"]+)"', svg)
+    assert raw is not None
+    return [(float(p.split(",")[0]), float(p.split(",")[1])) for p in raw.group(1).split()]
+
+
+def _circles(svg: str) -> list[tuple[float, float]]:
+    return [
+        (float(cx), float(cy))
+        for cx, cy in re.findall(r'<circle cx="([-\d.]+)" cy="([-\d.]+)"', svg)
+    ]
+
+
+# ---------------------------------------------------------------------------
+# Review round 2, C1 + deferred minor #6: NOTHING pinned the rendering
+# domains, so reverting either axis to auto-scaling passed every test in the
+# suite. The rug's x-axis was in fact auto-scaled -- every dot stretched
+# horizontally by 1/max(drawdown), putting a 0.109 drawdown where the curve
+# reads 0.392 on goldilocks -- and no test noticed.
+#
+# This pins GEOMETRY: a quarter whose drawdown and multiplier lie exactly ON
+# the curve must have its dot land exactly on the curve's own vertex. Teeth
+# verified by reverting each axis in turn (x to max(xs), y to min/max of ys)
+# and confirming this test fails, then restoring -- see the fix report.
+
+
+def test_the_rug_lands_on_the_curve_it_overlays_on_both_axes():
+    from ah.programme import _DD_DOMAIN, ProgrammeQuarter, _model_curves, model_block
+
+    curves = _model_curves()
+    # _DD_DOMAIN steps by 1/40, so drawdown 0.25 is sample 10 and 0.50 is
+    # sample 20. Two points, not one: a single point cannot distinguish a
+    # fixed domain from a degenerate auto-scaled one.
+    idx_a, idx_b = 10, 20
+    dd_a, dd_b = _DD_DOMAIN[idx_a], _DD_DOMAIN[idx_b]
+    assert (dd_a, dd_b) == (0.25, 0.5)
+
+    def q(n: int, dd: float, i: int) -> ProgrammeQuarter:
+        return _q(
+            quarter=n,
+            drawdown_depth=dd,
+            f_dist=curves["f_dist"][i],
+            f_call=curves["f_call"][i],
+        )
+
+    html = model_block([q(0, dd_a, idx_a), q(1, dd_b, idx_b)], "t")
+
+    for label, curve_key in (("f_dist(drawdown)", "f_dist"), ("f_call(drawdown)", "f_call")):
+        svg = _svg_for(html, label)
+        points = _polyline_points(svg)
+        dots = _circles(svg)
+        assert len(points) == len(_DD_DOMAIN) == len(curves[curve_key])
+        assert len(dots) == 2
+        for dot, i in zip(dots, (idx_a, idx_b), strict=True):
+            # X: drawdown 0.25 sits a quarter of the way across a 150px plot,
+            # NOT at 150 (which is where auto-scaling to max(xs) puts it).
+            assert dot[0] == pytest.approx(points[i][0], abs=0.05), (
+                f"{label}: dot x {dot[0]} is not the curve's x at sample {i} "
+                f"({points[i][0]}) -- the rug is on a different x-axis"
+            )
+            # Y: the quarter's multiplier IS the curve's value there, so the
+            # dot must sit on the vertex, not merely somewhere in the plot.
+            assert dot[1] == pytest.approx(points[i][1], abs=0.05), (
+                f"{label}: dot y {dot[1]} is not the curve's y at sample {i} "
+                f"({points[i][1]}) -- the rug is on a different y-axis"
+            )
+
+    # and the absolute numbers, so a change of plot width or domain is a
+    # deliberate edit rather than a silent drift: 150px wide, 41 samples.
+    assert _polyline_points(_svg_for(html, "f_dist(drawdown)"))[idx_a][0] == pytest.approx(37.5)
+    assert _circles(_svg_for(html, "f_dist(drawdown)"))[0][0] == pytest.approx(37.5)
+
+
+# ---------------------------------------------------------------------------
+# Review round 2, I1: the model block is rendered ONCE above every world, so
+# its rug belongs to reports[0] and only reports[0]. "this world's quarters"
+# is false for every other section on a multi-world page, which is the
+# console's ordinary invocation (ah credibility --preset a --preset b).
+
+
+def test_the_rug_caption_names_the_world_the_rug_came_from():
+    from ah.programme import ProgrammeReport, render_programme_section
+
+    def rep(title: str) -> ProgrammeReport:
+        return ProgrammeReport(
+            world_id=title,
+            title=title,
+            quarters=[_q(quarter=0, drawdown_depth=0.2, f_dist=0.8, f_call=0.98)],
+            ladder=[],
+            stats=[],
+            vintage_stack=[],
+            forced_sales=[],
+        )
+
+    html = render_programme_section([rep("stagflation"), rep("deflation bust")])
+    assert "stagflation's quarters actually landed" in html
+    assert "this world's quarters" not in html
+
+
+def test_a_real_worlds_f_call_rug_lies_exactly_on_its_curve(report):
+    """C1 on real output, not a hand-built tape.
+
+    ``f_call`` is a function of drawdown ALONE (cashflow_tier1.py:60-65), so
+    every quarter of any world must land exactly on the plotted curve -- to
+    within the interpolation between two samples 1/40 of the domain apart.
+    ``f_dist`` cannot be asserted this way and deliberately is not: it also
+    responds to the spread ratio, which the curve holds at 1, so its dots
+    scatter vertically by design. That asymmetry is what makes f_call the
+    honest geometry check.
+    """
+    from ah.programme import model_block
+
+    svg = _svg_for(model_block(report.quarters, report.title), "f_call(drawdown)")
+    points = _polyline_points(svg)
+    dots = _circles(svg)
+    assert len(dots) == len(report.quarters)
+    for cx, cy in dots:
+        nearest = min(points, key=lambda p: abs(p[0] - cx))
+        assert abs(nearest[1] - cy) < 0.6, (
+            f"f_call dot at ({cx}, {cy}) is off its own curve -- the rug and the "
+            "curve are not on the same axes"
+        )
+    # and the world's drawdowns must not have been stretched to fill the plot:
+    # stagflation never reaches drawdown 1.0, so no dot may sit at the edge.
+    assert max(cx for cx, _ in dots) < 149.0
+
+
+def test_the_model_caption_explains_the_f_dist_scatter():
+    """A reader who sees f_dist's dots off its curve must be told why (the
+    spread term), or the correct plot reads as the bug C1 just fixed."""
+    from ah.programme import model_block
+
+    html = model_block([_q(quarter=0)], "t").lower()
+    assert "spread ratio, which the curve holds at 1" in html
+    assert "not a plotting artefact" in html
+
+
+def test_the_rug_caption_falls_back_when_no_world_is_named():
+    from ah.programme import model_block
+
+    assert "this world's quarters" in model_block([_q(quarter=0)])
+
+
+# ---------------------------------------------------------------------------
+# Review round 2, I2: a statistic absent on EVERY path must render as a
+# "0 of N" row with dashes, not vanish. Confirmed live before the fix:
+# deflation_bust rendered no crossover_years row at all, leaving "never
+# happened" indistinguishable from "forgotten".
+
+
+def test_stats_table_renders_a_zero_of_n_row_for_a_statistic_no_path_had():
+    from ah.programme import ProgrammeReport, _stats_table, programme_stats
+
+    stats = programme_stats([{"dpi_age9": 1.0}, {"dpi_age9": 1.2}], {"dpi_age9": 1.0})
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[],
+        ladder=[],
+        stats=stats,
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _stats_table(rep)
+    assert "crossover_years" in html, "an absent statistic must still have a row"
+    row = next(r for r in html.split("<tr") if "crossover_years" in r)
+    assert "0 of 2" in row
+    assert "flagged" in row
+    assert row.count("<td>-</td>") >= 3, "median, spread and path 0 all dash out"
+    # the statistic that IS present is unaffected
+    present = next(r for r in html.split("<tr") if "dpi_age9" in r)
+    assert "2 of 2" in present
+    assert "1.100" in present
+
+
+# ---------------------------------------------------------------------------
+# Review round 2, I3: "coverage 0.58" reads as "58% covered" to a newcomer
+# and means the opposite. And M-b: the cash spark auto-scales with no numbers
+# beside it, so its shape alone says nothing about the level.
+
+
+def test_liquidity_note_defines_coverage_and_states_its_direction():
+    from ah.programme import ProgrammeReport, _liquidity_block
+
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[_q(quarter=0, cash=13.0, coverage_true=0.58, coverage_reported=0.4)],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _liquidity_block(rep).lower()
+    assert "unfunded obligations divided by nav" in html
+    assert "higher is worse" in html
+
+
+def test_liquidity_block_prints_the_cash_low_and_final_beside_the_spark():
+    from ah.programme import ProgrammeReport, _liquidity_block
+
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[
+            _q(quarter=0, cash=13.0),
+            _q(quarter=1, cash=2.0),
+            _q(quarter=2, cash=7.5),
+        ],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _liquidity_block(rep)
+    assert "peak 13.00" in html
+    assert "low 2.00" in html
+    assert "final 7.50" in html
+
+
+def test_stats_table_caption_says_the_rate_is_a_trailing_four_quarter_figure():
+    from ah.programme import ProgrammeReport, _stats_table
+
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _stats_table(rep).lower()
+    assert "trailing four-quarter" in html
+    assert "terminal liquidation" in html
 
 
 def test_stats_table_renders_a_dash_when_path0_is_missing():

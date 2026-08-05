@@ -164,3 +164,47 @@ def test_ladder_years_handles_partial_blocks(runs):
     # unfunded_end and private_nav_end should come from the true last row (index 37)
     assert last_year.unfunded_end == partial_rows[37].unfunded
     assert last_year.private_nav_end == partial_rows[37].private_nav
+
+    # Review round 2, M-a: `committed` is the one column read from
+    # linked.quarters rather than from the rows list, and it was sliced with a
+    # fixed four-quarter stride while every other column came from the block.
+    # On this shape -- a two-row final block -- the old code summed FOUR
+    # source quarters' commitments into a row whose called/distributed cover
+    # two, so the columns of one table row described different spans. This
+    # test exercised exactly that shape and asserted nothing about committed.
+    assert last_year.called == pytest.approx(sum(r.calls for r in partial_rows[36:38]))
+    assert last_year.committed == pytest.approx(
+        sum(q.new_commitments for q in linked.quarters[36:38])
+    )
+    # NOTE: on this real tape the assertion above cannot by itself fail the
+    # old code -- ah.play commits only when q % 4 == 0 (src/ah/play.py:371),
+    # so quarters 38 and 39 contribute nothing whether they are summed or
+    # not. The test with teeth is
+    # test_ladder_committed_comes_from_as_many_source_quarters_as_the_block,
+    # below, which uses a source run carrying commitments in every quarter.
+
+
+def test_ladder_committed_comes_from_as_many_source_quarters_as_the_block(runs):
+    """Review round 2, M-a, with teeth.
+
+    ``committed`` is the only ladder column read from the source PlayResult
+    rather than from the rows list, and it was sliced with a fixed
+    four-quarter stride. Give the source run a commitment in EVERY quarter
+    (ah.play's own ladder only commits one quarter in four, which is why the
+    real-tape assertion above cannot see the bug) and truncate the rows to
+    six: year 1's block is two rows long, so its committed must cover two
+    source quarters (10 + 100 = 110), not four (10 + 100 + 1000 + 10000).
+    """
+    linked, unlinked = runs
+    rows = programme_quarters(linked, unlinked)[:6]
+    amounts = [1.0, 2.0, 3.0, 4.0, 10.0, 100.0, 1000.0, 10000.0]
+    source = replace(
+        linked,
+        quarters=[
+            replace(q, new_commitments=a) for q, a in zip(linked.quarters[:8], amounts, strict=True)
+        ],
+    )
+    years = ladder_years(rows, source)
+    assert len(years) == 2
+    assert years[0].committed == pytest.approx(1.0 + 2.0 + 3.0 + 4.0)
+    assert years[1].committed == pytest.approx(110.0)

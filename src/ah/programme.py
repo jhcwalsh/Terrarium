@@ -150,7 +150,14 @@ def ladder_years(quarters: list[ProgrammeQuarter], linked: PlayResult) -> list[L
         block = quarters[start : start + _QUARTERS_PER_YEAR]
         if not block:
             continue
-        source = linked.quarters[start : start + _QUARTERS_PER_YEAR]
+        # Slice the source run by the BLOCK's own length, not a fixed stride:
+        # ``quarters`` and ``linked.quarters`` are the same length today, but
+        # if a caller ever passes a truncated rows list (as
+        # ``test_ladder_years_handles_partial_blocks`` does) a fixed stride
+        # would take four source quarters against a two-row block and desync
+        # the ``committed`` column from ``called``/``distributed`` in the same
+        # table row -- review round 2, M-a.
+        source = linked.quarters[start : start + len(block)]
         called = sum(r.calls for r in block)
         distributed = sum(r.distributions for r in block)
         running_called += called
@@ -204,7 +211,22 @@ PROGRAMME_PLAUSIBLE: dict[str, Band] = {
     "call_rate_y1_3": Band(0.15, 0.45, "do funds draw at a realistic speed"),
     "crossover_years": Band(4.0, 8.0, "the J-curve crossover"),
     "dpi_age9": Band(0.7, 2.0, "does a fund actually return capital"),
-    "linkage_bite": Band(0.30, 0.80, "how hard the linkage bites, as a rate not a level"),
+    # RE-DECLARED, review round 2 C2, when linkage_bite became a TRAILING
+    # four-quarter rate with cohort wind-ups excluded. The old 0.30-0.80 was a
+    # prior about a SINGLE quarter's rate; a four-quarter window necessarily
+    # reads closer to 1.0 than the quarter at its end, because three of its
+    # four quarters are the approach to the trough rather than the trough. Two
+    # further effects push the ratio up and are properties of the programme,
+    # not the linkage: the decade's median trailing rate includes the opening
+    # years, when the ladder has barely begun distributing, and the deepest
+    # drawdown usually falls late, when the bow curve has the cohorts at their
+    # most productive. 0.50-1.20 keeps teeth in both directions -- below 0.50
+    # the programme's capital return has more than halved at the trough, above
+    # 1.20 the worst market of the decade left distributions untouched and the
+    # linkage is not doing the job it exists to do. The four presets currently
+    # read 0.74-0.85 (unflagged); the old band split them arbitrarily across
+    # its 0.80 edge on indistinguishable behaviour.
+    "linkage_bite": Band(0.50, 1.20, "how hard the linkage bites, as a trailing rate not a level"),
     "linkage_shortfall": Band(0.05, 0.35, "the linkage's total decade cost"),
     "forced_secondaries": Band(0.0, 1.0, "is distress rare enough to mean something"),
 }
@@ -229,12 +251,20 @@ class ProgrammeStat:
     Review round 1, I3: it used to fall back to the median, which -- now
     that the adjacent column can read "1 of 20" -- would silently show a
     made-up "path 0" value for a statistic path 0 never had.
+
+    ``median``/``p10``/``p90`` are ``None`` when NO path computed the
+    statistic. Review round 2, I2: the row used to be dropped entirely in
+    that case, which is precisely backwards -- partial presence was made
+    visible by the count column while TOTAL absence, the case a reader most
+    needs to see, vanished without trace and left "this never happened"
+    indistinguishable from "somebody forgot to compute it". A row reading
+    "0 of 20" with dashes and a flag says which.
     """
 
     name: str
-    median: float
-    p10: float
-    p90: float
+    median: float | None
+    p10: float | None
+    p90: float | None
     path0: float | None
     band: Band
     flagged: bool
@@ -298,6 +328,79 @@ def vintage_stats(
     return out
 
 
+#: ``linkage_bite``'s trailing window, in quarters. Review round 2, C2: a
+#: single-quarter distribution rate is dominated by cohort wind-ups -- a whole
+#: cohort's NAV pays out in one quarter, against a private NAV the payout has
+#: itself just collapsed. Measured on deflation_bust path 0, quarter 19: rate
+#: 1.8167 against a median of 0.0164, reporting a 110x INCREASE in
+#: distributions at the exact quarter f_dist was pinned to its 0.300 floor.
+_BITE_WINDOW = 4
+
+
+def _terminal_liquidation_quarters(result: PlayResult) -> set[int]:
+    """Quarter indices (0-based, list position) in which a cohort wound up.
+
+    A cohort's terminal liquidation pays its whole remaining NAV out in one
+    quarter. That lump is a CONTRACTUAL event on the fund's clock -- it says
+    nothing about how the market linkage is behaving -- but it lands in the
+    same ``distributions_received`` field as ordinary yield, so any
+    distribution-rate statistic that includes it measures the fund calendar
+    rather than the linkage. Worse, the lump also removes the NAV it came
+    from, so it inflates the numerator and deflates the denominator at once.
+    Quarters carrying one are therefore excluded from ``linkage_bite``
+    entirely rather than being smoothed.
+
+    Detected from the per-cohort NAV ``ah.play`` already records: a cohort
+    whose ``vintage_nav`` was positive in the previous quarter and is zero or
+    absent in this one has wound up (whether at term or sold to zero in a
+    forced secondary -- both dump a lump into the same field).
+
+    The returned set is used for MEMBERSHIP ONLY, never iterated, so it
+    cannot make this module's output order-dependent.
+    """
+    out: set[int] = set()
+    previous: dict[str, float] = {}
+    for i, q in enumerate(result.quarters):
+        if i > 0 and any(
+            nav > 0.0 and q.vintage_nav.get(name, 0.0) <= 0.0 for name, nav in previous.items()
+        ):
+            out.add(i)
+        previous = q.vintage_nav
+    return out
+
+
+def _trailing_distribution_rates(
+    quarters: list[ProgrammeQuarter], liquidations: set[int]
+) -> list[tuple[float, float]]:
+    """``(trailing distribution rate, that quarter's drawdown depth)`` pairs.
+
+    The rate is ``_BITE_WINDOW`` quarters of distributions (this quarter and
+    the three before it) over the private NAV at the START of that window --
+    the closing private NAV of the quarter before the window, falling back to
+    the window's own first quarter when the window starts at quarter 0 and
+    there is no earlier close to read. A trailing figure means one large
+    quarter is at most a quarter of the numerator instead of all of it.
+
+    Quarters without a full window of history are excluded rather than
+    computed on a short one, and so is any quarter whose window OVERLAPS a
+    terminal liquidation: a lump three quarters back pollutes a trailing
+    numerator exactly as much as one in the quarter itself, so excluding only
+    the liquidation quarter would leave the defect in place under a different
+    index.
+    """
+    out: list[tuple[float, float]] = []
+    for i in range(_BITE_WINDOW - 1, len(quarters)):
+        first = i - _BITE_WINDOW + 1
+        if any(j in liquidations for j in range(first, i + 1)):
+            continue
+        opening = quarters[first - 1].private_nav if first > 0 else quarters[first].private_nav
+        if opening <= 0.0:
+            continue
+        total = sum(quarters[j].distributions for j in range(first, i + 1))
+        out.append((total / opening, quarters[i].drawdown_depth))
+    return out
+
+
 def path_stats(quarters: list[ProgrammeQuarter], result: PlayResult) -> dict[str, float]:
     """The programme-level statistics for ONE path."""
     out: dict[str, float] = {}
@@ -305,9 +408,15 @@ def path_stats(quarters: list[ProgrammeQuarter], result: PlayResult) -> dict[str
     if ratios:
         out["peak_unfunded_ratio"] = max(ratios)
 
-    rates = [
-        (q.distributions / q.private_nav, q.drawdown_depth) for q in quarters if q.private_nav > 0.0
-    ]
+    # linkage_bite: the TRAILING four-quarter distribution rate in the
+    # deepest-drawdown quarter, over the median trailing rate of the decade,
+    # with cohort wind-up windows excluded from both. It asks "when the market
+    # was at its worst, how did the rate at which the programme returned
+    # capital compare with a normal quarter" -- below 1.0 means the linkage
+    # suppressed distributions, above 1.0 means it did not. The worst quarter
+    # is chosen on DRAWDOWN DEPTH and never on the distribution value, or the
+    # statistic would be circular.
+    rates = _trailing_distribution_rates(quarters, _terminal_liquidation_quarters(result))
     if rates:
         worst = max(rates, key=lambda pair: pair[1])[0]
         median = float(np.median([r for r, _ in rates]))
@@ -390,20 +499,35 @@ def _rug(
     width: int = 150,
     height: int = 34,
     domain: tuple[float, float] | None = None,
+    x_domain: tuple[float, float] | None = None,
 ) -> str:
     """Where this world's quarters actually landed on a response curve.
 
-    ``domain`` MUST match the ``domain`` passed to the ``_sparkline`` call for
-    the curve this rug overlays -- a rug plotted on a different y-range than
-    its curve lands its dots at the wrong height, which is worse than no rug.
+    BOTH axes must match the curve underneath, and for the same reason: a rug
+    plotted on a different range than its curve lands its dots in the wrong
+    place, which is worse than no rug at all -- a reader checks a dot against
+    the curve it sits on, and a dot that disagrees with the curve is a lie
+    told in ink.
+
+    ``domain`` is the Y range and MUST match the ``domain`` passed to the
+    ``_sparkline`` call for the curve this rug overlays. ``x_domain`` is the X
+    range and MUST match the domain the curve's own values were SAMPLED over
+    (``_DD_DOMAIN`` for both linkage responses), because ``_sparkline`` spreads
+    those samples evenly across the full width. Review round 2, C1: ``x_domain``
+    did not exist and X auto-scaled to ``max(xs)``, so every dot was stretched
+    horizontally by ``1 / max(drawdown)`` -- on goldilocks (max drawdown 0.278)
+    a quarter whose drawdown was 0.109 landed where the curve reads 0.392.
+    ``None`` on either axis keeps that auto-scaling, and is only safe for a
+    rug over an auto-scaled curve.
     """
     if not xs:
         return ""
-    x_hi = max(xs) or 1.0
+    x_lo, x_hi = x_domain if x_domain is not None else (min(xs), max(xs))
+    x_span = (x_hi - x_lo) or 1.0
     y_lo, y_hi = domain if domain is not None else (min(ys), max(ys))
     span = (y_hi - y_lo) or 1.0
     dots = "".join(
-        f'<circle cx="{x / x_hi * width:.1f}" '
+        f'<circle cx="{(x - x_lo) / x_span * width:.1f}" '
         f'cy="{height - (y - y_lo) / span * (height - 2) - 1:.1f}" r="1.6"/>'
         for x, y in zip(xs, ys, strict=True)
     )
@@ -439,11 +563,21 @@ def _model_curves() -> dict[str, list[float]]:
     return {"call_rate": rc_curve, "bow": bow_curve, "f_dist": fd_curve, "f_call": fc_curve}
 
 
-def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
+def model_block(
+    realised: list[ProgrammeQuarter] | None = None, realised_title: str | None = None
+) -> str:
     """The model's own curves, before any world touches them.
 
-    World-independent except for the optional rug, which marks where the
-    decade's quarters landed on the two response curves.
+    World-independent except for the optional rug, which marks where ONE
+    world's quarters landed on the two response curves.
+
+    ``realised_title`` names the world the rug came from. Review round 2, I1:
+    this block is rendered ONCE, above every world's section, but the console
+    is routinely invoked multi-world (``ah credibility --preset stagflation
+    --preset goldilocks``), so a reader in the second world's section who
+    scrolls up is looking at the FIRST world's rug. The caption said "this
+    world's quarters", which is false for every world but the first; naming
+    the world makes the rug's provenance impossible to misread.
     """
     doc = _cohort_doc()
     params = doc["parameters"]
@@ -458,17 +592,23 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
     rc_curve, bow_curve = curves["call_rate"], curves["bow"]
     fd_curve, fc_curve = curves["f_dist"], curves["f_call"]
 
+    # The x-axis both response curves are SAMPLED over -- the rug must use the
+    # same one or its dots sit at drawdowns the curve never had (C1).
+    dd_domain = (_DD_DOMAIN[0], _DD_DOMAIN[-1])
+
     rug_dist = rug_call = ""
     if realised:
         rug_dist = _rug(
             [q.drawdown_depth for q in realised],
             [q.f_dist for q in realised],
             domain=fd_domain,
+            x_domain=dd_domain,
         )
         rug_call = _rug(
             [q.drawdown_depth for q in realised],
             [q.f_call for q in realised],
             domain=fc_domain,
+            x_domain=dd_domain,
         )
 
     rows = [
@@ -502,6 +642,7 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
         f"<tr><td>{_e(name)}</td><td>{svg}</td><td class='note'>{_e(note)}</td></tr>"
         for name, svg, note in rows
     )
+    whose = f"{_e(realised_title)}'s" if realised_title else "this world's"
     return (
         "<h3>The model, before any world touches it</h3>"
         f"<table><tbody>{body}</tbody></table>"
@@ -513,7 +654,15 @@ def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
         f"[{_F_CALL_LO}, {_F_CALL_HI}]. The asymmetry is the mechanic: f_call is "
         "clipped near-flat while f_dist can fall to its floor, so calls keep arriving "
         "while distributions stop. That, not the drawdown itself, is what empties the "
-        "cash account. Brass dots mark where this world's quarters actually landed.</p>"
+        f"cash account. Brass dots mark where {whose} quarters actually landed - one "
+        "world only, on both axes of the curve they sit on (drawdown across, "
+        "multiplier up), even when several worlds are rendered below. Expect the "
+        "f_call dots to lie exactly ON their curve and the f_dist dots to scatter "
+        "vertically around theirs: f_call is a function of drawdown alone, while "
+        "f_dist also responds to the spread ratio, which the curve holds at 1. That "
+        "vertical spread IS the spread term, not a plotting artefact. Dots stopping "
+        "short of the right-hand edge mean the world never reached those "
+        "drawdowns.</p>"
     )
 
 
@@ -524,12 +673,30 @@ def programme_stats(
 
     One path can be unlucky; a flag should mean the WORLD does this, so the
     flag fires on the median, with path 0's own value shown beside it.
+
+    A statistic no path could compute still gets a row -- "0 of N", dashes,
+    flagged (review round 2, I2). It is flagged because a declared band with
+    nothing to judge against it is an unanswered question, and an unanswered
+    question is exactly what a flag is an invitation to go and look at.
     """
     n_total = len(per_path)
     stats: list[ProgrammeStat] = []
     for name, band in PROGRAMME_PLAUSIBLE.items():
         values = [row[name] for row in per_path if name in row]
         if not values:
+            stats.append(
+                ProgrammeStat(
+                    name=name,
+                    median=None,
+                    p10=None,
+                    p90=None,
+                    path0=None,
+                    band=band,
+                    flagged=True,
+                    n_present=0,
+                    n_total=n_total,
+                )
+            )
             continue
         median = float(np.median(values))
         stats.append(
@@ -751,7 +918,24 @@ def _sale_row(s: dict[str, object]) -> str:
 
 
 def _liquidity_block(rep: ProgrammeReport) -> str:
-    cash = _sparkline([q.cash for q in rep.quarters], color="var(--jade)")
+    cash_series = [q.cash for q in rep.quarters]
+    cash = _sparkline(cash_series, color="var(--jade)")
+    # Review round 2, M-b: the cash spark auto-scales, so its line touches the
+    # bottom of the plot at its own minimum whatever the level -- a decade
+    # ending at 0.000 and one ending at 12.0 draw the same shape. _sparkline's
+    # docstring is only true of axis-less curves whose numbers are printed
+    # beside them, so print them.
+    # The peak is printed alongside the low and the final because the plot is
+    # auto-scaled: its top edge IS the peak and its bottom edge IS the low, so
+    # without both numbers the curve's shape carries no level at all. Every
+    # preset happens to end the decade at 0.000, which makes the low and the
+    # final identical and the peak the only number that says how far it fell.
+    levels = (
+        f" &nbsp; cash: peak {_f(max(cash_series))}, low {_f(min(cash_series))}, "
+        f"final {_f(cash_series[-1])} (the plot is auto-scaled between peak and low)"
+        if cash_series
+        else ""
+    )
     worst = max(rep.quarters, key=lambda q: q.coverage_true)
     sales = "".join(_sale_row(s) for s in rep.forced_sales)
     table = (
@@ -761,9 +945,20 @@ def _liquidity_block(rep: ProgrammeReport) -> str:
         else "<p class='note'>No forced sales this decade.</p>"
     )
     return (
-        f"<p>cash {cash} &nbsp; worst coverage: {_coverage_str(worst.coverage_true)} true vs "
+        f"<p>cash {cash}{levels} &nbsp; worst coverage: "
+        f"{_coverage_str(worst.coverage_true)} true vs "
         f"{_coverage_str(worst.coverage_reported)} reported (quarter {worst.quarter})</p>"
-        "<p class='note'>Selling liquid holdings to fund a call is ordinary funding; "
+        # Review round 2, I3: "coverage 0.58" reads to a newcomer as "58%
+        # covered", which is the opposite of what it says. It is the
+        # Portfolio.coverage_true convention -- unfunded over NAV -- so it must
+        # say so, and say which way is bad.
+        "<p class='note'><strong>Coverage</strong> here is unfunded obligations "
+        "divided by NAV (the <code>Portfolio.coverage_true</code> convention), so "
+        "<strong>higher is worse</strong>: 0.58 means undrawn commitments worth 58% "
+        "of the whole book, not a book 58% covered. 'True' uses true NAV, "
+        "'reported' the smoothed NAV a committee would actually be shown; the "
+        "reported figure flatters the institution exactly when the true one is "
+        "moving. Selling liquid holdings to fund a call is ordinary funding; "
         "a forced <em>secondary</em> at the policy haircut is distress. They are "
         "listed apart because collapsing them teaches the reader to ignore the "
         "words.</p>" + table
@@ -791,16 +986,25 @@ def _stack_block(rep: ProgrammeReport) -> str:
     )
 
 
+def _dash(value: float | None, places: int = 3) -> str:
+    """A value, or "-" when there is none. Never a substituted zero: an
+    absent statistic and a statistic that came out at 0.000 are different
+    findings and must not print the same."""
+    return _f(value, places) if value is not None else "-"
+
+
 def _stat_row(s: ProgrammeStat) -> str:
     # "-" rather than a value when path 0 never computed this statistic --
     # review round 1, I3: falling back to the median here silently invented
     # a "path 0" number for a statistic path 0 didn't have, right beside a
     # present-count column that would otherwise make the gap visible.
-    path0_str = _f(s.path0, 3) if s.path0 is not None else "-"
+    # Review round 2, I2: median/p10/p90 dash out the same way on a "0 of N"
+    # row, which is rendered rather than dropped.
+    spread = f"{_dash(s.p10)} - {_dash(s.p90)}" if s.p10 is not None or s.p90 is not None else "-"
     return (
         f"<tr class='{'flagged' if s.flagged else ''}'><td>{_e(s.name)}</td>"
-        f"<td>{_f(s.median, 3)}</td><td>{_f(s.p10, 3)} - {_f(s.p90, 3)}</td>"
-        f"<td>{path0_str}</td>"
+        f"<td>{_dash(s.median)}</td><td>{spread}</td>"
+        f"<td>{_dash(s.path0)}</td>"
         f"<td>{s.n_present} of {s.n_total}</td>"
         f"<td>{_f(s.band.lo, 2)} - {_f(s.band.hi, 2)}</td>"
         f"<td class='note'>{_e(s.band.question)}</td></tr>"
@@ -813,7 +1017,26 @@ def _stats_table(rep: ProgrammeReport) -> str:
         "<th>paths</th><th>declared</th><th>the question</th></tr>"
     )
     rows = "".join(_stat_row(s) for s in rep.stats)
-    return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
+    return (
+        f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
+        "<p class='note'>Bands are declared priors, not truth; a flag is an "
+        "invitation to look. <strong>linkage_bite</strong> is a ratio of "
+        "<em>trailing four-quarter</em> distribution rates - four quarters of "
+        "distributions over the private NAV the window opened with - taken in "
+        "the deepest-drawdown quarter and divided by the decade's median. Below "
+        "1.0 means the linkage cut the rate at which capital came back when the "
+        "market was at its worst. Read above 1.0 with care rather than as a "
+        "benefit: the median is taken over the whole decade including the opening "
+        "years, when the ladder has barely started distributing, so a deep "
+        "drawdown that lands late - against mature cohorts - can clear the median "
+        "on the programme's own age curve alone. Windows containing a cohort's terminal "
+        "liquidation are excluded from both ends of that comparison: a wind-up "
+        "pays a whole cohort's NAV out at once on the fund's contractual clock, "
+        "which would otherwise swamp the market signal the statistic is asking "
+        "about. A row reading <strong>0 of N</strong> with dashes is a statistic "
+        "NO path could compute - not a zero, and not a statistic that was "
+        "forgotten.</p>"
+    )
 
 
 def render_programme_section(reports: list[ProgrammeReport]) -> str:
@@ -841,6 +1064,6 @@ def render_programme_section(reports: list[ProgrammeReport]) -> str:
         "<p class='lede'>What the cashflow model and the commitment pacing actually "
         "do, before the commitment lever asks a player to set them. Detail is path 0; "
         "statistics are the median across the world's own seed lineage.</p>"
-        + model_block(reports[0].quarters)
+        + model_block(reports[0].quarters, reports[0].title)
         + "".join(blocks)
     )
