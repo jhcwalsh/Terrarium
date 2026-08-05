@@ -21,6 +21,7 @@ bytes.
 
 from __future__ import annotations
 
+import html as _html
 import json
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,7 +30,7 @@ import numpy as np
 
 from ah.play import PlayResult
 from ah.port.cashflow_tier0 import load_spec
-from ah.port.cashflow_tier1 import run_tier1
+from ah.port.cashflow_tier1 import load_linkage, run_tier1
 
 __all__ = [
     "PROGRAMME_PLAUSIBLE",
@@ -38,6 +39,7 @@ __all__ = [
     "ProgrammeQuarter",
     "ProgrammeStat",
     "ladder_years",
+    "model_block",
     "path_stats",
     "programme_quarters",
     "programme_stats",
@@ -267,6 +269,130 @@ def path_stats(quarters: list[ProgrammeQuarter], result: PlayResult) -> dict[str
 
     out["forced_secondaries"] = float(result.forced_secondaries)
     return out
+
+
+def _e(s: object) -> str:
+    return _html.escape(str(s))
+
+
+def _f(value: float, places: int = 2) -> str:
+    return f"{value:.{places}f}"
+
+
+def _sparkline(
+    values: list[float], *, width: int = 150, height: int = 34, color: str, extra: str = ""
+) -> str:
+    """A minimal polyline. No axes: these curves are about SHAPE, and every
+    one of them has its numbers printed beside it.
+
+    ``extra`` is rendered inside the ``<svg>``, after the polyline — the rug
+    overlay (Task 4 ambiguity #2) uses it instead of string-splicing the
+    closing tag.
+    """
+    if not values:
+        return ""
+    lo, hi = min(values), max(values)
+    span = (hi - lo) or 1.0
+    step = width / max(1, len(values) - 1)
+    points = " ".join(
+        f"{i * step:.1f},{height - (v - lo) / span * (height - 2) - 1:.1f}"
+        for i, v in enumerate(values)
+    )
+    return (
+        f'<svg class="spark" width="{width}" height="{height}" '
+        f'viewBox="0 0 {width} {height}" role="img">'
+        f'<polyline fill="none" stroke="{color}" stroke-width="1.5" points="{points}"/>'
+        f"{extra}"
+        "</svg>"
+    )
+
+
+def _rug(xs: list[float], ys: list[float], *, width: int = 150, height: int = 34) -> str:
+    """Where this world's quarters actually landed on a response curve."""
+    if not xs:
+        return ""
+    x_hi = max(xs) or 1.0
+    y_lo, y_hi = min(ys), max(ys)
+    span = (y_hi - y_lo) or 1.0
+    dots = "".join(
+        f'<circle cx="{x / x_hi * width:.1f}" '
+        f'cy="{height - (y - y_lo) / span * (height - 2) - 1:.1f}" r="1.6"/>'
+        for x, y in zip(xs, ys, strict=True)
+    )
+    return f'<g class="rug" fill="var(--brass)" opacity="0.75">{dots}</g>'
+
+
+def model_block(realised: list[ProgrammeQuarter] | None = None) -> str:
+    """The model's own curves, before any world touches them.
+
+    World-independent except for the optional rug, which marks where the
+    decade's quarters landed on the two response curves.
+    """
+    doc = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
+    params = doc["parameters"]
+    life = float(doc["lifecycle"]["contractual_life_years"])
+    rc_curve = [float(v) for v in params["rc_curve"]]
+    bow, yield_rate = float(params["bow"]), float(params["yield_rate"])
+    link = load_linkage()
+    fd_spec, fc_spec = link["f_dist"], link["f_call"]
+
+    ages = [i * 0.25 for i in range(int(life * 4) + 1)]
+    bow_curve = [yield_rate * (min(1.0, a / life) ** bow) for a in ages]
+    dds = [i / 40.0 for i in range(41)]  # 0 .. 1.0 drawdown
+    fd_curve = [
+        min(
+            fd_spec["ceiling"],
+            max(fd_spec["floor"], float(np.exp(-fd_spec["a_drawdown"] * d))),
+        )
+        for d in dds
+    ]
+    fc_curve = [min(1.2, max(0.5, 1.0 - fc_spec["c"] * d)) for d in dds]
+
+    rug_dist = rug_call = ""
+    if realised:
+        rug_dist = _rug([q.drawdown_depth for q in realised], [q.f_dist for q in realised])
+        rug_call = _rug([q.drawdown_depth for q in realised], [q.f_call for q in realised])
+
+    rows = [
+        (
+            "call rate RC(age)",
+            _sparkline(rc_curve, color="var(--jade)"),
+            "annual, on unfunded: " + ", ".join(_f(v) for v in rc_curve),
+        ),
+        (
+            "distribution bow Y(age/L)^B",
+            _sparkline(bow_curve, color="var(--jade)"),
+            f"Y={_f(yield_rate)}, B={_f(bow, 1)}, L={_f(life, 0)} yrs; "
+            "terminal liquidation at age >= L",
+        ),
+        (
+            "f_dist(drawdown)",
+            _sparkline(fd_curve, color="var(--clay)", extra=rug_dist),
+            f"a={_f(fd_spec['a_drawdown'], 6)}, b={_f(fd_spec['b_log_spread'], 6)} "
+            "(log spread), "
+            f"floor {fd_spec['floor']}, ceiling {fd_spec['ceiling']} "
+            "- shown at spread_ratio = 1",
+        ),
+        (
+            "f_call(drawdown)",
+            _sparkline(fc_curve, color="var(--clay)", extra=rug_call),
+            f"c={fc_spec['c']}, clipped to [0.5, 1.2]",
+        ),
+    ]
+    body = "".join(
+        f"<tr><td>{_e(name)}</td><td>{svg}</td><td class='note'>{_e(note)}</td></tr>"
+        for name, svg, note in rows
+    )
+    return (
+        "<h3>The model, before any world touches it</h3>"
+        f"<table><tbody>{body}</tbody></table>"
+        "<p class='note'>Both linkage functions consume <strong>continuous</strong> "
+        "market states only - drawdown depth and a spread ratio - and never a regime "
+        "label (DN-5 Delta 3, structural). The asymmetry is the mechanic: f_call is "
+        "clipped near-flat while f_dist can fall to its floor, so calls keep arriving "
+        "while distributions stop. That, not the drawdown itself, is what empties the "
+        "cash account. Brass dots mark where this world's quarters actually landed.</p>"
+    )
 
 
 def programme_stats(
