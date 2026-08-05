@@ -10,7 +10,12 @@ import pytest
 
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
-from ah.programme import _model_curves, model_block
+from ah.programme import (
+    _model_curves,
+    build_programme_report,
+    model_block,
+    render_programme_section,
+)
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -98,3 +103,153 @@ def test_model_curves_f_call_span_is_narrower_than_f_dist_span():
     fc_span = max(curves["f_call"]) - min(curves["f_call"])
     fd_span = max(curves["f_dist"]) - min(curves["f_dist"])
     assert fc_span < fd_span * 0.5
+
+
+# ---------------------------------------------------------------------------
+# Task 5: the per-world blocks -- ladder, linkage, liquidity, flags, and the
+# report builder that runs the ensemble.
+#
+# _world and PRESETS are already defined at the top of this file (Task 4).
+
+
+@pytest.fixture(scope="module")
+def report():
+    return build_programme_report(_world("stagflation"), base_seed=771204, n_paths=4)
+
+
+def test_report_covers_the_decade(report):
+    assert len(report.quarters) == 40
+    assert len(report.ladder) == 10
+
+
+def test_section_shows_the_linkage_counterfactual(report):
+    html = render_programme_section([report])
+    assert "linkage off" in html.lower()
+    assert "drawdown" in html.lower()
+    assert "spread ratio" in html.lower()
+
+
+def test_section_lists_forced_sales_with_their_cause(report):
+    html = render_programme_section([report])
+    # every logged sale's cause string must reach the page verbatim
+    for sale in report.forced_sales:
+        assert str(sale["cause"]) in html
+
+
+def test_section_is_deterministic_for_a_fixed_world_and_seed():
+    a = build_programme_report(_world("goldilocks"), base_seed=771204, n_paths=4)
+    b = build_programme_report(_world("goldilocks"), base_seed=771204, n_paths=4)
+    assert render_programme_section([a]) == render_programme_section([b])
+
+
+@pytest.mark.parametrize("name", ["stagflation", "goldilocks", "deflation_bust", "reflation_boom"])
+def test_every_preset_renders(name):
+    rep = build_programme_report(_world(name), base_seed=771204, n_paths=2)
+    assert render_programme_section([rep])
+
+
+# ---------------------------------------------------------------------------
+# Carry-forward #1: infinite coverage (NAV <= 0) must render as a clear
+# marker, never the literal string "inf" -- and max() over quarters must not
+# choke when several of them are infinite.
+
+
+def test_liquidity_block_renders_wiped_coverage_not_the_string_inf():
+    from ah.programme import ProgrammeQuarter, ProgrammeReport, _liquidity_block
+
+    wiped = ProgrammeQuarter(
+        quarter=0,
+        month=2,
+        drawdown_depth=0.5,
+        spread_ratio=1.0,
+        f_dist=0.5,
+        f_call=1.0,
+        calls=1.0,
+        distributions=0.0,
+        distributions_unlinked=0.0,
+        cash=0.0,
+        nav_true=0.0,
+        nav_reported=0.0,
+        private_nav=0.0,
+        unfunded=5.0,
+        private_weight_true=0.0,
+        coverage_true=float("inf"),
+        coverage_reported=float("inf"),
+        forced_sale_total=0.0,
+    )
+    rep = ProgrammeReport(
+        world_id="test",
+        title="test",
+        quarters=[wiped],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    html = _liquidity_block(rep)
+    assert "inf" not in html.lower()
+    assert "wiped" in html.lower()
+
+
+def test_liquidity_block_worst_quarter_selection_survives_multiple_infinities():
+    from ah.programme import ProgrammeQuarter, ProgrammeReport, _liquidity_block
+
+    def q(n: int, cov: float) -> ProgrammeQuarter:
+        return ProgrammeQuarter(
+            quarter=n,
+            month=n * 3 + 2,
+            drawdown_depth=0.0,
+            spread_ratio=1.0,
+            f_dist=1.0,
+            f_call=1.0,
+            calls=0.0,
+            distributions=0.0,
+            distributions_unlinked=0.0,
+            cash=1.0,
+            nav_true=1.0,
+            nav_reported=1.0,
+            private_nav=0.0,
+            unfunded=0.0,
+            private_weight_true=0.0,
+            coverage_true=cov,
+            coverage_reported=cov,
+            forced_sale_total=0.0,
+        )
+
+    rep = ProgrammeReport(
+        world_id="t",
+        title="t",
+        quarters=[q(0, 0.2), q(1, float("inf")), q(2, float("inf")), q(3, 0.5)],
+        ladder=[],
+        stats=[],
+        vintage_stack=[],
+        forced_sales=[],
+    )
+    # must not raise (a naive .format() on inf is fine, but a comparison bug
+    # would be), and must land on one of the infinite quarters -- Python's
+    # max() returns the FIRST value achieving the maximum on ties, so this
+    # pins the result to quarter 1 rather than leaving it unspecified.
+    html = _liquidity_block(rep)
+    assert "quarter 1)" in html
+
+
+# ---------------------------------------------------------------------------
+# Carry-forward #2: a statistic present on only some paths must say so, not
+# silently report a median over a possibly-unrepresentative subset.
+
+
+def test_programme_stats_reports_how_many_paths_a_statistic_came_from():
+    from ah.programme import PROGRAMME_PLAUSIBLE, programme_stats
+
+    name = next(iter(PROGRAMME_PLAUSIBLE))
+    # present on 2 of 4 paths -- the other two couldn't compute it at all
+    per_path = [{name: 0.5}, {name: 0.7}, {}, {}]
+    stats = programme_stats(per_path, {name: 0.5})
+    stat = next(s for s in stats if s.name == name)
+    assert stat.n_present == 2
+    assert stat.n_total == 4
+
+
+def test_stats_table_shows_the_present_count(report):
+    html = render_programme_section([report])
+    assert " of 4" in html

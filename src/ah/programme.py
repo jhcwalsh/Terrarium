@@ -28,21 +28,28 @@ from pathlib import Path
 
 import numpy as np
 
-from ah.play import PlayResult
+from ah.core.engine import run_path
+from ah.core.numericworld import NumericWorld
+from ah.play import PlayResult, simulate_play
 from ah.port.cashflow_tier0 import load_spec
 from ah.port.cashflow_tier1 import load_linkage, run_tier1
 
 __all__ = [
+    "PROGRAMME_CSS",
+    "PROGRAMME_PATHS",
     "PROGRAMME_PLAUSIBLE",
     "Band",
     "LadderYear",
     "ProgrammeQuarter",
+    "ProgrammeReport",
     "ProgrammeStat",
+    "build_programme_report",
     "ladder_years",
     "model_block",
     "path_stats",
     "programme_quarters",
     "programme_stats",
+    "render_programme_section",
     "vintage_stats",
 ]
 
@@ -190,7 +197,19 @@ PROGRAMME_PLAUSIBLE: dict[str, Band] = {
 
 @dataclass(frozen=True)
 class ProgrammeStat:
-    """One statistic across the ensemble, against its declared band."""
+    """One statistic across the ensemble, against its declared band.
+
+    ``n_present``/``n_total`` carry HOW MANY of the ensemble's paths the
+    median was actually computed from. ``vintage_stats`` and ``path_stats``
+    both omit keys they cannot compute (e.g. no crossover ever happens, or a
+    path is too short) rather than substituting a placeholder, so a
+    statistic can be present on a small, non-representative slice of the
+    lineage. If presence correlates with outcome -- a crossover key that
+    only exists on fast-crossing paths, say -- the median over the present
+    subset silently describes a biased sample, not the world. Showing the
+    count as "n of N paths" on the page makes that visible instead of
+    hidden behind a single clean-looking number.
+    """
 
     name: str
     median: float
@@ -199,6 +218,8 @@ class ProgrammeStat:
     path0: float
     band: Band
     flagged: bool
+    n_present: int
+    n_total: int
 
 
 def vintage_stats(
@@ -473,6 +494,7 @@ def programme_stats(
     One path can be unlucky; a flag should mean the WORLD does this, so the
     flag fires on the median, with path 0's own value shown beside it.
     """
+    n_total = len(per_path)
     stats: list[ProgrammeStat] = []
     for name, band in PROGRAMME_PLAUSIBLE.items():
         values = [row[name] for row in per_path if name in row]
@@ -488,6 +510,243 @@ def programme_stats(
                 path0=float(path0.get(name, median)),
                 band=band,
                 flagged=not (band.lo <= median <= band.hi),
+                n_present=len(values),
+                n_total=n_total,
             )
         )
     return stats
+
+
+#: 20 full waterfall simulations per world, against the console's 400
+#: vectorised return paths — each of these runs the whole quarterly waterfall.
+#: Raise it if it turns out cheap.
+PROGRAMME_PATHS = 20
+
+
+@dataclass(frozen=True)
+class ProgrammeReport:
+    """Everything the section shows for one world."""
+
+    world_id: str
+    title: str
+    quarters: list[ProgrammeQuarter]
+    ladder: list[LadderYear]
+    stats: list[ProgrammeStat]
+    vintage_stack: list[tuple[str, list[float]]]
+    forced_sales: list[dict[str, object]]
+
+    @property
+    def flag_count(self) -> int:
+        return sum(1 for s in self.stats if s.flagged)
+
+
+def _vintage_stack(result: PlayResult) -> list[tuple[str, list[float]]]:
+    """Every cohort's NAV over the decade, zero before it was committed."""
+    names: list[str] = []
+    for q in result.quarters:
+        for key in q.vintage_nav:
+            if key not in names:
+                names.append(key)
+    return [(name, [q.vintage_nav.get(name, 0.0) for q in result.quarters]) for name in names]
+
+
+def build_programme_report(
+    world: NumericWorld,
+    *,
+    base_seed: int,
+    n_paths: int = PROGRAMME_PATHS,
+    title: str | None = None,
+) -> ProgrammeReport:
+    """Detail from path 0; statistics across the seed lineage."""
+    per_path: list[dict[str, float]] = []
+    path0_rows: list[ProgrammeQuarter] = []
+    path0_result: PlayResult | None = None
+    path0_stats: dict[str, float] = {}
+
+    for k in range(max(1, n_paths)):
+        paths = run_path(world, base_seed + 7919 * k)
+        linked = simulate_play(paths)
+        unlinked = simulate_play(paths, linkage=False)
+        rows = programme_quarters(linked, unlinked)
+        stats = path_stats(rows, linked)
+        stats.update(
+            vintage_stats(
+                np.array([r.drawdown_depth for r in rows]),
+                np.array([r.spread_ratio for r in rows]),
+                len(rows) - _QUARTERS_PER_YEAR,
+            )
+        )
+        per_path.append(stats)
+        if k == 0:
+            path0_rows, path0_result, path0_stats = rows, linked, stats
+
+    assert path0_result is not None  # n_paths >= 1 by construction
+    return ProgrammeReport(
+        world_id=world.world_id,
+        title=title or world.world_id,
+        quarters=path0_rows,
+        ladder=ladder_years(path0_rows, path0_result),
+        stats=programme_stats(per_path, path0_stats),
+        vintage_stack=_vintage_stack(path0_result),
+        forced_sales=list(path0_result.sale_log),
+    )
+
+
+PROGRAMME_CSS = """
+.spark{vertical-align:middle}
+.prog td.pos{color:var(--jade)}
+.prog td.neg{color:var(--clay)}
+.stack{display:flex;height:38px;align-items:flex-end;gap:1px}
+.stack i{display:block;flex:1;background:var(--jade);opacity:.55}
+"""
+
+
+def _ladder_table(rep: ProgrammeReport) -> str:
+    head = (
+        "<tr><th>year</th><th>committed</th><th>called</th><th>distributed</th>"
+        "<th>net</th><th>called to date</th><th>unfunded end</th>"
+        "<th>private NAV end</th></tr>"
+    )
+    rows = "".join(
+        f"<tr><td>{y.year}</td><td>{_f(y.committed)}</td><td>{_f(y.called)}</td>"
+        f"<td>{_f(y.distributed)}</td>"
+        f"<td class='{'pos' if y.net >= 0 else 'neg'}'>{_f(y.net)}</td>"
+        f"<td>{_f(y.called_to_date)}</td><td>{_f(y.unfunded_end)}</td>"
+        f"<td>{_f(y.private_nav_end)}</td></tr>"
+        for y in rep.ladder
+    )
+    return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
+
+
+def _linkage_table(rep: ProgrammeReport) -> str:
+    head = (
+        "<tr><th>qtr</th><th>drawdown</th><th>spread ratio</th><th>f_dist</th>"
+        "<th>f_call</th><th>distributions</th><th>linkage off</th>"
+        "<th>shortfall</th></tr>"
+    )
+    rows = "".join(
+        f"<tr><td>{q.quarter}</td><td>{_f(q.drawdown_depth, 3)}</td>"
+        f"<td>{_f(q.spread_ratio, 3)}</td><td>{_f(q.f_dist, 3)}</td>"
+        f"<td>{_f(q.f_call, 3)}</td><td>{_f(q.distributions)}</td>"
+        f"<td>{_f(q.distributions_unlinked)}</td>"
+        f"<td class='neg'>{_f(q.distributions - q.distributions_unlinked)}</td></tr>"
+        for q in rep.quarters
+    )
+    linked = sum(q.distributions for q in rep.quarters)
+    unlinked = sum(q.distributions_unlinked for q in rep.quarters)
+    return (
+        f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
+        f"<p class='note'>Decade total: {_f(linked)} received against {_f(unlinked)} "
+        "with the linkage off - the difference is what the market environment did to "
+        "this programme's cash.</p>"
+    )
+
+
+def _coverage_str(value: float) -> str:
+    """Render a coverage ratio, spelling out the NAV-wiped case.
+
+    ``_safe_ratio`` returns ``float("inf")`` when NAV <= 0 -- unfunded
+    obligations against no assets left to cover them, not a ratio with a
+    numeric value. Handing that straight to ``_f`` would print the literal
+    string "inf", which reads as a formatting bug rather than the
+    institution's actual state (an infinitely uncovered book, matching
+    ``Portfolio.coverage_true``'s own convention).
+    """
+    return "NAV wiped" if value == float("inf") else _f(value)
+
+
+def _sale_row(s: dict[str, object]) -> str:
+    """One forced-sale table row. ``s`` is a logged event (spec §8): period,
+    amount, cause, and the sleeves sold -- typed as ``object`` because the log
+    is a heterogeneous dict, so the values are narrowed here rather than at
+    the call site.
+    """
+    sleeves_sold = s.get("sleeves_sold", [])
+    sleeves = ", ".join(str(x) for x in sleeves_sold) if isinstance(sleeves_sold, list) else ""
+    amount = s.get("amount", 0.0)
+    amount_f = float(amount) if isinstance(amount, int | float) else 0.0
+    return (
+        f"<tr><td>Q{_e(s.get('period'))}</td><td>{_e(s.get('kind'))}</td>"
+        f"<td>{_e(s.get('cause'))}</td><td>{_e(sleeves)}</td>"
+        f"<td>{_f(amount_f)}</td></tr>"
+    )
+
+
+def _liquidity_block(rep: ProgrammeReport) -> str:
+    cash = _sparkline([q.cash for q in rep.quarters], color="var(--jade)")
+    worst = max(rep.quarters, key=lambda q: q.coverage_true)
+    sales = "".join(_sale_row(s) for s in rep.forced_sales)
+    table = (
+        "<table class='prog'><thead><tr><th>when</th><th>kind</th><th>cause</th>"
+        f"<th>sold</th><th>raised</th></tr></thead><tbody>{sales}</tbody></table>"
+        if sales
+        else "<p class='note'>No forced sales this decade.</p>"
+    )
+    return (
+        f"<p>cash {cash} &nbsp; worst coverage: {_coverage_str(worst.coverage_true)} true vs "
+        f"{_coverage_str(worst.coverage_reported)} reported (quarter {worst.quarter})</p>"
+        "<p class='note'>Selling liquid holdings to fund a call is ordinary funding; "
+        "a forced <em>secondary</em> at the policy haircut is distress. They are "
+        "listed apart because collapsing them teaches the reader to ignore the "
+        "words.</p>" + table
+    )
+
+
+def _stack_block(rep: ProgrammeReport) -> str:
+    bars = "".join(
+        f"<i style='height:{min(100.0, series[-1] * 4.0):.0f}%'></i>"
+        for _, series in rep.vintage_stack
+    )
+    return (
+        f"<div class='stack'>{bars}</div>"
+        f"<p class='note'>{len(rep.vintage_stack)} cohorts alive at the decade's end, "
+        "newest on the right. A programme with nothing on the right has stopped "
+        "committing; one with nothing on the left has run its openers to term.</p>"
+    )
+
+
+def _stats_table(rep: ProgrammeReport) -> str:
+    head = (
+        "<tr><th>statistic</th><th>median</th><th>p10-p90</th><th>path 0</th>"
+        "<th>paths</th><th>declared</th><th>the question</th></tr>"
+    )
+    rows = "".join(
+        f"<tr class='{'flagged' if s.flagged else ''}'><td>{_e(s.name)}</td>"
+        f"<td>{_f(s.median, 3)}</td><td>{_f(s.p10, 3)} - {_f(s.p90, 3)}</td>"
+        f"<td>{_f(s.path0, 3)}</td>"
+        f"<td>{s.n_present} of {s.n_total}</td>"
+        f"<td>{_f(s.band.lo, 2)} - {_f(s.band.hi, 2)}</td>"
+        f"<td class='note'>{_e(s.band.question)}</td></tr>"
+        for s in rep.stats
+    )
+    return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
+
+
+def render_programme_section(reports: list[ProgrammeReport]) -> str:
+    """The whole section: the model once, then each world."""
+    if not reports:
+        return ""
+    blocks = []
+    for rep in reports:
+        blocks.append(
+            f"<section class='world'><h2>{_e(rep.title)} - the private programme</h2>"
+            "<h3>The commitment ladder, year by year</h3>"
+            + _ladder_table(rep)
+            + "<h3>Cohorts alive at the decade's end</h3>"
+            + _stack_block(rep)
+            + "<h3>The market, and what it did to the cash</h3>"
+            + _linkage_table(rep)
+            + "<h3>Liquidity and the waterfall</h3>"
+            + _liquidity_block(rep)
+            + "<h3>Against the declared bands</h3>"
+            + _stats_table(rep)
+            + "</section>"
+        )
+    return (
+        "<h1>The private programme</h1>"
+        "<p class='lede'>What the cashflow model and the commitment pacing actually "
+        "do, before the commitment lever asks a player to set them. Detail is path 0; "
+        "statistics are the median across the world's own seed lineage.</p>"
+        + model_block(reports[0].quarters)
+        + "".join(blocks)
+    )
