@@ -74,12 +74,19 @@ class LadderYear:
 
 
 def _safe_ratio(numerator: float, denominator: float) -> float:
-    """Coverage on a wiped-out book is reported as 0.0, not an exception.
+    """Coverage ratio matching Portfolio.coverage_true()'s convention.
 
-    A NAV of zero means the institution is gone; the page should say so in a
-    cell rather than fail to render the world that showed it.
+    When denominator > 0, returns numerator / denominator.
+    When denominator <= 0, returns float("inf").
+
+    An institution with unfunded obligations and no assets is infinitely
+    uncovered, not perfectly covered (0.0). This matches the established
+    convention in src/ah/port/portfolio.py:79-85, which is also used by
+    QuarterReport.coverage_true in src/ah/port/engine.py:169. Returning
+    infinity when the book is wiped preserves the distinction between a
+    healthy institution and one that has failed.
     """
-    return numerator / denominator if denominator > 0.0 else 0.0
+    return numerator / denominator if denominator > 0.0 else float("inf")
 
 
 def programme_quarters(linked: PlayResult, unlinked: PlayResult) -> list[ProgrammeQuarter]:
