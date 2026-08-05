@@ -182,11 +182,13 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
 - When a plan is ambiguous, choose the interpretation that preserves determinism and
   auditability, keeps `schemas/` authoritative, and is simplest to delete later — then record
   the choice. If the ambiguity would change an interface another WP depends on, stop and ask.
-- **`docs/engine-realism-register.md`** records places where the toy engine is faithful to its
-  plan but not to an allocator's expectations. ER-1 and ER-4 are closed; ER-2 (no meeting
-  calendar / 25bp quantisation), ER-3 (the play surface does not use `ah/port/`), and ER-5
-  (crisis is a rectangular block; equity ACF 0.364) are open. Each entry says what a fix
-  invalidates. **These are release events and the owner's call, not incidental cleanups.**
+- **`docs/engine-realism-register.md`** records places where the engine and the cashflow model
+  are faithful to their plans but not to an allocator's expectations. ER-1, ER-3 and ER-4 are
+  closed; ER-2 (no meeting calendar / 25bp quantisation), ER-5 (crisis is a rectangular block;
+  equity ACF 0.364) and **ER-6 (~29% of every commitment is never called; `rc_curve` is an
+  ALB-A placeholder that was never fitted)** are open. Each entry says what a fix invalidates.
+  **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
+  prerequisite for the commitment lever (E1), not a parallel cleanup.
 
 ## Environment gotchas (learned the hard way)
 

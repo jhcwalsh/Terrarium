@@ -255,3 +255,123 @@ it, not the engine generating any of that internally. An engine that priced
 its own cashflow-bearing instruments (e.g. bonds with coupons and maturities,
 private funds with engine-native capital schedules) would be a different,
 larger change, and is not what shipped here.
+
+---
+
+## ER-6 — A third of every commitment is never called
+
+**Status:** open
+**Found:** 2026-08-05, the first run of the private-programme section of the
+credibility console (`ah credibility`) — the surface built specifically to
+look at the pacing model before the commitment lever is designed on top of
+it. Found by the flags, not by reading the code.
+
+**Scope note.** This entry is about the *cohort cashflow model* in
+`ah/port/`, not the `toy-v0` return process. ER-3 already took the register
+into this layer; the standing rule is the same — the plan is implemented
+faithfully, and what is recorded here is where that costs credibility.
+
+**What happens.** `rc_curve` in `fixtures/state/closed-end-cohort.example.json`
+is `[0.25, 0.30, 0.20, 0.12, 0.08, 0.05]`, applied by
+`ClosedEndCohort.step` as an annual **rate on the remaining unfunded
+balance**, with the age index clamped to the last element
+(`rc_index = min(int(age_years), len(rc_curve) - 1)`). From year 5 onward it
+therefore draws 5% per year of whatever is left — a declining rate against a
+shrinking balance — and converges well short of the full commitment. At
+`age >= L` the commitment lapses entirely and no further calls are made.
+
+Measured on a fresh cohort at tier 0's frozen growth, linkage neutral, fees
+off, `committed = 1.0`:
+
+| horizon | paid-in | never called |
+|---|---|---|
+| 10 years (the contractual life) | 0.7075 | **29.2%** |
+| 20 years (past life, calls lapse at L) | 0.7355 | **26.4%** |
+
+An allocator's expectation for a drawdown fund is 85–95% called by end of
+life. This is a **declared prior**, in the same spirit as the console's
+bands, not a citation.
+
+**What it produces downstream.** The institution commits a new vintage every
+year (`_ANNUAL_COMMITMENT_RATE = 0.18` of each private sleeve's target, in
+`ah/play.py`), so roughly 6.3 points a year are committed against about 35
+points of private NAV. If ~29% of each vintage is permanently stranded,
+unfunded accumulates instead of clearing, and the console reads:
+
+| statistic | stagflation | goldilocks | deflation_bust | reflation_boom | declared |
+|---|---|---|---|---|---|
+| `peak_unfunded_ratio` | 3.018 | 2.445 | 3.308 | 2.453 | 0.25–0.75 |
+| `crossover_years` | 8.500 | 8.375 | *never* | 8.750 | 4–8 |
+
+`peak_unfunded_ratio` flags on all four worlds. Roughly half of the headline
+figure is a one-quarter denominator collapse at the cohort's contractual
+wind-up (private NAV falls as the lump pays out while unfunded barely moves);
+the steady state is 1.0–1.7, still two to seven times the declared prior.
+The J-curve crossover is correspondingly late, and on `deflation_bust` no
+path's year-1 vintage crosses over at all within the decade.
+
+**Provenance — this is a placeholder, not an estimate.** `RC(t)` is register
+kind **E (estimated)** in `Instructions/model-parameter-register.md` §38,
+sourced from **ALB-A item 1** ("call rate on unfunded, by age"), with the
+note to "estimate the full age curve, not a 3-point schedule". ALB-A never
+arrived — the same sealed PM unavailability recorded in
+`mappings/cashflow-tier0-v1.0.yaml` ("UNPARAMETERIZABLE ... needs ALB-A/C,
+never delivered"). The six numbers now in the fixture are the example
+document's illustrative values, standing in for a parameter that was always
+meant to be fitted, and nothing had ever aggregated them until the console
+existed.
+
+**Why it has not failed anything.** The twin's absolute private NAV is set by
+`START_TARGETS`, not by how much of each commitment gets drawn, so
+under-drawing never moved a headline value anybody watched. It surfaced only
+as a stock of unfunded commitments that no surface plotted until now. Every
+tier-0/tier-1 identity test still passes: this is not a violation of the
+recursion, it is the recursion doing exactly what these coefficients say.
+
+**A related observation, possibly the same cause.** `forced_secondaries` is
+**0 on all four presets** under hold course — the forced-sale waterfall, the
+mechanic that makes liquidity consequential, is never exercised by the base
+case. Under-drawing means less cash pressure, so this may resolve on its own
+if the call curve is corrected. Worth re-measuring after any fix rather than
+treating it as a separate finding.
+
+**What a fix looks like.** Any of:
+1. Extend `rc_curve` beyond six entries so late-life draw rates rise rather
+   than flatten at 5%;
+2. Add a terminal true-up — call the residual unfunded at or near `L`, which
+   is what a GP with an expiring investment period actually does;
+3. Re-express `RC(t)` as a fraction of **committed** rather than of remaining
+   **unfunded**, which makes "call 90% by year 6" directly expressible.
+
+(3) is the cleanest to reason about and the furthest from the frozen spec's
+wording (`Call(t) = RC(t) × [CC − PIC(t−1)]`, register §28), so it would need
+that formula amended rather than just a vector swapped. (2) is the smallest
+change that reaches a credible number. Whichever is chosen, the console's
+`peak_unfunded_ratio` band must be re-derived afterwards — 0.25–0.75 was
+written for a programme that fully draws, and is not a fair test until one
+exists.
+
+**Consequences.** Digest-invalidating for anything private. Calls move, so
+NAV, cash, spending, the forced-sale waterfall and every downstream session
+value move with them. Specifically:
+
+- `simulate_play` output changes → the play surface's scores change. This
+  warrants a **`PLAY_ALPHA_VERSION` bump** (currently `port-v1-cashflow`), on
+  the same reasoning that introduced it: rows scored under two different
+  cashflow models must not share a leaderboard. **Owner's call.**
+- `app/fixtures/toy.bundle.gz` must be rebuilt (`twin_ledger` changes), and
+  the golden values in the play/bundle/serve suites move.
+- It does **not** touch `schemas/` (the field's shape is unchanged), does
+  **not** touch `mappings/` (`rc_curve` is in neither sealed artifact — the
+  tier-0 spec carries `g_annual`, the tier-1 artifact the linkage), and is
+  **not** inside the pre-registration seal's `hashed_files`.
+- `ah.eval.decision_metrics.DECISION_ALPHA_VERSION` stays put: the alpha
+  *definition* is unchanged, and it sits inside the G5 seal.
+
+**Why this one is urgent rather than merely recorded.** The commitment lever
+(`experience-deltas-register` E1) asks a player to choose how much to commit,
+and the post-game review (E4) is meant to teach them what cutting a
+commitment in a drawdown cost. Both rest on the arithmetic of commitments
+being drawn. While ~29% of any commitment is never called, the flinch cost is
+measured against a counterfactual that does not behave like a real programme
+— so this is a prerequisite for E1, not a parallel cleanup.
