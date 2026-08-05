@@ -49,17 +49,27 @@ def test_a_missing_statistic_does_not_crash_the_report():
     assert stats == []
 
 
-def test_vintage_stats_on_a_calm_tape_are_hand_checkable():
-    """36 quarters of flat 0% returns and no stress: the linkage is 1.0
-    throughout, so this is tier 0's recursion and the numbers follow the
-    frozen curves alone."""
+def test_vintage_stats_at_tier0_benchmark_growth_are_hand_checkable():
+    """No market drama (dd=0, spread=1 throughout, so the linkage is 1.0),
+    and NAV grows at tier 0's own frozen constant g_annual -- not zero --
+    because these are questions about the model's cashflow SHAPE, and tier
+    0's constant growth is what "the model's own shape" means. Zero growth
+    makes the J-curve crossover arithmetically impossible (NAV can never
+    outgrow calls net of distributions without growth) and caps DPI below
+    1.0 structurally -- an artifact of a lazy test tape, not a finding
+    about the model."""
     n = 36
     calm_dd = np.zeros(n)
     calm_spread = np.ones(n)
     out = vintage_stats(calm_dd, calm_spread, n)
-    # rc_curve[0] = 0.25 annual on unfunded, quarterly => 6.25% of 1.0 committed
+    # rc_curve[0] = 0.25 annual on unfunded, quarterly => 6.25% of 1.0
+    # committed. Returns don't affect the first call, so this is unchanged
+    # by the growth basis.
     assert np.isclose(out["first_call"], 0.0625, rtol=1e-6)
-    # DPI is cumulative distributions over paid-in; both positive on a calm tape
-    assert out["dpi_age9"] > 0.0
+    # paid_in=0.6924, cumulative distributions=0.7729 over 36 quarters of
+    # tier-0 constant growth => dpi_age9 = 0.7729 / 0.6924 = 1.116.
+    assert np.isclose(out["dpi_age9"], 1.116, atol=1e-3)
     assert 0.0 < out["call_rate_y1_3"] < 1.0
-    assert out["crossover_years"] > 0.0
+    # cumulative (distributions - calls) first turns positive at quarter
+    # index 34 (0-based) => crossover_years = (34 + 1) / 4 = 8.75.
+    assert out["crossover_years"] == 8.75

@@ -28,6 +28,7 @@ from pathlib import Path
 import numpy as np
 
 from ah.play import PlayResult
+from ah.port.cashflow_tier0 import load_spec
 from ah.port.cashflow_tier1 import run_tier1
 
 __all__ = [
@@ -204,18 +205,26 @@ def vintage_stats(
     """The single-cohort statistics for a vintage committed in year 1.
 
     Run through ``run_tier1`` rather than read out of the play run: these are
-    questions about the MODEL's fund, and tier 1 is the module that answers
-    them. Committed is 1.0 so every output is a ratio.
+    questions about the MODEL's own cashflow shape, not about any particular
+    world's market luck. So the cohort's sleeve returns are held at tier 0's
+    own frozen constant growth (``g_annual`` in
+    ``mappings/cashflow-tier0-v1.0.yaml``, converted to a quarterly rate) --
+    that constant is what "tier 0" means -- rather than at zero. Zero growth
+    made the J-curve crossover arithmetically impossible (NAV cannot outgrow
+    calls net of distributions without growth) and left DPI structurally
+    capped below 1.0, which is a defect of the test harness, not a question
+    about the model. Committed is 1.0 so every output is a ratio.
     """
     base = json.loads(_COHORT_DOC.read_text(encoding="utf-8"))
     n = min(quarters, len(drawdown_depth))
     if n < _QUARTERS_PER_YEAR:
         return {}
+    g_quarterly = (1.0 + float(load_spec()["g_annual"])) ** 0.25 - 1.0
     result = run_tier1(
         base,
         committed=1.0,
         vintage_year=int(base["identity"]["vintage_year"]) + 1,
-        sleeve_returns=np.zeros(n),
+        sleeve_returns=np.full(n, g_quarterly),
         drawdown_depth=np.asarray(drawdown_depth[:n], dtype=float),
         spread_ratio=np.asarray(spread_ratio[:n], dtype=float),
         fees_on=False,
