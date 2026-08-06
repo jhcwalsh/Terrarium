@@ -1471,3 +1471,73 @@ amendments:
     and at guidance 1.0. This is a protocol_change: the lock is stale by design until
     the campaign-2 re-mint that accompanies this amendment.'
   type: protocol_change
+- amendment_id: AM-2026-08-06-001
+  date: '2026-08-06'
+  payload:
+    file: src/ah/battery/thresholds.yaml
+    left_todo:
+      acf_r_lag1: observed 2026-08-04 before ratification (ER-5)
+      corr_distance: reference matrix not named
+    ratified:
+    - excess_kurtosis
+    - skewness
+    - hill_tail_index
+    - acf_abs_lag1
+    - max_drawdown_median
+    supersedes_lock_digest: sha256:e50e18f300aba8ddff306a0811928c000edbb439931a0749d7fa4e6897f85d92
+  post_hoc: true
+  rationale: 'Ratify five of the seven Step-0 stylised-panel gates while they are
+    still blind. None of the five (excess_kurtosis, skewness, hill_tail_index, acf_abs_lag1,
+    max_drawdown_median) has ever been observed on any generator, so the bands are
+    pre-registration in the strict sense -- fixed before the result exists and capable
+    of failing. Two gates stay `todo` deliberately: acf_r_lag1 was observed on 2026-08-04
+    at 0.364 (ER-5) and a threshold set after its statistic is seen is not pre-registered;
+    corr_distance is a distance to a reference matrix that has not been named, so
+    no band can be set honestly. Two drafted bounds were defective rather than merely
+    weak: max_drawdown_median''s `max: 0.0` was a tautology (the statistic is negative
+    by construction, so the gate could not fail), and excess_kurtosis / acf_abs_lag1
+    were one-sided floors at 0.0 that almost nothing fails. PROVENANCE: judgement
+    anchored on the stylised-fact literature (Cont 2001) and ordinary monthly-frequency
+    market behaviour; class CHOSEN. Explicitly NOT derived from this engine''s output,
+    which would fit the test to the system under test. Deriving them from ah/eval/reference.py''s
+    block-bootstrap bands over the train+validation panel is the stronger method and
+    remains recommended; the owner elected to ratify now because pre-registration
+    for these five decays the moment anyone runs the battery. POST-HOC FLAG: true
+    because the change is made after the 2026-08-02 seal, NOT because any ratified
+    threshold was set after seeing its own statistic -- for the five ratified gates
+    the opposite is true, and that distinction is the point of this entry.'
+  type: threshold_change
+- amendment_id: AM-2026-08-06-002
+  date: '2026-08-06'
+  payload:
+    file: src/ah/battery/thresholds.yaml
+    passes_at_operating_size: true
+    reason: statistic is a function of ensemble size; no sealed Step-0 ensemble size
+      exists
+    stability_measured:
+      '128': 0.4896
+      '16': -0.0947
+      '256': 0.7235
+      '32': -0.0499
+      '64': 0.298
+    supersedes_lock_digest: sha256:c4e209be64f998bbdda19379c4ab553b0d3b65222c0d69dcaa995a7680300293
+    withdrawn:
+    - acf_abs_lag1
+  post_hoc: true
+  rationale: 'WITHDRAW acf_abs_lag1 from the enforce surface, back to `todo`. It was
+    ratified hours earlier by AM-2026-08-06-001 and should not have been: the statistic
+    is not well-defined independently of ensemble size. Measured on the same world
+    and seed, pooled equity acf_abs_lag1 reads -0.0947 at 16 paths, -0.0499 at 32,
+    0.2980 at 64, 0.4896 at 128 and 0.7235 at 256 -- monotone in the number of paths
+    concatenated, which means the number is reporting the pooling and not volatility
+    clustering. A band cannot bound a quantity that moves with how much you ran. THIS
+    IS NOT A POST-HOC RELAXATION: at the battery''s own operating size (64 paths,
+    ah/battery/report.py _stagflation_ensemble) the metric PASSES at 0.298 inside
+    [0.05, 0.40], so the withdrawal removes a passing gate, not a failing one, and
+    nothing turns green as a result. The underlying defect is that the Step-0 battery
+    seals no ensemble size, unlike the Step-2 battery which seals `ensemble_size:`.
+    FOLLOW-UP, not done here: seal a Step-0 ensemble size, then re-ratify this gate
+    against it. The other four gates ratified by AM-2026-08-06-001 are unaffected
+    and were checked for the same instability -- excess_kurtosis, hill_tail_index
+    and max_drawdown_median are stable across 16-256 paths.'
+  type: threshold_change

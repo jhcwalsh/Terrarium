@@ -5,7 +5,7 @@ from a committed artifact, and re-running the script reproduces this file
 byte-identically. Negative results are sections, not footnotes.*
 
 **The seals this record is judged under:** `pre-registration.lock`
-`sha256:e50e18f300aba8ddff306a0811928c000edbb439931a0749d7fa4e6897f85d92` · G3 `sha256:938aef3ee9c2f85b0dd7856ae89e6122c0058337c65170c0f05fa01753ba51b8` ·
+`sha256:bf0b6d8936975a09f8c92f8ec8abc24aa43b1c18e26d5cd32dbf2fb9bd21b58d` · G3 `sha256:938aef3ee9c2f85b0dd7856ae89e6122c0058337c65170c0f05fa01753ba51b8` ·
 G5 `sha256:601e3f826b089de171783eb397b6697ec2d5a967a606659a303ed47ba79ea615`.
 
 **The standing caveat, verbatim at the top because it governs everything
