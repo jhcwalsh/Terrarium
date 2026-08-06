@@ -65,8 +65,14 @@ def test_battery_command(tmp_path: Path) -> None:
     _invoke(db, "world", "build", "--preset", "goldilocks")
     _invoke(db, "run", "--paths", "16")
     result = _invoke(db, "battery")
-    assert result.exit_code == 0
+    # HISTORY: asserted exit 0, which held only while every gate was `todo`.
+    # Since ratification (AM-2026-08-06-001) `ah battery` exits 1 because the
+    # engine fails excess_kurtosis (ER-7). Inverted rather than relaxed: the CLI
+    # is correctly reporting a real failure, and the command's job is to exit
+    # non-zero when a ratified gate breaks.
+    assert result.exit_code == 1
     assert "battery-0.1" in result.stdout
+    assert "excess_kurtosis" in result.stdout
 
 
 def test_build_scenario_offline(tmp_path: Path) -> None:

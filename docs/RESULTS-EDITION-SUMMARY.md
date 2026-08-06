@@ -176,7 +176,7 @@ gap between what these documents describe and what the repository does.
 | Seed | `20260727` (seed index 0 of three; per-seed table covers all three) |
 | Ensemble | 1024 paths × 120 months |
 | Battery | `eval-battery-0.1` (generator), `battery-0.1` (stylised panel) |
-| Pre-registration digest | `sha256:e50e18f300aba8ddff306a0811928c000edbb439931a0749d7fa4e6897f85d92` |
+| Pre-registration digest | `sha256:e50e18f300aba8ddff306a0811928c000edbb439931a0749d7fa4e6897f85d92` | **Superseded 2026-08-06:** the lock was re-minted twice that day (AM-2026-08-06-001 ratifying five Step-0 gates, then -002 withdrawing one), so the operative digest is now `sha256:bf0b6d89…b58d`. The campaign-2 results reported here were verified against `sha256:e50e18f3…f85d92`, the lock as it stood when they were produced; that verification is unaffected, but a reader recomputing the digest against today's tree will get the newer value.
 | Sources | `experiments/campaign2/cells/{F-hier-flow-v1,B-bootstrap-v1}-s{0,1,2}/battery.json`; `artifacts/campaign2/promotion-verdict.json`; `G2-EVIDENCE.md`; `RESEARCH-EVIDENCE.md`; `G1-EVIDENCE.md`; `docs/engine-realism-register.md` §ER-5; `pre-registration.yaml` / `.lock` |
 | Read | 2026-08-05 |
 | Battery executions performed | **none** |

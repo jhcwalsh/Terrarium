@@ -375,3 +375,46 @@ commitment in a drawdown cost. Both rest on the arithmetic of commitments
 being drawn. While ~29% of any commitment is never called, the flinch cost is
 measured against a counterfactual that does not behave like a real programme
 — so this is a prerequisite for E1, not a parallel cleanup.
+
+
+## ER-7 — Monthly returns are near-Gaussian: the engine has no fat tails
+
+**Status:** open
+**Found:** 2026-08-06, by the first run of the Step-0 stylised battery after its
+thresholds were ratified (AM-2026-08-06-001). Found by a gate, which is what the
+gate was ratified for.
+
+**What happens.** Pooled equity `excess_kurtosis` reads **0.0853** against a
+ratified floor of **0.5** — outside by 0.415. Excess kurtosis is 0 for a normal
+distribution, so the toy engine's monthly returns are very close to Gaussian.
+Fat tails are the most-cited stylised fact of financial returns (Cont 2001), and
+this engine does not have them.
+
+Stable across ensemble size, so it is a property of the process and not of the
+sample: 16 paths → −0.027, 32 → 0.085, 64 → 0.085, 128 → 0.033, 256 → 0.018.
+Every value is far below the floor.
+
+**Two other gates corroborate.** `hill_tail_index` reads 5.799 against a ceiling
+of 6.0 — a *high* alpha means a *thin* tail, so the engine sits just inside the
+"too thin" edge. Meanwhile `max_drawdown_median` is −0.5946, comfortably deep.
+The picture is coherent: month-to-month the engine is shallow-tailed and
+near-Gaussian, and its one large loss is the deterministic crisis block doing
+the work fat tails should do. That is the same mechanism ER-5 records for the
+autocorrelation defect, seen from another angle.
+
+**Why it was not caught earlier.** Every gate was `status: todo` from WP0.8 until
+2026-08-06, so the battery could not fail and the value was never read against
+anything. The statistic was computable at any time; nothing was looking.
+
+**Consequences.** CI's `python -m ah.battery.report` step now exits 1, so CI is
+red until either the engine gains fat tails or the threshold is amended. Amending
+the threshold to clear a failure it was written to catch would be a post-hoc
+adjustment of exactly the kind the pre-registration discipline exists to prevent,
+and should not be done to make CI green.
+
+**What a fix looks like.** A heavier-tailed innovation in the monthly return
+draws — a Student-t or a mixture — in place of the current Gaussian
+`standard_normal` streams, or a stochastic-volatility term that produces
+clustering endogenously rather than through a scripted crisis block. Either is
+digest-invalidating and would move every stylised fact at once, including ER-5's
+autocorrelation. **This is a release event and the owner's call.**

@@ -1,36 +1,118 @@
 # Validation-battery thresholds (STEP0-PLAN §WP0.8).
 #
 # Per metric: optional `min` / `max` and a `status`:
-#   - todo    : recorded but never blocking (pre-registration pending, D6 workshop)
+#   - todo    : recorded but never blocking (pre-registration pending)
 #   - enforce : a min/max breach fails the battery (non-zero exit / CI red)
 #
-# Step 0 ships plumbing only, so every gate is `todo`. The values below are
-# placeholders documenting intent, not ratified thresholds.
+# ---------------------------------------------------------------------------
+# RATIFIED 2026-08-06 (owner decision; amendment AM-2026-08-06-001).
+#
+# FOUR of the seven gates below are `enforce` (five were ratified by
+# AM-2026-08-06-001; acf_abs_lag1 was withdrawn hours later by -002, see its
+# entry below). All were ratified WHILE STILL BLIND: none had ever been observed
+# on any generator, so the bands are pre-registration in the strict sense --
+# written down before the result existed, and capable of failing. They duly
+# failed one: see excess_kurtosis.
+#
+# PROVENANCE OF THE NUMBERS. Judgement anchored on the stylised-fact literature
+# (Cont 2001) and on ordinary monthly-frequency market behaviour. They are NOT
+# derived from this repository's historical panel, and they are NOT derived
+# from anything this engine has produced -- the latter would be fitting the
+# test to the system it is meant to test. Deriving them instead from
+# `ah/eval/reference.py`'s block-bootstrap bands over the train+validation
+# panel is the stronger method and remains the recommended replacement; it was
+# not done here because the owner elected to ratify now rather than wait, on
+# the ground that pre-registration for these gates decays the moment anyone runs
+# the battery. Class: CHOSEN, stated.
+#
+# THREE GATES ARE `todo`, and none is an oversight:
+#
+#   acf_r_lag1     -- ALREADY OBSERVED (0.364 on 2026-08-04, against the drafted
+#                     [-0.2, 0.2] band; docs/engine-realism-register.md ER-5).
+#                     A threshold set after its statistic has been seen is not a
+#                     pre-registered threshold, whatever number is written here.
+#                     It stays descriptive; pre-registered evaluation of this
+#                     metric applies from the next generator version.
+#
+#   corr_distance  -- UNDEFINED WITHOUT A REFERENCE. The statistic is a
+#                     Frobenius distance to a reference correlation matrix, and
+#                     its scale depends entirely on which reference and how many
+#                     assets. Picking a band before picking the reference would
+#                     be a number with no meaning. Blocked on that decision, not
+#                     on judgement.
+#
+# CHANGING ANY VALUE BELOW is a dated, post-hoc-flagged amendment in
+# governance/amendment-log.yaml plus a re-seal, because this file is one of the
+# 34 hashed into pre-registration.lock (prereg.py `_REQUIRED_JUDGED_DATA`). That
+# coupling is deliberate: `ah/battery/report.py` is sealed judging code and
+# reads these values, so an unsealed threshold would leave a sealed estimator
+# defined over an unsealed input. Adjustment is possible; it is not quiet.
+# ---------------------------------------------------------------------------
 
 excess_kurtosis:
-  min: 0.0        # fat tails: leptokurtic vs normal
-  status: todo
+  # Monthly equity returns are fat-tailed but far less so than daily. The old
+  # one-sided `min: 0.0` asserted only "not thinner than a normal", which almost
+  # nothing fails. Two-sided: a generator producing near-Gaussian months fails
+  # the floor, one producing daily-like kurtosis at monthly frequency fails the
+  # ceiling.
+  min: 0.5
+  max: 8.0
+  status: enforce
 
 skewness:
-  status: todo
+  # Equity monthly skew is mildly negative and rarely strongly positive. Wide,
+  # because skew is the noisiest of these moments at this sample size.
+  min: -1.5
+  max: 0.5
+  status: enforce
 
 hill_tail_index:
-  min: 2.0        # finite variance-ish tail
+  # Unchanged from the WP0.8 draft, which was already defensible: financial
+  # return tail indices sit in the 2-5 region (finite variance, questionable
+  # fourth moment). Noted limitation: at the ensemble size this battery runs,
+  # the estimator uses few order statistics and is noisy -- which is an argument
+  # for the width of this band, not against the gate.
+  min: 2.0
   max: 6.0
-  status: todo
+  status: enforce
 
 acf_r_lag1:
-  min: -0.2       # returns roughly uncorrelated
+  # OBSERVED BEFORE RATIFICATION -- see the header. Descriptive only.
+  min: -0.2
   max: 0.2
   status: todo
 
 acf_abs_lag1:
-  min: 0.0        # volatility clustering: |r| positively autocorrelated
+  # RATIFIED then WITHDRAWN the same day (AM-2026-08-06-001, then -002). The
+  # statistic is not well-defined independently of ensemble size: on one world
+  # and seed it reads -0.0947 / -0.0499 / 0.2980 / 0.4896 / 0.7235 at 16 / 32 /
+  # 64 / 128 / 256 paths -- monotone in the number of paths pooled, so the number
+  # reports the concatenation and not volatility clustering. A band cannot bound
+  # a quantity that moves with how much you ran.
+  #
+  # Note what this withdrawal is NOT: at the battery's operating size (64 paths)
+  # the metric PASSES at 0.298 inside the withdrawn band. Removing it takes away
+  # a passing gate, not a failing one, and turns nothing green.
+  #
+  # To ratify properly, the Step-0 battery needs a sealed ensemble size, as the
+  # Step-2 battery has (`ensemble_size:`). That is the real defect here.
+  min: 0.05
+  max: 0.40
   status: todo
 
 max_drawdown_median:
-  max: 0.0        # drawdowns are non-positive by construction
-  status: todo
+  # THE DRAFT WAS A TAUTOLOGY. `max_drawdown` returns a NEGATIVE fraction by
+  # construction (battery/stylized.py), so the old `max: 0.0` asserted that a
+  # non-positive number is non-positive: a gate that could not fail. A decade of
+  # monthly equity ordinarily produces a median worst drawdown somewhere in the
+  # -0.20 to -0.55 region; the band is widened either side of that. The floor
+  # catches a generator whose decades are implausibly smooth -- which is the
+  # failure mode this platform has the most reason to watch for.
+  min: -0.65
+  max: -0.12
+  status: enforce
 
 corr_distance:
+  # Blocked on a reference decision -- see the header. No band can be set
+  # honestly until the reference matrix is named.
   status: todo

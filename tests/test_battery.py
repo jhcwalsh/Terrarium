@@ -111,18 +111,50 @@ def test_corr_matrix_distance_zero_for_identical() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def test_thresholds_yaml_loads_all_todo() -> None:
+def test_thresholds_yaml_ratification_state() -> None:
+    """Which gates are live, asserted exactly.
+
+    HISTORY: this was ``test_thresholds_yaml_loads_all_todo`` and asserted that
+    EVERY gate was ``todo``. That was true from WP0.8 until the owner ratified
+    five of the seven on 2026-08-06 (AM-2026-08-06-001), so the old assertion
+    encoded a temporary state as an invariant. Inverted rather than deleted, per
+    the repo convention, and tightened: it now pins exactly which gates are live,
+    so a future ratification or relaxation has to be deliberate.
+    """
     thresholds = load_thresholds()
     assert thresholds  # non-empty
-    assert all(spec.get("status") == "todo" for spec in thresholds.values())
+    live = {k for k, v in thresholds.items() if v.get("status") == "enforce"}
+    todo = {k for k, v in thresholds.items() if v.get("status") == "todo"}
+    assert live == {"excess_kurtosis", "skewness", "hill_tail_index", "max_drawdown_median"}
+    # acf_r_lag1 was observed (ER-5) before any ratification, so it can never be
+    # pre-registered on this generator; corr_distance has no named reference.
+    # acf_abs_lag1 was ratified and withdrawn the same day (AM-2026-08-06-002):
+    # the statistic moves monotonically with ensemble size, so no band bounds it.
+    assert todo == {"acf_r_lag1", "acf_abs_lag1", "corr_distance"}
 
 
-def test_run_battery_on_stagflation_passes() -> None:
+def test_run_battery_on_stagflation_fails_exactly_one_ratified_gate() -> None:
+    """The engine does not meet its own ratified battery, and that is the finding.
+
+    HISTORY: this was ``test_run_battery_on_stagflation_passes`` and asserted
+    ``report.passed``, which held only because every gate was ``todo`` -- the
+    comment on the old assertion said so outright. Ratification on 2026-08-06
+    made the gates real and the first ratified run failed one of them:
+    pooled equity ``excess_kurtosis`` is 0.085 against a floor of 0.5, i.e. the
+    toy engine's monthly returns are close to Gaussian and lack the fat tails
+    that are the most-cited stylised fact of financial returns.
+
+    The test is INVERTED rather than relaxed. Loosening the band to make this
+    green would be a threshold adjusted after seeing its own statistic, which is
+    the exact failure the pre-registration discipline exists to prevent. If the
+    engine is later fixed this test will fail again, and whoever fixes it should
+    update this assertion deliberately rather than have it pass silently.
+    """
     report = run_battery(_ensemble())
     assert report.version == BATTERY_VERSION
     assert report.checks  # metrics were evaluated
-    assert report.passed  # all thresholds are todo -> non-blocking
-    assert report.enforce_failures == []
+    assert [c.metric for c in report.enforce_failures] == ["excess_kurtosis"]
+    assert not report.passed
 
 
 def test_enforce_failure_is_detected() -> None:
@@ -172,9 +204,9 @@ def test_render_markdown_and_json() -> None:
     report = run_battery(_ensemble())
     md = render_markdown(report)
     assert BATTERY_VERSION in md
-    assert "enforce failures: 0" in md
+    assert "enforce failures: 1" in md  # excess_kurtosis, see the inverted test above
     payload = json.loads(render_json(report))
-    assert payload["passed"] is True
+    assert payload["passed"] is False
     assert "excess_kurtosis" in payload["scalars"]
 
 
@@ -187,8 +219,16 @@ def test_report_records_active_blocks_from_factor_manifest() -> None:
     assert payload["active_blocks"] == ["global", "us", "fx", "valuation"]
 
 
-def test_main_returns_zero() -> None:
-    assert main([]) == 0
+def test_main_returns_one_while_a_ratified_gate_fails() -> None:
+    """HISTORY: was ``test_main_returns_zero``, true while every gate was ``todo``.
+
+    Since ratification (AM-2026-08-06-001) the entry point returns 1, because
+    ``excess_kurtosis`` fails its floor. CI runs this exact command as a gate
+    step, so CI is red until the engine gains fat tails or the threshold is
+    amended -- and amending it to clear a failure it was written to catch would
+    be the post-hoc move the discipline forbids.
+    """
+    assert main([]) == 1
 
 
 # --------------------------------------------------------------------------- #
@@ -213,7 +253,11 @@ def test_run_battery_accepts_injected_synthetic_manifest(tmp_path: Path) -> None
     assert synthetic_manifest.active_blocks == ("alpha", "beta")
 
     report = run_battery(_ensemble(), manifest=synthetic_manifest)
-    assert report.passed
+    # This test is about MANIFEST INJECTION, not about threshold outcomes. It
+    # asserted `report.passed` when every gate was `todo`; since ratification the
+    # engine fails excess_kurtosis, which says nothing about whether an injected
+    # manifest is accepted. Assert the thing under test instead.
+    assert [c.metric for c in report.enforce_failures] == ["excess_kurtosis"]
     assert report.active_blocks == ("alpha", "beta")
     assert "active_blocks: alpha, beta" in render_markdown(report)
     payload = json.loads(render_json(report))
