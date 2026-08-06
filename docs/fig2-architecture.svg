@@ -1,0 +1,84 @@
+<svg viewBox="0 0 860 560" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h  { font-size: 15.5px; font-weight: bold; fill: #1a1a1a; }
+    .s  { font-size: 12px; fill: #333; }
+    .m  { font-size: 11.5px; fill: #666; font-style: italic; }
+    .tag{ font-size: 11px; fill: #fff; font-weight: bold; }
+    .spec { fill: #f2f6fa; stroke: #2c5a7a; stroke-width: 1.6; }
+    .learn{ fill: #fdf6ee; stroke: #b07030; stroke-width: 1.8; }
+    .cons { fill: #f5f5f0; stroke: #6a6a5a; stroke-width: 1.4; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="17">Four generator layers, slow → fast, each constraining the next</text>
+
+  <!-- L1 -->
+  <rect x="30" y="52" width="560" height="72" rx="6" class="spec"/>
+  <rect x="30" y="52" width="46" height="72" rx="6" fill="#2c5a7a"/>
+  <text x="53" y="93" text-anchor="middle" class="tag" font-size="15">L1</text>
+  <text x="92" y="76" class="h">Climate — long-run conditions</text>
+  <text x="92" y="96" class="s">Levels around which real rates, inflation, growth move over decades</text>
+  <text x="92" y="114" class="m">specified · calibrated on century-scale macro panels (JST)</text>
+
+  <!-- L2 -->
+  <rect x="60" y="146" width="530" height="72" rx="6" class="spec"/>
+  <rect x="60" y="146" width="46" height="72" rx="6" fill="#2c5a7a"/>
+  <text x="83" y="187" text-anchor="middle" class="tag" font-size="15">L2</text>
+  <text x="122" y="170" class="h">Seasons — multi-year regime spine</text>
+  <text x="122" y="190" class="s">Small set of interpretable regimes with a transition process</text>
+  <text x="122" y="208" class="m">specified · a documented modelling choice, varied in the robustness grid</text>
+
+  <!-- L3 -->
+  <rect x="90" y="240" width="500" height="88" rx="6" class="learn"/>
+  <rect x="90" y="240" width="46" height="88" rx="6" fill="#b07030"/>
+  <text x="113" y="289" text-anchor="middle" class="tag" font-size="15">L3</text>
+  <text x="152" y="264" class="h">Weather — monthly factor dynamics</text>
+  <text x="152" y="284" class="s">Conditional generator given (L1, L2) state; structural output constraints</text>
+  <text x="152" y="302" class="s">(log-space prices, floored rates); tail objective in the loss</text>
+  <text x="152" y="320" class="m">learned — the only learned layer, bounded by the specification around it</text>
+
+  <!-- L4 -->
+  <rect x="120" y="350" width="470" height="72" rx="6" class="spec"/>
+  <rect x="120" y="350" width="46" height="72" rx="6" fill="#2c5a7a"/>
+  <text x="143" y="391" text-anchor="middle" class="tag" font-size="15">L4</text>
+  <text x="182" y="374" class="h">Events — named events + narrative</text>
+  <text x="182" y="394" class="s">Marked point process on the regime spine; display &amp; conditioning only</text>
+  <text x="182" y="412" class="m">specified · narrative never modifies the numeric path</text>
+
+  <!-- constraint arrows -->
+  <g stroke="#2c5a7a" stroke-width="1.6" fill="#2c5a7a">
+    <line x1="46" y1="124" x2="46" y2="176" /><polygon points="46,182 41,172 51,172"/>
+    <line x1="76" y1="218" x2="76" y2="270" /><polygon points="76,276 71,266 81,266"/>
+    <line x1="106" y1="328" x2="106" y2="380"/><polygon points="106,386 101,376 111,376"/>
+  </g>
+  <text x="22" y="270" class="m" transform="rotate(-90 22 270)" text-anchor="middle">constrains</text>
+
+  <!-- consumption layers -->
+  <rect x="640" y="120" width="190" height="128" rx="6" class="cons"/>
+  <text x="735" y="146" text-anchor="middle" class="h">Cashflow layer</text>
+  <text x="654" y="170" class="s">Calls, distributions, NAV</text>
+  <text x="654" y="188" class="s">via Takahashi–Alexander,</text>
+  <text x="654" y="206" class="s">rates linked to market state</text>
+  <text x="654" y="230" class="m">(Robinson–Sensoy calibration)</text>
+
+  <rect x="640" y="290" width="190" height="128" rx="6" class="cons"/>
+  <text x="735" y="316" text-anchor="middle" class="h">Portfolio layer</text>
+  <text x="654" y="340" class="s">Decisions, cash waterfall,</text>
+  <text x="654" y="358" class="s">spending off reported values,</text>
+  <text x="654" y="376" class="s">forced sales when liquidity</text>
+  <text x="654" y="394" class="s">fails</text>
+
+  <g stroke="#6a6a5a" stroke-width="1.4" fill="#6a6a5a">
+    <line x1="590" y1="184" x2="634" y2="184"/><polygon points="640,184 630,179 630,189"/>
+    <line x1="735" y1="248" x2="735" y2="284"/><polygon points="735,290 730,280 740,280"/>
+  </g>
+
+  <!-- legend -->
+  <rect x="30" y="470" width="800" height="62" rx="6" fill="#ffffff" stroke="#ccc"/>
+  <rect x="48" y="486" width="26" height="14" class="spec"/>
+  <text x="82" y="498" class="s">specified — authored, interpretable, calibrated to public data</text>
+  <rect x="48" y="508" width="26" height="14" class="learn"/>
+  <text x="82" y="520" class="s">learned — generative model, subject to the pre-registered acceptance battery</text>
+  <rect x="470" y="486" width="26" height="14" class="cons"/>
+  <text x="504" y="498" class="s">consumption — transduces paths into institutional state</text>
+  <text x="504" y="520" class="m">Layer reconciliation via official-statistics benchmarking (Denton)</text>
+</svg>

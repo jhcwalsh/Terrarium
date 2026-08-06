@@ -1,0 +1,84 @@
+<svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 14.5px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12px; fill: #333; }
+    .m { font-size: 11px; fill: #666; font-style: italic; }
+    .llm  { fill: #f7f2fa; stroke: #6a4a8a; stroke-width: 1.6; }
+    .num  { fill: #f2f6fa; stroke: #2c5a7a; stroke-width: 1.6; }
+    .disp { fill: #fbfbf7; stroke: #8a8a70; stroke-width: 1.4; }
+    .gate { fill: #f4f7f4; stroke: #4a6a4a; stroke-width: 1.5; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="16">The compiler is caged: words never touch numbers</text>
+
+  <!-- input -->
+  <rect x="30" y="60" width="180" height="64" rx="6" fill="#fff" stroke="#999"/>
+  <text x="120" y="86" text-anchor="middle" class="h">Your scenario</text>
+  <text x="120" y="106" text-anchor="middle" class="m">"credit dries up in 2027"</text>
+
+  <!-- compiler -->
+  <rect x="270" y="52" width="180" height="80" rx="6" class="llm"/>
+  <text x="360" y="78" text-anchor="middle" class="h" fill="#6a4a8a">LLM compiler</text>
+  <text x="360" y="98" text-anchor="middle" class="s">writes two outputs,</text>
+  <text x="360" y="114" text-anchor="middle" class="s">on two separate tracks</text>
+
+  <g stroke="#555" stroke-width="1.6" fill="#555">
+    <line x1="210" y1="92" x2="264" y2="92"/><polygon points="270,92 260,87 260,97"/>
+  </g>
+
+  <!-- track 1: parameters -->
+  <rect x="530" y="30" width="190" height="60" rx="6" class="num"/>
+  <text x="625" y="54" text-anchor="middle" class="h" fill="#2c5a7a">Generator parameters</text>
+  <text x="625" y="74" text-anchor="middle" class="m">structured, bounded fields</text>
+
+  <!-- track 2: narrative -->
+  <rect x="530" y="130" width="190" height="60" rx="6" class="disp"/>
+  <text x="625" y="154" text-anchor="middle" class="h">Narrative &amp; cast</text>
+  <text x="625" y="174" text-anchor="middle" class="m">headlines, actors, the wire</text>
+
+  <g stroke="#2c5a7a" stroke-width="1.6" fill="#2c5a7a">
+    <line x1="450" y1="72" x2="524" y2="58"/><polygon points="530,57 521,54 522,64"/>
+  </g>
+  <g stroke="#8a8a70" stroke-width="1.6" fill="#8a8a70">
+    <line x1="450" y1="112" x2="524" y2="152"/><polygon points="530,155 523,147 519,156"/>
+  </g>
+
+  <!-- coherence gate -->
+  <rect x="530" y="230" width="190" height="64" rx="6" class="gate"/>
+  <text x="625" y="254" text-anchor="middle" class="h" fill="#4a6a4a">Coherence checks</text>
+  <text x="625" y="274" text-anchor="middle" class="s">incoherent worlds rejected</text>
+
+  <g stroke="#2c5a7a" stroke-width="1.6" fill="#2c5a7a">
+    <line x1="625" y1="90" x2="625" y2="224"/><polygon points="625,230 620,221 630,221"/>
+  </g>
+
+  <!-- generator -->
+  <rect x="270" y="230" width="180" height="64" rx="6" class="num"/>
+  <text x="360" y="254" text-anchor="middle" class="h" fill="#2c5a7a">Calibrated generator</text>
+  <text x="360" y="274" text-anchor="middle" class="s">produces every number</text>
+
+  <g stroke="#4a6a4a" stroke-width="1.6" fill="#4a6a4a">
+    <line x1="530" y1="262" x2="456" y2="262"/><polygon points="450,262 460,257 460,267"/>
+  </g>
+
+  <!-- world -->
+  <rect x="30" y="230" width="180" height="64" rx="6" fill="#fff" stroke="#333" stroke-width="1.6"/>
+  <text x="120" y="254" text-anchor="middle" class="h">The world you play</text>
+  <text x="120" y="274" text-anchor="middle" class="s">numbers + narration</text>
+
+  <g stroke="#2c5a7a" stroke-width="1.6" fill="#2c5a7a">
+    <line x1="270" y1="262" x2="216" y2="262"/><polygon points="210,262 220,257 220,267"/>
+  </g>
+
+  <!-- narrative display-only path -->
+  <path d="M 625 190 C 625 210, 200 200, 130 226" fill="none" stroke="#8a8a70" stroke-width="1.6" stroke-dasharray="6,4"/>
+  <polygon points="126,229 136,225 132,234" fill="#8a8a70"/>
+  <text x="330" y="212" class="m">display only — dashed because it carries no numeric information</text>
+
+  <!-- the wall -->
+  <line x1="490" y1="110" x2="490" y2="200" stroke="#8a2f2f" stroke-width="3"/>
+  <text x="482" y="160" class="h" fill="#8a2f2f" transform="rotate(-90 482 160)" text-anchor="middle">the wall</text>
+
+  <text x="30" y="336" class="s" font-weight="bold">Every number passes the same validation battery as every other world. The narrative cannot modify a single one.</text>
+  <text x="30" y="358" class="m">Nearest precedent for compilation: defence-sector wargaming. In financial markets, to the authors' knowledge, first — which is exactly why it is caged.</text>
+</svg>

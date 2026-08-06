@@ -1,0 +1,83 @@
+<svg viewBox="0 0 860 500" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 15.5px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12.5px; fill: #333; }
+    .m { font-size: 11.5px; fill: #666; font-style: italic; }
+    .mono { font-size: 13px; font-family: 'Courier New', monospace; fill: #1a1a1a; }
+    .a { fill: #dce8f2; stroke: #2c5a7a; stroke-width: 1.2; }
+    .p { fill: #efefe8; stroke: #8a8a70; stroke-width: 1.2; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="17">The hybrid replay: one fixed path, K+1 evaluations</text>
+  <text x="30" y="50" class="m">World and seed fixed — every row sees the identical exogenous decade. Rows differ only in who decides at each window.</text>
+
+  <!-- window header -->
+  <text x="150" y="86" class="s" font-weight="bold">window:</text>
+  <g class="s" text-anchor="middle" font-weight="bold">
+    <text x="255" y="86">1</text><text x="325" y="86">2</text><text x="395" y="86">3</text>
+    <text x="465" y="86">4</text><text x="535" y="86">…</text><text x="605" y="86">K</text>
+  </g>
+  <text x="700" y="86" class="s" font-weight="bold">terminal</text>
+
+  <!-- H0 row: all policy -->
+  <text x="30" y="122" class="mono">H₀</text>
+  <g>
+    <rect x="225" y="104" width="60" height="26" class="p"/><rect x="295" y="104" width="60" height="26" class="p"/>
+    <rect x="365" y="104" width="60" height="26" class="p"/><rect x="435" y="104" width="60" height="26" class="p"/>
+    <rect x="505" y="104" width="60" height="26" class="p"/><rect x="575" y="104" width="60" height="26" class="p"/>
+  </g>
+  <text x="700" y="122" class="s">baseline (twin)</text>
+
+  <!-- H1 -->
+  <text x="30" y="162" class="mono">H₁</text>
+  <g>
+    <rect x="225" y="144" width="60" height="26" class="a"/><rect x="295" y="144" width="60" height="26" class="p"/>
+    <rect x="365" y="144" width="60" height="26" class="p"/><rect x="435" y="144" width="60" height="26" class="p"/>
+    <rect x="505" y="144" width="60" height="26" class="p"/><rect x="575" y="144" width="60" height="26" class="p"/>
+  </g>
+
+  <!-- H2 -->
+  <text x="30" y="202" class="mono">H₂</text>
+  <g>
+    <rect x="225" y="184" width="60" height="26" class="a"/><rect x="295" y="184" width="60" height="26" class="a"/>
+    <rect x="365" y="184" width="60" height="26" class="p"/><rect x="435" y="184" width="60" height="26" class="p"/>
+    <rect x="505" y="184" width="60" height="26" class="p"/><rect x="575" y="184" width="60" height="26" class="p"/>
+  </g>
+
+  <!-- H3 -->
+  <text x="30" y="242" class="mono">H₃</text>
+  <g>
+    <rect x="225" y="224" width="60" height="26" class="a"/><rect x="295" y="224" width="60" height="26" class="a"/>
+    <rect x="365" y="224" width="60" height="26" class="a"/><rect x="435" y="224" width="60" height="26" class="p"/>
+    <rect x="505" y="224" width="60" height="26" class="p"/><rect x="575" y="224" width="60" height="26" class="p"/>
+  </g>
+
+  <!-- dots -->
+  <text x="430" y="272" class="s" text-anchor="middle">⋮</text>
+
+  <!-- HK -->
+  <text x="30" y="312" class="mono">H_K</text>
+  <g>
+    <rect x="225" y="294" width="60" height="26" class="a"/><rect x="295" y="294" width="60" height="26" class="a"/>
+    <rect x="365" y="294" width="60" height="26" class="a"/><rect x="435" y="294" width="60" height="26" class="a"/>
+    <rect x="505" y="294" width="60" height="26" class="a"/><rect x="575" y="294" width="60" height="26" class="a"/>
+  </g>
+  <text x="700" y="312" class="s">the agent's run</text>
+
+  <!-- contributions on the right of consecutive rows -->
+  <g class="mono" font-size="12">
+    <text x="650" y="140" fill="#2c5a7a">c₁ = (H₁−H₀)/H₀</text>
+    <text x="650" y="180" fill="#2c5a7a">c₂ = (H₂−H₁)/H₀</text>
+    <text x="650" y="220" fill="#2c5a7a">c₃ = (H₃−H₂)/H₀</text>
+  </g>
+
+  <!-- legend -->
+  <rect x="225" y="344" width="26" height="16" class="a"/><text x="259" y="357" class="s">agent's actual decision</text>
+  <rect x="430" y="344" width="26" height="16" class="p"/><text x="464" y="357" class="s">policy π (baseline)</text>
+
+  <!-- identity -->
+  <rect x="30" y="386" width="800" height="90" rx="8" fill="#f7f9fb" stroke="#2c5a7a" stroke-width="1.4"/>
+  <text x="50" y="414" class="mono" font-size="15">A = (H_K − H₀)/H₀        c_j = (H_j − H_{j−1})/H₀        Σ c_j = A   exactly</text>
+  <text x="50" y="442" class="s">The sum telescopes with no residual: every point of decision alpha is attributed to a specific window,</text>
+  <text x="50" y="460" class="s">and each c_j answers "what did this decision add, given everything already done?" — the chess-annotation question.</text>
+</svg>

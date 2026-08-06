@@ -1,0 +1,63 @@
+<svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 14.5px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12px; fill: #333; }
+    .m { font-size: 11px; fill: #666; font-style: italic; }
+    .rep { fill: #faf3f0; stroke: #9a4a2f; stroke-width: 1.6; }
+    .tru { fill: #f2f6fa; stroke: #2c5a7a; stroke-width: 1.6; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="16">Corrected before training; the smoothing put back where you can see it</text>
+
+  <!-- reported input -->
+  <rect x="30" y="70" width="200" height="90" rx="6" class="rep"/>
+  <text x="130" y="96" text-anchor="middle" class="h" fill="#9a4a2f">Reported series</text>
+  <text x="130" y="118" text-anchor="middle" class="s">appraised, anchored on</text>
+  <text x="130" y="134" text-anchor="middle" class="s">last quarter's value</text>
+  <text x="130" y="152" text-anchor="middle" class="m">looks calm; is not</text>
+
+  <!-- desmoothing -->
+  <rect x="300" y="70" width="200" height="90" rx="6" fill="#fff" stroke="#333" stroke-width="1.6"/>
+  <text x="400" y="96" text-anchor="middle" class="h">De-smoothing</text>
+  <text x="400" y="118" text-anchor="middle" class="s">the standard correction</text>
+  <text x="400" y="134" text-anchor="middle" class="m">Geltner (1991);</text>
+  <text x="400" y="150" text-anchor="middle" class="m">Getmansky–Lo–Makarov (2004)</text>
+
+  <!-- true series -->
+  <rect x="570" y="70" width="200" height="90" rx="6" class="tru"/>
+  <text x="670" y="96" text-anchor="middle" class="h" fill="#2c5a7a">Corrected series</text>
+  <text x="670" y="118" text-anchor="middle" class="s">real volatility and</text>
+  <text x="670" y="134" text-anchor="middle" class="s">market exposure restored</text>
+  <text x="670" y="152" text-anchor="middle" class="m">what calibration uses</text>
+
+  <g stroke="#333" stroke-width="1.7" fill="#333">
+    <line x1="230" y1="115" x2="294" y2="115"/><polygon points="300,115 290,110 290,120"/>
+    <line x1="500" y1="115" x2="564" y2="115"/><polygon points="570,115 560,110 560,120"/>
+  </g>
+
+  <!-- down into the sim -->
+  <g stroke="#2c5a7a" stroke-width="1.7" fill="#2c5a7a">
+    <line x1="670" y1="160" x2="670" y2="215"/><polygon points="670,221 665,212 675,212"/>
+  </g>
+  <text x="684" y="195" class="m">calibration, then generation</text>
+
+  <!-- inside the simulation: two planes -->
+  <rect x="240" y="225" width="530" height="120" rx="8" fill="#fdfdfc" stroke="#bbb" stroke-width="1.2"/>
+  <text x="505" y="248" text-anchor="middle" class="h">Inside every world: two planes, one toggle</text>
+
+  <rect x="270" y="262" width="220" height="60" rx="6" class="tru"/>
+  <text x="380" y="286" text-anchor="middle" class="h" fill="#2c5a7a">TRUE plane</text>
+  <text x="380" y="306" text-anchor="middle" class="s">what values really do</text>
+
+  <rect x="520" y="262" width="220" height="60" rx="6" class="rep"/>
+  <text x="630" y="286" text-anchor="middle" class="h" fill="#9a4a2f">REPORTED plane</text>
+  <text x="630" y="306" text-anchor="middle" class="s">smoothing reinstated, visibly</text>
+
+  <g stroke="#555" stroke-width="1.4" fill="#555">
+    <line x1="490" y1="292" x2="514" y2="292"/><polygon points="520,292 511,288 511,296"/>
+    <line x1="520" y1="298" x2="496" y2="298"/><polygon points="490,298 499,294 499,302"/>
+  </g>
+
+  <text x="30" y="375" class="s" font-weight="bold">A model trained on smoothed marks learns that private assets are calm. This one is trained on the corrected series —</text>
+  <text x="30" y="392" class="s" font-weight="bold">and then shows you both planes, because the gap between them is the point.</text>
+</svg>

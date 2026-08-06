@@ -1,0 +1,47 @@
+<svg viewBox="0 0 860 360" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 14.5px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12px; fill: #333; }
+    .m { font-size: 11px; fill: #666; font-style: italic; }
+    .axis { font-size: 11px; fill: #777; }
+  </style>
+
+  <text x="30" y="28" class="h" font-size="16">Your decade against the twin's — identical world, identical seed, only the decisions differ</text>
+
+  <rect x="60" y="50" width="620" height="230" fill="#fdfdfc" stroke="#ccc"/>
+
+  <!-- decision window markers -->
+  <g stroke="#ddd" stroke-width="1">
+    <line x1="122" y1="50" x2="122" y2="280"/><line x1="184" y1="50" x2="184" y2="280"/>
+    <line x1="246" y1="50" x2="246" y2="280"/><line x1="308" y1="50" x2="308" y2="280"/>
+    <line x1="370" y1="50" x2="370" y2="280"/><line x1="432" y1="50" x2="432" y2="280"/>
+    <line x1="494" y1="50" x2="494" y2="280"/><line x1="556" y1="50" x2="556" y2="280"/>
+    <line x1="618" y1="50" x2="618" y2="280"/>
+  </g>
+  <text x="370" y="298" class="axis" text-anchor="middle">annual decision windows</text>
+
+  <!-- twin path -->
+  <path d="M 60 200 C 130 196, 200 186, 260 190 C 320 194, 380 214, 440 210 C 520 204, 600 186, 680 178"
+        fill="none" stroke="#8a8a70" stroke-width="2.4" stroke-dasharray="7,5"/>
+  <text x="560" y="172" class="s" fill="#8a8a70" font-weight="bold">policy twin</text>
+
+  <!-- player path: diverges at year 4 (de-risk before drawdown), less drawdown, ends above -->
+  <path d="M 60 200 C 130 196, 200 186, 246 189 C 290 191, 330 200, 440 196 C 520 188, 600 162, 680 150"
+        fill="none" stroke="#2c5a7a" stroke-width="2.6"/>
+  <text x="560" y="140" class="s" fill="#2c5a7a" font-weight="bold">your portfolio</text>
+
+  <!-- divergence marker -->
+  <circle cx="246" cy="189" r="5" fill="#2c5a7a"/>
+  <line x1="246" y1="185" x2="246" y2="80" stroke="#2c5a7a" stroke-width="1" stroke-dasharray="2,3"/>
+  <text x="252" y="76" class="s" fill="#2c5a7a">year 4: you de-risked; the twin's band hadn't tripped</text>
+
+  <!-- terminal gap = decision alpha -->
+  <line x1="700" y1="150" x2="700" y2="178" stroke="#333" stroke-width="1.6"/>
+  <line x1="694" y1="150" x2="706" y2="150" stroke="#333" stroke-width="1.6"/>
+  <line x1="694" y1="178" x2="706" y2="178" stroke="#333" stroke-width="1.6"/>
+  <text x="712" y="168" class="h">decision</text>
+  <text x="712" y="184" class="h">alpha</text>
+
+  <text x="30" y="326" class="s" font-weight="bold">The twin follows the written policy off reported values — so it responds late to what smoothing hides, exactly as real governance does.</text>
+  <text x="30" y="344" class="s">Beating it means seeing through the reported plane sooner than the process did. The per-decision breakdown is in the interpretation guide.</text>
+</svg>

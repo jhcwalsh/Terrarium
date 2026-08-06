@@ -1,0 +1,57 @@
+<svg viewBox="0 0 860 420" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 17px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12.5px; fill: #333; }
+    .m { font-size: 12.5px; fill: #555; font-style: italic; }
+    .axis { font-size: 12px; fill: #777; }
+    .box { fill: #fafafa; stroke: #999; stroke-width: 1.2; }
+    .boxmain { fill: #f2f6fa; stroke: #2c5a7a; stroke-width: 2; }
+  </style>
+
+  <!-- axis -->
+  <line x1="60" y1="345" x2="800" y2="345" stroke="#888" stroke-width="1.2"/>
+  <polygon points="800,345 790,340 790,350" fill="#888"/>
+  <polygon points="60,345 70,340 70,350" fill="#888"/>
+  <text x="62" y="368" class="axis">structure imposed, flexibility low</text>
+  <text x="798" y="368" class="axis" text-anchor="end">flexibility high, structure learned</text>
+  <text x="430" y="392" class="axis" text-anchor="middle">— the flexibility–structure line —</text>
+
+  <!-- Classical ESG -->
+  <rect x="45" y="60" width="220" height="240" rx="6" class="box"/>
+  <text x="155" y="90" text-anchor="middle" class="h">Classical ESG</text>
+  <text x="155" y="110" text-anchor="middle" class="m">(Wilkie cascade lineage)</text>
+  <text x="60" y="140" class="s">• dynamics authored, parametric</text>
+  <text x="60" y="162" class="s">• state fully interpretable</text>
+  <text x="60" y="184" class="s">• validation practice mature</text>
+  <text x="60" y="214" class="s" fill="#8a2f2f">✗ Gaussian innovations;</text>
+  <text x="72" y="232" class="s" fill="#8a2f2f">unrealistic dynamics</text>
+  <text x="60" y="254" class="s" fill="#8a2f2f">✗ no reported/true distinction</text>
+  <line x1="155" y1="300" x2="155" y2="340" stroke="#999" stroke-width="1" stroke-dasharray="3,3"/>
+
+  <!-- Specified world model -->
+  <rect x="305" y="40" width="250" height="260" rx="6" class="boxmain"/>
+  <text x="430" y="72" text-anchor="middle" class="h" fill="#2c5a7a">Specified world model</text>
+  <text x="430" y="92" text-anchor="middle" class="m">(this paper)</text>
+  <text x="320" y="122" class="s">• transitions authored &amp; calibrated</text>
+  <text x="320" y="144" class="s">• observation operator authored</text>
+  <text x="320" y="166" class="s">• learning bounded to inner layer</text>
+  <text x="320" y="188" class="s">• hidden state known to designer</text>
+  <text x="320" y="210" class="s">• pre-registered acceptance battery</text>
+  <text x="320" y="232" class="s">• bit-for-bit replay</text>
+  <text x="320" y="262" class="s" fill="#8a2f2f">✗ bounded by the modeller's</text>
+  <text x="332" y="280" class="s" fill="#8a2f2f">imagination</text>
+  <line x1="430" y1="300" x2="430" y2="340" stroke="#2c5a7a" stroke-width="1.4"/>
+
+  <!-- Learned world model -->
+  <rect x="595" y="60" width="220" height="240" rx="6" class="box"/>
+  <text x="705" y="90" text-anchor="middle" class="h">Learned world model</text>
+  <text x="705" y="110" text-anchor="middle" class="m">(Ha &amp; Schmidhuber; Dreamer)</text>
+  <text x="610" y="140" class="s">• latent dynamics fitted to data</text>
+  <text x="610" y="162" class="s">• can discover unauthored</text>
+  <text x="622" y="180" class="s">structure</text>
+  <text x="610" y="210" class="s" fill="#8a2f2f">✗ needs abundant interaction</text>
+  <text x="610" y="232" class="s" fill="#8a2f2f">✗ opaque state; hard to validate</text>
+  <text x="610" y="254" class="s" fill="#8a2f2f">✗ learns reporting distortion</text>
+  <text x="622" y="272" class="s" fill="#8a2f2f">as the phenomenon</text>
+  <line x1="705" y1="300" x2="705" y2="340" stroke="#999" stroke-width="1" stroke-dasharray="3,3"/>
+</svg>

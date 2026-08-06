@@ -1,0 +1,50 @@
+<svg viewBox="0 0 860 400" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 15.5px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12.5px; fill: #333; }
+    .m { font-size: 11.5px; fill: #666; font-style: italic; }
+    .axis { font-size: 11.5px; fill: #777; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="17">A world is a distribution; a decade is one draw</text>
+  <text x="30" y="50" class="m">The same scenario parameters generate an ensemble of decades. Domain randomisation is the correct frame: score policies across draws, not on the lucky one.</text>
+
+  <rect x="70" y="70" width="620" height="250" fill="#fdfdfc" stroke="#ccc"/>
+
+  <!-- fan of paths -->
+  <g fill="none" stroke="#b8c8d6" stroke-width="1.4">
+    <path d="M 70 200 C 180 190, 300 150, 420 130 C 520 116, 620 108, 690 104"/>
+    <path d="M 70 200 C 180 196, 300 176, 420 168 C 520 162, 620 158, 690 156"/>
+    <path d="M 70 200 C 180 202, 300 198, 420 200 C 520 202, 620 206, 690 208"/>
+    <path d="M 70 200 C 180 206, 300 218, 420 232 C 520 242, 620 250, 690 254"/>
+    <path d="M 70 200 C 180 212, 300 244, 420 268 C 520 284, 620 292, 690 296"/>
+    <path d="M 70 200 C 180 194, 300 164, 420 152 C 520 144, 620 140, 690 138"/>
+    <path d="M 70 200 C 180 204, 300 210, 420 218 C 520 226, 620 232, 690 236"/>
+    <path d="M 70 200 C 180 198, 300 188, 420 184 C 520 180, 620 178, 690 176"/>
+  </g>
+
+  <!-- the revealed draw -->
+  <path d="M 70 200 C 180 208, 300 230, 420 248 C 520 234, 620 200, 690 184"
+        fill="none" stroke="#2c5a7a" stroke-width="3"/>
+  <text x="430" y="268" class="s" fill="#2c5a7a" font-weight="bold">the revealed path — one draw</text>
+
+  <text x="80" y="92" class="s">ensemble of decades from one WorldSpec</text>
+
+  <!-- axes -->
+  <text x="380" y="342" class="axis" text-anchor="middle">time →</text>
+  <text x="58" y="200" class="axis" text-anchor="end">V</text>
+
+  <!-- right panel -->
+  <rect x="710" y="90" width="130" height="210" rx="8" fill="#fbfbf7" stroke="#aaa" stroke-width="1.2"/>
+  <text x="775" y="116" text-anchor="middle" class="h" font-size="13">Two scores</text>
+  <text x="722" y="142" class="s" font-weight="bold">Realised</text>
+  <text x="722" y="159" class="m">on the drawn path;</text>
+  <text x="722" y="174" class="m">luck included</text>
+  <text x="722" y="204" class="s" font-weight="bold">Ensemble</text>
+  <text x="722" y="221" class="m">policy across many</text>
+  <text x="722" y="236" class="m">draws; luck averaged</text>
+  <text x="722" y="251" class="m">out — the robust-</text>
+  <text x="722" y="266" class="m">policy measure</text>
+
+  <text x="30" y="372" class="m">No transfer claim is made: the reality gap is unquantifiable at decade scale (§8). The ensemble score measures robustness within the specification, not skill in the world.</text>
+</svg>
