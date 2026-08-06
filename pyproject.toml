@@ -115,6 +115,9 @@ ignore = [
 # The QA console renders HTML: en-dashes, minus signs and middots are display
 # typography, and the ASCII lookalike would be wrong on the page.
 "src/ah/console.py" = ["RUF001", "RUF002", "RUF003"]
+# The console guard asserts on the console's own rendered column headers,
+# which carry the same display typography.
+"tests/test_console_guard.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Typer's (and FastAPI's) function-call-in-default is the intended idiom,
