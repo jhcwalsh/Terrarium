@@ -358,6 +358,8 @@ Pooled mean difference −0.3157, standard deviation 0.0265 across three seeds, 
 
 **The pre-registration records a bias in its own favour.** The sealed decision rule carries a disclosure that the head-to-head is biased toward promotion by the benchmark's data window. The benchmark can only resample 1990–2020, whose worst equity drawdowns are 2000–02, 2008–09 and 2020, while the challenger was fitted on a span including 1929–33, 1937, 1973–74 and 1987; both are then scored against realisations spanning the longer period. On any statistic rewarding reproduction of the deep pre-1990 left tail, the benchmark is handicapped by its window rather than by its form. Because the design treats a benchmark-ships verdict as a success, the bias runs against the conservative outcome. It was written into the seal before the comparison was run, and is reported for that reason: a pre-registration that records the thumb on its own scale is evidence about the discipline rather than an embarrassment to it.
 
+The same disclosure binds the evidence record to re-run the comparison restricted to the 1990–2020 realisations both systems are scored against, where the benchmark's window handicap does not apply. Under that restriction the challenger's mean difference moves from −0.296723 to −0.363470 and the pooled beat holds, so the verdict is not an artifact of the benchmark's draw span. Those are the G2-era figures at vintage `2026-07-26.1`, distinct from the campaign-2 numbers above.
+
 ### 8.4 Memorisation, and two statistics with no threshold
 
 Memorisation bounds were sealed at report severity. The generator sits above both nearest-neighbour floors and below the membership-inference ceiling.
