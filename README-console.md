@@ -51,13 +51,13 @@ directory and verifies there. The console writes nothing anywhere.
 
 | Page | What it proves |
 |---|---|
-| `/worlds` | **What exists.** Every world on disk with its spec version, generator, seeds actually run, and coherence-gate result (V1–V12, recomputed live). If a world is here, it was built and stored; if the gate column is red, it should not be played. |
+| `/worlds` | **What exists.** Every world on disk with its spec version, generator, seeds actually run, and **each of the twelve coherence rules shown individually** — green if silent, amber if it warned, red if it blocked, with the findings text on hover. A count would have told you three rules fired; this tells you which. |
 | `/world/<id>/path` | **The decade is well-formed.** Factor paths against the regime spine, crisis markers, the two-plane view, and the sanity strip. A red strip row is a generator defect surfaced — the console earning its keep. |
 | `/world/<id>/ensemble` | **The distribution is the right shape.** Fan charts per asset, terminal and drawdown distributions, forced-sale incidence, distribution-drought counts. Flags when `n` is below the world's declared ensemble size. |
-| `/world/<id>/cashflows` | **The institution's arithmetic closes.** Per-quarter calls, distributions, spending, NAV on both planes, unfunded, private weight; forced-sale events with their haircut; and a reconciliation footer recomputing the cash identity from the displayed numbers. |
-| `/run/<run_id>` | **The record reproduces.** Stored engine/validator/battery versions, the decision list as stored, and a replay check that re-executes in a scratch copy and reports bit-identity. |
+| `/world/<id>/cashflows` | **The institution's arithmetic closes.** The waterfall stage by stage — cash in, receive distributions, pay calls, pay spending, the balance that triggers a forced sale, cash out — plus cumulative paid-in, NAV on both planes, unfunded, private weight, per-sleeve private NAV, forced-sale events with their haircut, and a reconciliation footer recomputing the cash identity from the displayed numbers. |
+| `/run/<run_id>` | **The record reproduces, and the decomposition closes.** Stored engine/validator/battery versions, the decision list as stored, per-window contributions with the sum-versus-total check shown, and a replay check that re-executes in a scratch copy and reports bit-identity. |
 | `/battery/<report_id>` | **What the battery actually said.** Per gate: statistic, band, margin, verdict, and ratification status. Deliberately **no aggregate pass/fail badge** — the per-gate table is the truth, and a summary badge invites exactly the spin the evidence discipline forbids. |
-| `/diff` | **Unbuilt.** Descoped so the six core pages could be finished and verified. The page says so rather than faking a comparison. |
+| `/diff` | **Two worlds or two seeds side by side.** Summary statistics in columns with the B−A delta, and paths overlaid per factor and per asset. Warns when A and B are the same world at the same seed, where every difference is zero by construction. |
 
 Every number carries provenance: the italic line under each heading names the
 store, table or function that produced it, and the *how these numbers were
@@ -220,7 +220,6 @@ ledger display agree bit for bit.
 
 ## Known limits of this console
 
-- **`/diff` is unbuilt.** Descoped, not stubbed.
 - **The three series on `/run/<id>` are not shown.** Player, policy twin and
   drift twin are computed by the session service at outcome time and are not
   stored on the RunRecord; the drift twin is `null` by contract in `ah.serve`.
@@ -229,8 +228,21 @@ ledger display agree bit for bit.
 - **`cost_charged` and per-window `c_j` annotations are not on the record.** The
   sessions table stores `{month: verb}` and a `window_log`; no cost or
   contribution is persisted. The decision table says so per row.
-- **Ensemble forced-sale incidence is bounded to the first 40 seeds** for page
-  responsiveness. The page states the bound rather than silently truncating.
+- **Ensemble forced-sale incidence is bounded to the first 40 seeds**, and the
+  factor fans to the first 60, for page responsiveness. Both bounds are printed
+  on the page rather than silently applied.
+- **The cashflow ledger is quarterly, not monthly.** The brief asked for a
+  per-month ledger; the engine resolves the waterfall once per quarter
+  (`ah.port.engine.run_quarter`), so a monthly table would be interpolation
+  presented as data. The page says so where the table starts.
+- **Calls and distributions are not broken out per sleeve.** `PlayResult`
+  aggregates them across sleeves. Per-sleeve NAV *is* shown, derived from the
+  per-cohort snapshot the engine records. Deriving per-sleeve flows would mean
+  reimplementing the cohort recursion inside the console, which is how an
+  inspection tool starts disagreeing with the thing it inspects.
+- **Per-window contributions need a played session.** They decompose an action
+  sequence, and a RunRecord does not carry one; a run with no decisions gets an
+  empty state naming the endpoint that would produce them.
 - **The battery viewer reads report metadata, not git history.** Ratification
   status is derived from each metric's `severity` (`enforce` → pre-registered
   gate; `report` → descriptive) and `status`. The per-gate git determination

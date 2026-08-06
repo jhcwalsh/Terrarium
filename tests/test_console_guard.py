@@ -155,3 +155,61 @@ class TestEmptyStates:
         client = TestClient(create_app(tmp_path / "absent.db"))
         for route in ("/worlds", "/diff", "/battery/none"):
             assert WATERMARK in client.get(route).text, route
+
+
+class TestCompletedPages:
+    """The pages finished after the first cut, each asserted on real structure."""
+
+    def _store(self, tmp_path: Path) -> Path:
+        """A real store built by the real CLI — no fixture, no handmade rows."""
+        from typer.testing import CliRunner
+
+        from ah.cli import app as cli_app
+
+        db = tmp_path / "qa.db"
+        runner = CliRunner()
+        for preset in ("stagflation", "goldilocks"):
+            assert (
+                runner.invoke(
+                    cli_app, ["--db", str(db), "world", "build", "--preset", preset]
+                ).exit_code
+                == 0
+            )
+            assert runner.invoke(cli_app, ["--db", str(db), "run", "--paths", "20"]).exit_code == 0
+        return db
+
+    def test_shelf_itemises_all_twelve_coherence_rules(self, tmp_path: Path) -> None:
+        import re
+
+        from fastapi.testclient import TestClient
+
+        from ah.console import V_RULES
+
+        body = TestClient(create_app(self._store(tmp_path))).get("/worlds").text
+        found = set(re.findall(r">(V\d+)<", body))
+        assert set(V_RULES) <= found, f"missing rules: {set(V_RULES) - found}"
+
+    def test_cashflows_shows_the_waterfall_stages_and_paid_in(self, tmp_path: Path) -> None:
+        import re
+
+        from fastapi.testclient import TestClient
+
+        client = TestClient(create_app(self._store(tmp_path)))
+        wid = re.findall(r"/world/([0-9a-f\-]+)/path", client.get("/worlds").text)[0]
+        body = client.get(f"/world/{wid}/cashflows").text
+        for column in ("cash in", "+ dist", "− calls", "− spending", "cum. paid-in"):
+            assert column in body, column
+        assert "Private NAV by sleeve" in body
+
+    def test_diff_compares_two_real_worlds(self, tmp_path: Path) -> None:
+        import re
+
+        from fastapi.testclient import TestClient
+
+        client = TestClient(create_app(self._store(tmp_path)))
+        wids = sorted(set(re.findall(r"/world/([0-9a-f\-]+)/path", client.get("/worlds").text)))
+        assert len(wids) >= 2
+        body = client.get(f"/diff?a={wids[0]}&b={wids[1]}").text
+        assert "Summary statistics" in body
+        assert "Paths overlaid" in body
+        assert "same world at the same seed" not in body

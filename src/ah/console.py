@@ -55,7 +55,13 @@ from ah.core.engine import ASSETS, REPORTED_SLEEVES, EnginePaths, run_ensemble, 
 from ah.core.numericworld import project_numeric
 from ah.core.validator import validate
 from ah.core.worldspec import WorldSpec
-from ah.play import START_CASH, simulate_play
+from ah.feed import build_tier1_feed
+from ah.play import (
+    PRIVATE_ASSETS,
+    START_CASH,
+    simulate_play,
+    window_contributions_play,
+)
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
@@ -288,6 +294,39 @@ def _hist_svg(values: np.ndarray, title: str, w: int = 430, h: int = 190, bins: 
 # that cannot be made to go red has not been shown to work.
 # --------------------------------------------------------------------------- #
 
+#: The coherence rules the validator implements (WORLDSPEC.md §3). Named here so
+#: the shelf can show which of the twelve fired and which stayed silent, rather
+#: than only a count — "V4 warned" and "three warnings" are different facts.
+V_RULES: tuple[str, ...] = tuple(f"V{i}" for i in range(1, 13))
+
+
+def _v_rule_chips(res: Any) -> str:
+    """One chip per V-rule: red if blocking, amber if warning, green if silent."""
+    blocking = {f.rule for f in res.blocking}
+    warning = {f.rule for f in res.warnings}
+    chips = []
+    for rule in V_RULES:
+        if rule in blocking:
+            chips.append(
+                f'<span class="pill" style="border-color:#a3282f;color:#a3282f">{rule}</span>'
+            )
+        elif rule in warning:
+            chips.append(
+                f'<span class="pill" style="border-color:#8a6d1f;color:#8a6d1f">{rule}</span>'
+            )
+        else:
+            chips.append(f'<span class="pill" style="color:#1f6b3a">{rule}</span>')
+    detail = (
+        "; ".join(f"{f.rule}: {f.message}" for f in (*res.blocking, *res.warnings))
+        or "no rule produced a finding"
+    )
+    return (
+        " ".join(chips)
+        + f'<br><span class="pill">{len(res.clamps)} clamp(s)</span> '
+        + _src("findings", detail)
+    )
+
+
 SanityRow = tuple[str, float, float, float, float, str]
 
 
@@ -463,13 +502,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         rows = []
         for w in ws:
             res = validate(w.doc)
-            n_block, n_warn, n_clamp = len(res.blocking), len(res.warnings), len(res.clamps)
-            gate = (
-                f'<span class="bad">{n_block} blocking</span>'
-                if n_block
-                else '<span class="ok">V1–V12 clear</span>'
-            )
-            gate += f' <span class="pill">{n_warn} warn · {n_clamp} clamp</span>'
+            gate = _v_rule_chips(res)
             runs = _runs(c, w.world_id)
             seeds = sorted({r["seed"] for r in runs})
             ed = w.doc.get("engine_defaults", {})
@@ -532,12 +565,25 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         bands = []
         for ep in (w.doc.get("regimes") or {}).get("sequence") or []:
             bands.append((ep["from_quarter"] * 3, (ep["to_quarter"] + 1) * 3, ep["regime"]))
+        # named events: the world's own Tier-1 wire, so a marker's hover carries
+        # the artifact class and its headline rather than a generic label
         markers: list[tuple[int, str]] = []
-        for m in range(p.months):
-            if p.crisis[m] == 1.0 and (m == 0 or p.crisis[m - 1] == 0.0):
-                markers.append((m, "crisis window opens (factor_conditions.crisis_windows[0])"))
-            if p.crisis[m] == 0.0 and m and p.crisis[m - 1] == 1.0:
-                markers.append((m, "crisis window closes"))
+        wire: list[dict[str, Any]] = []
+        try:
+            wire = build_tier1_feed(nw, p, base_seed=int(use_seed), n_peer_paths=24)
+        except Exception as exc:  # a wire failure must not blank the whole page
+            wire_note = f"wire unavailable: {type(exc).__name__}: {exc}"
+        else:
+            wire_note = ""
+            for item in wire:
+                payload = item.get("payload") or {}
+                head = (
+                    payload.get("headline")
+                    or payload.get("title")
+                    or (payload.get("items") or [{}])[0].get("headline", "")
+                    or item.get("type", "")
+                )
+                markers.append((int(item["month"]), f"{item.get('type')}: {head}"))
 
         factors = _line_svg(
             {"policy rate %": p.rate, "inflation %": p.inflation},
@@ -632,7 +678,18 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "cumulative growth &gt; 0 for every asset.</div>"
             "<h2>Factor paths and the regime spine</h2>"
             f'<div class="grid"><div>{factors}</div><div>{spread}</div><div>{liquid}</div></div>'
-            "<h2>The two planes — reported against true</h2>"
+            + (
+                f'<div class="prov">{len(wire)} wire item(s) on this tape, rendered as timeline '
+                f"markers; hover a marker for its class and headline. "
+                + _src(
+                    "types present",
+                    ", ".join(sorted({str(i.get("type")) for i in wire})) or "none",
+                )
+                + "</div>"
+                if wire
+                else f'<div class="prov">{_e(wire_note or "no wire items on this tape")}</div>'
+            )
+            + "<h2>The two planes — reported against true</h2>"
             f'<div class="grid">{"".join(planes)}</div>'
         )
         return _page("path", body)
@@ -662,8 +719,19 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             else f"n={n}"
         )
         fans = "".join(
-            f"<div>{_fan_svg(np.cumprod(1.0 + ens.returns[a] / 100.0, axis=1), f'{a} — cumulative growth')}</div>"
+            f"<div>{_fan_svg(np.cumprod(1.0 + ens.returns[a] / 100.0, axis=1), f'{a} — cumulative growth (n={n})')}</div>"
             for a in ASSETS
+        )
+        # factor fans: the macro drivers, which the asset fans do not show
+        fpaths = [run_path(nw, int(base) + 7919 * i) for i in range(min(n, 60))]
+        nf = len(fpaths)
+        factor_fans = "".join(
+            f"<div>{_fan_svg(np.stack([getattr(fp, attr) for fp in fpaths]), f'{label} (n={nf})')}</div>"
+            for attr, label in (
+                ("rate", "policy rate %"),
+                ("spread", "HY spread bps"),
+                ("inflation", "inflation %"),
+            )
         )
         terminal = np.array([np.prod(1.0 + ens.returns["equity"][i] / 100.0) for i in range(n)])
         growth = np.cumprod(1.0 + ens.returns["equity"] / 100.0, axis=1)
@@ -673,14 +741,26 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
 
         # forced-sale incidence needs the institution; bounded to keep the page responsive
         k = min(n, 40)
-        forced, secondaries, drought = [], [], []
+        forced, secondaries, drought, depth = [], [], [], []
         for i in range(k):
             r = simulate_play(run_path(nw, int(base) + 7919 * i), None)
             forced.append(r.forced_sale_quarters)
             secondaries.append(r.forced_secondaries)
             dist = np.array([q.distributions_received for q in r.quarters])
             base_rate = float(np.median(dist)) if dist.size else 0.0
-            drought.append(float(np.sum(dist < 0.5 * base_rate)) if base_rate > 0 else 0.0)
+            if base_rate > 0:
+                dry = dist < 0.5 * base_rate
+                # duration: longest consecutive run of dry quarters
+                longest = cur = 0
+                for flag in dry:
+                    cur = cur + 1 if flag else 0
+                    longest = max(longest, cur)
+                drought.append(float(longest))
+                # depth: how far below normal the worst dry stretch fell
+                depth.append(float(1.0 - dist.min() / base_rate) if dist.min() < base_rate else 0.0)
+            else:
+                drought.append(0.0)
+                depth.append(0.0)
 
         body = (
             f"<h1>Ensemble — {_e(world_id)}</h1>"
@@ -693,6 +773,8 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 f"(bounded for page responsiveness, stated rather than silently truncated).",
             )
             + "</div>"
+            "<h2>Fan charts, per factor</h2>"
+            f'<div class="grid">{factor_fans}</div>'
             "<h2>Fan charts, per asset</h2>"
             f'<div class="grid">{fans}</div>'
             "<h2>Distributions</h2>"
@@ -700,7 +782,8 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             f"<div>{_hist_svg(terminal, 'equity terminal growth of 1')}</div>"
             f"<div>{_hist_svg(max_dd, 'equity max drawdown (depth)')}</div>"
             f"<div>{_hist_svg(np.array(forced, dtype=float), f'forced-sale quarters per path (first {k} seeds)')}</div>"
-            f"<div>{_hist_svg(np.array(drought, dtype=float), f'distribution-drought quarters (first {k} seeds)')}</div>"
+            f"<div>{_hist_svg(np.array(drought, dtype=float), f'drought DURATION: longest dry run, quarters (first {k} seeds)')}</div>"
+            f"<div>{_hist_svg(np.array(depth, dtype=float), f'drought DEPTH: worst shortfall vs normal (first {k} seeds)')}</div>"
             "</div>"
             f'<div class="prov">Forced secondaries across the {k} sampled paths: '
             f"{int(np.sum(secondaries))} total; "
@@ -731,19 +814,46 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         # a corrupted copy through
         residuals = cash_identity(res.quarters, START_CASH)
         rows, checks_ok, checks_bad = [], 0, 0
+        opening = START_CASH
+        cum_pic = 0.0
         for q, delta in zip(res.quarters, residuals, strict=True):
             ok = abs(delta) < 1e-6
             checks_ok += ok
             checks_bad += not ok
+            cum_pic += q.calls_paid
+            # the waterfall, stage by stage, in ah.port.engine.run_quarter's order
+            after_income = opening + q.distributions_received
+            after_calls = after_income - q.calls_paid
+            after_spend = after_calls - q.spending_paid
+            short = after_spend < 0.0
             rows.append(
                 f'<tr><td class="l">Q{q.quarter + 1} (m{q.month})</td>'
-                f"<td>{q.calls_paid:,.4f}</td><td>{q.distributions_received:,.4f}</td>"
-                f"<td>{q.spending_paid:,.4f}</td>"
-                f"<td>{'—' if q.forced_sale_total == 0 else f'{q.forced_sale_total:,.4f}'}</td>"
-                f"<td>{q.cash:,.4f}</td><td>{q.nav_true:,.4f}</td><td>{q.nav_reported:,.4f}</td>"
+                f"<td>{opening:,.4f}</td>"
+                f"<td>+{q.distributions_received:,.4f}</td><td>{after_income:,.4f}</td>"
+                f"<td>−{q.calls_paid:,.4f}</td><td>{after_calls:,.4f}</td>"
+                f"<td>−{q.spending_paid:,.4f}</td>"
+                f'<td class="l">{f"<span class=bad>{after_spend:,.4f}</span>" if short else f"{after_spend:,.4f}"}</td>'
+                f"<td>{'—' if q.forced_sale_total == 0 else f'+{q.forced_sale_total:,.4f}'}</td>"
+                f"<td>{q.cash:,.4f}</td>"
+                f"<td>{cum_pic:,.4f}</td>"
+                f"<td>{q.nav_true:,.4f}</td><td>{q.nav_reported:,.4f}</td>"
                 f"<td>{q.unfunded_total:,.4f}</td><td>{q.private_weight_true:,.4f}</td>"
                 f'<td class="l">{"<span class=ok>ok</span>" if ok else f"<span class=bad>Δ {delta:+.2e}</span>"}</td>'
                 "</tr>"
+            )
+            opening = q.cash
+
+        # per-sleeve NAV, summed from the cohort-level snapshot the engine records
+        sleeve_rows = []
+        for q in res.quarters:
+            per: dict[str, float] = {}
+            for cid, nav in q.vintage_nav.items():
+                per[cid.split("-")[0]] = per.get(cid.split("-")[0], 0.0) + nav
+            sleeve_rows.append(
+                f'<tr><td class="l">Q{q.quarter + 1}</td>'
+                + "".join(f"<td>{per.get(s, 0.0):,.4f}</td>" for s in PRIVATE_ASSETS)
+                + f"<td>{sum(per.values()):,.4f}</td>"
+                f"<td>{q.new_commitments:,.4f}</td></tr>"
             )
 
         sales = (
@@ -774,11 +884,28 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 "Quarterly resolution is the engine's own (ah.port.engine.PortfolioEngine.run_quarter).",
             )
             + "</div>"
-            "<h2>Per-quarter ledger</h2>"
-            "<table><tr><th class='l'>quarter</th><th>calls</th><th>distributions</th>"
-            "<th>spending</th><th>forced sale</th><th>cash</th><th>NAV true</th>"
+            "<h2>The waterfall, stage by stage</h2>"
+            '<div class="prov">Columns follow ah.port.engine.run_quarter in order: cash receives '
+            "distributions, then pays calls, then pays spending off the trailing reported average; "
+            "a negative balance at that point (shown red) is what triggers the forced sale. "
+            "<b>Resolution is quarterly because the engine is</b> — the waterfall runs once per "
+            "quarter, so a monthly ledger would be interpolation, not data.</div>"
+            "<table><tr><th class='l'>quarter</th><th>cash in</th><th>+ dist</th><th>=</th>"
+            "<th>− calls</th><th>=</th><th>− spending</th><th class='l'>= balance</th>"
+            "<th>forced sale</th><th>cash out</th><th>cum. paid-in</th><th>NAV true</th>"
             "<th>NAV reported</th><th>unfunded</th><th>private wt</th>"
             "<th class='l'>cash identity</th></tr>" + "".join(rows) + "</table>"
+            "<h2>Private NAV by sleeve</h2>"
+            '<div class="prov">Summed from the per-cohort NAV snapshot the engine records on each '
+            "quarter (PlayQuarter.vintage_nav). <b>Calls and distributions are not available per "
+            "sleeve</b> — PlayResult aggregates them across sleeves, and deriving them here would "
+            "mean reimplementing the cohort recursion, which is how a console starts disagreeing "
+            "with the engine it inspects.</div>"
+            "<table><tr><th class='l'>quarter</th>"
+            + "".join(f"<th>{s} NAV</th>" for s in PRIVATE_ASSETS)
+            + "<th>total private</th><th>new commitments</th></tr>"
+            + "".join(sleeve_rows)
+            + "</table>"
             "<h2>Forced-sale events</h2>"
             "<table><tr><th class='l'>period</th><th class='l'>kind</th><th>amount</th>"
             "<th>haircut</th><th class='l'>cause</th></tr>" + sales + "</table>"
@@ -824,6 +951,58 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 f"POST /sessions with run_id={run_id} against ah.serve",
             )
         )
+
+        # per-window contributions: computable only for a session that actually
+        # recorded decisions, and only from the record itself (no store write)
+        played = [s for s in sess if json.loads(s["decisions"] or "{}")]
+        wdoc = _world(c, rec["world_id"])
+        if not played or wdoc is None:
+            contrib_block = _empty(
+                "no session against this run recorded a decision, so there is nothing to "
+                "decompose. The decomposition needs an action sequence; the RunRecord alone "
+                "does not carry one",
+                f"play a session against run {run_id} via ah.serve, then reload this page",
+            )
+        else:
+            blocks: list[str] = []
+            nwp = project_numeric(WorldSpec.model_validate(wdoc.doc))
+            for s in played:
+                decisions = {int(m): a for m, a in json.loads(s["decisions"]).items()}
+                paths_s = run_path(nwp, rec["seed"])
+                att = window_contributions_play(
+                    paths_s, decisions, use_reported=(s["basis"] == "reported")
+                )
+                total = att.final_value - att.twin_final
+                summed = sum(att.contributions)
+                agree = abs(summed - total) < 1e-9
+                rows_c = "".join(
+                    f'<tr><td class="l">month {m}</td><td class="l">{_e(a)}</td>'
+                    f"<td>{cj:+,.6f}</td></tr>"
+                    for m, a, cj in zip(att.months, att.actions, att.contributions, strict=True)
+                )
+                blocks.append(
+                    f'<div class="card"><b>session {_e(s["session_id"][:8])}</b> '
+                    f"(basis {_e(s['basis'])})"
+                    "<table><tr><th class='l'>window</th><th class='l'>action</th>"
+                    "<th>contribution c<sub>j</sub></th></tr>" + rows_c + "</table>"
+                    f"<table><tr><th class='l'>sum of contributions</th><td>{summed:+,.10f}</td></tr>"
+                    f"<tr><th class='l'>terminal difference</th><td>{total:+,.10f}</td></tr>"
+                    f"<tr><th class='l'>sum − total</th><td>"
+                    + (
+                        f'<span class="ok">{summed - total:+.2e} — telescopes exactly</span>'
+                        if agree
+                        else f'<span class="bad">{summed - total:+.6f} — DOES NOT telescope</span>'
+                    )
+                    + "</td></tr></table>"
+                    + _src(
+                        "how",
+                        "ah.play.window_contributions_play(run_path(world, seed), decisions) — "
+                        "K+1 exact simulations for K windows, no sampling. The chain telescopes "
+                        "by construction, so a non-zero residual is a defect.",
+                    )
+                    + "</div>"
+                )
+            contrib_block = "".join(blocks)
 
         replay_block = (
             f'<div class="card"><a href="/run/{_e(run_id)}?replay=1"><b>Run replay check</b></a>'
@@ -886,6 +1065,8 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "</table>"
             "<h2>Decisions as stored</h2>"
             + decisions_tbl
+            + "<h2>Per-window contributions</h2>"
+            + contrib_block
             + "<h2>The three series</h2>"
             + _empty(
                 "player / policy twin / drift twin are computed by the session service at "
@@ -978,17 +1159,120 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
 
     # ----------------------------------------------------------------- diff --
     @app.get("/diff", response_class=HTMLResponse)
-    def diff_page() -> HTMLResponse:
-        return _page(
-            "diff",
-            "<h1>World comparison</h1>"
-            + _empty(
-                "NOT BUILT. The stretch page was descoped so the six core pages could be "
-                "finished and verified against real output. Nothing here is stubbed or faked — "
-                "the page simply does not exist yet",
-                "not applicable — this is unbuilt work, not missing data",
-            ),
+    def diff_page(
+        a: str | None = None,
+        b: str | None = None,
+        seed_a: int | None = None,
+        seed_b: int | None = None,
+    ) -> HTMLResponse:
+        """Two worlds, or two seeds of one world, side by side."""
+        if not db.exists():
+            return _page("diff", "<h1>Comparison</h1>" + _empty("no store", "ah world build"))
+        cn = conn()
+        ws = _worlds(cn)
+        if not ws:
+            return _page(
+                "diff",
+                "<h1>Comparison</h1>"
+                + _empty(
+                    "the store has no worlds to compare",
+                    "uv run ah world build --preset stagflation",
+                ),
+            )
+
+        def _pick(world_id: str | None, fallback: WorldRow) -> WorldRow:
+            for w in ws:
+                if w.world_id == world_id:
+                    return w
+            return fallback
+
+        wa = _pick(a, ws[0])
+        wb = _pick(b, ws[-1] if len(ws) > 1 else ws[0])
+
+        def _seed_for(w: WorldRow, override: int | None) -> int:
+            if override is not None:
+                return int(override)
+            runs_w = _runs(cn, w.world_id)
+            if runs_w:
+                return int(runs_w[0]["seed"])
+            return int((w.doc.get("engine_defaults") or {}).get("base_seed") or 0)
+
+        sa, sb = _seed_for(wa, seed_a), _seed_for(wb, seed_b)
+        pa = run_path(project_numeric(WorldSpec.model_validate(wa.doc)), sa)
+        pb = run_path(project_numeric(WorldSpec.model_validate(wb.doc)), sb)
+        label_a = (
+            f"A · {(wa.doc.get('narrative') or {}).get('title') or wa.world_id[-6:]} · seed {sa}"
         )
+        label_b = (
+            f"B · {(wb.doc.get('narrative') or {}).get('title') or wb.world_id[-6:]} · seed {sb}"
+        )
+
+        overlays = "".join(
+            f"<div>{_line_svg({label_a: np.cumprod(1.0 + pa.returns[k] / 100.0), label_b: np.cumprod(1.0 + pb.returns[k] / 100.0)}, f'{k} — cumulative growth, overlaid')}</div>"
+            for k in ("equity", "bonds", "hy", "pe")
+        ) + "".join(
+            f"<div>{_line_svg({label_a: getattr(pa, attr), label_b: getattr(pb, attr)}, f'{lab} — overlaid')}</div>"
+            for attr, lab in (("rate", "policy rate %"), ("spread", "HY spread bps"))
+        )
+
+        def _stats(p: EnginePaths) -> dict[str, float]:
+            eq = np.cumprod(1.0 + p.returns["equity"] / 100.0)
+            peak = np.maximum.accumulate(eq)
+            return {
+                "months": float(p.months),
+                "equity terminal growth": float(eq[-1]),
+                "equity max drawdown": float((1.0 - eq / peak).max()),
+                "policy rate mean %": float(p.rate.mean()),
+                "policy rate max %": float(p.rate.max()),
+                "HY spread mean bps": float(p.spread.mean()),
+                "HY spread max bps": float(p.spread.max()),
+                "inflation mean %": float(p.inflation.mean()),
+                "crisis months": float(p.crisis.sum()),
+            }
+
+        sa_, sb_ = _stats(pa), _stats(pb)
+        stat_rows = "".join(
+            f'<tr><td class="l">{_e(k)}</td><td>{sa_[k]:,.4f}</td><td>{sb_[k]:,.4f}</td>'
+            f"<td>{sb_[k] - sa_[k]:+,.4f}</td></tr>"
+            for k in sa_
+        )
+        options_a = "".join(
+            f'<li><a href="/diff?a={_e(w.world_id)}&b={_e(wb.world_id)}">A := '
+            f"{_e((w.doc.get('narrative') or {}).get('title') or w.world_id[-6:])}</a></li>"
+            for w in ws
+        )
+        options_b = "".join(
+            f'<li><a href="/diff?a={_e(wa.world_id)}&b={_e(w.world_id)}">B := '
+            f"{_e((w.doc.get('narrative') or {}).get('title') or w.world_id[-6:])}</a></li>"
+            for w in ws
+        )
+        same = wa.world_id == wb.world_id and sa == sb
+        body = (
+            "<h1>Comparison</h1>"
+            f'<div class="prov">{_e(label_a)} against {_e(label_b)}. '
+            + _src(
+                "how",
+                f"ah.core.engine.run_path on each world's stored document at the seed shown; "
+                f"pure functions, nothing written. A={wa.world_id} seed {sa}; "
+                f"B={wb.world_id} seed {sb}.",
+            )
+            + "</div>"
+            + (
+                '<div class="empty">A and B are the same world at the same seed, so every '
+                "difference below is zero by construction. Pick a different pair.</div>"
+                if same
+                else ""
+            )
+            + f'<div class="card" style="display:flex;gap:30px"><div><b>Set A</b><ul>{options_a}</ul></div>'
+            f"<div><b>Set B</b><ul>{options_b}</ul></div></div>"
+            "<h2>Summary statistics</h2>"
+            "<table><tr><th class='l'>statistic</th><th>A</th><th>B</th><th>B − A</th></tr>"
+            + stat_rows
+            + "</table>"
+            "<h2>Paths overlaid</h2>"
+            f'<div class="grid">{overlays}</div>'
+        )
+        return _page("diff", body)
 
     return app
 
