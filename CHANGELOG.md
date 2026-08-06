@@ -13,6 +13,45 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **`docs/BUILD-SUMMARY.md` and `docs/USER-MANUAL.md`** — an orientation pair,
+  derived from the code rather than from the plans, with every capability claim
+  carrying a `file:line` and every documented command actually executed. The
+  summary's §5 (fifteen subsections) is the point of it; the manual is verified
+  end to end against a scratch database. Documentation only — no code touched.
+  - **Findings recorded in §5 that were not previously registered anywhere.**
+    A **secondary sale does not reduce `unfunded`** (`play.py:298-307`,
+    `port/engine.py:136-140`), while calls are sized off the unfunded balance
+    (`cohort.py:185`) — so coverage worsens after the one action that exists to
+    relieve liquidity stress, on the scored path. **Two writers to the
+    leaderboard** disagree under one `decision_alpha_version` label: `"1.0"`
+    names both the toy-institution tournament score (`tournament.py:268` via
+    `store/runrecords.py:27`) and the sealed log-points research metric
+    (`eval/decision_metrics.py:21`). **Commitment pacing is open-loop**
+    (`play.py:213`), **one buyout fixture governs all three private sleeves**
+    (`mappings/pacing-parameters-v1.0.yaml` has only `pm_buyout`), and **equity
+    drawdown alone drives every sleeve's linkage** (`play.py:337-339`). These are
+    candidates for `docs/engine-realism-register.md`, not conclusions — the
+    register is the owner's call.
+  - **CI observations.** `ruff format --check .` fails on `main` under the locked
+    ruff 0.16.0 (two markdown plan documents with unformatted Python blocks); the
+    battery gate cannot fail while every threshold is `status: todo`, and its
+    step label names the stagflation *preset* while `main()` runs
+    `schemas/example-long-stagflation.worldspec.json` at 64 paths, seed 42
+    (`battery/report.py:189-196`); `ci.yml` has no Node step, so the app's 32
+    tests and the client-side seal are ungated; and six checkpoint tests skip on
+    a clean clone, so CI never exercises `hier-flow-v1`.
+  - **Documentation corrections identified, not applied** (each is someone's
+    call, and three are outside this branch's files): `CLAUDE.md` names bundle
+    `world-bundle-0.3` against the code's `0.4` and still describes the deleted
+    `ah/pacing.py`; `CLAUDE.md` and `CHANGELOG.md` both claim
+    `app/fixtures/toy.bundle.gz` is verified by *both* suites when only
+    `app/src/lib/bundle.test.ts:22` reads it; `README.md` still presents the
+    repository as Step 0 with "no real market data, no ML training, no UI".
+  - **Both documents were fact-checked by four independent review passes** and
+    corrected: 46 defects fixed, including a command-ordering error in the manual
+    that would have sent a reader to the wrong world (`ah run` with no argument
+    takes the most recent world by rowid). The manual carries its own errata
+    section rather than hiding the correction.
 - **The private-programme section lands in the credibility console**
   (`ah/programme.py`, wired into `ah/credibility.py` and `ah credibility`).
   Admin-only diagnostic: the model's own call-rate/distribution-bow/linkage
