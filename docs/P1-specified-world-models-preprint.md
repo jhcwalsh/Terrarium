@@ -1,9 +1,9 @@
 # Specified World Models
 ### Auditable environments for evaluating sequential decisions under designed partial observability
 
-*Working paper · Draft v0.2 · August 2026*
+*Working paper · Draft v0.3 · August 2026*
 
-*v0.2: adds formal definitions (§5.1), Propositions 1–2, the full-system diagram (Fig. 7), a stylised episode (§5.4), and an identification-based rewrite of §1.1.*
+*v0.3: adds §8 (empirical results) with the pre-registration status of each gate reported as a methods fact, Figures 8–9, and result sentences in §10 where an outcome now exists. v0.2 added formal definitions (§5.1), Propositions 1–2, the full-system diagram (Fig. 7), a stylised episode (§5.4), and an identification-based rewrite of §1.1.*
 
 ---
 
@@ -15,7 +15,7 @@ The design that delivers this is a **specified world model**: the latent transit
 
 Specification is not a retreat from the learned world models of reinforcement learning; in this domain it is forced. The available data are institutional reports, and reported private-asset returns are the true dynamics composed with a smoothing process — a composition that does not identify its components. Any learner must either absorb the distortion as dynamics or specify the observation operator to remove it. Here the operator is specified — and treated as the object of study. The resulting **designed partial observability** — a persistent, one-directional, empirically calibrated bias rather than sensor noise — is precisely the feature of institutional reality the environment exists to teach, and inverting it is the skill under evaluation.
 
-Three further properties follow: pre-registered validation against a battery fixed before any model was trained; contract versioning of every specification; and bit-for-bit replay of every run. The limitations are stated plainly: specification bounds the environment by the modeller's imagination, long-horizon coherent generation remains an open problem, and no claim of predictive validity is made or intended.
+Three further properties follow: pre-registered validation against a battery fixed before any model was trained; contract versioning of every specification; and bit-for-bit replay of every run. Section 8 reports what that battery has returned. The generator cleared every gate capable of failing it and beat a pre-specified bootstrap benchmark on the sealed tail criterion in all three seeds, under thresholds hashed together with the code that judges them; the pre-registration also records, in advance, a bias in that comparison running toward promotion. Two quantities the design lists as pre-registrable carry no sealed bound and are reported descriptively; a second battery covering summary stylised facts remains unratified, and its one observed statistic is outside its drafted band; the held-out-regime test was inconclusive; and no decade-scale claim is made, because most decade-tier metrics are structurally unavailable and the negative control for that tier does not fail. The limitations are stated plainly: specification bounds the environment by the modeller's imagination, long-horizon coherent generation remains an open problem, and no claim of predictive validity is made or intended.
 
 ---
 
@@ -225,7 +225,7 @@ The point of the illustration is narrow: **every quantity in it is well-defined 
 
 Three properties follow from authoring the environment rather than learning it, and each maps onto a requirement institutional deployment actually imposes.
 
-**Pre-registered acceptance.** Because the state variables and their intended behaviour are named before any model is trained, numeric pass/fail thresholds can be fixed in advance: tail-index tolerance bands, autocorrelation profile distance for absolute returns, discriminative-score ceilings, train-on-synthetic-test-on-real degradation limits, value-at-risk and expected-shortfall backtest error bounds, and a memorisation floor. Pre-registration is what makes a validation gate capable of failing. A battery specified after results are seen is a description, not a test.
+**Pre-registered acceptance.** Because the state variables and their intended behaviour are named before any model is trained, numeric pass/fail thresholds can be fixed in advance: tail-index tolerance bands, autocorrelation profile distance for absolute returns, discriminative-score ceilings, train-on-synthetic-test-on-real degradation limits, value-at-risk and expected-shortfall backtest error bounds, and a memorisation floor. That is the argument for what specification *permits*; §8.4 reports which of these were in fact sealed with a bound and which were not, and the discriminative-score and degradation quantities were not. Pre-registration is what makes a validation gate capable of failing. A battery specified after results are seen is a description, not a test.
 
 **Contract versioning.** The specification is expressed as a versioned schema — the parameters that define a world, the generator identity, the constraint set, the calibration provenance, the evaluation protocol version. Every generated world states what produced it. This is an engineering contribution rather than a research one, but it is the difference between a reproducibility claim and a reproducibility guarantee.
 
@@ -300,7 +300,97 @@ An environment with known ground truth, an exact baseline, per-decision scoring 
 
 ---
 
-## 8. Relation to sim2real and domain randomisation
+## 8. Empirical results
+
+This section reports what the validation apparatus of §6 has so far produced. It is placed before the sim2real discussion because the standing of these results bears on what can be claimed about transfer.
+
+### 8.1 Two batteries with different evidentiary standing
+
+The system carries two validation batteries, and they are not interchangeable. Reporting them as one would misstate both, so they are separated here as a methods fact.
+
+The **generator battery** evaluates the hierarchical generator across eight metric suites. Its thresholds are hashed together with the code that judges them into a lock file; the first seal is dated 2026-07-26 and the operative seal 2026-08-02. Every recorded run embeds the digest of the pre-registration it was judged against, and that verification is a content-address check: the digest is recomputed from the hashed files, read fresh from disk, and compared against the digest the lock records. Results from this battery are reported as pre-registered pass or fail.
+
+The **stylised panel** is a seven-statistic summary applied to a separate deterministic engine. Its thresholds were drafted 2026-07-24 and have never been ratified; all seven carry the status `todo` in the file that defines them, which describes them as "placeholders documenting intent, not ratified thresholds". Results from this battery are reported as descriptive, and no pass or fail is claimed from them.
+
+| | Generator battery | Stylised panel |
+|---|---|---|
+| Threshold artifact | `pre-registration.yaml`, hashed with judging code | `thresholds.yaml` |
+| Seal | `sha256:e50e18f3…f85d92`, sealed 2026-08-02 | none |
+| Ratified gates | five at enforce severity, plus report-severity bounds | none of seven |
+| Verification | content-address, per run | not applicable |
+| Standing | pre-registered | descriptive |
+
+![Figure 8 — The two batteries on one time axis: seal and re-seal dates, the stylised-panel run, and ratification status per gate.](figures/results/fig-preregistration-timeline.svg)
+
+*Figure 8. Pre-registration status by battery. Generator `hier-flow-v1`; battery versions `eval-battery-0.1` and `battery-0.1`.*
+
+**A disclosure about the ordering evidence.** The operative seal and the verdict it judges carry the same date, and chronological ordering within that day is not recoverable from the repository. The claim that the verdict was computed against the sealed thresholds therefore rests on content-address linkage rather than on timestamps: each recorded cell embeds `sha256:e50e18f3…f85d92`, matching the sealed lock. This is the stronger form of the evidence — a hash match establishes *what* was judged, where a timestamp establishes only *when* — but it is a different argument from commit ordering, and it is stated rather than elided. One qualification travels with it: the per-cell records carrying the digest are not committed to the repository, so the linkage is verifiable where those artifacts exist rather than from the published tree alone.
+
+### 8.2 The gates capable of failing
+
+The generator battery's enforce surface is five statistics. That restriction is recorded in the pre-registration itself, on the stated grounds that the remaining bounds rest on an unmeasured null distribution, and that a gate nobody derived is not a gate. All five passed, for both systems, at vintage `2026-08-02.4`, seed `20260727`, ensemble 1024 × 120.
+
+| Gate | Bound | `hier-flow-v1` | Margin | `bootstrap-v1` | Margin |
+|---|---|---|---|---|---|
+| `moment_band_exceedance_fraction` | ≤ 0.5 | 0.2333 | 0.2667 | 0.0667 | 0.4333 |
+| `dependence_band_exceedance_fraction` | ≤ 0.5 | 0.2667 | 0.2333 | 0.4222 | 0.0778 |
+| `near_duplicate_fraction` | ≤ 0.5 | 0.0913 | 0.4087 | 0.0566 | 0.4434 |
+| `money_pump_violations` | ≤ 0.0 | 0.0 | at bound | 0.0 | at bound |
+| `floor_violations` | ≤ 0.0 | 0.0 | at bound | 0.0 | at bound |
+
+Two features of that table resist summary. The benchmark clears the dependence gate by 0.0778, the narrowest margin recorded anywhere in the battery. And the two systems are not consistently ordered: the benchmark sits further inside on moments, the challenger further inside on dependence. Neither dominates on the surface that can fail.
+
+### 8.3 The kill criterion
+
+The pre-specified rule required the challenger to beat the benchmark on the tail criterion, the benchmark shipping otherwise. The rule was sealed before the comparison was executed. The challenger won in every seed.
+
+| Seed | Challenger | Benchmark | Difference | Band exceedances (C / B) |
+|---|---|---|---|---|
+| 0 | −2.5591 | −2.2131 | −0.3461 | 12 / 13 |
+| 1 | −2.5163 | −2.2132 | −0.3031 | 5 / 11 |
+| 2 | −2.5116 | −2.2139 | −0.2978 | 8 / 12 |
+
+Pooled mean difference −0.3157, standard deviation 0.0265 across three seeds, satisfying the sealed requirement that the absolute mean exceed the standard deviation. The verdict was PROMOTE. Of five systems evaluated under the same rule, four received the opposite verdict — the benchmark ships — which the design treats as a legitimate outcome rather than a failure of the exercise.
+
+![Figure 9 — Per-seed elicitability for challenger and benchmark, the pooled decision statistic, and the band-exceedance counts.](figures/results/fig-benchmark-comparison.svg)
+
+*Figure 9. Benchmark comparison. Generator `hier-flow-v1` (campaign-2 checkpoints); battery version `eval-battery-0.1`; vintage `2026-08-02.4`.*
+
+**The pre-registration records a bias in its own favour.** The sealed decision rule carries a disclosure that the head-to-head is biased toward promotion by the benchmark's data window. The benchmark can only resample 1990–2020, whose worst equity drawdowns are 2000–02, 2008–09 and 2020, while the challenger was fitted on a span including 1929–33, 1937, 1973–74 and 1987; both are then scored against realisations spanning the longer period. On any statistic rewarding reproduction of the deep pre-1990 left tail, the benchmark is handicapped by its window rather than by its form. Because the design treats a benchmark-ships verdict as a success, the bias runs against the conservative outcome. It was written into the seal before the comparison was run, and is reported for that reason: a pre-registration that records the thumb on its own scale is evidence about the discipline rather than an embarrassment to it.
+
+### 8.4 Memorisation, and two statistics with no threshold
+
+Memorisation bounds were sealed at report severity. The generator sits above both nearest-neighbour floors and below the membership-inference ceiling.
+
+| Statistic | Bound | `hier-flow-v1` | `bootstrap-v1` |
+|---|---|---|---|
+| `nn_distance_p05` | ≥ 0.0279 | 0.5541 | 0.6423 |
+| `nn_distance_p50` | ≥ 1.0371 | 1.3918 | 2.3641 |
+| `membership_inference_auc` | ≤ 0.75 | 0.4237 | 0.2939 |
+
+The generator sits closer to its training set than the resampler does on all three, which is what one expects of a learned model against a bootstrap of history, and is recorded rather than left implicit.
+
+Two quantities that §6 lists among the pre-registrable thresholds — discriminative-score ceilings and train-on-synthetic-test-on-real degradation limits — are computed but **carry no sealed bound**. Both were registered at report severity with neither minimum nor maximum. They are therefore descriptive, and no pass or fail is claimed of them:
+
+| Statistic | Bound | `hier-flow-v1` | `bootstrap-v1` |
+|---|---|---|---|
+| `discriminative_score` | none sealed | 0.0310 | 0.1472 |
+| `predictive_score` | none sealed | 0.5302 | 0.5206 |
+| `tstr_degradation` | none sealed | 1.0846 | 1.0649 |
+
+### 8.5 What the battery does not establish
+
+Sixteen of twenty-two decade-tier metrics are structurally unavailable for every generator: fourteen because no generator emits a path longer than its own horizon, and two because no valuation factor is mapped. The negative control designated to that tier, whose time ordering is destroyed outright, produces no substantive failures in it. **No decade-scale pass is claimed.** A generator whose decade behaviour was wrong while its monthly behaviour was right would not be detected by this apparatus — a limitation of the battery rather than a finding about the generator.
+
+The held-out-regime test returned inconclusive. Excluding the 1970s and regenerating from the 1965 state moved the era-frequency gap by roughly 6–8% of the gap present with that decade in sample, and one leg of the test was vacuous by construction: the block-level exclusion dropped no blocks. The test as executed did not exercise what it was designed to exercise.
+
+The one-shot held-out evaluation was spent once, under a sealed protocol. On the primary metric the realised maximum drawdown of 0.248 fell inside the ensemble's 95th-percentile warning of 0.644 — a drawdown surprise of −0.3952. Realised terminal wealth fell at the 99.6th percentile of the ensemble, so the cone that contained the downside under-spanned the realised upside. Band coverage for the inflation factor was 0.000, every realised month falling outside, and one factor went unread owing to a reader fault, which the sealed protocol publishes as a gap rather than re-running. These are reported together because reporting only the first would be selective.
+
+The stylised panel's single observed statistic is a miss. Pooled equity lag-one autocorrelation reads 0.364 against a drafted band of [−0.2, +0.2] — outside by 0.164. The ordering is stated in full: the band was drafted 2026-07-24 and never ratified, and the statistic was observed 2026-08-04, so observation preceded ratification. It is reported as descriptive, and pre-registered evaluation of this metric applies from the next generator version. The cause is known: the engine's crisis is a rectangular block of months in which every path takes an identical deterministic shift, which is what lag-one autocorrelation measures. The remaining six panel statistics have never been observed, so pre-registration for six of the seven remains intact and is preserved by ratifying them while that holds.
+
+---
+
+## 9. Relation to sim2real and domain randomisation
 
 Robotics has the most developed vocabulary for what transfers from simulation. Two ideas import cleanly, and one caution with them.
 
@@ -316,17 +406,17 @@ Robotics has the most developed vocabulary for what transfers from simulation. T
 
 ---
 
-## 9. Limitations
+## 10. Limitations
 
 **Specification bounds expressiveness.** The environment cannot generate a world the specification does not admit. A learned model might discover dynamics the authors failed to specify. This is the central cost of the design, and no mitigation exists beyond breadth of specification and honest reporting of the regime taxonomy as a choice.
 
-**Long-horizon coherent generation is unsolved.** The hierarchical structure is a proposed answer to decade-length generation, not a proof that the problem is solved. It should be read as a proposal.
+**Long-horizon coherent generation is unsolved.** The hierarchical structure is a proposed answer to decade-length generation, not a proof that the problem is solved. It should be read as a proposal. The validation apparatus does not currently constrain it either: sixteen of twenty-two decade-tier metrics are structurally unavailable and the negative control designated to that tier does not fail it, so no decade-scale claim is made (§8.5).
 
 **The regime layer has no empirical ancestor.** L2 regime labels are human categories. They are documented and varied across a robustness grid, which is mitigation rather than justification.
 
 **Scenario compilation from natural language is lightly precedented.** Compiling a described scenario into consistent generator parameters and a coherent narrative has, to the authors' knowledge, no precedent in the financial generative literature; a partial ancestor exists in defence-sector scenario generation. The defensible claim is *first in financial markets*, not first, and the mechanism's safety rests on coherence checks and the rule that narrative content never modifies the numeric path.
 
-**Held-out-regime testing is a self-designed severe test.** Training with a historical regime excluded and testing on it is a strong test, but it is one of the authors' own design, and self-designed severe tests are weaker evidence than tests a field has agreed on. Publishing the battery as an open standard is the intended remedy.
+**Held-out-regime testing is a self-designed severe test.** Training with a historical regime excluded and testing on it is a strong test, but it is one of the authors' own design, and self-designed severe tests are weaker evidence than tests a field has agreed on. Publishing the battery as an open standard is the intended remedy. As executed the test was inconclusive rather than passed or failed, and one leg of it was vacuous by construction — the block-level exclusion dropped no blocks (§8.5).
 
 **Calibration coverage is uneven.** Public cash-flow elasticities are available for buyout and venture and are extrapolated by judgement elsewhere; cross-sectional dispersion of fund cash-flow behaviour has no public source. These are the weakest quantitative links and are marked as such.
 
@@ -334,7 +424,7 @@ Robotics has the most developed vocabulary for what transfers from simulation. T
 
 ---
 
-## 10. Related work
+## 11. Related work
 
 Learned world models and latent imagination (Ha & Schmidhuber 2018; the Dreamer line). Generative financial time series: TimeGAN (Yoon et al. 2019), Quant GANs (Wiese et al. 2020), signature-based market generators (Buehler et al. 2020), diffusion approaches (Tanaka et al. 2025), tail-elicitable objectives (Cont et al. 2025), arbitrage-free neural SDEs (Cohen, Reisinger & Wang 2023), regulatory-scope neural ESGs and their validation (Flaig & Junike 2022, 2023). Stylised facts as acceptance specification (Cont 2001). The de-smoothing canon (Geltner 1991; Getmansky, Lo & Makarov 2004). Private-fund cash-flow modelling and cyclicality (Takahashi & Alexander 2002; Robinson & Sensoy 2016). Proxy modelling for tractable revaluation under many scenarios (Krah, Nikolić & Korn 2020). Decision-level evaluation of synthetic data (Bezzina & Vella 2024). Cascade-structured economic scenario generation (Wilkie 1984). Century-scale macro-financial panels (Jordà, Schularick & Taylor). Sim2real transfer and domain randomisation in robotics.
 
@@ -342,7 +432,7 @@ Learned world models and latent imagination (Ha & Schmidhuber 2018; the Dreamer 
 
 ---
 
-## 11. Conclusion
+## 12. Conclusion
 
 The contribution is a relocation of the modelling burden rather than a new algorithm. Learned world models place the modelling burden in a latent transition function fitted to observation data. The design described here places it in an authored transition function and an authored observation operator, confining learning to a layer where it is well supported.
 

@@ -1,7 +1,7 @@
 # How Terrarium Works — and How You'd Catch It Being Wrong
-## D-05 · Methodology note · Draft v0.2 · August 2026 · v0.2 adds five figures
+## D-05 · Methodology note · Draft v0.3 · August 2026 · v0.3 fills the G2 results slots in §6, adds §6.1 and two results figures
 
-*Audience: the sceptical practitioner. Register: plain, per the wire but flatter. Everything in [[double brackets]] is a G2-dependent slot — the number or result arrives when the validation seal lands, and this document does not ship without them filled. Anchors are stable; the help agent cites into this document.*
+*Audience: the sceptical practitioner. Register: plain, per the wire but flatter. As of v0.3 the G2 results slots in §6 are filled from the sealed battery; the remaining [[double brackets]] are cross-references to sibling documents that are not yet public, not missing results. Where a result does not exist, §6 says so explicitly rather than leaving a bracket. Anchors are stable; the help agent cites into this document.*
 
 ---
 
@@ -72,20 +72,103 @@ The published engine's calibration uses **public sources only** and is independe
 
 Every generator, and every published world's ensemble, passes a validation battery. The thresholds were pre-registered — written down numerically before any model was trained — so the tests are capable of failing. A battery specified after seeing results is a description, not a test.
 
+**There are two batteries, and they do not have the same standing.** They are reported separately below and never combined, because averaging them would misstate both.
+
+| Battery | What it covers | Seal status | Evidentiary weight |
+|---|---|---|---|
+| **Generator battery** (Step 2) | The hierarchical generator: stylised facts, tails, utility, memorisation, economics, calibration, conditional behaviour, and the benchmark kill criterion | Thresholds hashed **together with the code that judges them**; first sealed 2026-07-26, re-sealed 2026-07-31 and 2026-08-02 | **Pre-registered.** Results below are pass/fail against bounds fixed in advance |
+| **Stylised panel** (Step 0) | Seven summary statistics on the toy engine's own output | Drafted 2026-07-24; **never ratified** — all seven gates still carry `status: todo` | **Descriptive only.** No pass/fail claim is made; see the note at the end of this section |
+
 What is tested, in plain terms:
 
 | Test | The question it answers |
 |---|---|
 | Stylised facts (Cont 2001) | Do generated returns have the statistical signature real markets have — fat tails, volatility clustering, the right decay of autocorrelation? |
 | Tail accuracy | Are value-at-risk and expected shortfall correct at the 95th and 99th percentile, on a frozen set of benchmark portfolios? |
-| Discriminability | Can a trained classifier tell synthetic paths from real ones? [[G2: report score against pre-registered ceiling]] |
-| Train-synthetic, test-real | Does a model trained on synthetic data still work on real data? [[G2: report degradation against limit]] |
-| Memorisation | Is the generator producing genuinely new paths rather than replaying its training data? [[G2: report nearest-neighbour floor]] |
-| Benchmark comparison | Does the generator beat a pre-specified statistical bootstrap — and if it does not, the bootstrap ships instead. That kill criterion was written before training began. [[G2: report outcome, either way]] |
+| Discriminability | Can a trained classifier tell synthetic paths from real ones? |
+| Train-synthetic, test-real | Does a model trained on synthetic data still work on real data? |
+| Memorisation | Is the generator producing genuinely new paths rather than replaying its training data? |
+| Benchmark comparison | Does the generator beat a pre-specified statistical bootstrap — and if it does not, the bootstrap ships instead. That kill criterion was written before training began. |
 
-[[G2 SLOT — the results table. This section currently describes the battery; at the seal it reports the numbers, including any test that came in close. Publishing the near-misses is deliberate.]]
+### The results {#battery-results}
+
+**Provenance.** Generator `hier-flow-v1` against benchmark `bootstrap-v1`; data vintage `2026-08-02.4`; sampling seed `20260727` (seed index 0 of three); ensemble 1024 paths × 120 months; battery version `eval-battery-0.1`; pre-registration digest `sha256:e50e18f300aba8dd…f85d92`, matching `pre-registration.lock` sealed 2026-08-02. Every cell recorded `prereg_verified: true` and `criterion_bearing: true`. Figures: `docs/figures/results/`. Read 2026-08-05.
+
+**The gates that can fail.** The sealed battery's enforce surface is exactly five names — a deliberate restriction recorded in the pre-registration itself, on the grounds that the other bounds rest on an unmeasured null. All five passed, for both systems. Margins are shown because a pass with no margin is not the same result as a pass with a wide one.
+
+| Gate | Bound | `hier-flow-v1` | Margin | `bootstrap-v1` | Margin |
+|---|---|---|---|---|---|
+| `moment_band_exceedance_fraction` | ≤ 0.5 | 0.2333 | inside by 0.2667 | 0.0667 | inside by 0.4333 |
+| `dependence_band_exceedance_fraction` | ≤ 0.5 | 0.2667 | inside by 0.2333 | 0.4222 | **inside by 0.0778** |
+| `near_duplicate_fraction` | ≤ 0.5 | 0.0913 | inside by 0.4087 | 0.0566 | inside by 0.4434 |
+| `money_pump_violations` | ≤ 0.0 | 0.0 | at the bound | 0.0 | at the bound |
+| `floor_violations` | ≤ 0.0 | 0.0 | at the bound | 0.0 | at the bound |
+
+Two things a reader should take from that table rather than from a summary of it. The benchmark clears the dependence gate by 0.0778 — the narrowest margin anywhere in the battery, and closer to failing than anything the challenger produced. And the two systems are not ordered consistently: the benchmark is further inside on moments, the challenger is further inside on dependence. Neither dominates.
+
+**Memorisation.** Bounds sealed; severity `report`, so these do not gate.
+
+| Statistic | Bound | `hier-flow-v1` | Margin | `bootstrap-v1` |
+|---|---|---|---|---|
+| `nn_distance_p05` | ≥ 0.0279 | 0.5541 | above by 0.5262 | 0.6423 |
+| `nn_distance_p50` | ≥ 1.0371 | 1.3918 | above by 0.3547 | 2.3641 |
+| `membership_inference_auc` | ≤ 0.75 | 0.4237 | inside by 0.3263 | 0.2939 |
+
+The generator is not replaying its training data. It also sits consistently closer to the training set than the bootstrap does on every one of these three, which is what one would expect of a learned model against a resampler of history, and is stated rather than left for a reader to notice.
+
+**Discriminability and train-synthetic-test-real — descriptive, no threshold exists.** This document's previous draft promised these "against a pre-registered ceiling" and "against a limit". **There is no such ceiling and no such limit.** Both statistics are computed and recorded, but they were sealed at severity `report` with no bound, so no pass/fail claim can honestly be made about them.
+
+| Statistic | Bound | `hier-flow-v1` | `bootstrap-v1` |
+|---|---|---|---|
+| `discriminative_score` (\|balanced accuracy − 0.5\|; 0 = indistinguishable) | **none sealed** | 0.0310 | 0.1472 |
+| `predictive_score` (TSTR one-step-ahead error) | **none sealed** | 0.5302 | 0.5206 |
+| `tstr_degradation` (MSE ratio, synthetic-trained ÷ real-trained) | **none sealed** | 1.0846 | 1.0649 |
+
+Descriptively, a classifier separates `hier-flow-v1` from real data less well than it separates the bootstrap from real data (0.031 against 0.147), and a model trained on either synthetic source loses about 6–8% of its accuracy against a real-trained model. Those are observations, not passes.
+
+**The kill criterion — outcome, either way.** The pre-specified rule was that the generator must beat `bootstrap-v1`, and that if it did not, the bootstrap would ship instead. It beat it, on the per-seed route, in all three seeds:
+
+| Seed index | Challenger elicitability | Benchmark elicitability | Difference | Band exceedances (C vs B) |
+|---|---|---|---|---|
+| 0 | −2.5591 | −2.2131 | −0.3461 | 12 vs 13 |
+| 1 | −2.5163 | −2.2132 | −0.3031 | 5 vs 11 |
+| 2 | −2.5116 | −2.2139 | −0.2978 | 8 vs 12 |
+
+Pooled: mean difference −0.3157, standard deviation 0.0265 (n = 3), the absolute mean exceeding the standard deviation as the sealed rule requires. Verdict: **PROMOTE**. Four of the five systems evaluated earned the opposite verdict — SHIP-BENCHMARK — and that was a legitimate outcome of the exercise, not a failure of it.
+
+**The caveat the pre-registration recorded against its own result.** The sealed rule carries a disclosure, `multi_seed_decision_rule.benchmark_draw_span_bias`, recorded in the governance register as RFR-66: *the head-to-head is biased toward promotion by the benchmark's data window.* `bootstrap-v1` can only resample 1990–2020, whose worst equity drawdowns are 2000–02, 2008–09 and 2020, while the challenger was fitted on a span that includes 1929–33, 1937, 1973–74 and 1987 — and both are scored against realisations that include all of it. On any statistic rewarding reproduction of the deep pre-1990 left tail, the benchmark is handicapped by its window rather than by its form. The direction matters: the project's stated posture is that SHIP-BENCHMARK is a successful outcome, so this bias runs against the conservative verdict. It was written into the seal before the comparison was run, not added afterwards.
+
+![Benchmark comparison: per-seed elicitability for challenger and benchmark, the sealed decision rule's pooled statistic, and the band-exceedance counts.](figures/results/fig-benchmark-comparison.svg)
+
+*Benchmark comparison, `hier-flow-v1` vs `bootstrap-v1`. Generator version `hier-flow-v1` (campaign-2 checkpoints, `c6addb54…`); battery version `eval-battery-0.1`; vintage `2026-08-02.4`.*
+
+**What the decade-scale tier does not show.** Sixteen of twenty-two metrics in the ten-year tier are structurally unavailable for every generator — fourteen because no generator emits a path longer than its own horizon, two because no valuation factor is mapped. The negative control designed to fail this tier, whose time ordering is destroyed outright, produces zero substantive failures in it. **No decade-scale pass is claimed.** A generator whose decade behaviour was wrong while its monthly behaviour was right would not be caught by this battery.
+
+**The stylised panel (Step 0) — descriptive, gates open.** Its thresholds were drafted 2026-07-24 and have never been ratified; all seven remain `status: todo`. Six of the seven have never been observed at all. The seventh has:
+
+| Statistic | Drafted band | Observed | Result |
+|---|---|---|---|
+| `acf_r_lag1`, pooled equity | [−0.2, +0.2] | **0.364** | **outside by 0.164** |
+
+Ordering, stated in full: the band was drafted 2026-07-24 and never ratified; the statistic was observed 2026-08-04. The statistic was therefore observed **before** ratification, and this is reported as descriptive — *threshold post-hoc / pending ratification; pre-registered evaluation of this metric applies from the next generator version.* It is a miss, and it is reported here with the prominence a pass would have had. The cause is known and recorded: the toy engine's crisis is a rectangular block of months in which every path takes the same deterministic hit, which is exactly what lag-1 autocorrelation measures.
+
+The remaining six statistics — excess kurtosis, skewness, Hill tail index, `acf_abs_lag1`, median maximum drawdown, correlation distance — are *awaiting post-ratification battery run; thresholds ratification recommended 2026-08-05 — see evidence inventory*. They have never been observed, which means pre-registration for six of the seven is still intact and is preserved by ratifying now rather than by waiting.
+
+![Pre-registration timeline: the two batteries on one axis, showing seal and re-seal dates, the 2026-08-04 stylised-panel run, and ratification status per gate.](figures/results/fig-preregistration-timeline.svg)
+
+*Pre-registration timeline. Generator version `hier-flow-v1`; battery versions `eval-battery-0.1` (Step 2) and `battery-0.1` (Step 0).*
 
 A severe test we impose on ourselves and flag as our own invention: training with an entire historical regime excluded — the 1970s — and testing on it. Self-designed tests are weaker evidence than field-agreed ones, which is why the full battery is published as an open standard others can run and extend. [[Link: TERRARIUM-Bench when public.]]
+
+**The severe test's outcome: inconclusive, and the reason is structural.** Excluding the 1970s and regenerating from the 1965 state moved the era-frequency gap by roughly 6–8% of a gap that exists with the decade in sample. That is not a pass and not a failure; it is a test that did not discriminate. One leg of it was vacuous by construction — the block-sampler exclusion dropped zero blocks — so the test as run did not exercise the thing it was designed to exercise. Recorded as a human judgement, not a computed verdict.
+
+### 6.1 What the results establish, and what they don't {#what-results-establish}
+
+What they establish is narrow and worth stating precisely. On the sealed generator battery, the hierarchical generator cleared every gate capable of failing it, did not memorise its training data, and beat the pre-specified bootstrap on the tail criterion in all three seeds — under thresholds and judging code hashed together before the comparison was run, and verified by content address on every cell. That is a real result and it is the kind of result the pre-registration discipline was built to produce.
+
+What they do not establish is nearly everything a reader might want next. No decade-scale claim is made, because sixteen of twenty-two decade-tier metrics are structurally unavailable and the negative control designed to fail that tier does not fail it. Two of the tests this document previously advertised — discriminability and train-synthetic-test-real — turn out to have no sealed threshold at all, so their numbers are descriptive. The stylised panel is unratified, and its one observed statistic is a miss. The severe test was inconclusive. And the promotion carries a bias disclosure written into the seal itself, running in the direction of promotion. Read together, these say the generator survived the tests that existed, and that several tests a sceptic would want either do not exist yet or did not discriminate.
+
+None of this reaches the question the platform is for. **Statistical realism is not decision-relevance, and neither is prediction.** A generator that reproduces the statistical signature of market returns has been shown to reproduce that signature — not to produce decades whose *decisions* resemble the decisions real markets demand, and not to forecast anything whatsoever. Whether simulated experience in this environment improves judgement is an open empirical question that this battery cannot answer and was never designed to; it is the human study's question, and it has not been run. Any use of these results as evidence of predictive validity is a misuse of them.
 
 ![The validation gauntlet: six pre-registered gates in sequence, ending at the kill criterion — if the generator does not beat the pre-specified bootstrap, the bootstrap ships instead.](d05-figD-gauntlet.svg)
 
@@ -122,4 +205,4 @@ Every load-bearing component cites a published ancestor; the mapping is maintain
 
 ---
 
-*Not investment advice. Version [[x.y]], applies to WorldSpec [[range]], battery version [[id]]. Changelog at [[link D-10]].*
+*Not investment advice. Version 0.3, applies to WorldSpec `1.2.0`–`1.3.0`, battery versions `eval-battery-0.1` (generator battery, sealed) and `battery-0.1` (stylised panel, gates unratified). Results read 2026-08-05 from vintage `2026-08-02.4`. Changelog at [[link D-10]].*
