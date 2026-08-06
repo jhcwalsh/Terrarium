@@ -1,0 +1,70 @@
+<svg viewBox="0 0 880 400" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Benchmark comparison across three seeds">
+
+  <style>
+    text { font-family: Georgia, 'Times New Roman', serif; }
+    .h  { font-size: 15px; font-weight: bold; fill: #1a1a1a; }
+    .s  { font-size: 11.5px; fill: #333; }
+    .p  { font-size: 12px; font-weight: bold; fill: #1a1a1a; }
+    .m  { font-size: 10.5px; fill: #666; font-style: italic; }
+    .t  { font-size: 10px; fill: #666; }
+    .v  { font-size: 9.5px; fill: #333; }
+    .ax { stroke: #d8d8d4; stroke-width: 1; }
+  </style>
+
+<rect width="880" height="400" fill="#fdfdfc"/>
+<text x="28" y="30" class="h">Benchmark comparison — verdict PROMOTE, per-seed route</text>
+<text x="28" y="50" class="m">hier-flow-v1 against bootstrap-v1. The sealed rule required the challenger to win in every seed.</text>
+<rect x="28" y="62" width="10" height="10" fill="#12628f"/>
+<text x="44" y="71" class="t">hier-flow-v1 (challenger)</text>
+<rect x="196" y="62" width="10" height="10" fill="#9a4a2f"/>
+<text x="212" y="71" class="t">bootstrap-v1 (benchmark)</text>
+<text x="28" y="94" class="p">Tail criterion — elicitability score</text>
+<line x1="28" y1="300" x2="278" y2="300" class="ax"/>
+<text x="70.0" y="316" class="t" text-anchor="middle">seed 0</text>
+<text x="160.0" y="316" class="t" text-anchor="middle">seed 1</text>
+<text x="250.0" y="316" class="t" text-anchor="middle">seed 2</text>
+<text x="318" y="94" class="p">Difference (negative = challenger wins)</text>
+<line x1="318" y1="300" x2="568" y2="300" class="ax"/>
+<text x="360.0" y="316" class="t" text-anchor="middle">seed 0</text>
+<text x="450.0" y="316" class="t" text-anchor="middle">seed 1</text>
+<text x="540.0" y="316" class="t" text-anchor="middle">seed 2</text>
+<text x="608" y="94" class="p">No-regression — band exceedances</text>
+<line x1="608" y1="300" x2="858" y2="300" class="ax"/>
+<text x="650.0" y="316" class="t" text-anchor="middle">seed 0</text>
+<text x="740.0" y="316" class="t" text-anchor="middle">seed 1</text>
+<text x="830.0" y="316" class="t" text-anchor="middle">seed 2</text>
+<polyline points="70.0,274.9 160.0,256.9 250.0,255.0" fill="none" stroke="#12628f" stroke-width="2"/>
+<circle cx="70.0" cy="274.9" r="4.5" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<circle cx="160.0" cy="256.9" r="4.5" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<circle cx="250.0" cy="255.0" r="4.5" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<polyline points="70.0,129.9 160.0,129.9 250.0,130.2" fill="none" stroke="#9a4a2f" stroke-width="2" stroke-dasharray="5 3"/>
+<circle cx="70.0" cy="129.9" r="4.5" fill="#9a4a2f" stroke="#fdfdfc" stroke-width="2"/>
+<circle cx="160.0" cy="129.9" r="4.5" fill="#9a4a2f" stroke="#fdfdfc" stroke-width="2"/>
+<circle cx="250.0" cy="130.2" r="4.5" fill="#9a4a2f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="62.0" y="290.9" class="v">-2.559</text>
+<text x="62.0" y="119.9" class="v">-2.213</text>
+<rect x="318" y="243.2" width="250" height="23.3" fill="#8a2f2f" opacity="0.10"/>
+<line x1="318" y1="254.9" x2="568" y2="254.9" stroke="#8a2f2f" stroke-width="1.5" stroke-dasharray="4 3"/>
+<text x="568" y="248.9" class="v" text-anchor="end">pooled mean -0.3157, ±1 sd 0.0265</text>
+<rect x="344.0" y="116.0" width="32" height="152.3" fill="#12628f" rx="3"/>
+<text x="360.0" y="282.3" class="v" text-anchor="middle">-0.3461</text>
+<rect x="434.0" y="116.0" width="32" height="133.4" fill="#12628f" rx="3"/>
+<text x="450.0" y="263.4" class="v" text-anchor="middle">-0.3031</text>
+<rect x="524.0" y="116.0" width="32" height="131.0" fill="#12628f" rx="3"/>
+<text x="540.0" y="261.0" class="v" text-anchor="middle">-0.2978</text>
+<line x1="318" y1="116.0" x2="568" y2="116.0" class="ax"/>
+<rect x="630.0" y="152.8" width="20" height="147.2" fill="#12628f" rx="3"/>
+<text x="640.0" y="147.8" class="v" text-anchor="middle">12</text>
+<rect x="652.0" y="140.5" width="20" height="159.5" fill="#9a4a2f" rx="3"/>
+<text x="662.0" y="135.5" class="v" text-anchor="middle">13</text>
+<rect x="720.0" y="238.7" width="20" height="61.3" fill="#12628f" rx="3"/>
+<text x="730.0" y="233.7" class="v" text-anchor="middle">5</text>
+<rect x="742.0" y="165.1" width="20" height="134.9" fill="#9a4a2f" rx="3"/>
+<text x="752.0" y="160.1" class="v" text-anchor="middle">11</text>
+<rect x="810.0" y="201.9" width="20" height="98.1" fill="#12628f" rx="3"/>
+<text x="820.0" y="196.9" class="v" text-anchor="middle">8</text>
+<rect x="832.0" y="152.8" width="20" height="147.2" fill="#9a4a2f" rx="3"/>
+<text x="842.0" y="147.8" class="v" text-anchor="middle">12</text>
+<text x="28" y="360" class="m">Generator hier-flow-v1 (campaign-2 checkpoints, c6addb54…); battery version eval-battery-0.1; vintage 2026-08-02.4; 1024 x 120.</text>
+<text x="28" y="376" class="m">Pre-registered: thresholds hashed with the judging code, digest sha256:e50e18f3… verified on every cell. RFR-66 (benchmark draw-span bias) applies.</text>
+</svg>

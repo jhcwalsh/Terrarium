@@ -1,0 +1,69 @@
+<svg viewBox="0 0 860 460" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 15px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12px; fill: #333; }
+    .m { font-size: 11px; fill: #666; font-style: italic; }
+    .tag{ font-size: 12px; fill: #fff; font-weight: bold; }
+    .spec { fill: #f2f6fa; stroke: #2c5a7a; stroke-width: 1.5; }
+    .learn{ fill: #fdf6ee; stroke: #b07030; stroke-width: 1.7; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="16">One decade, four layers — each constrains the next</text>
+
+  <!-- Climate -->
+  <rect x="30" y="52" width="500" height="70" rx="6" class="spec"/>
+  <rect x="30" y="52" width="120" height="70" rx="6" fill="#2c5a7a"/>
+  <text x="90" y="92" text-anchor="middle" class="tag" font-size="14">CLIMATE</text>
+  <text x="166" y="78" class="s">Where rates, inflation and growth sit over decades.</text>
+  <text x="166" y="96" class="s">Moves slowly. Calibrated on a century of macro history.</text>
+  <text x="166" y="113" class="m">specified</text>
+
+  <!-- Seasons -->
+  <rect x="70" y="140" width="500" height="70" rx="6" class="spec"/>
+  <rect x="70" y="140" width="120" height="70" rx="6" fill="#2c5a7a"/>
+  <text x="130" y="180" text-anchor="middle" class="tag" font-size="14">SEASONS</text>
+  <text x="206" y="166" class="s">Multi-year regimes — expansion, stress, recovery.</text>
+  <text x="206" y="184" class="s">A documented human rule set, varied in robustness testing.</text>
+  <text x="206" y="201" class="m">specified — a stated choice, not a discovered truth</text>
+
+  <!-- Weather -->
+  <rect x="110" y="228" width="500" height="70" rx="6" class="learn"/>
+  <rect x="110" y="228" width="120" height="70" rx="6" fill="#b07030"/>
+  <text x="170" y="268" text-anchor="middle" class="tag" font-size="14">WEATHER</text>
+  <text x="246" y="254" class="s">Monthly market returns, conditioned on the regime.</text>
+  <text x="246" y="272" class="s">The one machine-learned layer — caged: no negative prices,</text>
+  <text x="246" y="288" class="s">no broken rates, penalised for getting tails wrong.</text>
+
+  <!-- Events -->
+  <rect x="150" y="316" width="500" height="70" rx="6" class="spec"/>
+  <rect x="150" y="316" width="120" height="70" rx="6" fill="#2c5a7a"/>
+  <text x="210" y="356" text-anchor="middle" class="tag" font-size="14">EVENTS</text>
+  <text x="286" y="342" class="s">Named events and the news wire, riding on the regime.</text>
+  <text x="286" y="360" class="s">Display and colour only.</text>
+  <text x="286" y="377" class="m">never touches a number</text>
+
+  <!-- arrows -->
+  <g stroke="#2c5a7a" stroke-width="1.6" fill="#2c5a7a">
+    <line x1="80" y1="122" x2="80" y2="164" /><polygon points="80,170 75,161 85,161"/>
+    <line x1="120" y1="210" x2="120" y2="252"/><polygon points="120,258 115,249 125,249"/>
+    <line x1="160" y1="298" x2="160" y2="340"/><polygon points="160,346 155,337 165,337"/>
+  </g>
+
+  <!-- right annotation -->
+  <rect x="640" y="120" width="195" height="180" rx="8" fill="#fbfbf7" stroke="#aaa" stroke-width="1.2"/>
+  <text x="737" y="148" text-anchor="middle" class="h" font-size="13">Why layers?</text>
+  <text x="654" y="174" class="s">120 unrelated monthly</text>
+  <text x="654" y="190" class="s">draws are not a decade.</text>
+  <text x="654" y="214" class="s">Each layer hands the next</text>
+  <text x="654" y="230" class="s">a constraint, so the months</text>
+  <text x="654" y="246" class="s">belong to the years and the</text>
+  <text x="654" y="262" class="s">years to the era.</text>
+  <text x="654" y="286" class="m">Lineage: Wilkie (1984),</text>
+  <text x="654" y="300" class="m">with the weak layer repaired</text>
+
+  <!-- legend -->
+  <rect x="30" y="416" width="24" height="14" class="spec"/>
+  <text x="62" y="428" class="s">specified — authored, documented, calibrated on public data</text>
+  <rect x="440" y="416" width="24" height="14" class="learn"/>
+  <text x="472" y="428" class="s">learned — one bounded layer, tested before trusted</text>
+</svg>

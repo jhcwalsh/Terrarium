@@ -1,0 +1,66 @@
+<svg viewBox="0 0 860 440" xmlns="http://www.w3.org/2000/svg" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .h { font-size: 15.5px; font-weight: bold; fill: #1a1a1a; }
+    .s { font-size: 12.5px; fill: #333; }
+    .m { font-size: 11.5px; fill: #666; font-style: italic; }
+    .axis { font-size: 11.5px; fill: #777; }
+  </style>
+
+  <text x="30" y="30" class="h" font-size="17">A symmetric band facing a one-directional bias</text>
+  <text x="30" y="50" class="m">Private weight through a drawdown beginning at t₀. The band absorbs noise; it cannot correct a persistent bias — it delays the response to it.</text>
+
+  <!-- plot area -->
+  <rect x="70" y="70" width="600" height="280" fill="#fdfdfc" stroke="#ccc"/>
+
+  <!-- band: policy weight ± tolerance -->
+  <rect x="70" y="175" width="600" height="60" fill="#eef2ee"/>
+  <line x1="70" y1="205" x2="670" y2="205" stroke="#5a7a5a" stroke-width="1.2" stroke-dasharray="6,4"/>
+  <line x1="70" y1="175" x2="670" y2="175" stroke="#9ab09a" stroke-width="1"/>
+  <line x1="70" y1="235" x2="670" y2="235" stroke="#9ab09a" stroke-width="1"/>
+  <text x="676" y="209" class="axis">policy weight</text>
+  <text x="676" y="179" class="axis">upper band</text>
+  <text x="676" y="239" class="axis">lower band</text>
+
+  <!-- drawdown marker -->
+  <line x1="230" y1="70" x2="230" y2="350" stroke="#999" stroke-width="1" stroke-dasharray="3,3"/>
+  <text x="230" y="366" class="axis" text-anchor="middle">t₀ drawdown begins</text>
+
+  <!-- TRUE weight: rises fast (denominator effect), crosses band early -->
+  <path d="M 70 208
+           C 130 206, 190 207, 230 205
+           C 270 195, 300 172, 330 150
+           C 370 124, 430 112, 500 110
+           C 560 109, 620 112, 670 116"
+        fill="none" stroke="#2c5a7a" stroke-width="2.6"/>
+  <text x="345" y="132" class="s" fill="#2c5a7a" font-weight="bold">true weight</text>
+
+  <!-- REPORTED weight: lags, crosses band much later -->
+  <path d="M 70 208
+           C 130 207, 190 208, 230 207
+           C 280 204, 330 196, 380 186
+           C 430 176, 480 166, 530 158
+           C 580 151, 630 147, 670 145"
+        fill="none" stroke="#9a4a2f" stroke-width="2.6" stroke-dasharray="8,5"/>
+  <text x="475" y="192" class="s" fill="#9a4a2f" font-weight="bold">reported weight</text>
+
+  <!-- crossing points -->
+  <circle cx="308" cy="175" r="5" fill="#2c5a7a"/>
+  <text x="300" y="95" class="s" fill="#2c5a7a">true weight breaches the band here…</text>
+  <line x1="308" y1="170" x2="308" y2="100" stroke="#2c5a7a" stroke-width="1" stroke-dasharray="2,3"/>
+
+  <circle cx="565" cy="175" r="5" fill="#9a4a2f"/>
+  <line x1="565" y1="170" x2="565" y2="255" stroke="#9a4a2f" stroke-width="1" stroke-dasharray="2,3"/>
+  <text x="420" y="275" class="s" fill="#9a4a2f">…the policy only responds here</text>
+
+  <!-- lateness interval -->
+  <line x1="308" y1="325" x2="565" y2="325" stroke="#333" stroke-width="1.4"/>
+  <line x1="308" y1="319" x2="308" y2="331" stroke="#333" stroke-width="1.4"/>
+  <line x1="565" y1="319" x2="565" y2="331" stroke="#333" stroke-width="1.4"/>
+  <text x="436" y="318" class="s" text-anchor="middle" font-weight="bold">systematically late — in one direction, when lateness is expensive</text>
+
+  <!-- axes labels -->
+  <text x="60" y="212" class="axis" text-anchor="end">w</text>
+  <text x="370" y="392" class="axis" text-anchor="middle">time →</text>
+
+  <text x="30" y="424" class="m">The agent who mentally de-smooths acts near the first crossing; the policy baseline acts near the second. The interval between them is what decision alpha has to measure.</text>
+</svg>

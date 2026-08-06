@@ -1,0 +1,52 @@
+<svg viewBox="0 0 880 470" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Pre-registration timeline for the two batteries">
+
+  <style>
+    text { font-family: Georgia, 'Times New Roman', serif; }
+    .h  { font-size: 15px; font-weight: bold; fill: #1a1a1a; }
+    .s  { font-size: 11.5px; fill: #333; }
+    .p  { font-size: 12px; font-weight: bold; fill: #1a1a1a; }
+    .m  { font-size: 10.5px; fill: #666; font-style: italic; }
+    .t  { font-size: 10px; fill: #666; }
+    .v  { font-size: 9.5px; fill: #333; }
+    .ax { stroke: #d8d8d4; stroke-width: 1; }
+  </style>
+
+<rect width="880" height="470" fill="#fdfdfc"/>
+<text x="28" y="30" class="h">Pre-registration status, by battery</text>
+<text x="28" y="50" class="m">Two batteries, two standings. They are reported separately and never combined.</text>
+<line x1="280" y1="150" x2="800" y2="150" stroke="#12628f" stroke-width="2"/>
+<line x1="280" y1="310" x2="800" y2="310" stroke="#8a2f2f" stroke-width="2" stroke-dasharray="6 4"/>
+<text x="28" y="144" class="p">Step-2 generator battery</text>
+<text x="28" y="162" class="t">PRE-REGISTERED — sealed</text>
+<text x="28" y="177" class="t">pass/fail claims permitted</text>
+<text x="28" y="304" class="p">Step-0 stylised panel</text>
+<text x="28" y="322" class="t">DESCRIPTIVE — gates unratified</text>
+<text x="28" y="337" class="t">no pass/fail claim made</text>
+<circle cx="300.0" cy="310" r="6" fill="#8a2f2f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="300.0" y="288" class="v" text-anchor="middle">2026-07-24</text>
+<text x="300.0" y="274" class="t" text-anchor="middle">Panel thresholds drafted</text>
+<text x="300.0" y="261" class="m" text-anchor="middle" font-size="9">all seven todo — never ratified</text>
+<circle cx="400.0" cy="150" r="6" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="400.0" y="184" class="v" text-anchor="middle">2026-07-26</text>
+<text x="400.0" y="198" class="t" text-anchor="middle">Pre-registration sealed</text>
+<text x="400.0" y="211" class="m" text-anchor="middle" font-size="9">thresholds + judging code</text>
+<circle cx="500.0" cy="150" r="6" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="500.0" y="128" class="v" text-anchor="middle">2026-07-31</text>
+<text x="500.0" y="114" class="t" text-anchor="middle">G2 verdict adjudicated</text>
+<text x="500.0" y="101" class="m" text-anchor="middle" font-size="9">4 of 5 SHIP-BENCHMARK</text>
+<circle cx="600.0" cy="150" r="6" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="600.0" y="184" class="v" text-anchor="middle">2026-08-02</text>
+<text x="600.0" y="198" class="t" text-anchor="middle">Campaign-2 re-seal</text>
+<text x="600.0" y="211" class="m" text-anchor="middle" font-size="9">digest e50e18f3…; PROMOTE</text>
+<circle cx="700.0" cy="150" r="6" fill="#12628f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="700.0" y="128" class="v" text-anchor="middle">2026-08-03</text>
+<text x="700.0" y="114" class="t" text-anchor="middle">Holdout spent</text>
+<text x="700.0" y="101" class="m" text-anchor="middle" font-size="9">drawdown surprise −0.3952</text>
+<circle cx="800.0" cy="310" r="6" fill="#8a2f2f" stroke="#fdfdfc" stroke-width="2"/>
+<text x="800.0" y="344" class="v" text-anchor="middle">2026-08-04</text>
+<text x="800.0" y="358" class="t" text-anchor="middle">Panel run</text>
+<text x="800.0" y="371" class="m" text-anchor="middle" font-size="9">acf_r_lag1 0.364 — outside band</text>
+<text x="28" y="418" class="m">Sealed line: thresholds hashed together with the code that judges them, verified by content address (prereg_digest) on every recorded run.</text>
+<text x="28" y="434" class="m">Dashed line: thresholds drafted 2026-07-24 and never ratified; the one observed statistic was observed before ratification, so it is descriptive.</text>
+<text x="28" y="450" class="m">Generator hier-flow-v1; battery versions eval-battery-0.1 (Step 2) and battery-0.1 (Step 0).</text>
+</svg>
