@@ -112,6 +112,9 @@ ignore = [
 # ellipses in axis labels and captions, where the typographic character is the
 # correct one and the ASCII lookalike would be wrong in print.
 "scripts/build_results_figures.py" = ["RUF001", "RUF002", "RUF003"]
+# The QA console renders HTML: en-dashes, minus signs and middots are display
+# typography, and the ASCII lookalike would be wrong on the page.
+"src/ah/console.py" = ["RUF001", "RUF002", "RUF003"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Typer's (and FastAPI's) function-call-in-default is the intended idiom,
