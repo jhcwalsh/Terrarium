@@ -77,6 +77,19 @@ skip_covered = false
 line-length = 100
 target-version = "py312"
 src = ["src", "tests"]
+# ruff 0.16 began formatting Python code blocks inside Markdown. This repo's
+# docs are prose ABOUT code: plan documents quote fragments -- keyword-argument
+# lists, partial call sites, snippets with the surrounding function elided --
+# which are not valid standalone modules. The formatter parses them as modules
+# and rewrites them into something that no longer means what the document says
+# (measured: `drawdown_depth=dd,` in a kwargs block became
+# `drawdown_depth = (dd,)`, a tuple assignment, in
+# docs/superpowers/plans/2026-08-04-private-programme-console-section.md).
+# Formatting documentation is not a check this project ever opted into, and
+# applying it corrupts the record -- so Markdown is excluded. Python files are
+# unaffected: `ruff check` and `ruff format` cover src/, tests/ and scripts/
+# exactly as before.
+extend-exclude = ["*.md"]
 
 [tool.ruff.lint]
 select = [
