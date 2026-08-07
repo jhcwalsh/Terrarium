@@ -41,7 +41,23 @@ TOY_GENERATOR_ID = "toy-v0"
 #         and a policy rate with enough innovation to make duration risky
 #   v0.4  register ER-7: market innovations are standardized Student-t, so
 #         monthly returns have tails. Declared volatility is unchanged.
-TOY_ENGINE_VERSION = "toy-v0.4"
+#         NEVER MERGED: its gate exposed the missing limited-liability floor
+#         below, so v0.4 numbers exist only in that branch's diagnosis.
+#   v0.5  ER-7 close-out: the fat tails v0.4 introduced could push a levered
+#         stream (pe = 1.4x equity) below -100% in a month (measured -127.7%,
+#         ~2 paths per 600 on stagflation), which no long-only asset can do
+#         and which NaN-poisons cumulative growth. Every monthly return is
+#         floored at -99% (limited liability). Tails otherwise unchanged.
+TOY_ENGINE_VERSION = "toy-v0.5"
+
+# -- register ER-7 close-out: limited liability ----------------------------- #
+# A holder of a long-only asset cannot lose more than everything: monthly
+# total returns are floored here, in percent units. -99 rather than -100 so a
+# floored month leaves a positive (1 + r/100) factor and cumulative growth
+# stays finite. The floor binds on ~0.3% of stagflation paths at t(6); it is a
+# truncation of the constructed return, not of the innovation, so the declared
+# vol/correlation structure above the floor is untouched.
+_MONTHLY_RETURN_FLOOR_PCT = -99.0
 
 # -- register ER-7: monthly returns had no tails --------------------------- #
 # Degrees of freedom for the market innovations. CHOSEN, from the empirical
@@ -409,6 +425,9 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
         "pc": pc,
         "re": re,
     }
+    # Limited liability (ER-7 close-out): no long-only stream loses more than
+    # everything in a month. See _MONTHLY_RETURN_FLOOR_PCT.
+    returns = {k: np.maximum(v, _MONTHLY_RETURN_FLOOR_PCT) for k, v in returns.items()}
 
     reported = _reported_marks(world, returns)
     return EnginePaths(nm, seed, rate, spread, inflation, crisis, returns, reported)

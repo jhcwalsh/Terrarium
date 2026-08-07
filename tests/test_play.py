@@ -87,14 +87,34 @@ class TestConsequence:
         assert all(q.spending_paid > 0.0 for q in held.quarters)
 
     def test_a_forced_secondary_happens_where_it_should(self):
-        """Not in a benign world; in the one named after a bust. This is the
-        behaviour that makes a VOLUNTARY secondary a real decision — sell
-        early at the haircut, or be sold later at it."""
+        """Not in a benign world; in one stressed enough to exhaust liquidity.
+        This is the behaviour that makes a VOLUNTARY secondary a real decision
+        — sell early at the haircut, or be sold later at it.
+
+        History: through toy-v0.3 the deflation_bust preset triggered this at
+        its base seed. toy-v0.5's variance-normalized Student-t innovations
+        make typical months milder (the declared vol concentrates into rare
+        tail months), and NO shipped preset now exhausts the liquid sleeves at
+        any of 20 seeds — recorded in docs/engine-realism-register.md ER-8.
+        The mechanic itself is covered here with a deliberately maximal world
+        (schema-bound vol 45, drift -15, a 12-quarter severity-1.0 crisis),
+        which forces secondaries on 10 of the first 11 seeds under toy-v0.5;
+        seed 0 is pinned. If THIS world stops exhausting liquidity, that is a
+        real engine event, not a golden to bump."""
         calm = simulate_play(_paths("goldilocks"), None)
-        bust = simulate_play(_paths("deflation_bust"), None)
         assert calm.forced_secondaries == 0
-        assert bust.forced_secondaries >= 1
-        assert bust.forced_secondary_nav > 0.0
+
+        doc: dict[str, Any] = json.loads(
+            (PRESETS / "deflation_bust.json").read_text(encoding="utf-8")
+        )
+        fc = doc["factor_conditions"]
+        fc["equity"]["vol_annual_pct"] = 45
+        fc["equity"]["drift_annual_pct"] = -15
+        fc["crisis_windows"] = [{"start_quarter": 2, "length_quarters": 12, "severity": 1.0}]
+        nw = project_numeric(WorldSpec.model_validate(doc))
+        stressed = simulate_play(run_path(nw, 0), None)
+        assert stressed.forced_secondaries >= 1
+        assert stressed.forced_secondary_nav > 0.0
 
     def test_every_sale_is_logged_with_a_cause(self, held):
         for entry in held.sale_log:

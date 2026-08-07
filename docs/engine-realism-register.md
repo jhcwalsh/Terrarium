@@ -379,7 +379,10 @@ measured against a counterfactual that does not behave like a real programme
 
 ## ER-7 — Monthly returns are near-Gaussian: the engine has no fat tails
 
-**Status:** CLOSED in `toy-v0.4` (engine-er7-fat-tails branch), 2026-08-06
+**Status:** CLOSED in `toy-v0.5`, 2026-08-08. (First closed in `toy-v0.4` on
+2026-08-06, which NEVER MERGED: its own gate run exposed that the new tails
+could push a levered stream below −100% in a month — see the close-out below
+and ER-8. v0.5 is the tails plus the limited-liability floor.)
 **Found:** 2026-08-06, by the first run of the Step-0 stylised battery after its
 thresholds were ratified (AM-2026-08-06-001). Found by a gate, which is what the
 gate was ratified for.
@@ -455,9 +458,75 @@ remains open and is now the largest stylised-fact defect in the engine. The gate
 is `todo` (observed before ratification), so nothing blocked; the number is worse
 and is recorded as worse.
 
-**What it invalidated.** `TOY_ENGINE_VERSION` → `toy-v0.4`; the golden snapshot
-regenerated (prior digest kept in the test); the presets moved to the **4xx
-`world_id` block** so scores from two engine generations cannot share a
-leaderboard row; `app/fixtures/toy.bundle.gz` rebuilt. Any RunRecord made under
-`toy-v0.3` or earlier will no longer replay — which the QA console already
-surfaces on `/run/<id>`.
+**v0.4 DID NOT SURVIVE ITS OWN GATE.** The full-suite run on the v0.4 branch
+failed 11 tests, and the diagnosis (2026-08-06) found one real defect among
+them: `pe = 1.4 * eq + ...` is levered on equity with **no floor**, and a t(6)
+tail month reached equity **−91.7%**, hence pe **−127.7%** — an impossible
+return for a long-only holder, and one that NaN-poisons cumulative growth
+(`(1 + r/100) < 0` raised to a fractional power). Measured ~2 breaching paths
+per 600 on stagflation — an **~18% chance per 60-path ensemble** of a NaN
+crash in the credibility console. Under Gaussian innovations the breach needed
+a ~16σ month and was unreachable; t(6) made it merely rare. v0.4's numbers
+exist only in that branch's diagnosis record.
+
+**The v0.5 close-out: tails + limited liability.** Every monthly return is
+floored at **−99%** (`_MONTHLY_RETURN_FLOOR_PCT`, applied uniformly to all
+eight streams after construction). −99 rather than −100 so a floored month
+leaves a positive growth factor. It truncates the constructed return, not the
+innovation, so vol/correlation structure above the floor is untouched; the
+floor does not bind on the golden path (the v0.4-regenerated golden digest
+carried over unchanged).
+
+**Measured, `python -m ah.battery.report`, operating size, 2026-08-08:**
+
+| metric | toy-v0.3 | toy-v0.5 | band | verdict |
+|---|---|---|---|---|
+| `excess_kurtosis` | 0.0853 | **2.0919** | [0.5, 8.0] | fail → **pass** |
+| `hill_tail_index` | 5.799 | **4.3839** | [2.0, 6.0] | pass → pass, off the thin-tail edge |
+| `skewness` | −0.0112 | 0.0221 | [−1.5, 0.5] | pass |
+| `max_drawdown_median` | −0.5946 | −0.5976 | [−0.65, −0.12] | pass |
+| enforce failures | 1 | **0** | | |
+
+(`acf_r_lag1` reads 0.2682 here vs the 0.4111 quoted above for v0.4 — both on
+their own ensembles; AM-2026-08-06-002 records that pooled ACF statistics move
+with ensemble size, so treat cross-version ACF comparisons as indicative only.
+ER-5 remains open either way.)
+
+**What it invalidated.** `TOY_ENGINE_VERSION` → `toy-v0.5`; presets moved to
+the **5xx `world_id` block** (the 4xx block was never published); the engine
+golden digest carried over from the v0.4 regeneration (floor non-binding on
+that path, prior v0.3 digest still kept in the test); institution golden
+57.923474 → **80.894413** and the play-linkage pin 76.712... → **86.890...**
+(milder typical months compound better — see ER-8);
+`app/fixtures/toy.bundle.gz` rebuilt from a fresh v0.5 stagflation run and
+re-verified by the TypeScript seal suite. Any RunRecord made under `toy-v0.3`
+or earlier will no longer replay — which the QA console already surfaces on
+`/run/<id>`.
+
+
+## ER-8 — toy-v0.5's typical months are milder, and the forced-secondary mechanic is preset-unreachable
+
+**Status:** OPEN — a documented consequence of the ER-7 fix, not an oversight.
+**Found:** 2026-08-06, by the v0.4 gate diagnosis; confirmed under v0.5.
+
+**What happens.** Variance-normalized Student-t keeps *declared* volatility
+fixed while concentrating it into rare large months, so *typical* months are
+milder than under Gaussian innovations. Compounding drag falls and hold-course
+outcomes rise (the stagflation twin: 57.9 → 80.9 on the same declared
+parameters). The A/B on deflation_bust at its base seed: forced secondaries
+1 → 0, forced quarters 30 → 20, minimum NAV 19.3 → 41.0.
+
+**The sharp edge:** across 20 seeds of every shipped preset, `forced_secondaries`
+is now **zero everywhere** (it fired on 8/20 deflation_bust seeds under v0.3).
+The mechanic the play surface calls "the behaviour that makes a VOLUNTARY
+secondary a real decision" is dead in every shipped world. The mechanic itself
+still works — `tests/test_play.py` now covers it with a schema-bound maximal
+world (vol 45, drift −15, 12-quarter severity-1.0 crisis; forced secondaries
+on 10 of 11 seeds) — but no *playable* world reaches it.
+
+**What a fix looks like.** Either a preset deliberately calibrated into the
+liquidity-stress region (a new world, not a re-parameterization of a published
+one), or crisis-block realism (ER-5's fix) restoring clustered sustained
+drawdowns that exhaust liquid sleeves organically. Bundling it into ER-5 is
+attractive since both trace to "the crisis is a rectangular block".
+**A release event and the owner's call.**

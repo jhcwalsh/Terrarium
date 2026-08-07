@@ -13,6 +13,20 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **`toy-v0.5` — ER-7 closed: fat tails plus the limited-liability floor.**
+  Market innovations are standardized Student-t (df=6, literature-chosen, not
+  tuned); every monthly return is floored at -99% after v0.4's gate exposed
+  that a t(6) month through the 1.4x PE loading could breach -100% (measured
+  -127.7%, NaN-poisoning cumulative growth ~18% of 60-path ensembles). v0.4
+  never merged. The ratified Step-0 battery now passes all four enforce gates
+  (excess_kurtosis 0.085 -> 2.09 in [0.5, 8.0]; zero failures) and `ah
+  battery`/CI exit 0 with the zero earned, not defaulted. Presets moved to
+  the 5xx world_id block; goldens regenerated (institution 57.92 -> 80.89,
+  play pin 76.71 -> 86.89 - milder typical months compound better);
+  toy.bundle.gz rebuilt and seal-verified. New register entry **ER-8**: no
+  shipped preset can now trigger a forced secondary (was 8/20 deflation_bust
+  seeds under v0.3); the mechanic is covered by a schema-bound maximal-stress
+  world in tests, and restoring a playable path to it is an open owner call.
 - **`ah/dataconsole.py` — the generator-input data console**, port 8796: the
   third console. Read-only over the vintage store (guard test scans for zero
   write call sites): series inventory with coverage/gaps/staleness-vs-SLA and

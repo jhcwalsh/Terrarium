@@ -38,9 +38,14 @@ GOLDEN_SEED = 42
 # growth of 100, stagflation hold-course twin. Regenerated for toy-v0.3
 # (register ER-1 + ER-4): high yield now earns its spread net of defaults, the
 # credit cycle clears instead of plateauing, and the policy rate moves enough
-# for duration to be a real risk. The twin ends lower because the old engine
-# was paying the book unearned carry.
-GOLDEN_HOLD_FINAL = 57.923474
+# for duration to be a real risk (that generation's value: 57.923474).
+# Regenerated for toy-v0.5 (register ER-7 closed: Student-t market innovations
+# plus the -99% limited-liability floor): variance-normalized t concentrates
+# the declared vol into rare months, so typical months are milder, compounding
+# drag falls, and the twin ends HIGHER than under Gaussian innovations. The
+# floor does not bind on this seed's path, so this value equals the unfloored
+# t-innovation number measured in the 2026-08-06 diagnosis.
+GOLDEN_HOLD_FINAL = 80.894413
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:
