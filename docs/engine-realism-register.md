@@ -379,7 +379,7 @@ measured against a counterfactual that does not behave like a real programme
 
 ## ER-7 — Monthly returns are near-Gaussian: the engine has no fat tails
 
-**Status:** open
+**Status:** CLOSED in `toy-v0.4` (engine-er7-fat-tails branch), 2026-08-06
 **Found:** 2026-08-06, by the first run of the Step-0 stylised battery after its
 thresholds were ratified (AM-2026-08-06-001). Found by a gate, which is what the
 gate was ratified for.
@@ -418,3 +418,46 @@ draws — a Student-t or a mixture — in place of the current Gaussian
 clustering endogenously rather than through a scripted crisis block. Either is
 digest-invalidating and would move every stylised fact at once, including ER-5's
 autocorrelation. **This is a release event and the owner's call.**
+
+
+### ER-7, closed — what the fix was and what it moved
+
+**The fix.** The market innovations in `run_path` are standardized Student-t
+rather than normal, at `_INNOVATION_DF = 6.0`. Dividing the draw by
+`sqrt(df/(df-2))` rescales it to unit variance, so a world declaring 16% equity
+volatility still gets 16% equity volatility — it simply arrives with occasional
+large months instead of uniformly middling ones. The macro state innovations
+(rate, spread, inflation) stay Gaussian: the defect was in return tails, and
+widening the macro shocks would have been a different change wearing this fix's
+clothes.
+
+`df = 6` is CHOSEN from the empirical literature on monthly equity index
+returns, which fits degrees of freedom in the 4–8 region. **It was not tuned to
+land the gate inside its band.** One value was picked on the literature, run
+once, and the result reported wherever it fell.
+
+**Measured, `python -m ah.battery.report`, 64 paths, seed 42:**
+
+| metric | toy-v0.3 | toy-v0.4 | band | verdict |
+|---|---|---|---|---|
+| `excess_kurtosis` | 0.0853 | **1.644** | [0.5, 8.0] | fail → **pass** |
+| `hill_tail_index` | 5.799 | **4.450** | [2.0, 6.0] | pass → pass, off the thin-tail edge |
+| `skewness` | −0.0112 | 0.0201 | [−1.5, 0.5] | pass |
+| `max_drawdown_median` | −0.5946 | −0.6015 | [−0.65, −0.12] | pass |
+| enforce failures | 1 | **0** | | |
+
+**IT MADE ER-5 SLIGHTLY WORSE, and that is reported rather than buried.**
+`acf_r_lag1` moved from 0.364 to **0.4111** against its drafted [−0.2, 0.2].
+Heavier tails do nothing about a rectangular crisis block — the mechanism ER-5
+names — and the larger monthly moves inside that block appear to have
+strengthened the pooled lag-1 autocorrelation rather than diluted it. ER-5
+remains open and is now the largest stylised-fact defect in the engine. The gate
+is `todo` (observed before ratification), so nothing blocked; the number is worse
+and is recorded as worse.
+
+**What it invalidated.** `TOY_ENGINE_VERSION` → `toy-v0.4`; the golden snapshot
+regenerated (prior digest kept in the test); the presets moved to the **4xx
+`world_id` block** so scores from two engine generations cannot share a
+leaderboard row; `app/fixtures/toy.bundle.gz` rebuilt. Any RunRecord made under
+`toy-v0.3` or earlier will no longer replay — which the QA console already
+surfaces on `/run/<id>`.

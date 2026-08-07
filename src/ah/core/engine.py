@@ -39,7 +39,19 @@ TOY_GENERATOR_ID = "toy-v0"
 #   v0.2  unit coherence: carry/vol constants moved into percent space
 #   v0.3  register ER-1 + ER-4: credit losses, a spread cycle that clears,
 #         and a policy rate with enough innovation to make duration risky
-TOY_ENGINE_VERSION = "toy-v0.3"
+#   v0.4  register ER-7: market innovations are standardized Student-t, so
+#         monthly returns have tails. Declared volatility is unchanged.
+TOY_ENGINE_VERSION = "toy-v0.4"
+
+# -- register ER-7: monthly returns had no tails --------------------------- #
+# Degrees of freedom for the market innovations. CHOSEN, from the empirical
+# literature on monthly equity index returns, which puts fitted t degrees of
+# freedom in the 4-8 region; 6 sits mid-range and gives the innovation an excess
+# kurtosis of 6/(df-4) = 3.0. Deliberately NOT tuned to land the battery's
+# `excess_kurtosis` gate inside its band: picking df by what makes the gate pass
+# would be the mirror image of moving the threshold, and the realized pooled
+# statistic is reported wherever it falls.
+_INNOVATION_DF = 6.0
 
 _ENSEMBLE_SEED_STRIDE = 7919  # run_ensemble uses base_seed + 7919*k
 
@@ -258,25 +270,43 @@ def _inflation_path(world: NumericWorld, nm: int, crisis: np.ndarray, z: np.ndar
 # --------------------------------------------------------------------------- #
 
 
+def _t_draws(rng: np.random.Generator, nm: int, df: float = _INNOVATION_DF) -> np.ndarray:
+    """Standardized Student-t innovations: unit variance, excess kurtosis 6/(df-4).
+
+    Register ER-7. Dividing by ``sqrt(df/(df-2))`` rescales the draw to unit
+    variance, so swapping this in for ``standard_normal`` adds tail weight
+    WITHOUT changing any volatility the WorldSpec declares — a world asking for
+    16% equity vol still gets 16% equity vol, it just gets there with occasional
+    large months instead of uniformly middling ones. That separation is the whole
+    point: the defect was the shape of the tail, not the size of the variance.
+    """
+    return rng.standard_t(df, nm) / math.sqrt(df / (df - 2.0))
+
+
 def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     """Simulate one monthly history from ``seed`` (PCG64). Pure & deterministic."""
     _require_toy(world)
     nm = world.horizon.quarters * 3
     rng = np.random.Generator(np.random.PCG64(seed))
 
-    # Draw every normal stream up front, in a fixed order (determinism anchor).
+    # Draw every stream up front, in a fixed order (determinism anchor).
+    #
+    # Register ER-7: the MARKET innovations are standardized Student-t, not
+    # normal. The macro state innovations below stay Gaussian — the defect was
+    # in return tails, and widening rate/inflation shocks would be a different
+    # change wearing the same fix's clothes.
     z_rate = rng.standard_normal(nm)
     z_spread = rng.standard_normal(nm)
     z_infl = rng.standard_normal(nm)
-    z_m = rng.standard_normal(nm)
-    e_eq = rng.standard_normal(nm)
-    e_hy = rng.standard_normal(nm)
-    e_com = rng.standard_normal(nm)
-    e_b = rng.standard_normal(nm)
-    e_reit = rng.standard_normal(nm)
-    e_pe = rng.standard_normal(nm)
-    e_pc = rng.standard_normal(nm)
-    e_re = rng.standard_normal(nm)
+    z_m = _t_draws(rng, nm)
+    e_eq = _t_draws(rng, nm)
+    e_hy = _t_draws(rng, nm)
+    e_com = _t_draws(rng, nm)
+    e_b = _t_draws(rng, nm)
+    e_reit = _t_draws(rng, nm)
+    e_pe = _t_draws(rng, nm)
+    e_pc = _t_draws(rng, nm)
+    e_re = _t_draws(rng, nm)
 
     crisis = _crisis_mask(world, nm)
     rate = _rate_path(world, nm, z_rate)
