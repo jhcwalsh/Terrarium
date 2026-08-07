@@ -13,6 +13,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **`ah/dataconsole.py` — the generator-input data console**, port 8796: the
+  third console. Read-only over the vintage store (guard test scans for zero
+  write call sites): series inventory with coverage/gaps/staleness-vs-SLA and
+  proxy-splice share, per-source freshness, recorded QC summary; per-asset-
+  class lineage pages (raw series with proxy stretches shaded → the derived
+  factors the generator consumes, with histogram + moments); reported-vs-
+  de-smoothed overlay for the private-markets series (glm_ma, method
+  labeled); and a factor-panel page recomputing every factors.yaml factor
+  mechanically (kind=series verbatim, kind=derived via ah.data.derive) with
+  the sealed train/validation/holdout windows shaded — holdout labeled SPENT.
+  Sealed surfaces are imported, never edited. Spec and plan under
+  `docs/superpowers/`.
 - **Live-path `.env` fallback** — `fetch_raw_text` now loads
   `ANTHROPIC_API_KEY` from the repo-root `.env` when the environment lacks it
   (stdlib parse, mirroring `scripts/download_data.py`'s FRED_API_KEY

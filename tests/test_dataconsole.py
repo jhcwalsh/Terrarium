@@ -199,3 +199,31 @@ def test_privates_page_shows_desmoothing_overlay(tmp_path):
     assert "de-smoothed" in r.text
     assert "reported" in r.text
     assert "<table" in r.text  # side-by-side moments table
+
+
+def test_dataconsole_is_read_only():
+    """The data console's contract: zero write call sites, ever.
+
+    Same source-scan technique as the programme/buildconsole guards: a future
+    edit that adds any store-writing call fails loudly here.
+    """
+    import inspect
+
+    import ah.dataconsole as dc
+
+    src = inspect.getsource(dc)
+    for needle in (
+        "write_observations(",
+        "create_vintage(",
+        "advance_pointer(",
+        "quarantine_vintage(",
+        "record_qc(",
+        "record_intake(",
+        "register_series(",
+        "INSERT",
+        "UPDATE",
+        "DELETE",
+        "to_parquet(",
+        ".save_",
+    ):
+        assert needle not in src, f"read-only surface contains {needle}"
