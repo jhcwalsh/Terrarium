@@ -21,11 +21,21 @@ from __future__ import annotations
 
 import html
 import threading
+import time
+from collections.abc import Callable
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
 from fastapi.responses import HTMLResponse
+
+from ah.compiler.fixture_adapter import slugify
+from ah.compiler.interface import CompileError
+from ah.compiler.pipeline import process
+from ah.compiler.postprocess import extract_json
+from ah.compiler.prompt_v1 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
+from ah.core.validator import VALIDATOR_VERSION, stamp_validation
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
@@ -83,6 +93,137 @@ def _page(title: str, body: str, *, refresh: bool = False) -> HTMLResponse:
 
 def _recent_attempts_html(app: FastAPI) -> str:
     return ""
+
+
+# --------------------------------------------------------------------------- #
+# the dry-run pipeline
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class Stage:
+    name: str
+    status: str  # "running" | "ok" | "fail"
+    detail: str
+    payload: str = ""  # raw evidence shown on failure (or verbose detail)
+    elapsed_ms: int = 0
+
+
+@dataclass
+class Attempt:
+    attempt_id: str
+    scenario_text: str
+    live: bool
+    created_at: str
+    stages: list[Stage]
+    done: bool = False
+    stamped: dict[str, Any] | None = None
+    kept_world_id: str | None = None
+    error: str | None = None
+    _thread: Any = field(default=None, repr=False, compare=False)
+
+
+def _stage(att: Attempt, name: str, detail: str) -> Stage:
+    s = Stage(name=name, status="running", detail=detail)
+    att.stages.append(s)
+    return s
+
+
+def run_stages(att: Attempt, *, fetch_text: Callable[[str], str]) -> None:
+    """Dry-run compile pipeline. Persists nothing; mutates ``att`` in place.
+
+    ``fetch_text`` returns raw compiler text for the scenario — a fixture read
+    offline, a live model call online. Every failure ends the ledger at its
+    stage with the evidence in ``payload``.
+    """
+    try:
+        t0 = time.perf_counter()
+        s = _stage(att, "prompt", "")
+        messages = build_messages(att.scenario_text)
+        s.detail = (
+            f"prompt {PROMPT_VERSION}: system {len(SYSTEM_PROMPT)} chars, "
+            f"user {len(messages[0]['content'])} chars"
+        )
+        s.status, s.elapsed_ms = "ok", int((time.perf_counter() - t0) * 1000)
+
+        t0 = time.perf_counter()
+        s = _stage(att, "model", "live call" if att.live else "fixture replay")
+        try:
+            text = fetch_text(att.scenario_text)
+        except Exception as exc:
+            s.status, s.payload = "fail", f"{type(exc).__name__}: {exc}"
+            return
+        s.detail += f" — {len(text)} chars received"
+        s.status, s.elapsed_ms = "ok", int((time.perf_counter() - t0) * 1000)
+
+        s = _stage(att, "extract", "outermost JSON object")
+        try:
+            raw = extract_json(text)
+        except CompileError as exc:
+            s.status, s.payload = "fail", f"{exc}\n--- raw text ---\n{text[:4000]}"
+            return
+        s.detail = f"{len(raw)} top-level keys"
+        s.status = "ok"
+
+        s = _stage(att, "validate", "ah.core.validator via pipeline.process")
+        outcome = process(raw)
+        clamps = len(outcome.result.clamps)
+        if outcome.rejected:
+            s.status = "fail"
+            s.detail = f"REJECTED ({clamps} clamp(s) before rejection)"
+            s.payload = str(outcome.reject_reason)[:4000]
+            return
+        s.detail = f"passed — {clamps} clamp(s), 0 blocking"
+        s.status = "ok"
+
+        s = _stage(att, "stamp", "stamp_validation (preview — nothing stored)")
+        att.stamped = stamp_validation(
+            outcome.result,
+            validated_at=att.created_at,
+            validator_version=VALIDATOR_VERSION,
+        )
+        s.detail = f"world_id {att.stamped['world_id']} — status {att.stamped['status']}"
+        s.status = "ok"
+    except Exception as exc:  # a defect in the console itself, not the compile
+        att.error = f"{type(exc).__name__}: {exc}"
+    finally:
+        att.done = True
+        for st in att.stages:
+            if st.status == "running":
+                st.status = "fail"
+
+
+def ledger_html(att: Attempt) -> str:
+    """Render the stage ledger. Pure function of the attempt."""
+    rows = []
+    for s in att.stages:
+        cls = {"ok": "ok", "fail": "bad"}.get(s.status, "warn")
+        rows.append(
+            f'<tr><td>{_e(s.name)}</td><td class="{cls}">{_e(s.status)}</td>'
+            f"<td>{_e(s.detail)}</td><td>{s.elapsed_ms} ms</td></tr>"
+        )
+        if s.payload:
+            rows.append(f'<tr><td colspan="4"><pre>{_e(s.payload)}</pre></td></tr>')
+    if att.error:
+        rows.append(
+            f'<tr><td colspan="4" class="bad">console defect (not a compile result): '
+            f"{_e(att.error)}</td></tr>"
+        )
+    return (
+        "<table><tr><th>stage</th><th>status</th><th>detail</th><th>elapsed</th></tr>"
+        + "".join(rows)
+        + "</table>"
+    )
+
+
+def _fixture_fetch(fixtures_dir: Path) -> Callable[[str], str]:
+    def fetch(scenario_text: str) -> str:
+        p = fixtures_dir / f"{slugify(scenario_text)}.json"
+        if not p.exists():
+            raise CompileError(f"no fixture for scenario (looked for {p.name})")
+        return p.read_text(encoding="utf-8")
+
+    return fetch
 
 
 def create_app(

@@ -6,10 +6,13 @@ pytest-socket blocks by default. No test here touches the network — the live
 compiler path is never imported.
 """
 
+import json
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
-from ah.buildconsole import create_app
+from ah.buildconsole import Attempt, create_app, ledger_html, run_stages
 
 pytestmark = pytest.mark.enable_socket
 
@@ -21,6 +24,68 @@ def _client(tmp_path, fixtures_dir=None):
         synchronous=True,
     )
     return TestClient(app)
+
+
+GOOD = "the long stagflation"  # slug: the-long-stagflation
+
+
+def _write_fixture(tmp_path, name, doc):
+    d = tmp_path / "fixtures"
+    d.mkdir(exist_ok=True)
+    (d / f"{name}.json").write_text(json.dumps(doc), encoding="utf-8")
+    return d
+
+
+def _good_doc():
+    # reuse a real committed KNOWN-GOOD compiler fixture (the adversarial-*
+    # families are deliberately clamped/rejected; valid-scenario-* are clean)
+    src = Path(__file__).resolve().parents[1] / "fixtures" / "compiler"
+    return json.loads(sorted(src.glob("valid-scenario-*.json"))[0].read_text(encoding="utf-8"))
+
+
+def test_run_stages_all_ok():
+    doc = _good_doc()
+    att = Attempt(
+        attempt_id="a1",
+        scenario_text=GOOD,
+        live=False,
+        created_at="2026-08-06T00:00:00+00:00",
+        stages=[],
+    )
+    run_stages(att, fetch_text=lambda s: json.dumps(doc))
+    assert att.done
+    assert [s.name for s in att.stages] == ["prompt", "model", "extract", "validate", "stamp"]
+    assert all(s.status == "ok" for s in att.stages)
+    assert att.stamped is not None and "world_id" in att.stamped
+
+
+def test_run_stages_rejection_is_first_class():
+    att = Attempt(
+        attempt_id="a2",
+        scenario_text="x",
+        live=False,
+        created_at="2026-08-06T00:00:00+00:00",
+        stages=[],
+    )
+    run_stages(att, fetch_text=lambda s: json.dumps({"schema_version": "1.0.0"}))
+    assert att.done and att.stamped is None
+    validate_stage = next(s for s in att.stages if s.name == "validate")
+    assert validate_stage.status == "fail"
+    assert validate_stage.payload  # evidence preserved
+    assert not any(s.name == "stamp" for s in att.stages)  # later stages not run
+
+
+def test_ledger_html_marks_failures():
+    att = Attempt(
+        attempt_id="a3",
+        scenario_text="x",
+        live=False,
+        created_at="2026-08-06T00:00:00+00:00",
+        stages=[],
+    )
+    run_stages(att, fetch_text=lambda s: "not json at all")
+    out = ledger_html(att)
+    assert 'class="bad"' in out and "extract" in out
 
 
 def test_compose_page_renders(tmp_path):
