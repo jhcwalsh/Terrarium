@@ -86,9 +86,13 @@ with the raw payload; full gate green.
 
 ## Sequencing and constraints
 
-1. ER-7 merge (`engine-er7-fat-tails`, gate9 in flight) lands first.
-2. WP-A, full gate, `--no-ff` merge, push.
-3. WP-B, full gate, `--no-ff` merge, push.
+1. WP-B (the console), full gate, `--no-ff` merge, push. Branched from main —
+   independent of the ER-7 branch, whose gate turned up defects and is held
+   for an owner decision. *(Order flipped from the original draft by owner
+   /goal 2026-08-06: the console is the instrument for iterating on the
+   prompt, so it lands first.)*
+2. WP-A (prompt v2 + envelope), full gate, `--no-ff` merge, push — iterated
+   live through the WP-B console.
 
 No new dependencies. Live compiles need network + API key at runtime only —
 never in tests. CLI-echoed strings stay ASCII. The pre-registration lock does
