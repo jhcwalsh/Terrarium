@@ -22,7 +22,7 @@ from __future__ import annotations
 
 import html
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -114,6 +114,12 @@ CLASSES: dict[str, dict[str, list[str]]] = {
 # --------------------------------------------------------------------------- #
 
 
+def _col(frame: pd.DataFrame, name: str) -> pd.Series:
+    """A typed column accessor: the pandas stubs give ``frame[name]`` a union
+    type this module's full-strictness pyright environment rejects."""
+    return cast("pd.Series", frame[name])
+
+
 def gap_ranges(dates: pd.Series) -> list[tuple[str, str]]:
     """Missing calendar months between the first and last observation, as
     inclusive (YYYY-MM, YYYY-MM) ranges. Empty/singleton input -> no gaps."""
@@ -154,7 +160,7 @@ def proxy_pct(frame: pd.DataFrame) -> float:
     """Share of observations flagged proxy-spliced; no column means all-actual."""
     if "is_proxy" not in frame.columns or len(frame) == 0:
         return 0.0
-    return float(frame["is_proxy"].astype(bool).mean())
+    return float(_col(frame, "is_proxy").astype(bool).mean())
 
 
 def moments(values: np.ndarray) -> dict[str, float]:
@@ -298,7 +304,7 @@ def line_svg(
     parts = [f'<svg width="{width}" height="{height}" role="img">']
     parts.append(f'<text x="8" y="14" font-size="12" font-weight="600">{_e(title)}</text>')
     if proxy_col in frame.columns:
-        for i0, i1 in _proxy_runs(frame[proxy_col]):
+        for i0, i1 in _proxy_runs(_col(frame, proxy_col)):
             x0 = xs[i0] - (2 if i0 else 0)
             x1 = xs[i1]
             parts.append(
@@ -306,7 +312,7 @@ def line_svg(
                 f'height="{height - pad_t - pad_b}" fill="#f3e2c7" opacity="0.8">'
                 f"<title>proxy-spliced stretch</title></rect>"
             )
-        if _proxy_runs(frame[proxy_col]):
+        if _proxy_runs(_col(frame, proxy_col)):
             parts.append(
                 f'<text x="{width - pad_r - 4}" y="14" font-size="10" text-anchor="end" '
                 f'fill="#8a6d1f">shaded = proxy-spliced</text>'
@@ -514,7 +520,7 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                 if r.series_id in index:
                     frame = _read_current(cat, vintage, r.series_id)
                     meta = index[r.series_id]
-                    gaps = gap_ranges(frame["date"]) if frame is not None else []
+                    gaps = gap_ranges(_col(frame, "date")) if frame is not None else []
                     st = staleness_days(meta["last_date"], as_of)
                     stale_cls = "mut" if not r.enforce else ("bad" if st > r.sla_days else "ok")
                     ppct = proxy_pct(frame) if frame is not None else 0.0
@@ -580,7 +586,7 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                 )
                 return _page(sid, body)
 
-            gaps = gap_ranges(frame["date"])
+            gaps = gap_ranges(_col(frame, "date"))
             gap_rows = "".join(
                 f'<tr><td class="l">{a}</td><td class="l">{b}</td></tr>' for a, b in gaps
             )
@@ -606,7 +612,7 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
             body = (
                 f"<h1>{_e(sid)}</h1>"
                 f'<p class="prov">vintage {_e(vintage)} · {len(frame)} obs · '
-                f"coverage {coverage_pct(frame['date']):.1%} · proxy {proxy_pct(frame):.0%}</p>"
+                f"coverage {coverage_pct(_col(frame, 'date')):.1%} · proxy {proxy_pct(frame):.0%}</p>"
                 + line_svg(
                     frame, title=f"{sid} — full history (current vintage)", width=900, height=220
                 )
@@ -665,7 +671,7 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                     continue
                 raw_parts.append(
                     f'<div class="card"><b><a href="/series/{_e(sid)}">{_e(sid)}</a></b> '
-                    f"coverage {coverage_bar(coverage_pct(frame['date']))} "
+                    f"coverage {coverage_bar(coverage_pct(_col(frame, 'date')))} "
                     f'<span class="mut">proxy {proxy_pct(frame):.0%}</span><br>'
                     + line_svg(frame, title=sid)
                     + "</div>"
