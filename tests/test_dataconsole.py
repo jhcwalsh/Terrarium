@@ -49,7 +49,11 @@ def _tiny_store(tmp_path):
     cat = Catalog(tmp_path)
     reqs = load_requirements()
     cat.create_vintage("v1", created_at="2026-08-07T00:00:00Z", status="pending")
-    for sid, vals in [("fred.CPI", [100.0, 101.0, 102.0]), ("french.mkt_rf", [0.01, -0.02, 0.03])]:
+    for sid, vals in [
+        ("fred.CPI", [100.0, 101.0, 102.0]),
+        ("french.mkt_rf", [0.01, -0.02, 0.03]),
+        ("french.rf", [0.001, 0.001, 0.001]),
+    ]:
         cat.register_series(reqs[sid])
         frame = pd.DataFrame(
             {
@@ -152,6 +156,39 @@ def test_class_page_lists_raw_and_factors(tmp_path):
     assert "french.mkt_rf" in r.text
     assert "registered, never fetched" in r.text  # shiller series absent from tiny store
     assert c.get("/class/no-such").status_code == 404
+
+
+def test_factors_page_renders_every_declared_factor(tmp_path):
+    c = TestClient(create_app(data_root=_tiny_store(tmp_path)))
+    r = c.get("/factors")
+    assert r.status_code == 200
+    assert "train" in r.text and "validation" in r.text
+    assert "SPENT" in r.text  # holdout labeling
+    assert "absent" in r.text or "unavailable" in r.text  # tiny store lacks most inputs
+
+
+def test_factor_frame_derived_matches_derive(tmp_path):
+    """A derived factor recomputed through _factor_frame == calling derive directly."""
+    from ah.data import derive
+    from ah.data.catalog import Catalog
+    from ah.dataconsole import _factor_frame
+    from ah.factors import load_manifest
+
+    root = _tiny_store(tmp_path)
+    manifest = load_manifest()
+    # equity_mkt is derived: add(french.mkt_rf, french.rf) — both in the tiny store
+    fs = manifest.sources["equity_mkt"]
+    assert fs.kind == "derived"
+    cat = Catalog(root)
+    try:
+        frame, note = _factor_frame(cat, "v1", fs)
+        assert note == "" and frame is not None
+        direct = getattr(derive, str(fs.expr))(
+            *[cat.read_observations("v1", sid) for sid in fs.inputs]
+        )
+        pd.testing.assert_frame_equal(frame, direct)
+    finally:
+        cat.close()
 
 
 def test_privates_page_shows_desmoothing_overlay(tmp_path):

@@ -753,6 +753,123 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
         finally:
             cat.close()
 
+    @app.get("/factors", response_class=HTMLResponse)
+    def factors_page() -> HTMLResponse:
+        from ah.factors import load_manifest
+        from ah.splits import HOLDOUT, TRAIN, VALIDATION
+
+        cat = _cat()
+        try:
+            vintage = cat.current_vintage()
+            if vintage is None:
+                return _page(
+                    "factors",
+                    "<h1>The factor panel</h1>"
+                    + _empty("no current vintage", "uv run ah data refresh ..."),
+                )
+            manifest = load_manifest()
+            splits_note = (
+                f'<div class="card"><b>Sealed splits</b> (ah.splits): '
+                f"train {TRAIN.start}..{TRAIN.end} · "
+                f"validation {VALIDATION.start}..{VALIDATION.end} · "
+                f'<span class="warn">holdout {HOLDOUT.start}..{HOLDOUT.end} — '
+                f"SPENT at WP5.6</span>. The generator trains on train+validation "
+                f"only; shading below marks the windows.</div>"
+            )
+
+            def _split_shading(frame: pd.DataFrame, width: int = 600, height: int = 160) -> str:
+                """Vertical bands for validation and holdout over a chart's x-range."""
+                if len(frame) < 2:
+                    return ""
+                d0 = pd.Timestamp(frame["date"].iloc[0])
+                d1 = pd.Timestamp(frame["date"].iloc[-1])
+                span = (d1 - d0).days or 1
+                out = []
+                for split, color, label in (
+                    (VALIDATION, "#dce8f2", "validation"),
+                    (HOLDOUT, "#f2dcdc", "holdout (SPENT)"),
+                ):
+                    s = max(pd.Timestamp(split.start), d0)
+                    e = min(pd.Timestamp(split.end), d1)
+                    if s >= e:
+                        continue
+                    x0 = 46 + (s - d0).days / span * (width - 54)
+                    x1 = 46 + (e - d0).days / span * (width - 54)
+                    out.append(
+                        f'<rect x="{x0:.1f}" y="20" width="{x1 - x0:.1f}" height="{height - 38}" '
+                        f'fill="{color}" opacity="0.7"><title>{label}</title></rect>'
+                    )
+                return "".join(out)
+
+            rows = []
+            for block in manifest.blocks:
+                active = manifest.is_active(block)
+                rows.append(
+                    f"<h2>block: {_e(block)} {'' if active else '(inert — not in active_blocks)'}</h2>"
+                )
+                for fname in manifest.blocks[block]:
+                    fs = manifest.sources[fname]
+                    frame, note = (None, "") if not active else _factor_frame(cat, vintage, fs)
+                    head = (
+                        f"<b>{_e(fname)}</b> "
+                        f'<span class="pill">{_e(fs.kind)}</span> '
+                        f'<span class="pill">{_e(fs.units or "—")}</span>'
+                        + (f' <span class="pill">{_e(fs.numeraire)}</span>' if fs.numeraire else "")
+                        + (
+                            f' <span class="pill warn">proxy: {_e(fs.proxy_for)}</span>'
+                            if fs.proxy
+                            else ""
+                        )
+                    )
+                    if not active:
+                        rows.append(
+                            f'<div class="card">{head} <span class="mut">inert block — not rendered</span></div>'
+                        )
+                        continue
+                    if fs.kind == "unavailable":
+                        rows.append(
+                            f'<div class="card">{head}<br><span class="warn">unavailable — '
+                            f"{_e(fs.reason)}</span></div>"
+                        )
+                        continue
+                    if frame is None:
+                        rows.append(
+                            f'<div class="card">{head}<br><span class="warn">{_e(note)}</span></div>'
+                        )
+                        continue
+                    m = moments(frame["value"].to_numpy())
+                    chart = line_svg(frame, title=f"factor: {fname}")
+                    # inject split shading right after the opening svg content
+                    shading = _split_shading(frame)
+                    if shading:
+                        chart = chart.replace("</svg>", shading + "</svg>")
+                    srcs = (
+                        f'source: <a href="/series/{_e(fs.series_id)}">{_e(fs.series_id)}</a>'
+                        if fs.kind == "series"
+                        else "inputs: "
+                        + " · ".join(f'<a href="/series/{_e(s)}">{_e(s)}</a>' for s in fs.inputs)
+                        + f" via derive.{_e(fs.expr)}"
+                    )
+                    rows.append(
+                        f'<div class="card">{head}<br>{chart}'
+                        + "<table><tr>"
+                        + "".join(f'<th class="l">{k}</th>' for k in m)
+                        + "</tr><tr>"
+                        + "".join(f"<td>{v:.6g}</td>" for v in m.values())
+                        + "</tr></table>"
+                        + f'<span class="mut">{srcs}</span></div>'
+                    )
+
+            body = (
+                "<h1>The factor panel — what the generator sees</h1>"
+                f'<p class="prov">vintage {_e(vintage)} · every factor recomputed mechanically '
+                f"from factors.yaml's factor_sources (kind=series verbatim; kind=derived via "
+                f"ah.data.derive); nothing hand-drawn</p>" + splits_note + "".join(rows)
+            )
+            return _page("factors", body)
+        finally:
+            cat.close()
+
     return app
 
 
