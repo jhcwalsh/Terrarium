@@ -20,11 +20,12 @@ tests); the live adapter is imported lazily inside the request handler.
 from __future__ import annotations
 
 import html
+import json
 import threading
 import time
 import uuid
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -105,7 +106,36 @@ def _page(title: str, body: str, *, refresh: bool = False) -> HTMLResponse:
 
 
 def _recent_attempts_html(app: FastAPI) -> str:
-    return ""
+    """The last 20 logged attempts, newest first. Tolerates a missing log."""
+    log = Path(app.state.log_dir) / "attempts.jsonl"
+    if not log.exists():
+        return ""
+    lines = log.read_text(encoding="utf-8").splitlines()[-20:]
+    rows = []
+    for line in reversed(lines):
+        try:
+            rec = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        stages = rec.get("stages") or []
+        last = stages[-1] if stages else {"name": "-", "status": "-"}
+        cls = {"ok": "ok", "fail": "bad"}.get(last.get("status", ""), "warn")
+        kept = rec.get("kept_world_id") or "—"
+        rows.append(
+            f"<tr><td>{_e(rec.get('created_at', ''))}</td>"
+            f"<td>{_e(rec.get('scenario_text', '')[:80])}</td>"
+            f"<td>{'live' if rec.get('live') else 'fixture'}</td>"
+            f'<td class="{cls}">{_e(last.get("name", ""))}: {_e(last.get("status", ""))}</td>'
+            f"<td>{_e(kept)}</td></tr>"
+        )
+    if not rows:
+        return ""
+    return (
+        "<h2>Recent attempts</h2><table>"
+        "<tr><th>when</th><th>scenario</th><th>path</th><th>last stage</th><th>kept</th></tr>"
+        + "".join(rows)
+        + "</table>"
+    )
 
 
 # --------------------------------------------------------------------------- #
@@ -239,19 +269,35 @@ def _fixture_fetch(fixtures_dir: Path) -> Callable[[str], str]:
     return fetch
 
 
-def _append_attempt_log(att: Attempt) -> None:
-    """Stub until Task 5: the jsonl attempt log."""
+def _append_attempt_log(att: Attempt, log_dir: Path) -> None:
+    """One json line per completed attempt — including failures; this is the
+    debugging record. Payloads are already truncated at capture time."""
+    rec = {
+        "attempt_id": att.attempt_id,
+        "scenario_text": att.scenario_text,
+        "live": att.live,
+        "created_at": att.created_at,
+        "stages": [asdict(s) for s in att.stages],
+        "done": att.done,
+        "kept_world_id": att.kept_world_id,
+        "error": att.error,
+    }
+    log_dir.mkdir(parents=True, exist_ok=True)
+    with (log_dir / "attempts.jsonl").open("a", encoding="utf-8") as f:
+        f.write(json.dumps(rec) + "\n")
 
 
 def create_app(
     db_path: str | Path = DEFAULT_DB,
     fixtures_dir: str | Path = FIXTURES_DIR,
     synchronous: bool = False,
+    log_dir: str | Path = ATTEMPT_LOG_DIR,
 ) -> FastAPI:
     app = FastAPI(title="ah build console", version="0.1.0")
     app.state.db_path = Path(db_path)
     app.state.fixtures_dir = Path(fixtures_dir)
     app.state.synchronous = synchronous
+    app.state.log_dir = Path(log_dir)
     app.state.attempts = {}
     app.state.lock = threading.Lock()
 
@@ -285,23 +331,28 @@ def create_app(
             created_at=datetime.now(UTC).isoformat(),
             stages=[],
         )
+        fetch: Callable[[str], str]
         if live:
 
-            def fetch(text: str) -> str:  # pragma: no cover - live only
+            def _live_fetch(text: str) -> str:  # pragma: no cover - live only
                 from ah.compiler.anthropic_adapter import COMPILER_MODEL, fetch_raw_text
 
                 return fetch_raw_text(COMPILER_MODEL, text)
 
+            fetch = _live_fetch
         else:
             fetch = _fixture_fetch(app.state.fixtures_dir)
         with app.state.lock:
             app.state.attempts[att.attempt_id] = att
         if app.state.synchronous:
             run_stages(att, fetch_text=fetch)
-            _append_attempt_log(att)
+            _append_attempt_log(att, app.state.log_dir)
         else:
             t = threading.Thread(
-                target=lambda: (run_stages(att, fetch_text=fetch), _append_attempt_log(att)),
+                target=lambda: (
+                    run_stages(att, fetch_text=fetch),
+                    _append_attempt_log(att, app.state.log_dir),
+                ),
                 daemon=True,
             )
             att._thread = t

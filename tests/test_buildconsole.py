@@ -175,6 +175,36 @@ def test_compile_alone_stores_nothing(tmp_path):
     assert conn.execute("SELECT COUNT(*) AS n FROM worlds").fetchone()["n"] == 0
 
 
+def test_attempt_log_records_failures_too(tmp_path):
+    app = create_app(
+        db_path=tmp_path / "t.db",
+        fixtures_dir=tmp_path / "none",
+        synchronous=True,
+        log_dir=tmp_path / "log",
+    )
+    c = TestClient(app)
+    c.post("/compile", data={"scenario": "no such fixture"})
+    lines = (tmp_path / "log" / "attempts.jsonl").read_text(encoding="utf-8").splitlines()
+    assert len(lines) == 1
+    rec = json.loads(lines[0])
+    assert rec["scenario_text"] == "no such fixture"
+    assert rec["stages"][-1]["status"] == "fail"  # model stage: missing fixture
+    assert "no fixture" in rec["stages"][-1]["payload"]
+
+
+def test_recent_attempts_on_compose_page(tmp_path):
+    fixtures = _write_fixture(tmp_path, "the-long-stagflation", _good_doc())
+    app = create_app(
+        db_path=tmp_path / "t.db",
+        fixtures_dir=fixtures,
+        synchronous=True,
+        log_dir=tmp_path / "log",
+    )
+    c = TestClient(app)
+    c.post("/compile", data={"scenario": GOOD})
+    assert GOOD in c.get("/").text
+
+
 def test_only_keep_handler_writes_to_store():
     """Guard: the module's sole store-writing call sites live inside keep_post.
 
