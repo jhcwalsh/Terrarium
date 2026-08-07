@@ -13,6 +13,20 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **`ah/buildconsole.py` — the scenario build console (WP-B)**, port 8798:
+  type a scenario, watch it compile through a five-stage ledger (prompt →
+  model → extract → validate → stamp), then explicitly keep or discard.
+  Compiling is a dry-run; the keep handler is the module's only write path
+  into `data/ah.db` (guard test scans the source), optionally recording an
+  engine run so the world lands fully inspectable on the QA shelf (8799).
+  Every attempt — including failures, with raw payload evidence — is logged
+  to `data/buildconsole/attempts.jsonl`. `anthropic_adapter.py` gained
+  `fetch_raw_text` (behavior-preserving split of `compile`) so the live raw
+  model text can be its own stage. Deliberately a separate module from the
+  read-only QA console, whose guarantee is untouched. **Known state:** the
+  live path still ends in a validator rejection until the compiler prompt
+  rewrite (WP-A) lands — the console shows that failure honestly, and is the
+  instrument for fixing it. Spec and plan under `docs/superpowers/`.
 - **`docs/BUILD-SUMMARY.md` and `docs/USER-MANUAL.md`** — an orientation pair,
   derived from the code rather than from the plans, with every capability claim
   carrying a `file:line` and every documented command actually executed. The
