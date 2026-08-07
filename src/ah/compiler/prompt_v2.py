@@ -34,7 +34,7 @@ _SCHEMA_PATH = Path(__file__).resolve().parents[3] / "schemas" / "worldspec-v1.2
 _EXAMPLE_PATH = _SCHEMA_PATH.parent / "example-long-stagflation.worldspec.json"
 
 
-def _field_line(name: str, spec: dict[str, Any], required: bool) -> str:
+def _field_line(name: str, spec: dict[str, Any], required: bool, indent: int) -> str:
     bits = [str(spec.get("type", "object"))]
     if "enum" in spec:
         bits.append("one of " + ", ".join(map(str, spec["enum"])))
@@ -43,7 +43,24 @@ def _field_line(name: str, spec: dict[str, Any], required: bool) -> str:
     if "minItems" in spec or "maxItems" in spec:
         bits.append(f"items {spec.get('minItems', 0)}..{spec.get('maxItems', 'n')}")
     flag = "REQUIRED" if required else "optional"
-    return f"  - {name} ({flag}: {'; '.join(bits)})"
+    return f"{'  ' * indent}- {name} ({flag}: {'; '.join(bits)})"
+
+
+def _walk(lines: list[str], name: str, spec: dict[str, Any], required: bool, indent: int) -> None:
+    """Render a field and recurse into nested objects (and array items).
+
+    Depth-limited to 3 levels below the block. The first live run against a
+    one-level digest failed exactly here: the model wrote
+    ``structural.infrastructure.inflation_linkage: "strong"`` because the
+    nested numeric constraint was never shown to it.
+    """
+    lines.append(_field_line(name, spec, required, indent))
+    if indent >= 4:
+        return
+    inner = spec.get("items", spec) if spec.get("type") == "array" else spec
+    req = set(inner.get("required", []))
+    for fname, fspec in sorted(inner.get("properties", {}).items()):
+        _walk(lines, fname, fspec, fname in req, indent + 1)
 
 
 def schema_digest() -> str:
@@ -54,8 +71,10 @@ def schema_digest() -> str:
         spec = schema["properties"][block]
         req = set(spec.get("required", []))
         lines.append(f"{block}:")
-        for fname, fspec in sorted(spec.get("properties", {}).items()):
-            lines.append(_field_line(fname, fspec, fname in req))
+        inner = spec.get("items", spec) if spec.get("type") == "array" else spec
+        inner_req = req | set(inner.get("required", []))
+        for fname, fspec in sorted(inner.get("properties", {}).items()):
+            _walk(lines, fname, fspec, fname in inner_req, 1)
     return "\n".join(lines)
 
 
