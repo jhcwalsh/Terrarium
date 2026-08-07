@@ -63,11 +63,13 @@ def test_default_run_is_unchanged_by_these_additions():
     """The additive fields and the new keyword must be inert on the scored path.
 
     Pinned against values recorded from the pre-change implementation, so a
-    later edit that quietly moves a scored number fails here.
+    later edit that quietly moves a scored number fails here. Regenerated for
+    toy-v0.5 (ER-7 closed): the engine moved underneath this test, not
+    play.py — toy-v0.3's value was 76.71221387563882.
     """
     result = simulate_play(_paths())
     assert len(result.quarters) == 40
-    assert result.final_value == 76.71221387563882
+    assert result.final_value == 86.89058776172098
     assert result.forced_secondaries == 0
 
 

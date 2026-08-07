@@ -18,7 +18,7 @@ manual uses, defined once.
 | **World** | A complete specification of a counterfactual decade: inflation, policy rates, credit spreads, equity drift and volatility, crisis windows, private-market structure, plus a narrative the numbers never see. Stored as a JSON document validated against `schemas/worldspec-v1.2.schema.json`. |
 | **WorldSpec** | The contract that document must satisfy. `schemas/` is read-only vendored truth — never edit it. |
 | **Preset** | One of four ready-made worlds shipped in the repo: `stagflation`, `goldilocks`, `deflation_bust`, `reflation_boom`. |
-| **Engine** | The simulator that turns a world into monthly returns for eight assets. The one that runs today is the deterministic toy engine, version `toy-v0.3`. |
+| **Engine** | The simulator that turns a world into monthly returns for eight assets. The one that runs today is the deterministic toy engine, version `toy-v0.5` (was `toy-v0.3` when this manual's commands were executed; preset world ids moved from the 3xx to the 5xx block with it). |
 | **Path** | One simulated history: 120 months of returns for every asset. |
 | **Ensemble** | Many paths from one world, seeded `base_seed + 7919·k`. The fan charts are quantiles across the ensemble. |
 | **RunRecord** | The immutable receipt of one engine run — world id, seed, path count, and a SHA-256 digest of the outputs. Everything downstream is regenerated from it. |

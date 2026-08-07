@@ -133,28 +133,29 @@ def test_thresholds_yaml_ratification_state() -> None:
     assert todo == {"acf_r_lag1", "acf_abs_lag1", "corr_distance"}
 
 
-def test_run_battery_on_stagflation_fails_exactly_one_ratified_gate() -> None:
-    """The engine does not meet its own ratified battery, and that is the finding.
+def test_run_battery_on_stagflation_passes_every_ratified_gate() -> None:
+    """The engine meets its own ratified battery — since toy-v0.5, and not before.
 
-    HISTORY: this was ``test_run_battery_on_stagflation_passes`` and asserted
-    ``report.passed``, which held only because every gate was ``todo`` -- the
-    comment on the old assertion said so outright. Ratification on 2026-08-06
-    made the gates real and the first ratified run failed one of them:
-    pooled equity ``excess_kurtosis`` is 0.085 against a floor of 0.5, i.e. the
-    toy engine's monthly returns are close to Gaussian and lack the fat tails
-    that are the most-cited stylised fact of financial returns.
-
-    The test is INVERTED rather than relaxed. Loosening the band to make this
-    green would be a threshold adjusted after seeing its own statistic, which is
-    the exact failure the pre-registration discipline exists to prevent. If the
-    engine is later fixed this test will fail again, and whoever fixes it should
-    update this assertion deliberately rather than have it pass silently.
+    HISTORY, in three acts. (1) This was ``test_run_battery_on_stagflation_passes``
+    and asserted ``report.passed``, which held only because every gate was
+    ``todo``. (2) Ratification on 2026-08-06 made the gates real and the first
+    ratified run failed one: pooled equity ``excess_kurtosis`` was 0.085 against
+    a floor of 0.5 — near-Gaussian months. The test was INVERTED to assert that
+    failure, with instructions to whoever fixed the engine to update it
+    deliberately. (3) toy-v0.5 (register ER-7 closed: standardized Student-t
+    innovations, df=6, plus the -99% limited-liability floor) is that fix:
+    measured 2026-08-08, excess_kurtosis 2.0919 in [0.5, 8.0], skewness 0.0221,
+    hill 4.3839, max_drawdown_median -0.5976 — zero enforce failures. df was
+    chosen from the literature before this run and NOT tuned to the band
+    (engine.py `_INNOVATION_DF` comment); the value is reported wherever it
+    falls. If this goes red again, the engine changed — judge the change, do
+    not touch the bands.
     """
     report = run_battery(_ensemble())
     assert report.version == BATTERY_VERSION
     assert report.checks  # metrics were evaluated
-    assert [c.metric for c in report.enforce_failures] == ["excess_kurtosis"]
-    assert not report.passed
+    assert [c.metric for c in report.enforce_failures] == []
+    assert report.passed
 
 
 def test_enforce_failure_is_detected() -> None:
@@ -204,9 +205,9 @@ def test_render_markdown_and_json() -> None:
     report = run_battery(_ensemble())
     md = render_markdown(report)
     assert BATTERY_VERSION in md
-    assert "enforce failures: 1" in md  # excess_kurtosis, see the inverted test above
+    assert "enforce failures: 0" in md  # zero since toy-v0.5; see the gate test above
     payload = json.loads(render_json(report))
-    assert payload["passed"] is False
+    assert payload["passed"] is True
     assert "excess_kurtosis" in payload["scalars"]
 
 
@@ -219,16 +220,16 @@ def test_report_records_active_blocks_from_factor_manifest() -> None:
     assert payload["active_blocks"] == ["global", "us", "fx", "valuation"]
 
 
-def test_main_returns_one_while_a_ratified_gate_fails() -> None:
-    """HISTORY: was ``test_main_returns_zero``, true while every gate was ``todo``.
-
-    Since ratification (AM-2026-08-06-001) the entry point returns 1, because
-    ``excess_kurtosis`` fails its floor. CI runs this exact command as a gate
-    step, so CI is red until the engine gains fat tails or the threshold is
-    amended -- and amending it to clear a failure it was written to catch would
-    be the post-hoc move the discipline forbids.
+def test_main_returns_zero_when_every_ratified_gate_passes() -> None:
+    """HISTORY: was ``test_main_returns_zero`` (true while every gate was
+    ``todo``), then ``test_main_returns_one_while_a_ratified_gate_fails``
+    (ratification made excess_kurtosis fail its floor and CI ran red on
+    purpose). toy-v0.5 gave the engine its fat tails honestly — see
+    test_run_battery_on_stagflation_passes_every_ratified_gate — so the entry
+    point returns 0 again, and this time the zero is EARNED: four enforce
+    gates are live and all pass.
     """
-    assert main([]) == 1
+    assert main([]) == 0
 
 
 # --------------------------------------------------------------------------- #
@@ -254,10 +255,11 @@ def test_run_battery_accepts_injected_synthetic_manifest(tmp_path: Path) -> None
 
     report = run_battery(_ensemble(), manifest=synthetic_manifest)
     # This test is about MANIFEST INJECTION, not about threshold outcomes. It
-    # asserted `report.passed` when every gate was `todo`; since ratification the
-    # engine fails excess_kurtosis, which says nothing about whether an injected
-    # manifest is accepted. Assert the thing under test instead.
-    assert [c.metric for c in report.enforce_failures] == ["excess_kurtosis"]
+    # asserted `report.passed` when every gate was `todo`; under ratified gates
+    # the enforce-failure set is whatever the engine earns (empty since
+    # toy-v0.5), which says nothing about whether an injected manifest is
+    # accepted. Assert the thing under test instead.
+    assert [c.metric for c in report.enforce_failures] == []
     assert report.active_blocks == ("alpha", "beta")
     assert "active_blocks: alpha, beta" in render_markdown(report)
     payload = json.loads(render_json(report))

@@ -39,7 +39,11 @@ _EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 # regeneration: the unit-coherence fix (percent-space constants restored from
 # the plan's decimal-convention literals; owner-approved deviation).
 GOLDEN_SEED = 42
-GOLDEN_DIGEST = "d6da53bc277c9b95922f2e5f2912b94843892383b5198e9bb3624d3800de9180"
+# toy-v0.4 (register ER-7: standardized Student-t market innovations).
+# Regenerated because the engine's numbers changed by design, which is what a
+# golden snapshot exists to force someone to notice. Prior value, toy-v0.3:
+# d6da53bc277c9b95922f2e5f2912b94843892383b5198e9bb3624d3800de9180
+GOLDEN_DIGEST = "6c3f7c896a552b49eccbdb07aff4aed175ef9eebf6df9d98919a5e136a9a1f83"
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

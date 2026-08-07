@@ -183,10 +183,13 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   auditability, keeps `schemas/` authoritative, and is simplest to delete later — then record
   the choice. If the ambiguity would change an interface another WP depends on, stop and ask.
 - **`docs/engine-realism-register.md`** records places where the engine and the cashflow model
-  are faithful to their plans but not to an allocator's expectations. ER-1, ER-3 and ER-4 are
-  closed; ER-2 (no meeting calendar / 25bp quantisation), ER-5 (crisis is a rectangular block;
-  equity ACF 0.364) and **ER-6 (~29% of every commitment is never called; `rc_curve` is an
-  ALB-A placeholder that was never fitted)** are open. Each entry says what a fix invalidates.
+  are faithful to their plans but not to an allocator's expectations. ER-1, ER-3, ER-4 and
+  ER-7 (fat tails + the -99% limited-liability floor, closed in `toy-v0.5`) are closed;
+  ER-2 (no meeting calendar / 25bp quantisation), ER-5 (crisis is a rectangular block;
+  pooled equity ACF well outside its drafted band), **ER-6 (~29% of every commitment is
+  never called; `rc_curve` is an ALB-A placeholder that was never fitted)** and ER-8
+  (toy-v0.5's typical months are milder; no shipped preset can trigger a forced
+  secondary) are open. Each entry says what a fix invalidates.
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 

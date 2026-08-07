@@ -104,8 +104,11 @@ def preset(
     }
 
 
-# World ids carry the ENGINE GENERATION in their last block: the 3xx series is
-# toy-v0.3 (register ER-1 + ER-4). The engine is not part of a WorldSpec, so
+# World ids carry the ENGINE GENERATION in their last block: the 3xx series was
+# toy-v0.3 (register ER-1 + ER-4); the 4xx series was toy-v0.4 (Student-t
+# tails), which NEVER MERGED — its gate exposed the missing limited-liability
+# floor; the 5xx series is toy-v0.5 (ER-7 closed: tails + the -99% monthly
+# floor). The engine is not part of a WorldSpec, so
 # nothing would otherwise stop scores made under two different engines sharing
 # a leaderboard row — the board is keyed (world_id, seed, decision_alpha_version),
 # and the alpha DEFINITION is unchanged, so world identity is the only place
@@ -113,7 +116,7 @@ def preset(
 # record of what G0 actually ran, and must not be rewritten.
 PRESETS = {
     "stagflation": preset(
-        world_id="00000000-0000-4000-9000-000000000301",
+        world_id="00000000-0000-4000-9000-000000000501",
         title="The Long Stagflation",
         tagline="A decade prices refused to behave.",
         infl=6.5,
@@ -129,7 +132,7 @@ PRESETS = {
         base_seed=771204,
     ),
     "goldilocks": preset(
-        world_id="00000000-0000-4000-9000-000000000302",
+        world_id="00000000-0000-4000-9000-000000000502",
         title="Goldilocks",
         tagline="Steady growth, tame inflation, calm credit.",
         infl=2.0,
@@ -145,7 +148,7 @@ PRESETS = {
         base_seed=42,
     ),
     "deflation_bust": preset(
-        world_id="00000000-0000-4000-9000-000000000303",
+        world_id="00000000-0000-4000-9000-000000000503",
         title="Deflation Bust",
         tagline="Falling prices, a hard credit crunch.",
         infl=-1.0,
@@ -161,7 +164,7 @@ PRESETS = {
         base_seed=1848,
     ),
     "reflation_boom": preset(
-        world_id="00000000-0000-4000-9000-000000000304",
+        world_id="00000000-0000-4000-9000-000000000504",
         title="Reflation Boom",
         tagline="Rates rise into a booming real economy.",
         infl=3.5,
