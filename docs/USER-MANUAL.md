@@ -300,6 +300,24 @@ its present state — `summary.twin_final_value` is computed on Step 0's toy
 institution (no cash account, no calls), `twin_ledger` on the real one. In this
 bundle they read 166.502 and 76.712 respectively. `docs/BUILD-SUMMARY.md` §5.2.
 
+### Inspect the generator's input data (added 2026-08-07, postdates this manual's survey)
+
+```bash
+uv run uvicorn ah.dataconsole:app --port 8796
+```
+
+Read-only over the vintage store. `/` answers "is anything missing or stale":
+every registered series with coverage, gaps, staleness against its SLA, and
+the share of history that is proxy-spliced. `/class/<name>` (equities,
+rates-bonds, credit, inflation-macro, fx, privates) shows the raw series
+feeding each asset class — proxy stretches shaded — and then the derived
+factors the generator actually consumes; the privates page overlays reported
+vs de-smoothed returns with both moment sets. `/series/<id>` is the
+drill-down (vintages, gaps, QC findings, manifest entry verbatim);
+`/factors` recomputes the whole factor panel mechanically and shades the
+sealed train/validation windows (holdout labeled SPENT). It writes nothing —
+a guard test enforces zero write call sites.
+
 ### Compile a scenario in the browser (added 2026-08-06, postdates this manual's survey)
 
 ```bash

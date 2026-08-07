@@ -246,6 +246,7 @@ and `gen/base.py`. See §5.15.
 | Private-programme console section | working | `src/ah/programme.py:751`; read-only enforced by import-graph test `tests/test_programme_guard.py` | included in `ah credibility` |
 | **`ah audit` (world register + wire audit)** | **absent — plan only** | `docs/superpowers/plans/2026-08-05-world-and-wire-audit.md` (2,027 lines, 7 tasks) and its design note; `ah --help` lists no `audit` command | — |
 | Scenario build console (WP-B, added 2026-08-06 — postdates this document's survey) | working | `src/ah/buildconsole.py`; dry-run five-stage compile ledger, keep-only writes (guard test `test_only_keep_handler_writes_to_store`); live path known to end in validator rejection until the compiler prompt rewrite (WP-A) | `uv run uvicorn ah.buildconsole:app --port 8798` |
+| Generator-input data console (added 2026-08-07 — postdates this document's survey) | working | `src/ah/dataconsole.py`; read-only over the vintage store (guard test `test_dataconsole_is_read_only`); raw→factor lineage, proxy shading, de-smoothing overlay, split-shaded factor panel | `uv run uvicorn ah.dataconsole:app --port 8796` |
 
 ### The data layer
 
