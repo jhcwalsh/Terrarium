@@ -13,6 +13,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **PriMaRS intake: the eight private-markets return series are real.**
+  `ah.data.connectors.albourne_primars` (pure, probe-faithful parse +
+  live TWR fetch with bearer/refresh auth) and `scripts/download_primars.py`
+  drive Albourne PriMaRS data through the standard manual-intake path.
+  First delivery landed as vintage `2026-08-07.2`: 1,164 quarterly
+  observations, buyout to 1984Q2, VC to 1983Q2. RFR-88 discharged (taxonomy
+  codes now carry the `pm_*_ret_q` series-id fragments); pm_dl and pm_mezz
+  are declared index proxies (Senior Debt / broad Private Credit — no
+  mezzanine index exists in the 49-index universe); pm SLAs 120→240d after
+  the first vintage correctly quarantined on a structurally unsatisfiable
+  SLA (vendor publishes ~4 months after quarter-end). The data console's
+  privates page now shows reported-vs-de-smoothed on real data.
 - **`toy-v0.5` — ER-7 closed: fat tails plus the limited-liability floor.**
   Market innovations are standardized Student-t (df=6, literature-chosen, not
   tuned); every monthly return is floored at -99% after v0.4's gate exposed

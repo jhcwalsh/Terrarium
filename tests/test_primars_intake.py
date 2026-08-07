@@ -53,6 +53,26 @@ def test_payload_to_intake_frame_maps_every_registered_series():
     assert frame["ret"].tolist() == pytest.approx([0.0326] * len(PM_INDEX_MAP))
 
 
+def test_null_twr_is_skipped_as_no_observation():
+    """The live feed carries null TWR for pre-inception/unpublished quarters
+    (hit on the first real download, 2026-08-08): a null is an absent
+    observation, not a malformed row, and must not become NaN in the store."""
+    payload = [
+        {
+            "indexId": 547791,
+            "published": False,
+            "asOfDate": 0,
+            "indexData": [
+                {"QUARTER": "Fri Mar 31 00:00:00 UTC 2023", "TWR": None},
+                {"QUARTER": "Fri Jun 30 00:00:00 UTC 2023", "TWR": "0.02"},
+            ],
+        }
+    ]
+    frame = payload_to_intake_frame(payload)
+    assert len(frame) == 1
+    assert frame["period"].tolist() == ["2023Q2"]
+
+
 def test_unknown_index_id_is_an_error_not_a_skip():
     with pytest.raises(ConnectorError, match="unmapped"):
         payload_to_intake_frame(

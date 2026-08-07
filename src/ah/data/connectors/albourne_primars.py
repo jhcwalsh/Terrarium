@@ -111,6 +111,11 @@ def payload_to_intake_frame(payload: list[dict[str, Any]]) -> pd.DataFrame:
         for obs in entry.get("indexData", []):
             if "QUARTER" not in obs or "TWR" not in obs:
                 raise ConnectorError(f"index {pid}: observation missing QUARTER/TWR: {obs!r}")
+            if obs["TWR"] is None:
+                # Pre-inception/unpublished quarters arrive as null TWR (seen
+                # on the first live download): an absent observation, skipped
+                # rather than stored as NaN.
+                continue
             rows.append(
                 {
                     "period": parse_java_date_quarter(str(obs["QUARTER"])),
