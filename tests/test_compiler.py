@@ -132,3 +132,83 @@ def test_anthropic_adapter_not_imported() -> None:
     import sys
 
     assert "ah.compiler.anthropic_adapter" not in sys.modules
+
+
+def test_stamp_envelope_supplies_system_owned_keys():
+    from ah.compiler.postprocess import SPEC_VERSION, stamp_envelope
+
+    body = {"narrative": {}, "horizon": {}, "meta": {"x": 1}, "schema_version": "9.9"}
+    out = stamp_envelope(
+        body,
+        scenario_text="a scenario",
+        created_at="2026-08-06T00:00:00+00:00",
+        compiler_model="claude-sonnet-4-6",
+        prompt_version="compile-world-v2.0",
+    )
+    assert out["spec_version"] == SPEC_VERSION
+    assert out["status"] == "draft"
+    assert out["extensions"] == {}
+    assert out["provenance"]["source"]["compiler_prompt_version"] == "compile-world-v2.0"
+    assert out["provenance"]["created_at"] == "2026-08-06T00:00:00+00:00"
+    assert "meta" not in out and "schema_version" not in out  # model-invented dropped
+    assert "world_id" in out
+    assert "meta" in body  # input not mutated
+
+
+def test_stamp_envelope_world_id_override_is_deterministic():
+    from ah.compiler.postprocess import stamp_envelope
+
+    out = stamp_envelope(
+        {},
+        scenario_text="s",
+        created_at="t",
+        compiler_model="m",
+        prompt_version="p",
+        world_id="00000000-0000-4000-8000-00000000abcd",
+    )
+    assert out["world_id"] == "00000000-0000-4000-8000-00000000abcd"
+
+
+def test_prompt_v2_names_every_model_owned_required_field():
+    import json
+    from pathlib import Path
+
+    from ah.compiler.prompt_v2 import MODEL_OWNED, SYSTEM_PROMPT
+
+    schema = json.loads(
+        (Path(__file__).resolve().parents[1] / "schemas" / "worldspec-v1.2.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for block in MODEL_OWNED:
+        assert block in SYSTEM_PROMPT
+        sub = schema["properties"][block]
+        for req in sub.get("required", []):
+            assert req in SYSTEM_PROMPT, f"{block}.{req} missing from prompt"
+
+
+def test_prompt_v2_never_asks_for_system_owned_keys():
+    from ah.compiler.postprocess import _SYSTEM_OWNED
+    from ah.compiler.prompt_v2 import SYSTEM_PROMPT
+
+    ask = SYSTEM_PROMPT[SYSTEM_PROMPT.index("Output a JSON object") :]
+    for key in _SYSTEM_OWNED:
+        assert key not in ask, f"prompt asks the model for system-owned {key}"
+
+
+def test_prompt_v2_embeds_the_vendored_example_blocks():
+    from ah.compiler.prompt_v2 import SYSTEM_PROMPT
+
+    # the canonical example's title proves the few-shot rode along
+    assert "stagflation" in SYSTEM_PROMPT.lower()
+
+
+def test_prompt_v2_resolves_schema_refs():
+    """The regime enum lives behind #/$defs/regime_name; an unresolved walk
+    showed the model no enum and it invented "goldilocks" (live, 2026-08-07)."""
+    from ah.compiler.prompt_v2 import SYSTEM_PROMPT, schema_digest
+
+    digest = schema_digest()
+    for name in ("deflation_boom", "stagflation", "reflation"):
+        assert name in digest, f"regime enum value {name} missing from digest"
+    assert "deflation_boom" in SYSTEM_PROMPT

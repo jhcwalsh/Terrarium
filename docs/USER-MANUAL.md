@@ -300,6 +300,44 @@ its present state — `summary.twin_final_value` is computed on Step 0's toy
 institution (no cash account, no calls), `twin_ledger` on the real one. In this
 bundle they read 166.502 and 76.712 respectively. `docs/BUILD-SUMMARY.md` §5.2.
 
+### Inspect the generator's input data (added 2026-08-07, postdates this manual's survey)
+
+```bash
+uv run uvicorn ah.dataconsole:app --port 8796
+```
+
+Read-only over the vintage store. `/` answers "is anything missing or stale":
+every registered series with coverage, gaps, staleness against its SLA, and
+the share of history that is proxy-spliced. `/class/<name>` (equities,
+rates-bonds, credit, inflation-macro, fx, privates) shows the raw series
+feeding each asset class — proxy stretches shaded — and then the derived
+factors the generator actually consumes; the privates page overlays reported
+vs de-smoothed returns with both moment sets. `/series/<id>` is the
+drill-down (vintages, gaps, QC findings, manifest entry verbatim);
+`/factors` recomputes the whole factor panel mechanically and shades the
+sealed train/validation windows (holdout labeled SPENT). It writes nothing —
+a guard test enforces zero write call sites.
+
+### Compile a scenario in the browser (added 2026-08-06, postdates this manual's survey)
+
+```bash
+uv run uvicorn ah.buildconsole:app --port 8798
+```
+
+Type a scenario, press **Compile (dry-run)**, and watch the five-stage ledger
+(prompt → model → extract → validate → stamp) fill in live. Nothing is stored
+until you press **Keep** — which stamps and stores the world exactly as
+`ah world build` would, optionally records an engine run, and links you to the
+QA shelf on 8799. Every attempt, including failures with their raw payloads,
+lands in `data/buildconsole/attempts.jsonl`. Offline it replays
+`fixtures/compiler/` by scenario slug; the **live** checkbox needs
+`ANTHROPIC_API_KEY` — from the environment, or (as of 2026-08-07) falling
+back to the repo-root `.env`, the same pattern the data scripts use for
+`FRED_API_KEY`, so plain `uv run uvicorn ah.buildconsole:app --port 8798`
+works from a fresh shell. Live compiles work as of WP-A (prompt v2, envelope
+stamped by the system): a throwaway scenario ran all six stages green on
+2026-08-06. The ledger shows exactly where and why anything fails.
+
 ### The credibility console — is this world's arithmetic sane?
 
 Admin tooling. It regenerates ensembles from stored seeds, computes decade

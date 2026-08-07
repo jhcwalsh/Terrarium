@@ -13,6 +13,55 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **`ah/dataconsole.py` — the generator-input data console**, port 8796: the
+  third console. Read-only over the vintage store (guard test scans for zero
+  write call sites): series inventory with coverage/gaps/staleness-vs-SLA and
+  proxy-splice share, per-source freshness, recorded QC summary; per-asset-
+  class lineage pages (raw series with proxy stretches shaded → the derived
+  factors the generator consumes, with histogram + moments); reported-vs-
+  de-smoothed overlay for the private-markets series (glm_ma, method
+  labeled); and a factor-panel page recomputing every factors.yaml factor
+  mechanically (kind=series verbatim, kind=derived via ah.data.derive) with
+  the sealed train/validation/holdout windows shaded — holdout labeled SPENT.
+  Sealed surfaces are imported, never edited. Spec and plan under
+  `docs/superpowers/`.
+- **Live-path `.env` fallback** — `fetch_raw_text` now loads
+  `ANTHROPIC_API_KEY` from the repo-root `.env` when the environment lacks it
+  (stdlib parse, mirroring `scripts/download_data.py`'s FRED_API_KEY
+  precedent). Fixes the owner-reported "Could not resolve authentication
+  method" on a console started from a fresh shell. Live-only code path;
+  never imported by tests.
+- **Compiler prompt v2 + envelope stamping (WP-A)** — live scenario compiles
+  now succeed end to end. `postprocess.stamp_envelope` supplies the five
+  system-owned envelope keys (`world_id`, `provenance`, `status`,
+  `spec_version`, `extensions`) and drops model-invented ones (`meta`,
+  `schema_version`); the model is asked for economics, not identity.
+  `prompt_v2.py` (`compile-world-v2.0`) derives its field contract from
+  `schemas/worldspec-v1.2.schema.json` at import time — three levels deep,
+  after the first live run failed on a nested field
+  (`structural.infrastructure.inflation_linkage` returned `"strong"` where the
+  schema wants a number) — plus the vendored example's six blocks as a
+  canonical few-shot. The build console ledger gained an `envelope` stage.
+  Measured before/after on `claude-sonnet-4-6`: v1 output carried 38 stray
+  keys and missed 6 required fields (every live build rejected); v2 second
+  attempt ran `prompt:ok model:ok extract:ok envelope:ok validate:ok
+  (0 clamps, 0 blocking) stamp:ok`. `prompt_v1.py` is kept untouched for
+  provenance history. Live iteration was driven through the WP-B console —
+  one red stage, one derivation fix, no prompt-wording tuning.
+- **`ah/buildconsole.py` — the scenario build console (WP-B)**, port 8798:
+  type a scenario, watch it compile through a five-stage ledger (prompt →
+  model → extract → validate → stamp), then explicitly keep or discard.
+  Compiling is a dry-run; the keep handler is the module's only write path
+  into `data/ah.db` (guard test scans the source), optionally recording an
+  engine run so the world lands fully inspectable on the QA shelf (8799).
+  Every attempt — including failures, with raw payload evidence — is logged
+  to `data/buildconsole/attempts.jsonl`. `anthropic_adapter.py` gained
+  `fetch_raw_text` (behavior-preserving split of `compile`) so the live raw
+  model text can be its own stage. Deliberately a separate module from the
+  read-only QA console, whose guarantee is untouched. **Known state:** the
+  live path still ends in a validator rejection until the compiler prompt
+  rewrite (WP-A) lands — the console shows that failure honestly, and is the
+  instrument for fixing it. Spec and plan under `docs/superpowers/`.
 - **`docs/BUILD-SUMMARY.md` and `docs/USER-MANUAL.md`** — an orientation pair,
   derived from the code rather than from the plans, with every capability claim
   carrying a `file:line` and every documented command actually executed. The
