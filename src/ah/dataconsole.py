@@ -411,6 +411,36 @@ def _read_current(cat: Catalog, vintage: str, sid: str) -> pd.DataFrame | None:
     return frame if len(frame) else None
 
 
+def _factor_frame(cat: Catalog, vintage: str, fs: Any) -> tuple[pd.DataFrame | None, str]:
+    """Mechanically recompute one factor for display. Returns (frame, note).
+
+    kind=series  -> the series frame verbatim.
+    kind=derived -> getattr(ah.data.derive, fs.expr)(*[frame(sid) for sid in fs.inputs])
+    kind=unavailable -> (None, the sealed reason).
+    Missing input series -> (None, naming what is absent).
+    """
+    from ah.data import derive
+
+    if fs.kind == "unavailable":
+        return None, f"unavailable — {fs.reason}"
+    if fs.kind == "series":
+        frame = _read_current(cat, vintage, str(fs.series_id))
+        return (
+            (frame, "") if frame is not None else (None, f"input {fs.series_id} absent from store")
+        )
+    inputs = []
+    for sid in fs.inputs:
+        frame = _read_current(cat, vintage, sid)
+        if frame is None:
+            return None, f"input {sid} absent from store"
+        inputs.append(frame)
+    try:
+        out = getattr(derive, str(fs.expr))(*inputs)
+    except Exception as exc:
+        return None, f"derive.{fs.expr} failed: {type(exc).__name__}: {exc}"
+    return out, ""
+
+
 # --------------------------------------------------------------------------- #
 # the app
 # --------------------------------------------------------------------------- #
@@ -602,6 +632,124 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                 + _manifest_table(req)
             )
             return _page(sid, body)
+        finally:
+            cat.close()
+
+    @app.get("/class/{name}", response_class=HTMLResponse)
+    def class_page(name: str) -> HTMLResponse:
+        from ah.factors import load_manifest
+
+        spec = CLASSES.get(name)
+        if spec is None:
+            raise HTTPException(404, f"no asset class {name}")
+        cat = _cat()
+        try:
+            vintage = cat.current_vintage()
+            if vintage is None:
+                return _page(
+                    name,
+                    f"<h1>{_e(name)}</h1>"
+                    + _empty("no current vintage", "uv run ah data refresh ..."),
+                )
+            reqs = load_requirements()
+
+            raw_parts = []
+            for sid in spec["raw"]:
+                frame = _read_current(cat, vintage, sid)
+                if frame is None:
+                    raw_parts.append(
+                        f'<div class="card"><b><a href="/series/{_e(sid)}">{_e(sid)}</a></b> '
+                        f'<span class="mut">registered, never fetched'
+                        f" (intake: {_e(reqs[sid].intake if sid in reqs else '?')})</span></div>"
+                    )
+                    continue
+                raw_parts.append(
+                    f'<div class="card"><b><a href="/series/{_e(sid)}">{_e(sid)}</a></b> '
+                    f"coverage {coverage_bar(coverage_pct(frame['date']))} "
+                    f'<span class="mut">proxy {proxy_pct(frame):.0%}</span><br>'
+                    + line_svg(frame, title=sid)
+                    + "</div>"
+                )
+
+            factor_parts = []
+            if spec["factors"]:
+                sources = load_manifest().sources
+                for fname in spec["factors"]:
+                    fs = sources.get(fname)
+                    if fs is None:
+                        continue
+                    frame, note = _factor_frame(cat, vintage, fs)
+                    if frame is None:
+                        factor_parts.append(
+                            f'<div class="card"><b>{_e(fname)}</b> '
+                            f'<span class="warn">{_e(note)}</span></div>'
+                        )
+                        continue
+                    m = moments(frame["value"].to_numpy())
+                    factor_parts.append(
+                        f'<div class="card"><b>{_e(fname)}</b> '
+                        f'<span class="pill">{_e(fs.kind)}</span><br>'
+                        + line_svg(frame, title=f"factor: {fname}")
+                        + hist_svg(frame["value"].to_numpy(), title="distribution")
+                        + "<table><tr>"
+                        + "".join(f'<th class="l">{k}</th>' for k in m)
+                        + "</tr><tr>"
+                        + "".join(f"<td>{v:.6g}</td>" for v in m.values())
+                        + "</tr></table></div>"
+                    )
+
+            desmooth_parts = []
+            if name == "privates":
+                from ah.data.desmooth import glm_ma
+
+                for sid in spec["raw"]:
+                    frame = _read_current(cat, vintage, sid)
+                    if frame is None or len(frame) < 12:
+                        continue
+                    reported = frame["value"].to_numpy(dtype=float)
+                    res = glm_ma(reported)
+                    truth = pd.Series(res.truth)
+                    m_rep, m_true = moments(reported), moments(res.truth)
+                    rows = "".join(
+                        f'<tr><td class="l">{k}</td><td>{m_rep[k]:.6g}</td><td>{m_true[k]:.6g}</td></tr>'
+                        for k in m_rep
+                    )
+                    desmooth_parts.append(
+                        f'<div class="card"><b>{_e(sid)}</b> '
+                        f'<span class="pill">method {_e(res.method)} (k={res.k})</span><br>'
+                        + line_svg(
+                            frame,
+                            title=f"{sid}: reported vs de-smoothed",
+                            series2=truth,
+                            label1="reported",
+                            label2="de-smoothed",
+                            width=900,
+                            height=200,
+                        )
+                        + f'<table><tr><th class="l">moment</th><th>reported</th><th>de-smoothed</th></tr>{rows}</table>'
+                        + "</div>"
+                    )
+                if not desmooth_parts:
+                    desmooth_parts.append(
+                        _empty(
+                            "no private-markets series in the store (or too few observations)",
+                            "uv run ah data intake validate <file> --schema albourne_pm_returns",
+                        )
+                    )
+
+            body = (
+                f"<h1>{_e(name)}</h1>"
+                f'<p class="prov">vintage {_e(vintage)} · raw series first, then the derived '
+                f"factor(s) the generator consumes</p>"
+                f"<h2>Raw series</h2>{''.join(raw_parts)}"
+                + (f"<h2>Derived factors</h2>{''.join(factor_parts)}" if factor_parts else "")
+                + (
+                    f"<h2>Reported vs de-smoothed (appraisal-smoothing correction)</h2>{''.join(desmooth_parts)}"
+                    if name == "privates"
+                    else ""
+                )
+            )
+            return _page(name, body)
         finally:
             cat.close()
 

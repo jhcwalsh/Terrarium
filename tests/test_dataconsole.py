@@ -114,3 +114,51 @@ def test_empty_store_is_a_card_not_a_traceback(tmp_path):
     r = c.get("/")
     assert r.status_code == 200
     assert "Not available" in r.text
+
+
+def _add_albourne(root, sid, n=40):
+    """Append a quarterly private-markets series to vintage v1: AR(1)-smoothed
+    seeded returns, so de-smoothing has structure to recover. Deterministic."""
+    from numpy.random import PCG64, Generator
+
+    from ah.data.catalog import Catalog
+    from ah.data.manifest import load_requirements
+
+    rng = Generator(PCG64(0))
+    true = rng.normal(0.02, 0.06, n)
+    obs = np.empty(n)
+    obs[0] = true[0]
+    for i in range(1, n):
+        obs[i] = 0.6 * obs[i - 1] + 0.4 * true[i]
+    cat = Catalog(root)
+    cat.register_series(load_requirements()[sid])
+    frame = pd.DataFrame(
+        {
+            "date": pd.period_range("2010Q1", periods=n, freq="Q").to_timestamp(),
+            "value": obs,
+            "series_id": sid,
+            "vintage": "v1",
+        }
+    )
+    cat.write_observations("v1", sid, frame)
+    cat.close()
+    return root
+
+
+def test_class_page_lists_raw_and_factors(tmp_path):
+    c = TestClient(create_app(data_root=_tiny_store(tmp_path)))
+    r = c.get("/class/equities")
+    assert r.status_code == 200
+    assert "french.mkt_rf" in r.text
+    assert "registered, never fetched" in r.text  # shiller series absent from tiny store
+    assert c.get("/class/no-such").status_code == 404
+
+
+def test_privates_page_shows_desmoothing_overlay(tmp_path):
+    root = _add_albourne(_tiny_store(tmp_path), "albourne.pm_buyout_ret_q", n=40)
+    c = TestClient(create_app(data_root=root))
+    r = c.get("/class/privates")
+    assert r.status_code == 200
+    assert "de-smoothed" in r.text
+    assert "reported" in r.text
+    assert "<table" in r.text  # side-by-side moments table
