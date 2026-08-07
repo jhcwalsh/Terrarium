@@ -89,7 +89,9 @@ src = ["src", "tests"]
 # applying it corrupts the record -- so Markdown is excluded. Python files are
 # unaffected: `ruff check` and `ruff format` cover src/, tests/ and scripts/
 # exactly as before.
-extend-exclude = ["*.md"]
+# docs/data/client.py is the VENDORED PriMaRS API reference (imports a module
+# that only exists in its home repo) - a contract document, not repo code.
+extend-exclude = ["*.md", "docs/data/client.py"]
 
 [tool.ruff.lint]
 select = [
