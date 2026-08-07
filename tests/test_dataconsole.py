@@ -201,6 +201,58 @@ def test_privates_page_shows_desmoothing_overlay(tmp_path):
     assert "<table" in r.text  # side-by-side moments table
 
 
+def test_proxy_factor_gets_mechanical_proxy_mask(tmp_path):
+    """hy_spread (proxy: true) — the sealed derive strips is_proxy by design,
+    so the console recomputes the mask from the splice contract itself:
+    actuals are never touched, so any factor date absent from the target
+    series (inputs[0]) is proxy by construction."""
+    from ah.data.catalog import Catalog
+    from ah.data.manifest import load_requirements
+    from ah.dataconsole import _factor_frame
+    from ah.factors import load_manifest
+
+    root = _tiny_store(tmp_path)
+    cat = Catalog(root)
+    reqs = load_requirements()
+    months = pd.to_datetime(
+        ["2020-01-01", "2020-02-01", "2020-03-01", "2020-04-01", "2020-05-01", "2020-06-01"]
+    )
+    for sid, vals in [
+        ("fred.BAA", [5.0, 5.1, 5.2, 5.3, 5.4, 5.5]),
+        ("fred.AAA", [4.0, 4.0, 4.1, 4.1, 4.2, 4.2]),
+    ]:
+        cat.register_series(reqs[sid])
+        cat.write_observations(
+            "v1",
+            sid,
+            pd.DataFrame({"date": months, "value": vals, "series_id": sid, "vintage": "v1"}),
+        )
+    # target series exists only for the last two months -> first four are proxy
+    cat.register_series(reqs["fred.HY_OAS"])
+    cat.write_observations(
+        "v1",
+        "fred.HY_OAS",
+        pd.DataFrame(
+            {
+                "date": months[-2:],
+                "value": [3.5, 3.6],
+                "series_id": "fred.HY_OAS",
+                "vintage": "v1",
+            }
+        ),
+    )
+    try:
+        fs = load_manifest().sources["hy_spread"]
+        frame, note = _factor_frame(cat, "v1", fs)
+        assert note == "" and frame is not None
+        assert "is_proxy" in frame.columns
+        flags = frame.sort_values("date")["is_proxy"].tolist()
+        assert flags[:4] == [True, True, True, True]
+        assert flags[-2:] == [False, False]
+    finally:
+        cat.close()
+
+
 def test_dataconsole_is_read_only():
     """The data console's contract: zero write call sites, ever.
 

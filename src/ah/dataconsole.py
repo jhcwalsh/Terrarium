@@ -444,6 +444,15 @@ def _factor_frame(cat: Catalog, vintage: str, fs: Any) -> tuple[pd.DataFrame | N
         out = getattr(derive, str(fs.expr))(*inputs)
     except Exception as exc:
         return None, f"derive.{fs.expr} failed: {type(exc).__name__}: {exc}"
+    if getattr(fs, "proxy", False) and "is_proxy" not in out.columns:
+        # The sealed derive keeps the panel's canonical (date, value) shape and
+        # strips per-row proxy flags (derive.hy_oas_spliced docstring). Recompute
+        # the mask from the splice contract itself: actuals are never touched,
+        # so any factor date absent from the target series (inputs[0] by the
+        # splice convention) is proxy by construction.
+        target_dates = set(pd.DatetimeIndex(_col(inputs[0], "date")))
+        out = out.copy()
+        out["is_proxy"] = [d not in target_dates for d in pd.DatetimeIndex(_col(out, "date"))]
     return out, ""
 
 
@@ -692,9 +701,15 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                         )
                         continue
                     m = moments(frame["value"].to_numpy())
+                    proxy_chip = (
+                        f'<span class="pill warn" title="{_e(fs.proxy_for or "")}">'
+                        "proxy-spliced backfill</span>"
+                        if getattr(fs, "proxy", False)
+                        else ""
+                    )
                     factor_parts.append(
                         f'<div class="card"><b>{_e(fname)}</b> '
-                        f'<span class="pill">{_e(fs.kind)}</span><br>'
+                        f'<span class="pill">{_e(fs.kind)}</span>{proxy_chip}<br>'
                         + line_svg(frame, title=f"factor: {fname}")
                         + hist_svg(frame["value"].to_numpy(), title="distribution")
                         + "<table><tr>"
@@ -822,7 +837,8 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                         f'<span class="pill">{_e(fs.units or "—")}</span>'
                         + (f' <span class="pill">{_e(fs.numeraire)}</span>' if fs.numeraire else "")
                         + (
-                            f' <span class="pill warn">proxy: {_e(fs.proxy_for)}</span>'
+                            f' <span class="pill warn" title="{_e(fs.proxy_for or "")}">'
+                            "proxy-spliced backfill</span>"
                             if fs.proxy
                             else ""
                         )
