@@ -201,3 +201,14 @@ def test_prompt_v2_embeds_the_vendored_example_blocks():
 
     # the canonical example's title proves the few-shot rode along
     assert "stagflation" in SYSTEM_PROMPT.lower()
+
+
+def test_prompt_v2_resolves_schema_refs():
+    """The regime enum lives behind #/$defs/regime_name; an unresolved walk
+    showed the model no enum and it invented "goldilocks" (live, 2026-08-07)."""
+    from ah.compiler.prompt_v2 import SYSTEM_PROMPT, schema_digest
+
+    digest = schema_digest()
+    for name in ("deflation_boom", "stagflation", "reflation"):
+        assert name in digest, f"regime enum value {name} missing from digest"
+    assert "deflation_boom" in SYSTEM_PROMPT

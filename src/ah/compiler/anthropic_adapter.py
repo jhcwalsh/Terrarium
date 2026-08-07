@@ -12,6 +12,7 @@ going live against a newer model.
 
 from __future__ import annotations
 
+from pathlib import Path
 from typing import Any, cast
 
 from ah.compiler.postprocess import extract_json, stamp_envelope
@@ -19,6 +20,25 @@ from ah.compiler.prompt_v2 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
 
 COMPILER_MODEL = "claude-sonnet-4-6"
 _MAX_TOKENS = 4096
+
+
+def _load_env_key() -> None:  # pragma: no cover - live only
+    """Fall back to the repo-root ``.env`` for ANTHROPIC_API_KEY.
+
+    Same stdlib pattern as ``scripts/download_data.py`` uses for FRED_API_KEY
+    (no python-dotenv dependency). Without this, a server or CLI started from
+    a fresh shell fails the model call with the SDK's "Could not resolve
+    authentication method" error even though the key sits in ``.env``.
+    """
+    import os
+
+    if os.environ.get("ANTHROPIC_API_KEY"):
+        return
+    env = Path(__file__).resolve().parents[3] / ".env"
+    if env.exists():
+        for line in env.read_text(encoding="utf-8").splitlines():
+            if line.startswith("ANTHROPIC_API_KEY="):
+                os.environ["ANTHROPIC_API_KEY"] = line.split("=", 1)[1].strip()
 
 
 def fetch_raw_text(model: str, scenario_text: str) -> str:  # pragma: no cover - live only
@@ -29,6 +49,7 @@ def fetch_raw_text(model: str, scenario_text: str) -> str:  # pragma: no cover -
     """
     import anthropic  # lazy: keep import off the test/CI path
 
+    _load_env_key()
     client = anthropic.Anthropic()
     message = client.messages.create(
         model=model,

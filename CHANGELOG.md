@@ -13,6 +13,12 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Live-path `.env` fallback** — `fetch_raw_text` now loads
+  `ANTHROPIC_API_KEY` from the repo-root `.env` when the environment lacks it
+  (stdlib parse, mirroring `scripts/download_data.py`'s FRED_API_KEY
+  precedent). Fixes the owner-reported "Could not resolve authentication
+  method" on a console started from a fresh shell. Live-only code path;
+  never imported by tests.
 - **Compiler prompt v2 + envelope stamping (WP-A)** — live scenario compiles
   now succeed end to end. `postprocess.stamp_envelope` supplies the five
   system-owned envelope keys (`world_id`, `provenance`, `status`,
