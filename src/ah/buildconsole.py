@@ -22,13 +22,16 @@ from __future__ import annotations
 import html
 import threading
 import time
+import uuid
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs
 
-from fastapi import FastAPI
-from fastapi.responses import HTMLResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from ah.compiler.fixture_adapter import slugify
 from ah.compiler.interface import CompileError
@@ -226,6 +229,10 @@ def _fixture_fetch(fixtures_dir: Path) -> Callable[[str], str]:
     return fetch
 
 
+def _append_attempt_log(att: Attempt) -> None:
+    """Stub until Task 5: the jsonl attempt log."""
+
+
 def create_app(
     db_path: str | Path = DEFAULT_DB,
     fixtures_dir: str | Path = FIXTURES_DIR,
@@ -253,6 +260,76 @@ def create_app(
             '<button type="submit">Compile (dry-run)</button></form>' + _recent_attempts_html(app)
         )
         return _page("compose", body)
+
+    @app.post("/compile")
+    async def compile_post(request: Request) -> RedirectResponse:
+        form = parse_qs((await request.body()).decode("utf-8"))
+        scenario = (form.get("scenario") or [""])[0].strip()
+        live = (form.get("live") or [""])[0] == "on"
+        if not scenario:
+            return RedirectResponse(url="/", status_code=303)
+        att = Attempt(
+            attempt_id=uuid.uuid4().hex[:12],
+            scenario_text=scenario,
+            live=live,
+            created_at=datetime.now(UTC).isoformat(),
+            stages=[],
+        )
+        if live:
+
+            def fetch(text: str) -> str:  # pragma: no cover - live only
+                from ah.compiler.anthropic_adapter import COMPILER_MODEL, fetch_raw_text
+
+                return fetch_raw_text(COMPILER_MODEL, text)
+
+        else:
+            fetch = _fixture_fetch(app.state.fixtures_dir)
+        with app.state.lock:
+            app.state.attempts[att.attempt_id] = att
+        if app.state.synchronous:
+            run_stages(att, fetch_text=fetch)
+            _append_attempt_log(att)
+        else:
+            t = threading.Thread(
+                target=lambda: (run_stages(att, fetch_text=fetch), _append_attempt_log(att)),
+                daemon=True,
+            )
+            att._thread = t
+            t.start()
+        return RedirectResponse(url=f"/attempt/{att.attempt_id}", status_code=303)
+
+    @app.get("/attempt/{aid}", response_class=HTMLResponse)
+    def attempt_page(aid: str) -> HTMLResponse:
+        with app.state.lock:
+            att = app.state.attempts.get(aid)
+        if att is None:
+            raise HTTPException(404, "no such attempt")
+        head = (
+            f"<h1>Attempt {_e(att.attempt_id)}</h1>"
+            f'<div class="card"><b>{"live" if att.live else "fixture"}</b> · '
+            f"{_e(att.created_at)}<br><i>{_e(att.scenario_text[:500])}</i></div>"
+        )
+        body = head + ledger_html(att)
+        if not att.done:
+            return _page("compiling…", body + '<p class="prov">compiling…</p>', refresh=True)
+        if att.kept_world_id is not None:
+            body += (
+                f'<p class="ok">kept as <code>{_e(att.kept_world_id)}</code> — '
+                f'<a href="{QA_CONSOLE_URL}/worlds">open the QA shelf</a></p>'
+            )
+        elif att.stamped is not None:
+            body += (
+                f'<form method="post" action="/attempt/{_e(aid)}/keep" class="card">'
+                '<label><input type="checkbox" name="run" value="on" checked> '
+                "also run the engine</label> "
+                'seed <input name="seed" value="42" size="6"> '
+                'n_paths <input name="n_paths" value="1000" size="6"> '
+                '<button type="submit">Keep this world</button></form>'
+                '<p><a href="/">discard (nothing was stored)</a></p>'
+            )
+        else:
+            body += '<p><a href="/">discard (nothing was stored)</a></p>'
+        return _page("attempt", body)
 
     return app
 

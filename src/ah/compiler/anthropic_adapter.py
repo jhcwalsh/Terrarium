@@ -1,8 +1,9 @@
 """Live compiler over the Anthropic Messages API (STEP0-PLAN §WP0.7).
 
-Exercised ONLY via the CLI ``--live`` flag; **never imported by tests** and never
-run in CI (pytest-socket blocks the network). The ``anthropic`` SDK is imported
-lazily inside ``compile`` so importing this module has no side effects.
+Exercised ONLY via the CLI ``--live`` flag and the build console; **never
+imported by tests** and never run in CI (pytest-socket blocks the network). The
+``anthropic`` SDK is imported lazily inside ``fetch_raw_text`` so importing
+this module has no side effects.
 
 The model id is the Step-0 pinned value from the plan and the canonical example's
 ``compiler_model``. Bump it deliberately (and re-run the fixture regression) when
@@ -20,6 +21,28 @@ COMPILER_MODEL = "claude-sonnet-4-6"
 _MAX_TOKENS = 4096
 
 
+def fetch_raw_text(model: str, scenario_text: str) -> str:  # pragma: no cover - live only
+    """One live model call; returns the raw text before any JSON extraction.
+
+    Split out of ``AnthropicCompiler.compile`` so the build console can show
+    the raw model text as its own pipeline stage.
+    """
+    import anthropic  # lazy: keep import off the test/CI path
+
+    client = anthropic.Anthropic()
+    message = client.messages.create(
+        model=model,
+        max_tokens=_MAX_TOKENS,
+        system=SYSTEM_PROMPT,
+        messages=cast("Any", build_messages(scenario_text)),
+    )
+    return "".join(
+        getattr(block, "text", "")
+        for block in message.content
+        if getattr(block, "type", "") == "text"
+    )
+
+
 class AnthropicCompiler:
     """Compile scenarios with a live model call. Requires ANTHROPIC_API_KEY."""
 
@@ -28,18 +51,4 @@ class AnthropicCompiler:
         self.prompt_version = PROMPT_VERSION
 
     def compile(self, scenario_text: str) -> dict[str, Any]:  # pragma: no cover - live only
-        import anthropic  # lazy: keep import off the test/CI path
-
-        client = anthropic.Anthropic()
-        message = client.messages.create(
-            model=self.model,
-            max_tokens=_MAX_TOKENS,
-            system=SYSTEM_PROMPT,
-            messages=cast("Any", build_messages(scenario_text)),
-        )
-        text = "".join(
-            getattr(block, "text", "")
-            for block in message.content
-            if getattr(block, "type", "") == "text"
-        )
-        return extract_json(text)
+        return extract_json(fetch_raw_text(self.model, scenario_text))

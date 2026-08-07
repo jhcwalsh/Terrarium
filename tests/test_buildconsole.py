@@ -95,3 +95,34 @@ def test_compose_page_renders(tmp_path):
     assert "BUILD SURFACE" in r.text  # watermark
     assert "WRITES ONLY ON KEEP" in r.text
     assert "<textarea" in r.text
+
+
+def test_compile_flow_fixture_green(tmp_path):
+    fixtures = _write_fixture(tmp_path, "the-long-stagflation", _good_doc())
+    c = _client(tmp_path, fixtures_dir=fixtures)
+    r = c.post("/compile", data={"scenario": GOOD}, follow_redirects=False)
+    assert r.status_code == 303
+    page = c.get(r.headers["location"]).text
+    for stage in ("prompt", "model", "extract", "validate", "stamp"):
+        assert stage in page
+    assert "world_id" in page
+    assert "Keep" in page  # done state offers keep
+    assert "http-equiv" not in page  # done -> no meta refresh
+
+
+def test_watching_page_polls_until_done(tmp_path):
+    # non-synchronous app: the page must render mid-compile with a refresh tag
+    fixtures = _write_fixture(tmp_path, "the-long-stagflation", _good_doc())
+    app = create_app(db_path=tmp_path / "t.db", fixtures_dir=fixtures, synchronous=False)
+    c = TestClient(app)
+    r = c.post("/compile", data={"scenario": GOOD}, follow_redirects=False)
+    aid = r.headers["location"].rsplit("/", 1)[1]
+    with app.state.lock:
+        thread = app.state.attempts[aid]._thread
+    thread.join(timeout=30)
+    assert "Keep" in c.get(f"/attempt/{aid}").text
+
+
+def test_unknown_attempt_404(tmp_path):
+    c = _client(tmp_path)
+    assert c.get("/attempt/nope").status_code == 404
