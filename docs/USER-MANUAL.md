@@ -300,6 +300,23 @@ its present state — `summary.twin_final_value` is computed on Step 0's toy
 institution (no cash account, no calls), `twin_ledger` on the real one. In this
 bundle they read 166.502 and 76.712 respectively. `docs/BUILD-SUMMARY.md` §5.2.
 
+### Compile a scenario in the browser (added 2026-08-06, postdates this manual's survey)
+
+```bash
+uv run uvicorn ah.buildconsole:app --port 8798
+```
+
+Type a scenario, press **Compile (dry-run)**, and watch the five-stage ledger
+(prompt → model → extract → validate → stamp) fill in live. Nothing is stored
+until you press **Keep** — which stamps and stores the world exactly as
+`ah world build` would, optionally records an engine run, and links you to the
+QA shelf on 8799. Every attempt, including failures with their raw payloads,
+lands in `data/buildconsole/attempts.jsonl`. Offline it replays
+`fixtures/compiler/` by scenario slug; the **live** checkbox needs
+`ANTHROPIC_API_KEY` and — known state at time of writing — still ends in a
+validator rejection until the compiler prompt rewrite (WP-A) lands. The ledger
+shows exactly where and why.
+
 ### The credibility console — is this world's arithmetic sane?
 
 Admin tooling. It regenerates ensembles from stored seeds, computes decade
