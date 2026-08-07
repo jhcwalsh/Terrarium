@@ -32,6 +32,27 @@ from fastapi.responses import HTMLResponse
 from ah.data.catalog import Catalog
 from ah.data.manifest import Requirement, load_requirements
 
+
+def _manifest_table(r: Requirement) -> str:
+    rows = [
+        ("source", r.source),
+        ("code", r.code or "—"),
+        ("frequency", r.frequency),
+        ("units", r.units),
+        ("min_start", r.min_start or "—"),
+        ("sla_days", r.sla_days),
+        ("license", r.license_tier),
+        ("priority", r.priority),
+        ("intake", r.intake),
+        ("level", "enforce" if r.enforce else "warn"),
+        ("notes", r.notes or "—"),
+    ]
+    body = "".join(
+        f'<tr><th class="l">{_e(k)}</th><td class="l">{_e(v)}</td></tr>' for k, v in rows
+    )
+    return f"<table>{body}</table>"
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DATA_ROOT = _REPO_ROOT / "data"
 WATERMARK = "DATA INSPECTION — read-only over the vintage store — simulated/licensed data"
@@ -223,6 +244,140 @@ def _empty(what: str, command: str) -> str:
 
 
 # --------------------------------------------------------------------------- #
+# tiny SVG primitives (same technique as ah/console.py — no plotting library)
+# --------------------------------------------------------------------------- #
+
+
+def _scale(v: float, lo: float, hi: float, a: float, b: float) -> float:
+    if hi == lo:
+        return (a + b) / 2.0
+    return a + (v - lo) * (b - a) / (hi - lo)
+
+
+def _proxy_runs(flags: pd.Series) -> list[tuple[int, int]]:
+    """Contiguous [start, end] index runs where the proxy flag is set."""
+    runs: list[tuple[int, int]] = []
+    start: int | None = None
+    vals = list(flags.astype(bool))
+    for i, v in enumerate(vals):
+        if v and start is None:
+            start = i
+        elif not v and start is not None:
+            runs.append((start, i - 1))
+            start = None
+    if start is not None:
+        runs.append((start, len(vals) - 1))
+    return runs
+
+
+def line_svg(
+    frame: pd.DataFrame,
+    *,
+    title: str,
+    proxy_col: str = "is_proxy",
+    width: int = 600,
+    height: int = 160,
+    series2: pd.Series | None = None,
+    label1: str = "",
+    label2: str = "",
+) -> str:
+    """One series as a polyline; proxy-flagged stretches shaded behind it.
+
+    ``series2`` overlays a second polyline on the same x/y scale (used for the
+    reported vs de-smoothed privates view).
+    """
+    pad_l, pad_r, pad_t, pad_b = 46, 8, 20, 18
+    if len(frame) == 0:
+        return f'<svg width="{width}" height="{height}"><text x="8" y="20">{_e(title)}: no data</text></svg>'
+    ys = frame["value"].to_numpy(dtype=float)
+    all_y = ys if series2 is None else np.concatenate([ys, series2.to_numpy(dtype=float)])
+    lo, hi = float(np.nanmin(all_y)), float(np.nanmax(all_y))
+    n = len(frame)
+    xs = [_scale(i, 0, max(n - 1, 1), pad_l, width - pad_r) for i in range(n)]
+
+    parts = [f'<svg width="{width}" height="{height}" role="img">']
+    parts.append(f'<text x="8" y="14" font-size="12" font-weight="600">{_e(title)}</text>')
+    if proxy_col in frame.columns:
+        for i0, i1 in _proxy_runs(frame[proxy_col]):
+            x0 = xs[i0] - (2 if i0 else 0)
+            x1 = xs[i1]
+            parts.append(
+                f'<rect class="proxy" x="{x0:.1f}" y="{pad_t}" width="{max(x1 - x0, 2):.1f}" '
+                f'height="{height - pad_t - pad_b}" fill="#f3e2c7" opacity="0.8">'
+                f"<title>proxy-spliced stretch</title></rect>"
+            )
+        if _proxy_runs(frame[proxy_col]):
+            parts.append(
+                f'<text x="{width - pad_r - 4}" y="14" font-size="10" text-anchor="end" '
+                f'fill="#8a6d1f">shaded = proxy-spliced</text>'
+            )
+
+    def _poly(values: np.ndarray, color: str) -> str:
+        pts = " ".join(
+            f"{x:.1f},{_scale(float(v), lo, hi, height - pad_b, pad_t):.1f}"
+            for x, v in zip(xs, values, strict=True)
+            if np.isfinite(v)
+        )
+        return f'<polyline fill="none" stroke="{color}" stroke-width="1.4" points="{pts}"/>'
+
+    parts.append(_poly(ys, "#1f4e79"))
+    if series2 is not None:
+        parts.append(_poly(series2.to_numpy(dtype=float), "#a3282f"))
+        parts.append(
+            f'<text x="{pad_l}" y="{height - 4}" font-size="10" fill="#1f4e79">{_e(label1)}</text>'
+            f'<text x="{pad_l + 120}" y="{height - 4}" font-size="10" fill="#a3282f">{_e(label2)}</text>'
+        )
+    for v in (lo, hi):
+        y = _scale(v, lo, hi, height - pad_b, pad_t)
+        parts.append(f'<text x="4" y="{y + 4:.1f}" font-size="10" fill="#5c6874">{v:.3g}</text>')
+    d0, d1 = str(frame["date"].iloc[0])[:7], str(frame["date"].iloc[-1])[:7]
+    parts.append(
+        f'<text x="{pad_l}" y="{height - pad_b + 12}" font-size="9" fill="#5c6874">{d0}</text>'
+        f'<text x="{width - pad_r}" y="{height - pad_b + 12}" font-size="9" '
+        f'text-anchor="end" fill="#5c6874">{d1}</text>'
+    )
+    parts.append("</svg>")
+    return "".join(parts)
+
+
+def hist_svg(
+    values: np.ndarray, *, title: str, bins: int = 30, width: int = 300, height: int = 160
+) -> str:
+    x = np.asarray(values, dtype=float)
+    x = x[np.isfinite(x)]
+    if len(x) < 2:
+        return f'<svg width="{width}" height="{height}"><text x="8" y="20">{_e(title)}: no data</text></svg>'
+    counts, edges = np.histogram(x, bins=bins)
+    pad_t, pad_b = 20, 14
+    top = counts.max() or 1
+    bw = (width - 16) / bins
+    parts = [f'<svg width="{width}" height="{height}">']
+    parts.append(f'<text x="8" y="14" font-size="12" font-weight="600">{_e(title)}</text>')
+    for i, c in enumerate(counts):
+        h = _scale(float(c), 0, float(top), 0, height - pad_t - pad_b)
+        parts.append(
+            f'<rect x="{8 + i * bw:.1f}" y="{height - pad_b - h:.1f}" '
+            f'width="{max(bw - 1, 1):.1f}" height="{h:.1f}" fill="#9fb4c7"/>'
+        )
+    parts.append(
+        f'<text x="8" y="{height - 2}" font-size="9" fill="#5c6874">{edges[0]:.3g}</text>'
+        f'<text x="{width - 8}" y="{height - 2}" font-size="9" text-anchor="end" '
+        f'fill="#5c6874">{edges[-1]:.3g}</text></svg>'
+    )
+    return "".join(parts)
+
+
+def coverage_bar(pct: float, *, width: int = 220) -> str:
+    filled = int(pct * (width - 2))
+    color = "#1f6b3a" if pct >= 0.999 else ("#8a6d1f" if pct >= 0.9 else "#a3282f")
+    return (
+        f'<svg width="{width}" height="14"><rect x="0" y="0" width="{width}" height="14" '
+        f'fill="#eef1f4"/><rect x="1" y="1" width="{filled}" height="12" fill="{color}"/>'
+        f"<title>{pct:.1%} of spanned months observed</title></svg>"
+    )
+
+
+# --------------------------------------------------------------------------- #
 # store access (reads only)
 # --------------------------------------------------------------------------- #
 
@@ -368,6 +523,85 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                 + "</table>"
             )
             return _page("data inventory", body)
+        finally:
+            cat.close()
+
+    @app.get("/series/{sid}", response_class=HTMLResponse)
+    def series_page(sid: str) -> HTMLResponse:
+        reqs = load_requirements()
+        req = reqs.get(sid)
+        if req is None:
+            raise HTTPException(404, f"no registered series {sid}")
+        cat = _cat()
+        try:
+            vintage = cat.current_vintage()
+            if vintage is None:
+                return _page(
+                    sid,
+                    f"<h1>{_e(sid)}</h1>"
+                    + _empty("no current vintage", "uv run ah data refresh ..."),
+                )
+            frame = _read_current(cat, vintage, sid)
+            if frame is None:
+                body = (
+                    f"<h1>{_e(sid)}</h1>"
+                    f'<p class="prov">registered, never fetched (intake: {_e(req.intake)})</p>'
+                    + _manifest_table(req)
+                )
+                return _page(sid, body)
+
+            gaps = gap_ranges(frame["date"])
+            gap_rows = "".join(
+                f'<tr><td class="l">{a}</td><td class="l">{b}</td></tr>' for a, b in gaps
+            )
+            vint_rows = "".join(
+                f'<tr><td class="l">{_e(r[0])}</td><td>{r[1]}</td><td>{_e(str(r[2]))}</td>'
+                f'<td>{_e(str(r[3]))}</td><td class="l">{"&larr; current" if r[0] == vintage else ""}</td></tr>'
+                for r in cat.con.execute(
+                    "SELECT vintage_id, n_obs, first_date, last_date FROM observations_index "
+                    "WHERE series_id = ? ORDER BY vintage_id",
+                    [sid],
+                ).fetchall()
+            )
+            qc_rows = "".join(
+                f'<tr><td class="l">{_e(r[0])}</td><td class="l">{_e(r[1])}</td>'
+                f'<td class="{"ok" if r[2] else "bad"}">{bool(r[2])}</td><td class="l">{_e(r[3])}</td></tr>'
+                for r in cat.con.execute(
+                    "SELECT rule, severity, passed, detail FROM qc_results "
+                    "WHERE series_id = ? AND vintage_id = ? ORDER BY rule",
+                    [sid, vintage],
+                ).fetchall()
+            )
+            m = moments(frame["value"].to_numpy())
+            body = (
+                f"<h1>{_e(sid)}</h1>"
+                f'<p class="prov">vintage {_e(vintage)} · {len(frame)} obs · '
+                f"coverage {coverage_pct(frame['date']):.1%} · proxy {proxy_pct(frame):.0%}</p>"
+                + line_svg(
+                    frame, title=f"{sid} — full history (current vintage)", width=900, height=220
+                )
+                + f"<div class='grid'>{hist_svg(frame['value'].to_numpy(), title='distribution')}"
+                + "<table><tr><th class='l'>moment</th><th>value</th></tr>"
+                + "".join(f'<tr><td class="l">{k}</td><td>{v:.6g}</td></tr>' for k, v in m.items())
+                + "</table></div>"
+                + "<h2>Gaps</h2>"
+                + (
+                    f'<table><tr><th class="l">from</th><th class="l">to</th></tr>{gap_rows}</table>'
+                    if gaps
+                    else '<p class="ok">no missing months in span</p>'
+                )
+                + "<h2>Vintages carrying this series</h2>"
+                + f'<table><tr><th class="l">vintage</th><th>obs</th><th>first</th><th>last</th><th class="l"></th></tr>{vint_rows}</table>'
+                + "<h2>QC findings (current vintage)</h2>"
+                + (
+                    f'<table><tr><th class="l">rule</th><th class="l">severity</th><th>passed</th><th class="l">detail</th></tr>{qc_rows}</table>'
+                    if qc_rows
+                    else '<p class="mut">none recorded</p>'
+                )
+                + "<h2>Manifest entry</h2>"
+                + _manifest_table(req)
+            )
+            return _page(sid, body)
         finally:
             cat.close()
 

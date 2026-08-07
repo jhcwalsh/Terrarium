@@ -74,6 +74,31 @@ def _tiny_store(tmp_path):
     return tmp_path
 
 
+def test_series_page_renders_chart_gaps_and_manifest(tmp_path):
+    c = TestClient(create_app(data_root=_tiny_store(tmp_path)))
+    r = c.get("/series/fred.CPI")
+    assert r.status_code == 200
+    assert "<svg" in r.text
+    assert "CPIAUCNS" in r.text  # manifest entry verbatim (code)
+    assert "bounds" in r.text  # its QC finding
+    assert c.get("/series/no.such").status_code == 404
+
+
+def test_proxy_shading_present_when_flagged():
+    from ah.dataconsole import line_svg
+
+    f = pd.DataFrame(
+        {
+            "date": pd.to_datetime(["2020-01-01", "2020-02-01", "2020-03-01"]),
+            "value": [1.0, 2.0, 3.0],
+            "is_proxy": [True, False, False],
+        }
+    )
+    out = line_svg(f, title="t")
+    assert "proxy" in out  # shaded region carries a class/label
+    assert line_svg(f.drop(columns=["is_proxy"]), title="t").count("proxy") == 0
+
+
 def test_inventory_page(tmp_path):
     c = TestClient(create_app(data_root=_tiny_store(tmp_path)))
     r = c.get("/")
