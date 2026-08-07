@@ -167,3 +167,37 @@ def test_stamp_envelope_world_id_override_is_deterministic():
         world_id="00000000-0000-4000-8000-00000000abcd",
     )
     assert out["world_id"] == "00000000-0000-4000-8000-00000000abcd"
+
+
+def test_prompt_v2_names_every_model_owned_required_field():
+    import json
+    from pathlib import Path
+
+    from ah.compiler.prompt_v2 import MODEL_OWNED, SYSTEM_PROMPT
+
+    schema = json.loads(
+        (Path(__file__).resolve().parents[1] / "schemas" / "worldspec-v1.2.schema.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    for block in MODEL_OWNED:
+        assert block in SYSTEM_PROMPT
+        sub = schema["properties"][block]
+        for req in sub.get("required", []):
+            assert req in SYSTEM_PROMPT, f"{block}.{req} missing from prompt"
+
+
+def test_prompt_v2_never_asks_for_system_owned_keys():
+    from ah.compiler.postprocess import _SYSTEM_OWNED
+    from ah.compiler.prompt_v2 import SYSTEM_PROMPT
+
+    ask = SYSTEM_PROMPT[SYSTEM_PROMPT.index("Output a JSON object") :]
+    for key in _SYSTEM_OWNED:
+        assert key not in ask, f"prompt asks the model for system-owned {key}"
+
+
+def test_prompt_v2_embeds_the_vendored_example_blocks():
+    from ah.compiler.prompt_v2 import SYSTEM_PROMPT
+
+    # the canonical example's title proves the few-shot rode along
+    assert "stagflation" in SYSTEM_PROMPT.lower()

@@ -15,7 +15,7 @@ from __future__ import annotations
 from typing import Any, cast
 
 from ah.compiler.postprocess import extract_json, stamp_envelope
-from ah.compiler.prompt_v1 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
+from ah.compiler.prompt_v2 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
 
 COMPILER_MODEL = "claude-sonnet-4-6"
 _MAX_TOKENS = 4096
