@@ -33,12 +33,22 @@ from urllib.parse import parse_qs
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 
+from ah.battery.report import BATTERY_VERSION
 from ah.compiler.fixture_adapter import slugify
 from ah.compiler.interface import CompileError
 from ah.compiler.pipeline import process
 from ah.compiler.postprocess import extract_json
 from ah.compiler.prompt_v1 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
+from ah.core.digest import digest_ensemble
+from ah.core.engine import TOY_ENGINE_VERSION, run_ensemble
+from ah.core.institution import hold_course_twin
+from ah.core.numericworld import project_numeric
 from ah.core.validator import VALIDATOR_VERSION, stamp_validation
+from ah.core.worldspec import WorldSpec
+from ah.store import chronicle as chronicle_store
+from ah.store import runrecords as run_store
+from ah.store import worlds as worlds_store
+from ah.store.db import connect
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
@@ -330,6 +340,78 @@ def create_app(
         else:
             body += '<p><a href="/">discard (nothing was stored)</a></p>'
         return _page("attempt", body)
+
+    @app.post("/attempt/{aid}/keep")
+    async def keep_post(aid: str, request: Request) -> HTMLResponse:
+        """THE module's only write path into the store (guard test enforces)."""
+        form = parse_qs((await request.body()).decode("utf-8"))
+        with app.state.lock:
+            att = app.state.attempts.get(aid)
+        if att is None or not att.done or att.stamped is None:
+            raise HTTPException(404, "no completed, valid attempt with that id")
+        if att.kept_world_id is not None:
+            raise HTTPException(409, "already kept")
+
+        now = datetime.now(UTC).isoformat()
+        conn = connect(app.state.db_path)
+        try:
+            worlds_store.save_world(conn, att.stamped, created_at=now)
+            wid = att.stamped["world_id"]
+            chronicle_store.append(
+                conn,
+                world_id=wid,
+                seq=len(chronicle_store.read(conn, wid)),
+                type="birth",
+                payload={"status": att.stamped["status"], "source": "buildconsole"},
+                created_at=now,
+            )
+            run_note = ""
+            if (form.get("run") or [""])[0] == "on":
+                ws = WorldSpec.model_validate(att.stamped)
+                nw = project_numeric(ws)
+                seed = int((form.get("seed") or ["42"])[0])
+                n_paths = int((form.get("n_paths") or ["1000"])[0])
+                ensemble = run_ensemble(nw, n_paths, base_seed=seed)
+                digest = digest_ensemble(ensemble)
+                twin = hold_course_twin(nw, seed)
+                run_id = str(uuid.uuid4())
+                run_store.save_run_record(
+                    conn,
+                    run_id=run_id,
+                    world_id=wid,
+                    resolved_engine={
+                        "generator_id": ws.engine_defaults.generator_id,
+                        "generator_version": TOY_ENGINE_VERSION,
+                        "validator_version": VALIDATOR_VERSION,
+                        "battery_version": BATTERY_VERSION,
+                    },
+                    seed=seed,
+                    n_paths=n_paths,
+                    overrides={"seed": seed, "n_paths": n_paths},
+                    outputs_digest=digest,
+                    summary_stats={"final_of_100": twin.final_value},
+                    created_at=now,
+                )
+                chronicle_store.append(
+                    conn,
+                    world_id=wid,
+                    run_id=run_id,
+                    seq=len(chronicle_store.read(conn, wid)),
+                    type="run",
+                    payload={"digest": digest, "seed": seed, "n_paths": n_paths},
+                    created_at=now,
+                )
+                run_note = f"<p>run recorded: <code>{_e(run_id)}</code></p>"
+            conn.commit()
+        finally:
+            conn.close()
+        att.kept_world_id = wid
+        body = (
+            f"<h1>Kept</h1><p>world <code>{_e(wid)}</code> stored.</p>{run_note}"
+            f'<p><a href="{QA_CONSOLE_URL}/worlds">open the QA shelf</a> · '
+            f'<a href="/">compile another</a></p>'
+        )
+        return _page("kept", body)
 
     return app
 

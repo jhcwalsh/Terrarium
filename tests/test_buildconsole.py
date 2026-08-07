@@ -126,3 +126,69 @@ def test_watching_page_polls_until_done(tmp_path):
 def test_unknown_attempt_404(tmp_path):
     c = _client(tmp_path)
     assert c.get("/attempt/nope").status_code == 404
+
+
+def _kept_client(tmp_path):
+    fixtures = _write_fixture(tmp_path, "the-long-stagflation", _good_doc())
+    c = _client(tmp_path, fixtures_dir=fixtures)
+    loc = c.post("/compile", data={"scenario": GOOD}, follow_redirects=False).headers["location"]
+    return c, loc.rsplit("/", 1)[1]
+
+
+def test_keep_stores_world_and_birth(tmp_path):
+    from ah.store import chronicle as chronicle_store
+    from ah.store.db import connect
+
+    c, aid = _kept_client(tmp_path)
+    r = c.post(f"/attempt/{aid}/keep", data={}, follow_redirects=False)
+    assert r.status_code == 200
+    conn = connect(tmp_path / "test.db")
+    rows = conn.execute("SELECT world_id FROM worlds").fetchall()
+    assert len(rows) == 1
+    events = chronicle_store.read(conn, rows[0]["world_id"])
+    assert [e["type"] for e in events] == ["birth"]
+
+
+def test_keep_with_run_records_a_run(tmp_path):
+    from ah.store.db import connect
+
+    c, aid = _kept_client(tmp_path)
+    c.post(f"/attempt/{aid}/keep", data={"run": "on", "seed": "42", "n_paths": "16"})
+    conn = connect(tmp_path / "test.db")
+    runs = conn.execute("SELECT n_paths, seed FROM run_records").fetchall()
+    assert [(r["n_paths"], r["seed"]) for r in runs] == [(16, 42)]
+
+
+def test_keep_twice_is_rejected(tmp_path):
+    c, aid = _kept_client(tmp_path)
+    c.post(f"/attempt/{aid}/keep", data={})
+    r = c.post(f"/attempt/{aid}/keep", data={})
+    assert r.status_code == 409
+
+
+def test_compile_alone_stores_nothing(tmp_path):
+    """The dry-run guarantee, tested from the outside: no keep, no rows."""
+    from ah.store.db import connect
+
+    _c, _aid = _kept_client(tmp_path)  # compiled, never kept
+    conn = connect(tmp_path / "test.db")
+    assert conn.execute("SELECT COUNT(*) AS n FROM worlds").fetchone()["n"] == 0
+
+
+def test_only_keep_handler_writes_to_store():
+    """Guard: the module's sole store-writing call sites live inside keep_post.
+
+    Same technique as the narrative-blindness scan: assert on source text so a
+    future edit that adds a second write path fails loudly here.
+    """
+    import inspect
+
+    import ah.buildconsole as bc
+
+    src = inspect.getsource(bc)
+    keep_src = src[src.index("async def keep_post") :]
+    for needle in ("save_world(", "save_run_record(", "chronicle_store.append("):
+        assert src.count(needle) == keep_src.count(needle), (
+            f"{needle} called outside keep_post — the console's write "
+            "guarantee is 'nothing persists except through Keep'"
+        )
