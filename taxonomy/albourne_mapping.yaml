@@ -78,10 +78,22 @@ codes:
   # (taxonomy-v1.1) the HF sub-strategy codes, where THE CODE IS THE SERIES-ID
   # FRAGMENT: ah.data.intake.to_series_frames keys a grouped file's series as
   # `<source>.<code>`, so a drop whose strategy column carries these codes lands
-  # under exactly the registered requirements.yaml ids. (The PM codes below do
-  # NOT yet obey that rule - `buyout` keys `albourne.buyout`, not the registered
-  # `albourne.pm_buyout_ret_q`; recorded as RFR-88, bites on first PM delivery.)
+  # under exactly the registered requirements.yaml ids.
+  #
+  # RFR-88 DISCHARGED (2026-08-08, the first real PM delivery - PriMaRS): the
+  # PM return codes below now carry the full `pm_*_ret_q` series-id fragments,
+  # so a returns drop keys the registered ids. The short codes (`buyout`, ...)
+  # REMAIN for the ALB-A..E cashflow packs, whose per-row strategy column uses
+  # them; the two vocabularies coexist on purpose.
   albourne:
+    pm_buyout_ret_q: pm_buyout
+    pm_growth_ret_q: pm_growth
+    pm_vc_ret_q: pm_vc
+    pm_secondaries_ret_q: pm_secondaries
+    pm_dl_ret_q: pm_direct_lending
+    pm_mezz_ret_q: pm_mezzanine
+    pm_distressed_ret_q: pm_distressed
+    pm_re_va_ret_q: pm_re_value_add
     buyout: pm_buyout
     growth: pm_growth
     vc: pm_vc

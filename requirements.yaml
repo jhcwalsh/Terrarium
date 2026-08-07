@@ -65,12 +65,16 @@ series:
   treasury.hqm_curve: {source: fred, code: HQMCB10YR, frequency: "M", units: pct, min_start: 1984-01, sla_days: 45, license_tier: FREE, priority: P1, intake: auto, enforce: true, notes: "10y HQM corporate spot rate via FRED (Treasury xls not needed); full curve is HQMCB<maturity>"}
 
   # --- alternatives (manual intake; schemas in src/ah/data/schemas) ---
+  # PM returns are sourced from Albourne PriMaRS (TWR field) via
+  # scripts/download_primars.py; series->index mapping lives in
+  # ah.data.connectors.albourne_primars.PM_INDEX_MAP (ids from
+  # docs/data/primars_ids.md). Two mappings are declared PROXIES, noted below.
   albourne.pm_buyout_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_growth_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_vc_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_secondaries_ret_q: {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_dl_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_mezz_ret_q:        {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_dl_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "PROXY: direct lending carried by the PriMaRS Senior Debt index (553475) - owner decision 2026-08-08"}
+  albourne.pm_mezz_ret_q:        {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "PROXY: no mezzanine index exists in the PriMaRS universe; carried by the broad Private Credit index (547807) - owner decision 2026-08-08"}
   albourne.pm_distressed_ret_q:  {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_re_va_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P0, intake: manual, enforce: true}
   albourne.pm_infra_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 120, license_tier: COMM, priority: P1, intake: manual, enforce: true}
