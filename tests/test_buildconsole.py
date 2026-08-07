@@ -55,7 +55,15 @@ def test_run_stages_all_ok():
     )
     run_stages(att, fetch_text=lambda s: json.dumps(doc))
     assert att.done
-    assert [s.name for s in att.stages] == ["prompt", "model", "extract", "validate", "stamp"]
+    # "envelope" joined the ledger in WP-A (carried through on the fixture path)
+    assert [s.name for s in att.stages] == [
+        "prompt",
+        "model",
+        "extract",
+        "envelope",
+        "validate",
+        "stamp",
+    ]
     assert all(s.status == "ok" for s in att.stages)
     assert att.stamped is not None and "world_id" in att.stamped
 
@@ -228,3 +236,40 @@ def test_only_keep_handler_writes_to_store():
             f"{needle} called outside keep_post — the console's write "
             "guarantee is 'nothing persists except through Keep'"
         )
+
+
+def test_live_attempt_gets_envelope_stage(tmp_path):
+    """Simulated live: fetch returns a six-block body with model-invented keys;
+    the envelope stage must stamp identity before validation."""
+    body = {
+        k: v
+        for k, v in _good_doc().items()
+        if k
+        in ("narrative", "horizon", "regimes", "factor_conditions", "structural", "engine_defaults")
+    }
+    body["meta"] = {"model": "invented"}
+    att = Attempt(
+        attempt_id="a9",
+        scenario_text="x",
+        live=True,
+        created_at="2026-08-06T00:00:00+00:00",
+        stages=[],
+    )
+    run_stages(att, fetch_text=lambda s: json.dumps(body))
+    names = [s.name for s in att.stages]
+    assert names == ["prompt", "model", "extract", "envelope", "validate", "stamp"]
+    assert att.stamped is not None
+    assert att.stamped["provenance"]["source"]["kind"] == "compiler"
+
+
+def test_fixture_attempt_envelope_stage_is_carried(tmp_path):
+    att = Attempt(
+        attempt_id="a10",
+        scenario_text="x",
+        live=False,
+        created_at="2026-08-06T00:00:00+00:00",
+        stages=[],
+    )
+    run_stages(att, fetch_text=lambda s: json.dumps(_good_doc()))
+    env = next(s for s in att.stages if s.name == "envelope")
+    assert env.status == "ok" and "fixture" in env.detail

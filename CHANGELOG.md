@@ -13,6 +13,23 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Compiler prompt v2 + envelope stamping (WP-A)** — live scenario compiles
+  now succeed end to end. `postprocess.stamp_envelope` supplies the five
+  system-owned envelope keys (`world_id`, `provenance`, `status`,
+  `spec_version`, `extensions`) and drops model-invented ones (`meta`,
+  `schema_version`); the model is asked for economics, not identity.
+  `prompt_v2.py` (`compile-world-v2.0`) derives its field contract from
+  `schemas/worldspec-v1.2.schema.json` at import time — three levels deep,
+  after the first live run failed on a nested field
+  (`structural.infrastructure.inflation_linkage` returned `"strong"` where the
+  schema wants a number) — plus the vendored example's six blocks as a
+  canonical few-shot. The build console ledger gained an `envelope` stage.
+  Measured before/after on `claude-sonnet-4-6`: v1 output carried 38 stray
+  keys and missed 6 required fields (every live build rejected); v2 second
+  attempt ran `prompt:ok model:ok extract:ok envelope:ok validate:ok
+  (0 clamps, 0 blocking) stamp:ok`. `prompt_v1.py` is kept untouched for
+  provenance history. Live iteration was driven through the WP-B console —
+  one red stage, one derivation fix, no prompt-wording tuning.
 - **`ah/buildconsole.py` — the scenario build console (WP-B)**, port 8798:
   type a scenario, watch it compile through a five-stage ledger (prompt →
   model → extract → validate → stamp), then explicitly keep or discard.

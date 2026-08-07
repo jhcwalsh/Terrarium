@@ -313,9 +313,11 @@ until you press **Keep** — which stamps and stores the world exactly as
 QA shelf on 8799. Every attempt, including failures with their raw payloads,
 lands in `data/buildconsole/attempts.jsonl`. Offline it replays
 `fixtures/compiler/` by scenario slug; the **live** checkbox needs
-`ANTHROPIC_API_KEY` and — known state at time of writing — still ends in a
-validator rejection until the compiler prompt rewrite (WP-A) lands. The ledger
-shows exactly where and why.
+`ANTHROPIC_API_KEY` (the server must have it in its environment — load `.env`
+before starting uvicorn, or the model stage goes red with the auth error).
+Live compiles work as of WP-A (prompt v2, envelope stamped by the system): a
+throwaway scenario ran all six stages green on 2026-08-06. The ledger shows
+exactly where and why anything fails.
 
 ### The credibility console — is this world's arithmetic sane?
 

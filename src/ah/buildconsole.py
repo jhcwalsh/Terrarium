@@ -38,8 +38,8 @@ from ah.battery.report import BATTERY_VERSION
 from ah.compiler.fixture_adapter import slugify
 from ah.compiler.interface import CompileError
 from ah.compiler.pipeline import process
-from ah.compiler.postprocess import extract_json
-from ah.compiler.prompt_v1 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
+from ah.compiler.postprocess import extract_json, stamp_envelope
+from ah.compiler.prompt_v2 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
 from ah.core.digest import digest_ensemble
 from ah.core.engine import TOY_ENGINE_VERSION, run_ensemble
 from ah.core.institution import hold_course_twin
@@ -163,6 +163,10 @@ class Attempt:
     stamped: dict[str, Any] | None = None
     kept_world_id: str | None = None
     error: str | None = None
+    #: Set by the live route from the adapter's pinned model id; stays "" on
+    #: the fixture path and in pure tests, so run_stages never has to import
+    #: the live adapter (tests/test_compiler.py guards that import).
+    compiler_model: str = ""
     _thread: Any = field(default=None, repr=False, compare=False)
 
 
@@ -206,6 +210,20 @@ def run_stages(att: Attempt, *, fetch_text: Callable[[str], str]) -> None:
             s.status, s.payload = "fail", f"{exc}\n--- raw text ---\n{text[:4000]}"
             return
         s.detail = f"{len(raw)} top-level keys"
+        s.status = "ok"
+
+        s = _stage(att, "envelope", "")
+        if att.live:
+            raw = stamp_envelope(
+                raw,
+                scenario_text=att.scenario_text,
+                created_at=att.created_at,
+                compiler_model=att.compiler_model or "unknown",
+                prompt_version=PROMPT_VERSION,
+            )
+            s.detail = f"stamped world_id {raw['world_id']} (system-owned envelope)"
+        else:
+            s.detail = "fixture carries its own envelope — carried through"
         s.status = "ok"
 
         s = _stage(att, "validate", "ah.core.validator via pipeline.process")
@@ -332,11 +350,12 @@ def create_app(
             stages=[],
         )
         fetch: Callable[[str], str]
-        if live:
+        if live:  # pragma: no cover - live only (lazy: keeps the adapter off the test path)
+            from ah.compiler.anthropic_adapter import COMPILER_MODEL, fetch_raw_text
 
-            def _live_fetch(text: str) -> str:  # pragma: no cover - live only
-                from ah.compiler.anthropic_adapter import COMPILER_MODEL, fetch_raw_text
+            att.compiler_model = COMPILER_MODEL
 
+            def _live_fetch(text: str) -> str:
                 return fetch_raw_text(COMPILER_MODEL, text)
 
             fetch = _live_fetch
