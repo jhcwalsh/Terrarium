@@ -22,6 +22,7 @@ def _client(tmp_path, fixtures_dir=None):
         db_path=tmp_path / "test.db",
         fixtures_dir=fixtures_dir or tmp_path / "fixtures",
         synchronous=True,
+        log_dir=tmp_path / "log",  # never the repo's real data/buildconsole
     )
     return TestClient(app)
 
@@ -113,7 +114,12 @@ def test_compile_flow_fixture_green(tmp_path):
 def test_watching_page_polls_until_done(tmp_path):
     # non-synchronous app: the page must render mid-compile with a refresh tag
     fixtures = _write_fixture(tmp_path, "the-long-stagflation", _good_doc())
-    app = create_app(db_path=tmp_path / "t.db", fixtures_dir=fixtures, synchronous=False)
+    app = create_app(
+        db_path=tmp_path / "t.db",
+        fixtures_dir=fixtures,
+        synchronous=False,
+        log_dir=tmp_path / "log",  # never the repo's real data/buildconsole
+    )
     c = TestClient(app)
     r = c.post("/compile", data={"scenario": GOOD}, follow_redirects=False)
     aid = r.headers["location"].rsplit("/", 1)[1]
