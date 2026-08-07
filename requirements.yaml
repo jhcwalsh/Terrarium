@@ -70,6 +70,11 @@ series:
   # ah.data.connectors.albourne_primars.PM_INDEX_MAP (ids from
   # docs/data/primars_ids.md). Two mappings are declared PROXIES, noted below.
   #
+  # min_start values are the >=10-constituents cutoffs (owner decision
+  # 2026-08-08: exclude the violent 1-2-fund early index history; probed live
+  # from the API's CONSTITUENTS field, recorded in PM_INDEX_MAP). The
+  # downloader trims at parse, so the store never carries the excluded span.
+  #
   # sla_days 240 (was 120, changed 2026-08-08 on the first real delivery): the
   # vendor's own newest quarter per primarsLastQuarter was 2026Q1 on 2026-08-07,
   # i.e. 128 days after quarter-end - a 120d SLA is structurally unsatisfiable
@@ -77,15 +82,15 @@ series:
   # real vintage (2026-08-07.1) duly QUARANTINED on it. 240 = one quarter (91d)
   # + publication lag (~130d) + margin; same satisfiability reasoning as the
   # TEDRATE/DTWEXM registrations above.
-  albourne.pm_buyout_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_growth_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_vc_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_secondaries_ret_q: {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_dl_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "PROXY: direct lending carried by the PriMaRS Senior Debt index (553475) - owner decision 2026-08-08"}
-  albourne.pm_mezz_ret_q:        {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "PROXY: no mezzanine index exists in the PriMaRS universe; carried by the broad Private Credit index (547807) - owner decision 2026-08-08"}
-  albourne.pm_distressed_ret_q:  {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_re_va_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
-  albourne.pm_infra_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: null, sla_days: 240, license_tier: COMM, priority: P1, intake: manual, enforce: true}
+  albourne.pm_buyout_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1989-10, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_growth_ret_q:      {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1997-07, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_vc_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1991-01, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_secondaries_ret_q: {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1998-10, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_dl_ret_q:          {source: albourne, code: null, frequency: "Q", units: ret, min_start: 2011-04, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "PROXY: direct lending carried by the PriMaRS Senior Debt index (553475) - owner decision 2026-08-08"}
+  albourne.pm_mezz_ret_q:        {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1995-07, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true, notes: "PROXY: no mezzanine index exists in the PriMaRS universe; carried by the broad Private Credit index (547807) - owner decision 2026-08-08"}
+  albourne.pm_distressed_ret_q:  {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1999-04, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_re_va_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: 1999-10, sla_days: 240, license_tier: COMM, priority: P0, intake: manual, enforce: true}
+  albourne.pm_infra_ret_q:       {source: albourne, code: null, frequency: "Q", units: ret, min_start: 2006-01, sla_days: 240, license_tier: COMM, priority: P1, intake: manual, enforce: true}
   # WP2R.2 (owner decision 2026-08-01, option b): HF series are registered at
   # SUB-STRATEGY granularity — the 20 HedgeRS AW sub-strategy indices plus the
   # MS Diversified multi-strat index — replacing the seven group-level ids

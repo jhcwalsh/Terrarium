@@ -13,6 +13,19 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Data-review follow-through (owner directives 2026-08-08).** (1) pm_infra
+  joined the PriMaRS map (553478). (2) Thin early PM index history is
+  excluded by an objective rule — first quarter with >= 10 constituent funds,
+  probed live from the API's CONSTITUENTS field (buyout's +194% quarter sat
+  on ONE fund); cutoffs live in PM_INDEX_MAP and requirements.yaml
+  min_start; the trimmed delivery is vintage 2026-08-07.3 (990 rows, 9
+  series). (3) The 2025-10 shutdown hole in fred.CPI/CPI_CORE/UNRATE/
+  SAHMREALTIME is filled by DECLARED midpoint interpolation
+  (`ah/data/gapfill.py`): rules name series+month+reason, fills carry
+  is_proxy=True in the stored frame (catalog now persists that column;
+  carry-forward preserves it and applies declared fills), and the CLI
+  reports fills separately from failures. Landed in vintage 2026-08-07.5;
+  the review sweep now reads gap-free across all 70 fetched series.
 - **PriMaRS intake: the eight private-markets return series are real.**
   `ah.data.connectors.albourne_primars` (pure, probe-faithful parse +
   live TWR fetch with bearer/refresh auth) and `scripts/download_primars.py`

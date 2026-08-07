@@ -164,7 +164,11 @@ class Catalog:
             raise CatalogError("frame must have 'date' and 'value' columns")
         df["series_id"] = series_id
         df["vintage"] = vintage_id
-        df = df.reindex(columns=CANONICAL_COLUMNS)
+        # `is_proxy` is the one optional column that survives storage: a
+        # synthetic observation (splice backfill, declared gap fill) must stay
+        # flagged in the stored frame or the substitution becomes silent.
+        extra = ["is_proxy"] if "is_proxy" in df.columns else []
+        df = df.reindex(columns=CANONICAL_COLUMNS + extra)
         df = df.sort_values(by="date", ignore_index=True)
 
         out_dir = self.parquet_root / vintage_id / source

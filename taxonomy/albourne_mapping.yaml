@@ -94,6 +94,7 @@ codes:
     pm_mezz_ret_q: pm_mezzanine
     pm_distressed_ret_q: pm_distressed
     pm_re_va_ret_q: pm_re_value_add
+    pm_infra_ret_q: pm_infra
     buyout: pm_buyout
     growth: pm_growth
     vc: pm_vc

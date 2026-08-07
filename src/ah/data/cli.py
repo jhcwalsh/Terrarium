@@ -112,6 +112,10 @@ def data_refresh(
         f"vintage {result.vintage} {status}: wrote {len(result.written)} series, "
         f"carried forward {len(result.carried_forward)}."
     )
+    if result.fill_notes:
+        typer.echo(f"  declared gap fills ({len(result.fill_notes)}):")
+        for n in result.fill_notes:
+            typer.echo(f"    - {n}")
     if result.warnings:
         typer.echo(f"  skipped {len(result.warnings)} series (fetch/parse failed):")
         for w in result.warnings:

@@ -50,40 +50,60 @@ _MONTHS = {
     "Dec": 12,
 }
 
-#: Registered series suffix -> (PriMaRS index id, index title, proxy note).
-#: Ids from docs/data/primars_ids.md. Owner decisions 2026-08-08: pm_dl maps
-#: to Senior Debt; pm_mezz has NO mezzanine index in the 49-index universe and
-#: uses broad Private Credit as a declared proxy. Both proxies are recorded in
-#: requirements.yaml notes as well — a substitution must never be silent.
-PM_INDEX_MAP: dict[str, tuple[int, str, str | None]] = {
-    "pm_buyout_ret_q": (547791, "Albourne AW Buy-Outs/Growth Index (USD)", None),
-    "pm_growth_ret_q": (553469, "Albourne AW Growth (PE) Index (USD)", None),
-    "pm_vc_ret_q": (547813, "Albourne AW Venture Capital Index (USD)", None),
-    "pm_secondaries_ret_q": (553463, "Albourne AW Secondaries Index (USD)", None),
+#: Registered series suffix -> (PriMaRS index id, index title, proxy note,
+#: min_quarter). Ids from docs/data/primars_ids.md. Owner decisions 2026-08-08:
+#: pm_dl maps to Senior Debt; pm_mezz has NO mezzanine index in the 49-index
+#: universe and uses broad Private Credit as a declared proxy (both recorded in
+#: requirements.yaml notes as well — a substitution must never be silent).
+#:
+#: min_quarter EXCLUDES the violent early index history (owner decision
+#: 2026-08-08: "where there are violent early data in private series exclude
+#: it"). The criterion is OBJECTIVE, not statistical: the first quarter with
+#: >= 10 constituent funds, probed live from the API's CONSTITUENTS field on
+#: 2026-08-08 — every index opens on 1-2 funds (buyout's +194% quarter, 1988Q4,
+#: sat on ONE constituent). Ten is the platform's minimum for calling a pooled
+#: return an index; the criterion keeps genuinely-broad extremes (VC's +51%
+#: dot-com quarter, 1999Q4, had hundreds of constituents and stays).
+PM_INDEX_MAP: dict[str, tuple[int, str, str | None, str]] = {
+    "pm_buyout_ret_q": (547791, "Albourne AW Buy-Outs/Growth Index (USD)", None, "1989Q4"),
+    "pm_growth_ret_q": (553469, "Albourne AW Growth (PE) Index (USD)", None, "1997Q3"),
+    "pm_vc_ret_q": (547813, "Albourne AW Venture Capital Index (USD)", None, "1991Q1"),
+    "pm_secondaries_ret_q": (553463, "Albourne AW Secondaries Index (USD)", None, "1998Q4"),
     "pm_dl_ret_q": (
         553475,
         "Albourne AW Senior Debt Index (USD)",
         "direct lending proxied by the senior-debt index (owner decision 2026-08-08)",
+        "2011Q2",
     ),
     "pm_mezz_ret_q": (
         547807,
         "Albourne AW Private Credit Index (USD)",
         "NO mezzanine index exists in the PriMaRS universe; broad private credit "
         "is a declared proxy (owner decision 2026-08-08)",
+        "1995Q3",
     ),
     "pm_distressed_ret_q": (
         547805,
         "Albourne AW Distressed, Stressed & Special Situations Index (USD)",
         None,
+        "1999Q2",
     ),
     "pm_re_va_ret_q": (
         558969,
         "Albourne AW Real Estate Equity Value-Added Index (USD)",
         None,
+        "1999Q4",
+    ),
+    "pm_infra_ret_q": (
+        553478,
+        "Albourne AW Infrastructure Index (USD)",
+        None,
+        "2006Q1",
     ),
 }
 
-_ID_TO_STRATEGY = {pid: strat for strat, (pid, _, _) in PM_INDEX_MAP.items()}
+_ID_TO_STRATEGY = {pid: strat for strat, (pid, _, _, _) in PM_INDEX_MAP.items()}
+_MIN_QUARTER = {strat: minq for strat, (_, _, _, minq) in PM_INDEX_MAP.items()}
 
 
 def parse_java_date_quarter(text: str) -> str:
@@ -116,13 +136,13 @@ def payload_to_intake_frame(payload: list[dict[str, Any]]) -> pd.DataFrame:
                 # on the first live download): an absent observation, skipped
                 # rather than stored as NaN.
                 continue
-            rows.append(
-                {
-                    "period": parse_java_date_quarter(str(obs["QUARTER"])),
-                    "strategy": strategy,
-                    "ret": float(obs["TWR"]),
-                }
-            )
+            period = parse_java_date_quarter(str(obs["QUARTER"]))
+            if period < _MIN_QUARTER[strategy]:
+                # Thin early index history excluded per PM_INDEX_MAP's
+                # >=10-constituents rule (string compare is safe: YYYYQn is
+                # fixed-width and lexicographic == chronological).
+                continue
+            rows.append({"period": period, "strategy": strategy, "ret": float(obs["TWR"])})
     if not rows:
         raise ConnectorError("PriMaRS payload contained no observations")
     frame = pd.DataFrame(rows, columns=["period", "strategy", "ret"])
@@ -158,7 +178,7 @@ def fetch_pm_payload() -> list[dict[str, Any]]:  # pragma: no cover - live only
     import httpx
 
     token, refresh = _load_tokens()
-    ids = sorted(pid for pid, _, _ in PM_INDEX_MAP.values())
+    ids = sorted(pid for pid, _, _, _ in PM_INDEX_MAP.values())
     with httpx.Client(
         timeout=120,
         headers={"Accept": "application/json", "endpoint": "SWAGGER"},

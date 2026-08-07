@@ -44,7 +44,7 @@ def test_parse_java_date_quarter():
 def test_payload_to_intake_frame_maps_every_registered_series():
     payload = [
         _payload_entry(pid, [("Fri Mar 31 00:00:00 UTC 2023", "0.0326")])
-        for pid, _, _ in PM_INDEX_MAP.values()
+        for pid, _, _, _ in PM_INDEX_MAP.values()
     ]
     frame = payload_to_intake_frame(payload)
     assert list(frame.columns) == ["period", "strategy", "ret"]
@@ -73,6 +73,25 @@ def test_null_twr_is_skipped_as_no_observation():
     assert frame["period"].tolist() == ["2023Q2"]
 
 
+def test_thin_early_history_is_excluded_by_min_quarter():
+    """Owner decision 2026-08-08: violent early index quarters (1-2 constituent
+    funds; buyout's +194% 1988Q4 sat on ONE) are excluded via the
+    >=10-constituents min_quarter in PM_INDEX_MAP. 1988Q4 is out; the first
+    kept buyout quarter is 1989Q4."""
+    payload = [
+        _payload_entry(
+            547791,
+            [
+                ("Sat Dec 31 00:00:00 UTC 1988", "1.9443"),  # the 1-fund +194% quarter
+                ("Sun Dec 31 00:00:00 UTC 1989", "0.05"),  # first >=10-constituent quarter
+                ("Sat Mar 31 00:00:00 UTC 1990", "0.02"),
+            ],
+        )
+    ]
+    frame = payload_to_intake_frame(payload)
+    assert frame["period"].tolist() == ["1989Q4", "1990Q1"]
+
+
 def test_unknown_index_id_is_an_error_not_a_skip():
     with pytest.raises(ConnectorError, match="unmapped"):
         payload_to_intake_frame(
@@ -95,7 +114,7 @@ def test_drop_lands_in_the_store_through_the_standard_intake_path(tmp_path):
         ("Tue Mar 31 00:00:00 UTC 2026", "0.0326"),
         ("Tue Jun 30 00:00:00 UTC 2026", "-0.0210"),
     ]
-    payload = [_payload_entry(pid, quarters) for pid, _, _ in PM_INDEX_MAP.values()]
+    payload = [_payload_entry(pid, quarters) for pid, _, _, _ in PM_INDEX_MAP.values()]
     frame = payload_to_intake_frame(payload)
     drop = tmp_path / "albourne-pm-returns_2026-08-08.csv"
     frame.to_csv(drop, index=False)
