@@ -14,7 +14,7 @@ from __future__ import annotations
 
 from typing import Any, cast
 
-from ah.compiler.postprocess import extract_json
+from ah.compiler.postprocess import extract_json, stamp_envelope
 from ah.compiler.prompt_v1 import PROMPT_VERSION, SYSTEM_PROMPT, build_messages
 
 COMPILER_MODEL = "claude-sonnet-4-6"
@@ -50,5 +50,19 @@ class AnthropicCompiler:
         self.model = model
         self.prompt_version = PROMPT_VERSION
 
-    def compile(self, scenario_text: str) -> dict[str, Any]:  # pragma: no cover - live only
-        return extract_json(fetch_raw_text(self.model, scenario_text))
+    def compile(
+        self, scenario_text: str, *, created_at: str = "1970-01-01T00:00:00Z"
+    ) -> dict[str, Any]:  # pragma: no cover - live only
+        """Compile a scenario, then stamp the envelope the system owns.
+
+        ``created_at`` is a caller argument, never a clock read, so this path
+        obeys the repo's no-time-based-defaults rule like every other. The CLI
+        passes the same timestamp it stamps validation with.
+        """
+        return stamp_envelope(
+            extract_json(fetch_raw_text(self.model, scenario_text)),
+            scenario_text=scenario_text,
+            created_at=created_at,
+            compiler_model=self.model,
+            prompt_version=self.prompt_version,
+        )

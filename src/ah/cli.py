@@ -107,6 +107,7 @@ def world_build(
     if bool(preset) == bool(scenario):
         raise typer.BadParameter("provide exactly one of --preset or --scenario")
 
+    now = _now()
     if preset:
         path = PRESETS_DIR / f"{preset}.json"
         if not path.exists():
@@ -116,7 +117,7 @@ def world_build(
     elif live:
         from ah.compiler.anthropic_adapter import AnthropicCompiler
 
-        raw = AnthropicCompiler().compile(scenario or "")
+        raw = AnthropicCompiler().compile(scenario or "", created_at=now)
     else:
         raw = FixtureCompiler(FIXTURES_DIR).compile(scenario or "")
 
@@ -124,8 +125,6 @@ def world_build(
     if outcome.rejected:
         typer.echo(f"REJECTED: {outcome.reject_reason}", err=True)
         raise typer.Exit(1)
-
-    now = _now()
     stamped = stamp_validation(
         outcome.result, validated_at=now, validator_version=VALIDATOR_VERSION
     )

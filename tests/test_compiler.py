@@ -132,3 +132,38 @@ def test_anthropic_adapter_not_imported() -> None:
     import sys
 
     assert "ah.compiler.anthropic_adapter" not in sys.modules
+
+
+def test_stamp_envelope_supplies_system_owned_keys():
+    from ah.compiler.postprocess import SPEC_VERSION, stamp_envelope
+
+    body = {"narrative": {}, "horizon": {}, "meta": {"x": 1}, "schema_version": "9.9"}
+    out = stamp_envelope(
+        body,
+        scenario_text="a scenario",
+        created_at="2026-08-06T00:00:00+00:00",
+        compiler_model="claude-sonnet-4-6",
+        prompt_version="compile-world-v2.0",
+    )
+    assert out["spec_version"] == SPEC_VERSION
+    assert out["status"] == "draft"
+    assert out["extensions"] == {}
+    assert out["provenance"]["source"]["compiler_prompt_version"] == "compile-world-v2.0"
+    assert out["provenance"]["created_at"] == "2026-08-06T00:00:00+00:00"
+    assert "meta" not in out and "schema_version" not in out  # model-invented dropped
+    assert "world_id" in out
+    assert "meta" in body  # input not mutated
+
+
+def test_stamp_envelope_world_id_override_is_deterministic():
+    from ah.compiler.postprocess import stamp_envelope
+
+    out = stamp_envelope(
+        {},
+        scenario_text="s",
+        created_at="t",
+        compiler_model="m",
+        prompt_version="p",
+        world_id="00000000-0000-4000-8000-00000000abcd",
+    )
+    assert out["world_id"] == "00000000-0000-4000-8000-00000000abcd"
