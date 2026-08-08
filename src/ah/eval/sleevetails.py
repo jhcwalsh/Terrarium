@@ -102,6 +102,50 @@ def hf_sleeve_members() -> dict[str, tuple[str, ...]]:
     }
 
 
+#: Sleeve groups whose marks move on an APPRAISAL CALENDAR rather than by
+#: return smoothing. DN-5 §5.2's two-mechanism table, verbatim: "Return
+#: smoothing (GLM) | HF sleeves, private credit"; "Appraisal lag (Geltner) |
+#: Real estate, infrastructure | AR(1) partial adjustment on *levels*, tied to
+#: a valuation calendar". Keyed by GROUP, not by sleeve id, so the rule is
+#: DN-5's sentence rather than a hand-maintained list. DN-5's own warning for
+#: getting this wrong: "applying one form to all sleeves ... produces real
+#: estate that reacts a quarter too fast."
+GELTNER_GROUPS: frozenset[str] = frozenset({"pm_re", "pm_infra"})
+
+
+def smoothing_family(sleeve_id: str) -> str:
+    """``"geltner"`` for appraisal-calendar sleeves, ``"glm"`` otherwise (DN-5 §5.2)."""
+    return "geltner" if load_taxonomy().sleeve(sleeve_id).group in GELTNER_GROUPS else "glm"
+
+
+def pm_sleeve_members() -> dict[str, tuple[str, ...]]:
+    """Modeled PM sleeve -> its member series ids, from the pinned taxonomy.
+
+    The private-markets sibling of :func:`hf_sleeve_members`, added 2026-08-08
+    when the first PriMaRS delivery landed and made these sleeves estimable.
+
+    DELIBERATELY SEPARATE rather than a generalization of ``hf_sleeve_members``.
+    That function's result defines the G3 document's ``sleeve_tail_thresholds``
+    key set (``tests/test_g3seal.py`` asserts the two agree), so widening it
+    would pull PM sleeves into the sealed JUDGED set and require tail
+    thresholds invented after their data was in hand -- the post-hoc move the
+    pre-registration discipline exists to prevent. PM tail thresholds need
+    their own pre-registration, before anyone looks. This function feeds
+    ESTIMATION (the smoothing kernel, the factor->sleeve mappings), never
+    judgement.
+    """
+    taxonomy = load_taxonomy()
+    members: dict[str, list[str]] = {}
+    for series_id, sleeve_id in taxonomy.series_to_sleeve.items():
+        if series_id.startswith("albourne.pm_"):
+            members.setdefault(sleeve_id, []).append(series_id)
+    return {
+        sleeve_id: tuple(sorted(ids))
+        for sleeve_id, ids in sorted(members.items())
+        if taxonomy.sleeve(sleeve_id).modeled_in_v1
+    }
+
+
 def reference_composite(access: DataAccess, member_ids: tuple[str, ...]) -> np.ndarray:
     """The sleeve's reference series: equal-weight mean of de-smoothed members.
 

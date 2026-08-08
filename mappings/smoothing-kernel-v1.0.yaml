@@ -1,7 +1,7 @@
 # mappings/smoothing-kernel-v1.0.yaml — scripts/estimate_smoothing_kernel.py
-# vintage 2026-08-01.2; train+validation only; SM-10: exact inverse of the D1 primary.
+# vintage 2026-08-07.5; train+validation only; SM-10: exact inverse of the D1 primary.
 kernel_version: smooth-2026.08
-campaign_vintage_id: "2026-08-01.2"
+campaign_vintage_id: "2026-08-07.5"
 desmoothing_method: glm_ma  # the paired inverse (SM-10); one model, two views
 stickiness_calibration: >-
   Calibrated on IN-SAMPLE NBER stress months (2008-09, 2020) — deliberately
@@ -10,9 +10,14 @@ stickiness_calibration: >-
   deviation from the design note, in the seal's favour.
 families:
   geltner:
-    status: UNPARAMETERIZED  # no PM series delivered; the sealed PM unavailability
-    trigger: first PM delivery -> parameterize by amendment before any RE/infra
-      reported path is generated
+    status: PARAMETERIZED  # first PriMaRS delivery, 2026-08-08 (AM-2026-08-08-002)
+    form: AR(1) partial adjustment; desmooth.geltner_ar1 in return space
+    frequency: Q  # PM marks; the observation frequency is the valuation calendar
+    sleeves:
+      pm_infra: {a: 0.8357, phi: 0.1643, n_obs: 60}
+      pm_re_value_add: {a: 0.8214, phi: 0.1786, n_obs: 85}
+    stickiness: 0.4508
+    stickiness_evidence: {a_calm_pooled: 0.9643, a_stress_pooled: 0.5296, n_sleeves_pooled: 2, parameter: phi, frequency: Q}
   glm:
     sleeves:
       hf_credit: {k: 2, theta: [0.6500, 0.2500, 0.1000]}
@@ -22,13 +27,13 @@ families:
       hf_macro: {k: 1, theta: [0.9328, 0.0672]}
       hf_multi: {k: 3, theta: [0.5500, 0.2500, 0.1500, 0.0500]}
       hf_rv: {k: 2, theta: [0.6500, 0.2500, 0.1000]}
-    # MEASURED ZERO, and the sign of the evidence is the finding: theta0 was
-    # HIGHER in NBER stress months (0.833) than calm (0.793) on this panel -
-    # no extra stickiness detectable in-sample, mildly OPPOSITE to DN-5 5.3's
-    # prior. Shipped as measured rather than invented: the mechanism is
-    # implemented (the kernel accepts s), its calibrated value is 0, and the
-    # sealed mark_lag criterion at WP3.11 becomes a genuine test of whether
-    # 2022's mark lag emerges without it. If it fails there, that is a
-    # finding about WHERE stickiness lives, not a tuning opportunity.
     stickiness: 0.0000
-    stickiness_evidence: {theta0_calm_pooled: 0.7926, theta0_stress_pooled: 0.8332, n_sleeves_pooled: 7}
+    stickiness_evidence: {theta0_calm_pooled: 0.7926, theta0_stress_pooled: 0.8332, n_sleeves_pooled: 7, frequency: M}
+    pm_sleeves:  # quarterly; excluded from the stickiness pool (see header)
+      pm_buyout: {k: 1, theta: [0.8500, 0.1500], n_obs: 125, method: glm_ma}
+      pm_direct_lending: {k: 1, theta: [1.0000, 0.0000], n_obs: 39, method: geltner_ar1}  # fell back to Geltner (boundary)
+      pm_distressed: {k: 2, theta: [0.7000, 0.2000, 0.1000], n_obs: 87, method: glm_ma}
+      pm_growth: {k: 2, theta: [0.5500, 0.2000, 0.2500], n_obs: 94, method: glm_ma}
+      pm_mezzanine: {k: 1, theta: [0.8000, 0.2000], n_obs: 102, method: glm_ma}
+      pm_secondaries: {k: 2, theta: [0.5500, 0.3000, 0.1500], n_obs: 89, method: glm_ma}
+      pm_vc: {k: 2, theta: [0.6000, 0.1500, 0.2500], n_obs: 120, method: glm_ma}
