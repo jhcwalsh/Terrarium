@@ -36,23 +36,36 @@ report docs + hub allowlist entries).
 
 ## Track A — translation layer
 
-**What it demonstrates:** how the institutional twin behaves on simulated preset
-worlds under the AM-002 re-estimated artifacts (`mappings/smoothing-kernel-v1.0.yaml`,
+**What it demonstrates:** how the institutional twin behaves under the AM-002
+re-estimated artifacts (`mappings/smoothing-kernel-v1.0.yaml`,
 `mappings/sleeve-mappings-v1.0.yaml`, vintage `2026-08-07.5`), and what would
 change if the measured PM loadings were adopted.
+
+**Design correction (2026-08-08, same day):** the first draft said "the four
+presets over toy-v0.5 paths". That is not wireable as a re-run: the toy engine
+emits asset-class returns (`equity … pe, pc, re`, `ah/core/engine.py` ASSETS)
+while the mapping artifact consumes seven regressors
+(`equity_mkt, smb, hml, mom, d_level, d_slope, d_ig`) — a preset-driven track
+would never touch the new mappings, and bridging assets to regressors would be
+new modeling, not a re-run. Track A therefore drives the twin with **observed
+factor history from the campaign vintage** — the exact wiring of the G1 replay
+(`run_2022_replay.py`) and the I4/I6 inspection, extended from one episode to
+the full span. Deterministic end to end: observed inputs, frozen artifacts,
+no RNG.
 
 **Design.**
 
 - New module `src/ah/port/campaign_exhibit.py` (pure, testable) + thin script
   `scripts/campaign_r1_translation.py` — the `desmooth_validation.py` +
   `validate_desmoothing.py` split.
-- For each of the four presets: compile the world, run the `toy-v0.5` engine for
-  a fixed path count and seed (deterministic; seed recorded in the report).
-- Factor paths → sleeve return paths via `ah.port.mapping.load_artifact()`:
-  HF sleeves from the `sleeves:` block (monthly), PM sleeves from the
-  `pm_sleeves:` block (quarterly), reported planes via the smoothing kernel
-  (`ah.port.smoothing.smooth` / `theta_for`; Geltner family for `pm_re`/`pm_infra`
-  per the AM-002 kernel).
+- Windows: the full common regressor span on `2026-08-07.5`, plus the three
+  named episode windows (2007-07..2009-12, 2020-01..2020-12, 2021-12..2023-12)
+  reported separately.
+- Observed regressor series → sleeve return paths via
+  `ah.port.mapping.load_artifact()`: HF sleeves from the `sleeves:` block
+  (monthly), PM sleeves from the `pm_sleeves:` block (quarterly), reported
+  planes via the smoothing kernel (`ah.port.smoothing.smooth` / `theta_for`;
+  Geltner family for `pm_re`/`pm_infra` per the AM-002 kernel).
 - **The loadings toggle is the experiment:** `loadings_source="prior"` uses each
   PM sleeve's `prior_superseded` row (the frozen `cashflow-tier1-v1.0.yaml`
   `pm_growth_loadings` values); `loadings_source="measured"` uses the fitted
@@ -60,11 +73,11 @@ change if the measured PM loadings were adopted.
   labelled **NOT ADOPTED** in every table that shows it.
 - Twin loop: `Portfolio`/`PortfolioEngine`/`Policy` with a mid-life closed-end
   cohort (the committed fixture cohort), quarterly steps, the wiring of
-  `scripts/run_inspection_i4_i6.py`. Per-path metrics: end NAV, max drawdown on
-  the true and reported planes, calls met vs missed, forced-sale incidence,
+  `scripts/run_inspection_i4_i6.py`. Per-window metrics: end NAV, max drawdown
+  on the true and reported planes, calls met vs missed, forced-sale incidence,
   minimum coverage ratio, private-weight peak (denominator effect).
-- Report `docs/data/CAMPAIGN-R1-TRANSLATION.md`: per-preset distribution
-  summaries, prior-vs-measured delta tables, and a **named exclusion** section
+- Report `docs/data/CAMPAIGN-R1-TRANSLATION.md`: per-window summaries,
+  prior-vs-measured delta tables, and a **named exclusion** section
   stating that cashflow tier-0/tier-1 remain pinned to `2026-08-01.2` and ER-6's
   `rc_curve` remains unfitted — no Albourne data arrived, unchanged by design.
 - Hub `DOCS` allowlist entry so the report is served on 8795.
