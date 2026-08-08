@@ -77,3 +77,71 @@ def load_regressors(catalog: Any, vintage: str) -> pd.DataFrame:
     if frame.empty:
         raise SystemExit(f"campaign R1: empty regressor frame on vintage {vintage}")
     return frame
+
+
+def hf_sleeve_returns(reg: pd.DataFrame, mapping: dict) -> dict[str, pd.Series]:
+    """Monthly HF sleeve returns from the mapping's ``sleeves:`` block."""
+    out: dict[str, pd.Series] = {}
+    for sleeve, spec in mapping["sleeves"].items():
+        r = pd.Series(float(spec["alpha_monthly"]), index=reg.index)
+        for name, beta in spec["loadings"].items():
+            if float(beta) != 0.0:
+                r = r + float(beta) * reg[name]
+        out[sleeve] = r
+    return out
+
+
+def pm_sleeve_returns(reg_q: pd.DataFrame, mapping: dict, *, source: str) -> dict[str, pd.Series]:
+    """Quarterly PM sleeve returns under the prior or the measured loadings.
+
+    ``source="prior"`` reproduces the frozen pm_growth_loadings convention
+    (beta * factor, no alpha); ``"measured"`` uses the fitted row with its
+    alpha. The asymmetry is the experiment — see the module docstring.
+    """
+    if source not in ("prior", "measured"):
+        raise ValueError(f"source must be 'prior' or 'measured', got {source!r}")
+    out: dict[str, pd.Series] = {}
+    for sleeve, spec in mapping["pm_sleeves"].items():
+        if source == "prior":
+            r = pd.Series(0.0, index=reg_q.index)
+            for name, beta in spec["prior_superseded"].items():
+                if name != "source" and float(beta) != 0.0:
+                    r = r + float(beta) * reg_q[name]
+        else:
+            r = pd.Series(float(spec["alpha_quarterly"]), index=reg_q.index)
+            for name, beta in spec["loadings"].items():
+                if float(beta) != 0.0:
+                    r = r + float(beta) * reg_q[name]
+        out[sleeve] = r
+    return out
+
+
+def geltner_report(true: np.ndarray, *, a: float, phi: float) -> np.ndarray:
+    """Forward AR(1) partial adjustment: reported[t] = phi*reported[t-1] + a*true[t]."""
+    x = np.asarray(true, dtype=float)
+    rep = np.empty_like(x)
+    prev = 0.0
+    for t, value in enumerate(x):
+        prev = phi * prev + a * float(value)
+        rep[t] = prev
+    return rep
+
+
+def reported_plane(sleeve_id: str, true: pd.Series) -> pd.Series:
+    """The sleeve's reported returns under its OWN smoothing family.
+
+    Family resolution is read-only through the sealed taxonomy
+    (``ah.eval.sleevetails.smoothing_family``) so the exhibit cannot drift
+    from the judged classification; HF sleeves are always GLM.
+    """
+    from ah.eval.sleevetails import smoothing_family
+    from ah.port import smoothing as sk
+
+    family = "glm" if sleeve_id.startswith("hf_") else smoothing_family(sleeve_id)
+    values = true.to_numpy(dtype=float)
+    if family == "geltner":
+        a, phi = sk.geltner_for(sleeve_id)
+        reported = geltner_report(values, a=a, phi=phi)
+    else:
+        reported = sk.smooth(values, sk.theta_for(sleeve_id))
+    return pd.Series(reported, index=true.index)
