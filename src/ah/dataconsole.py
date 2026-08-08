@@ -30,7 +30,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import HTMLResponse
 
 from ah.data.catalog import Catalog
-from ah.data.manifest import Requirement, load_requirements
+from ah.data.manifest import Requirement, load_requirements, source_link
 
 
 def _manifest_table(r: Requirement) -> str:
@@ -50,6 +50,12 @@ def _manifest_table(r: Requirement) -> str:
     body = "".join(
         f'<tr><th class="l">{_e(k)}</th><td class="l">{_e(v)}</td></tr>' for k, v in rows
     )
+    url = source_link(r)
+    if url:
+        body += (
+            f'<tr><th class="l">source link</th>'
+            f'<td class="l"><a href="{_e(url)}">{_e(url)}</a></td></tr>'
+        )
     return f"<table>{body}</table>"
 
 
@@ -104,6 +110,7 @@ CLASSES: dict[str, dict[str, list[str]]] = {
             "albourne.pm_dl_ret_q",
             "albourne.pm_mezz_ret_q",
             "albourne.pm_re_va_ret_q",
+            "albourne.pm_infra_ret_q",
         ],
         "factors": [],
     },
@@ -526,6 +533,12 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
 
             inv_rows = []
             for r in sorted(reqs, key=lambda q: q.series_id):
+                url = source_link(r)
+                link_cell = (
+                    f'<td class="l"><a href="{_e(url)}" title="{_e(url)}">src&nearr;</a></td>'
+                    if url
+                    else '<td class="l mut">—</td>'
+                )
                 if r.series_id in index:
                     frame = _read_current(cat, vintage, r.series_id)
                     meta = index[r.series_id]
@@ -539,14 +552,16 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                         f"<td>{meta['n_obs']}</td><td>{len(gaps)}</td>"
                         f'<td class="{stale_cls}">{st}d / SLA {r.sla_days}d</td>'
                         f"<td>{ppct:.0%}</td>"
-                        f'<td class="l">{"enforce" if r.enforce else "warn"}</td></tr>'
+                        f'<td class="l">{"enforce" if r.enforce else "warn"}</td>'
+                        f"{link_cell}</tr>"
                     )
                 else:
                     inv_rows.append(
                         f'<tr><td class="l">{_e(r.series_id)}</td>'
                         f'<td colspan="6" class="l mut">registered, never fetched'
                         f" (intake: {_e(r.intake)}, {_e(r.license_tier)})</td>"
-                        f'<td class="l">{"enforce" if r.enforce else "warn"}</td></tr>'
+                        f'<td class="l">{"enforce" if r.enforce else "warn"}</td>'
+                        f"{link_cell}</tr>"
                     )
 
             body = (
@@ -563,9 +578,8 @@ def create_app(data_root: str | Path = DEFAULT_DATA_ROOT) -> FastAPI:
                 f'<table><tr><th class="l">severity</th><th>passed</th><th>count</th></tr>{qc_rows}</table>'
                 f"<h2>Series inventory ({len(reqs)} registered)</h2>"
                 f'<table><tr><th class="l">series</th><th>first</th><th>last</th><th>obs</th>'
-                f"<th>gaps</th><th>staleness</th><th>proxy %</th><th class='l'>level</th></tr>"
-                + "".join(inv_rows)
-                + "</table>"
+                f"<th>gaps</th><th>staleness</th><th>proxy %</th><th class='l'>level</th>"
+                f"<th class='l'>link</th></tr>" + "".join(inv_rows) + "</table>"
             )
             return _page("data inventory", body)
         finally:
