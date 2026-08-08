@@ -78,6 +78,13 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "recovered, autocorrelation before and after, no-ops named, and a "
         "market-priced comparator where one exists.",
     ),
+    "license-registry": (
+        "docs/data/LICENSE-REGISTRY.md",
+        "Licence registry",
+        "What needs clearing before commercial use: every registered series by "
+        "licence tier, plus the four quantities the platform needs and has no "
+        "licence for, each with why free data does not close it.",
+    ),
     "albourne-request": (
         "docs/data/ALBOURNE-COEFFICIENT-REQUEST.md",
         "Albourne coefficient request",
