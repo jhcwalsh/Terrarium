@@ -92,6 +92,13 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "NOT-ADOPTED diagnostic, and the cashflow tiers named as unchanged "
         "by design.",
     ),
+    "campaign-r1-generator": (
+        "docs/data/CAMPAIGN-R1-GENERATOR.md",
+        "Campaign R1 — the generator cells on the new vintage",
+        "The six campaign-2 cells re-run from the existing checkpoints against "
+        "vintage 2026-08-07.5, compared cell by cell with the sealed record. "
+        "Not a gate: the holdout is spent and the verdicts stand.",
+    ),
     "license-registry": (
         "docs/data/LICENSE-REGISTRY.md",
         "Licence registry",
