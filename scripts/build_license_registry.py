@@ -45,10 +45,16 @@ GAPS: list[dict[str, str]] = [
         "candidate": "Bloomberg Commodity Index (BCOM) TR, S&P GSCI TR, or equivalent",
         "tier": "COMM",
         "why_free_fails": "FRED's free commodity series are PRICE indices, not investable "
-        "total-return indices: PPIACO is a producer price index (1913+), PALLFNFINDEXM an IMF "
-        "spot-price index (1992+). The factor declares numeraire total_return, and a spot price "
-        "index is a different quantity -- registering one as `commodities` would be exactly the "
-        "plausible substitution this platform refuses. Verified 2026-08-08.",
+        "total-return indices, and a futures total return additionally needs roll and "
+        "collateral yield that no free source carries. The factor declares numeraire "
+        "total_return, so registering a spot index AS `commodities` would be exactly the "
+        "plausible substitution this platform refuses. SEARCHED 2026-08-08: the IMF's Primary "
+        "Commodity Price System starts 1992-01 across its whole family on FRED (monthly, "
+        "quarterly and annual all begin that month), so IMF is not a long-history answer; the "
+        "IMF's own legacy SDMX host is retired and its replacement returned 502. The two best "
+        "free options ARE now registered, as what they are and explicitly not as the factor: "
+        "fred.CMDTY_GLOBAL (IMF global all-commodities, 1992+) and fred.CMDTY_PPI (US PPI all "
+        "commodities, 1913+, the longest free commodity-linked series).",
         "unlocks": "closes a sealed missing_factor; implies a campaign retrain, not just a fetch",
     },
     {

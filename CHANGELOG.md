@@ -13,6 +13,26 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Commodity price series, registered as what they are** (owner request
+  2026-08-08). `fred.CMDTY_GLOBAL` (IMF global all-commodities price index,
+  1992+, 414 obs) and `fred.CMDTY_PPI` (US PPI all commodities, 1913+,
+  1362 obs — the longest free commodity-linked series), fetched into vintage
+  2026-08-08.3. Both are `units: index`, `enforce: false`, and disclaim "NOT
+  the `commodities` factor" in their own notes; a test asserts factors.yaml's
+  `commodities` stays `kind: unavailable`, so available price data cannot be
+  read as the sealed missing_factor closing. The IMF long-history search is
+  answered and recorded in the licence registry: the Primary Commodity Price
+  System starts 1992-01 across its entire family, and the IMF's legacy SDMX
+  host is retired (replacement returned 502) — IMF is not the long-history
+  answer.
+- **Plain-English note on the de-smoothing coefficient**
+  (`docs/notes/desmoothing-coefficient.md`, served by the tools hub).
+  Explains `a` as the fraction of the truth that reaches the reported number,
+  gives the measured calm-vs-stress contrast (0.96 vs 0.53, stickiness 0.45)
+  against the hedge-fund family's 0.00, and connects it to the denominator
+  effect — appraisers anchor hardest exactly when values fall. Ends by
+  saying plainly that this is a statistical correction, not an observation,
+  and that on direct lending it found nothing at all.
 - **De-smoothing validation exhibit** (`ah/data/desmooth_validation.py` +
   `scripts/validate_desmoothing.py` -> `docs/data/DESMOOTHING-VALIDATION.md`).
   Puts every modeled PM sleeve through its OWN smoothing family and reports
