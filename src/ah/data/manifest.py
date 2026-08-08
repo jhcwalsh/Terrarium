@@ -41,6 +41,9 @@ class Requirement(BaseModel):
     intake: Intake = "auto"
     enforce: bool = True
     notes: str | None = None
+    #: Optional per-entry override for the human-facing source page; when
+    #: absent, :func:`source_link` resolves through SOURCE_URL_TEMPLATES.
+    source_url: str | None = None
 
     @property
     def redistributable(self) -> bool:
@@ -81,6 +84,43 @@ class Requirements:
 
     def sources(self) -> set[str]:
         return {r.source for r in self}
+
+
+#: Human-facing landing page per source. DELIBERATELY not the connectors'
+#: fetch endpoints: FRED's fetch URL carries the API key as a query parameter
+#: and must never be rendered; bulk-zip/blob endpoints are backend details.
+#: ``{code}`` interpolates the entry's upstream code where a per-series page
+#: exists.
+SOURCE_URL_TEMPLATES: dict[str, str] = {
+    "fred": "https://fred.stlouisfed.org/series/{code}",
+    "french": "https://mba.tuck.dartmouth.edu/pages/faculty/ken.french/data_library.html",
+    "shiller": "http://www.econ.yale.edu/~shiller/data.htm",
+    "bis": "https://data.bis.org/topics/CREDIT_GAPS",
+    "jst": "https://www.macrohistory.net/database/",
+    "albourne": "https://village.albourne.com",
+    "cliffwater": "https://www.cliffwater.com",
+    "nareit": "https://www.reit.com/data-research",
+    "ncreif": "https://www.ncreif.org",
+    "treasury": "https://fred.stlouisfed.org/series/{code}",  # HQM served via FRED
+}
+
+
+def source_link(req: Requirement) -> str | None:
+    """The human-facing source page for a registered series, or None.
+
+    Per-entry ``source_url`` wins; otherwise the source template resolves,
+    interpolating ``{code}`` where the template has one (entries without an
+    upstream code fall back to the template minus interpolation only when the
+    template needs none).
+    """
+    if req.source_url:
+        return req.source_url
+    template = SOURCE_URL_TEMPLATES.get(req.source)
+    if template is None:
+        return None
+    if "{code}" in template:
+        return template.format(code=req.code) if req.code else None
+    return template
 
 
 def _normalize_date(value: object) -> str | None:

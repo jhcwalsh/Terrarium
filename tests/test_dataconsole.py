@@ -253,6 +253,40 @@ def test_proxy_factor_gets_mechanical_proxy_mask(tmp_path):
         cat.close()
 
 
+def test_source_links_resolve_for_every_registered_series():
+    """Owner request 2026-08-08: every series carries its source link. The
+    resolver must cover all 79 registered entries, never render an API key,
+    and give fred.BAA its exact per-series page."""
+    from ah.data.manifest import Requirement, load_requirements, source_link
+
+    reqs = load_requirements()
+    for r in reqs:
+        url = source_link(r)
+        assert url, f"{r.series_id}: no source link resolves"
+        assert url.startswith(("http://", "https://"))
+        assert "api_key" not in url and "apikey" not in url.lower()
+    assert source_link(reqs["fred.BAA"]) == "https://fred.stlouisfed.org/series/BAA"
+    # per-entry override wins over the template
+    override = Requirement(
+        series_id="x.y",
+        source="fred",
+        code="Z",
+        frequency="M",
+        units="pct",
+        sla_days=1,
+        license_tier="FREE",
+        priority="P2",
+        source_url="https://example.org/custom",
+    )
+    assert source_link(override) == "https://example.org/custom"
+
+
+def test_series_page_and_inventory_render_the_link(tmp_path):
+    c = TestClient(create_app(data_root=_tiny_store(tmp_path)))
+    assert "https://fred.stlouisfed.org/series/CPIAUCNS" in c.get("/series/fred.CPI").text
+    assert "https://fred.stlouisfed.org/series/CPIAUCNS" in c.get("/").text
+
+
 def test_dataconsole_is_read_only():
     """The data console's contract: zero write call sites, ever.
 

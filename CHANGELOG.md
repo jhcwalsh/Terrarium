@@ -13,6 +13,15 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Source links on the data console (owner request 2026-08-08).** Every
+  registered series resolves a human-facing source page —
+  `manifest.source_link` (per-source templates + per-entry `source_url`
+  override; FRED gets per-series pages via `{code}`) — rendered as a
+  `source link` row in the `/series/<id>` manifest table and a link column
+  on the inventory. Deliberately never the connectors' fetch endpoints (the
+  FRED fetch URL carries the API key); a test pins all-79 coverage, the
+  exact fred.BAA page, and that no rendered URL carries a key. pm_infra
+  joined the privates class page.
 - **The orientation surfaces (owner requests 2026-08-08).** `ah/hub.py` —
   the tools hub on port 8795: every browser surface and CLI tool as a card
   with the question it answers and a reads/writes tag; a Papers & documents
