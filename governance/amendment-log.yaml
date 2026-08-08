@@ -1571,3 +1571,46 @@ amendments:
     own header instructs adding ''on delivery''; the G3 seal (2026-08-01) simply predates
     the first delivery. Owner approved option ''amend and re-seal'' 2026-08-08.'
   type: protocol_change
+- amendment_id: AM-2026-08-08-002
+  date: '2026-08-08'
+  payload:
+    artifacts_re_estimated:
+    - mappings/smoothing-kernel-v1.0.yaml
+    - mappings/sleeve-mappings-v1.0.yaml
+    campaign_vintage_id: 2026-08-07.5
+    geltner_stickiness_measured: 0.4508
+    glm_stickiness_unchanged: 0.0
+    hf_sleeve_members_unchanged: true
+    judged_code_changed:
+    - src/ah/eval/sleevetails.py
+    - scripts/estimate_smoothing_kernel.py
+    - scripts/estimate_sleeve_mappings.py
+    pm_tail_thresholds: OUT OF SCOPE - need pre-registration before anyone looks
+    seal: g3
+    supersedes_lock_digest: sha256:c0a1d20e61ced5d33ae3bbd711cea5df3a2e6311ccb34de5f814ec5e8ce284b5
+    trigger_discharged: smoothing-kernel geltner family
+  post_hoc: true
+  rationale: 'G3 RE-SEAL: the PM estimation trigger fired. The smoothing-kernel artifact
+    carried the geltner family as ''status: UNPARAMETERIZED'' with ''trigger: first
+    PM delivery -> parameterize by amendment before any RE/infra reported path is
+    generated''. The first PriMaRS delivery landed 2026-08-08 (vintages 2026-08-07.2/.3),
+    so the trigger is discharged here as its own text instructed. Re-estimated: mappings/smoothing-kernel-v1.0.yaml
+    (geltner family fitted over the two quarterly appraisal sleeves; PM GLM sleeves
+    fitted and reported) and mappings/sleeve-mappings-v1.0.yaml + MAPPINGS.md (a quarterly
+    PM loadings block). Judged code touched: sleevetails gains pm_sleeve_members +
+    smoothing_family; both estimation scripts gain PM paths. WHAT DID NOT CHANGE:
+    the HF sleeve fits, the glm stickiness value, and hf_sleeve_members itself --
+    which defines the sleeve_tail_thresholds key set, so widening it would have pulled
+    PM sleeves into the JUDGED set and demanded tail thresholds invented after their
+    data was in hand. PM tail thresholds remain unpre-registered and out of scope.
+    RECORDED DEVIATION from DN-5 SM-11 (one stickiness scalar per family): PM GLM
+    sleeves are excluded from the glm stickiness pool because a quarterly MA weight
+    is not commensurable with a monthly one; pooling would have silently moved a sealed
+    number. Deviation is in the seal''s favour. MEASUREMENT NOTE for whoever judges
+    this next: the fitted loadings say the de-smoother is under-correcting the equity-like
+    private sleeves (estimated equity betas 0.17x-0.57x of prior, versus 0.75x-1.09x
+    for credit and real assets), so these estimates supersede the priors as a RECORD
+    OF THE DATA without thereby being the better twin inputs. That adoption decision
+    is the owner''s and is not taken here. Owner approved ''amend and re-seal, then
+    re-run the kernel and mappings'' 2026-08-08.'
+  type: protocol_change
