@@ -54,20 +54,66 @@ def load_kernel(path: Path | None = None) -> dict[str, Any]:
 
 
 def theta_for(sleeve_id: str, *, artifact_path: Path | None = None) -> np.ndarray:
+    """MA(k) weights for a GLM-family sleeve — HF (monthly) or PM (quarterly).
+
+    Appraisal-calendar sleeves are NOT here by design: they carry an AR(1)
+    partial adjustment, a different functional form, served by
+    :func:`geltner_for`. Asking this function for one is an error, not a
+    fallback.
+    """
     doc = load_kernel(artifact_path)
-    glm = doc["families"]["glm"]["sleeves"]
-    if sleeve_id not in glm:
+    glm = doc["families"]["glm"]
+    known = {**glm.get("sleeves", {}), **(glm.get("pm_sleeves") or {})}
+    if sleeve_id not in known:
         geltner = doc["families"].get("geltner", {})
-        raise SmoothingError(
-            f"no GLM kernel for sleeve '{sleeve_id}' (known: {sorted(glm)}). The "
-            f"geltner family is {geltner.get('status', 'absent')} — an unparameterized "
-            "family raises rather than pretending."
+        in_geltner = sleeve_id in (geltner.get("sleeves") or {})
+        detail = (
+            f"'{sleeve_id}' is an APPRAISAL-CALENDAR sleeve — use geltner_for()"
+            if in_geltner
+            else f"known GLM sleeves: {sorted(known)}; the geltner family is "
+            f"{geltner.get('status', 'absent')}"
         )
-    return np.asarray(glm[sleeve_id]["theta"], dtype=float)
+        raise SmoothingError(f"no GLM kernel for sleeve '{sleeve_id}'. {detail}.")
+    return np.asarray(known[sleeve_id]["theta"], dtype=float)
 
 
-def stickiness(*, artifact_path: Path | None = None) -> float:
-    return float(load_kernel(artifact_path)["families"]["glm"]["stickiness"])
+def geltner_for(sleeve_id: str, *, artifact_path: Path | None = None) -> tuple[float, float]:
+    """``(a, phi)`` for an appraisal-calendar sleeve: the AR(1) partial
+    adjustment where reported marks track truth at rate ``a = 1 - phi``.
+
+    Added 2026-08-08 when the first PriMaRS delivery parameterized the family
+    this artifact had carried as UNPARAMETERIZED with a trigger. A sleeve the
+    family does not cover still raises — delivery for two sleeves is not
+    delivery for all of them.
+    """
+    doc = load_kernel(artifact_path)
+    geltner = doc["families"].get("geltner", {})
+    if geltner.get("status") != "PARAMETERIZED":
+        raise SmoothingError(
+            f"the geltner family is {geltner.get('status', 'absent')} — an "
+            "unparameterized family raises rather than pretending."
+        )
+    sleeves = geltner.get("sleeves") or {}
+    if sleeve_id not in sleeves:
+        raise SmoothingError(
+            f"no geltner kernel for sleeve '{sleeve_id}' (known: {sorted(sleeves)}). "
+            "PM delivery covers the modeled sleeves only."
+        )
+    entry = sleeves[sleeve_id]
+    return float(entry["a"]), float(entry["phi"])
+
+
+def stickiness(*, family: str = "glm", artifact_path: Path | None = None) -> float:
+    """State-dependent mark stickiness for a smoothing family (DN-5 SM-11).
+
+    Defaults to ``glm`` so existing callers are unaffected. The two families
+    are calibrated on different frequencies and are NOT interchangeable — see
+    the kernel artifact's header.
+    """
+    value = load_kernel(artifact_path)["families"][family]["stickiness"]
+    if value is None:
+        raise SmoothingError(f"family '{family}' has no fitted stickiness on this artifact")
+    return float(value)
 
 
 def smooth(
