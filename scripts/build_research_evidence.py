@@ -31,6 +31,24 @@ def _lock(name: str) -> str:
     return json.loads((_REPO_ROOT / name).read_text("utf-8"))["digest"]
 
 
+# "Judged under" is a HISTORICAL FACT — the lock digests as they stood when
+# WP5's judgments were made — so it is pinned here rather than read live.
+# Reading the live locks made the record drift on any legitimate later
+# re-seal, which AM-2026-08-08-001 (a G3 re-seal for additive taxonomy
+# vocabulary; nothing judged changed) exposed: this document briefly claimed
+# the research was judged under a seal minted after the judgment. Later seal
+# history lives in governance/amendment-log.yaml, not here.
+_JUDGED_UNDER = {
+    "pre-registration.lock": "sha256:bf0b6d8936975a09f8c92f8ec8abc24aa43b1c18e26d5cd32dbf2fb9bd21b58d",
+    "pre-registration-g3.lock": "sha256:938aef3ee9c2f85b0dd7856ae89e6122c0058337c65170c0f05fa01753ba51b8",
+    "pre-registration-g5.lock": "sha256:601e3f826b089de171783eb397b6697ec2d5a967a606659a303ed47ba79ea615",
+}
+
+
+def _judged_under(name: str) -> str:
+    return _JUDGED_UNDER[name]
+
+
 def _holdout_block() -> str:
     path = _REPO_ROOT / "artifacts/wp56/holdout-evaluation.json"
     h = json.loads(path.read_text("utf-8"))
@@ -95,8 +113,8 @@ from a committed artifact, and re-running the script reproduces this file
 byte-identically. Negative results are sections, not footnotes.*
 
 **The seals this record is judged under:** `pre-registration.lock`
-`{_lock("pre-registration.lock")}` · G3 `{_lock("pre-registration-g3.lock")}` ·
-G5 `{_lock("pre-registration-g5.lock")}`.
+`{_judged_under("pre-registration.lock")}` · G3 `{_judged_under("pre-registration-g3.lock")}` ·
+G5 `{_judged_under("pre-registration-g5.lock")}`.
 
 **The standing caveat, verbatim at the top because it governs everything
 below:** *{PITFALL}*
