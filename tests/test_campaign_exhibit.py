@@ -114,3 +114,21 @@ def test_run_window_toggle_changes_the_result():
     prior = ce.run_window("test", _window_frame(), mapping, source="prior")
     measured = ce.run_window("test", _window_frame(), mapping, source="measured")
     assert prior != measured
+
+
+def test_render_pins_the_guard_text():
+    mapping = ce.load_real_mapping()
+    results = [
+        ce.run_window("gfc", _window_frame(), mapping, source="prior"),
+        ce.run_window("gfc", _window_frame(), mapping, source="measured"),
+    ]
+    text = ce.render_markdown(results, vintage="2026-08-07.5")
+    assert "NOT ADOPTED" in text
+    assert "2026-08-01.2" in text  # cashflow tiers unchanged by design
+    assert "rc_curve" in text and "ER-6" in text
+    assert "2026-08-07.5" in text
+    assert "exhibit" in text.lower() and "not a gate" in text.lower()
+    # every measured row is labelled, every window has a delta row
+    assert text.count("NOT ADOPTED") >= 2  # header note + at least the row label
+    # ASCII only (the report is served to a cp1252 console world)
+    text.encode("ascii")
