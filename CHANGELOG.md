@@ -13,6 +13,22 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Campaign R1 Track A — the twin over observed history**
+  (`ah/port/campaign_exhibit.py` + `scripts/campaign_r1_translation.py` ->
+  `docs/data/CAMPAIGN-R1-TRANSLATION.md`, served by the tools hub). The
+  translation layer re-run under the AM-2026-08-08-002 kernel and mappings on
+  frozen vintage 2026-08-07.5: three episode windows (GFC, COVID, 2022)
+  through the full twin loop, priors scored, the measured PM loadings as a
+  side-by-side diagnostic labelled NOT ADOPTED — the difference IS the
+  adoption diff (e.g. full-span pm_buyout max drawdown -53% prior vs -10%
+  measured). Two guard rails found and kept on the first real run: the twin
+  loop REFUSES windows longer than the fixture cohort's remaining contract
+  (146 quarters through one non-recommitting cohort drained the book negative
+  and printed -994% drawdown artifacts), with long spans reporting per-sleeve
+  plane statistics instead; and the report names the cashflow tiers as
+  unchanged BY DESIGN (still pinned to 2026-08-01.2; ER-6's rc_curve still
+  unfitted; no Albourne data arrived). Zero seal events: sealed artifacts
+  read, never re-emitted.
 - **Commodity price series, registered as what they are** (owner request
   2026-08-08). `fred.CMDTY_GLOBAL` (IMF global all-commodities price index,
   1992+, 414 obs) and `fred.CMDTY_PPI` (US PPI all commodities, 1913+,
