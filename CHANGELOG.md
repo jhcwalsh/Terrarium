@@ -13,6 +13,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **The orientation surfaces (owner requests 2026-08-08).** `ah/hub.py` —
+  the tools hub on port 8795: every browser surface and CLI tool as a card
+  with the question it answers and a reads/writes tag; a Papers & documents
+  section serving an ALLOWLIST of repo documents rendered by a small
+  markdown-subset converter (traversal 404s, guard-tested static — zero
+  write call sites). `docs/PLAIN-ENGLISH-USER-MANUAL.md` — the manual for
+  someone who has never used a terminal, warnings-first (toy engine, worlds
+  are not history, reported-vs-true, server-side scoring), task-shaped, with
+  a glossary; also rendered to `docs/PLAIN-ENGLISH-USER-MANUAL.pdf` by
+  `scripts/build_manual_pdf.py` (Chrome print engine, no new dependencies)
+  and downloadable from the hub. `docs/data/DATA-REVIEW-2026-08-08.md` — the
+  pre-model-rerun mechanical sweep as a dated document.
 - **Data-review follow-through (owner directives 2026-08-08).** (1) pm_infra
   joined the PriMaRS map (553478). (2) Thin early PM index history is
   excluded by an objective rule — first quarter with >= 10 constituent funds,
