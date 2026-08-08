@@ -13,6 +13,31 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Data-review follow-through (owner directives 2026-08-08).** (1) pm_infra
+  joined the PriMaRS map (553478). (2) Thin early PM index history is
+  excluded by an objective rule — first quarter with >= 10 constituent funds,
+  probed live from the API's CONSTITUENTS field (buyout's +194% quarter sat
+  on ONE fund); cutoffs live in PM_INDEX_MAP and requirements.yaml
+  min_start; the trimmed delivery is vintage 2026-08-07.3 (990 rows, 9
+  series). (3) The 2025-10 shutdown hole in fred.CPI/CPI_CORE/UNRATE/
+  SAHMREALTIME is filled by DECLARED midpoint interpolation
+  (`ah/data/gapfill.py`): rules name series+month+reason, fills carry
+  is_proxy=True in the stored frame (catalog now persists that column;
+  carry-forward preserves it and applies declared fills), and the CLI
+  reports fills separately from failures. Landed in vintage 2026-08-07.5;
+  the review sweep now reads gap-free across all 70 fetched series.
+- **PriMaRS intake: the eight private-markets return series are real.**
+  `ah.data.connectors.albourne_primars` (pure, probe-faithful parse +
+  live TWR fetch with bearer/refresh auth) and `scripts/download_primars.py`
+  drive Albourne PriMaRS data through the standard manual-intake path.
+  First delivery landed as vintage `2026-08-07.2`: 1,164 quarterly
+  observations, buyout to 1984Q2, VC to 1983Q2. RFR-88 discharged (taxonomy
+  codes now carry the `pm_*_ret_q` series-id fragments); pm_dl and pm_mezz
+  are declared index proxies (Senior Debt / broad Private Credit — no
+  mezzanine index exists in the 49-index universe); pm SLAs 120→240d after
+  the first vintage correctly quarantined on a structurally unsatisfiable
+  SLA (vendor publishes ~4 months after quarter-end). The data console's
+  privates page now shows reported-vs-de-smoothed on real data.
 - **`toy-v0.5` — ER-7 closed: fat tails plus the limited-liability floor.**
   Market innovations are standardized Student-t (df=6, literature-chosen, not
   tuned); every monthly return is floored at -99% after v0.4's gate exposed

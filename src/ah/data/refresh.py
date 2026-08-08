@@ -17,6 +17,7 @@ from typing import Any
 import pandas as pd
 
 from ah.data.catalog import Catalog
+from ah.data.gapfill import fill_declared_gaps
 from ah.data.manifest import Requirement, Requirements
 from ah.data.qc import QCReport, run_qc
 from ah.data.reports import gap_register, generate_data_status_md, generate_gaps_md, series_gap
@@ -37,6 +38,10 @@ class RefreshResult:
     gaps_md: str = ""
     status_md: str = ""
     warnings: list[str] = field(default_factory=list)
+    #: Declared-gap interpolations applied this refresh (ah.data.gapfill) —
+    #: reported separately from warnings: a fill is a documented action, not a
+    #: failure.
+    fill_notes: list[str] = field(default_factory=list)
 
 
 def plan(
@@ -80,6 +85,7 @@ def refresh(
     written: list[str] = []
     pairs: list[tuple[Requirement, pd.DataFrame]] = []
     warnings: list[str] = []
+    fill_notes: list[str] = []
     for req in due:
         try:
             frame = provider(req)
@@ -88,12 +94,15 @@ def refresh(
             continue
         if frame is None or frame.empty:
             continue
+        frame, notes = fill_declared_gaps(req.series_id, frame)
+        fill_notes.extend(notes)
         catalog.register_series(req)
         catalog.write_observations(vintage, req.series_id, frame)
         written.append(req.series_id)
         pairs.append((req, frame))
 
-    carried = _carry_forward(catalog, reqs, vintage, written)
+    carried, carry_notes = _carry_forward(catalog, reqs, vintage, written)
+    fill_notes.extend(carry_notes)
 
     qc = (
         run_qc(catalog, vintage, pairs, asof=asof, created_at=created_at) if pairs else QCReport([])
@@ -112,6 +121,7 @@ def refresh(
         gaps_md=gaps_md,
         status_md=status_md,
         warnings=warnings,
+        fill_notes=fill_notes,
         carried_forward=carried,
     )
 
@@ -162,7 +172,7 @@ def apply_intake_frames(
         written.append(series_id)
         pairs.append((req, frames[series_id]))
 
-    carried = _carry_forward(catalog, reqs, vintage, written)
+    carried, carry_notes = _carry_forward(catalog, reqs, vintage, written)
     qc = run_qc(catalog, vintage, pairs, asof=asof, created_at=created_at)
     if qc.passed and written:
         catalog.advance_pointer(vintage, when=created_at)
@@ -173,6 +183,7 @@ def apply_intake_frames(
         vintage,
         sorted(frames),
         written,
+        fill_notes=carry_notes,
         quarantined=not qc.passed,
         qc=qc,
         gaps_md=gaps_md,
@@ -183,7 +194,7 @@ def apply_intake_frames(
 
 def _carry_forward(
     catalog: Catalog, reqs: Requirements, vintage: str, written: list[str]
-) -> list[str]:
+) -> tuple[list[str], list[str]]:
     """Copy every already-held series that this refresh did not fetch into ``vintage``.
 
     A vintage is documented as a complete as-of snapshot and every read pins one
@@ -204,6 +215,7 @@ def _carry_forward(
     """
     done = set(written)
     carried: list[str] = []
+    notes: list[str] = []
     for req in reqs:
         if req.series_id in done:
             continue
@@ -213,9 +225,16 @@ def _carry_forward(
         frame = catalog.read_observations(source_vintage, req.series_id)
         if frame.empty:
             continue
-        catalog.write_observations(vintage, req.series_id, frame[["date", "value"]])
+        # Keep the proxy flag across carries (a flagged synthetic observation
+        # must never lose its flag), and apply declared gap fills here too — a
+        # fresh series is carried, not refetched, so this is the only chance a
+        # declared fill gets until the series next goes stale.
+        cols = ["date", "value"] + (["is_proxy"] if "is_proxy" in frame.columns else [])
+        filled, fill_notes = fill_declared_gaps(req.series_id, frame[cols])
+        notes.extend(fill_notes)
+        catalog.write_observations(vintage, req.series_id, filled)
         carried.append(req.series_id)
-    return carried
+    return carried, notes
 
 
 _SHARED_FILE_SOURCES = {"french", "jst", "shiller"}
