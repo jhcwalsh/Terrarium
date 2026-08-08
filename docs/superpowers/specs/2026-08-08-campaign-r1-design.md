@@ -76,6 +76,14 @@ no RNG.
   `scripts/run_inspection_i4_i6.py`. Per-window metrics: end NAV, max drawdown
   on the true and reported planes, calls met vs missed, forced-sale incidence,
   minimum coverage ratio, private-weight peak (denominator effect).
+- **Second correction (found on the first real run):** the twin loop refuses
+  windows longer than the fixture cohort's remaining contract. `full_span`
+  (146 quarters) through a single non-recommitting mid-life cohort drained the
+  book negative and printed drawdowns of −994% — domain artifacts, not
+  results. Long spans report **sleeve-plane statistics** instead (per-sleeve
+  true vs reported volatility and drawdown, prior vs measured), which is the
+  adoption-relevant long-horizon content; the episode windows keep the full
+  twin loop. The refusal is tested, and the report states it.
 - Report `docs/data/CAMPAIGN-R1-TRANSLATION.md`: per-window summaries,
   prior-vs-measured delta tables, and a **named exclusion** section
   stating that cashflow tier-0/tier-1 remain pinned to `2026-08-01.2` and ER-6's

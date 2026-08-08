@@ -84,6 +84,14 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "Plain English: what the coefficient means, why it collapses from 0.96 "
         "to 0.53 in stressed markets, and why that is the denominator effect.",
     ),
+    "campaign-r1-translation": (
+        "docs/data/CAMPAIGN-R1-TRANSLATION.md",
+        "Campaign R1 — the twin over observed history",
+        "The translation layer re-run on the AM-002 kernel and mappings: four "
+        "observed windows, priors scored, the measured PM loadings as a "
+        "NOT-ADOPTED diagnostic, and the cashflow tiers named as unchanged "
+        "by design.",
+    ),
     "license-registry": (
         "docs/data/LICENSE-REGISTRY.md",
         "Licence registry",

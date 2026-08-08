@@ -116,6 +116,26 @@ def test_run_window_toggle_changes_the_result():
     assert prior != measured
 
 
+def test_run_window_refuses_windows_beyond_the_cohorts_contract():
+    """FOUND on the first real run: full_span (146 quarters) through a single
+    mid-life fixture cohort drains the book negative and prints drawdowns
+    like -994% - domain artifacts, not results. The loop refuses."""
+    mapping = ce.load_real_mapping()
+    idx = pd.date_range("1990-01-31", periods=480, freq="ME")
+    zeros = {c: [0.0] * 480 for c in ("smb", "hml", "mom", "d_level", "d_slope", "d_ig")}
+    frame = pd.DataFrame({**zeros, "equity_mkt": [0.005] * 480, "ig_level": [1.0] * 480}, index=idx)
+    with pytest.raises(SystemExit, match="cannot carry"):
+        ce.run_window("full_span", frame, mapping, source="prior")
+
+
+def test_pm_plane_stats_cover_every_mapped_sleeve_and_damp_volatility():
+    mapping = ce.load_real_mapping()
+    rows = ce.pm_plane_stats("full_span", _window_frame(), mapping, source="prior")
+    assert {r.sleeve for r in rows} == set(mapping["pm_sleeves"])
+    smoothed = [r for r in rows if r.sleeve != "pm_direct_lending"]  # dl kernel is identity
+    assert all(r.vol_reported_annual <= r.vol_true_annual + 1e-12 for r in smoothed)
+
+
 def test_render_pins_the_guard_text():
     mapping = ce.load_real_mapping()
     results = [
@@ -132,3 +152,24 @@ def test_render_pins_the_guard_text():
     assert text.count("NOT ADOPTED") >= 2  # header note + at least the row label
     # ASCII only (the report is served to a cp1252 console world)
     text.encode("ascii")
+
+
+def test_report_is_committed_and_carries_the_toggle():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    path = root / "docs" / "data" / "CAMPAIGN-R1-TRANSLATION.md"
+    assert path.exists(), "run scripts/campaign_r1_translation.py"
+    text = path.read_text(encoding="utf-8")
+    assert "NOT ADOPTED" in text and "2026-08-07.5" in text
+    assert "2026-08-01.2" in text and "rc_curve" in text
+    for window in ("full_span", "gfc", "covid", "y2022"):
+        assert f"`{window}`" in text, f"window {window} missing from the report"
+
+
+def test_hub_serves_the_campaign_r1_report():
+    from ah.hub import DOCS
+
+    rel, title, _ = DOCS["campaign-r1-translation"]
+    assert rel == "docs/data/CAMPAIGN-R1-TRANSLATION.md"
+    assert "Campaign R1" in title

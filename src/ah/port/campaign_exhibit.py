@@ -214,6 +214,24 @@ def run_window(name: str, reg: pd.DataFrame, mapping: dict, *, source: str) -> W
     if quarters < 1:
         raise SystemExit(f"campaign R1: window '{name}' has no complete quarter")
 
+    base = json.loads(
+        (repo_root / "fixtures" / "state" / "closed-end-cohort.example.json").read_text("utf-8")
+    )
+    life = float(base["lifecycle"]["contractual_life_years"])
+    age = float(base["lifecycle"]["age_years"])
+    remaining_q = int((life - age) * 4)
+    if quarters > remaining_q:
+        # FOUND on the first real run (full_span, 146 quarters): one mid-life
+        # cohort with no re-commitment pacing, drained by spending for decades,
+        # takes the book NEGATIVE and prints drawdowns like -994% - artifacts
+        # of leaving the fixture's domain, not results. The twin loop refuses
+        # rather than printing nonsense; long spans get pm_plane_stats.
+        raise SystemExit(
+            f"campaign R1: window '{name}' is {quarters} quarters but the fixture "
+            f"cohort has {remaining_q} in contract - a single non-recommitting "
+            "cohort cannot carry a longer window; use pm_plane_stats for long spans"
+        )
+
     # sleeve returns on both planes
     hf = hf_sleeve_returns(reg, mapping)
     hf_true_m = sum(hf.values()) / len(hf)
@@ -230,9 +248,6 @@ def run_window(name: str, reg: pd.DataFrame, mapping: dict, *, source: str) -> W
     ratio_q = (reg["ig_level"] / anchor).clip(lower=0.5).resample("QE").last()
 
     # the book at the door
-    base = json.loads(
-        (repo_root / "fixtures" / "state" / "closed-end-cohort.example.json").read_text("utf-8")
-    )
     cohort = ClosedEndCohort.from_document(base)
     cohort.report(cohort.nav_true)  # reported meets true at the window door
     private_start = cohort.nav_true
@@ -303,6 +318,50 @@ def run_window(name: str, reg: pd.DataFrame, mapping: dict, *, source: str) -> W
     )
 
 
+@dataclass(frozen=True)
+class PlaneResult:
+    """Sleeve-plane statistics for a long window (no institution, no cohort)."""
+
+    window: str
+    source: str
+    sleeve: str
+    quarters: int
+    vol_true_annual: float
+    vol_reported_annual: float
+    max_dd_true: float
+    max_dd_reported: float
+
+
+def pm_plane_stats(
+    name: str, reg: pd.DataFrame, mapping: dict, *, source: str
+) -> list[PlaneResult]:
+    """True vs reported per PM sleeve over a window of any length.
+
+    The long-span companion to :func:`run_window` — the twin loop's fixture
+    book cannot carry decades, but the sleeve planes can: this is what the
+    prior/measured choice does to volatility and drawdown, sleeve by sleeve.
+    """
+    reg_q = _quarterly(reg)
+    out: list[PlaneResult] = []
+    for sleeve, true in sorted(pm_sleeve_returns(reg_q, mapping, source=source).items()):
+        reported = reported_plane(sleeve, true)
+        cum_true = (1.0 + true).cumprod()
+        cum_rep = (1.0 + reported).cumprod()
+        out.append(
+            PlaneResult(
+                window=name,
+                source=source,
+                sleeve=sleeve,
+                quarters=len(reg_q),
+                vol_true_annual=float(true.std(ddof=1)) * 2.0,
+                vol_reported_annual=float(reported.std(ddof=1)) * 2.0,
+                max_dd_true=float((cum_true / cum_true.cummax() - 1.0).min()),
+                max_dd_reported=float((cum_rep / cum_rep.cummax() - 1.0).min()),
+            )
+        )
+    return out
+
+
 _METRICS: tuple[tuple[str, str], ...] = (
     ("end_nav", "end NAV"),
     ("max_dd_true", "max drawdown (true)"),
@@ -317,7 +376,9 @@ _METRICS: tuple[tuple[str, str], ...] = (
 )
 
 
-def render_markdown(results: list[WindowResult], *, vintage: str) -> str:
+def render_markdown(
+    results: list[WindowResult], *, vintage: str, plane: list[PlaneResult] | None = None
+) -> str:
     """The Track A report. Guard text is pinned by test — do not soften it."""
     by_window: dict[str, dict[str, WindowResult]] = {}
     for r in results:
@@ -360,6 +421,34 @@ def render_markdown(results: list[WindowResult], *, vintage: str) -> str:
         if prior:
             lines += ["", f"{prior.quarters} quarters."]
         lines += [""]
+    if plane:
+        by_pw: dict[str, list[PlaneResult]] = {}
+        for p in plane:
+            by_pw.setdefault(p.window, []).append(p)
+        for window, rows in by_pw.items():
+            start, end = WINDOWS.get(window, ("?", "?"))
+            lines += [
+                f"## Window `{window}` ({start} .. {end}) - sleeve planes only",
+                "",
+                "The twin loop REFUSES this window: its single mid-life fixture",
+                "cohort has fewer contract quarters than the window - running it",
+                "anyway drains the book negative and prints drawdown artifacts,",
+                "which the first real run demonstrated. What a long span can",
+                "honestly show is the sleeve planes themselves:",
+                "",
+                "| sleeve | source | vol true | vol reported | max dd true | max dd reported |",
+                "|---|---|---|---|---|---|",
+            ]
+            for p in sorted(rows, key=lambda p: (p.sleeve, p.source)):
+                label = p.source if p.source == "prior" else "measured (NOT ADOPTED)"
+                lines.append(
+                    f"| {p.sleeve} | {label} | {p.vol_true_annual:.4f} "
+                    f"| {p.vol_reported_annual:.4f} | {p.max_dd_true:+.4f} "
+                    f"| {p.max_dd_reported:+.4f} |"
+                )
+            if rows:
+                lines += ["", f"{rows[0].quarters} quarters."]
+            lines += [""]
     lines += [
         "## Named exclusion: the cashflow tiers are unchanged by design",
         "",
