@@ -78,6 +78,12 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "recovered, autocorrelation before and after, no-ops named, and a "
         "market-priced comparator where one exists.",
     ),
+    "desmoothing-note": (
+        "docs/notes/desmoothing-coefficient.md",
+        "Note — the de-smoothing coefficient",
+        "Plain English: what the coefficient means, why it collapses from 0.96 "
+        "to 0.53 in stressed markets, and why that is the denominator effect.",
+    ),
     "license-registry": (
         "docs/data/LICENSE-REGISTRY.md",
         "Licence registry",

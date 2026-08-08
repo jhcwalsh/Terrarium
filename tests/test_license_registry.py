@@ -54,11 +54,37 @@ def test_registry_lists_every_commercial_series_it_claims_to():
 def test_commodities_gap_refuses_the_price_index_substitution():
     """The registry must say WHY the free commodity series do not close the
     gap -- a spot price index is not a total-return index, and quietly
-    registering one would be the substitution this platform refuses."""
+    registering one AS the factor would be the substitution this platform
+    refuses. Registering it as what it IS, clearly disclaimed, is the pattern
+    fred.SAHMREALTIME and fred.SOFR already follow."""
     text = REGISTRY.read_text(encoding="utf-8")
     section = text.split("### Commodities total return")[1].split("###")[0]
-    assert "total_return" in section and "PPIACO" in section
+    assert "total_return" in section, "the numeraire mismatch is the whole reason"
+    assert "PRICE indices" in section
+    assert "IMF" in section and "1992" in section, "the IMF search result must be recorded"
+    # and it must point at what IS registered, so the gap is not read as 'no data'
+    assert "fred.CMDTY_GLOBAL" in section and "fred.CMDTY_PPI" in section
+
+
+def test_commodity_price_series_are_registered_but_disclaimed():
+    """Available, and explicitly not the factor: every commodity series we do
+    register must say so in its own notes, so no later reader mistakes an
+    available price index for the sealed missing_factor being closed."""
     reqs = load_requirements()
-    assert not [r for r in reqs if "commod" in r.series_id.lower()], (
-        "a commodities series was registered without closing the sealed missing_factor"
-    )
+    commodity = [r for r in reqs if r.series_id.startswith("fred.CMDTY_")]
+    assert len(commodity) == 2, "expected the global and long-history price indices"
+    for r in commodity:
+        assert r.units == "index", f"{r.series_id} is a price index, not a return"
+        assert r.license_tier == "FREE"
+        assert not r.enforce, f"{r.series_id} has no consumer yet; it must not gate a refresh"
+        assert "NOT the `commodities` factor" in (r.notes or ""), (
+            f"{r.series_id} must disclaim the factor role in its own notes"
+        )
+
+
+def test_no_commodities_factor_was_quietly_closed():
+    """The sealed missing_factor stays missing: registering price indices does
+    not map anything to the `commodities` factor."""
+    from ah.factors import load_manifest
+
+    assert load_manifest().sources["commodities"].kind == "unavailable"
