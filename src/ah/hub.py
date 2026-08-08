@@ -71,6 +71,13 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "The mechanical sweep of all 70 fetched series: outliers, gaps, "
         "staleness, cross-series sanity - run before the model re-runs.",
     ),
+    "albourne-request": (
+        "docs/data/ALBOURNE-COEFFICIENT-REQUEST.md",
+        "Albourne coefficient request",
+        "The outgoing data request: pacing coefficients per strategy in lieu "
+        "of the undelivered ALB-A/C lifecycle datasets, across all 39 sleeves "
+        "of the private-markets taxonomy.",
+    ),
 }
 
 #: The browser surfaces. (name, url, answers, writes)
