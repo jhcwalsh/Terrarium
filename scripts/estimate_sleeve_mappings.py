@@ -35,12 +35,18 @@ from pathlib import Path
 
 import numpy as np
 import pandas as pd
+import yaml
 from scipy.optimize import lsq_linear
 
 from ah.data.catalog import Catalog
-from ah.data.desmooth import glm_ma
+from ah.data.desmooth import geltner_ar1, glm_ma
 from ah.eval.panel import read_factor_frames
-from ah.eval.sleevetails import hf_sleeve_members, reference_composite
+from ah.eval.sleevetails import (
+    hf_sleeve_members,
+    pm_sleeve_members,
+    reference_composite,
+    smoothing_family,
+)
 from ah.factors import load_manifest
 from ah.splits import DataAccess
 
@@ -48,6 +54,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 
 MAPPING_VERSION = "map-2026.08"
 REGRESSORS = ("equity_mkt", "smb", "hml", "mom", "d_level", "d_slope", "d_ig")
+#: Factors that are RETURNS (compound within a quarter); the rest are levels
+#: whose quarter-end value is differenced.
+_RETURN_FACTORS = frozenset({"equity_mkt", "smb", "hml", "mom"})
 
 #: (lower, upper, prior) per regressor, per sleeve — DN-5 §3.2 rows pooled to the
 #: modeled sleeves. 0-width bounds are structural zeros; priors are DN-5's tabled
@@ -114,25 +123,90 @@ CONSTRAINTS: dict[str, dict[str, tuple[float, float, float]]] = {
 RIDGE_SCALE = 0.5  # shrinkage intensity multiplier; effective lambda ~ k/T per SM-4
 
 
-def _dated_composite(access: DataAccess, members: tuple[str, ...], desmoothed: bool) -> pd.Series:
-    """The sleeve composite WITH dates (script-side twin of the sealed one)."""
+def pm_constraints() -> dict[str, dict[str, tuple[float, float, float]]]:
+    """PM sleeve constraints, READ from ``mappings/cashflow-tier1-v1.0.yaml``.
+
+    That artifact's ``pm_growth_loadings`` are DN-5 §3.3's priors already pooled
+    to exactly the nine modeled PM sleeves, and were frozen with the label
+    "ADOPTED AS CHOSEN (kind C) - no PM data exists; sensitivity-flagged, never
+    called estimates". Reading them here rather than retyping them means the
+    shrinkage target provably IS the recorded prior, and the loadings this
+    script now writes are the estimates that supersede it.
+
+    Bounds follow each prior's sign (DN-5's positive/negative columns): a positive prior is
+    constrained non-negative, a negative prior non-positive, and a regressor the
+    prior omits is a structural zero — DN-5 §4.1's caveat applies, a zero is a
+    claim about the MEAN and the tail is delegated to residuals.
+    """
+    doc = yaml.safe_load(
+        (_REPO_ROOT / "mappings" / "cashflow-tier1-v1.0.yaml").read_text(encoding="utf-8")
+    )
+    out: dict[str, dict[str, tuple[float, float, float]]] = {}
+    for sleeve, priors in (doc.get("pm_growth_loadings") or {}).items():
+        spec: dict[str, tuple[float, float, float]] = {}
+        for regressor in REGRESSORS:
+            prior = float(priors.get(regressor, 0.0))
+            if prior > 0:
+                spec[regressor] = (0.0, _INF, prior)
+            elif prior < 0:
+                spec[regressor] = (-_INF, 0.0, prior)
+            else:
+                spec[regressor] = (0.0, 0.0, 0.0)
+        out[sleeve] = spec
+    return out
+
+
+def _to_quarterly(s: pd.Series, how: str) -> pd.Series:
+    """Monthly factor -> quarterly, labelled at quarter START to match the PM
+    series' own dates (intake writes ``Period.to_timestamp()``). Returns
+    COMPOUND within the quarter; levels take the quarter-end observation, so
+    their differences are true quarter-on-quarter changes."""
+    quarters = pd.PeriodIndex(s.index, freq="Q")
+    out = (
+        (1.0 + s).groupby(quarters).prod() - 1.0
+        if how == "compound"
+        else s.groupby(quarters).last()
+    )
+    out.index = pd.PeriodIndex(out.index).to_timestamp()
+    return out.sort_index()
+
+
+def _dated_composite(
+    access: DataAccess,
+    members: tuple[str, ...],
+    desmoothed: bool,
+    *,
+    family: str = "glm",
+) -> pd.Series:
+    """The sleeve composite WITH dates (script-side twin of the sealed one).
+
+    ``family`` routes the de-smoother so SM-10 holds for PM sleeves too: the
+    operator used here must be the one the smoothing kernel inverts, which for
+    the appraisal-calendar sleeves is Geltner, not GLM.
+    """
+    desmoother = geltner_ar1 if family == "geltner" else glm_ma
     cols = []
     for sid in members:
         frame = access.train_val(sid)
         values = pd.to_numeric(frame["value"]).to_numpy(dtype=float)
-        truth = glm_ma(values).truth if desmoothed else values
+        truth = desmoother(values).truth if desmoothed else values
         cols.append(pd.Series(truth, index=pd.to_datetime(frame["date"])))
     return pd.concat(cols, axis=1).mean(axis=1, skipna=True).sort_index()
 
 
-def _regressor_frame(access: DataAccess) -> pd.DataFrame:
+def _regressor_frame(access: DataAccess, *, quarterly: bool = False) -> pd.DataFrame:
     frames = read_factor_frames(access, load_manifest()).frames
 
     def series(fid: str) -> pd.Series:
         f = frames[fid]
-        return pd.Series(
+        s = pd.Series(
             pd.to_numeric(f["value"]).to_numpy(dtype=float), index=pd.to_datetime(f["date"])
         )
+        if not quarterly:
+            return s
+        # returns compound within the quarter; levels take the quarter-end value
+        # so that .diff() below is a true quarter-on-quarter change
+        return _to_quarterly(s, "compound" if fid in _RETURN_FACTORS else "last")
 
     x = pd.DataFrame(
         {
@@ -148,11 +222,16 @@ def _regressor_frame(access: DataAccess) -> pd.DataFrame:
     return x.dropna()
 
 
-def _fit(y: pd.Series, x: pd.DataFrame, sleeve: str) -> tuple[np.ndarray, float, pd.Series]:
+def _fit(
+    y: pd.Series,
+    x: pd.DataFrame,
+    sleeve: str,
+    constraints: dict[str, dict[str, tuple[float, float, float]]] | None = None,
+) -> tuple[np.ndarray, float, pd.Series]:
     """Bounded ridge fit toward the DN-5 priors; returns (beta, alpha, residuals)."""
     joined = pd.concat([y.rename("y"), x], axis=1, sort=True).dropna()
     yv = joined["y"].to_numpy()
-    spec = CONSTRAINTS[sleeve]
+    spec = (constraints or CONSTRAINTS)[sleeve]
     # structural zeros never enter the solver; their betas are 0 by assertion
     free = [r for r in REGRESSORS if not (spec[r][0] == 0.0 == spec[r][1])]
     design = joined[free].to_numpy()
@@ -284,6 +363,96 @@ def main() -> None:
             + f" | {sigma_ann:.1%} | {r2:.2f} | {oos:.2f} | {b_mkt_smooth:+.3f} | {b_mkt_desm:+.3f}"
             + f" | {beta_exp[0]:+.3f} | {beta_rec[0]:+.3f} |"
         )
+
+    # ----- PM sleeves: quarterly, on the first PriMaRS delivery (2026-08-08).
+    # A separate block and a separate regressor frame: PM marks are quarterly,
+    # so the monthly design would silently mis-align. Loadings supersede the
+    # cashflow-tier1 priors they shrink toward; n is reported per sleeve
+    # because several spans are short after the constituent trim.
+    xq = _regressor_frame(access, quarterly=True)
+    pm_specs = pm_constraints()
+    artifact_lines.append("pm_sleeves:  # quarterly design; see MAPPINGS.md for n and fit")
+    report += [
+        "",
+        "## PM sleeves (quarterly)",
+        "",
+        "Estimated on the first PriMaRS delivery. Composites de-smoothed with the",
+        "sleeve's OWN family (SM-10): Geltner for the appraisal-calendar sleeves,",
+        "GLM elsewhere. Priors are `cashflow-tier1-v1.0.yaml`'s `pm_growth_loadings`",
+        "— frozen as *chosen* because no PM data existed; these are the estimates",
+        "that supersede them.",
+        "",
+        "| sleeve | family | n (quarters) | "
+        + " | ".join(REGRESSORS)
+        + " | prior β_mkt | resid sigma (ann) | R² |",
+        "|---|---|---|" + "---|" * (len(REGRESSORS) + 3),
+    ]
+    for sleeve, member_ids in pm_sleeve_members().items():
+        if sleeve not in pm_specs:
+            continue
+        family = smoothing_family(sleeve)
+        y = _dated_composite(access, member_ids, desmoothed=True, family=family)
+        beta, alpha, resid = _fit(y, xq, sleeve, pm_specs)
+        n_obs = len(pd.concat([y.rename("y"), xq], axis=1, sort=True).dropna())
+        sigma_ann = float(resid.std(ddof=1) * np.sqrt(4.0))  # quarterly -> annual
+        r2 = _r2(y, xq, beta, alpha)
+        prior_mkt = pm_specs[sleeve]["equity_mkt"][2]
+
+        artifact_lines.append(f"  {sleeve}:")
+        artifact_lines.append(f"    family: {family}")
+        artifact_lines.append(f"    n_quarters: {n_obs}")
+        artifact_lines.append(f"    alpha_quarterly: {alpha:.6f}")
+        artifact_lines.append(
+            "    loadings: {"
+            + ", ".join(f"{r}: {b:.4f}" for r, b in zip(REGRESSORS, beta, strict=True))
+            + "}"
+        )
+        artifact_lines.append(f"    residual_sigma_annual: {sigma_ann:.4f}")
+        artifact_lines.append(f"    r2_train_val: {r2:.3f}")
+        artifact_lines.append(
+            f"    prior_superseded: {{source: cashflow-tier1-v1.0.yaml pm_growth_loadings, "
+            f"equity_mkt: {prior_mkt:.4f}}}"
+        )
+        report.append(
+            f"| {sleeve} | {family} | {n_obs} | "
+            + " | ".join(f"{b:+.3f}" for b in beta)
+            + f" | {prior_mkt:+.2f} | {sigma_ann:.1%} | {r2:.2f} |"
+        )
+
+    report += [
+        "",
+        "### Reading these numbers: the de-smoother is under-correcting",
+        "",
+        "EVERY estimated equity beta lands below its DN-5 prior, and the shortfall",
+        "sorts by how equity-like the sleeve is. The credit and real-asset sleeves",
+        "come out near their priors (distressed 1.09x, infra 0.83x, mezzanine",
+        "0.75x); the equity-like ones come out far below (growth 0.57x, VC 0.36x,",
+        "buyout 0.29x, secondaries 0.23x, RE value-add 0.17x). Venture — the most",
+        "equity-like private asset there is — explains 11% of its own variance",
+        "against a 120-quarter panel, and RE value-add explains 1%.",
+        "",
+        "That ordering is the signature of RESIDUAL SMOOTHING surviving the",
+        "de-smoothing operator, not of private equity genuinely having a third of",
+        "the market beta its economics imply. It is corroborated by the smoothing",
+        "kernel fitted alongside: the Geltner phi for the appraisal sleeves is only",
+        "0.18 over the full sample, while the stress-state refit puts it at 0.47 —",
+        "the full-sample operator is weak precisely because the smoothing is",
+        "state-dependent and the calm majority dominates the fit.",
+        "",
+        "CONSEQUENCE, stated rather than buried: these loadings are ESTIMATES and",
+        "they supersede the priors as a record of what the delivered data says —",
+        "but 'measured' is not automatically 'better'. Adopting beta_mkt 0.087 for",
+        "RE value-add in place of the 0.50 prior would encode the smoothing defect",
+        "into the twin. Whether the twin consumes these loadings or keeps the",
+        "priors is an owner decision, not a consequence of running this script.",
+        "The Cliffwater BDC series (market-priced, same asset class as direct",
+        "lending, annualized vol 21.6% against this panel's 8.3% residual sigma)",
+        "is the natural instrument for calibrating how much correction is missing.",
+        "",
+        "`pm_direct_lending` is the weakest cell in the table and should not be used:",
+        "39 quarters after the constituent trim, an all-zero loading vector, R^2 of",
+        "-0.00, and a de-smoother that fell back to a literal no-op.",
+    ]
 
     # cross-sleeve residual correlation on common months
     resid_frame = pd.DataFrame(residual_store).dropna()

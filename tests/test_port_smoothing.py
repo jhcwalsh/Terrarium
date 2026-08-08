@@ -47,10 +47,36 @@ class TestKernelArtifact:
         ev = glm["stickiness_evidence"]
         assert ev["theta0_stress_pooled"] > ev["theta0_calm_pooled"]  # the sign IS the finding
 
-    def test_geltner_family_refuses_rather_than_pretends(self):
-        assert sk.load_kernel()["families"]["geltner"]["status"] == "UNPARAMETERIZED"
-        with pytest.raises(sk.SmoothingError, match="geltner"):
-            sk.theta_for("pm_re_core")
+    def test_geltner_family_is_parameterized_and_still_refuses_what_it_lacks(self):
+        """HISTORY: this asserted ``status == UNPARAMETERIZED`` and that asking
+        for any appraisal sleeve raised — the honest state while no PM series
+        was delivered. The first PriMaRS delivery (2026-08-08) fired the
+        trigger the artifact carried, so the family is now fitted and the
+        assertion is INVERTED rather than deleted.
+
+        What must NOT change is the refusal for sleeves the delivery does not
+        cover: two modeled sleeves is not all of them.
+        """
+        geltner = sk.load_kernel()["families"]["geltner"]
+        assert geltner["status"] == "PARAMETERIZED"
+
+        a, phi = sk.geltner_for("pm_re_value_add")
+        assert 0.0 < a <= 1.0 and 0.0 <= phi < 1.0
+        assert a == pytest.approx(1.0 - phi, abs=1e-9)  # the AR(1) identity
+
+        # an appraisal sleeve is not a GLM sleeve, and says so
+        with pytest.raises(sk.SmoothingError, match="APPRAISAL-CALENDAR"):
+            sk.theta_for("pm_re_value_add")
+        # and a sleeve the delivery never covered still refuses
+        with pytest.raises(sk.SmoothingError, match="pm_re_core"):
+            sk.geltner_for("pm_re_core")
+
+    def test_pm_glm_sleeves_are_reachable_and_carry_their_own_stickiness(self):
+        theta = sk.theta_for("pm_buyout")
+        assert theta.ndim == 1 and theta.sum() == pytest.approx(1.0, abs=1e-6)
+        # the two families are calibrated on different frequencies
+        assert sk.stickiness(family="glm") == 0.0
+        assert sk.stickiness(family="geltner") > 0.0
 
 
 class TestSM10Inverse:
