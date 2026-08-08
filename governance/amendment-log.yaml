@@ -1541,3 +1541,33 @@ amendments:
     and were checked for the same instability -- excess_kurtosis, hill_tail_index
     and max_drawdown_median are stable across 16-256 paths.'
   type: threshold_change
+- amendment_id: AM-2026-08-08-001
+  date: '2026-08-08'
+  payload:
+    added_codes:
+    - pm_buyout_ret_q
+    - pm_growth_ret_q
+    - pm_vc_ret_q
+    - pm_secondaries_ret_q
+    - pm_dl_ret_q
+    - pm_mezz_ret_q
+    - pm_distressed_ret_q
+    - pm_re_va_ret_q
+    - pm_infra_ret_q
+    file: taxonomy/albourne_mapping.yaml
+    retrofit_register: RFR-88 discharged
+    seal: g3
+    supersedes_lock_digest: sha256:938aef3ee9c2f85b0dd7856ae89e6122c0058337c65170c0f05fa01753ba51b8
+  post_hoc: true
+  rationale: 'G3 RE-SEAL for an additive taxonomy change on first PM delivery. taxonomy/albourne_mapping.yaml
+    (hashed by pre-registration-g3.yaml''s seal_scope) gained nine codes.albourne
+    entries carrying the full pm_*_ret_q series-id fragments, so that a PriMaRS returns
+    drop keys the registered requirements.yaml series ids -- discharging RFR-88, whose
+    own comment said the mismatch ''bites on first PM delivery''. The delivery is
+    real: PriMaRS TWR history landed as vintages 2026-08-07.2/.3 through the standard
+    intake path. NOTHING JUDGED CHANGED: no existing mapping was edited, no sleeve_id
+    moved, the series->sleeve section is untouched, and the short cashflow codes remain
+    for the ALB-A..E packs. The change is additive vocabulary the mapping file''s
+    own header instructs adding ''on delivery''; the G3 seal (2026-08-01) simply predates
+    the first delivery. Owner approved option ''amend and re-seal'' 2026-08-08.'
+  type: protocol_change
