@@ -61,7 +61,7 @@ def test_the_loadings_toggle_moves_pm_and_only_pm():
 
 
 def test_unknown_source_refuses():
-    with pytest.raises(ValueError, match="prior|measured"):
+    with pytest.raises(ValueError, match=r"prior|measured"):
         ce.pm_sleeve_returns(pd.DataFrame({"equity_mkt": [0.0]}), _mapping_stub(), source="x")
 
 

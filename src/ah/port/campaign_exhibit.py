@@ -15,7 +15,7 @@ adopting the measured loadings would make.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, cast
 
 import numpy as np
 import pandas as pd
@@ -53,7 +53,7 @@ def _series(catalog: Any, vintage: str, sid: str) -> pd.Series:
             f"(needed for regressor(s) {needed_for}): {exc}"
         ) from exc
     return pd.Series(
-        pd.to_numeric(frame["value"]).to_numpy(dtype=float),
+        np.asarray(pd.to_numeric(frame["value"]), dtype=float),
         index=pd.to_datetime(frame["date"]),
     )
 
@@ -234,7 +234,7 @@ def run_window(name: str, reg: pd.DataFrame, mapping: dict, *, source: str) -> W
 
     # sleeve returns on both planes
     hf = hf_sleeve_returns(reg, mapping)
-    hf_true_m = sum(hf.values()) / len(hf)
+    hf_true_m = cast("pd.Series", sum(hf.values())) / len(hf)
     hf_true_q = hf_true_m.resample("QE").sum().reindex(reg_q.index).fillna(0.0)
     pm_true_q = pm_sleeve_returns(reg_q, mapping, source=source)[_TWIN_PM_SLEEVE]
     pm_rep_q = reported_plane(_TWIN_PM_SLEEVE, pm_true_q)
@@ -353,8 +353,8 @@ def pm_plane_stats(
                 source=source,
                 sleeve=sleeve,
                 quarters=len(reg_q),
-                vol_true_annual=float(true.std(ddof=1)) * 2.0,
-                vol_reported_annual=float(reported.std(ddof=1)) * 2.0,
+                vol_true_annual=float(cast("float", true.std(ddof=1))) * 2.0,
+                vol_reported_annual=float(cast("float", reported.std(ddof=1))) * 2.0,
                 max_dd_true=float((cum_true / cum_true.cummax() - 1.0).min()),
                 max_dd_reported=float((cum_rep / cum_rep.cummax() - 1.0).min()),
             )
