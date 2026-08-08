@@ -13,6 +13,20 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **De-smoothing validation exhibit** (`ah/data/desmooth_validation.py` +
+  `scripts/validate_desmoothing.py` -> `docs/data/DESMOOTHING-VALIDATION.md`).
+  Puts every modeled PM sleeve through its OWN smoothing family and reports
+  what came back: volatility recovered, lag-1 autocorrelation before and
+  after, and any market-priced comparator on shared periods. Two things it
+  exists to keep visible - a de-smoother that is a LITERAL NO-OP (named in
+  prose, not left as "1.00" in a table cell), and the rule that a comparator
+  ratio is an UPPER BOUND and never a correction target, because listed
+  vehicles carry leverage and listing sentiment the private index does not.
+  Outside the seal by design: it audits the estimators, so tuning them to it
+  would be fitting an estimator to its own audit. First run (vintage
+  2026-08-08.1): 8 of 9 sleeves recover 16-65% more volatility with
+  autocorrelation driven to ~0; `pm_dl_ret_q` is the sole no-op (ACF1 -0.050,
+  nothing of the shape either operator keys on). Served by the tools hub.
 - **Source links on the data console (owner request 2026-08-08).** Every
   registered series resolves a human-facing source page —
   `manifest.source_link` (per-source templates + per-entry `source_url`
