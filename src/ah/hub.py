@@ -71,6 +71,13 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "The mechanical sweep of all 70 fetched series: outliers, gaps, "
         "staleness, cross-series sanity - run before the model re-runs.",
     ),
+    "desmoothing-validation": (
+        "docs/data/DESMOOTHING-VALIDATION.md",
+        "De-smoothing validation (private markets)",
+        "Does the de-smoother actually recover risk? Per sleeve: volatility "
+        "recovered, autocorrelation before and after, no-ops named, and a "
+        "market-priced comparator where one exists.",
+    ),
     "albourne-request": (
         "docs/data/ALBOURNE-COEFFICIENT-REQUEST.md",
         "Albourne coefficient request",
