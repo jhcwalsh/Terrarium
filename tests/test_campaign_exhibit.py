@@ -82,3 +82,35 @@ def test_reported_plane_is_deterministic_and_shallower_on_a_shock():
         b = ce.reported_plane(sleeve, true)
         assert a.equals(b)
         assert abs(float(a.min())) < abs(float(true.min()))
+
+
+def _window_frame() -> pd.DataFrame:
+    """Twelve months, calm lead-in, one violent equity quarter (Q3); ig_level
+    is a STATE column (feeds f_dist), not a mapping regressor. The calm
+    lead-in matters: the kernel backfills pre-history with the first
+    observation, so a window that OPENS with the shock reports it 1:1 — real
+    windows open calm, and this fixture mirrors that."""
+    idx = pd.date_range("2020-01-31", periods=12, freq="ME")
+    zeros = {c: [0.0] * 12 for c in ("smb", "hml", "mom", "d_level", "d_slope", "d_ig")}
+    equity = [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, -0.20, -0.10, 0.01, 0.02, 0.02, 0.01]
+    ig = [1.0, 1.0, 1.0, 1.0, 1.0, 1.0, 2.5, 2.0, 1.5, 1.2, 1.0, 1.0]
+    return pd.DataFrame({**zeros, "equity_mkt": equity, "ig_level": ig}, index=idx)
+
+
+def test_run_window_reports_shallower_marks_and_is_deterministic():
+    mapping = ce.load_real_mapping()
+    a = ce.run_window("test", _window_frame(), mapping, source="prior")
+    b = ce.run_window("test", _window_frame(), mapping, source="prior")
+    assert a == b
+    assert a.window == "test" and a.source == "prior"
+    assert a.quarters == 4
+    # marks are shallower than truth (magnitudes)
+    assert abs(a.max_dd_reported) <= abs(a.max_dd_true)
+    assert a.calls_paid > 0.0 and a.distributions > 0.0
+
+
+def test_run_window_toggle_changes_the_result():
+    mapping = ce.load_real_mapping()
+    prior = ce.run_window("test", _window_frame(), mapping, source="prior")
+    measured = ce.run_window("test", _window_frame(), mapping, source="measured")
+    assert prior != measured

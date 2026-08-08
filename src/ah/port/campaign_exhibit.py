@@ -14,6 +14,7 @@ adopting the measured loadings would make.
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Any
 
 import numpy as np
@@ -72,6 +73,9 @@ def load_regressors(catalog: Any, vintage: str) -> pd.DataFrame:
         "d_level": s["fred.DGS10"].diff(),
         "d_slope": (s["fred.DGS10"] - s["fred.DGS2"]).diff(),
         "d_ig": (s["fred.BAA"] - s["fred.AAA"]).diff(),
+        # STATE column, not a mapping regressor: f_dist needs the spread LEVEL,
+        # which cannot be reconstructed from d_ig changes within a window.
+        "ig_level": s["fred.BAA"] - s["fred.AAA"],
     }
     frame = pd.DataFrame(cols).dropna()
     if frame.empty:
@@ -145,3 +149,155 @@ def reported_plane(sleeve_id: str, true: pd.Series) -> pd.Series:
     else:
         reported = sk.smooth(values, sk.theta_for(sleeve_id))
     return pd.Series(reported, index=true.index)
+
+
+def load_real_mapping() -> dict:
+    """The committed sleeve-mappings artifact, read-only."""
+    from ah.port.mapping import load_artifact
+
+    return load_artifact()
+
+
+# The exhibit's institution — chosen, stated, and NOT a sealed reference book:
+# 30% private (one mid-life buyout cohort, the committed fixture document),
+# the liquid 70% split 60/40 public equity / equal-weight HF composite,
+# cash 4% of book on top. Policy() defaults throughout.
+_PRIVATE_WEIGHT = 0.30
+_PUBLIC_SHARE_OF_LIQUID = 0.60
+_CASH_FRACTION = 0.04
+_TWIN_PM_SLEEVE = "pm_buyout"  # the fixture cohort's shape
+
+
+@dataclass(frozen=True)
+class WindowResult:
+    window: str
+    source: str
+    quarters: int
+    end_nav: float
+    max_dd_true: float
+    max_dd_reported: float
+    calls_paid: float
+    distributions: float
+    forced_sale_quarters: int
+    forced_sale_total: float
+    min_coverage: float
+    peak_private_weight_reported: float
+    breach_quarters: int
+
+
+def _quarterly(reg: pd.DataFrame) -> pd.DataFrame:
+    """Quarter sums for returns/changes; quarter-end LAST for the state level."""
+    out = reg.drop(columns=["ig_level"], errors="ignore").resample("QE").sum()
+    if "ig_level" in reg.columns:
+        out["ig_level"] = reg["ig_level"].resample("QE").last()
+    return out
+
+
+def run_window(name: str, reg: pd.DataFrame, mapping: dict, *, source: str) -> WindowResult:
+    """One deterministic pass of the twin over an observed window.
+
+    ``breach_quarters`` counts REPORTED-plane breaches — the plane policy
+    actually acts on.
+    """
+    import json
+    from pathlib import Path
+
+    from ah.port.cashflow_tier1 import f_call, f_dist
+    from ah.port.cohort import ClosedEndCohort
+    from ah.port.engine import Policy, PortfolioEngine
+    from ah.port.portfolio import Portfolio
+    from ah.port.sleeves import LiquidSleeve
+
+    repo_root = Path(__file__).resolve().parents[3]
+    reg_q = _quarterly(reg)
+    quarters = len(reg_q)
+    if quarters < 1:
+        raise SystemExit(f"campaign R1: window '{name}' has no complete quarter")
+
+    # sleeve returns on both planes
+    hf = hf_sleeve_returns(reg, mapping)
+    hf_true_m = sum(hf.values()) / len(hf)
+    hf_true_q = hf_true_m.resample("QE").sum().reindex(reg_q.index).fillna(0.0)
+    pm_true_q = pm_sleeve_returns(reg_q, mapping, source=source)[_TWIN_PM_SLEEVE]
+    pm_rep_q = reported_plane(_TWIN_PM_SLEEVE, pm_true_q)
+    public_q = ((1.0 + reg["equity_mkt"]).resample("QE").prod() - 1.0).reindex(reg_q.index)
+
+    # cashflow states: equity drawdown depth, spread ratio vs the window's
+    # first-year mean, floored at 0.5 (the run_2022_replay construction)
+    cum = (1.0 + reg["equity_mkt"]).cumprod()
+    depth_q = (1.0 - cum / cum.cummax()).clip(lower=0.0).resample("QE").last()
+    anchor = float(reg["ig_level"].iloc[:12].mean())
+    ratio_q = (reg["ig_level"] / anchor).clip(lower=0.5).resample("QE").last()
+
+    # the book at the door
+    base = json.loads(
+        (repo_root / "fixtures" / "state" / "closed-end-cohort.example.json").read_text("utf-8")
+    )
+    cohort = ClosedEndCohort.from_document(base)
+    cohort.report(cohort.nav_true)  # reported meets true at the window door
+    private_start = cohort.nav_true
+    liquid_total = private_start * (1.0 - _PRIVATE_WEIGHT) / _PRIVATE_WEIGHT
+    liquid_doc = json.loads(
+        (repo_root / "fixtures" / "state" / "liquid-sleeve.example.json").read_text("utf-8")
+    )
+    sleeves: dict[str, LiquidSleeve] = {}
+    for key, share in (
+        ("public_equity", _PUBLIC_SHARE_OF_LIQUID),
+        ("hf_composite", 1.0 - _PUBLIC_SHARE_OF_LIQUID),
+    ):
+        doc = json.loads(json.dumps(liquid_doc))
+        doc["identity"] = {**doc["identity"], "sleeve_id": key}
+        doc["value"] = liquid_total * share
+        doc["weight"] = share * (1.0 - _PRIVATE_WEIGHT)
+        sleeves[key] = LiquidSleeve.from_document(doc)
+
+    portfolio = Portfolio(cash=_CASH_FRACTION * (private_start + liquid_total))
+    portfolio.add(_TWIN_PM_SLEEVE, cohort)
+    for key, sleeve in sleeves.items():
+        portfolio.add(key, sleeve)
+    engine = PortfolioEngine(portfolio, Policy())
+
+    nav_true_path = [portfolio.nav_true()]
+    nav_rep_path = [portfolio.nav_reported()]
+    calls_total = dist_total = forced_total = 0.0
+    forced_quarters = breach_quarters = 0
+    min_coverage = float("inf")
+    peak_w_rep = portfolio.private_weight_reported()
+
+    for t in range(quarters):
+        sleeves["public_equity"].apply_return(float(public_q.iloc[t]))
+        sleeves["hf_composite"].apply_return(float(hf_true_q.iloc[t]))
+        fc = f_call(float(depth_q.iloc[t]))
+        fd = f_dist(float(depth_q.iloc[t]), float(ratio_q.iloc[t]))
+        step = cohort.step(float(pm_true_q.iloc[t]), f_call=fc, f_dist=fd)
+        cohort.report(cohort.nav_reported * (1.0 + float(pm_rep_q.iloc[t])))
+        report = engine.run_quarter(distributions=step.distribution_total, calls=step.call)
+        calls_total += report.calls_paid
+        dist_total += report.distributions_received
+        forced_total += report.forced_sale_total
+        forced_quarters += int(report.forced_sale_total > 0.0)
+        breach_quarters += int(report.breach_reported)
+        min_coverage = min(min_coverage, report.coverage_true)
+        peak_w_rep = max(peak_w_rep, report.private_weight_reported)
+        nav_true_path.append(portfolio.nav_true())
+        nav_rep_path.append(portfolio.nav_reported())
+
+    def _max_dd(path: list[float]) -> float:
+        arr = np.asarray(path, dtype=float)
+        return float((arr / np.maximum.accumulate(arr) - 1.0).min())
+
+    return WindowResult(
+        window=name,
+        source=source,
+        quarters=quarters,
+        end_nav=float(nav_true_path[-1]),
+        max_dd_true=_max_dd(nav_true_path),
+        max_dd_reported=_max_dd(nav_rep_path),
+        calls_paid=calls_total,
+        distributions=dist_total,
+        forced_sale_quarters=forced_quarters,
+        forced_sale_total=forced_total,
+        min_coverage=min_coverage,
+        peak_private_weight_reported=peak_w_rep,
+        breach_quarters=breach_quarters,
+    )
