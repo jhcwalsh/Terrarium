@@ -126,6 +126,15 @@ SURFACES: list[tuple[str, str, str, str]] = [
         "reads only",
     ),
     (
+        "Generator console (8797)",
+        "http://127.0.0.1:8797/",
+        "Watch a decade get built layer by layer - climate, seasons, weather, "
+        "joinery - from the campaign checkpoints (hash-verified), and follow "
+        "live campaign runs as their cell artifacts land. Nothing here is a "
+        "score.",
+        "reads only",
+    ),
+    (
         "Build console (8798)",
         "http://127.0.0.1:8798/",
         "Type a scenario in plain text and watch it compile into a world, "
