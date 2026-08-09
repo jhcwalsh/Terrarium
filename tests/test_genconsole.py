@@ -75,6 +75,14 @@ def test_scan_runs_handles_a_missing_root(tmp_path):
     assert gc.scan_runs(tmp_path / "nope") == []
 
 
+def test_hub_names_the_generator_console():
+    from ah.hub import SURFACES
+
+    [entry] = [s for s in SURFACES if "8797" in s[1]]
+    assert "Generator console" in entry[0]
+    assert entry[3] == "reads only"
+
+
 @pytest.mark.enable_socket
 def test_app_builds_a_decade_and_serves_the_stages():
     import time
