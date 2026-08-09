@@ -120,6 +120,17 @@ def build() -> None:
         ",Mom\n"
         "2020, 3.00\n",
     )
+    _write(
+        FX / "french" / "factors_daily.csv",
+        "This file was created by CMPT_ME_BEME_RETS_DAILY using the 202412 CRSP database.\n"
+        "\n"
+        ",Mkt-RF,SMB,HML,RF\n"
+        "20200102, 0.50, -0.10,  0.20, 0.006\n"
+        "20200103,-1.20,  0.30, -0.10, 0.006\n"
+        "20200203, 0.80,  0.05,  0.00, 0.005\n"
+        "\n"
+        "Copyright 2024 Kenneth R. French\n",
+    )
 
     # --- Shiller ie_data (xlsx) ---
     shiller = pd.DataFrame(

@@ -1,11 +1,11 @@
 # PROPOSED amendment — registered acceptance thresholds for the equity_vol backcast
 
-**Status: DRAFT — awaiting owner ratification. Nothing in this file is in
-force.** This file is a proposal in the sense of
-`docs/superpowers/specs/2026-08-09-volext-decisions.md` D3: the authority is
-`governance/amendment-log.yaml`, appended only by
-`ah.eval.prereg.append_amendment`, and this draft never enters it until the
-owner says so.
+**Status: RATIFIED as `AM-2026-08-09-001`** (owner authorization 2026-08-09:
+threshold values approved in Q&A — "go with your proposed thresholds" — and
+Stage 2 ordered started, which is the ratification point D3 named). The
+authoritative entry is in `governance/amendment-log.yaml`, appended by
+`ah.eval.prereg.append_amendment` BEFORE the registered fit ran; this file is
+retained as the drafting record.
 
 **Ratify before:** the Stage-2 registered fit of
 `src/ah/data/vol_backcast.py` runs on real data. Registering the grading

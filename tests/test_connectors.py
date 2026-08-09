@@ -119,6 +119,24 @@ def test_french_momentum() -> None:
     assert out["value"].tolist() == pytest.approx([0.01, -0.02])
 
 
+def test_french_daily_keeps_daily_rows() -> None:
+    # frequency "D" selects the daily file's YYYYMMDD block; rows stay daily
+    # (no monthly aggregation -- the vol backcast needs the returns themselves)
+    out = FrenchConnector().parse(
+        _raw("french", "factors_daily.csv", "french.mkt_rf_d"), REQ["french.mkt_rf_d"]
+    )
+    assert out["date"].dt.strftime("%Y-%m-%d").tolist() == [
+        "2020-01-02",
+        "2020-01-03",
+        "2020-02-03",
+    ]
+    assert out["value"].tolist() == pytest.approx([0.005, -0.012, 0.008])
+    rf = FrenchConnector().parse(
+        _raw("french", "factors_daily.csv", "french.rf_d"), REQ["french.rf_d"]
+    )
+    assert rf["value"].tolist() == pytest.approx([0.00006, 0.00006, 0.00005])
+
+
 # --------------------------------------------------------------------------- #
 # Shiller / JST / BIS / Treasury HQM
 # --------------------------------------------------------------------------- #
