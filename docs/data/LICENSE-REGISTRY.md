@@ -54,17 +54,19 @@
 | `ncreif.npi_ret_q` | ncreif | Q | P1 | status: pending-license |
 | `ncreif.odce_ret_q` | ncreif | Q | P1 | status: pending-license |
 
-### REG (3 series)
+### REG (5 series)
 
 | series | source | frequency | priority | notes |
 |---|---|---|---|---|
+| `aqr.cmdty_ew_excess` | aqr | M | P1 | Excess return of the equal-weight commodity futures portfolio (Levine-Ooi-Richardson (c)2018, AQR data library |
+| `aqr.cmdty_ew_spot` | aqr | M | P2 | Spot return of the same portfolio -- VERIFICATION-ONLY: cross-checked against the registered free price indice |
 | `cliffwater.bdc_ret_m` | cliffwater | M | P1 | Cliffwater BDC Index total return |
 | `cliffwater.cdli_ret_q` | cliffwater | Q | P0 |  |
 | `nareit.all_equity_tr` | nareit | M | P0 |  |
 
-### FREE (50 series)
+### FREE (52 series)
 
-No licence needed. By source: `bis` (1), `fred` (30), `french` (7), `jst` (8), `shiller` (4).
+No licence needed. By source: `bis` (1), `fred` (32), `french` (7), `jst` (8), `shiller` (4).
 
 ## Part 2 — gaps: needed, unlicensed, no series registered
 
@@ -74,7 +76,7 @@ Each of these is a quantity the platform declares it needs. None is a bug or a b
 
 - **Consumer:** factors.yaml `commodities` (kind: unavailable); named in pre-registration.yaml `missing_factors`, so the seal REJECTS any threshold keyed to it
 - **Candidate:** Bloomberg Commodity Index (BCOM) TR, S&P GSCI TR, or equivalent
-- **Why free data does not close it:** FRED's free commodity series are PRICE indices, not investable total-return indices, and a futures total return additionally needs roll and collateral yield that no free source carries. The factor declares numeraire total_return, so registering a spot index AS `commodities` would be exactly the plausible substitution this platform refuses. SEARCHED 2026-08-08: the IMF's Primary Commodity Price System starts 1992-01 across its whole family on FRED (monthly, quarterly and annual all begin that month), so IMF is not a long-history answer; the IMF's own legacy SDMX host is retired and its replacement returned 502. The two best free options ARE now registered, as what they are and explicitly not as the factor: fred.CMDTY_GLOBAL (IMF global all-commodities, 1992+) and fred.CMDTY_PPI (US PPI all commodities, 1913+, the longest free commodity-linked series).
+- **Why free data does not close it:** FRED's free commodity series are PRICE indices, not investable total-return indices, and a futures total return additionally needs roll and collateral yield that no free source carries. The factor declares numeraire total_return, so registering a spot index AS `commodities` would be exactly the plausible substitution this platform refuses. SEARCHED 2026-08-08: the IMF's Primary Commodity Price System starts 1992-01 across its whole family on FRED (monthly, quarterly and annual all begin that month), so IMF is not a long-history answer; the IMF's own legacy SDMX host is retired and its replacement returned 502. The two best free options ARE now registered, as what they are and explicitly not as the factor: fred.CMDTY_GLOBAL (IMF global all-commodities, 1992+) and fred.CMDTY_PPI (US PPI all commodities, 1913+, the longest free commodity-linked series). STATUS CHANGE 2026-08-09 (owner ruling C2, WP-DATA-CMDTY): CLOSED FOR RESEARCH USE by the owner-supplied AQR Commodities-for-the-Long-Run set (aqr.cmdty_ew_excess, monthly excess return of an investable equal-weight futures portfolio, 1877-02+; REG tier -- attribution required, raw data never redistributed, workbook lives in gitignored data/aqr/). Total return = excess + the registered risk-free leg, which satisfies the factor's total_return numeraire where a PRICE index cannot. COMMERCIAL CLEARANCE REMAINS OPEN: AQR's terms cover research/informational use; commercial use of the platform on this data is an unresolved registry item, and the sealed missing_factor itself stays sealed until the owner ratifies the amendment drafted in governance/proposed/.
 - **What a licence unlocks:** closes a sealed missing_factor; implies a campaign retrain, not just a fetch
 
 ### High-yield OAS, full history — tier COMM

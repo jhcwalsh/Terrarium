@@ -54,7 +54,17 @@ GAPS: list[dict[str, str]] = [
         "IMF's own legacy SDMX host is retired and its replacement returned 502. The two best "
         "free options ARE now registered, as what they are and explicitly not as the factor: "
         "fred.CMDTY_GLOBAL (IMF global all-commodities, 1992+) and fred.CMDTY_PPI (US PPI all "
-        "commodities, 1913+, the longest free commodity-linked series).",
+        "commodities, 1913+, the longest free commodity-linked series). "
+        "STATUS CHANGE 2026-08-09 (owner ruling C2, WP-DATA-CMDTY): CLOSED FOR RESEARCH USE "
+        "by the owner-supplied AQR Commodities-for-the-Long-Run set (aqr.cmdty_ew_excess, "
+        "monthly excess return of an investable equal-weight futures portfolio, 1877-02+; "
+        "REG tier -- attribution required, raw data never redistributed, workbook lives in "
+        "gitignored data/aqr/). Total return = excess + the registered risk-free leg, which "
+        "satisfies the factor's total_return numeraire where a PRICE index cannot. "
+        "COMMERCIAL CLEARANCE REMAINS OPEN: AQR's terms cover research/informational use; "
+        "commercial use of the platform on this data is an unresolved registry item, and the "
+        "sealed missing_factor itself stays sealed until the owner ratifies the amendment "
+        "drafted in governance/proposed/.",
         "unlocks": "closes a sealed missing_factor; implies a campaign retrain, not just a fetch",
     },
     {
