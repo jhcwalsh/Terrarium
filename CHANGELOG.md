@@ -13,6 +13,27 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **Campaign R1 Track B — the generator cells on the new vintage**
+  (`scripts/campaign_r1_generator.py` + `campaign_r1_compare.py` ->
+  `docs/data/CAMPAIGN-R1-GENERATOR.md`, served by the tools hub). The six
+  campaign-2 cells (bootstrap-v1 and hier-flow-v1, three seeds, EXISTING
+  checkpoints hash-verified in a fail-fast pre-flight) re-run through
+  `run_ablation_grid.run_cell` verbatim with the reference rebuilt on vintage
+  2026-08-07.5, then compared per-seed against the sealed
+  promotion-verdict.json. RESULT: bootstrap scores bit-identical, hier-flow
+  within 9.4e-8 (float noise), every clause verdict and band-exceedance count
+  unchanged. The finding that makes "identical" honest rather than alarming:
+  15 of 18 factor source series DO differ between the vintages, but every
+  difference is at the trailing edge (2025-10 gap-fills, 2026 months) —
+  after the sealed train+validation boundary the leakage guard stops the
+  reference from reading. So the exhibit proves exact reproducibility under
+  the refreshed catalog and that the refresh changed nothing inside the
+  judged span; it does not test in-span revisions, because there were none.
+  The sealed criterion-bearing check itself refused the re-run (ensemble
+  vintage stamp != expected) — not-a-gate enforced by sealed code. Battery
+  wall-clock: ~11 min per bootstrap cell, ~2.2 h per flow cell on this CPU
+  (the 23-min campaign-2 figure does not reproduce here; recorded for the
+  next scoping).
 - **Campaign R1 Track A — the twin over observed history**
   (`ah/port/campaign_exhibit.py` + `scripts/campaign_r1_translation.py` ->
   `docs/data/CAMPAIGN-R1-TRANSLATION.md`, served by the tools hub). The

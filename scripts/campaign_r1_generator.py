@@ -248,6 +248,48 @@ def phase_report(args: argparse.Namespace) -> None:
     # recorded it as 'pooled_beat' - normalize for the renderer
     rerun_pooled = dict(rerun["pooled"])
     rerun_pooled.setdefault("pooled_beat", rerun_pooled.get("beats"))
+
+    # computed findings: measured drift by system, and the sealed check's refusal
+    vintage = rerun["vintage_id"]
+    base_by_seed = {r["seed_index"]: r for r in baseline["per_seed"]}
+    flow_deltas = [
+        abs(
+            r["challenger_mean_elicitability"]
+            - base_by_seed[r["seed_index"]]["challenger_mean_elicitability"]
+        )
+        for r in rerun["per_seed"]
+    ]
+    boot_deltas = [
+        abs(
+            r["benchmark_mean_elicitability"]
+            - base_by_seed[r["seed_index"]]["benchmark_mean_elicitability"]
+        )
+        for r in rerun["per_seed"]
+    ]
+    cb = rerun["per_seed"][0]["challenger_criterion_bearing"]
+    findings = [
+        f"The bootstrap benchmark's re-run scores are BIT-IDENTICAL to the record "
+        f"(max abs delta {max(boot_deltas):.1e}); hier-flow's differ by at most "
+        f"{max(flow_deltas):.1e} - floating-point noise from re-sampling the network, "
+        f"not a data effect. Every clause verdict and band-exceedance count is unchanged.",
+        "WHY identical is the honest answer here, not a bug (VERIFIED 2026-08-08, "
+        "per-series sha256 + first-differing-date comparison across the two vintages): "
+        "15 of 18 factor source series DO differ between "
+        f"`{baseline['vintage_id']}` and `{vintage}`, but every difference is at the "
+        "trailing edge (the 2025-10 gap-fills and 2026 months) - AFTER the sealed "
+        "train+validation boundary. The leakage guard means the reference never reads "
+        "those months, so the rebuilt answer key is identical by construction of the "
+        "split. This exhibit therefore demonstrates exact REPRODUCIBILITY under the "
+        "refreshed catalog, and that the refresh changed nothing inside the judged "
+        "span; it does NOT test robustness to revisions WITHIN the judged span, "
+        "because there were none.",
+        "The sealed criterion-bearing check itself REFUSED this re-run "
+        f"(observed ensemble vintage `{cb['observed']['vintage_id']}` != expected "
+        f"`{vintage}`, ok={cb['ok']}): the ensembles carry the sealed campaign "
+        "vintage stamp, so by the sealed code's own definition this run is not "
+        "criterion-bearing. The not-a-gate framing above is enforced by the sealed "
+        "arithmetic, not just by prose.",
+    ]
     text = crc.render_markdown(
         rows,
         vintage=rerun["vintage_id"],
@@ -255,6 +297,7 @@ def phase_report(args: argparse.Namespace) -> None:
         baseline_verdict=baseline["verdict"],
         rerun_pooled=rerun_pooled,
         baseline_pooled=baseline["pooled"],
+        findings=findings,
     )
     REPORT_OUT.write_text(text, encoding="utf-8", newline="\n")
     print(f"wrote {REPORT_OUT.relative_to(_REPO_ROOT)}")

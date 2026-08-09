@@ -87,6 +87,35 @@ def test_render_pins_the_not_a_gate_header():
     text.encode("ascii")
 
 
+def test_render_carries_findings_when_given():
+    baseline = _doc([-0.34])
+    rerun = _doc([-0.34])
+    text = crc.render_markdown(
+        crc.compare_cells(baseline, rerun),
+        vintage="v-new",
+        baseline_vintage="v-old",
+        baseline_verdict="PROMOTE",
+        rerun_pooled=rerun["pooled"],
+        baseline_pooled=baseline["pooled"],
+        findings=["the finding text"],
+    )
+    assert "## Findings" in text and "the finding text" in text
+
+
+def test_generator_report_is_committed_with_the_findings():
+    """Written after the real re-run: the report must exist, carry the guard
+    header, and state the three findings — bit-identical grading, the
+    trailing-edge explanation, and the sealed check's refusal."""
+    path = ROOT / "docs" / "data" / "CAMPAIGN-R1-GENERATOR.md"
+    assert path.exists(), "run scripts/campaign_r1_generator.py --phase report"
+    text = path.read_text(encoding="utf-8")
+    assert "not a gate" in text.lower()
+    assert "BIT-IDENTICAL" in text
+    assert "train+validation boundary" in text
+    assert "REFUSED" in text and "criterion-bearing" in text
+    assert "2026-08-07.5" in text and "2026-08-02.4" in text
+
+
 def test_runner_plans_exactly_the_six_campaign_cells():
     crg = _load_script("campaign_r1_generator")
 

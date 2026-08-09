@@ -61,6 +61,7 @@ def render_markdown(
     baseline_verdict: str,
     rerun_pooled: dict[str, Any],
     baseline_pooled: dict[str, Any],
+    findings: list[str] | None = None,
 ) -> str:
     """The Track B report. Guard header is pinned by test — do not soften it."""
     lines = [
@@ -94,6 +95,10 @@ def render_markdown(
             lines.append(
                 f"| {r['seed_index']} | {r['metric']} | {rec:.6f} | {new:.6f} | {delta:+.6f} |"
             )
+    if findings:
+        lines += ["", "## Findings", ""]
+        for f in findings:
+            lines.append(f"- {f}")
     lines += [
         "",
         "## Pooled (the sealed multi-seed rule's arithmetic, both vintages)",
