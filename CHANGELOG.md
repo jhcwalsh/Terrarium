@@ -13,6 +13,26 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-CMDTY — the sealed commodities gap closed in kind, pending
+  ratification (owner rulings C1-C3, 2026-08-09).** The owner-supplied AQR
+  Commodities-for-the-Long-Run workbook (monthly excess returns of an
+  investable equal-weight futures portfolio, 1877-02+, (c)2018
+  Levine-Ooi-Richardson) enters as a REG-tier manual intake: the workbook
+  lives in gitignored `data/aqr/` and is NEVER committed (a test pins that
+  no committable path carries it); `connectors/aqr_cftlr.py` locates
+  columns by content and refuses ambiguity; `ah.data.cmdty_close` builds
+  `aqr.cmdty_ew_tr = excess + french.rf` (1,187 months, 1926-07+;
+  excess-only pre-history excluded, never zero-filled) — satisfying the
+  sealed factor's total_return numeraire that every free source lacked.
+  Verified (`docs/data/CMDTY-REPORT.md`): parse cross-checks vs the
+  registered free price indices (corr 0.56 vs IMF global, 0.25 vs the
+  smoothed PPI — different baskets, co-movement not identity); episodes
+  read true unprompted (1930-32 cumulative -73%, 1973-74 +156%, 2008 -34%,
+  2020-22 +58%). The sealed missing_factor is STILL sealed (tested);
+  `governance/proposed/PROPOSED-AM-commodities-close.md` drafts the
+  ratification (re-seal + future-campaigns-only activation); the licence
+  registry's commodities gap now reads CLOSED FOR RESEARCH USE with
+  commercial clearance OPEN.
 - **WP-DATA-UST2YEXT — ust_2y extended to 1953 by curve interpolation
   (owner rulings U1-U3, 2026-08-09).** `ah.data.ust2y_extend` recreates the
   2-year yield below DGS2's 1976-06 start from its observed curve
