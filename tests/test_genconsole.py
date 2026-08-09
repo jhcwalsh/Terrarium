@@ -73,3 +73,56 @@ def test_scan_runs_renders_states_not_exceptions(tmp_path):
 
 def test_scan_runs_handles_a_missing_root(tmp_path):
     assert gc.scan_runs(tmp_path / "nope") == []
+
+
+@pytest.mark.enable_socket
+def test_app_builds_a_decade_and_serves_the_stages():
+    import time
+
+    from fastapi.testclient import TestClient
+
+    client = TestClient(gc.app)
+    r = client.post("/api/decade", json={"seed": 5, "checkpoint": 0})
+    run_id = r.json()["run_id"]
+    for _ in range(600):
+        state = client.get(f"/api/decade/{run_id}").json()
+        if state["done"]:
+            break
+        time.sleep(0.5)
+    assert state["done"] and state["error"] is None
+    assert state["stages"] == list(gc.STAGES)
+    page = client.get(f"/decade/{run_id}")
+    assert page.status_code == 200
+    assert "Climate (L1)" in page.text and "Joinery (L4)" in page.text
+
+
+@pytest.mark.enable_socket
+def test_app_unknown_run_is_404_and_runs_page_serves():
+    from fastapi.testclient import TestClient
+
+    client = TestClient(gc.app)
+    assert client.get("/api/decade/nope").status_code == 404
+    assert client.get("/decade/nope").status_code == 404
+    assert client.get("/runs").status_code == 200
+
+
+@pytest.mark.enable_socket
+def test_a_failed_run_surfaces_its_error_on_the_page(monkeypatch):
+    import time
+
+    from fastapi.testclient import TestClient
+
+    def boom(*args, **kwargs):
+        raise ValueError("checkpoint hash mismatch (test)")
+
+    monkeypatch.setattr(gc, "build_decade", boom)
+    client = TestClient(gc.app)
+    run_id = client.post("/api/decade", json={"seed": 1, "checkpoint": 0}).json()["run_id"]
+    for _ in range(100):
+        state = client.get(f"/api/decade/{run_id}").json()
+        if state["done"]:
+            break
+        time.sleep(0.05)
+    assert state["done"] and "hash mismatch" in state["error"]
+    page = client.get(f"/decade/{run_id}")
+    assert page.status_code == 200 and "run failed" in page.text

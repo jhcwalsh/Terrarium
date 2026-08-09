@@ -226,3 +226,270 @@ def scan_runs(experiments_root: Path) -> list[dict[str, Any]]:
             cells.append(row)
         campaigns.append({"campaign": cdir.name, "cells": cells})
     return campaigns
+
+
+# --------------------------------------------------------------------------- #
+# the app
+# --------------------------------------------------------------------------- #
+
+import html  # noqa: E402
+
+from fastapi import FastAPI, HTTPException  # noqa: E402
+from fastapi.responses import HTMLResponse, JSONResponse  # noqa: E402
+from pydantic import BaseModel  # noqa: E402
+
+WATERMARK = "GENERATOR CONSOLE - how a decade gets built; nothing here is a score"
+
+_CSS = """
+body{font-family:Segoe UI,system-ui,sans-serif;margin:0;background:#fafafa;color:#222}
+nav{background:#1a237e;padding:8px 16px}nav a{color:#fff;margin-right:16px;text-decoration:none}
+.wm{background:#fff3cd;padding:4px 16px;font-size:12px;color:#664d03}
+main{padding:16px;max-width:1080px}
+table{border-collapse:collapse;margin:8px 0}td,th{border:1px solid #ccc;padding:3px 8px;font-size:13px}
+.stage{background:#fff;border:1px solid #ddd;border-radius:6px;padding:12px;margin:12px 0}
+.ribbon{display:flex;height:28px}.ribbon div{flex:1}
+.err{background:#f8d7da;padding:8px;border-radius:4px}
+.small{font-size:12px;color:#555}
+form{background:#fff;border:1px solid #ddd;padding:12px;border-radius:6px;display:inline-block}
+.done{color:#0a6e0a}.running{color:#b36b00}.unreadable{color:#a00}
+"""
+
+_REGIME_COLORS = {
+    "EXP": "#7dc87d",
+    "SLOW": "#e6d97a",
+    "REC": "#e8a44a",
+    "CRI": "#d9534f",
+    "STAG": "#a678c8",
+    "REF": "#6fa8dc",
+}
+
+
+def _e(x: Any) -> str:
+    return html.escape(str(x))
+
+
+def _page(title: str, body: str, *, refresh: int | None = None) -> HTMLResponse:
+    meta = f"<meta http-equiv='refresh' content='{refresh}'>" if refresh else ""
+    return HTMLResponse(
+        f"<!doctype html><html><head><meta charset='utf-8'><title>{_e(title)}</title>"
+        f"{meta}<style>{_CSS}</style></head><body>"
+        f'<div class="wm">{_e(WATERMARK)}</div>'
+        f'<nav><a href="/">build a decade</a><a href="/runs">live runs</a>'
+        f'<a href="http://127.0.0.1:8795/">hub (8795)</a></nav>'
+        f"<main>{body}</main></body></html>"
+    )
+
+
+def _poly_svg(series: list[float], *, title: str, width: int = 560, height: int = 120) -> str:
+    if not series:
+        return f"<p class='small'>{_e(title)}: no data</p>"
+    lo, hi = min(series), max(series)
+    span = (hi - lo) or 1.0
+    pts = " ".join(
+        f"{i * width / max(1, len(series) - 1):.1f},{height - (v - lo) / span * height:.1f}"
+        for i, v in enumerate(series)
+    )
+    return (
+        f"<div><b class='small'>{_e(title)}</b> "
+        f"<span class='small'>[{lo:.4g} .. {hi:.4g}]</span><br>"
+        f"<svg width='{width}' height='{height}' viewBox='0 0 {width} {height}'>"
+        f"<rect width='{width}' height='{height}' fill='#fff' stroke='#ddd'/>"
+        f"<polyline points='{pts}' fill='none' stroke='#1a237e' stroke-width='1'/></svg></div>"
+    )
+
+
+def _ribbon_svg(labels: list[str]) -> str:
+    cells = "".join(
+        f"<div style='background:{_REGIME_COLORS.get(label, '#ccc')}' title='{_e(label)} m{i}'></div>"
+        for i, label in enumerate(labels)
+    )
+    legend = " ".join(
+        f"<span style='background:{c};padding:1px 6px'>{_e(name)}</span>"
+        for name, c in _REGIME_COLORS.items()
+    )
+    return f"<div class='ribbon'>{cells}</div><p class='small'>{legend}</p>"
+
+
+#: run records: run_id -> {"stages": [(name, payload)], "error", "done", "summary"}
+_RUNS: dict[str, dict[str, Any]] = {}
+_RUNS_LOCK = threading.Lock()
+_RUN_COUNTER = 0
+_MAX_RUNS = 8
+
+#: test seam: when set, passed straight through to build_decade
+TESTING_SAMPLER: Any = None
+
+app = FastAPI(title="generator console")
+
+
+def _start_run(seed: int, checkpoint: int) -> str:
+    global _RUN_COUNTER
+    with _RUNS_LOCK:
+        _RUN_COUNTER += 1
+        run_id = f"{seed}-{checkpoint}-{_RUN_COUNTER}"
+        _RUNS[run_id] = {"stages": [], "error": None, "done": False, "summary": None}
+        while len(_RUNS) > _MAX_RUNS:
+            _RUNS.pop(next(iter(_RUNS)))
+
+    def work() -> None:
+        record = _RUNS.get(run_id)
+        if record is None:
+            return
+        try:
+            summary = build_decade(
+                seed,
+                checkpoint,
+                on_stage=lambda name, payload: record["stages"].append((name, payload)),
+                sampler_override=TESTING_SAMPLER,
+            )
+            record["summary"] = summary
+        except Exception as exc:  # a pin mismatch is a page error, never a 500
+            record["error"] = str(exc)
+        finally:
+            record["done"] = True
+
+    threading.Thread(target=work, daemon=True).start()
+    return run_id
+
+
+@app.get("/", response_class=HTMLResponse)
+def index() -> HTMLResponse:
+    body = (
+        "<h1>Build a decade</h1>"
+        "<p>One decade, the real four layers, the campaign-2 checkpoint "
+        "(hash-verified). Same seed, same page - always.</p>"
+        "<form method='get' action='/decade/start'>"
+        "seed <input name='seed' type='number' value='0'> "
+        "checkpoint <select name='checkpoint'><option>0</option><option>1</option>"
+        "<option>2</option></select> "
+        "<button type='submit'>build</button></form>"
+    )
+    return _page("generator console", body)
+
+
+class DecadeRequest(BaseModel):
+    seed: int = 0
+    checkpoint: int = 0
+
+
+@app.get("/decade/start", response_class=HTMLResponse)
+def start_decade(seed: int = 0, checkpoint: int = 0) -> HTMLResponse:
+    """Form target. A side-effecting GET is tolerated on this internal console
+    because HTML forms cannot POST without the python-multipart dependency,
+    which is not in the plan's dependency budget."""
+    run_id = _start_run(seed, checkpoint)
+    return HTMLResponse(status_code=303, headers={"Location": f"/decade/{run_id}"}, content="")
+
+
+@app.post("/api/decade")
+def api_start(req: DecadeRequest) -> JSONResponse:
+    return JSONResponse({"run_id": _start_run(req.seed, req.checkpoint)})
+
+
+@app.get("/api/decade/{run_id}")
+def api_run(run_id: str) -> JSONResponse:
+    record = _RUNS.get(run_id)
+    if record is None:
+        raise HTTPException(404, "no such run")
+    return JSONResponse(
+        {
+            "done": record["done"],
+            "error": record["error"],
+            "stages": [name for name, _ in record["stages"]],
+            "summary": record["summary"],
+        }
+    )
+
+
+def _render_stage(name: str, payload: dict[str, Any]) -> str:
+    if name == "climate":
+        charts = "".join(
+            _poly_svg(series, title=f"L1 slow state: {state}")
+            for state, series in payload["states"].items()
+        )
+        return f"<div class='stage'><h2>1 - Climate (L1)</h2>{charts}</div>"
+    if name == "seasons":
+        rows = "".join(
+            f"<tr><td>{_e(s['label'])}</td><td>m{s['start']}</td><td>{s['months']}</td></tr>"
+            for s in payload["durations"]
+        )
+        return (
+            f"<div class='stage'><h2>2 - Seasons (L2)</h2>{_ribbon_svg(payload['labels'])}"
+            f"<table><tr><th>regime</th><th>starts</th><th>months</th></tr>{rows}</table></div>"
+        )
+    if name == "weather":
+        charts = "".join(
+            _poly_svg(series, title=f"factor: {factor}")
+            for factor, series in payload["factors"].items()
+        )
+        seams = ", ".join(f"m{b['start']} ({_e(b['regime'])})" for b in payload["blocks"])
+        return (
+            f"<div class='stage'><h2>3 - Weather (L3)</h2>"
+            f"<p class='small'>block seams every {payload['block_months']} months: {seams}. "
+            "The pipeline does not retain raw pre-stitch blocks; seams and conditioning "
+            "are shown on the stitched stream, and the stitching corrections are the "
+            "next panel.</p>"
+            f"{charts}</div>"
+        )
+    if name == "joinery":
+        recon_rows = "".join(
+            f"<tr><td>{_e(factor)}</td><td>{_e(info)}</td></tr>"
+            for factor, info in payload["reconciliation"].items()
+        )
+        stat_rows = "".join(
+            f"<tr><td>{_e(factor)}</td><td>{_e(metric)}</td>"
+            f"<td>{vals['decade']:.4f}</td><td>{vals['historical']:.4f}</td></tr>"
+            for factor, metrics in payload["filter_stats"].items()
+            for metric, vals in metrics.items()
+        )
+        return (
+            f"<div class='stage'><h2>4 - Joinery (L4)</h2>"
+            f"<h3>reconciliation</h3><table>{recon_rows}</table>"
+            f"<h3>filter statistics</h3><p class='small'>{_e(payload['filter_note'])}</p>"
+            f"<table><tr><th>factor</th><th>metric</th><th>this decade</th>"
+            f"<th>historical</th></tr>{stat_rows}</table></div>"
+        )
+    return f"<div class='stage'>{_e(name)}</div>"
+
+
+@app.get("/decade/{run_id}", response_class=HTMLResponse)
+def decade_page(run_id: str) -> HTMLResponse:
+    record = _RUNS.get(run_id)
+    if record is None:
+        raise HTTPException(404, "no such run")
+    parts = [f"<h1>Decade run {_e(run_id)}</h1>"]
+    if record["error"]:
+        parts.append(f"<div class='err'>run failed: {_e(record['error'])}</div>")
+    for name, payload in list(record["stages"]):
+        parts.append(_render_stage(name, payload))
+    if not record["done"]:
+        done = len(record["stages"])
+        parts.append(f"<p class='small'>building... stage {done + 1} of {len(STAGES)}</p>")
+    elif record["summary"]:
+        parts.append(
+            f"<p class='small'>done - checkpoint {_e(record['summary']['checkpoint_hash'][:16])}"
+            "...</p>"
+        )
+    return _page(f"decade {run_id}", "".join(parts), refresh=None if record["done"] else 3)
+
+
+@app.get("/runs", response_class=HTMLResponse)
+def runs_page() -> HTMLResponse:
+    campaigns = scan_runs(_REPO_ROOT / "experiments")
+    parts = ["<h1>Live runs</h1><p class='small'>what the artifacts on disk say; 30s refresh</p>"]
+    if not campaigns:
+        parts.append("<p>no campaign artifacts found under experiments/</p>")
+    for c in campaigns:
+        rows = "".join(
+            f"<tr><td>{_e(cell['slug'])}</td>"
+            f"<td class='{_e(cell['status'])}'>{_e(cell['status'])}</td>"
+            f"<td>{_e(cell.get('timings', {}).get('total_s', ''))}</td>"
+            f"<td>{_e(cell.get('criterion_bearing', ''))}</td>"
+            f"<td>{_e(cell.get('passed_unfiltered', ''))}</td></tr>"
+            for cell in c["cells"]
+        )
+        parts.append(
+            f"<h2>{_e(c['campaign'])}</h2><table><tr><th>cell</th><th>status</th>"
+            f"<th>total s</th><th>criterion</th><th>passed</th></tr>{rows}</table>"
+        )
+    return _page("live runs", "".join(parts), refresh=30)
