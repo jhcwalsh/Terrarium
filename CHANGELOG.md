@@ -13,6 +13,23 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **The generator console (owner request 2026-08-08).** `ah/genconsole.py` on
+  port 8797, in the console family: watch one hier-flow decade get built
+  through the real four layers — the L1 slow-state paths, the L2 regime
+  ribbon with durations, the L3 stitched factor stream with block seams and
+  per-block conditioning, and the L4 reconciliation plus the acceptance
+  filter's statistics (with the honest caveat that a single decade has
+  statistics, not a verdict). Campaign-2 checkpoints hash-verified per run;
+  climate/regimes sha pins enforced; a pin mismatch is a page error, never a
+  fallback. Same seed, same page — a test pins bit-identical reruns, riding
+  the platform seed rule that makes decade 0 of a batched ensemble equal a
+  single-decade rebuild. Second tab: a live-runs monitor that reads
+  `experiments/*/cells/` artifacts directly (done/running/unreadable as
+  STATES, not exceptions). Read-only throughout; nothing in `ah/gen/` was
+  edited — the joinery's per-decade private classes are consumed read-only
+  as a recorded dependency. Deviation from the plan, recorded: the HTML form
+  starts a run via GET (FastAPI's Form needs python-multipart, outside the
+  dependency budget); the JSON API POSTs.
 - **Campaign R1 Track B — the generator cells on the new vintage**
   (`scripts/campaign_r1_generator.py` + `campaign_r1_compare.py` ->
   `docs/data/CAMPAIGN-R1-GENERATOR.md`, served by the tools hub). The six

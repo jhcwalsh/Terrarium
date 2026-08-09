@@ -36,9 +36,7 @@ def test_same_seed_is_bit_identical():
         return out
 
     a, b = run(7), run(7)
-    assert json.dumps(a, sort_keys=True, default=str) == json.dumps(
-        b, sort_keys=True, default=str
-    )
+    assert json.dumps(a, sort_keys=True, default=str) == json.dumps(b, sort_keys=True, default=str)
 
 
 def test_scan_runs_renders_states_not_exceptions(tmp_path):

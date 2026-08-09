@@ -20,10 +20,9 @@ from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
-
-import numpy as np
+from typing import Any
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 _CHECKPOINT_MANIFEST = _REPO_ROOT / "configs" / "campaign2-checkpoints.json"
