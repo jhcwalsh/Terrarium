@@ -53,6 +53,19 @@ def build() -> None:
         ),
     )
     _write(
+        FX / "fred" / "vxo.json",
+        json.dumps(
+            {
+                "observations": [
+                    {"date": "2020-01-02", "value": "2.4"},
+                    {"date": "2020-01-03", "value": "4.8"},
+                    {"date": "2020-02-03", "value": "."},
+                    {"date": "2020-02-04", "value": "6.0"},
+                ]
+            }
+        ),
+    )
+    _write(
         FX / "fred" / "tb3ms.json",
         json.dumps(
             {

@@ -91,7 +91,10 @@ src = ["src", "tests"]
 # exactly as before.
 # docs/data/client.py is the VENDORED PriMaRS API reference (imports a module
 # that only exists in its home repo) - a contract document, not repo code.
-extend-exclude = ["*.md", "docs/data/client.py"]
+# Instructions/REFERENCE-vix_backcast.py is the owner's specification sketch
+# for WP-DATA-VOLEXT ("treat it as a specification sketch, not code to
+# vendor") - the rewrite it specifies is src/ah/data/vol_backcast.py.
+extend-exclude = ["*.md", "docs/data/client.py", "Instructions/REFERENCE-vix_backcast.py"]
 
 [tool.ruff.lint]
 select = [
