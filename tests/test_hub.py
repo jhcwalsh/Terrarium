@@ -60,6 +60,11 @@ def test_md_to_html_covers_the_repo_subset():
     assert "&lt;tag&gt;" in out  # code blocks escape HTML
 
 
+def test_md_to_html_strips_header_anchors():
+    out = md_to_html("## The two hardest questions {#hardest-questions}")
+    assert out == "<h2>The two hardest questions</h2>"  # pandoc-style anchor never renders
+
+
 def test_md_to_html_joins_wrapped_paragraphs():
     out = md_to_html("*An italic caption\nwrapped across lines.*\n\nNext paragraph.")
     assert "<i>An italic caption wrapped across lines.</i>" in out  # emphasis survives the wrap
@@ -85,12 +90,19 @@ def test_methodology_doc_serves_with_inlined_figures():
     assert r.text.count("<figure>") == 2  # both exhibits inlined, not ![...] text
 
 
-def test_methodology_pdf_route():
+def test_pdf_routes_serve_only_committed_pdfs():
     c = TestClient(app)
-    r = c.get("/methodology.pdf")
-    assert r.status_code in (200, 404)  # 404 only if the PDF is absent from the checkout
-    if r.status_code == 200:
-        assert r.headers["content-type"] == "application/pdf"
+    assert c.get("/pdf/no-such-doc").status_code == 404
+    served = 0
+    for slug in DOCS:
+        r = c.get(f"/pdf/{slug}")
+        assert r.status_code in (200, 404)  # 404 only when no PDF sibling is committed
+        if r.status_code == 200:
+            served += 1
+            assert r.headers["content-type"] == "application/pdf"
+    assert served >= 4  # the manual, the method, D-05 and P1 PDFs are committed
+    for alias in ("/manual.pdf", "/methodology.pdf"):  # links that predate /pdf/<slug>
+        assert c.get(alias).status_code == 200
 
 
 def test_hub_is_static_no_write_call_sites():

@@ -21,8 +21,6 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 MANUAL_PATH = _REPO_ROOT / "docs" / "PLAIN-ENGLISH-USER-MANUAL.md"
-MANUAL_PDF_PATH = _REPO_ROOT / "docs" / "PLAIN-ENGLISH-USER-MANUAL.pdf"
-METHODOLOGY_PDF_PATH = _REPO_ROOT / "docs" / "METHODOLOGY.pdf"
 WATERMARK = "TOOLS HUB — every surface, what it answers, how to reach it"
 
 #: Papers and documents served at /doc/<slug>. An ALLOWLIST — the hub serves
@@ -253,6 +251,16 @@ def _e(x: Any) -> str:
     return html.escape(str(x))
 
 
+def _doc_pdf(slug: str) -> Path | None:
+    """The committed PDF sibling of an allowlisted document, or None. Built
+    by scripts/build_doc_pdf.py; served at /pdf/<slug>."""
+    entry = DOCS.get(slug)
+    if entry is None:
+        return None
+    path = (_REPO_ROOT / entry[0]).with_suffix(".pdf")
+    return path if path.exists() else None
+
+
 def md_to_html(text: str, base: Path | None = None) -> str:
     """A deliberately small markdown subset -> HTML: headers, fenced code,
     tables, lists, hr, bold/italic/code/links, images, paragraphs. Consecutive
@@ -327,7 +335,8 @@ def md_to_html(text: str, base: Path | None = None) -> str:
                 out.append("</ul>")
                 in_list = False
             level = min(len(stripped) - len(stripped.lstrip("#")), 4)
-            out.append(f"<h{level}>{inline(stripped.lstrip('#').strip())}</h{level}>")
+            text_part = re.sub(r"\s*\{#[^}]*\}\s*$", "", stripped.lstrip("#").strip())
+            out.append(f"<h{level}>{inline(text_part)}</h{level}>")
         elif (m := re.fullmatch(r"!\[([^\]]*)\]\(([^)\s]+)\)", stripped)) is not None:
             flush_para()
             if in_list:
@@ -384,7 +393,11 @@ def hub() -> HTMLResponse:
         f'<div class="card"><code>{_e(cmd)}</code><p class="what">{_e(why)}</p></div>'
         for cmd, why in COMMANDS
     )
-    pdf_link = ' · <a href="/manual.pdf">download as PDF</a>' if MANUAL_PDF_PATH.exists() else ""
+    pdf_link = (
+        ' · <a href="/manual.pdf">download as PDF</a>'
+        if _doc_pdf("plain-english-manual") is not None
+        else ""
+    )
     manual_note = (
         f'<div class="card"><b><a href="/doc/plain-english-manual">The plain-English '
         f"manual</a></b>{pdf_link}"
@@ -395,15 +408,14 @@ def hub() -> HTMLResponse:
         else '<div class="card"><p class="what">Plain-English manual not found at '
         "docs/PLAIN-ENGLISH-USER-MANUAL.md.</p></div>"
     )
-    methodology_pdf_link = (
-        ' &middot; <a href="/methodology.pdf">download as PDF</a>'
-        if METHODOLOGY_PDF_PATH.exists()
-        else ""
-    )
     doc_cards = "".join(
         f'<div class="card"><b><a href="/doc/{_e(slug)}">{_e(title)}</a></b>'
-        f"{methodology_pdf_link if slug == 'methodology' else ''}"
-        f'<p class="what">{_e(blurb)}</p></div>'
+        + (
+            f' &middot; <a href="/pdf/{_e(slug)}">download as PDF</a>'
+            if _doc_pdf(slug) is not None
+            else ""
+        )
+        + f'<p class="what">{_e(blurb)}</p></div>'
         for slug, (rel, title, blurb) in DOCS.items()
         if slug != "plain-english-manual" and (_REPO_ROOT / rel).exists()
     )
@@ -431,18 +443,28 @@ def manual() -> PlainTextResponse:
     return PlainTextResponse(MANUAL_PATH.read_text(encoding="utf-8"))
 
 
+def _pdf_response(slug: str) -> FileResponse:
+    path = _doc_pdf(slug)
+    if path is None:
+        raise HTTPException(404, "no PDF for that document; see scripts/build_doc_pdf.py")
+    return FileResponse(path, media_type="application/pdf")
+
+
+@app.get("/pdf/{slug}")
+def doc_pdf(slug: str) -> FileResponse:
+    return _pdf_response(slug)
+
+
 @app.get("/manual.pdf")
 def manual_pdf() -> FileResponse:
-    if not MANUAL_PDF_PATH.exists():
-        raise HTTPException(404, "PDF not generated; see scripts/build_manual_pdf.py")
-    return FileResponse(MANUAL_PDF_PATH, media_type="application/pdf")
+    # Alias kept for links that predate /pdf/<slug>.
+    return _pdf_response("plain-english-manual")
 
 
 @app.get("/methodology.pdf")
 def methodology_pdf() -> FileResponse:
-    if not METHODOLOGY_PDF_PATH.exists():
-        raise HTTPException(404, "PDF not generated; see scripts/build_methodology_pdf.py")
-    return FileResponse(METHODOLOGY_PDF_PATH, media_type="application/pdf")
+    # Alias kept for links that predate /pdf/<slug>.
+    return _pdf_response("methodology")
 
 
 _DOC_CSS = (
