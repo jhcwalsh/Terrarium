@@ -13,6 +13,22 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-FSEXT — funding_spread extended both ways on CP-bill (owner
+  rulings F1-F3, 2026-08-09).** `ah.data.funding_extend` chains the CP leg
+  (CPF3M live / CP3M 1971-97 / NBER prime CP 1857-1971, mean-offset joins
+  with measured residuals) over the bill leg (TB3M_SEC, TB3MS before 1954)
+  and maps CP-bill onto TED by level regression on their 1986-2022 overlap:
+  corr 0.9652, RMSE 0.109 pct on 433 months (`docs/data/FSEXT-REPORT.md`,
+  live-verified). Fills BOTH ends — 624 proxy months backward to 1934-01
+  (F3 floor: the bill leg's start) and 55 forward closing the known
+  post-TED train+validation hole (F2) — a recorded deviation from the
+  splice framework's backward-only shape; observed TED months are never
+  touched. Episodes read true: Franklin National 1974 peaks at 5.32, Penn
+  Central 2.17, 1937-38 at 1.12. Same sealed-surface posture as VOLEXT
+  (factors.yaml/derive.py hashed; nothing sealed learns rule
+  `PROXY-FUNDING-CPBILL-V1`, tested); the span draft gains an addendum: the
+  ratifiable floor is now 1984-01, where `hqm_curve` binds. Donors
+  `fred.CP3M` and `fred.CP3M_NBER` registered warn-only.
 - **WP-DATA-VOLEXT Stage 2 — the model backcast below 1986, PASS on all
   registered thresholds.** `ah.data.vol_backcast`: monthly log implied vol
   on a HAR cascade of trailing realized vol plus tail severity (the sketch's

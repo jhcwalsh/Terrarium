@@ -62,9 +62,9 @@
 | `cliffwater.cdli_ret_q` | cliffwater | Q | P0 |  |
 | `nareit.all_equity_tr` | nareit | M | P0 |  |
 
-### FREE (46 series)
+### FREE (50 series)
 
-No licence needed. By source: `bis` (1), `fred` (28), `french` (5), `jst` (8), `shiller` (4).
+No licence needed. By source: `bis` (1), `fred` (30), `french` (7), `jst` (8), `shiller` (4).
 
 ## Part 2 — gaps: needed, unlicensed, no series registered
 
