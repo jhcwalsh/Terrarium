@@ -22,6 +22,7 @@ from fastapi.responses import FileResponse, HTMLResponse, PlainTextResponse
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 MANUAL_PATH = _REPO_ROOT / "docs" / "PLAIN-ENGLISH-USER-MANUAL.md"
 MANUAL_PDF_PATH = _REPO_ROOT / "docs" / "PLAIN-ENGLISH-USER-MANUAL.pdf"
+METHODOLOGY_PDF_PATH = _REPO_ROOT / "docs" / "METHODOLOGY.pdf"
 WATERMARK = "TOOLS HUB — every surface, what it answers, how to reach it"
 
 #: Papers and documents served at /doc/<slug>. An ALLOWLIST — the hub serves
@@ -33,6 +34,13 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "The plain-English manual",
         "Start here: what this platform is, what it honestly is not, and every "
         "task walked through without assuming you know a terminal.",
+    ),
+    "methodology": (
+        "docs/METHODOLOGY.md",
+        "The Terrarium Method",
+        "The consolidated summary: the approach in one page, the six enforced "
+        "honesty constraints, the academic lineage table, a plain-English "
+        "walkthrough, and the referee-facing caveats. Sits above D-05 and P1.",
     ),
     "methodology-note": (
         "docs/D-05-methodology-note.md",
@@ -245,10 +253,18 @@ def _e(x: Any) -> str:
     return html.escape(str(x))
 
 
-def md_to_html(text: str) -> str:
+def md_to_html(text: str, base: Path | None = None) -> str:
     """A deliberately small markdown subset -> HTML: headers, fenced code,
-    tables, lists, hr, bold/italic/code/links, paragraphs. Enough for this
-    repo's documents; anything unrecognized renders as an escaped paragraph."""
+    tables, lists, hr, bold/italic/code/links, images, paragraphs. Consecutive
+    plain lines join into one paragraph (standard markdown), so emphasis may
+    wrap across source lines. Enough for this repo's documents; anything
+    unrecognized renders as an escaped paragraph.
+
+    ``base``: when given, a standalone ``![alt](name.svg)`` line whose target
+    is a *sibling file* of ``base`` (no path separators, so the allowlist
+    cannot be escaped) is inlined as the SVG's own markup with the alt text as
+    a caption. Without ``base``, or when the file is absent, the alt text
+    renders as an italic placeholder — never the raw ``![...]`` line."""
     import re
 
     def inline(s: str) -> str:
@@ -263,9 +279,17 @@ def md_to_html(text: str) -> str:
     lines = text.splitlines()
     i = 0
     in_list = False
+    para: list[str] = []
+
+    def flush_para() -> None:
+        if para:
+            out.append(f"<p>{inline(' '.join(para))}</p>")
+            para.clear()
+
     while i < len(lines):
         line = lines[i]
         if line.startswith("```"):
+            flush_para()
             if in_list:
                 out.append("</ul>")
                 in_list = False
@@ -278,6 +302,7 @@ def md_to_html(text: str) -> str:
             i += 1
             continue
         if line.startswith("|") and i + 1 < len(lines) and set(lines[i + 1]) <= set("|-: "):
+            flush_para()
             if in_list:
                 out.append("</ul>")
                 in_list = False
@@ -292,18 +317,42 @@ def md_to_html(text: str) -> str:
             continue
         stripped = line.strip()
         if not stripped:
+            flush_para()
             if in_list:
                 out.append("</ul>")
                 in_list = False
         elif stripped.startswith("#"):
+            flush_para()
             if in_list:
                 out.append("</ul>")
                 in_list = False
             level = min(len(stripped) - len(stripped.lstrip("#")), 4)
             out.append(f"<h{level}>{inline(stripped.lstrip('#').strip())}</h{level}>")
+        elif (m := re.fullmatch(r"!\[([^\]]*)\]\(([^)\s]+)\)", stripped)) is not None:
+            flush_para()
+            if in_list:
+                out.append("</ul>")
+                in_list = False
+            alt, src = m.group(1), m.group(2)
+            target = base / src if base is not None else None
+            if (
+                target is not None
+                and src.endswith(".svg")
+                and "/" not in src
+                and "\\" not in src
+                and target.is_file()
+            ):
+                out.append(
+                    f"<figure>{target.read_text(encoding='utf-8')}"
+                    f"<figcaption>{_e(alt)}</figcaption></figure>"
+                )
+            else:
+                out.append(f"<p><i>[figure: {_e(alt)}]</i></p>")
         elif stripped in ("---", "***", "___"):
+            flush_para()
             out.append("<hr>")
         elif stripped.startswith(("- ", "* ")):
+            flush_para()
             if not in_list:
                 out.append("<ul>")
                 in_list = True
@@ -312,8 +361,9 @@ def md_to_html(text: str) -> str:
             if in_list:
                 out.append("</ul>")
                 in_list = False
-            out.append(f"<p>{inline(stripped)}</p>")
+            para.append(stripped)
         i += 1
+    flush_para()
     if in_list:
         out.append("</ul>")
     return "\n".join(out)
@@ -345,8 +395,14 @@ def hub() -> HTMLResponse:
         else '<div class="card"><p class="what">Plain-English manual not found at '
         "docs/PLAIN-ENGLISH-USER-MANUAL.md.</p></div>"
     )
+    methodology_pdf_link = (
+        ' &middot; <a href="/methodology.pdf">download as PDF</a>'
+        if METHODOLOGY_PDF_PATH.exists()
+        else ""
+    )
     doc_cards = "".join(
         f'<div class="card"><b><a href="/doc/{_e(slug)}">{_e(title)}</a></b>'
+        f"{methodology_pdf_link if slug == 'methodology' else ''}"
         f'<p class="what">{_e(blurb)}</p></div>'
         for slug, (rel, title, blurb) in DOCS.items()
         if slug != "plain-english-manual" and (_REPO_ROOT / rel).exists()
@@ -382,6 +438,13 @@ def manual_pdf() -> FileResponse:
     return FileResponse(MANUAL_PDF_PATH, media_type="application/pdf")
 
 
+@app.get("/methodology.pdf")
+def methodology_pdf() -> FileResponse:
+    if not METHODOLOGY_PDF_PATH.exists():
+        raise HTTPException(404, "PDF not generated; see scripts/build_methodology_pdf.py")
+    return FileResponse(METHODOLOGY_PDF_PATH, media_type="application/pdf")
+
+
 _DOC_CSS = (
     "body{font:15px/1.6 Georgia,serif;color:#1a1a1a;max-width:820px;margin:0 auto;"
     "padding:28px}h1{font-size:26px}h2{font-size:20px;border-bottom:1px solid #ddd;"
@@ -401,7 +464,7 @@ def doc(slug: str) -> HTMLResponse:
     path = _REPO_ROOT / rel
     if not path.exists():
         raise HTTPException(404, f"{rel} not present in this checkout")
-    body = md_to_html(path.read_text(encoding="utf-8"))
+    body = md_to_html(path.read_text(encoding="utf-8"), base=path.parent)
     return HTMLResponse(
         f"<!doctype html><html><head><meta charset='utf-8'><title>{_e(title)}</title>"
         f"<style>{_DOC_CSS}</style></head><body>"
