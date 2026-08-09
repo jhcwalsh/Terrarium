@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 330" font-family="Georgia, 'Times New Roman', serif">
+  <style>
+    .t  { font-size: 19px; fill: #111827; }
+    .st { font-size: 13px; fill: #6b7280; font-style: italic; }
+    .s  { font-size: 12px; fill: #374151; }
+    .b  { font-size: 12px; fill: #111827; font-weight: bold; }
+    .m  { font-size: 11px; fill: #6b7280; }
+    .axis { stroke: #9ca3af; stroke-width: 1.5; }
+    .tick { stroke: #9ca3af; stroke-width: 1; }
+    .lead { stroke: #d1d5db; stroke-width: 1; }
+  </style>
+  <rect width="960" height="330" fill="#fcfcfb"/>
+
+  <text x="40" y="30" class="t">The seal, in time: judged before it was built, spent once, never re-graded</text>
+  <text x="40" y="50" class="st">Squares are seal events (thresholds and judging code hashed together); circles are everything else. July&#8211;August 2026.</text>
+
+  <!-- x-scale: Jul 24 -> 70, Aug 8 -> 900 (55.33 px/day). Axis at y=185 -->
+  <!-- RFR-82 unhashed window Jul 29-31 -->
+  <rect x="347" y="177" width="110" height="16" fill="#b45309" opacity="0.15"/>
+  <line x1="70" y1="185" x2="900" y2="185" class="axis"/>
+
+  <!-- ticks + date labels -->
+  <g class="m" text-anchor="middle">
+    <line x1="70"  y1="185" x2="70"  y2="192" class="tick"/><text x="70"  y="207">Jul 24</text>
+    <line x1="181" y1="185" x2="181" y2="192" class="tick"/><text x="181" y="207">Jul 26</text>
+    <line x1="347" y1="185" x2="347" y2="192" class="tick"/><text x="347" y="207">Jul 29</text>
+    <line x1="457" y1="185" x2="457" y2="192" class="tick"/><text x="457" y="207">Jul 31</text>
+    <line x1="568" y1="185" x2="568" y2="192" class="tick"/><text x="568" y="207">Aug 2</text>
+    <line x1="623" y1="185" x2="623" y2="192" class="tick"/><text x="623" y="207">Aug 3</text>
+    <line x1="900" y1="185" x2="900" y2="192" class="tick"/><text x="900" y="207">Aug 8</text>
+  </g>
+
+  <!-- ===== events above the axis ===== -->
+  <!-- Jul 26: SEAL 1 -->
+  <line x1="181" y1="120" x2="181" y2="178" class="lead"/>
+  <rect x="175" y="172" width="12" height="12" rx="2" fill="#2563eb"/>
+  <text x="181" y="85"  class="b" text-anchor="middle">Sealed</text>
+  <text x="181" y="100" class="s" text-anchor="middle">thresholds + judging code hashed together;</text>
+  <text x="181" y="115" class="s" text-anchor="middle">data vintage frozen &#8212; before any training</text>
+
+  <!-- Jul 31: G2 verdict -->
+  <line x1="457" y1="120" x2="457" y2="178" class="lead"/>
+  <rect x="451" y="172" width="12" height="12" rx="2" fill="#2563eb"/>
+  <text x="457" y="100" class="b" text-anchor="middle">G2 executed: PROMOTE hier-flow-v1</text>
+  <text x="457" y="115" class="s" text-anchor="middle">re-sealed at 33 files; holdout declared unspent</text>
+
+  <!-- Aug 3: holdout spent -->
+  <line x1="623" y1="140" x2="623" y2="178" class="lead"/>
+  <circle cx="623" cy="178" r="7" fill="#b45309"/>
+  <text x="623" y="123" class="b" text-anchor="middle">Holdout SPENT</text>
+  <text x="623" y="138" class="s" text-anchor="middle">one generation, one read, published both ways</text>
+
+  <!-- ===== events below the axis ===== -->
+  <!-- Jul 24: stylised panel drafted -->
+  <line x1="70" y1="192" x2="70" y2="240" class="lead"/>
+  <circle cx="70" cy="192" r="6" fill="#9ca3af"/>
+  <text x="42" y="257" class="b">Stylised panel drafted</text>
+  <text x="42" y="272" class="s">never ratified &#8594; reported as</text>
+  <text x="42" y="287" class="s">descriptive only, no pass/fail claim</text>
+
+  <!-- Jul 29: post-hoc amendment + unhashed window -->
+  <line x1="347" y1="192" x2="347" y2="225" class="lead"/>
+  <circle cx="347" cy="192" r="6" fill="#9ca3af"/>
+  <text x="290" y="242" class="b">First post-hoc amendment</text>
+  <text x="290" y="257" class="s">a prose defect in the sealed rule, fixed in</text>
+  <text x="290" y="272" class="s">the open; no number moved. Shaded: the</text>
+  <text x="290" y="287" class="s">verdict arithmetic sat unhashed two days</text>
+  <text x="290" y="302" class="s">(RFR-82) &#8212; disclosed, then hashed</text>
+
+  <!-- Aug 2: holdout spec sealed -->
+  <line x1="568" y1="192" x2="568" y2="225" class="lead"/>
+  <rect x="562" y="186" width="12" height="12" rx="2" fill="#2563eb"/>
+  <text x="560" y="242" class="b">Holdout spec sealed</text>
+  <text x="560" y="257" class="s">what will be read, and that</text>
+  <text x="560" y="272" class="s">nothing re-runs, fixed first</text>
+
+  <!-- Aug 8: campaign R1 -->
+  <line x1="900" y1="192" x2="900" y2="240" class="lead"/>
+  <circle cx="900" cy="192" r="6" fill="#9ca3af"/>
+  <text x="920" y="257" class="b" text-anchor="end">Refresh re-run</text>
+  <text x="920" y="272" class="s" text-anchor="end">reproduces bit-identically; the sealed</text>
+  <text x="920" y="287" class="s" text-anchor="end">criterion refuses to grade new data</text>
+
+  <text x="40" y="322" class="m">Sources: pre-registration lock and amendment log; G2-EVIDENCE.md &#167;1; RESEARCH-EVIDENCE.md (WP5.6); CAMPAIGN-R1-GENERATOR.md.</text>
+</svg>
