@@ -1,0 +1,8 @@
+This file was created by CMPT_ME_BEME_RETS_DAILY using the 202412 CRSP database.
+
+,Mkt-RF,SMB,HML,RF
+20200102, 0.50, -0.10,  0.20, 0.006
+20200103,-1.20,  0.30, -0.10, 0.006
+20200203, 0.80,  0.05,  0.00, 0.005
+
+Copyright 2024 Kenneth R. French

@@ -13,6 +13,29 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-VOLEXT Stage 2 — the model backcast below 1986, PASS on all
+  registered thresholds.** `ah.data.vol_backcast`: monthly log implied vol
+  on a HAR cascade of trailing realized vol plus tail severity (the sketch's
+  `downside` term dropped by specification), OLS with Newey-West HAC (12
+  lags), fitted on the 1990+ overlap; realized vol from the DAILY French
+  market factor (`french.mkt_rf_d`/`french.rf_d`, registered intake:manual
+  and never stored — the connector gained a daily-file branch). Thresholds
+  ratified FIRST as `AM-2026-08-09-001` (owner Q&A; `volext_backcast_fit.py`
+  mechanically refuses to run without the entry — RFR-77 enforced by code).
+  RESULT (`docs/data/VOLEXT-STAGE2.md`, provenance under `artifacts/volext/`):
+  1986-89 VXO true-held-out corr 0.9116 (>=0.90), Oct-1987 predicted 56.0 vs
+  53.9 VIX-equivalent (ratio 1.038), stress-decile OOS bias -0.085, GFC and
+  COVID peaks at ratio 1.11, ensemble restores vol-of-vol to 0.923 where the
+  bare mean retains 0.751, coverage 0.775. Backcast: 709 ensemble model
+  months 1926-12..1985-12 (n_draws=200, 12-month residual blocks), every row
+  `is_proxy` under `PROXY-EQUITY-VOL-HAR-V1`, regenerable bit-identically
+  from the provenance artifact via `paths()` (owner decision D2). The
+  held-out corr sits below the sketch's 0.949 — attributable to the mandated
+  spec change and the D1 source change, and above the registered floor.
+  Nothing consumes the backcast; the span amendment remains unratified and
+  argues against admitting model months to the benchmark at all. 13 offline
+  tests incl. no-look-ahead truncation, HAC>OLS on persistent terms, a
+  post-split stress miss that validate() must reject, and seed determinism.
 - **WP-DATA-VOLEXT Stage 1 — equity_vol extended to 1986 on observation**
   (`Instructions/TASK-vol-backcast-claude-code.md`; owner decisions D1-D5 in
   `docs/superpowers/specs/2026-08-09-volext-decisions.md`). `fred.VXO`

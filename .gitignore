@@ -79,6 +79,13 @@ experiments/
 /artifacts/wp27/*
 !/artifacts/wp27/summary.json
 !/artifacts/wp27/joinery-assembly-report.md
+# WP-DATA-VOLEXT: the backcast provenance IS the auditable record (fit, HAC
+# covariance, residual pool, full validation vs the AM-2026-08-09-001
+# thresholds) and the D2 contract regenerates the ensemble from it -- nothing
+# else in the repository would hold these numbers.
+!/artifacts/volext/
+/artifacts/volext/*
+!/artifacts/volext/equity-vol-backcast-provenance.json
 # WP2.8 (hier-diffusion-v1) evidence, same reasoning as WP2.4/WP2.7 above: the
 # per-seed battery reports reproduce bit-for-bit from
 # scripts/run_diffusion_battery.py against the sealed vintage, the pinned L1/L2
