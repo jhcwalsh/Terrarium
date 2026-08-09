@@ -13,6 +13,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **D-05 and P1 as PDFs, and one generic PDF pipeline (owner request
+  2026-08-09).** `docs/D-05-methodology-note.pdf` and
+  `docs/P1-specified-world-models-preprint.pdf` are committed and served,
+  figures inlined. The per-document build scripts collapsed into
+  `scripts/build_doc_pdf.py` (slug-driven off the hub's `DOCS` allowlist;
+  `build_manual_pdf.py` and `build_methodology_pdf.py` deleted), and the hub
+  grew a generic `/pdf/<slug>` route with a "download as PDF" link on every
+  card whose committed sibling PDF exists — `/manual.pdf` and
+  `/methodology.pdf` stay as aliases. `md_to_html` now strips pandoc-style
+  `{#anchor}` header suffixes, which D-05's headers carry. The manual and
+  methodology PDFs were rebuilt through the same pipeline (the manual's
+  predates the paragraph-joining fix).
 - **The Terrarium Method on the tools hub, with a PDF (owner request
   2026-08-08).** `docs/METHODOLOGY.md` (the consolidated
   approach/underpinnings/plain-English summary, committed 2026-08-08 with its
