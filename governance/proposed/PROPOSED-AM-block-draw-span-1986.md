@@ -66,6 +66,15 @@ payload:
 - It does not retroactively touch any sealed G2 verdict. The sealed
   campaign record stands; the extended span defines the benchmark only for
   future campaigns, which would say so in their own pre-registrations.
-- It does not admit the stage-2 model backcast into anything. That would be
-  a further amendment with its own evidence bar, and the disclosure above
-  argues against it for benchmark purposes.
+- It does not, BY ITSELF, admit the stage-2 model backcast into the span.
+  **Owner ruling D6 (2026-08-09, recorded in
+  `docs/superpowers/specs/2026-08-09-volext-decisions.md`): the backcast IS
+  admissible** — recreating a series from the era's own observed daily
+  returns through a held-out-audited mapping is reconstruction, not the
+  platform modelling its own null. This superseded the earlier draft of this
+  file, which argued against admission; that argument (a partly-fitted
+  benchmark is a weaker null pre-1986) remains on the record as the
+  counterposition, not as the ruling. Admission still requires its own
+  ratified amendment naming the HAR months span-bearing, and is MOOT until
+  `funding_spread` and its successors extend: the joint panel, not
+  equity_vol, is what binds below 1986.

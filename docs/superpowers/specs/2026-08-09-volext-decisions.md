@@ -68,6 +68,24 @@ Derived from the task file's reproduce-or-beat targets (corr 0.949; 58.4 vs
 Acceptance criterion 5's "mypy" is read as **pyright** (the repo's checker,
 basic mode with the `src/ah/data` stub-noise carve-out). mypy is not added.
 
+## D6 — Admission ruling (owner, 2026-08-09, after the stage-2 PASS)
+
+**The backcast equity_vol IS admissible as span-bearing data.** The owner's
+distinction: *recreating* a series from observed contemporaneous inputs
+(realized vol computed from the era's own daily returns, mapped through a
+fitted, held-out-audited link, with a disclosed residual ensemble) is not
+*modelling* in the sense the benchmark must exclude — the platform's own
+generator never touches it. This supersedes the argued-against posture the
+span draft originally carried; the counterargument (a benchmark partly built
+on our fitted mapping is a weaker null in pre-1986 episodes) stays recorded
+here and in the draft's history rather than being erased. Conditions carried
+forward unchanged: every model month stays `is_proxy` under
+`PROXY-EQUITY-VOL-HAR-V1`, any statistic over the extended span discloses the
+proxy share, tail-bearing consumers draw from the ensemble (never the stored
+median), and admission takes effect only through a ratified amendment.
+Practical consequence unchanged: `funding_spread` (1986-01) still binds the
+joint panel; admission moves nothing until it and its successors extend.
+
 ## Sealed-surface posture (established during planning, binds both stages)
 
 `src/ah/data/splice.py` (including the `PROXY_RULES` registry) and
