@@ -23,6 +23,8 @@ series:
   fred.TB3MS:    {source: fred, code: TB3MS,  frequency: "M",    units: pct,   min_start: 1934-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
   # fred.TB3MS also serves as the pre-1954 splice donor for fred.FEDFUNDS (above).
   fred.GS10:     {source: fred, code: GS10,   frequency: "M",    units: pct,   min_start: 1953-04, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
+  fred.GS1:      {source: fred, code: GS1,    frequency: "M",    units: pct,   min_start: 1953-04, sla_days: 35,  license_tier: FREE, priority: P1, intake: auto, enforce: false, notes: "1-year constant-maturity Treasury yield -- curve neighbour donor for the ust_2y extension (ah.data.ust2y_extend, rule PROXY-UST2Y-GS1GS3-V1, WP-DATA-UST2YEXT). Live series; enforce false because nothing consumes it until the owner ratifies the span amendment."}
+  fred.GS3:      {source: fred, code: GS3,    frequency: "M",    units: pct,   min_start: 1953-04, sla_days: 35,  license_tier: FREE, priority: P1, intake: auto, enforce: false, notes: "3-year constant-maturity Treasury yield -- the other curve neighbour donor for the ust_2y extension. Same posture as fred.GS1."}
   fred.BAA:      {source: fred, code: BAA,    frequency: "M",    units: pct,   min_start: 1919-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
   fred.AAA:      {source: fred, code: AAA,    frequency: "M",    units: pct,   min_start: 1919-01, sla_days: 35,  license_tier: FREE, priority: P0, intake: auto, enforce: true}
   fred.HY_OAS:   {source: fred, code: BAMLH0A0HYM2, frequency: "D->M", units: pct, min_start: 1996-12, sla_days: 7, license_tier: FREE, priority: P0, intake: auto, enforce: true}

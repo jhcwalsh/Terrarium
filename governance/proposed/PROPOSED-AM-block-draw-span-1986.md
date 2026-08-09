@@ -21,6 +21,18 @@
 > hqm months, binding moves to ust_2y) — each successive step adds one more
 > disclosed proxy family under the D6/F1/H1 recreation rulings, and the
 > disclosure section must name every family the chosen span includes.
+>
+> **Addendum 2026-08-09c (post-UST2YEXT):** `ust_2y` is now extended to
+> 1953-04 by curve interpolation from GS1/GS3 (`ah.data.ust2y_extend`,
+> verified in `docs/data/UST2YEXT-REPORT.md`: corr 0.9999, RMSE 0.055 pct on
+> the 1976+ overlap). The chain's binding factor is now **`fx_usd`
+> (1973-01) — the Bretton Woods wall**, a design question rather than a data
+> gap. The ratifiable targets are therefore 1986 / 1984 / 1976-06 /
+> **1973-01** (four disclosed proxy families: VXO, CP-bill, Aaa-HQM,
+> GS1/GS3-interpolated 2y). At 1973-01 the span is 576 months against the
+> sealed 372 (+55%) and contains 1973-74 and the stagflation era the severe
+> test names. Beyond 1973 requires an fx_usd design ruling or a
+> ragged-panel amendment, both of a different order.
 
 **Status: DRAFT — awaiting owner ratification. Nothing in this file is in
 force, and Stage 1 shipping does NOT apply it.** The authority is

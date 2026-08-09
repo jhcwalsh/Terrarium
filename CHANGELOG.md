@@ -13,6 +13,19 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-UST2YEXT — ust_2y extended to 1953 by curve interpolation
+  (owner rulings U1-U3, 2026-08-09).** `ah.data.ust2y_extend` recreates the
+  2-year yield below DGS2's 1976-06 start from its observed curve
+  neighbours (`fred.GS1`/`fred.GS3`, monthly, 1953-04, newly registered
+  warn-only): `ust2y = a + 0.367*GS1 + 0.646*GS3` fitted on 602 overlap
+  months at corr 0.9999, RMSE 0.055 pct — interpolation between observed
+  points on the same curve, the mildest recreation in the family. 278
+  proxy months 1953-04..1976-05 (`docs/data/UST2YEXT-REPORT.md`,
+  live-verified); nothing sealed learns `PROXY-UST2Y-GS1GS3-V1` (tested).
+  Span-draft addendum c: with all four extensions verified the binding
+  factor is **fx_usd (1973-01), the Bretton Woods wall** — ratifiable
+  targets 1986 / 1984 / 1976-06 / 1973-01, the last giving 576 months
+  (+55%) including 1973-74 and the stagflation era the severe test names.
 - **WP-DATA-HQMEXT — the 10y HQM rate extended to 1919 on Moody's Aaa
   (owner rulings H1-H3, 2026-08-09).** `ah.data.hqm_extend` maps `fred.AAA`
   (seasoned long Aaa yield, 1919-01, already a live P0 series — zero new
