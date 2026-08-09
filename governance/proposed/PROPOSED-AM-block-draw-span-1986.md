@@ -10,6 +10,17 @@
 > and the D6/F1 recreation rulings). The entry below is written for 1986;
 > a 1984 ratification updates `to:`, the binding factor (-> hqm_curve), and
 > the disclosure to name both proxy families.
+>
+> **Addendum 2026-08-09b (post-HQMEXT):** `hqm_curve` (in truth one series,
+> the 10y HQM spot rate) is now extended to 1919-01 on Moody's Aaa
+> (`ah.data.hqm_extend`, verified in `docs/data/HQMEXT-REPORT.md`: overlap
+> corr 0.987 on 511 months; the H2 slope diagnostic came back quiet). The
+> chain's next binding factor is **`ust_2y` (GS2, 1976-06)**, then `fx_usd`
+> (1973-01). A ratification may therefore target 1986 (pure observation),
+> 1984 (adds the CP-bill proxy months), or **1976-06** (adds the Aaa-mapped
+> hqm months, binding moves to ust_2y) — each successive step adds one more
+> disclosed proxy family under the D6/F1/H1 recreation rulings, and the
+> disclosure section must name every family the chosen span includes.
 
 **Status: DRAFT — awaiting owner ratification. Nothing in this file is in
 force, and Stage 1 shipping does NOT apply it.** The authority is

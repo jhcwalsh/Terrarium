@@ -13,6 +13,21 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-HQMEXT — the 10y HQM rate extended to 1919 on Moody's Aaa
+  (owner rulings H1-H3, 2026-08-09).** `ah.data.hqm_extend` maps `fred.AAA`
+  (seasoned long Aaa yield, 1919-01, already a live P0 series — zero new
+  registrations) onto `treasury.hqm_curve` (which despite the name is one
+  series, the 10y HQM spot rate) by level regression on the 1984+ overlap:
+  corr 0.9871, RMSE 0.393 pct on 511 months; 780 proxy months
+  1919-01..1983-12 (`docs/data/HQMEXT-REPORT.md`, live-verified). The H2
+  slope diagnostic — fit the term-slope variant, extrapolate both
+  constructions over 1953-83, report the divergence — came back QUIET: max
+  0.081 pct, in 1959, not the Volcker era; the registered construction
+  stays the simple fit and the revisit trigger did not fire. Episodes read
+  true unprompted (Volcker Sep-1981 at 15.83; 1932 trough 5.42; WW2 pegged
+  era 2.64). Same sealed-surface posture; nothing sealed learns
+  `PROXY-HQM10-AAA-V1` (tested). Span-draft addendum: ratifiable targets
+  are now 1986 / 1984 / 1976-06, where `ust_2y` becomes binding.
 - **WP-DATA-FSEXT — funding_spread extended both ways on CP-bill (owner
   rulings F1-F3, 2026-08-09).** `ah.data.funding_extend` chains the CP leg
   (CPF3M live / CP3M 1971-97 / NBER prime CP 1857-1971, mean-offset joins
