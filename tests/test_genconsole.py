@@ -39,3 +39,37 @@ def test_same_seed_is_bit_identical():
     assert json.dumps(a, sort_keys=True, default=str) == json.dumps(
         b, sort_keys=True, default=str
     )
+
+
+def test_scan_runs_renders_states_not_exceptions(tmp_path):
+    cells = tmp_path / "campaign-x" / "cells"
+    done = cells / "B-bootstrap-v1-s0"
+    done.mkdir(parents=True)
+    (done / "summary.json").write_text(
+        json.dumps(
+            {
+                "system_id": "bootstrap-v1",
+                "seed_index": 0,
+                "timings": {"total_s": 60.0},
+                "criterion_bearing": True,
+                "passed_unfiltered": True,
+            }
+        ),
+        encoding="utf-8",
+    )
+    (cells / "F-hier-flow-v1-s1").mkdir()
+    corrupt = cells / "F-hier-flow-v1-s2"
+    corrupt.mkdir()
+    (corrupt / "summary.json").write_text("{not json", encoding="utf-8")
+    [campaign] = gc.scan_runs(tmp_path)
+    assert campaign["campaign"] == "campaign-x"
+    by_slug = {c["slug"]: c["status"] for c in campaign["cells"]}
+    assert by_slug == {
+        "B-bootstrap-v1-s0": "done",
+        "F-hier-flow-v1-s1": "running",
+        "F-hier-flow-v1-s2": "unreadable",
+    }
+
+
+def test_scan_runs_handles_a_missing_root(tmp_path):
+    assert gc.scan_runs(tmp_path / "nope") == []

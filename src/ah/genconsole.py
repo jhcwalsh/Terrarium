@@ -183,3 +183,46 @@ def build_decade(
         "checkpoint_hash": str(meta["checkpoint_hash"]),
         "stages": list(STAGES),
     }
+
+
+def scan_runs(experiments_root: Path) -> list[dict[str, Any]]:
+    """Campaign runs as the artifacts on disk tell them, newest first.
+
+    Every filesystem read is fallible by design (cells vanish, JSON is
+    mid-write): failures become states ("unreadable"), never exceptions.
+    """
+    campaigns: list[dict[str, Any]] = []
+    try:
+        campaign_dirs = [d for d in experiments_root.iterdir() if (d / "cells").is_dir()]
+    except OSError:
+        return []
+    campaign_dirs.sort(key=lambda d: d.stat().st_mtime, reverse=True)
+    for cdir in campaign_dirs:
+        cells: list[dict[str, Any]] = []
+        try:
+            cell_dirs = sorted((cdir / "cells").iterdir())
+        except OSError:
+            continue
+        for cell_dir in cell_dirs:
+            if not cell_dir.is_dir():
+                continue
+            row: dict[str, Any] = {"slug": cell_dir.name, "status": "running"}
+            summary_path = cell_dir / "summary.json"
+            if summary_path.exists():
+                try:
+                    summary = json.loads(summary_path.read_text("utf-8"))
+                    row.update(
+                        {
+                            "status": "done",
+                            "system_id": summary.get("system_id"),
+                            "seed_index": summary.get("seed_index"),
+                            "timings": summary.get("timings", {}),
+                            "criterion_bearing": summary.get("criterion_bearing"),
+                            "passed_unfiltered": summary.get("passed_unfiltered"),
+                        }
+                    )
+                except (OSError, ValueError):
+                    row["status"] = "unreadable"
+            cells.append(row)
+        campaigns.append({"campaign": cdir.name, "cells": cells})
+    return campaigns
