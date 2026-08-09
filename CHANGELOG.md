@@ -13,6 +13,25 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-VOLEXT Stage 1 — equity_vol extended to 1986 on observation**
+  (`Instructions/TASK-vol-backcast-claude-code.md`; owner decisions D1-D5 in
+  `docs/superpowers/specs/2026-08-09-volext-decisions.md`). `fred.VXO`
+  (VXOCLS, the original S&P 100 implied-vol index, discontinued 2021-09)
+  registered as a warn-only donor with month-end D->M aggregation matching
+  `fred.VIX`; new `ah.data.vol_extend` implements the log-log link OUTSIDE
+  the sealed splice framework (splice.py and derive.py are hashed by the
+  lock; a test pins that neither learned the new rule). Real-data overlap
+  verification in `docs/data/VOLEXT-STAGE1.md` via
+  `scripts/volext_overlap_report.py`: n=381 overlap months, log-level
+  correlation 0.9827, RMSE 0.064 log; 48 proxy months 1986-01..1989-12;
+  Oct-1987 VXO 61.4 maps to VIX-equivalent 53.9 (the reference sketch said
+  51.6 under its own exploratory mapping — stage 2's held-out check scores
+  against the repo's). Two amendment drafts in `governance/proposed/`
+  (block_draw_span -> 1986-01; stage-2 acceptance thresholds), NOTHING
+  applied: block_draw_span is unchanged and nothing sealed consumes the
+  extension. The live refresh attempted en route was QUARANTINED by QC
+  (fred.DTWEXBGS one day past SLA) and the quarantine was respected — the
+  verification fetch bypasses the store, not the QC.
 - **The gate evidence record on the hub, as pages and PDFs (owner request
   2026-08-09).** G0, G2, Consolidation, G1, G4 and RESEARCH evidence join
   the hub allowlist in step order — the honest labels ride the cards ("an

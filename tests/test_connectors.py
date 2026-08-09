@@ -67,6 +67,13 @@ def test_fred_vix_month_end() -> None:
     assert out["value"].tolist() == [4.0, 5.0]  # month-end values
 
 
+def test_fred_vxo_month_end_with_missing_marker() -> None:
+    # The VXO donor aggregates month-end like its splice target fred.VIX, and
+    # FRED's "." missing marker never becomes a value.
+    out = FredConnector().parse(_raw("fred", "vxo.json", "fred.VXO"), REQ["fred.VXO"])
+    assert out["value"].tolist() == [4.8, 6.0]
+
+
 def test_fred_monthly_passthrough() -> None:
     out = FredConnector().parse(_raw("fred", "tb3ms.json", "fred.TB3MS"), REQ["fred.TB3MS"])
     assert out["value"].tolist() == [1.5, 1.6]

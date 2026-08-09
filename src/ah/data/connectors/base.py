@@ -81,8 +81,11 @@ def to_monthly_last(frame: pd.DataFrame) -> pd.DataFrame:
 
 
 def aggregate_daily_to_monthly(frame: pd.DataFrame, series_id: str) -> pd.DataFrame:
-    """Apply the fixed D->M rule: month-end for VIX, monthly mean otherwise."""
-    if series_id.endswith("VIX") or "vix" in series_id.lower():
+    """Apply the fixed D->M rule: month-end for the implied-vol indices (VIX and
+    its VXO splice donor -- both must aggregate the same way or the overlap fit
+    compares a month-end print to a monthly average), monthly mean otherwise."""
+    lowered = series_id.lower()
+    if "vix" in lowered or "vxo" in lowered:
         return to_monthly_last(frame)
     return to_monthly_mean(frame)
 
