@@ -60,6 +60,39 @@ def test_md_to_html_covers_the_repo_subset():
     assert "&lt;tag&gt;" in out  # code blocks escape HTML
 
 
+def test_md_to_html_joins_wrapped_paragraphs():
+    out = md_to_html("*An italic caption\nwrapped across lines.*\n\nNext paragraph.")
+    assert "<i>An italic caption wrapped across lines.</i>" in out  # emphasis survives the wrap
+    assert out.count("<p>") == 2  # blank line still separates paragraphs
+    assert "*" not in out  # no literal asterisks leak
+
+
+def test_md_to_html_inlines_sibling_svg_figures(tmp_path):
+    (tmp_path / "fig.svg").write_text("<svg xmlns='http://www.w3.org/2000/svg'/>", encoding="utf-8")
+    md = "![The figure](fig.svg)\n\n![Gone](missing.svg)\n\n![Escape](../fig.svg)"
+    out = md_to_html(md, base=tmp_path)
+    assert "<svg" in out and "<figcaption>The figure</figcaption>" in out
+    assert "[figure: Gone]" in out and "[figure: Escape]" in out  # absent + traversal fall back
+    assert "![" not in out  # the raw markdown never leaks
+    assert "<svg" not in md_to_html(md)  # no base, no filesystem access
+
+
+def test_methodology_doc_serves_with_inlined_figures():
+    c = TestClient(app)
+    r = c.get("/doc/methodology")
+    assert r.status_code == 200
+    assert "Terrarium Method" in r.text
+    assert r.text.count("<figure>") == 2  # both exhibits inlined, not ![...] text
+
+
+def test_methodology_pdf_route():
+    c = TestClient(app)
+    r = c.get("/methodology.pdf")
+    assert r.status_code in (200, 404)  # 404 only if the PDF is absent from the checkout
+    if r.status_code == 200:
+        assert r.headers["content-type"] == "application/pdf"
+
+
 def test_hub_is_static_no_write_call_sites():
     import inspect
 

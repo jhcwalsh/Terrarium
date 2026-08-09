@@ -13,6 +13,20 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **The Terrarium Method on the tools hub, with a PDF (owner request
+  2026-08-08).** `docs/METHODOLOGY.md` (the consolidated
+  approach/underpinnings/plain-English summary, committed 2026-08-08 with its
+  two SVG exhibits) is now served at `/doc/methodology`, with
+  `docs/METHODOLOGY.pdf` downloadable at `/methodology.pdf` — both mirroring
+  the plain-English manual's pattern, PDF built by the new
+  `scripts/build_methodology_pdf.py` (same Chrome print engine, no new
+  dependencies). `md_to_html` learned two things every hub doc benefits from:
+  a standalone `![alt](name.svg)` line whose target is a sibling of the
+  document inlines the SVG as a real figure (sibling-only by construction, so
+  the allowlist cannot be escaped; absent targets render the alt text, never
+  raw markdown), and consecutive plain lines join into one paragraph
+  (standard markdown), which fixes wrapped emphasis rendering with literal
+  asterisks in every served document.
 - **The generator console (owner request 2026-08-08).** `ah/genconsole.py` on
   port 8797, in the console family: watch one hier-flow decade get built
   through the real four layers — the L1 slow-state paths, the L2 regime
