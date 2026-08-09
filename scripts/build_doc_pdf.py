@@ -27,7 +27,14 @@ sys.path.insert(0, str(ROOT / "src"))
 from ah.hub import _DOC_CSS, DOCS, md_to_html  # noqa: E402
 
 #: Built when no slugs are given: the documents whose PDFs are committed.
-DEFAULT_SLUGS = ["plain-english-manual", "methodology", "methodology-note", "preprint"]
+DEFAULT_SLUGS = [
+    "plain-english-manual",
+    "methodology",
+    "methodology-note",
+    "preprint",
+    "user-manual",
+    "build-summary",
+]
 
 _CHROME_CANDIDATES = [
     Path(r"C:\Program Files\Google\Chrome\Application\chrome.exe"),
