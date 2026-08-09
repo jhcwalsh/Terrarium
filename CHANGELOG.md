@@ -13,6 +13,12 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **The technical user manual and the build summary as PDFs (owner request
+  2026-08-09).** `docs/USER-MANUAL.pdf` (18 pages) and
+  `docs/BUILD-SUMMARY.pdf` (17 pages) committed and added to
+  `build_doc_pdf.py`'s default set; the hub's per-request PDF discovery
+  picked both up with no code change — six documents now carry a
+  "download as PDF" link.
 - **D-05 and P1 as PDFs, and one generic PDF pipeline (owner request
   2026-08-09).** `docs/D-05-methodology-note.pdf` and
   `docs/P1-specified-world-models-preprint.pdf` are committed and served,
