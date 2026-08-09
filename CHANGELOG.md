@@ -13,6 +13,14 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **The gate evidence record on the hub, as pages and PDFs (owner request
+  2026-08-09).** G0, G2, Consolidation, G1, G4 and RESEARCH evidence join
+  the hub allowlist in step order — the honest labels ride the cards ("an
+  honest FAIL", "there is no held-out data left") — and their PDFs are
+  committed next to each source (repo root; `governance/evidence/` for G4)
+  and served at `/pdf/<slug>`. The root `G2-EVIDENCE.md` is the served
+  copy; `governance/evidence/G2-EVIDENCE.md` is bit-identical. Twelve
+  documents now carry a "download as PDF" link.
 - **The technical user manual and the build summary as PDFs (owner request
   2026-08-09).** `docs/USER-MANUAL.pdf` (18 pages) and
   `docs/BUILD-SUMMARY.pdf` (17 pages) committed and added to

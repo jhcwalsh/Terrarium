@@ -119,6 +119,46 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "of the undelivered ALB-A/C lifecycle datasets, across all 39 sleeves "
         "of the private-markets taxonomy.",
     ),
+    # The gate evidence record, in step order.
+    "g0-evidence": (
+        "G0-EVIDENCE.md",
+        "G0 evidence — the rails",
+        "Step 0's gate: WorldSpec contract, validator, deterministic engine, "
+        "append-only stores and replay, each claim with its command and output.",
+    ),
+    "g2-evidence": (
+        "G2-EVIDENCE.md",
+        "G2 evidence — the promotion verdict",
+        "The sealed decision rule executed on the ablation grid: PROMOTE "
+        "hier-flow-v1, four SHIP-BENCHMARK verdicts, the severe test "
+        "INCONCLUSIVE, and every defect in the seal itself disclosed.",
+    ),
+    "consolidation-evidence": (
+        "CONSOLIDATION-EVIDENCE.md",
+        "Consolidation evidence — contracts frozen",
+        "Step 2R: the frozen contracts, the vintage handoff, and everything "
+        "re-run against them before Step 3 was allowed to start.",
+    ),
+    "g1-evidence": (
+        "G1-EVIDENCE.md",
+        "G1 evidence — an honest FAIL",
+        "The translation layer's 2022 end-to-end reproduction: named "
+        "limitations, tier 1 beaten by tier 0, recorded as a FAIL and "
+        "carried forward rather than repaired quietly.",
+    ),
+    "g4-evidence": (
+        "governance/evidence/G4-EVIDENCE.md",
+        "G4 evidence — artifacts, actors, governance",
+        "Step 4's gate scored criterion by criterion: the narrative cage, "
+        "tier-2 authoring, live mode, and the GenAI governance record.",
+    ),
+    "research-evidence": (
+        "RESEARCH-EVIDENCE.md",
+        "Research evidence — the consolidated record",
+        "Step 5's answers to the research questions, including the one-shot "
+        "holdout spend: the drawdown stayed inside the cone, terminal wealth "
+        "did not, and there is no held-out data left.",
+    ),
 }
 
 #: The browser surfaces. (name, url, answers, writes)
