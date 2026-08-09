@@ -13,6 +13,24 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **WP-DATA-SPAN53 — the two donors that carry the panel to 1953-04 (owner
+  ruling 2026-08-09: ratify the span at 1953-04).** `ah.data.ust10y_extend`
+  splices `fred.GS10` (the monthly-average ancestor, 1953-04) under
+  `fred.DGS10`: measured as the identity it should be (corr 1.00000, RMSE
+  0.003 pct on 764 overlap months), 105 proxy months. `ah.data.fx_parity`
+  builds the pegged-era dollar index 1953-04..1972-12 from the PUBLISHED
+  Bretton Woods par-value record (vendored constants; geometric
+  equal-weight basket of six pegged majors, Canada excluded and disclosed):
+  flat between realignments, 7 documented steps, the largest being the
+  Smithsonian devaluation (1971-12, ~-10.6%), level-pinned to DTWEXM's
+  first observation (no overlap exists by construction; disclosed as a
+  pin, not a fit). Near-zero pegged-era variance is the era's TRUE value;
+  degenerate-variance guards for correlation consumers are named as a
+  ratification work item. Verified in `docs/data/SPAN53-REPORT.md`;
+  nothing sealed learns either rule (tested). With these, every active
+  factor reaches 1953-04 (policy_rate's 15-month gap rides the
+  already-registered fedfunds_pre1954 splice at ratification): the
+  ratifiable span is 813 months against the sealed 372.
 - **WP-DATA-CMDTY — the sealed commodities gap closed in kind, pending
   ratification (owner rulings C1-C3, 2026-08-09).** The owner-supplied AQR
   Commodities-for-the-Long-Run workbook (monthly excess returns of an
