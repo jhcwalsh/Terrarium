@@ -34,6 +34,12 @@ DEFAULT_SLUGS = [
     "preprint",
     "user-manual",
     "build-summary",
+    "g0-evidence",
+    "g2-evidence",
+    "consolidation-evidence",
+    "g1-evidence",
+    "g4-evidence",
+    "research-evidence",
 ]
 
 _CHROME_CANDIDATES = [
