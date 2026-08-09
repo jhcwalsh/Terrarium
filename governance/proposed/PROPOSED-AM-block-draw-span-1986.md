@@ -1,5 +1,16 @@
 # PROPOSED amendment — move `bootstrap_v1.block_draw_span` to 1986-01
 
+> **Addendum 2026-08-09 (post-FSEXT):** with `funding_spread` now extended
+> both ways on CP-bill (`ah.data.funding_extend`, verified in
+> `docs/data/FSEXT-REPORT.md`: TED-overlap corr 0.965 on 433 months, filled
+> 1934-01 backward and post-2022 forward), the ratifiable floor is no longer
+> 1986-01 but **1984-01, where `hqm_curve` binds**. At ratification the owner
+> chooses the target (1986 on the original text, or 1984 with the
+> funding_spread proxy months included under the same disclosure discipline
+> and the D6/F1 recreation rulings). The entry below is written for 1986;
+> a 1984 ratification updates `to:`, the binding factor (-> hqm_curve), and
+> the disclosure to name both proxy families.
+
 **Status: DRAFT — awaiting owner ratification. Nothing in this file is in
 force, and Stage 1 shipping does NOT apply it.** The authority is
 `governance/amendment-log.yaml`; this draft never enters it until the owner

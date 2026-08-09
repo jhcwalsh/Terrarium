@@ -59,19 +59,18 @@ Under the owner's D6 distinction this is *recreation from observed
 contemporaneous instruments*, not modelling — but the instrument-identity
 ruling is the owner's to make, not this document's.
 
-## Owner questions (gate the start)
+## Owner rulings (2026-08-09: "go with your recommendations on all three")
 
-1. **Identity ruling:** accept CP−bill as the funding-stress recreation for
-   the eras LIBOR doesn't cover (pre-1986 and post-2022), with the
-   instrument-difference caveat disclosed? Recommended: yes — it is the
-   literature-standard proxy on one side and the de-facto successor on the
-   other.
-2. **Scope of this WP:** fold the post-2022 fix into the same WP (one rule
-   family, one amendment, closes a known hole in current train+validation
-   history) or backward-only? Recommended: fold it in — the forward fix is
-   the same construction with a live overlap, and it repairs an existing
-   honesty debt, not just pre-history.
-3. **Depth:** stop at 1934-01 (the TB3MS floor — covers everything the
-   severe test and the 1930s care about except 1929-33 itself) or scope a
-   pre-1934 bill proxy now? Recommended: 1934 now; pre-1934 is its own
-   decision with materially weaker instruments.
+1. **F1 — Identity ruling: ACCEPTED.** CP−bill is the funding-stress
+   recreation for the eras LIBOR doesn't cover (pre-1986 and post-2022),
+   instrument difference disclosed, per the D6 recreation-vs-modelling
+   distinction.
+2. **F2 — Scope: BOTH ENDS.** The post-2022 repair is in this WP: same rule
+   family, one amendment, closes the known train+validation hole. Recorded
+   deviation from the splice framework's backward-only shape; the
+   never-overwrite-observed invariant is unchanged.
+3. **F3 — Depth: 1934-01.** The bill leg's floor. 1929-33 stays out of
+   reach; a pre-1934 bill proxy is its own future decision.
+
+Built as `ah.data.funding_extend` (rule `PROXY-FUNDING-CPBILL-V1`);
+verification on real data in `docs/data/FSEXT-REPORT.md`.
