@@ -277,6 +277,36 @@ keys with `status`/`consequence` fields, matching neighbors.)
 - `bootstrap_v1.block_draw_span_consequence` "ROUTES OUT" — the route taken
   (extension + ratification) should be recorded as taken.
 
+## Block 11 — code constants at the flip (prepared 2026-08-09 evening)
+
+The split landed ahead of the event (commit e52113f, behavior-preserving):
+`bootstrap.CAMPAIGN2_VINTAGE_ID` is the frozen historical id; the three
+campaign-2 CHECKPOINT replay surfaces (genconsole decade replays, the
+hier-flow-v1 / hier-diffusion-v1 factories) pin it explicitly; and
+`campaign_source()` picks its span check per vintage (campaign-2 read →
+CAMPAIGN2_DRAW_SPAN; anything else → the live sealed constants). At the
+seal event, exactly TWO one-line edits remain, no test edits:
+
+- `scripts/compute_campaign_reference.py::CAMPAIGN_VINTAGE_ID` →
+  `<C3_VINTAGE_ID>` (test_prereg's script-agrees test compares it to the
+  sealed `reference_run.vintage_id` dynamically — both move in the one
+  commit and the test passes untouched).
+- `src/ah/gen/bootstrap.py::CAMPAIGN_VINTAGE_ID` → `<C3_VINTAGE_ID>`
+  (test_bootstrap compares it to the sealed `campaign_vintage_id`
+  dynamically — same one-commit property).
+
+Historical pins deliberately NOT touched, ever: `campaign2_seal_package.py`,
+`campaign2_probe.py`, `measure_block_length_window.py`, `flow.py`'s
+selection-config note, `splice.py`'s fit-measurement comment,
+`test_campaign_r1_generator`'s recorded comparisons — all facts about the
+campaign-2 record.
+
+DECISION CARRIED TO THE SEAL, flagged: whether `commodities` joins
+`bootstrap_v1.factor_set` / `bootstrap.FACTOR_SET` (K2 says the campaign
+sees the factor; the factor SET is sealed in the bootstrap_v1 block and
+extending it is part of the same amendment — bands exist either way, the
+question is whether the benchmark and the generators emit it).
+
 ## The amendment (payload sketch)
 
 `AM-<C3_AM_ID>` (`protocol_change`, post_hoc false, one commit with every
