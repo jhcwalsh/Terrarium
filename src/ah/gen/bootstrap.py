@@ -544,12 +544,21 @@ def regime_labels_for(
     )
 
 
+#: The span as sealed AT G2 and carried in the campaign-2 record. Campaign-2-era
+#: consumers (the memoized campaign source, battery replays, the generator
+#: console) check against THIS, not the live sealed constants: AM-2026-08-09-002
+#: moved block_draw_span to 1953-04/813 spec-first, and the catalog serves the
+#: extended panel only after campaign-3's read-path flip.
+CAMPAIGN2_DRAW_SPAN: tuple[str, str, int] = ("1990-01-01", "2020-12-01", 372)
+
+
 def build_source(
     access: DataAccess,
     manifest: FactorManifest,
     *,
     vintage_id: str = CAMPAIGN_VINTAGE_ID,
     enforce_sealed_span: bool = True,
+    expected_span: tuple[str, str, int] | None = None,
 ) -> BootstrapSource:
     """Assemble the sealed draw span, its factor matrix and its regime labels.
 
@@ -585,14 +594,20 @@ def build_source(
 
     dates = pd.DatetimeIndex(span.index)
     if enforce_sealed_span:
-        want_start = pd.Timestamp(BLOCK_DRAW_SPAN_START)
-        want_end = pd.Timestamp(BLOCK_DRAW_SPAN_END)
-        if dates[0] != want_start or dates[-1] != want_end or len(dates) != BLOCK_DRAW_SPAN_MONTHS:
+        exp_start, exp_end, exp_months = expected_span or (
+            BLOCK_DRAW_SPAN_START,
+            BLOCK_DRAW_SPAN_END,
+            BLOCK_DRAW_SPAN_MONTHS,
+        )
+        if (
+            dates[0] != pd.Timestamp(exp_start)
+            or dates[-1] != pd.Timestamp(exp_end)
+            or len(dates) != exp_months
+        ):
             raise BootstrapError(
                 f"derived draw span {dates[0].date()}..{dates[-1].date()} "
                 f"({len(dates)} months) != the sealed block_draw_span "
-                f"{BLOCK_DRAW_SPAN_START}..{BLOCK_DRAW_SPAN_END} "
-                f"({BLOCK_DRAW_SPAN_MONTHS} months)"
+                f"{exp_start}..{exp_end} ({exp_months} months)"
             )
 
     usrec_frame = _read_series(access, USREC_SERIES_ID)
@@ -888,7 +903,13 @@ def campaign_source(
     root = _REPO_ROOT / "data" if catalog_root is None else Path(catalog_root)
     catalog, access = _catalog_access(root, vintage_id)
     try:
-        return build_source(access, load_manifest(), vintage_id=vintage_id)
+        # Campaign-2-era replay surface: the local catalog serves the panel as
+        # sealed at G2, so the check pins the CAMPAIGN-2 span (see
+        # CAMPAIGN2_DRAW_SPAN) -- the live constants moved to 1953-04 under
+        # AM-2026-08-09-002 and apply from campaign-3's wiring onward.
+        return build_source(
+            access, load_manifest(), vintage_id=vintage_id, expected_span=CAMPAIGN2_DRAW_SPAN
+        )
     finally:
         catalog.close()
 
