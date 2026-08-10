@@ -50,12 +50,13 @@ What it deliberately cannot do
   says so: bootstrap-v1 honours a WorldSpec's regime sequence (via stratification) and
   nothing else. Its conditional-tier failure is expected and is measured evidence, not a
   defect to fix.
-- **No pre-1990 month.** The sealed ``block_draw_span`` is 1990-01..2020-12, bound by
-  ``equity_vol`` (VIX begins 1990-01), because a multivariate block can only be drawn
-  where the whole panel exists. WP2.11's severe test ("exclude the 1970s, regenerate from
-  the 1965 climate state") is therefore **not posable** for this generator --
-  :data:`SEVERE_TEST_POSABLE` states that in code and ``G2-EVIDENCE.md`` must record the
-  row as NOT POSABLE rather than reporting a benchmark result that does not exist.
+- **The span reaches 1953-04** (AM-2026-08-09-002, the span-53 ratification; as sealed
+  at G2 it was 1990-01, bound by equity_vol, and the severe test was NOT posable).
+  The extended ``block_draw_span`` is 1953-04..2020-12, bound by ``ust_2y``'s GS1/GS3
+  donor floor; a multivariate block can only be drawn where the whole panel exists, and
+  serving that panel is campaign-3's read-path flip -- until its seal, draws over the
+  extension cannot run (spec now, wiring at campaign-3). WP2.11's severe test is now
+  **posable for both sides**; :data:`SEVERE_TEST_POSABLE` states that in code.
 
 Layering
 --------
@@ -154,10 +155,13 @@ BLOCK_LENGTH_DISTRIBUTION = "geometric"
 #: roughly 5 <= L <= 9; 6 sits inside it, ONE STEP from the lower edge.
 MEAN_BLOCK_MONTHS = 6
 
-BLOCK_DRAW_SPAN_START = "1990-01-01"
-BLOCK_DRAW_SPAN_END = "2020-12-01"  # inclusive -- 372 months of 1990-01..2020-12
-BLOCK_DRAW_SPAN_MONTHS = 372
-BLOCK_DRAW_SPAN_BINDING_FACTOR = "equity_vol"
+# AM-2026-08-09-002 (span-53 ratification): 1990-01/372/equity_vol -> the
+# extended span. Spec now, wiring at campaign-3 -- draws over the extension
+# require the campaign-3 read-path flip and its re-derived references.
+BLOCK_DRAW_SPAN_START = "1953-04-01"
+BLOCK_DRAW_SPAN_END = "2020-12-01"  # inclusive -- 813 months of 1953-04..2020-12
+BLOCK_DRAW_SPAN_MONTHS = 813
+BLOCK_DRAW_SPAN_BINDING_FACTOR = "ust_2y"
 
 #: Every active factor with train+validation data on the sealed campaign vintage.
 #: Campaign-2 (2026-08-02, owner-ratified): hy_spread revived via the pinned
@@ -193,9 +197,10 @@ CAMPAIGN_VINTAGE_ID = "2026-08-02.4"
 CRITERION_N_PATHS = 1024
 CRITERION_MONTHS = 120
 
-#: See the module docstring. The sealed `block_draw_span_consequence` states this; the
-#: constant exists so a caller (and `G2-EVIDENCE.md`) can assert it rather than recall it.
-SEVERE_TEST_POSABLE = False
+#: See the module docstring. False from the G2 seal until AM-2026-08-09-002 extended
+#: the span past the excluded decade; the constant exists so a caller (and the
+#: evidence documents) can assert it rather than recall it.
+SEVERE_TEST_POSABLE = True
 
 SEED_STRIDE = 7919  # CLAUDE.md's ensemble seed rule: base_seed + 7919*k
 

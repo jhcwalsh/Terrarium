@@ -5,11 +5,11 @@ merely those that START inside it -- and the train-only standardization
 constants are re-derived on the reduced sample, because they are part of the
 fit and not of the architecture.
 
-The rule is exercised here on a SYNTHETIC panel that straddles the 1970s. It is
-vacuous on the real campaign panel, whose span is the sealed
-``block_draw_span`` 1990-01..2020-12; that fact is pinned by
-:class:`TestTheRealPanelDoesNotReachTheDecade` because it is the single most
-consequential fact about this leg of the severe test.
+The rule is exercised here on a SYNTHETIC panel that straddles the 1970s. As
+sealed at G2 it was VACUOUS on the real campaign panel (span 1990-01..2020-12);
+AM-2026-08-09-002 extended the span to 1953-04 and the vacuousness is gone --
+that flip is pinned by :class:`TestTheExtendedPanelReachesTheDecade` because it
+is the single most consequential fact about this leg of the severe test.
 """
 
 from __future__ import annotations
@@ -127,16 +127,20 @@ class TestBlockWindowDropRule:
             )
 
 
-class TestTheRealPanelDoesNotReachTheDecade:
-    """The sealed block_draw_span is 1990-2020: the L3 leg of the severe test is
-    STRUCTURALLY VACUOUS, for the same reason the sealed benchmark_exception says
-    bootstrap-v1 cannot run this test at all. Pinned so it cannot be discovered
-    late or glossed over."""
+class TestTheExtendedPanelReachesTheDecade:
+    """INVERTED 2026-08-09 (AM-2026-08-09-002, the span-53 ratification).
+    HISTORY: as sealed at G2 the span was 1990-2020 and this class pinned the
+    opposite -- the L3 severe-test leg was STRUCTURALLY VACUOUS because no
+    block could reach the excluded 1970s, the same reason the sealed
+    benchmark_exception said bootstrap-v1 could not run the test at all.
+    The extended 1953-04 span closes exactly that defect: the excluded decade
+    is now inside the span and the severe test is POSABLE FOR BOTH SIDES at
+    campaign-3. Pinned in this direction so a regression of the span silently
+    un-fixing it cannot be glossed over."""
 
-    def test_the_sealed_block_draw_span_misses_the_excluded_decade_entirely(self):
-        # one month past the sealed inclusive end == the exclusive boundary
-        assert not severe.SEVERE_TEST_EXCLUSION.intersects(bs.BLOCK_DRAW_SPAN_START, "2021-01-01")
+    def test_the_extended_span_reaches_the_excluded_decade(self):
+        assert severe.SEVERE_TEST_EXCLUSION.intersects(bs.BLOCK_DRAW_SPAN_START, "2021-01-01")
 
-    def test_no_block_of_the_sealed_span_can_intersect_it(self):
+    def test_blocks_of_the_extended_span_can_intersect_it(self):
         starts = pd.date_range(bs.BLOCK_DRAW_SPAN_START, bs.BLOCK_DRAW_SPAN_END, freq="MS")
-        assert not severe.SEVERE_TEST_EXCLUSION.window_intersects(starts, months=6).any()
+        assert severe.SEVERE_TEST_EXCLUSION.window_intersects(starts, months=6).any()

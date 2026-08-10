@@ -13,6 +13,24 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **THE SPAN-53 RATIFICATION — AM-2026-08-09-002, the first sealed event of
+  the extension campaign.** `bootstrap_v1.block_draw_span` moves from
+  1990-01..2020-12 (372 months, bound by equity_vol) to **1953-04..2020-12
+  (813 months, bound by ust_2y's donor floor)**, appended by the real
+  machinery with all seven proxy families disclosed by rule id, the
+  D6-admitted HAR months pinned to ONE ensemble draw (seed 20260809,
+  provenance artifact sha pinned in the payload), the superseded lock
+  digest recorded, and the pre-registration RE-SEALED (new digest
+  sha256:f857c45b...). SPEC NOW, WIRING AT CAMPAIGN-3: no sealed code
+  serves the extended panel; campaign-3's own seal performs the read-path
+  flip, hashes the extension modules, re-derives every reference band, and
+  is declared the training basis (rulings K1-K4). No existing verdict is
+  re-graded; the campaign-2 record keeps reproducing bit-identically until
+  campaign-3's seal. THE SEVERE TEST IS NOW POSABLE FOR BOTH SIDES
+  (`bootstrap.SEVERE_TEST_POSABLE` flipped True; the G2-era vacuousness
+  tests INVERTED with their history kept, per convention). The G2-era
+  consequence prose is preserved verbatim as history inside the amended
+  sealed text.
 - **WP-DATA-SPAN53 — the two donors that carry the panel to 1953-04 (owner
   ruling 2026-08-09: ratify the span at 1953-04).** `ah.data.ust10y_extend`
   splices `fred.GS10` (the monthly-average ancestor, 1953-04) under

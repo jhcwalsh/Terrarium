@@ -4117,9 +4117,19 @@ bootstrap_v1:
     factor_set (below) is simultaneously observed. Multivariate blocks mean one shared
     row index across all factors (never per-factor resampling), so a block can only be
     drawn where the whole panel exists.
-  block_draw_span: {start: "1990-01-01", end: "2020-12-01", months: 372}
-  block_draw_span_binding_factor: equity_vol
+  block_draw_span: {start: "1953-04-01", end: "2020-12-01", months: 813}
+  block_draw_span_binding_factor: ust_2y
   block_draw_span_consequence: >-
+    AMENDED BY AM-2026-08-09-002 (the span-53 ratification): the span above is
+    1953-04..2020-12 (813 months), bound by ust_2y's GS1/GS3 donor floor, on the
+    seven verified series extensions of 2026-08-09 -- SPEC NOW, WIRING AT
+    CAMPAIGN-3, whose own pre-registration performs the read-path flip, hashes the
+    extension modules, and re-derives every reference band on the extended panel.
+    No sealed code serves the extended panel under this amendment; the campaign-2
+    record keeps reproducing bit-identically until campaign-3's seal; no existing
+    verdict is re-graded. The severe test becomes POSABLE FOR BOTH SIDES at
+    campaign-3 (the benchmark span now contains 1966-84). The prose below is the
+    G2-era record of the defect this amendment closes, kept verbatim as history.
     THE BENCHMARK'S LARGEST SINGLE DEFECT, stated here rather than discovered in WP2.4.
     equity_vol (fred.VIX) begins 1990-01, funding_spread (TED) 1986-01 and hqm_curve
     1984-01, while equity_mkt/smb/hml/mom reach back to 1926 and cpi to 1913 -- so
