@@ -17,6 +17,11 @@
 # 37 observations, all inside the holdout), `commodities` is still unsourced, and
 # `bootstrap_v1.block_draw_span` is still 1990-2020 because `equity_vol` (VIX) binds it,
 # not `policy_rate`.
+# [Every clause of that sentence has since been discharged, each by its own
+# amendment: hy_spread restored at campaign-2 (AM-2026-08-02-009, pinned splice),
+# the draw span extended to 1953-04..2020-12 by the span-53 ratification
+# (AM-2026-08-09-002), and commodities sourced at campaign-3 (AM-2026-08-10-001,
+# ruling K2). The sentence above is kept as first-seal history, not as a live claim.]
 #
 # THIS IS THE ONE-WAY DOOR. Every change to this file -- and to any file listed in
 # pre-registration.lock's `hashed_files`, which is every module that can move a
@@ -182,7 +187,14 @@ sealed: true
 # pre-existing factors' bands are re-derived on the new vintage at the same seed
 # and any movement is disclosed in the campaign-2 reference-run artifact
 # (artifacts/campaign2/reference-run.json) rather than silently absorbed.
-campaign_vintage_id: "2026-08-02.4"
+#
+# CAMPAIGN-3 (AM-2026-08-10-001): the vintage moved deliberately -- the campaign
+# restart the paragraph above prices in. The 2026-08-02.4 record is the
+# campaign-2 record and is closed; this vintage is the first to carry the
+# extension donors (VXO, CPF3M, CP3M, CP3M_NBER, TB3M_SEC, GS1, GS3) and the
+# AQR commodities series, so the extended reads of AM-2026-08-09-003 engage
+# here for the first time.
+campaign_vintage_id: "2026-08-10.1"
 
 # The sealed factor namespace (WP2.1b Task 1, ah.factors.load_manifest). Path is
 # relative to this file; ah.eval.prereg.seal() reads it to know which factors.yaml to
@@ -240,6 +252,29 @@ splits:
   holdout:    {start: "2021-01-01", end: "2026-08-01"}
 
 # --------------------------------------------------------------------------- #
+# future_accruing_holdout -- ruling K1 (AM-2026-08-10-001). The one-shot
+# historical holdout was SPENT at WP5.6 and no past data can be un-seen; the
+# future is the only place a holdout can still come from. Sealed here so the
+# rule predates the data it protects, which no historical holdout can ever
+# claim again.
+# --------------------------------------------------------------------------- #
+future_accruing_holdout:
+  accrual_start: "2026-09-01"   # data first PUBLISHED after 2026-08
+  earliest_read: "2029-01-01"
+  protocol: >-
+    Data first published after 2026-08 is UNTOUCHABLE by any fit, tuning
+    run, reference derivation or verdict until 2029-01 at the earliest.
+    ONE READ, EVER, in WP5.6's protocol shape: the evaluation spec is
+    written and sealed BEFORE the read; results publish both ways; nothing
+    re-runs. Monthly refreshes continue to STORE accruing data (the vintage
+    machinery is append-only and storage is not reading); the read surface
+    for every campaign remains train+validation, whose end does not move.
+    Operationalizing the fence (a splits-layer accrual boundary and its
+    leakage-guard test) is a sealed requirement on the work package that
+    first touches post-2026-08 data, in the same posture as
+    criterion_bearing_runs_only's requirement on WP2.11.
+
+# --------------------------------------------------------------------------- #
 # reference_run -- the single run every historical band in this file came from.
 #
 # Reproduce with:
@@ -255,7 +290,12 @@ splits:
 reference_run:
   # Campaign-2 (AM-2026-08-02-009): re-run on the new vintage at the SAME seed so
   # pre-existing factors' bands are comparable bit-for-bit (RFR-61 discipline).
-  vintage_id: "2026-08-02.4"
+  # Campaign-3 (AM-2026-08-10-001): re-run on `2026-08-10.1` -- the first vintage
+  # carrying the extension donors and the AQR commodities series -- at the SAME
+  # seed, kept so any factor whose data is genuinely unchanged reproduces its
+  # campaign-2 band bit-for-bit; every band that moves is attributable to the
+  # data (artifacts/campaign3/reference-run.json).
+  vintage_id: "2026-08-10.1"
   seed: 20260726
   n_resamples: 1000
   level: 0.9
@@ -300,7 +340,12 @@ reference_run:
   # (see decisions.S2-NUMERAIRE-BIAS).
   # Campaign-2: hy_spread leaves this list (restored via the pinned splice above);
   # commodities remains the one declared-unavailable factor (RFR-8).
-  missing_factors: [commodities]
+  # Campaign-3 (AM-2026-08-10-001): commodities RESTORED -- sourced by
+  # `aqr.cmdty_ew_excess + french.rf` (expr: add, the exact equity_mkt pattern).
+  # RFR-8's "no free connectored series" reason is discharged by the REG-licensed
+  # manual intake (AM-2026-08-08-001 precedent); the superseded state is kept in
+  # the paragraphs above for the record. The list is EMPTY for the first time.
+  missing_factors: []
 
   # CONSEQUENCE FOR D4. rationale.d4_commodities_consequence names TWO strategies as
   # unevaluable (eqw_factors, endowment_proxy) on the strength of `commodities` alone.
@@ -321,31 +366,62 @@ reference_run:
   # were sourced tomorrow" hypothetical is now the LIVE condition: sourcing
   # commodities would make endowment_proxy computable, since credit_xs_hy's
   # hy_spread leg is restored.
-  uncomputable_d4_strategies: [eqw_factors, endowment_proxy]
+  # Campaign-3 (AM-2026-08-10-001): the LIVE condition fired exactly as written --
+  # "sourcing commodities would make endowment_proxy computable, since
+  # credit_xs_hy's hy_spread leg is restored." Commodities is sourced (K2);
+  # eqw_factors and endowment_proxy both become computable and carry sealed
+  # thresholds.strategies entries. The list is EMPTY for the first time.
+  uncomputable_d4_strategies: []
 
   # Per-factor train+validation coverage of the run, verbatim from its output. Sealed
   # because a band that does not say how much history it rests on is not auditable, and
   # the spread here is roughly threefold.
   coverage:
-    # campaign-2 additions (AM-2026-08-02-007/-008/-009), verbatim from the
-    # campaign-2 reference run (artifacts/campaign2/reference-run.json).
-    # hy_spread's 1224 months are ALL proxy on a train+validation read (the
-    # pinned splice; fred.HY_OAS itself has zero train+validation rows).
+    # CAMPAIGN-3 (AM-2026-08-10-001): verbatim from the campaign-3 reference run
+    # (artifacts/campaign3/reference-run.json) on the extended panel -- every
+    # extension family engaged (the seven extended firsts below were verified
+    # against the wiring's expected values before this table was written, the
+    # runbook's abort rule). Proxy months are IN these counts; the per-factor
+    # proxy share is a sealed reporting requirement
+    # (multi_seed_decision_rule.proxy_share_disclosure). hy_spread's 1224 months
+    # remain ALL proxy on a train+validation read (the pinned splice).
+    # equity_vol's pre-1986 months are the ONE pinned HAR draw -- MODEL OUTPUT
+    # (pinned_artifacts below). Superseded campaign-2 table: policy_rate
+    # 1954-07/798, ust_10y 1962-01/708, ust_2y 1976-06/535, fx_usd 1973-01/576,
+    # hqm_curve 1984-01/444, funding_spread 1986-01/420, no commodities row;
+    # the eight unextended factors' rows are unchanged.
     cape_v:         {first: "1881-01-01", last: "2020-12-01", n_obs: 1680}
     cpi:            {first: "1913-01-01", last: "2020-12-01", n_obs: 1296}
     ig_spread:      {first: "1919-01-01", last: "2020-12-01", n_obs: 1224}
     hy_spread:      {first: "1919-01-01", last: "2020-12-01", n_obs: 1224}
+    hqm_curve:      {first: "1919-01-01", last: "2020-12-01", n_obs: 1224}
     equity_mkt:     {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
     hml:            {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
     smb:            {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
+    commodities:    {first: "1926-07-01", last: "2020-12-01", n_obs: 1134}
     mom:            {first: "1927-01-01", last: "2020-12-01", n_obs: 1128}
-    policy_rate:    {first: "1954-07-01", last: "2020-12-01", n_obs: 798}
-    ust_10y:        {first: "1962-01-01", last: "2020-12-01", n_obs: 708}
-    ust_2y:         {first: "1976-06-01", last: "2020-12-01", n_obs: 535}
-    fx_usd:         {first: "1973-01-01", last: "2020-12-01", n_obs: 576}
-    hqm_curve:      {first: "1984-01-01", last: "2020-12-01", n_obs: 444}
-    funding_spread: {first: "1986-01-01", last: "2020-12-01", n_obs: 420}
-    equity_vol:     {first: "1990-01-01", last: "2020-12-01", n_obs: 372}
+    policy_rate:    {first: "1934-01-01", last: "2020-12-01", n_obs: 1044}
+    funding_spread: {first: "1934-01-01", last: "2020-12-01", n_obs: 1044}
+    equity_vol:     {first: "1953-04-01", last: "2020-12-01", n_obs: 813}
+    ust_2y:         {first: "1953-04-01", last: "2020-12-01", n_obs: 813}
+    ust_10y:        {first: "1953-04-01", last: "2020-12-01", n_obs: 813}
+    fx_usd:         {first: "1953-04-01", last: "2020-12-01", n_obs: 813}
+
+  # THE PINNED EQUITY-VOL ARTIFACTS (AM-2026-08-09-003). equity_vol months
+  # before 1986-01 are MODEL OUTPUT: the ONE pinned HAR draw, served from
+  # package data, never regenerated at read time. Bands over equity_vol
+  # therefore rest partly on model months; the K3 masked ablation cell
+  # measures that dependence and har_masked_ablation states the demotion
+  # criterion.
+  pinned_artifacts:
+    equity_vol_pinned_draw:
+      path: src/ah/data/equity_vol_pinned_draw.json
+      sha256: 53a378a49bfa58f9457698473457f526298efe5454ca9187ff2c35ca3fb50178
+      seed: 20260809
+      span: ["1953-04", "1985-12"]
+    equity_vol_backcast_provenance:
+      path: artifacts/volext/equity-vol-backcast-provenance.json
+      sha256: f0535582c061cc60ea8605aa9085d457b27dbc12af5e4718aed557146284fc92
 
 # --------------------------------------------------------------------------- #
 # ensemble_size -- THE SIZE THE GATE BOUNDS ARE CALIBRATED AT.
@@ -517,6 +593,13 @@ rationale:
     lives. `carry` is computable only because the campaign vintage moved: it funds at
     `cash_tr_1m`, which derives from `policy_rate`, which the 2026-07-24 snapshot did
     not contain.
+    CAMPAIGN-3 SUPERSESSION (AM-2026-08-10-001), the paragraph above kept as
+    history: BOTH strategies are now computable, exactly through the two
+    independent restorations the paragraph's own analysis required -- hy_spread
+    at campaign-2 (AM-2026-08-02-009, the pinned splice) and commodities at
+    campaign-3 (ruling K2, the REG-licensed AQR intake). ALL FIVE D4 strategies
+    carry sealed thresholds.strategies entries; reference_run's two lists are
+    empty for the first time.
 
 # --------------------------------------------------------------------------- #
 # Conventions -- one set of rules, applied to every definition in this file.
@@ -2446,6 +2529,32 @@ thresholds:
       # band [1.890591, 5.874610]; historical point 2.517642. A Hill index is strictly
       # positive, so the lower side (4 half-widths reaches -4.09) is NOT sealed.
       "equity_mkt.hill_tail_index_5pct": {min: null, max: 11.8506, severity: report}
+      # ------------------------------------------------------------------- #
+      # CAMPAIGN-3 COMMODITIES FAMILY (ruling K2, AM-2026-08-10-001). The factor
+      # is newly sourced (aqr.cmdty_ew_excess + french.rf, 1926-07..2020-12,
+      # n=1134) -- the same footing every campaign-2 block addition had, and the
+      # ONE exception to "no name added on the strength of seeing the run". The
+      # five names mirror equity_mkt's exactly (the return-factor convention);
+      # same recipe, same severity, bands from
+      # artifacts/campaign3/reference-run.json. NOTE: no new cross_blocks entry
+      # -- commodities joins the EXISTING global block, no new active pair
+      # exists, and verify()'s one-entry-per-pair requirement is already met.
+      # ------------------------------------------------------------------- #
+      # band [-0.794507, 1.386598]; historical point 0.506187. Both sides bind.
+      "commodities.skew": {min: -4.0662, max: 4.6583, severity: report}
+      # band [-0.062816, 4.330426]; historical point 3.645502. Lower side NOT
+      # sealed: 4 half-widths reaches -6.65, below the structural minimum of -2.
+      "commodities.excess_kurtosis": {min: null, max: 10.9203, severity: report}
+      # band [-0.726780, 3.471064]; historical point 4.071706. Both sides bind.
+      "commodities.acf_abs_sum": {min: -7.0235, max: 9.7678, severity: report}
+      # band [-0.258013, 0.248415]; historical point 0.066630. VACUOUS ON BOTH
+      # SIDES and stated as such (the campaign-2 cross-pair honesty): 4
+      # half-widths spans [-1.02, 1.01], outside a correlation's [-1, 1] range
+      # in both directions, so neither side can bind.
+      "commodities.leverage_correlation": {min: null, max: null, severity: report}
+      # band [1.976939, 5.850324]; historical point 2.734947. A Hill index is
+      # strictly positive, so the lower side (raw -3.83) is NOT sealed.
+      "commodities.hill_tail_index_5pct": {min: null, max: 11.6604, severity: report}
     us:
       # `policy_rate.excess_kurtosis` WAS REMOVED AT THE FIRST SEAL AND IS RESTORED HERE,
       # at severity REPORT, not the enforce it originally carried. The history matters
@@ -2462,23 +2571,32 @@ thresholds:
       # unchanged at five names, and no NEW per-name bound was added on the strength of
       # the new factor, because selecting names after seeing a run is how a threshold
       # gets fitted.
-      # band [-1.455738, 2.169716]; historical point 1.532111. Lower side NOT sealed: 4
-      # half-widths reaches -6.89, below excess kurtosis's structural minimum of -2.
-      "policy_rate.excess_kurtosis": {min: null, max: 7.6079, severity: report}
-      # band [0.921121, 0.975344]; historical point 0.993107. A PER-PATH statistic, so
-      # the pooled/per-path mismatch does not apply to it. Upper side NOT sealed: 4
-      # half-widths reaches 1.0567, outside an autocorrelation's [-1, 1] range. The
-      # surviving `min` says a 10-year yield LEVEL must stay persistent, which is the
-      # falsifiable content.
-      "ust_10y.acf_r_lag1": {min: 0.8398, max: null, severity: report}
-      # band [3.659931, 4.564024]; historical point 4.873915. Upper side NOT sealed: 4
-      # half-widths reaches 5.9202, above the structural maximum of 5 for a sum of five
-      # autocorrelations.
-      "ust_10y.acf_r_sum": {min: 2.3038, max: null, severity: report}
-      # band [-1.181082, 0.666286]; historical point 0.247950. Lower side NOT sealed
-      # (structural minimum -2, as for equity_mkt above).
-      "ust_10y.excess_kurtosis": {min: null, max: 3.4373, severity: report}
+      # CAMPAIGN-3 (AM-2026-08-10-001): band re-derived on the extended panel
+      # (policy_rate now 1934-01.., the fedfunds_pre1954 splice applied at read).
+      # band [-1.465808, 1.746486]; historical point 1.537653. Lower side NOT sealed: 4
+      # half-widths reaches -6.28, below excess kurtosis's structural minimum of -2.
+      # Superseded campaign-2 values: band [-1.455738, 2.169716], max 7.6079.
+      "policy_rate.excess_kurtosis": {min: null, max: 6.5649, severity: report}
+      # CAMPAIGN-3: ust_10y extended to 1953-04 (GS10 + par-yield extension); band
+      # moved accordingly. band [0.921987, 0.977457]; historical point 0.993587. A
+      # PER-PATH statistic, so the pooled/per-path mismatch does not apply to it.
+      # Upper side NOT sealed: 4 half-widths reaches 1.0607, outside an
+      # autocorrelation's [-1, 1] range. The surviving `min` says a 10-year yield
+      # LEVEL must stay persistent, which is the falsifiable content.
+      # Superseded campaign-2 values: band [0.921121, 0.975344], min 0.8398.
+      "ust_10y.acf_r_lag1": {min: 0.8388, max: null, severity: report}
+      # CAMPAIGN-3 band [3.679321, 4.580812]; historical point 4.883684. Upper side
+      # NOT sealed: 4 half-widths reaches 5.933, above the structural maximum of 5
+      # for a sum of five autocorrelations. Superseded campaign-2: band
+      # [3.659931, 4.564024], min 2.3038.
+      "ust_10y.acf_r_sum": {min: 2.3271, max: null, severity: report}
+      # CAMPAIGN-3 band [-1.159448, 0.824898]; historical point 0.463249. Lower side
+      # NOT sealed (structural minimum -2, as for equity_mkt above). Superseded
+      # campaign-2: band [-1.181082, 0.666286], max 3.4373.
+      "ust_10y.excess_kurtosis": {min: null, max: 3.8014, severity: report}
       # band [-1.545279, 2.006997]; historical point -0.699652. Same structural clip.
+      # CAMPAIGN-3: BIT-IDENTICAL to campaign-2 (cpi's data is unchanged and the
+      # seed is kept -- the RFR-61 discipline demonstrating itself).
       "cpi.excess_kurtosis": {min: null, max: 7.3354, severity: report}
     # ----------------------------------------------------------------------- #
     # CAMPAIGN-2 BLOCK ADDITIONS (AM-2026-08-02-007/-008; merged here as part of
@@ -2491,15 +2609,22 @@ thresholds:
     # severity report throughout -- no new enforce name, for the family-wise-error
     # reason the section header states.
     fx:
-      # band [0.916783, 0.987438]. Upper side NOT sealed: 4 half-widths reaches
-      # 1.0935, outside an autocorrelation's [-1, 1]. The surviving min says a
-      # trade-weighted dollar LEVEL must stay persistent -- the falsifiable content.
-      "fx_usd.acf_r_lag1": {min: 0.8108, max: null, severity: report}
-      # band [3.532848, 4.735283]. Upper side NOT sealed (4 half-widths reaches
-      # 6.5395, above the structural max of 5 for a sum of five autocorrelations).
-      "fx_usd.acf_r_sum": {min: 1.7292, max: null, severity: report}
-      # band [-1.540829, 1.349860]. Lower side NOT sealed (structural minimum -2).
-      "fx_usd.excess_kurtosis": {min: null, max: 5.6859, severity: report}
+      # CAMPAIGN-3 (AM-2026-08-10-001): fx_usd extended to 1953-04 -- the pegged
+      # era enters via the parity/pre-2006 rules (proxy share disclosed per
+      # multi_seed_decision_rule.proxy_share_disclosure) and every band below
+      # moved. Superseded campaign-2 values quoted per entry.
+      # band [0.904861, 0.986080]; point 0.995218. Upper side NOT sealed: 4
+      # half-widths reaches 1.1079, outside an autocorrelation's [-1, 1]. The
+      # surviving min says a trade-weighted dollar LEVEL must stay persistent --
+      # the falsifiable content. Campaign-2: band [0.916783, 0.987438], min 0.8108.
+      "fx_usd.acf_r_lag1": {min: 0.783, max: null, severity: report}
+      # band [3.329675, 4.729389]; point 4.902614. Upper side NOT sealed (4
+      # half-widths reaches 6.829, above the structural max of 5 for a sum of five
+      # autocorrelations). Campaign-2: band [3.532848, 4.735283], min 1.7292.
+      "fx_usd.acf_r_sum": {min: 1.2301, max: null, severity: report}
+      # band [-1.584479, 2.824626]; point -0.851731. Lower side NOT sealed
+      # (structural minimum -2). Campaign-2: band [-1.540829, 1.349860], max 5.6859.
+      "fx_usd.excess_kurtosis": {min: null, max: 9.4383, severity: report}
     valuation:
       # band [0.924902, 0.983156]. Upper side NOT sealed ([-1, 1] clip, as fx).
       # cape_v is DN-1's v_t -- the min is a decade-scale persistence floor on the
@@ -2525,7 +2650,9 @@ thresholds:
       # original key would be judgeable again today -- it is not restored here because
       # `correlation` is now covered as a family by moment_band_exceedance_fraction and
       # `crisis_corr_lift` is the DN-1.1-named statistic.)
-      "equity_mkt~ust_10y.crisis_corr_lift": {min: -1.9168, max: 1.9170, severity: report}
+      # CAMPAIGN-3 band [-0.480506, 0.479405]; point 0.013595 (both legs' data
+      # extended; the band barely moved). Campaign-2: {min: -1.9168, max: 1.9170}.
+      "equity_mkt~ust_10y.crisis_corr_lift": {min: -1.9204, max: 1.9193, severity: report}
     # CAMPAIGN-2 PAIRS (AM-2026-08-02-007/-008). One representative
     # crisis_corr_lift per pair, chosen PRE-HOC on macro grounds and mirroring
     # the sealed convention above; same derivation, same weak-bound honesty.
@@ -2535,22 +2662,44 @@ thresholds:
     # every active pair to carry one, and a stated-vacuous bound is more honest
     # than a pretend one -- the real cross-block judgment for these pairs, as for
     # global|us above, is cross_block_corr_matrix_distance and the dependence gate.
+    # CAMPAIGN-3, THE THREE FX PAIRS (AM-2026-08-10-001): their crisis_corr_lift
+    # bands are NaN ON THE EXTENDED PANEL and the entries seal VACUOUS with the
+    # reason stated, which is the same honesty rule the campaign-2 vacuous
+    # entries followed. Mechanism, so a reader does not mistake it for a data
+    # error: fx_usd now reaches 1953-04, and a 120-month resample drawn inside
+    # the pegged era (1953-71) has near-zero fx variance -- reference.py's
+    # degenerate-variance guard (AM-2026-08-09-003) returns its STATED NaN
+    # sentinel for the conditional correlation, and block_bootstrap_band's
+    # ordinary np.percentile is deliberately not NaN-robust
+    # (governance/retrofit-register.md RFR-19, deferred by design), so one
+    # sentinel replicate makes the band NaN. n_valid_resamples = 882 of 1000
+    # for each fx pair (the loss is disclosed, not hidden). The historical
+    # POINTS are finite (0.1806, -0.3357, 0.3568) -- the full sample spans both
+    # eras. Switching these pairs to a statistic with a finite band would be
+    # selecting names after seeing the run, which the recipe forbids; the real
+    # cross-block judgment stays cross_block_corr_matrix_distance and the
+    # dependence gate, as the section header has always said. Superseded
+    # campaign-2 values quoted per entry.
     "fx|global":
-      # band [-0.363019, 0.492506]; dollar~equity crisis interaction (flight to
-      # the dollar). Both sides bind, barely (range clip at -2/2 not reached).
-      "fx_usd~equity_mkt.crisis_corr_lift": {min: -1.6463, max: 1.7758, severity: report}
+      # Campaign-2: band [-0.363019, 0.492506], {min: -1.6463, max: 1.7758}.
+      # Campaign-3: band NaN (882/1000 valid), point 0.180554 -- vacuous, above.
+      "fx_usd~equity_mkt.crisis_corr_lift": {min: null, max: null, severity: report}
     "fx|us":
-      # band [-0.881578, 0.659509]; 4 half-widths spans [-3.19, 2.97] -- vacuous.
+      # Campaign-2: band [-0.881578, 0.659509] -- already vacuous by width.
+      # Campaign-3: band NaN (882/1000 valid), point -0.335722 -- vacuous, above.
       "fx_usd~ust_10y.crisis_corr_lift": {min: null, max: null, severity: report}
     "fx|valuation":
-      # band [-1.047624, 1.069450]; 4 half-widths spans [-4.22, 4.24] -- vacuous.
+      # Campaign-2: band [-1.047624, 1.069450] -- already vacuous by width.
+      # Campaign-3: band NaN (882/1000 valid), point 0.356841 -- vacuous, above.
       "fx_usd~cape_v.crisis_corr_lift": {min: null, max: null, severity: report}
     "global|valuation":
       # band [-0.469687, 0.459772]; valuation~equity, the DN-1-natural pair.
-      # Both sides bind, barely.
+      # Both sides bind, barely. CAMPAIGN-3: BIT-IDENTICAL (both legs' data
+      # unchanged, seed kept -- RFR-61).
       "equity_mkt~cape_v.crisis_corr_lift": {min: -1.8639, max: 1.854, severity: report}
     "us|valuation":
-      # band [-0.905227, 1.246245]; 4 half-widths spans [-4.13, 4.47] -- vacuous.
+      # CAMPAIGN-3 band [-0.830438, 1.200772]; 4 half-widths spans [-3.88, 4.25]
+      # -- still vacuous. Campaign-2 band: [-0.905227, 1.246245].
       "ust_10y~cape_v.crisis_corr_lift": {min: null, max: null, severity: report}
   panel:
     # NOT derived from a band, and cannot be: see the next sentence. The 10.0 is a
@@ -2755,8 +2904,20 @@ thresholds:
     # alike, and the null is dominated by the most self-similar factors (cpi's own p05
     # is 0.0153; smb's is 2.1672). WP2.4 must report bootstrap-v1's measured values
     # against these floors.
-    "nn_distance_p05": {min: 0.0279, max: null, severity: report}
-    "nn_distance_p50": {min: 1.0371, max: null, severity: report}
+    # CAMPAIGN-3 (AM-2026-08-10-001): floors re-derived on the extended panel
+    # (artifacts/campaign3/seal-evidence.json; 650 pooled blocks over 16
+    # factors). The composition caveat above SHARPENS: fx_usd's own per-factor
+    # p05 is exactly 0.0 -- pegged-era 24-month windows are constant-to-
+    # machine-precision and sit at zero distance from each other, so the
+    # pooled 5th percentile now rests partly on an era where history IS
+    # self-identical. A generated fx path reproducing the peg would be flagged
+    # "close to training data" for being RIGHT; that is why these floors are
+    # `report`, and the equal-weight generated-side caveat applies with more
+    # force than at campaign-2. Superseded campaign-2 floors: p05 0.0279,
+    # p50 1.0371 (comment values cpi 0.0153 / smb 2.1672 refer to the
+    # campaign-2 pools; campaign-3 per-factor values are in the artifact).
+    "nn_distance_p05": {min: 0.0918, max: null, severity: report}
+    "nn_distance_p50": {min: 1.2950, max: null, severity: report}
     "membership_inference_auc": {min: null, max: 0.75, severity: report}
     # WP2.2c Item 2 + Item 3. severity: enforce, max: 0.5 -- a LOOSENED bound at a
     # RAISED severity, and both halves are deliberate.
@@ -2869,7 +3030,10 @@ thresholds:
   # threshold because limitations.named_estimator_substitutions records why the backtest
   # family runs at 95% only.
   strategies:
-    # THREE OF THE FIVE D4 STRATEGIES APPEAR HERE. At the first seal it was two: `carry`
+    # CAMPAIGN-3 (AM-2026-08-10-001): ALL FIVE D4 STRATEGIES NOW APPEAR -- the
+    # paragraph below is the campaign-2 record, kept as history; the campaign-3
+    # measured statistics and entries follow it.
+    # [SUPERSEDED CAMPAIGN-2 TEXT] THREE OF THE FIVE D4 STRATEGIES APPEAR HERE. At the first seal it was two: `carry`
     # is restored by the campaign-vintage move, because it funds at cash_tr_1m, which
     # derives from policy_rate, which the 2026-07-24 snapshot did not contain. The two
     # that remain absent -- eqw_factors and endowment_proxy -- have no computable
@@ -2923,12 +3087,32 @@ thresholds:
     # generated ensemble whose 95% VaR on the classic 60/40 portfolio is under 1.4% or
     # over 12.6% a month is not modelling that portfolio. It is a coarse instrument and
     # is sealed `report`.
-    "sixty_forty.var_95": {min: 0.0140, max: 0.1264, severity: report}
-    "sixty_forty.es_95": {min: 0.0200, max: 0.1800, severity: report}
+    # CAMPAIGN-3 (AM-2026-08-10-001), measured on the extended panel via
+    # scripts/measure_seal_evidence.py (artifacts/campaign3/seal-evidence.json),
+    # same [historical/3, historical*3] recipe:
+    #   sixty_forty  n = 813 (1953-2020 -- ust_10y's extension moved its start
+    #                from 1962), var_95 0.03929, es_95 0.05760.
+    #   momentum     n = 1134, var_95 0.05613, es_95 0.09102 -- UNCHANGED to
+    #                every digit (its legs' data did not move); entries kept.
+    #   carry        n = 813 (same extension; policy_rate no longer binds),
+    #                var_95 0.03198, es_95 0.04975.
+    #   eqw_factors  n = 1128 (RESTORED, ruling K2 -- commodities was its last
+    #                blocker), var_95 0.02662, es_95 0.04241.
+    #   endowment_proxy n = 813 (RESTORED -- hy_spread's leg came back at
+    #                campaign-2, commodities now closes it), var_95 0.04119,
+    #                es_95 0.06319.
+    # Superseded campaign-2 entries quoted in git and the amendment; the two
+    # new strategies enter on the same footing and severity as the three.
+    "sixty_forty.var_95": {min: 0.0131, max: 0.1179, severity: report}
+    "sixty_forty.es_95": {min: 0.0192, max: 0.1728, severity: report}
     "momentum.var_95": {min: 0.0187, max: 0.1684, severity: report}
     "momentum.es_95": {min: 0.0303, max: 0.2731, severity: report}
-    "carry.var_95": {min: 0.0116, max: 0.1045, severity: report}
-    "carry.es_95": {min: 0.0173, max: 0.1561, severity: report}
+    "carry.var_95": {min: 0.0107, max: 0.0959, severity: report}
+    "carry.es_95": {min: 0.0166, max: 0.1493, severity: report}
+    "eqw_factors.var_95": {min: 0.0089, max: 0.0798, severity: report}
+    "eqw_factors.es_95": {min: 0.0141, max: 0.1272, severity: report}
+    "endowment_proxy.var_95": {min: 0.0137, max: 0.1236, severity: report}
+    "endowment_proxy.es_95": {min: 0.0211, max: 0.1896, severity: report}
     # elicitability_score is the D4 tail objective WP2.8's auxiliary loss optimizes --
     # the average of the Fissler-Ziegel-style joint (VaR, ES) consistent scoring
     # function of the GENERATED returns against the HISTORICAL forecast. It is a loss,
@@ -2941,6 +3125,11 @@ thresholds:
     "sixty_forty.elicitability_score": {min: null, max: 5.0, severity: report}
     "momentum.elicitability_score": {min: null, max: 5.0, severity: report}
     "carry.elicitability_score": {min: null, max: 5.0, severity: report}
+    # Campaign-3: the two restored strategies carry the same deliberately loose
+    # underived 5.0 ceiling as the three above, for the same stated reason --
+    # no run-derived bound exists until a campaign reports measured values.
+    "eqw_factors.elicitability_score": {min: null, max: 5.0, severity: report}
+    "endowment_proxy.elicitability_score": {min: null, max: 5.0, severity: report}
     # WP2.2 Task 4 fix pass 2 (BLOCKING 1): renamed from `kupiec_pof_pvalue`, and the
     # statistic pinned to the SEALED one-path reference count (T = 120), not to a pooled
     # count ~1000x larger. The 0.01 floor is now DERIVED rather than provisional: it is
@@ -2991,6 +3180,21 @@ decisions:
   S2-ENDOWMENT-WEIGHTS:  # WP2.3 resolution of governance/retrofit-register.md RFR-9.
     status: CLOSED
     consequence: "RFR-9 asked WP2.3 to decide whether endowment_proxy's weights are capital shares throughout -- which would mean adding a duration-matched government leg at HY spread duration (4.0y) so the credit sleeve becomes a genuine total return -- or explicitly a RISK BUDGET for the zero-cost leg. RISK BUDGET is sealed, and it is stated in the definition rather than left to be inferred: endowment_proxy's equity_mkt 0.65, govt_tr_10y 0.10 and commodities 0.10 are CAPITAL SHARES summing to 0.85; credit_xs_hy 0.15 is a NOTIONAL/RISK BUDGET on a self-financing, duration-hedged position, not a capital share, and the remaining 0.15 of capital is uninvested and earns nothing (see S2-NUMERAIRE-BIAS, which is the portfolio-level statement of the same fact). The alternative was rejected on two grounds. (1) It requires a NEW derived series -- a government total return at 4.0y duration, distinct from the sealed govt_tr_10y at 8.5y -- which is a new sealed transform authored with no evidence, for a strategy that has NO COMPUTABLE HISTORICAL PATH on this vintage and cannot be validated either way (reference_run.uncomputable_d4_strategies). (2) It would change a sealed D4 strategy definition to make an economic claim about a series nothing can currently compute, which is precisely the shape of change the seal exists to make expensive. CONSEQUENCE: endowment_proxy's `weights` table must be read as a mixed capital/notional table, ah.strategies' sum-to-1.0 load check is NOT a full-investment check for it, and the sealed thresholds for it are -- none, because it is uncomputable. RE-ENTRY: if hy_spread ever acquires train+validation history (which needs the hy_oas_pre1996 splice and a campaign restart), whoever recomputes its bands should revisit this with real data rather than inheriting the decision."
+
+  # Campaign-3 additions (AM-2026-08-10-001): the four K-rulings, sealed with
+  # the campaign's own prereg edits and before any training run.
+  S3-K1-FUTURE-HOLDOUT:
+    status: SEALED
+    consequence: "see future_accruing_holdout; the historical holdout remains SPENT and no appeal to it is possible"
+  S3-K2-COMMODITIES-CLOSE:
+    status: SEALED
+    consequence: "aqr.cmdty_ew_excess + french.rf sources `commodities` (expr: add); REG licence -- attribution rides every artifact, raw values never committed; eqw_factors and endowment_proxy become computable and carry sealed thresholds; commodities joins bootstrap_v1.factor_set / bootstrap.FACTOR_SET / the hier-flow-v2 training list (owner ruling 2026-08-10) so the restored strategies are judgeable on generated paths"
+  S3-K3-HAR-MASKED-CELL:
+    status: SEALED
+    consequence: "ablation system F + multi_seed_decision_rule.har_masked_ablation's demotion criterion"
+  S3-K4-HARDWARE-GATE:
+    status: OPEN
+    consequence: "training does not start until the owner picks the host; ~2.2h/flow cell on CPU, grid at 4 neural systems x >=3 seeds; the seal does not wait for this call -- only training does"
 
 # --------------------------------------------------------------------------- #
 # structurally_unavailable_statistics -- names that are NaN on every ensemble, always.
@@ -3333,15 +3537,32 @@ claims_with_tests:
         - tests/test_prereg.py::test_verify_fails_when_sealed_and_lock_file_is_missing
       status: pinned
 
+    the_extended_panel_reaches_the_excluded_decade:
+      claim: >-
+        The extended block_draw_span (1953-04..2020-12) contains the severe test's
+        excluded decade and the 1965 start state, so the vacuousness that grounded
+        the benchmark's severe-test exception is closed and the leg is posable for
+        both sides -- the flip campaign-3's retirement of benchmark_exception
+        rests on (AM-2026-08-10-001).
+      covers:
+        - "(tests/test_severe_blocks.py::TestTheExtendedPanelReachesTheDecade pins"
+      pinned_by:
+        - tests/test_severe_blocks.py::test_the_extended_span_reaches_the_excluded_decade
+        - tests/test_severe_blocks.py::test_blocks_of_the_extended_span_can_intersect_it
+      status: pinned
+
     every_active_pair_must_carry_a_cross_block_entry:
       claim: >-
         verify() requires a thresholds.cross_blocks entry for every active block
         pair -- which is why campaign-2's three vacuous (both-null) pair entries
         exist at all: the coverage requirement is machine-enforced, and a
         stated-vacuous bound satisfies it honestly where 4 half-widths exceeds
-        the statistic's whole range.
+        the statistic's whole range. Campaign-3's commodities family cites the
+        same fact from the other side: joining an EXISTING block creates no new
+        active pair, so the requirement is already met with no new entry.
       covers:
         - "# directions, so no side can bind. The entry exists because verify() requires"
+        - "# exists, and verify()'s one-entry-per-pair requirement is already met."
       pinned_by:
         - tests/test_prereg.py::test_verify_fails_when_cross_block_entry_missing
       status: pinned
@@ -4120,6 +4341,13 @@ bootstrap_v1:
   block_draw_span: {start: "1953-04-01", end: "2020-12-01", months: 813}
   block_draw_span_binding_factor: ust_2y
   block_draw_span_consequence: >-
+    THE ROUTE OUT WAS TAKEN AT CAMPAIGN-3 (AM-2026-08-10-001): the first of the
+    three routes below -- extension plus ratification plus campaign restart --
+    completed end to end. The read-path flip is sealed (AM-2026-08-09-003), the
+    extension modules and pinned artifacts are hashed, and every reference band
+    is re-derived on the extended panel (artifacts/campaign3/reference-run.json,
+    vintage 2026-08-10.1). The severe test is POSABLE FOR BOTH SIDES from this
+    seal onward (see severe_test_protocol.benchmark_exception, retired).
     AMENDED BY AM-2026-08-09-002 (the span-53 ratification): the span above is
     1953-04..2020-12 (813 months), bound by ust_2y's GS1/GS3 donor floor, on the
     seven verified series extensions of 2026-08-09 -- SPEC NOW, WIRING AT
@@ -4164,8 +4392,12 @@ bootstrap_v1:
 
   # Campaign-2 (AM-2026-08-02-009): hy_spread restored (pinned splice), fx_usd and
   # cape_v added by the fx / valuation block_addition amendments (-007/-008).
-  factor_set: [cape_v, cpi, equity_mkt, equity_vol, funding_spread, fx_usd, hml,
-               hqm_curve, hy_spread, ig_spread, mom, policy_rate, smb, ust_10y, ust_2y]
+  # Campaign-3 (AM-2026-08-10-001, ruling K2 + owner ruling 2026-08-10):
+  # commodities joins -- sourced, banded, and EMITTED, so the restored
+  # eqw_factors/endowment_proxy thresholds are judgeable on generated paths.
+  factor_set: [cape_v, commodities, cpi, equity_mkt, equity_vol, funding_spread,
+               fx_usd, hml, hqm_curve, hy_spread, ig_spread, mom, policy_rate,
+               smb, ust_10y, ust_2y]
   factor_set_rule: >-
     Every active factor with train+validation data on the sealed campaign vintage --
     i.e. manifest.active_factors() minus reference_run.missing_factors. TWELVE of the
@@ -4243,15 +4475,22 @@ ablation_systems:
   A: {id: structure-only, description: "L1 climate + L2 regimes + Gaussian residuals", neural: false}
   B: {id: neural-rollout, description: "L3 chained directly, no waypoints, no L1 anchor", neural: true}
   C: {id: neural-only, description: "L3 blocks + naive chaining, no L1", neural: true}
-  D: {id: full-hierarchy, description: "the complete four-layer hierarchy; two samplers, hier-diffusion-v1 and hier-flow-v1", neural: true}
-  E: {id: bootstrap-v1, description: "the frozen benchmark specified above", neural: false}
+  D: {id: full-hierarchy, description: "the complete four-layer hierarchy; ONE sampler at campaign-3, hier-flow-v2 (hier-diffusion DOES NOT RACE -- the flow family was the promoted line and a diffusion retrain spends the K4 budget without a decision it would change; racing it later is a dated amendment). Superseded campaign-2 text: two samplers, hier-diffusion-v1 and hier-flow-v1.", neural: true}
+  E: {id: bootstrap-v1, description: "the frozen benchmark on the EXTENDED span (AM-2026-08-09-002); campaign-2 text: the frozen benchmark specified above", neural: false}
+  F: {id: har-masked, description: "system D's architecture with equity_vol MISSING pre-1986 (ruling K3; see multi_seed_decision_rule.har_masked_ablation)", neural: true}
 ablation_rule: >-
-  Exactly these five, no more. Neural systems (B, C, D) run >= 3 TRAINING seeds each;
-  deterministic systems (A, E) run >= 3 SAMPLING seeds each. Every system is evaluated
-  on the identical splits, the identical campaign vintage, and the sealed criterion
-  ensemble size. ABLATION.md is generated, not hand-assembled, and shows cross-seed
-  dispersion per metric. Adding a sixth arm after any result is seen is a dated,
-  post-hoc-flagged amendment and must be reported as one.
+  Exactly these six, no more (CAMPAIGN-3, AM-2026-08-10-001: F added by ruling
+  K3, sealed BEFORE any training run -- the "sixth arm after any result is
+  seen" prohibition below is untouched because no result exists). Neural
+  systems (B, C, D, F) run >= 3 TRAINING seeds each; deterministic systems
+  (A, E) run >= 3 SAMPLING seeds each. Every system is evaluated on the
+  identical splits, the identical campaign vintage, and the sealed criterion
+  ensemble size. ABLATION.md is generated, not hand-assembled, and shows
+  cross-seed dispersion per metric. Adding a further arm after any result is
+  seen is a dated, post-hoc-flagged amendment and must be reported as one.
+  Superseded campaign-2 text, kept as history: "Exactly these five, no more.
+  ... Adding a sixth arm after any result is seen is a dated,
+  post-hoc-flagged amendment and must be reported as one."
 
 # --------------------------------------------------------------------------- #
 # tuning_protocol -- the forking-paths record (STEP2-GENERATOR-PLAN Sec.WP2.8).
@@ -4343,12 +4582,27 @@ severe_test_protocol:
     the generator's ability to extrapolate to an era it never saw, which is the whole
     question the test asks; it is not grounds for re-tuning.
   benchmark_exception: >-
-    bootstrap-v1 CANNOT RUN THIS TEST. Its block_draw_span is 1990-2020 (see
-    bootstrap_v1.block_draw_span_consequence), which contains neither the excluded
-    decade nor the 1965 start state, so "exclude the 1970s" is vacuous for it and
-    "regenerate from 1965" is impossible. G2-EVIDENCE.md must record the benchmark's
-    severe-test row as NOT POSABLE, with this reason, rather than as a pass, a fail, or
-    an omission.
+    RETIRED AT CAMPAIGN-3 (AM-2026-08-10-001): bootstrap-v1 CAN NOW RUN THIS
+    TEST. Its block_draw_span is 1953-04..2020-12 (AM-2026-08-09-002), which
+    contains the excluded decade AND the 1965 start state; the vacuousness
+    that grounded this exception is exactly what the extended span closed
+    (tests/test_severe_blocks.py::TestTheExtendedPanelReachesTheDecade pins
+    the flip). The severe leg is POSABLE FOR BOTH SIDES and no system holds
+    an exception. SUPERSEDED G2 TEXT, verbatim, kept as history: bootstrap-v1
+    CANNOT RUN THIS TEST. Its block_draw_span is 1990-2020 (see
+    bootstrap_v1.block_draw_span_consequence), which contains neither the
+    excluded decade nor the 1965 start state, so "exclude the 1970s" is
+    vacuous for it and "regenerate from 1965" is impossible. G2-EVIDENCE.md
+    must record the benchmark's severe-test row as NOT POSABLE, with this
+    reason, rather than as a pass, a fail, or an omission.
+  severe_test_criterion: >-
+    SEALED WITH THE PROCEDURE, RFR-77's lesson (a procedure without a
+    criterion judges nothing). A system PASSES the severe leg iff its
+    excluded-decade regeneration keeps EVERY enforce-tier severe statistic
+    inside its sealed band over the 1966-1984 comparison window. A system
+    that cannot pose the leg FAILS it -- no exception route exists any more.
+    The result reports either way and a failure is a finding, not a tuning
+    opportunity (reporting clause above, unchanged).
 
 # --------------------------------------------------------------------------- #
 # multi_seed_decision_rule -- the G2 promotion rule, IN WORDS, sealed before any
@@ -4443,7 +4697,13 @@ multi_seed_decision_rule:
     every seed for the pooled route -- the pooled arm relaxes the objective, not the
     band-regression check.
   benchmark_draw_span_bias: >-
-    THE HEAD-TO-HEAD IS BIASED TOWARD PROMOTION, AND BY A MECHANISM THAT HAS NOTHING TO
+    CLAUSE RETIRED AT CAMPAIGN-3 (AM-2026-08-10-001): the mechanism this clause
+    disclosed is GONE -- bootstrap-v1 resamples 1953-04..2020-12, so both
+    sides of the head-to-head see 1973-74, 1987 and the stagflation decade,
+    and no common-window restriction is required. REPLACED BY
+    proxy_share_disclosure, the asymmetry the extended span introduces in
+    its place. SUPERSEDED G2 TEXT, verbatim, kept as history: THE
+    HEAD-TO-HEAD IS BIASED TOWARD PROMOTION, AND BY A MECHANISM THAT HAS NOTHING TO
     DO WITH EITHER GENERATOR'S QUALITY. Re-seal fix, review Critical 2. bootstrap-v1
     can only resample bootstrap_v1.block_draw_span (1990-01..2020-12; see
     block_draw_span_consequence), whose worst equity drawdowns are 2000-02, 2008-09 and
@@ -4462,6 +4722,31 @@ multi_seed_decision_rule:
     the sealed rule is the sealed rule -- but a PROMOTE that survives only on the full
     sample and vanishes on the common window is a promotion of a data window. THE
     ROUTES OUT are block_draw_span_consequence's three, all amendments; none is taken.
+  proxy_share_disclosure: >-
+    THE EXTENDED SPAN'S OWN DISCLOSED ASYMMETRY, replacing the retired
+    draw-span bias clause (AM-2026-08-09-002's disclosure, promoted to a
+    sealed reporting requirement). Every verdict table computed over the
+    extended span MUST report, per factor, the proxy share of the months
+    that produced it -- and for equity_vol, the HAR share separately from
+    the VXO share, because HAR months are MODEL OUTPUT (owner ruling D6
+    admitted them as span data; this clause is the standing price). Neither
+    number gates -- the sealed rule is the sealed rule -- but a verdict
+    whose winning margin concentrates in high-proxy-share months must say
+    so in G2-EVIDENCE.md's campaign-3 successor, and the K3 masked cell
+    (har_masked_ablation) is the measured check on the equity_vol case.
+  har_masked_ablation: >-
+    RULING K3, operationalized. The ablation grid carries a MASKED variant
+    of the promoted-family system: identical architecture, hyperparameters
+    and seeds, with equity_vol treated as MISSING before 1986-01. The
+    included-vs-masked comparison is reported in the campaign evidence.
+    DEMOTION CRITERION, sealed before any training run: the HAR-included
+    variant is DEMOTED to report-only -- the masked variant becomes the
+    criterion-bearing configuration -- if (a) masking flips ANY enforce-tier
+    clause of this decision rule for that system, or (b) the pooled
+    decision-alpha difference between included and masked exceeds half the
+    sealed beats-margin (|mean_s(d_s)| of clause (i)'s pooled route). A
+    demotion is a finding about learning-from-our-own-reconstruction and
+    reports as one.
   rule: >-
     PROMOTE the challenger over bootstrap-v1 only if ALL FOUR of the following hold.
     (1) TAIL SUPERIORITY: the challenger beats bootstrap-v1 on the tail tier in EVERY

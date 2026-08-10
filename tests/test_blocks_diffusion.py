@@ -9,7 +9,13 @@ import torch
 from ah.gen.blocks import constraints as ct
 from ah.gen.blocks import data as bd
 from ah.gen.blocks import diffusion as df
-from ah.gen.bootstrap import FACTOR_SET
+
+# hier-diffusion-v1 is a CAMPAIGN-2 artifact and does not race at campaign-3
+# (sealed ablation_systems.D note, AM-2026-08-10-001): every sampler and
+# checkpoint this suite exercises records the fifteen-factor campaign-2 set,
+# so the whole file pins CAMPAIGN2_FACTOR_SET -- the live sixteen-factor
+# FACTOR_SET belongs to hier-flow-v2's campaign, not to these artifacts.
+from ah.gen.bootstrap import CAMPAIGN2_FACTOR_SET as FACTOR_SET
 from ah.gen.joinery import bridge
 from ah.gen.joinery.waypoints import (
     RATE_FLOOR_FACTORS,

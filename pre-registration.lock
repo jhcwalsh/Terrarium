@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:6061fd73d9a5d25f0b105e3f1a96ddd5570bbc24c559afaf25d8b330d17636ce",
+  "digest": "sha256:f48c777a67d117c25e962dcc4719a657bb309cf91b22b6a230e4a5935205c63d",
   "hashed_files": [
     "artifacts/volext/equity-vol-backcast-provenance.json",
     "factors.yaml",
@@ -46,5 +46,5 @@
     "src/ah/strategies.py"
   ],
   "prereg_path": "pre-registration.yaml",
-  "sealed_at": "2026-08-09T20:45:00-07:00"
+  "sealed_at": "2026-08-10"
 }

@@ -12,6 +12,36 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Added
+- **THE CAMPAIGN-3 SEAL — AM-2026-08-10-001, the first campaign sealed on the
+  extended panel.** `campaign_vintage_id` moves to `2026-08-10.1` (the first
+  clean weekday vintage carrying the extension donors and the AQR commodities
+  series; the crashed Sunday attempt sits quarantined beside it as the record
+  it is). The reference run re-derived at the KEPT seed 20260726
+  (`artifacts/campaign3/reference-run.json`): all sixteen coverage firsts
+  matched the wiring's expected values (the runbook's abort rule), every
+  unchanged factor reproduced its band bit-identically (RFR-61), and every
+  moved band belongs to an extended factor with its superseded value quoted
+  in place. `missing_factors` and `uncomputable_d4_strategies` are EMPTY for
+  the first time: commodities is sourced (ruling K2), banded (the equity_mkt
+  five-name convention), and EMITTED — it joins `bootstrap_v1.factor_set` /
+  `bootstrap.FACTOR_SET` and the constraints `LOG1P_FACTORS` (owner ruling
+  2026-08-10), so all five D4 strategies carry sealed thresholds and are
+  judgeable on generated paths. The K-rulings sealed: `future_accruing_holdout`
+  (K1; accrual 2026-09-01, earliest read 2029-01-01, one read ever),
+  `har_masked_ablation` + ablation system F with its demotion criterion (K3),
+  S3-K4-HARDWARE-GATE ships OPEN (training gated on the owner's host call).
+  `benchmark_exception` and `benchmark_draw_span_bias` RETIRED with their G2
+  text preserved verbatim; `severe_test_criterion` and
+  `proxy_share_disclosure` seal in their place. The three fx cross-pair
+  entries seal VACUOUS with the mechanism disclosed (pegged-era resamples →
+  the degenerate-variance sentinel → RFR-19's deliberately non-NaN-robust
+  percentile; 882/1000 valid resamples). `CAMPAIGN2_FACTOR_SET` freezes the
+  fifteen-factor set for every campaign-2 replay surface (the
+  CAMPAIGN2_VINTAGE_ID split applied to the factor set). ALL THREE LOCKS
+  re-sealed in the one commit. hier-diffusion does not race (sealed in the
+  grid); training starts only on the K4 call.
+
 ### Fixed
 - **Datalab Series page: stale-row numbers were invisible in dark theme.**
   The staleness highlight set only `background-color: #fee`, leaving the

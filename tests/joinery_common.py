@@ -204,7 +204,11 @@ def make_source(
         "fx_usd": 100.0 + 8.0 * np.sin(t / 19.0),
         "cape_v": 0.3 * np.sin(t / 23.0),
     }
-    factor_names = bs.FACTOR_SET
+    # The CAMPAIGN-2 set: the joinery under test assembles campaign-2-era
+    # checkpoints, whose feature dimensions are a fact about that campaign.
+    # Campaign-3 moved the live FACTOR_SET to sixteen (commodities joined,
+    # AM-2026-08-10-001); these synthetic columns deliberately stay fifteen.
+    factor_names = bs.CAMPAIGN2_FACTOR_SET
     values = np.column_stack([columns[name] for name in factor_names])
     return bs.BootstrapSource(
         factor_names=factor_names,

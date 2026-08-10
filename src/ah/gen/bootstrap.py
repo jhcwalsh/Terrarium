@@ -111,6 +111,7 @@ __all__ = [
     "BLOCK_DRAW_SPAN_MONTHS",
     "BLOCK_DRAW_SPAN_START",
     "BLOCK_LENGTH_DISTRIBUTION",
+    "CAMPAIGN2_FACTOR_SET",
     "CAMPAIGN2_VINTAGE_ID",
     "CAMPAIGN_VINTAGE_ID",
     "CRITERION_MONTHS",
@@ -167,9 +168,14 @@ BLOCK_DRAW_SPAN_BINDING_FACTOR = "ust_2y"
 #: Every active factor with train+validation data on the sealed campaign vintage.
 #: Campaign-2 (2026-08-02, owner-ratified): hy_spread revived via the pinned
 #: hy_oas_pre1996 splice at the read surface; fx_usd and cape_v added by the fx
-#: and valuation block_addition amendments. commodities stays declared-unavailable.
+#: and valuation block_addition amendments. Campaign-3 (ruling K2 + owner
+#: ruling 2026-08-10, AM-2026-08-10-001): commodities joins -- sourced by the
+#: REG-licensed AQR intake, banded on the campaign-3 reference, and emitted so
+#: the restored eqw_factors/endowment_proxy thresholds are judgeable on
+#: generated paths.
 FACTOR_SET: tuple[str, ...] = (
     "cape_v",
+    "commodities",
     "cpi",
     "equity_mkt",
     "equity_vol",
@@ -186,6 +192,15 @@ FACTOR_SET: tuple[str, ...] = (
     "ust_2y",
 )
 
+#: HISTORICAL, never moves again: the FIFTEEN-factor set as sealed at
+#: campaign-2. Every campaign-2 trained artifact (the hier-flow-v1 /
+#: hier-diffusion-v1 checkpoints, the pinned L1/L2 artifacts) records this
+#: set, and its feature dimensions are a fact about that campaign -- the
+#: same split as :data:`CAMPAIGN2_VINTAGE_ID` vs the live
+#: :data:`CAMPAIGN_VINTAGE_ID` (commit e52113f), applied to the factor set
+#: at the campaign-3 seal event when `commodities` joined the live set.
+CAMPAIGN2_FACTOR_SET: tuple[str, ...] = tuple(f for f in FACTOR_SET if f != "commodities")
+
 STRATIFICATION = "regime_ruleset_v1"
 #: Campaign-2 vintage (S2-CAMPAIGN-VINTAGE-2): four iterations recorded in the
 #: retrofit register (RFR-91/92); the RFR-61 discipline applies -- pre-existing
@@ -197,11 +212,12 @@ STRATIFICATION = "regime_ruleset_v1"
 #: the live campaign.
 CAMPAIGN2_VINTAGE_ID = "2026-08-02.4"
 
-#: The LIVE campaign vintage. Still the campaign-2 id until the campaign-3
-#: seal event moves it (the first clean weekday vintage carrying the
-#: extension donors); everything sealed compares against the prereg's
-#: campaign_vintage_id, and a test pins the two equal.
-CAMPAIGN_VINTAGE_ID = CAMPAIGN2_VINTAGE_ID
+#: The LIVE campaign vintage, moved at the campaign-3 seal event: the first
+#: clean weekday vintage carrying the extension donors (VXO, CPF3M, CP3M,
+#: CP3M_NBER, TB3M_SEC, GS1, GS3) and the AQR commodities series. Everything
+#: sealed compares against the prereg's campaign_vintage_id, and a test pins
+#: the two equal.
+CAMPAIGN_VINTAGE_ID = "2026-08-10.1"
 
 #: The sealed criterion ensemble size. A run at any other size -- or against any vintage
 #: other than `CAMPAIGN_VINTAGE_ID` -- is diagnostic only;
@@ -593,6 +609,7 @@ def build_source(
     vintage_id: str = CAMPAIGN_VINTAGE_ID,
     enforce_sealed_span: bool = True,
     expected_span: tuple[str, str, int] | None = None,
+    expected_factor_set: tuple[str, ...] | None = None,
 ) -> BootstrapSource:
     """Assemble the sealed draw span, its factor matrix and its regime labels.
 
@@ -612,10 +629,15 @@ def build_source(
     frames = read_factor_frames(access, manifest)
 
     factors = tuple(sorted(frames))
-    if enforce_sealed_span and factors != FACTOR_SET:
+    # The factor-set expectation, like the span expectation below, is a fact
+    # about the VINTAGE being read: a campaign-2 replay resolves the fifteen
+    # factors its checkpoints were trained on (CAMPAIGN2_FACTOR_SET), while a
+    # live read must resolve exactly the live sealed set.
+    sealed_set = FACTOR_SET if expected_factor_set is None else expected_factor_set
+    if enforce_sealed_span and factors != sealed_set:
         raise BootstrapError(
             f"resolved factor set {factors} != the sealed bootstrap_v1.factor_set "
-            f"{FACTOR_SET}; the benchmark must emit exactly the sealed set"
+            f"{sealed_set}; the benchmark must emit exactly the sealed set"
         )
 
     panel = derive.assemble_panel({name: frames[name] for name in factors})
@@ -942,8 +964,16 @@ def campaign_source(
         # CAMPAIGN2_DRAW_SPAN -- AM-2026-08-09-002 moved the live constants to
         # 1953-04 spec-first), while any other vintage is checked against the
         # live sealed constants, which is what the campaign-3 vintage must hit.
-        expected = CAMPAIGN2_DRAW_SPAN if vintage_id == CAMPAIGN2_VINTAGE_ID else None
-        return build_source(access, load_manifest(), vintage_id=vintage_id, expected_span=expected)
+        is_campaign2 = vintage_id == CAMPAIGN2_VINTAGE_ID
+        expected = CAMPAIGN2_DRAW_SPAN if is_campaign2 else None
+        expected_set = CAMPAIGN2_FACTOR_SET if is_campaign2 else None
+        return build_source(
+            access,
+            load_manifest(),
+            vintage_id=vintage_id,
+            expected_span=expected,
+            expected_factor_set=expected_set,
+        )
     finally:
         catalog.close()
 

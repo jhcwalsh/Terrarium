@@ -1142,12 +1142,12 @@ def test_compute_reference_resolves_real_manifest_series_ids() -> None:
         access, manifest, vintage_id="v-map", seed=1, n_resamples=5, block_length=12
     )
 
-    # commodities is the one declared-unavailable active factor; everything else has a
-    # declared source and real data, so nothing else may be missing.
-    assert ref.missing_factors == ("commodities",)
+    # Campaign-3 (AM-2026-08-10-001): NO active factor is declared-unavailable
+    # any more -- commodities was the last and is now derived from the AQR
+    # series (ruling K2), which this fixture synthesizes like every other
+    # manifest input. Every active factor must resolve.
+    assert ref.missing_factors == ()
     for factor in manifest.active_factors():
-        if factor == "commodities":
-            continue
         block = manifest.block_of(factor)
         assert f"{factor}.mean" in ref.blocks[block].stats, (
             f"factor '{factor}' has a declared factor_sources entry and real data, but "
@@ -1236,9 +1236,14 @@ def test_reference_splits_missing_declared_from_missing_no_data() -> None:
         access, manifest, vintage_id="v", seed=1, n_resamples=5, block_length=12
     )
 
-    assert ref.missing_declared == ("commodities",)
+    # Campaign-3 (AM-2026-08-10-001): the DECLARED half of the split has no
+    # live example left -- commodities was the last declared-unavailable
+    # active factor and is now sourced (uk's factors stay declared but the
+    # block is inactive and excluded here). The split machinery is unchanged;
+    # the no-data half still demonstrates it.
+    assert ref.missing_declared == ()
     assert ref.missing_no_data == ("equity_vol",)
-    assert set(ref.missing_factors) == {"commodities", "equity_vol"}
+    assert set(ref.missing_factors) == {"equity_vol"}
 
 
 # --------------------------------------------------------------------------- #

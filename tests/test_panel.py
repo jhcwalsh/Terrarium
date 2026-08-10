@@ -358,10 +358,13 @@ def test_build_panel_over_real_manifest_end_to_end() -> None:
 
     panel = build_panel(access, manifest)
 
-    assert panel.missing == ("commodities",)  # the one known gap (RFR-1)
-    assert panel.missing_declared == ("commodities",)
+    # Campaign-3 (AM-2026-08-10-001): the RFR-1/RFR-8 gap is closed -- the
+    # fixture synthesizes the AQR inputs like every other manifest series, so
+    # NOTHING is missing and every active factor is a panel column.
+    assert panel.missing == ()
+    assert panel.missing_declared == ()
     assert panel.missing_no_data == ()
-    expected_columns = {f for f in manifest.active_factors() if f != "commodities"}
+    expected_columns = set(manifest.active_factors())
     assert set(panel.frame.columns) - {"date"} == expected_columns
     assert not panel.frame.empty
 
