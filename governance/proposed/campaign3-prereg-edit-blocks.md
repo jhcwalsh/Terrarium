@@ -307,6 +307,14 @@ sees the factor; the factor SET is sealed in the bootstrap_v1 block and
 extending it is part of the same amendment — bands exist either way, the
 question is whether the benchmark and the generators emit it).
 
+**RULED 2026-08-10 (owner, pre-seal): YES — commodities joins the factor
+set** (`bootstrap_v1.factor_set`, `bootstrap.FACTOR_SET`, and the
+hier-flow-v2 training list), in the same amendment. Grounds: `FACTOR_SET`
+is the set the battery judges, and the two newly-computable strategies
+(eqw_factors 0.20, endowment_proxy 0.10 commodities) are judgeable on
+generated paths only if the generators emit the factor; bands-only would
+seal thresholds that are structurally unavailable on every ensemble.
+
 ## The amendment (payload sketch)
 
 `AM-<C3_AM_ID>` (`protocol_change`, post_hoc false, one commit with every
