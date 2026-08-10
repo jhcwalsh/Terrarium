@@ -114,13 +114,18 @@ def test_series_registered_reg_manual_never_redistributable():
     assert "NOT the factor" in (reqs["aqr.cmdty_ew_spot"].notes or "")
 
 
-def test_the_sealed_missing_factor_was_not_silently_closed():
+def test_the_sealed_missing_factor_was_closed_loudly_not_silently():
+    """INVERTED at campaign-3 (AM-2026-08-10-001). Through campaign-2 this
+    asserted the factor stayed `unavailable` -- the guard against a QUIET
+    closure. The closure has now happened LOUDLY (ruling K2, the amendment,
+    all three re-seals), so the new truth is the derived mapping; what must
+    never change is the licence half, which keeps its original assertion."""
     from pathlib import Path
 
     from ah.factors import load_manifest
 
-    assert load_manifest().sources["commodities"].kind == "unavailable"
-    # and the licensed workbook is never in a committable location
+    assert load_manifest().sources["commodities"].kind == "derived"
+    # and the licensed workbook is never in a committable location -- unchanged
     root = Path(__file__).resolve().parents[1]
     strays = list(root.glob("docs/**/*Commodities for the Long Run*"))
     assert not strays, f"licensed workbook in a committable path: {strays}"

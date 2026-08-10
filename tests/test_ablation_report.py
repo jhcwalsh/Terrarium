@@ -153,9 +153,11 @@ def grid_root(tmp_path: Path) -> Path:
                     "dates": [f"{1962 + i // 12:04d}-{i % 12 + 1:02d}-01" for i in range(720)],
                     "values": [0.004 * ((i % 17) - 8) for i in range(720)],
                 }
-                for sid in ("sixty_forty", "momentum", "carry")
+                # Campaign-3: all five strategies carry historical returns
+                # (eqw_factors/endowment_proxy were `None` through campaign-2,
+                # mirroring the then-sealed uncomputable list, now empty).
+                for sid in ("sixty_forty", "momentum", "carry", "eqw_factors", "endowment_proxy")
             }
-            | {"eqw_factors": None, "endowment_proxy": None}
         ),
         "utf-8",
     )
@@ -211,12 +213,19 @@ def test_the_document_carries_every_sealed_rule_input(grid_root: Path) -> None:
 
 
 def test_the_comparison_set_named_in_the_document_is_the_sealed_one(grid_root: Path) -> None:
+    """Campaign-3 (AM-2026-08-10-001): the sealed uncomputable list is empty,
+    so the comparison set is ALL FIVE strategies in the sealed d4_strategies
+    order and nothing is excluded. Through campaign-2 this asserted the
+    three-strategy set with eqw_factors/endowment_proxy excluded."""
     doc = builder.build(grid_root, PREREG)
-    assert doc["comparison_set"]["strategy_ids"] == ["sixty_forty", "momentum", "carry"]
-    assert sorted(doc["comparison_set"]["excluded_strategy_ids"]) == [
-        "endowment_proxy",
+    assert doc["comparison_set"]["strategy_ids"] == [
         "eqw_factors",
+        "sixty_forty",
+        "endowment_proxy",
+        "momentum",
+        "carry",
     ]
+    assert doc["comparison_set"]["excluded_strategy_ids"] == []
 
 
 def test_the_restricted_window_actually_narrows_the_realization_sample(

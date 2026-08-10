@@ -228,11 +228,17 @@ def test_every_declared_factor_has_a_factor_source() -> None:
     assert set(manifest.sources) == all_factors
 
 
-def test_commodities_is_unavailable_with_a_reason() -> None:
+def test_commodities_is_sourced_with_its_provenance_stated() -> None:
+    """INVERTED at campaign-3 (AM-2026-08-10-001). Through campaign-2 this
+    asserted kind == "unavailable" with a stated reason (RFR-8); ruling K2
+    closed the gap via the REG-licensed AQR intake, so the new truth is a
+    derived total return whose notes carry the licence discipline."""
     manifest = load_manifest()
     source = manifest.sources["commodities"]
-    assert source.kind == "unavailable"
-    assert source.reason
+    assert source.kind == "derived"
+    assert source.expr == "add"
+    assert source.inputs == ("aqr.cmdty_ew_excess", "french.rf")
+    assert "REG licence" in (source.notes or "")
 
 
 def test_uk_block_factors_are_all_unavailable() -> None:

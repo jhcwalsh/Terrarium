@@ -82,9 +82,14 @@ def test_commodity_price_series_are_registered_but_disclaimed():
         )
 
 
-def test_no_commodities_factor_was_quietly_closed():
-    """The sealed missing_factor stays missing: registering price indices does
-    not map anything to the `commodities` factor."""
+def test_the_commodities_factor_closure_names_its_amendment():
+    """INVERTED at campaign-3. Through campaign-2 this pinned that registering
+    price indices did NOT map anything to the `commodities` factor (the
+    quiet-closure guard). The closure is now real and LOUD: the mapping must
+    name its ruling and amendment in its own notes, which is what separates a
+    ratified closure from the silent one this test existed to prevent."""
     from ah.factors import load_manifest
 
-    assert load_manifest().sources["commodities"].kind == "unavailable"
+    source = load_manifest().sources["commodities"]
+    assert source.kind == "derived"
+    assert "K2" in (source.notes or "") and "AM-2026-08-10-001" in (source.notes or "")

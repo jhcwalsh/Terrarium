@@ -98,16 +98,19 @@ def make_report(
     memorization_passed=True,
 ):
     rows = []
-    for sid, elic in zip(D4[:3], elicitability, strict=True):
+    # Campaign-3 (AM-2026-08-10-001): ALL FIVE strategies are computable --
+    # through campaign-2 the last two (eqw_factors, endowment_proxy) emitted
+    # NaN rows here, mirroring the sealed uncomputable list, which is now
+    # empty. The 3-tuple `elicitability` parameter is kept for the callers;
+    # the two restored strategies reuse its last value.
+    elics = (*elicitability, elicitability[-1], elicitability[-1])
+    for sid, elic in zip(D4, elics, strict=True):
         for stat in STRATEGY_STATS:
             value = {"var_95": 0.06, "es_95": 0.09}.get(stat, 0.5)
             if stat == "elicitability_score":
                 value = elic
             band = _band(-10.0, 10.0, value) if strategy_bands else None
             rows.append(_row(f"{sid}.{stat}", "tails", "monthly", value, band=band))
-    for sid in D4[3:]:
-        for stat in STRATEGY_STATS:
-            rows.append(_row(f"{sid}.{stat}", "tails", "monthly", float("nan")))
     pairs = ("cpi~equity_mkt", "cpi~ig_spread", "equity_mkt~ust_10y")
     for pair, value, (lo, hi) in zip(pairs, td_values, td_bands, strict=True):
         rows.append(

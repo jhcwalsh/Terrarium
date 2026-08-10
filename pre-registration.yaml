@@ -3557,9 +3557,12 @@ claims_with_tests:
         pair -- which is why campaign-2's three vacuous (both-null) pair entries
         exist at all: the coverage requirement is machine-enforced, and a
         stated-vacuous bound satisfies it honestly where 4 half-widths exceeds
-        the statistic's whole range.
+        the statistic's whole range. Campaign-3's commodities family cites the
+        same fact from the other side: joining an EXISTING block creates no new
+        active pair, so the requirement is already met with no new entry.
       covers:
         - "# directions, so no side can bind. The entry exists because verify() requires"
+        - "# exists, and verify()'s one-entry-per-pair requirement is already met."
       pinned_by:
         - tests/test_prereg.py::test_verify_fails_when_cross_block_entry_missing
       status: pinned

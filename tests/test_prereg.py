@@ -1935,16 +1935,15 @@ def test_verify_rejects_a_threshold_on_a_factor_with_no_data(tmp_path: Path) -> 
     the factor it is demonstrated on has moved to one that is genuinely absent.
     """
     doc = _load_real_doc()
-    # CAMPAIGN-2: hy_spread left missing_factors (the pinned splice restored it --
-    # the "no refresh will ever" sentence above was true of refreshes and the
-    # splice is not one). commodities is now the sole, durable demonstration
-    # factor: declared unavailable, no candidate series free (RFR-8).
-    assert "commodities" in doc["reference_run"]["missing_factors"]
-    doc["thresholds"]["blocks"]["global"]["commodities.excess_kurtosis"] = {
-        "min": -2.0,
-        "max": 50.0,
-        "severity": "enforce",
-    }
+    # CAMPAIGN-2: hy_spread left missing_factors (the pinned splice restored it).
+    # CAMPAIGN-3 (AM-2026-08-10-001): commodities left too and the real list is
+    # EMPTY for the first time -- there is no real missing factor left to
+    # demonstrate on, which is the milestone. The check must survive it, so the
+    # premise becomes SYNTHETIC on this copy: declare commodities missing as if
+    # its data were gone, and verify() must reject its (real, sealed)
+    # thresholds against that declaration.
+    assert doc["reference_run"]["missing_factors"] == []
+    doc["reference_run"]["missing_factors"] = ["commodities"]
     prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
     with pytest.raises(PreRegError, match="no computable reference statistic"):
         prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
@@ -1961,12 +1960,13 @@ def test_verify_rejects_a_threshold_on_an_uncomputable_d4_strategy(tmp_path: Pat
     so sourcing either one alone would not restore it.
     """
     doc = _load_real_doc()
-    assert "endowment_proxy" in doc["reference_run"]["uncomputable_d4_strategies"]
-    doc["thresholds"]["strategies"]["endowment_proxy.var_95"] = {
-        "min": 0.0,
-        "max": 1.0,
-        "severity": "report",
-    }
+    # CAMPAIGN-3 (AM-2026-08-10-001): the real list is EMPTY -- endowment_proxy
+    # was restored (hy_spread at campaign-2, commodities at campaign-3) and
+    # carries real sealed thresholds. The premise becomes SYNTHETIC on this
+    # copy, exactly as in the factor-scoped test above: declare it uncomputable
+    # and verify() must reject its (real, sealed) entries.
+    assert doc["reference_run"]["uncomputable_d4_strategies"] == []
+    doc["reference_run"]["uncomputable_d4_strategies"] = ["endowment_proxy"]
     prereg_path, factors_path = _write_doc_and_factors(tmp_path, doc)
     with pytest.raises(PreRegError, match="uncomputable_d4_strategies"):
         prereg.verify(prereg.load(prereg_path), load_manifest(factors_path))
@@ -2233,13 +2233,23 @@ def test_the_mc_error_grid_script_agrees_with_the_sealed_grid() -> None:
     assert doc["ensemble_size"]["months"] == module.MONTHS
 
 
-def test_the_block_length_window_script_agrees_with_the_sealed_vintage() -> None:
+def test_the_block_length_window_script_agrees_with_its_own_vintage() -> None:
     """``scripts/measure_block_length_window.py`` is the provenance script for
-    ``bootstrap_v1.block_length_derivation``; it must read the sealed campaign vintage
-    and the sealed reference-run parameters, or the quoted window is a window over
-    different data."""
+    ``bootstrap_v1.block_length_derivation`` -- a CAMPAIGN-2 measurement record.
+
+    Through campaign-2 this asserted the script's vintage equals the LIVE
+    ``campaign_vintage_id``, which was true while they coincided. Campaign-3
+    (AM-2026-08-10-001) moved the live vintage; the script is one of Block 11's
+    historical pins that deliberately never moves (its quoted window is a
+    measurement over the campaign-2 panel, and rewriting it would falsify the
+    provenance). The assertion is therefore split, not relaxed: the script pins
+    exactly the frozen campaign-2 vintage, and the sealed derivation's numbers
+    keep their original provenance.
+    """
     import importlib.util
     import sys
+
+    from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID
 
     scripts_dir = ROOT / "scripts"
     sys.path.insert(0, str(scripts_dir))
@@ -2254,7 +2264,7 @@ def test_the_block_length_window_script_agrees_with_the_sealed_vintage() -> None
         sys.path.remove(str(scripts_dir))
 
     doc = _load_real_doc()
-    assert doc["campaign_vintage_id"] == module.CAMPAIGN_VINTAGE_ID
+    assert module.CAMPAIGN_VINTAGE_ID == CAMPAIGN2_VINTAGE_ID
     assert doc["reference_run"]["seed"] == module.REFERENCE_SEED
     assert doc["bootstrap_v1"]["mean_block_months"] in module.BLOCK_LENGTHS
 
@@ -2285,7 +2295,11 @@ def test_the_sealed_splice_scope_rests_on_the_true_premise() -> None:
     # pins is therefore the NEW one, in both directions: the factor resolves,
     # splice.py is INSIDE the hash, and the pinned constants exist.
     assert "hy_spread" not in missing
-    assert missing == ["commodities"]
+    # CAMPAIGN-3 (AM-2026-08-10-001): commodities left too (ruling K2); the
+    # list is EMPTY for the first time and the splice-scope conclusion is
+    # untouched by it -- splice.py's seal membership never rested on
+    # commodities.
+    assert missing == []
 
     assert doc["seal_scope"]["splice_py"] == "SEALED"
     assert "SEALED AT CAMPAIGN-2" in doc["seal_scope"]["splice_py_reason"]
