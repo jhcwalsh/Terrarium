@@ -12,6 +12,13 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Fixed
+- **Datalab Series page: stale-row numbers were invisible in dark theme.**
+  The staleness highlight set only `background-color: #fee`, leaving the
+  theme's near-white text on a light pink ground. The style now pins the
+  text color too, and a guard test scans `app.py` for any inline
+  background that fails to pin its text color.
+
 ### Added
 - **DATALAB — the streamlit interrogation console (owner-directed; spec +
   rulings 2026-08-09).** `src/ah/datalab.py` is a pure, read-only,

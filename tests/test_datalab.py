@@ -192,6 +192,23 @@ def test_zero_write_guard() -> None:
             assert not re.search(rf"\.{name}\(", text), f"{rel} calls {name}"
 
 
+def test_inline_backgrounds_pin_their_text_color() -> None:
+    """Streamlit renders in the viewer's theme: a light inline background
+    with the theme's default (near-white) text is invisible in dark mode.
+    Any style string painting a background must set color explicitly.
+
+    History: the Series-page staleness highlight shipped as bare
+    'background-color: #fee' and its rows were unreadable in dark theme
+    (2026-08-10)."""
+    text = (ROOT / "apps/datalab/app.py").read_text(encoding="utf-8")
+    styles = re.findall(r"['\"]([^'\"]*background-color[^'\"]*)['\"]", text)
+    assert styles, "expected at least one inline background style in app.py"
+    for style in styles:
+        assert re.search(r"(?<!background-)color\s*:", style), (
+            f"style {style!r} paints a background without pinning text color"
+        )
+
+
 def test_streamlit_is_not_imported_by_the_package() -> None:
     """The console group stays optional: no src/ah module imports streamlit."""
     for path in (ROOT / "src" / "ah").rglob("*.py"):

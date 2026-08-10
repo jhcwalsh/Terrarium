@@ -161,7 +161,10 @@ if page == "Series":
     inv = _inventory(data_root, today)
     st.dataframe(
         inv.style.apply(
-            lambda row: ["background-color: #fee" if row["stale"] else ""] * len(row), axis=1
+            lambda row: (
+                ["background-color: #fee; color: #7a1f1f" if row["stale"] else ""] * len(row)
+            ),
+            axis=1,
         ),
         hide_index=True,
         height=420,
