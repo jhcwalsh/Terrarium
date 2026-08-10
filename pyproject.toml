@@ -44,6 +44,13 @@ dev = [
     "pyright>=1.1.370",       # type-check (basic mode)
     "httpx2>=0.1",            # starlette TestClient transport (su-eng-02 tests)
 ]
+# The datalab interrogation console (owner-directed 2026-08-09; design in
+# docs/superpowers/specs/2026-08-09-streamlit-data-console-design.md).
+# Display-only: never imported by src/ah modules or tests, so the CI gate and
+# the no-network invariant never see it. Install: uv sync --group console.
+console = [
+    "streamlit>=1.40",        # apps/datalab/app.py only (altair ships with it)
+]
 
 [build-system]
 requires = ["hatchling"]
