@@ -1870,6 +1870,13 @@ def test_modified_enforce_metric_code_with_a_stale_lock_fails_loudly(
     repo = tmp_path / "repo"
     shutil.copytree(ROOT / "src", repo / "src")
     shutil.copytree(ROOT / "fixtures", repo / "fixtures")
+    # campaign-3 wiring: the seal hashes the committed volext provenance artifact
+    # (AM-2026-08-09-003), so the copied tree must carry it like any judged source.
+    (repo / "artifacts" / "volext").mkdir(parents=True)
+    shutil.copy(
+        ROOT / "artifacts" / "volext" / "equity-vol-backcast-provenance.json",
+        repo / "artifacts" / "volext" / "equity-vol-backcast-provenance.json",
+    )
     shutil.copy(REAL_PREREG_PATH, repo / "pre-registration.yaml")
     shutil.copy(REAL_FACTORS_PATH, repo / "factors.yaml")
     monkeypatch.setattr(prereg, "_REPO_ROOT", repo)

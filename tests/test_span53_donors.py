@@ -100,11 +100,27 @@ def test_fx_refuses_when_nothing_to_prepend():
         fp.extend_fx(early)
 
 
-def test_nothing_sealed_learned_the_new_rules():
+def test_the_sealed_read_path_learned_the_rules():
+    """INVERTED 2026-08-09 (campaign-3 wiring; AM-2026-08-09-002).
+
+    HISTORY, first state: pinned that neither sealed file referenced
+    PROXY-UST10Y / PROXY-FX-PARITY or imported the two donor modules while the
+    rules were verified but unratified. The campaign-3 wiring put both on the
+    read path (``derive.ust_10y_extended`` / ``derive.fx_usd_extended``); the
+    pin inverts, and ``splice.py`` stays clean (its own registry never learned
+    these families -- the fx splice rule it has always carried is
+    ``fx_usd_pre2006``, which the extended read composes with, not replaces).
+    """
+    import json
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    for sealed in ("src/ah/data/splice.py", "src/ah/data/derive.py"):
-        text = (root / sealed).read_text(encoding="utf-8")
-        for needle in ("PROXY-UST10Y", "PROXY-FX-PARITY", "ust10y_extend", "fx_parity"):
-            assert needle not in text, f"{sealed} references unratified {needle}"
+    derive_text = (root / "src/ah/data/derive.py").read_text(encoding="utf-8")
+    for needle in ("PROXY-UST10Y", "PROXY-FX-PARITY", "ust10y_extend", "fx_parity"):
+        assert needle in derive_text, f"derive.py does not carry {needle}"
+    splice_text = (root / "src/ah/data/splice.py").read_text(encoding="utf-8")
+    for needle in ("ust10y_extend", "fx_parity"):
+        assert needle not in splice_text, f"splice.py references {needle}"
+    lock = json.loads((root / "pre-registration.lock").read_text(encoding="utf-8"))
+    assert "src/ah/data/ust10y_extend.py" in lock["hashed_files"]
+    assert "src/ah/data/fx_parity.py" in lock["hashed_files"]

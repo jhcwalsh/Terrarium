@@ -422,6 +422,47 @@ def _std(x: np.ndarray) -> float:
     return float(np.std(x, ddof=1))
 
 
+# --------------------------------------------------------------------------- #
+# the degenerate-variance guard (campaign-3 wiring; AM-2026-08-09-002)
+#
+# The extended fx_usd factor carries pegged-era months (PROXY-FX-PARITY-V1,
+# 1953-04..1972-12) that are CONSTANT between realignments -- near-zero
+# variance is the era's true value, not a data defect. A correlation or ACF
+# over a window drawn entirely inside a no-realignment stretch is undefined
+# (division by a zero or numerically-negligible variance), and before this
+# guard the outcome depended on where the zero appeared: an exact-zero check
+# caught the bit-identical case while a machine-precision-jittered constant
+# fell through to ``corrcoef``'s divide, whose output is noise.
+#
+# The guard states both halves explicitly. A leg is DEGENERATE when its
+# variance is at or below :data:`DEGENERATE_REL_VARIANCE_FLOOR` relative to
+# its squared scale -- constant-to-machine-precision, far below any real
+# variation (a window CONTAINING a realignment step has honest variance and
+# is judged normally). Every correlation/ACF consumer returns
+# :data:`DEGENERATE_STAT` for a degenerate leg: the module's stated sentinel,
+# equal by convention to the "not computable over this window" NaN that the
+# banding machinery already discloses (``n_valid_resamples``) and never
+# judges -- returned deliberately by a named guard, never produced
+# incidentally by downstream arithmetic.
+# --------------------------------------------------------------------------- #
+
+#: Variance floor, relative to ``max(1, mean(x)^2)``: below it a series is
+#: constant to machine precision (std under ~1e-9 of its own scale).
+DEGENERATE_REL_VARIANCE_FLOOR = 1e-18
+
+#: The stated degenerate-variance sentinel (see the guard's comment block).
+DEGENERATE_STAT = float("nan")
+
+
+def _degenerate_variance(x: np.ndarray) -> bool:
+    """True when ``x`` is constant to machine precision (the guard's predicate)."""
+    x = np.asarray(x, dtype=np.float64)
+    if x.shape[0] == 0:
+        return True
+    mean = float(np.mean(x))
+    return float(np.var(x)) <= DEGENERATE_REL_VARIANCE_FLOOR * max(1.0, mean * mean)
+
+
 def _central_moment(x: np.ndarray, order: int) -> float:
     xbar = np.mean(x)
     return float(np.mean((x - xbar) ** order))
@@ -460,11 +501,11 @@ def _acf1(x: np.ndarray) -> float:
     n = x.shape[0]
     if n < 2:
         return float("nan")
+    if _degenerate_variance(x):
+        return DEGENERATE_STAT
     dev = x - np.mean(x)
     gamma0 = float(np.sum(dev**2) / n)
     gamma1 = float(np.sum(dev[:-1] * dev[1:]) / n)
-    if gamma0 == 0.0:
-        return float("nan")
     return gamma1 / gamma0
 
 
@@ -472,17 +513,19 @@ def _acf_at_lag(x: np.ndarray, lag: int) -> float:
     """``gamma_lag / gamma_0`` at an arbitrary positive lag -- :func:`_acf1` generalized.
 
     Identical convention (overall mean, n-denominator), so ``_acf_at_lag(x, 1)`` is
-    ``_acf1(x)`` bit for bit. NaN for ``lag < 1``, for a series no longer than ``lag``,
-    and for a degenerate (zero-variance) series.
+    ``_acf1(x)`` bit for bit. NaN for ``lag < 1`` and for a series no longer than
+    ``lag``; :data:`DEGENERATE_STAT` for a series the degenerate-variance guard
+    flags (the campaign-3 pegged-era convention -- strictly wider than the exact
+    zero-variance check it replaces).
     """
     x = np.asarray(x, dtype=np.float64)
     n = x.shape[0]
     if lag < 1 or n <= lag:
         return float("nan")
+    if _degenerate_variance(x):
+        return DEGENERATE_STAT
     dev = x - np.mean(x)
     gamma0 = float(np.sum(dev**2) / n)
-    if gamma0 == 0.0:
-        return float("nan")
     gamma_lag = float(np.sum(dev[:-lag] * dev[lag:]) / n)
     return gamma_lag / gamma0
 
@@ -1628,11 +1671,18 @@ class RegisteredCrossStat:
 
 
 def _correlation(a: np.ndarray, b: np.ndarray) -> float:
-    """Pearson correlation between two aligned 1-D arrays."""
+    """Pearson correlation between two aligned 1-D arrays.
+
+    Returns :data:`DEGENERATE_STAT` for a leg the degenerate-variance guard
+    flags (pegged-era fx months are the motivating case; the guard's comment
+    block states the convention) -- strictly wider than the exact
+    ``std == 0.0`` check it replaces, so every pair the old check refused is
+    refused identically.
+    """
     a = np.asarray(a, dtype=np.float64)
     b = np.asarray(b, dtype=np.float64)
-    if a.shape[0] < 2 or np.std(a) == 0.0 or np.std(b) == 0.0:
-        return float("nan")
+    if a.shape[0] < 2 or _degenerate_variance(a) or _degenerate_variance(b):
+        return DEGENERATE_STAT
     return float(np.corrcoef(a, b)[0, 1])
 
 

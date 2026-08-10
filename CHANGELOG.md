@@ -13,6 +13,32 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **THE CAMPAIGN-3 WIRING — AM-2026-08-09-003, the read-path flip
+  AM-2026-08-09-002 deferred.** The seven ratified extension families join
+  the sealed read surface: `ah.data.derive` gains `equity_vol_extended`,
+  `funding_spread_extended`, `hqm_curve_extended`, `ust_2y_extended`,
+  `ust_10y_extended`, `fx_usd_extended` and `policy_rate_extended`;
+  `ah.eval.panel` and `ah.gen.bootstrap` register them; `factors.yaml`
+  flips the seven entries — including `policy_rate`, whose
+  `fedfunds_pre1954` splice moves from REGISTERED-BUT-NOT-APPLIED (the
+  first seal's standing disclosure) to APPLIED. Donor inputs are optional
+  at the panel layer, so the flip is carried by what a vintage contains,
+  not a code fork. `equity_vol` pre-1986 is served from **THE pinned HAR
+  draw** (seed 20260809, 393 months, materialized once by
+  `scripts/volext_materialize_draw.py`; sha256 53a378a4…, provenance sha
+  verified against the amendment pin). `ah.eval.reference` gains the
+  degenerate-variance guard (`DEGENERATE_REL_VARIANCE_FLOOR`,
+  `DEGENERATE_STAT`) for pegged-era fx months. The seal grows by the seven
+  extension modules and both pinned artifacts and the lock is RE-SEALED
+  (new digest sha256:6061fd73…); the five extension-family "nothing sealed
+  learned the rule" tests invert to their third state with history kept.
+  DISCLOSED CONSEQUENCE, now in effect: campaign-2's live-tree panel
+  re-derivation ends at this commit (the campaign-2 vintage already carries
+  fred.AAA/TB3MS/DTWEXM, which the extended reads consume); the sealed
+  campaign-2 record and its artifact replays are untouched. One bounded
+  deviation, disclosed in the amended test: `policy_rate` and
+  `funding_spread` now share `fred.TB3MS` as a DONOR only — nine
+  overlapping months (1953-04..1953-12) of the ratified span.
 - **THE SPAN-53 RATIFICATION — AM-2026-08-09-002, the first sealed event of
   the extension campaign.** `bootstrap_v1.block_draw_span` moves from
   1990-01..2020-12 (372 months, bound by equity_vol) to **1953-04..2020-12

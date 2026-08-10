@@ -150,6 +150,45 @@ _DERIVED_EXPRS: dict[str, DerivedExpr] = {
     "demeaned_log_cape": DerivedExpr(
         1, lambda frames: derive.demeaned_log_cape(frames[0]), units_rule="log_demeaned"
     ),
+    # CAMPAIGN-3 WIRING (AM-2026-08-09-002's read-path flip): the seven ratified
+    # extension families join the read surface. Donor inputs are OPTIONAL in the
+    # panel's sense -- a vintage that predates a donor reads it empty and the
+    # derive helper returns the campaign-2 behaviour unchanged (its documented
+    # fallback), rather than the whole factor going missing on every fixture
+    # vintage. The primary series of each factor stays required.
+    "equity_vol_extended": DerivedExpr(
+        2,
+        lambda frames: derive.equity_vol_extended(frames[0], frames[1]),
+        optional_inputs=(1,),
+    ),
+    "funding_spread_extended": DerivedExpr(
+        6,
+        lambda frames: derive.funding_spread_extended(*frames),
+        optional_inputs=(1, 2, 3, 4, 5),
+    ),
+    "hqm_curve_extended": DerivedExpr(
+        2,
+        lambda frames: derive.hqm_curve_extended(frames[0], frames[1]),
+        optional_inputs=(1,),
+    ),
+    "ust_2y_extended": DerivedExpr(
+        3,
+        lambda frames: derive.ust_2y_extended(frames[0], frames[1], frames[2]),
+        optional_inputs=(1, 2),
+    ),
+    "ust_10y_extended": DerivedExpr(
+        2,
+        lambda frames: derive.ust_10y_extended(frames[0], frames[1]),
+        optional_inputs=(1,),
+    ),
+    # both inputs required, exactly as fx_usd_spliced's were: the parity table
+    # is vendored in ah.data.fx_parity, so no new series joins the read.
+    "fx_usd_extended": DerivedExpr(2, lambda frames: derive.fx_usd_extended(frames[0], frames[1])),
+    "policy_rate_extended": DerivedExpr(
+        2,
+        lambda frames: derive.policy_rate_extended(frames[0], frames[1]),
+        optional_inputs=(1,),
+    ),
 }
 
 

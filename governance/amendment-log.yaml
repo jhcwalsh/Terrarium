@@ -1692,3 +1692,71 @@ amendments:
     with the HAR equity_vol months included per D6 and a masked ablation cell measuring
     their effect (ruling K3).'
   type: protocol_change
+- amendment_id: AM-2026-08-09-003
+  date: '2026-08-09'
+  payload:
+    consequence: campaign-2 live-tree panel re-derivation ends here; sealed campaign-2
+      artifacts and their replays are untouched
+    degenerate_variance_guard:
+      floor: variance <= 1e-18 * max(1, mean^2)
+      module: ah.eval.reference
+      sentinel: DEGENERATE_STAT (NaN by convention, returned deliberately by the named
+        guard; disclosed via n_valid_resamples, never judged)
+    executes: AM-2026-08-09-002 (SPEC NOW, WIRING AT CAMPAIGN-3)
+    hashed_files_added:
+    - src/ah/data/vol_extend.py
+    - src/ah/data/vol_backcast.py
+    - src/ah/data/funding_extend.py
+    - src/ah/data/hqm_extend.py
+    - src/ah/data/ust2y_extend.py
+    - src/ah/data/ust10y_extend.py
+    - src/ah/data/fx_parity.py
+    - artifacts/volext/equity-vol-backcast-provenance.json
+    - src/ah/data/equity_vol_pinned_draw.json
+    pinned_draw:
+      draw_index: 0
+      n_months: 393
+      path: src/ah/data/equity_vol_pinned_draw.json
+      provenance_sha256: f0535582c061cc60ea8605aa9085d457b27dbc12af5e4718aed557146284fc92
+      seed: 20260809
+      sha256: 53a378a49bfa58f9457698473457f526298efe5454ca9187ff2c35ca3fb50178
+      span:
+      - 1953-04
+      - 1985-12
+    read_surface:
+      equity_vol: equity_vol_extended(fred.VIX, fred.VXO) + pinned HAR draw
+      funding_spread: funding_spread_extended(fred.TEDRATE, fred.CPF3M, fred.CP3M,
+        fred.CP3M_NBER, fred.TB3M_SEC, fred.TB3MS)
+      fx_usd: fx_usd_extended(fred.DTWEXBGS, fred.DTWEXM) with parity prepend
+      hqm_curve: hqm_curve_extended(treasury.hqm_curve, fred.AAA)
+      policy_rate: policy_rate_extended(fred.FEDFUNDS, fred.TB3MS)
+      ust_10y: ust_10y_extended(fred.DGS10, fred.GS10)
+      ust_2y: ust_2y_extended(fred.DGS2, fred.GS1, fred.GS3)
+    reseal: required; performed in the same commit
+    supersedes_lock_digest: sha256:f857c45be56356b001fa35548d4e818d578d20fc1a9428cdd81c09e0e9123a1d
+  post_hoc: false
+  rationale: 'CAMPAIGN-3 WIRING: executes the read-path flip AM-2026-08-09-002 declared
+    (SPEC NOW, WIRING AT CAMPAIGN-3) and ends the deferral in the same terms it was
+    made. ah.data.derive gains seven *_extended read helpers (equity_vol_extended,
+    funding_spread_extended, hqm_curve_extended, ust_2y_extended, ust_10y_extended,
+    fx_usd_extended, policy_rate_extended); ah.eval.panel and ah.gen.bootstrap register
+    them; factors.yaml flips the seven factor entries to the extended exprs -- including
+    policy_rate, whose fedfunds_pre1954 splice moves from REGISTERED-BUT-NOT-APPLIED
+    (the first seal''s disclosure) to APPLIED. Donor inputs are optional at the panel
+    layer: a vintage without them reads exactly the campaign-2 behaviour, so the flip
+    is carried by the data a vintage contains, not by a code fork. equity_vol pre-1986
+    is served from the ONE pinned HAR draw (seed 20260809, materialized once by scripts/volext_materialize_draw.py).
+    ah.eval.reference gains the degenerate-variance guard (DEGENERATE_REL_VARIANCE_FLOOR,
+    DEGENERATE_STAT) for pegged-era fx months -- the amendment''s named work item.
+    The seal grows by the seven extension modules and the two pinned artifacts (the
+    RFR-82 lesson applied in the same commit that puts them on the read path), and
+    the five extension-family ''nothing sealed learned the rule'' tests invert to
+    their third state with history kept. DISCLOSED CONSEQUENCE, now in effect: campaign-2''s
+    live-tree bit-reproducibility ends at this commit -- the campaign-2 vintage already
+    carries donors (fred.AAA, fred.TB3MS, fred.DTWEXM) that the extended reads consume,
+    so hqm_curve, policy_rate and fx_usd panel reads on that vintage now differ from
+    the sealed campaign-2 record. The sealed record itself (G2-EVIDENCE.md, RunRecords,
+    the 2026-08-02.4 vintage bytes) is untouched and replays of the sealed artifacts
+    remain valid; what ends is re-DERIVING those panels from the live tree, exactly
+    as AM-2026-08-09-002 said it would, recorded here in the amendment that does it.'
+  type: protocol_change

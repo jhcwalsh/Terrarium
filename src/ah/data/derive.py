@@ -86,6 +86,199 @@ def fx_usd_spliced(broad: pd.DataFrame, major: pd.DataFrame) -> pd.DataFrame:
     return result.frame[["date", "value"]].copy()
 
 
+# --------------------------------------------------------------------------- #
+# (a2) the extended factor reads (campaign-3 wiring; AM-2026-08-09-002)
+#
+# Each helper applies one of the seven ratified extension families AT THE READ
+# SURFACE, exactly as hy_oas_spliced/fx_usd_spliced apply ah.data.splice. Two
+# shared conventions, both chosen so a fixture vintage that predates the
+# extended donors keeps its campaign-2 behaviour bit-for-bit:
+#
+# - A DONOR read that is EMPTY (the series is absent from the vintage, or the
+#   panel's optional-input machinery substituted an empty frame) means the
+#   extension does not engage and the unextended campaign-2 read is returned.
+# - A fit refusal (the module's own ValueError: overlap shorter than the
+#   family's MIN_OVERLAP_MONTHS) likewise falls back to the unextended read --
+#   a short fixture overlap is a fact about the fixture, not an error. On the
+#   live campaign-3 vintage every family's overlap is hundreds of months
+#   (docs/data/*-REPORT.md) and the fallbacks are dead code there.
+#
+# Proxy provenance: every extension module flags its filled months is_proxy
+# with a rule_id at source; this surface returns the canonical (date, value)
+# shape and the per-factor proxy share is disclosed by the reporting layer
+# (AM-2026-08-09-002's disclosure clause), not carried in the panel.
+# --------------------------------------------------------------------------- #
+
+
+def equity_vol_extended(vix: pd.DataFrame, vxo: pd.DataFrame) -> pd.DataFrame:
+    """VIX extended to 1986-01 on observed VXO, then to 1953-04 on the pinned HAR draw.
+
+    Applies ``PROXY-EQUITY-VOL-VXO-V1`` (``ah.data.vol_extend``, stage 1: a
+    log-log fit of observed VXO onto VIX over the 1990+ overlap) and then
+    prepends ``PROXY-EQUITY-VOL-HAR-V1``'s ONE pinned ensemble draw
+    (``ah.data.vol_backcast.pinned_draw_series``; seed 20260809, materialized
+    once, sha pinned by the campaign-3 pre-registration). The draw is model
+    output and is prepended only when it lands flush against the extension
+    (first observed/VXO month == 1986-01); on any other vintage shape it is
+    withheld rather than leaving a panel gap that assemble_panel would refuse.
+    """
+    if vxo.empty:
+        return vix[["date", "value"]].copy()
+    from ah.data import vol_backcast as vb
+    from ah.data import vol_extend as vx
+
+    try:
+        ext = vx.extend_equity_vol(vix, vxo)
+    except ValueError:
+        return vix[["date", "value"]].copy()
+    frame = ext.frame[["date", "value"]].copy()
+    frame["date"] = pd.to_datetime(frame["date"])
+    first = frame["date"].min()
+    junction = pd.Timestamp(f"{vb.PINNED_DRAW_SPAN[1]}-01") + pd.offsets.MonthBegin(1)
+    if first != junction:
+        return frame
+    draw = vb.pinned_draw_series()
+    pre = pd.DataFrame({"date": draw.index, "value": draw.to_numpy()})
+    return pd.concat([pre, frame], ignore_index=True).sort_values(by="date", ignore_index=True)
+
+
+def funding_spread_extended(
+    ted: pd.DataFrame,
+    cpf3m: pd.DataFrame,
+    cp3m: pd.DataFrame,
+    nber: pd.DataFrame,
+    tb3m_sec: pd.DataFrame,
+    tb3ms: pd.DataFrame,
+) -> pd.DataFrame:
+    """TED extended on BOTH ends with the fitted CP-bill spread (PROXY-FUNDING-CPBILL-V1).
+
+    ``ah.data.funding_extend``: the commercial-paper leg chains
+    CPF3M <- CP3M <- NBER by mean offset, the bill leg TB3M_SEC <- TB3MS, and
+    ``TED = a + b * (CP - bill)`` is fitted on the observed overlap. Fills every
+    month TED does not cover on either side (owner ruling F2 -- the post-2022
+    hole is half the point), floored at 1934-01 (ruling F3). Any empty donor
+    frame, or an overlap the module refuses, degrades to the campaign-2 read
+    ``funding_stress(ted)`` unchanged.
+    """
+    donors = (cpf3m, cp3m, nber, tb3m_sec, tb3ms)
+    if any(d.empty for d in donors):
+        return funding_stress(ted)
+    from ah.data import funding_extend as fe
+
+    try:
+        ext = fe.extend_funding_spread(ted, *donors)
+    except ValueError:
+        return funding_stress(ted)
+    return ext.frame[["date", "value"]].copy()
+
+
+def hqm_curve_extended(hqm: pd.DataFrame, aaa: pd.DataFrame) -> pd.DataFrame:
+    """HQM 10y spot extended backward on the fitted Aaa donor (PROXY-HQM10-AAA-V1).
+
+    ``ah.data.hqm_extend``: ``HQM10 = a + b * Aaa`` on the 1984+ overlap,
+    backward fill only, observed months never overwritten. An empty or
+    overlap-short donor degrades to the unextended read.
+    """
+    if aaa.empty:
+        return hqm[["date", "value"]].copy()
+    from ah.data import hqm_extend as he
+
+    try:
+        ext = he.extend_hqm(hqm, aaa)
+    except ValueError:
+        return hqm[["date", "value"]].copy()
+    return ext.frame[["date", "value"]].copy()
+
+
+def ust_2y_extended(dgs2: pd.DataFrame, gs1: pd.DataFrame, gs3: pd.DataFrame) -> pd.DataFrame:
+    """DGS2 extended to 1953-04 by GS1/GS3 curve interpolation (PROXY-UST2Y-GS1GS3-V1).
+
+    ``ah.data.ust2y_extend``: a two-donor regression on the curve neighbours
+    over the observed overlap -- the binding factor of the ratified span
+    (AM-2026-08-09-002 moved it here from equity_vol). Empty or overlap-short
+    donors degrade to the unextended read.
+    """
+    if gs1.empty or gs3.empty:
+        return dgs2[["date", "value"]].copy()
+    from ah.data import ust2y_extend as u2
+
+    try:
+        ext = u2.extend_ust2y(dgs2, gs1, gs3)
+    except ValueError:
+        return dgs2[["date", "value"]].copy()
+    return ext.frame[["date", "value"]].copy()
+
+
+def ust_10y_extended(dgs10: pd.DataFrame, gs10: pd.DataFrame) -> pd.DataFrame:
+    """DGS10 extended to 1953-04 on the GS10 identity splice (PROXY-UST10Y-GS10-V1).
+
+    ``ah.data.ust10y_extend``: the same instrument published at monthly
+    frequency (overlap corr 1.000), backward fill only. Empty or overlap-short
+    donor degrades to the unextended read.
+    """
+    if gs10.empty:
+        return dgs10[["date", "value"]].copy()
+    from ah.data import ust10y_extend as u10
+
+    try:
+        ext = u10.extend_ust10y(dgs10, gs10)
+    except ValueError:
+        return dgs10[["date", "value"]].copy()
+    return ext.frame[["date", "value"]].copy()
+
+
+def fx_usd_extended(broad: pd.DataFrame, major: pd.DataFrame) -> pd.DataFrame:
+    """fx_usd_spliced with the pegged-era parity index prepended (PROXY-FX-PARITY-V1).
+
+    The DTWEXM donor is first extended to 1953-04 with the vendored
+    Bretton-Woods parity index (``ah.data.fx_parity``; single-point junction
+    pin, no fit) and the whole donor -- parity months included -- then goes
+    through the same ``fx_usd_pre2006`` splice as :func:`fx_usd_spliced`, so
+    pegged-era months arrive in DTWEXBGS units via one transform, not two
+    conventions. The parity index is prepended only when the donor starts flush
+    at the floating-era boundary (1973-01); otherwise -- a truncated fixture
+    donor -- the read degrades to :func:`fx_usd_spliced` unchanged.
+
+    Pegged-era months are near-constant BY CONSTRUCTION (the era's true value);
+    correlation/ACF consumers over them need the degenerate-variance guard
+    (``ah.eval.reference``), which is part of the same wiring.
+    """
+    from ah.data import fx_parity
+    from ah.data import splice as sp
+
+    d = major.assign(date=pd.to_datetime(major["date"]))
+    first = d["date"].min() if not d.empty else None
+    boundary = pd.Timestamp(fx_parity.END) + pd.offsets.MonthBegin(1)
+    if first is None or first != boundary:
+        return fx_usd_spliced(broad, major)
+    ext = fx_parity.extend_fx(major)
+    result = sp.splice(sp.PROXY_RULES["fx_usd_pre2006"], broad, ext.frame[["date", "value"]])
+    return result.frame[["date", "value"]].copy()
+
+
+def policy_rate_extended(fedfunds: pd.DataFrame, tb3ms: pd.DataFrame) -> pd.DataFrame:
+    """FEDFUNDS extended to 1934-01 on the TB3MS donor (PROXY_RULES['fedfunds_pre1954']).
+
+    The one extension whose rule predates this wiring: registered in
+    ``ah.data.splice`` since Step 1 and APPLIED here for the first time
+    (factors.yaml's entry has said "REGISTERED BUT NOT YET APPLIED" since the
+    first seal). Regression transform on the 1954-1990 overlap; actuals never
+    touched. An empty donor degrades to the unextended read.
+    """
+    if tb3ms.empty:
+        return fedfunds[["date", "value"]].copy()
+    from ah.data import splice as sp
+
+    try:
+        result = sp.splice(sp.PROXY_RULES["fedfunds_pre1954"], fedfunds, tb3ms)
+    except ValueError:
+        # the rule's own refusal (<2 overlap points inside its 1954-1990 fit
+        # window): a fixture-shaped vintage, handled as every other family's
+        # overlap refusal is -- the unextended campaign-2 read.
+        return fedfunds[["date", "value"]].copy()
+    return result.frame[["date", "value"]].copy()
+
+
 def yoy(index_frame: pd.DataFrame, periods: int = 12) -> pd.DataFrame:
     """Year-on-year percent change of an index series."""
     s = _s(index_frame).sort_index()

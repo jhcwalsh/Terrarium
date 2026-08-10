@@ -304,12 +304,34 @@ _DERIVED_EXPRS: dict[str, tuple[int, Any]] = {
     "hy_oas_spliced": (3, lambda frames: derive.hy_oas_spliced(frames[0], frames[1], frames[2])),
     "fx_usd_spliced": (2, lambda frames: derive.fx_usd_spliced(frames[0], frames[1])),
     "demeaned_log_cape": (1, lambda frames: derive.demeaned_log_cape(frames[0])),
+    # campaign-3 wiring additions -- mirrored from ah.eval.panel._DERIVED_EXPRS,
+    # kept identical by the equivalence test.
+    "equity_vol_extended": (2, lambda frames: derive.equity_vol_extended(frames[0], frames[1])),
+    "funding_spread_extended": (6, lambda frames: derive.funding_spread_extended(*frames)),
+    "hqm_curve_extended": (2, lambda frames: derive.hqm_curve_extended(frames[0], frames[1])),
+    "ust_2y_extended": (
+        3,
+        lambda frames: derive.ust_2y_extended(frames[0], frames[1], frames[2]),
+    ),
+    "ust_10y_extended": (2, lambda frames: derive.ust_10y_extended(frames[0], frames[1])),
+    "fx_usd_extended": (2, lambda frames: derive.fx_usd_extended(frames[0], frames[1])),
+    "policy_rate_extended": (2, lambda frames: derive.policy_rate_extended(frames[0], frames[1])),
 }
 
-#: Mirrors ah.eval.panel's DerivedExpr.optional_inputs for the one pinned-splice
-#: case: fred.HY_OAS's train+validation read is empty by construction and the
-#: transform handles it. The equivalence test pins this to panel's declaration.
-_OPTIONAL_INPUTS: dict[str, tuple[int, ...]] = {"hy_oas_spliced": (0,)}
+#: Mirrors ah.eval.panel's DerivedExpr.optional_inputs -- the pinned-splice case
+#: (fred.HY_OAS's train+validation read is empty by construction) plus the
+#: campaign-3 extension families' donor inputs, whose emptiness on a pre-donor
+#: vintage means "extension does not engage", handled by the derive helper's
+#: documented fallback. The equivalence test pins this to panel's declaration.
+_OPTIONAL_INPUTS: dict[str, tuple[int, ...]] = {
+    "hy_oas_spliced": (0,),
+    "equity_vol_extended": (1,),
+    "funding_spread_extended": (1, 2, 3, 4, 5),
+    "hqm_curve_extended": (1,),
+    "ust_2y_extended": (1, 2),
+    "ust_10y_extended": (1,),
+    "policy_rate_extended": (1,),
+}
 
 
 def _read_series(access: DataAccess, series_id: str) -> pd.DataFrame | None:

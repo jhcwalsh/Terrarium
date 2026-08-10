@@ -1,6 +1,7 @@
 {
-  "digest": "sha256:f857c45be56356b001fa35548d4e818d578d20fc1a9428cdd81c09e0e9123a1d",
+  "digest": "sha256:6061fd73d9a5d25f0b105e3f1a96ddd5570bbc24c559afaf25d8b330d17636ce",
   "hashed_files": [
+    "artifacts/volext/equity-vol-backcast-provenance.json",
     "factors.yaml",
     "fixtures/worlds/conditional/crisis_severity_mild.worldspec.json",
     "fixtures/worlds/conditional/crisis_severity_severe.worldspec.json",
@@ -15,7 +16,15 @@
     "src/ah/battery/stylized.py",
     "src/ah/battery/thresholds.yaml",
     "src/ah/data/derive.py",
+    "src/ah/data/equity_vol_pinned_draw.json",
+    "src/ah/data/funding_extend.py",
+    "src/ah/data/fx_parity.py",
+    "src/ah/data/hqm_extend.py",
     "src/ah/data/splice.py",
+    "src/ah/data/ust10y_extend.py",
+    "src/ah/data/ust2y_extend.py",
+    "src/ah/data/vol_backcast.py",
+    "src/ah/data/vol_extend.py",
     "src/ah/eval/ablation.py",
     "src/ah/eval/battery.py",
     "src/ah/eval/g2.py",
@@ -37,5 +46,5 @@
     "src/ah/strategies.py"
   ],
   "prereg_path": "pre-registration.yaml",
-  "sealed_at": "2026-08-09T20:30:00-07:00"
+  "sealed_at": "2026-08-09T20:45:00-07:00"
 }

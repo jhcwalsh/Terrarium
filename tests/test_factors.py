@@ -259,9 +259,10 @@ def test_series_id_for_returns_the_declared_series() -> None:
     manifest = load_manifest()
     # `equity_mkt` used to be asserted here; the fix pass made it `kind: derived`
     # (mkt_rf + rf -- see test_equity_mkt_is_a_total_return_not_a_bare_excess_return),
-    # so it now belongs to the rejection test below instead.
+    # so it now belongs to the rejection test below instead. `ust_10y` followed it
+    # at the campaign-3 wiring (AM-2026-08-09-003: ust_10y_extended).
     assert manifest.series_id_for("smb") == "french.smb"
-    assert manifest.series_id_for("ust_10y") == "fred.DGS10"
+    assert manifest.series_id_for("cpi") == "fred.CPI"
 
 
 def test_series_id_for_rejects_derived_factor() -> None:
@@ -270,6 +271,11 @@ def test_series_id_for_rejects_derived_factor() -> None:
         manifest.series_id_for("ig_spread")
     with pytest.raises(ValueError, match="equity_mkt"):
         manifest.series_id_for("equity_mkt")
+    # campaign-3 wiring: the extended factors joined the derived side.
+    with pytest.raises(ValueError, match="ust_10y"):
+        manifest.series_id_for("ust_10y")
+    with pytest.raises(ValueError, match="equity_vol"):
+        manifest.series_id_for("equity_vol")
 
 
 def test_series_id_for_rejects_unavailable_factor() -> None:
@@ -489,21 +495,43 @@ def test_policy_rate_maps_to_the_effective_funds_rate_not_a_bill() -> None:
     """
     manifest = load_manifest()
     source = manifest.sources["policy_rate"]
-    assert source.kind == "series"
-    assert source.series_id == "fred.FEDFUNDS"
+    # campaign-3 wiring (AM-2026-08-09-003): the entry moved to `kind: derived`
+    # (policy_rate_extended applies the fedfunds_pre1954 splice at read time),
+    # but Critical 2's substance is unchanged and still asserted: the PRIMARY
+    # series is the administered funds rate, never a bill.
+    assert source.kind == "derived"
+    assert source.expr == "policy_rate_extended"
+    assert source.inputs[0] == "fred.FEDFUNDS"
     # the pre-1954 backfill is machine-visible, not free text in `notes`
     assert source.proxy is True
     assert source.proxy_for and "fred.TB3MS" in source.proxy_for
 
 
-def test_policy_rate_and_funding_spread_share_no_input_series() -> None:
-    """The contamination the mapping must not create, asserted directly."""
+def test_policy_rate_and_funding_spread_share_only_the_bounded_pre1954_donor() -> None:
+    """The contamination the mapping must not create, asserted directly.
+
+    AMENDED 2026-08-09 (campaign-3 wiring, AM-2026-08-09-003). As written this
+    test asserted full disjointness, and for the factors' PRIMARY/observed
+    constructions it still does: FEDFUNDS vs TEDRATE + the CP/bill donor legs
+    share nothing, so no observed month of either factor is built from the
+    other's inputs. What the wiring adds is one BOUNDED donor overlap:
+    fred.TB3MS enters policy_rate only before 1954-07 (the fedfunds_pre1954
+    splice) and enters funding_spread's bill leg only before 1954-01 (where
+    TB3M_SEC takes over), so the shared-construction months are exactly
+    1953-04..1953-12 of the ratified span -- nine months, deepest history,
+    disclosed here and in both factors' proxy_for entries rather than sealed
+    over silently. Any second shared series, or TB3MS appearing outside these
+    donor roles, fails this test exactly as full disjointness would have.
+    """
     manifest = load_manifest()
     policy = manifest.sources["policy_rate"]
     funding = manifest.sources["funding_spread"]
     policy_inputs = {policy.series_id} if policy.series_id else set(policy.inputs)
     funding_inputs = {funding.series_id} if funding.series_id else set(funding.inputs)
-    assert policy_inputs.isdisjoint(funding_inputs)
+    assert policy_inputs & funding_inputs == {"fred.TB3MS"}
+    # the primary constructions stay fully disjoint
+    assert policy.inputs[0] not in funding_inputs
+    assert "fred.TEDRATE" not in policy_inputs
 
 
 def test_equity_mkt_is_a_total_return_not_a_bare_excess_return() -> None:

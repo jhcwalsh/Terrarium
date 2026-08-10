@@ -107,13 +107,27 @@ def test_vxo_aggregates_month_end_like_vix():
     assert out["value"].tolist() == [12.0, 11.0], "month-end last, not monthly mean"
 
 
-def test_nothing_sealed_learned_the_new_rule():
-    """The sealed registry and the sealed factor read path must not reference
-    the stage-1 rule until the owner ratifies the amendment that moves it."""
+def test_the_sealed_read_path_learned_the_rule():
+    """INVERTED 2026-08-09 (campaign-3 wiring; AM-2026-08-09-002).
+
+    HISTORY, first state: as written this test pinned the opposite -- neither
+    ``splice.py`` nor ``derive.py`` could reference VXO or import
+    ``vol_extend``, because the stage-1 rule was verified but UNRATIFIED.
+    AM-2026-08-09-002 ratified the span and the campaign-3 wiring put the rule
+    on the sealed read path (``derive.equity_vol_extended``), so the pin
+    inverts: the read surface MUST now carry the rule, the module MUST be in
+    the lock's hashed set, and ``splice.py`` -- whose registry never learned
+    this family -- stays clean.
+    """
+    import json
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    for sealed in ("src/ah/data/splice.py", "src/ah/data/derive.py"):
-        text = (root / sealed).read_text(encoding="utf-8")
-        assert "VXO" not in text, f"{sealed} references the unratified VXO rule"
-        assert "vol_extend" not in text, f"{sealed} imports the unratified module"
+    derive_text = (root / "src/ah/data/derive.py").read_text(encoding="utf-8")
+    assert "vol_extend" in derive_text and "VXO" in derive_text
+    splice_text = (root / "src/ah/data/splice.py").read_text(encoding="utf-8")
+    assert "vol_extend" not in splice_text
+    lock = json.loads((root / "pre-registration.lock").read_text(encoding="utf-8"))
+    assert "src/ah/data/vol_extend.py" in lock["hashed_files"]
+    assert "src/ah/data/vol_backcast.py" in lock["hashed_files"]
+    assert "src/ah/data/equity_vol_pinned_draw.json" in lock["hashed_files"]
