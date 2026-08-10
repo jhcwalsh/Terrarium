@@ -254,17 +254,21 @@ def test_every_ablation_system_is_registered_and_resolvable_by_id():
         assert system_id in registered, system_id
 
 
-def test_the_system_table_covers_dn11_letters_a_through_e():
+def test_the_system_table_covers_the_sealed_letters_a_through_f():
+    """Campaign-3 (AM-2026-08-10-001, ruling K3) added F -- through campaign-2
+    this asserted exactly DN-1.1's A-E; the sealed ablation_systems grid is
+    now six and the assertion is updated to the new truth, not relaxed."""
     letters = {row.letter for row in systems.SYSTEMS}
-    assert letters == {"A", "B", "C", "D", "E"}
+    assert letters == {"A", "B", "C", "D", "E", "F"}
     d_ids = [row.system_id for row in systems.SYSTEMS if row.letter == "D"]
     assert d_ids == ["hier-diffusion-v1", "hier-flow-v1"]
     assert [row.system_id for row in systems.SYSTEMS if row.letter == "E"] == ["bootstrap-v1"]
+    assert [row.system_id for row in systems.SYSTEMS if row.letter == "F"] == ["har-masked"]
 
 
 def test_neural_rows_declare_training_seeds_and_deterministic_rows_do_not():
     for row in systems.SYSTEMS:
-        if row.letter in {"B", "C", "D"}:
+        if row.letter in {"B", "C", "D", "F"}:
             assert row.neural is True
             assert row.family in {"diffusion", "flow"}
         else:

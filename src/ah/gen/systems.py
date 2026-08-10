@@ -115,6 +115,7 @@ __all__ = [
     "SEED_PLAN",
     "SYSTEMS",
     "SYSTEM_A_ID",
+    "SYSTEM_F_ID",
     "AblationSystem",
     "GaussianResidualBlockSampler",
     "SeedIndex",
@@ -128,6 +129,14 @@ __all__ = [
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 SYSTEM_A_ID = "abl-a-structure-only"
+
+#: System F (ruling K3, AM-2026-08-10-001): the sealed ``ablation_systems.F``
+#: id. System D's flow architecture, hyperparameters and seeds, trained with
+#: equity_vol MISSING before 1986-01 (``bootstrap.har_masked_source``); at
+#: SAMPLING time the composition is identical to D's -- only the checkpoint
+#: differs. Its "family" is the flow family throughout: same config, same
+#: selection, same train seeds (``train_seed_for`` maps it to flow).
+SYSTEM_F_ID = "har-masked"
 
 #: A regime stratum below this many months does not get its own mean (see the
 #: module docstring). Same shape of floor as
@@ -352,7 +361,12 @@ def train_seed_for(family: str, seed_index: int) -> int:
     indices step it by :data:`SEED_STRIDE`. Keying the grid by INDEX rather than by
     absolute seed is what lets "seed index 1" mean one column across both arms
     despite that historical difference.
+
+    ``har-masked`` (system F) resolves to the FLOW seeds: the sealed K3 clause
+    is "identical architecture, hyperparameters and seeds".
     """
+    if family == SYSTEM_F_ID:
+        family = "flow"
     base = PRIMARY_TRAIN_SEED_BY_FAMILY[_check_family(family)]
     if seed_index < 0:
         raise JoineryError(f"seed_index must be >= 0; got {seed_index}")
@@ -363,8 +377,30 @@ def _checkpoint_for(family: str, seed_index: int) -> tuple[Path, str]:
     """``(path, expected_weight_sha256)`` for one (family, seed index).
 
     Index 0 resolves to the WP2.8/2.9 checkpoint and its module-level pin; every
-    other index resolves through the committed manifest.
+    other index resolves through the committed manifest. ``har-masked`` (system
+    F) has NO primary checkpoint -- it exists only from the campaign-3 training
+    run onward -- so EVERY index resolves through the manifest under keys
+    ``har-masked:<index>``.
     """
+    if family == SYSTEM_F_ID:
+        path = seed_checkpoint_manifest_path()
+        if not path.exists():
+            raise JoineryError(
+                f"no seed-checkpoint manifest at {path}; run scripts/train_ablation_seeds.py"
+            )
+        doc = json.loads(path.read_text("utf-8"))
+        key = f"{SYSTEM_F_ID}:{seed_index}"
+        if key not in doc:
+            raise JoineryError(
+                f"seed-checkpoint manifest has no entry '{key}' (have: {sorted(doc)})"
+            )
+        entry = doc[key]
+        if int(entry["train_seed"]) != train_seed_for(SYSTEM_F_ID, seed_index):
+            raise JoineryError(
+                f"manifest entry '{key}' records train_seed {entry['train_seed']}, but the "
+                f"seed plan says {train_seed_for(SYSTEM_F_ID, seed_index)}"
+            )
+        return _REPO_ROOT / entry["checkpoint"], str(entry["checkpoint_hash"])
     module = _family_module(family)
     if seed_index == 0:
         pin = module.PINNED_CHECKPOINT_SHA256
@@ -390,9 +426,15 @@ def _checkpoint_for(family: str, seed_index: int) -> tuple[Path, str]:
 
 
 def _build_sampler(family: str, seed_index: int):
-    """Load and hash-verify one family's checkpoint at one seed index."""
-    module = _family_module(family)
+    """Load and hash-verify one family's checkpoint at one seed index.
+
+    ``har-masked`` loads through the FLOW module (the architecture is D's) but
+    resolves its checkpoint under its own manifest keys.
+    """
     path, expected = _checkpoint_for(family, seed_index)
+    if family == SYSTEM_F_ID:
+        family = "flow"
+    module = _family_module(family)
     if not path.exists():
         raise JoineryError(f"{family} checkpoint for seed index {seed_index} not found: {path}")
     model, std, meta = module.load_checkpoint(path)
@@ -460,6 +502,29 @@ def build(system_id: str, *, seed_index: int = 0):
     seed_index = int(seed_index)
     if system_id == SYSTEM_A_ID:
         return structure_only_v1_factory()
+    if system_id == SYSTEM_F_ID:
+        # System F (K3): D's flow composition verbatim -- full campaign source,
+        # pinned L1/L2, the standard joinery -- differing ONLY in the checkpoint,
+        # which was trained on the har-masked dataset and lives under F's own
+        # manifest keys. The mask is a TRAINING fact; sampling is identical.
+        from ah.gen.blocks.flow import HierFlowV1
+
+        sampler, source, meta = _build_sampler(SYSTEM_F_ID, seed_index)
+        climate, regimes = _pinned_layers()
+
+        class _HarMasked(HierFlowV1):
+            generator_id = SYSTEM_F_ID
+            system_description = (
+                "system D's flow architecture trained with equity_vol MISSING "
+                "pre-1986-01 (ruling K3; the har_masked_ablation cell)"
+            )
+
+        _HarMasked.__name__ = "HarMaskedFlow"
+        _HarMasked.__qualname__ = _HarMasked.__name__
+        system = _HarMasked(climate, regimes, source, sampler)
+        system.checkpoint_hash = meta["checkpoint_hash"]
+        system.config_hash = meta.get("config_hash")
+        return system
     for letter in ("B", "C"):
         for family in ("diffusion", "flow"):
             builder = neural_rollout_id if letter == "B" else neural_only_id
@@ -601,6 +666,18 @@ SYSTEMS: tuple[AblationSystem, ...] = (
         composition="Regime-stratified stationary block bootstrap (the frozen benchmark)",
         question="The transparent benchmark (G2 opponent)",
         neural=False,
+    ),
+    # Campaign-3 (ruling K3, AM-2026-08-10-001): the har-masked cell.
+    AblationSystem(
+        letter="F",
+        system_id=SYSTEM_F_ID,
+        composition=(
+            "system D's flow arm, trained with equity_vol MISSING pre-1986-01 "
+            "(identical architecture, hyperparameters and seeds)"
+        ),
+        question="How much does the model learn from our own HAR reconstruction?",
+        neural=True,
+        family="flow",
     ),
 )
 

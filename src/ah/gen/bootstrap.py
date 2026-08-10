@@ -119,6 +119,7 @@ __all__ = [
     "FACTOR_SET",
     "FORM",
     "GENERATOR_ID",
+    "HAR_MASK_CUTOFF",
     "MEAN_BLOCK_MONTHS",
     "REGIME_LABELS",
     "SEED_STRIDE",
@@ -131,6 +132,8 @@ __all__ = [
     "bootstrap_v1_factory",
     "build_source",
     "campaign_source",
+    "har_masked_source",
+    "har_masked_source_from",
     "read_factor_frames",
     "validated_active_blocks",
 ]
@@ -976,6 +979,44 @@ def campaign_source(
         )
     finally:
         catalog.close()
+
+
+#: Ruling K3 (AM-2026-08-10-001): the month before which ``equity_vol`` is
+#: treated as MISSING in system F's training data -- the first VXO month, i.e.
+#: where the observed (non-HAR) equity_vol record begins.
+HAR_MASK_CUTOFF = "1986-01-01"
+
+
+def har_masked_source_from(source: BootstrapSource) -> BootstrapSource:
+    """``source`` with ``equity_vol`` treated as MISSING before 1986-01 (K3).
+
+    Under the sealed complete-case ``block_draw_span_rule``, a month lacking
+    any factor cannot enter a multivariate block, so masking equity_vol
+    pre-1986 is EXACTLY a row restriction to ``dates >= HAR_MASK_CUTOFF`` --
+    no missingness channel and no architecture change, which is what the
+    sealed clause ("identical architecture, hyperparameters and seeds")
+    requires. Raises :class:`BootstrapError` when nothing survives the cut.
+    """
+    keep = source.dates >= pd.Timestamp(HAR_MASK_CUTOFF)
+    if not bool(keep.any()):
+        raise BootstrapError(f"har-masked source is empty: no rows on or after {HAR_MASK_CUTOFF}")
+    idx = np.flatnonzero(np.asarray(keep))
+    return BootstrapSource(
+        factor_names=source.factor_names,
+        dates=source.dates[keep],
+        values=np.asarray(source.values)[idx],
+        labels=tuple(np.asarray(source.labels, dtype=object)[idx]),
+        ruleset_version=source.ruleset_version,
+        vintage_id=source.vintage_id,
+        active_blocks=source.active_blocks,
+    )
+
+
+def har_masked_source(
+    catalog_root: str | None = None, vintage_id: str = CAMPAIGN_VINTAGE_ID
+) -> BootstrapSource:
+    """System F's TRAINING source: the campaign source under the K3 mask."""
+    return har_masked_source_from(campaign_source(catalog_root, vintage_id))
 
 
 def bootstrap_v1_factory() -> BootstrapV1:

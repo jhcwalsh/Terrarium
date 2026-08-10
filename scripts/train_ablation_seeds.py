@@ -57,18 +57,45 @@ FAMILIES = {
         "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
         "exp_prefix": "l3b-flow-final",
     },
+    # System F (ruling K3, AM-2026-08-10-001): the flow family's SELECTED config,
+    # space and seeds VERBATIM -- the sealed clause is "identical architecture,
+    # hyperparameters and seeds" -- trained on the har-masked dataset (equity_vol
+    # MISSING pre-1986-01, i.e. the campaign source restricted to the cutoff).
+    "har-masked": {
+        "config_cls": FlowConfig,
+        "tuning_exp": "l3b-flow-tuning-v1",
+        "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
+        "exp_prefix": "l3b-flow-harmasked",
+    },
 }
 
 
-def _dataset(catalog_root: Path, vintage: str):
+def _dataset(catalog_root: Path, vintage: str, *, masked: bool = False):
     """The campaign block dataset, built exactly as WP2.8/2.9 built it.
 
     Imported lazily from the tuning driver so 'same data' is a fact rather than a
     reimplementation (WP2.9 verified the two arms' datasets are byte-identical).
+    ``masked=True`` (system F) builds the SAME dataset from the har-masked
+    source -- same climate artifact, same pin check, same builder.
     """
-    from run_blocks_tuning import build_campaign_dataset
+    import run_blocks_tuning as rbt
 
-    return build_campaign_dataset(catalog_root, vintage)
+    if not masked:
+        return rbt.build_campaign_dataset(catalog_root, vintage)
+
+    from ah.factors import load_manifest as _load_manifest
+    from ah.gen.bootstrap import build_source, har_masked_source_from
+
+    manifest = _load_manifest()
+    from ah.data.catalog import Catalog as _Catalog
+
+    with _Catalog(catalog_root) as catalog:
+        access = rbt.catalog_access(catalog, vintage)
+        source = har_masked_source_from(build_source(access, manifest, vintage_id=vintage))
+    climate = rbt.load_climate(rbt.DEFAULT_CLIMATE_ARTIFACT)
+    if climate.meta["content_sha256"] != rbt.PINNED_CLIMATE_SHA256:
+        raise SystemExit("climate artifact sha != the pin; refusing to build the dataset")
+    return rbt.bd.build_dataset(source, climate)
 
 
 def main() -> None:
@@ -86,15 +113,25 @@ def main() -> None:
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(manifest_path.read_text("utf-8")) if manifest_path.exists() else {}
 
-    dataset = _dataset(args.catalog_root, args.vintage)
+    dataset_full = _dataset(args.catalog_root, args.vintage)
     print(
-        f"dataset: {dataset.n_train_raw} raw train blocks, "
-        f"{dataset.n_train_effective} effective/epoch",
+        f"dataset: {dataset_full.n_train_raw} raw train blocks, "
+        f"{dataset_full.n_train_effective} effective/epoch",
         flush=True,
     )
+    dataset_masked = None
+    if "har-masked" in args.families:
+        dataset_masked = _dataset(args.catalog_root, args.vintage, masked=True)
+        print(
+            f"har-masked dataset: {dataset_masked.n_train_raw} raw train blocks, "
+            f"{dataset_masked.n_train_effective} effective/epoch",
+            flush=True,
+        )
 
     for family in args.families:
         spec = FAMILIES[family]
+        dataset = dataset_masked if family == "har-masked" else dataset_full
+        assert dataset is not None
         _space, _budget, space_sha = tu.load_search_space(spec["space"], spec["config_cls"])
         final_budget = yaml.safe_load(Path(spec["space"]).read_text("utf-8"))["final"]
         selection = json.loads(
@@ -138,6 +175,7 @@ def main() -> None:
                     "generator_id": {
                         "diffusion": "hier-diffusion-v1",
                         "flow": "hier-flow-v1",
+                        "har-masked": "har-masked",
                     }[family],
                     "vintage_id": args.vintage,
                     "seed": seed,
