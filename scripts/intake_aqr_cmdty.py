@@ -35,7 +35,9 @@ SERIES_BY_CODE = {
 
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--vintage", required=True, help="Vintage id to write (e.g. 2026-08-10.aqr1)")
+    parser.add_argument(
+        "--vintage", required=True, help="Vintage id to write (e.g. 2026-08-10.aqr1)"
+    )
     args = parser.parse_args()
 
     from ah.data.catalog import Catalog
@@ -51,7 +53,9 @@ def main() -> int:
     parsed = parse_workbook(WORKBOOK)
     frames = {SERIES_BY_CODE[code]: frame for code, frame in parsed.items()}
     for sid, frame in sorted(frames.items()):
-        print(f"{sid}: {len(frame)} obs, {frame['date'].min().date()}..{frame['date'].max().date()}")
+        print(
+            f"{sid}: {len(frame)} obs, {frame['date'].min().date()}..{frame['date'].max().date()}"
+        )
 
     catalog = Catalog(ROOT / "data")
     now = datetime.now(UTC)
