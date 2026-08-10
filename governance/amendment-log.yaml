@@ -1760,3 +1760,56 @@ amendments:
     remain valid; what ends is re-DERIVING those panels from the live tree, exactly
     as AM-2026-08-09-002 said it would, recorded here in the amendment that does it.'
   type: protocol_change
+- amendment_id: AM-2026-08-09-004
+  date: '2026-08-09'
+  payload:
+    cause: AM-2026-08-09-003 (campaign-3 wiring)
+    seal: g3
+    shared_files_edited:
+    - factors.yaml
+    - src/ah/data/derive.py
+    - src/ah/eval/prereg.py
+    - src/ah/eval/reference.py
+    supersedes_lock_digest: sha256:8d1e9df21ab132a736e7604f7d51dc2bccc2976fc5a8cb786840825469de4285
+  post_hoc: true
+  rationale: 'G3 RE-SEAL for the campaign-3 wiring''s edits to SHARED judged sources.
+    AM-2026-08-09-003 edited files this lock also hashes (factors.yaml, src/ah/data/derive.py,
+    src/ah/eval/prereg.py, src/ah/eval/reference.py) -- the generator-campaign read-path
+    flip, its seal growth, and the degenerate-variance guard. NOTHING G3-JUDGED CHANGED:
+    no threshold, protocol field, mapping or sealed evidence value moved; the new
+    derive helpers degrade to the exact prior behaviour wherever their donor series
+    are absent, and the G3 record stands as computed. Re-derivations of factor panels
+    from the live tree inherit the consequence AM-2026-08-09-003 disclosed (campaign-2
+    live-tree panel re-derivation ended there). POST-HOC, honestly flagged: the edits
+    landed in commit d2ed72b with the MAIN lock''s amendment and re-seal, and this
+    lock''s own re-seal followed only after the full gate caught the digest mismatch
+    -- the same failure shape AM-2026-08-08-001 records, caught by the same gate,
+    before anything left the branch. The standing rule is unchanged: an edit to a
+    file named by more than one seal_scope re-seals EVERY lock that hashes it, in
+    the same commit.'
+  type: protocol_change
+- amendment_id: AM-2026-08-09-005
+  date: '2026-08-09'
+  payload:
+    cause: AM-2026-08-09-003 (campaign-3 wiring)
+    seal: g5
+    shared_files_edited:
+    - factors.yaml
+    - src/ah/eval/prereg.py
+    supersedes_lock_digest: sha256:601e3f826b089de171783eb397b6697ec2d5a967a606659a303ed47ba79ea615
+  post_hoc: true
+  rationale: 'G5 RE-SEAL for the campaign-3 wiring''s edits to SHARED judged sources.
+    AM-2026-08-09-003 edited files this lock also hashes (factors.yaml, src/ah/eval/prereg.py)
+    -- the generator-campaign read-path flip, its seal growth, and the degenerate-variance
+    guard. NOTHING G5-JUDGED CHANGED: no threshold, protocol field, mapping or sealed
+    evidence value moved; the new derive helpers degrade to the exact prior behaviour
+    wherever their donor series are absent, and the G5 record stands as computed.
+    Re-derivations of factor panels from the live tree inherit the consequence AM-2026-08-09-003
+    disclosed (campaign-2 live-tree panel re-derivation ended there). POST-HOC, honestly
+    flagged: the edits landed in commit d2ed72b with the MAIN lock''s amendment and
+    re-seal, and this lock''s own re-seal followed only after the full gate caught
+    the digest mismatch -- the same failure shape AM-2026-08-08-001 records, caught
+    by the same gate, before anything left the branch. The standing rule is unchanged:
+    an edit to a file named by more than one seal_scope re-seals EVERY lock that hashes
+    it, in the same commit.'
+  type: protocol_change
