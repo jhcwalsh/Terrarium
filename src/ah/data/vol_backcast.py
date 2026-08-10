@@ -61,6 +61,10 @@ import pandas as pd
 
 __all__ = [
     "FEATURES",
+    "PINNED_DRAW_PATH",
+    "PINNED_DRAW_SEED",
+    "PINNED_DRAW_SPAN",
+    "PINNED_PROVENANCE_SHA256",
     "REGISTERED_OBJECT",
     "REGISTERED_THRESHOLDS",
     "RULE_ID",
@@ -73,7 +77,9 @@ __all__ = [
     "backcast",
     "close_from_returns",
     "fit",
+    "fit_from_provenance",
     "paths",
+    "pinned_draw_series",
     "realized_features",
     "validate",
     "vxo_heldout",
@@ -104,6 +110,33 @@ REGISTERED_THRESHOLDS: dict[str, float] = {
 #: Feature columns, in the order they enter the design matrix. Frozen: the
 #: coefficient vector in a stored fit is positional.
 FEATURES: tuple[str, ...] = ("log_rv22", "log_rv66", "log_rv252", "log_maxdd")
+
+# --------------------------------------------------------------------------- #
+# the pinned panel draw (AM-2026-08-09-002)
+# --------------------------------------------------------------------------- #
+
+#: sha256 of ``artifacts/volext/equity-vol-backcast-provenance.json`` as pinned
+#: in AM-2026-08-09-002's payload. The materialization script refuses to run
+#: against any other provenance, and :func:`pinned_draw_series` refuses to
+#: serve a draw whose recorded provenance sha differs.
+PINNED_PROVENANCE_SHA256 = "f0535582c061cc60ea8605aa9085d457b27dbc12af5e4718aed557146284fc92"
+
+#: The ONE ensemble draw the extended panel consumes (ratification design
+#: ruling R1): a single seed, drawn once, materialized to
+#: :data:`PINNED_DRAW_PATH` by ``scripts/volext_materialize_draw.py`` and never
+#: regenerated at read time. Tail-bearing DIAGNOSTICS still regenerate the full
+#: ensemble from the provenance fit (owner decision D2); the panel itself is
+#: one path so that every consumer sees the same history.
+PINNED_DRAW_SEED = 20260809
+
+#: Month span of the pinned draw, inclusive, ``YYYY-MM``: from the ratified
+#: extended-span start (AM-2026-08-09-002) to the last month below the stage-1
+#: VXO extension.
+PINNED_DRAW_SPAN: tuple[str, str] = ("1953-04", "1985-12")
+
+#: The materialized draw, committed as package data so the read path needs no
+#: repository-root discovery and the seal can hash it as a file.
+PINNED_DRAW_PATH = Path(__file__).parent / "equity_vol_pinned_draw.json"
 
 
 # --------------------------------------------------------------------------- #
@@ -658,3 +691,77 @@ def write_provenance(
     }
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(json.dumps(payload, indent=2, default=str), encoding="utf-8")
+
+
+def fit_from_provenance(payload: dict[str, Any]) -> BackcastFit:
+    """Rebuild the registered :class:`BackcastFit` from a provenance payload.
+
+    The inverse of :func:`write_provenance` for the fields that determine
+    numbers: spec, coefficients and the residual pool (:func:`paths` consumes
+    only ``resid`` and ``spec.residual_block_months``;
+    :meth:`BackcastFit.predict` only ``coef``). Standard errors and fit
+    statistics are carried through for display faithfulness, not because any
+    consumer re-judges them.
+    """
+    d = payload["fit"]
+    spec = BackcastSpec(
+        rule_id=d["rule_id"],
+        target=d["target"],
+        donor=d["donor"],
+        overlap_start=d["overlap_start"],
+        overlap_end=d["overlap_end"],
+        rv=RVConfig(
+            estimator=d["rv"]["estimator"],
+            windows=tuple(d["rv"]["windows"]),
+            min_days_per_month=d["rv"]["min_days_per_month"],
+        ),
+        hac_lags=d["hac_lags"],
+        residual_block_months=d["residual_block_months"],
+        min_overlap_months=d["min_overlap_months"],
+    )
+    names = ("const", *FEATURES)
+    resid = pd.Series(
+        {pd.Timestamp(k): float(v) for k, v in payload["residuals"].items()}, name="resid"
+    ).sort_index()
+    return BackcastFit(
+        spec=spec,
+        coef=tuple(float(d["coef"][n]) for n in names),
+        se_hac=tuple(float(d["se_hac"][n]) for n in names),
+        se_ols=tuple(float(d["se_ols"][n]) for n in names),
+        tstat_hac=tuple(float(d["tstat_hac"][n]) for n in names),
+        r2=float(d["r2"]),
+        resid=resid,
+        resid_sigma=float(d["resid_sigma"]),
+        n_obs=int(d["n_obs"]),
+        overlap=(d["overlap"][0], d["overlap"][1]),
+    )
+
+
+def pinned_draw_series(path: Path | None = None) -> pd.Series:
+    """The materialized pinned draw as a month-START indexed level series.
+
+    Loads :data:`PINNED_DRAW_PATH` (written once by
+    ``scripts/volext_materialize_draw.py``), refuses a file whose recorded
+    seed, span or provenance sha differs from the module's pinned constants,
+    and refuses a gap in the monthly index. Month-start timestamps match the
+    connector/vintage date convention the factor read surface joins against.
+    """
+    p = path or PINNED_DRAW_PATH
+    doc = json.loads(p.read_text(encoding="utf-8"))
+    if doc.get("provenance_sha256") != PINNED_PROVENANCE_SHA256:
+        raise ValueError(
+            f"pinned draw at {p} records provenance sha {doc.get('provenance_sha256')!r}, "
+            f"not the AM-2026-08-09-002 pin {PINNED_PROVENANCE_SHA256!r}"
+        )
+    if int(doc.get("seed", -1)) != PINNED_DRAW_SEED or doc.get("draw_index", -1) != 0:
+        raise ValueError(f"pinned draw at {p} is not the seed-{PINNED_DRAW_SEED} draw 0")
+    if tuple(doc.get("span", ())) != PINNED_DRAW_SPAN:
+        raise ValueError(f"pinned draw at {p} spans {doc.get('span')}, not {PINNED_DRAW_SPAN}")
+    s = pd.Series(
+        {pd.Timestamp(f"{k}-01"): float(v) for k, v in doc["values"].items()},
+        name="equity_vol_pinned",
+    ).sort_index()
+    expected = pd.date_range(f"{PINNED_DRAW_SPAN[0]}-01", f"{PINNED_DRAW_SPAN[1]}-01", freq="MS")
+    if not s.index.equals(expected):
+        raise ValueError(f"pinned draw at {p} has {len(s)} months; expected {len(expected)}")
+    return s
