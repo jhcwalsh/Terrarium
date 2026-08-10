@@ -142,12 +142,20 @@ frame with known proxy months; vintage_diff on two synthetic vintages;
 har_fan determinism in `(n_draws, seed)`; the zero-write guard. The
 Streamlit file gets no tests (presentation-only, thin by construction).
 
-## Open questions for the owner
+## Owner rulings (2026-08-09, all three questions answered YES)
 
-1. Port 8795 and the name "datalab" acceptable?
-2. Should the Factors page offer a CSV download button (trivial in
-   Streamlit; the store is licensed data — REG series would need the
-   attribution string embedded in the download)?
-3. Any appetite for a "campaign lens" toggle (campaign-2 vintage vs
-   campaign-3 vintage side-by-side) as a first-class page, or is the
-   Vintages diff page sufficient?
+1. Port 8795, name "datalab" — CONFIRMED.
+2. CSV download on the Factors (and Series) pages — CONFIRMED, with the
+   licence discipline embedded in the file itself: comment header lines
+   carrying the licence tier of every contributing series and, whenever a
+   REG series contributes, the full attribution string
+   (`ah.data.cmdty_close.ATTRIBUTION` for AQR). A download whose bytes do
+   not carry the attribution does not ship.
+3. A first-class **Campaign lens** page — CONFIRMED: two vintage pickers
+   (defaulting to campaign-2 `2026-08-02.4` vs the current pointer),
+   factor multiselect, side-by-side charts and proxy-share tables. The
+   Vintages diff page remains for store-level deltas; the lens is the
+   factor-level view.
+
+Pages become six: **Series · Factors · Extensions · Campaign lens ·
+Vintages · Spans**.
