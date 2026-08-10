@@ -789,7 +789,7 @@ def hier_diffusion_v1_factory() -> HierDiffusionV1:
     :data:`PINNED_CHECKPOINT_SHA256`, its recorded c_b fingerprint differs from
     the runtime's, or the L1/L2 artifact SHAs differ from the WP2.7 pins.
     """
-    from ah.gen.bootstrap import campaign_source
+    from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
     from ah.gen.climate.simulate import load_artifact as load_climate
     from ah.gen.joinery.assemble import (
         DEFAULT_CLIMATE_ARTIFACT,
@@ -815,7 +815,9 @@ def hier_diffusion_v1_factory() -> HierDiffusionV1:
         raise JoineryError("regimes artifact sha != WP2.7 pin")
     if meta.get("climate_sha256") != PINNED_CLIMATE_SHA256:
         raise JoineryError("checkpoint was trained against a different L1 artifact")
-    source = campaign_source()
+    # hier-diffusion-v1 is a CAMPAIGN-2 artifact; same vintage pin and reason
+    # as hier-flow-v1's factory in ah.gen.blocks.flow.
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID)
     sampler = DiffusionBlockSampler(
         model,
         std,

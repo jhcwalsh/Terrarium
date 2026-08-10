@@ -66,7 +66,7 @@ def build_decade(
     import torch
 
     from ah.gen.blocks.flow import FlowBlockSampler, load_checkpoint
-    from ah.gen.bootstrap import campaign_source
+    from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
     from ah.gen.climate.model import STATE_NAMES
     from ah.gen.climate.simulate import load_artifact as load_climate
     from ah.gen.joinery import assemble as ja
@@ -96,7 +96,10 @@ def build_decade(
     if regimes.meta["content_sha256"] != ja.PINNED_REGIMES_SHA256:
         raise ValueError("regimes artifact sha256 != WP2.7 pin")
 
-    source = campaign_source()
+    # A campaign-2 checkpoint replay: the vintage is pinned to the record the
+    # checkpoint was trained against, not the live campaign default -- the
+    # trained feature dimensions are a fact about that vintage.
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID)
     sampler = sampler_override or FlowBlockSampler(
         model,
         std,

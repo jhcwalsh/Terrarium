@@ -538,7 +538,7 @@ def hier_flow_v1_factory() -> HierFlowV1:
     :data:`PINNED_CHECKPOINT_SHA256`, its recorded c_b fingerprint differs from
     the runtime's, or the L1/L2 artifact SHAs differ from the WP2.7 pins.
     """
-    from ah.gen.bootstrap import campaign_source
+    from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
     from ah.gen.climate.simulate import load_artifact as load_climate
     from ah.gen.joinery.assemble import (
         DEFAULT_CLIMATE_ARTIFACT,
@@ -564,7 +564,12 @@ def hier_flow_v1_factory() -> HierFlowV1:
         raise JoineryError("regimes artifact sha != WP2.7 pin")
     if meta.get("climate_sha256") != PINNED_CLIMATE_SHA256:
         raise JoineryError("checkpoint was trained against a different L1 artifact")
-    source = campaign_source()
+    # hier-flow-v1 is a CAMPAIGN-2 artifact: its checkpoint's feature
+    # dimensions and c_b fingerprint are facts about the campaign-2 vintage,
+    # so its factory pins that vintage rather than the live campaign default
+    # (which moves at the campaign-3 seal). hier-flow-v2 registers its own
+    # factory against the extended panel when it trains.
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID)
     sampler = FlowBlockSampler(
         model,
         std,
