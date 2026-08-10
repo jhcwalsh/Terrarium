@@ -41,6 +41,7 @@ def _synthetic_source(
     n_rows: int = 60,
     factor_names: tuple[str, ...] = ("a", "b", "c"),
     labels: tuple[str, ...] | None = None,
+    start: str = "1990-01-01",
 ) -> bs.BootstrapSource:
     """A source whose every column is an injective function of the row index.
 
@@ -48,7 +49,7 @@ def _synthetic_source(
     it came from unambiguously, which is what makes the multivariate-block test exact
     rather than statistical.
     """
-    dates = pd.DatetimeIndex(pd.date_range("1990-01-01", periods=n_rows, freq="MS"))
+    dates = pd.DatetimeIndex(pd.date_range(start, periods=n_rows, freq="MS"))
     values = np.arange(n_rows, dtype=np.float64)[:, None] + 1000.0 * np.arange(
         len(factor_names), dtype=np.float64
     )
@@ -387,18 +388,21 @@ def test_worldspec_regime_names_map_onto_the_six_ruleset_labels() -> None:
 
 
 # --------------------------------------------------------------------------- #
-# 9. the severe test is structurally not posable for this benchmark
+# 9. the severe test became posable (inverted at the span-53 ratification)
 # --------------------------------------------------------------------------- #
 
 
-def test_no_pre_1990_month_is_reachable() -> None:
-    """The sealed span starts 1990-01, so WP2.11's 'regenerate from 1965' cannot be posed."""
-    assert bs.BLOCK_DRAW_SPAN_START == "1990-01-01"
-    source = _synthetic_source(n_rows=372)
+def test_pre_1990_months_are_reachable_over_the_extended_span() -> None:
+    """INVERTED 2026-08-09 (AM-2026-08-09-002). HISTORY: as sealed at G2 the span
+    started 1990-01, this test was `test_no_pre_1990_month_is_reachable`, and
+    SEVERE_TEST_POSABLE was False -- WP2.11's 'regenerate from 1965' could not be
+    posed for the benchmark. The extended 1953-04 span closes that defect."""
+    assert bs.BLOCK_DRAW_SPAN_START == "1953-04-01"
+    source = _synthetic_source(n_rows=bs.BLOCK_DRAW_SPAN_MONTHS, start=bs.BLOCK_DRAW_SPAN_START)
     rows = _row_indices(bs.BootstrapV1(source).sample_months(120, 64, 4).paths)
     reachable = source.dates.to_numpy()[np.unique(rows)]
-    assert reachable.min() >= np.datetime64(bs.BLOCK_DRAW_SPAN_START)
-    assert bs.SEVERE_TEST_POSABLE is False
+    assert reachable.min() < np.datetime64("1990-01-01")
+    assert bs.SEVERE_TEST_POSABLE is True
 
 
 # --------------------------------------------------------------------------- #
@@ -472,17 +476,21 @@ def test_local_factor_resolution_matches_ah_eval_panel() -> None:
 # --------------------------------------------------------------------------- #
 
 
-def _plausible_access(vix_start: str = "1990-01-01") -> DataAccess:
-    """A catalog-free stand-in with the real vintage's *shape*.
+def _plausible_access(vix_start: str = "1950-01-01") -> DataAccess:
+    """A catalog-free stand-in with the *post-campaign-3-wiring* panel's shape.
 
-    Every registered series runs 1970-01..2020-12 except ``fred.VIX``, which starts at
-    ``vix_start`` and is therefore the binding factor exactly as the sealed
-    ``block_draw_span_binding_factor`` records; ``fred.HY_OAS`` is empty, as it is on the
-    sealed campaign vintage (its whole licensed history is inside the holdout).
-    Magnitudes are plausible rather than realistic -- enough that a cumulative equity
-    index, a CPI year-on-year and an NBER indicator all compute.
+    RESHAPED 2026-08-09 (AM-2026-08-09-002): as sealed at G2 every series ran
+    1970-01..2020-12 with ``fred.VIX`` starting 1990-01 as the binding factor.
+    Under the extended span the fixture simulates the panel campaign-3's
+    read-path flip will serve: every series runs 1950-01..2020-12 except
+    ``fred.DGS2``, which starts at the sealed 1953-04 and is therefore the
+    binding factor exactly as the amended ``block_draw_span_binding_factor``
+    records (ust_2y's donor floor). ``vix_start`` is kept as the lever the
+    refuses-a-different-span test uses. ``fred.HY_OAS`` is empty, as on the
+    sealed campaign vintage. Magnitudes are plausible rather than realistic.
     """
-    long_dates = pd.date_range("1970-01-01", "2020-12-01", freq="MS")
+    long_dates = pd.date_range("1950-01-01", "2020-12-01", freq="MS")
+    dgs2_dates = pd.date_range("1953-04-01", "2020-12-01", freq="MS")
     vix_dates = pd.date_range(vix_start, "2020-12-01", freq="MS")
     rng = np.random.Generator(np.random.PCG64(20260726))
     n = len(long_dates)
@@ -500,7 +508,7 @@ def _plausible_access(vix_start: str = "1990-01-01") -> DataAccess:
         "fred.BAA": (long_dates, 7.0 + rng.normal(0.0, 0.5, size=n)),
         "fred.AAA": (long_dates, 6.0 + rng.normal(0.0, 0.4, size=n)),
         "fred.FEDFUNDS": (long_dates, 3.0 + rng.normal(0.0, 1.0, size=n)),
-        "fred.DGS2": (long_dates, 3.5 + rng.normal(0.0, 1.0, size=n)),
+        "fred.DGS2": (dgs2_dates, 3.5 + rng.normal(0.0, 1.0, size=len(dgs2_dates))),
         "fred.DGS10": (long_dates, 4.5 + rng.normal(0.0, 1.0, size=n)),
         "treasury.hqm_curve": (long_dates, 5.5 + rng.normal(0.0, 0.8, size=n)),
         "fred.TEDRATE": (long_dates, 0.5 + rng.normal(0.0, 0.2, size=n)),

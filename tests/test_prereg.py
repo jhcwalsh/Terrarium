@@ -2163,9 +2163,13 @@ def test_the_benchmark_draw_span_bias_is_sealed_and_names_its_direction() -> Non
     assert "TOWARD PROMOTION" in bias
     span = doc["bootstrap_v1"]["block_draw_span"]
     assert str(span["start"]) in bias or "1990-2020" in bias
-    # The span is bound by equity_vol, not by policy_rate -- sealed as a value so the
-    # claim is checkable rather than narrative.
-    assert doc["bootstrap_v1"]["block_draw_span_binding_factor"] == "equity_vol"
+    # HISTORY: sealed as equity_vol at G2 (the claim was checkable, not narrative).
+    # AM-2026-08-09-002 (span-53 ratification) moved the span to 1953-04 and the
+    # binding factor to ust_2y (the GS1/GS3 donor floor); the amended consequence
+    # prose records the G2-era text verbatim as history.
+    assert doc["bootstrap_v1"]["block_draw_span_binding_factor"] == "ust_2y"
+    assert doc["bootstrap_v1"]["block_draw_span"]["months"] == 813
+    assert "AM-2026-08-09-002" in doc["bootstrap_v1"]["block_draw_span_consequence"]
 
 
 def test_the_tuning_selection_lambda_is_pinned_to_a_number() -> None:
