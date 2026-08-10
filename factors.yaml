@@ -156,12 +156,28 @@ factor_sources:
       total-return legs (its weight in eqw_factors is a notional/risk budget, not a
       capital share). Used directly, no transform.
   equity_vol:
-    kind: series
-    series_id: fred.VIX
+    kind: derived
+    expr: equity_vol_extended
+    inputs: [fred.VIX, fred.VXO]
     units: idx
+    proxy: true
+    proxy_for: >-
+      fred.VXO 1986-01..1989-12 via PROXY-EQUITY-VOL-VXO-V1 (ah.data.vol_extend,
+      log-log fit on the 1990+ overlap, corr 0.9827) and the ONE pinned HAR
+      ensemble draw 1953-04..1985-12 via PROXY-EQUITY-VOL-HAR-V1
+      (ah.data.vol_backcast.pinned_draw_series: seed 20260809 on the registered
+      provenance artifact, materialized once, sha pinned by the campaign-3
+      pre-registration). APPLIED AT THE READ SURFACE as of the campaign-3
+      wiring (AM-2026-08-09-002, owner ruling D6: backcast months are admitted
+      span data and say so). The HAR months are MODEL OUTPUT; the K3 masked
+      ablation cell measures their effect and every verdict table disclosed
+      over the extended span reports the per-factor proxy share. On a vintage
+      without fred.VXO the read is plain fred.VIX, unchanged from campaign-2.
     notes: >-
       CBOE VIX index level (requirements.yaml units: idx) -- a level, never a return,
-      matching pre-registration.yaml's level_factors classification.
+      matching pre-registration.yaml's level_factors classification. Extended
+      backward per proxy_for; the fred.VXO donor input is optional in
+      ah.eval.panel's sense (empty on a pre-donor vintage; the helper falls back).
   commodities:
     kind: unavailable
     numeraire: total_return
@@ -210,30 +226,34 @@ factor_sources:
 
   # --- us block ---
   policy_rate:
-    kind: series
-    series_id: fred.FEDFUNDS
+    kind: derived
+    expr: policy_rate_extended
+    inputs: [fred.FEDFUNDS, fred.TB3MS]
     units: pct
     proxy: true
     proxy_for: >-
       fred.TB3MS before 1954-07 (FRED's first FEDFUNDS observation), via the
       ah.data.splice PROXY_RULES['fedfunds_pre1954'] rule (regression on the
-      1954-1990 overlap). REGISTERED BUT NOT YET APPLIED: this rule is not run by
-      ah.data.refresh today, so the panel this factor sources from does not yet
-      contain the spliced pre-1954-07 observations or any is_proxy flag --
-      read_factor_frames reads fred.FEDFUNDS directly, unextended. WP2.3 CONFIRMED
-      (2026-07-26) which the sealed campaign vintage contains: NEITHER backfill. The
-      DEMONSTRATION for this factor is now direct rather than inferred: on campaign
-      vintage 2026-07-26.1 its train+validation history starts at 1954-07, which is
-      fred.FEDFUNDS's own first observation, not at fred.TB3MS's 1934-01 -- so the
-      splice rule is visibly unapplied. CORRECTION TO THE FIRST SEAL (2026-07-26,
-      same day): the 2026-07-24 vintage predated fred.FEDFUNDS's own registration and
-      held no parquet for it at all, so `policy_rate` was in
-      reference_run.missing_factors and `cash_tr_1m`, `carry`, `term_premium`,
-      `equity_risk_premium` and `policy_anchor_deviation` were all uncomputable. A live
-      refresh restored the series (864 monthly observations, 1954-07 to 2026-06; 798 in
-      train+validation) and the campaign vintage moved to 2026-07-26.1. All five are
-      computable. See governance/retrofit-register.md RFR-48/50/51 for the superseded
-      state and RFR-61/62/63 for the restoration.
+      1954-1990 overlap). APPLIED AT THE READ SURFACE as of the campaign-3 wiring
+      (AM-2026-08-09-002; ah.data.derive.policy_rate_extended) -- the sentence
+      "REGISTERED BUT NOT YET APPLIED" that stood here from the first seal is
+      retired by that wiring, and the demonstration reverses: on the campaign-3
+      vintage this factor's train+validation history starts at fred.TB3MS's
+      1934-01, proxy-flagged at source before 1954-07. On a vintage without the
+      donor the read is plain fred.FEDFUNDS, unchanged from campaign-2.
+      HISTORY of the campaign-2-era statement, kept because its corrections are
+      part of the record: WP2.3 CONFIRMED (2026-07-26) the then-sealed campaign
+      vintage contained NEITHER backfill; on vintage 2026-07-26.1 the
+      train+validation history visibly started at 1954-07. CORRECTION TO THE
+      FIRST SEAL (2026-07-26, same day): the 2026-07-24 vintage predated
+      fred.FEDFUNDS's own registration and held no parquet for it at all, so
+      `policy_rate` was in reference_run.missing_factors and `cash_tr_1m`,
+      `carry`, `term_premium`, `equity_risk_premium` and
+      `policy_anchor_deviation` were all uncomputable. A live refresh restored
+      the series (864 monthly observations, 1954-07 to 2026-06; 798 in
+      train+validation) and the campaign vintage moved to 2026-07-26.1. All five
+      are computable. See governance/retrofit-register.md RFR-48/50/51 for the
+      superseded state and RFR-61/62/63 for the restoration.
     notes: >-
       Effective federal funds rate -- the ADMINISTERED US policy rate. Registered in
       requirements.yaml by WP2.2 Task 1 under the WP1.9 emergent-requirements rule
@@ -248,40 +268,79 @@ factor_sources:
       crisis-correlation-lift bands would have been sealed over an artifact of the
       mapping. tests/test_factors.py asserts the two factors share no input series.
   ust_2y:
-    kind: series
-    series_id: fred.DGS2
+    kind: derived
+    expr: ust_2y_extended
+    inputs: [fred.DGS2, fred.GS1, fred.GS3]
     units: pct
+    proxy: true
+    proxy_for: >-
+      fred.GS1/fred.GS3 curve interpolation before 1976-06 (fred.DGS2's first
+      observation), via PROXY-UST2Y-GS1GS3-V1 (ah.data.ust2y_extend, two-donor
+      regression on the observed overlap; corr 0.9999, RMSE 0.055). APPLIED AT
+      THE READ SURFACE as of the campaign-3 wiring (AM-2026-08-09-002). THE
+      BINDING FACTOR of the ratified 1953-04 span -- the GS1/GS3 donor floor is
+      what the amendment's block_draw_span start rests on. Donor inputs optional;
+      without them the read is plain fred.DGS2, unchanged from campaign-2.
   ust_10y:
-    kind: series
-    series_id: fred.DGS10
+    kind: derived
+    expr: ust_10y_extended
+    inputs: [fred.DGS10, fred.GS10]
     units: pct
+    proxy: true
+    proxy_for: >-
+      fred.GS10 before 1962-01 (fred.DGS10's first observation), via
+      PROXY-UST10Y-GS10-V1 (ah.data.ust10y_extend, the same instrument at
+      monthly frequency; overlap corr 1.000, RMSE 0.003). APPLIED AT THE READ
+      SURFACE as of the campaign-3 wiring (AM-2026-08-09-002). Donor input
+      optional; without it the read is plain fred.DGS10, unchanged from
+      campaign-2.
   cpi:
     kind: series
     series_id: fred.CPI
     units: index
     notes: "CPI-U, NSA index level (requirements.yaml units: index); a level, not a YoY rate."
   hqm_curve:
-    kind: series
-    series_id: treasury.hqm_curve
+    kind: derived
+    expr: hqm_curve_extended
+    inputs: [treasury.hqm_curve, fred.AAA]
     units: pct
+    proxy: true
+    proxy_for: >-
+      fred.AAA before 1984-01 (the HQM series' first observation), via
+      PROXY-HQM10-AAA-V1 (ah.data.hqm_extend, level fit on the 1984+ overlap;
+      corr 0.9871, RMSE 0.393; the slope diagnostic against GS10 came back
+      quiet, max divergence 0.081pp). APPLIED AT THE READ SURFACE as of the
+      campaign-3 wiring (AM-2026-08-09-002). Donor input optional; without it
+      the read is plain treasury.hqm_curve, unchanged from campaign-2.
     notes: "10y HQM corporate spot rate via FRED (HQMCB10YR); see requirements.yaml's note."
   funding_spread:
     kind: derived
-    expr: funding_stress
-    inputs: [fred.TEDRATE]
+    expr: funding_spread_extended
+    inputs: [fred.TEDRATE, fred.CPF3M, fred.CP3M, fred.CP3M_NBER, fred.TB3M_SEC, fred.TB3MS]
     units: pct
+    proxy: true
+    proxy_for: >-
+      the fitted CP-bill spread (PROXY-FUNDING-CPBILL-V1, ah.data.funding_extend:
+      CP leg CPF3M<-CP3M<-NBER chained by mean offset, bill leg
+      TB3M_SEC<-TB3MS; TED = a + b*(CP-bill) on the observed overlap, corr
+      0.9652) on BOTH ends of observed TED -- before 1986-01 floored at 1934-01
+      (owner rulings F1-F3) AND after TEDRATE's 2022-01 retirement, which
+      closes the post-2022 hole the previous entry disclosed. APPLIED AT THE
+      READ SURFACE as of the campaign-3 wiring (AM-2026-08-09-002). Donor
+      inputs optional; without them the read is funding_stress(ted), unchanged
+      from campaign-2.
     notes: >-
-      ah.data.derive.funding_stress(ted) through TEDRATE's 2022-01 retirement
-      (requirements.yaml's fred.TEDRATE note). No SOFR-basis replacement series is
-      registered in requirements.yaml, so the documented post-2022 extension argument
-      (sofr_basis) is omitted here rather than sourced from an unregistered series --
-      this factor's train+validation history is honestly incomplete after 2022-01
-      until such a series is registered under the requirements.yaml WP1.9 rule.
+      ah.data.derive.funding_spread_extended over TEDRATE plus the five CP/bill
+      donor series. The campaign-2 entry's disclosure -- "history honestly
+      incomplete after 2022-01 until a replacement series is registered" -- is
+      discharged by the both-ends extension rather than by a SOFR-basis series:
+      the CP-bill spread is itself the live funding-stress instrument post-2022,
+      proxy-flagged at source like every extension month.
 
   # --- fx block (campaign-2 block_addition; R5 re-entry) ---
   fx_usd:
     kind: derived
-    expr: fx_usd_spliced
+    expr: fx_usd_extended
     inputs: [fred.DTWEXBGS, fred.DTWEXM]
     units: index
     proxy: true
@@ -289,11 +348,17 @@ factor_sources:
       fred.DTWEXM (the discontinued major-currencies index) before 2006-01
       (fred.DTWEXBGS's first observation), via the ah.data.splice
       PROXY_RULES['fx_usd_pre2006'] rule, APPLIED AT THE READ SURFACE as of the
-      campaign-2 seal. Unlike hy_spread's rule this one fits at read time: its
-      2006-2019 overlap (the donor's full remaining life) lies entirely inside
-      train+validation, so the fit uses only sanctioned reads. Verified on
-      vintage 2026-08-02.4: 643 monthly observations 1973-01..2026-07, 396
-      proxy-flagged, overlap RMSE 2.04 index points.
+      campaign-2 seal; and, as of the campaign-3 wiring (AM-2026-08-09-002),
+      the vendored Bretton-Woods parity index before 1973-01 via
+      PROXY-FX-PARITY-V1 (ah.data.fx_parity: geometric equal-weight over six
+      published parities, single-point junction pin to DTWEXM, then the same
+      pre2006 splice transform into DTWEXBGS units -- one conversion, not two
+      conventions). The splice still fits at read time on the 2006-2019 overlap,
+      entirely inside train+validation. Pegged-era months are NEAR-CONSTANT BY
+      CONSTRUCTION (the era's true value); correlation/ACF consumers apply the
+      degenerate-variance guard rather than propagating NaN. Verified on
+      vintage 2026-08-02.4 (pre-parity): 643 monthly observations
+      1973-01..2026-07, 396 proxy-flagged, overlap RMSE 2.04 index points.
     notes: >-
       Trade-weighted broad US dollar index (goods and services), a LEVEL. The
       generator's first FX exposure factor (decision R5's re-entry;

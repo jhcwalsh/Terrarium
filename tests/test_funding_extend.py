@@ -138,11 +138,22 @@ def test_donors_are_registered_warn_only():
         assert "funding_extend" in (r.notes or "") or "funding_spread" in (r.notes or "")
 
 
-def test_nothing_sealed_learned_the_new_rule():
+def test_the_sealed_read_path_learned_the_rule():
+    """INVERTED 2026-08-09 (campaign-3 wiring; AM-2026-08-09-002).
+
+    HISTORY, first state: pinned that neither sealed file referenced
+    PROXY-FUNDING-CPBILL or imported ``funding_extend`` while the rule was
+    verified but unratified. The campaign-3 wiring put it on the read path
+    (``derive.funding_spread_extended``); the pin inverts, and ``splice.py``
+    stays clean (its registry never learned this family).
+    """
+    import json
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    for sealed in ("src/ah/data/splice.py", "src/ah/data/derive.py"):
-        text = (root / sealed).read_text(encoding="utf-8")
-        assert "PROXY-FUNDING-CPBILL" not in text, f"{sealed} references the unratified rule"
-        assert "funding_extend" not in text, f"{sealed} imports the unratified module"
+    derive_text = (root / "src/ah/data/derive.py").read_text(encoding="utf-8")
+    assert "funding_extend" in derive_text and "PROXY-FUNDING-CPBILL" in derive_text
+    splice_text = (root / "src/ah/data/splice.py").read_text(encoding="utf-8")
+    assert "funding_extend" not in splice_text
+    lock = json.loads((root / "pre-registration.lock").read_text(encoding="utf-8"))
+    assert "src/ah/data/funding_extend.py" in lock["hashed_files"]

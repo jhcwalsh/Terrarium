@@ -1218,10 +1218,13 @@ def test_reference_splits_missing_declared_from_missing_no_data() -> None:
     # Campaign-2 re-target: hy_spread no longer works as the example -- it is now
     # kind: derived through the pinned splice, whose target input is DECLARED
     # optional-empty, so dropping fred.HY_OAS no longer produces a missing factor
-    # (that is the fix working, not the test's premise). equity_vol (fred.VIX,
-    # kind: series) is the demonstration factor now.
-    vol_series = manifest.sources["equity_vol"].series_id
-    assert vol_series is not None
+    # (that is the fix working, not the test's premise). equity_vol served next,
+    # until the campaign-3 wiring (AM-2026-08-09-003) made it derived with an
+    # optional donor too -- dropping fred.VIX (its REQUIRED primary input) still
+    # works, and is the demonstration now: an optional-donor factor still goes
+    # missing when its primary series has no data.
+    vol_series = manifest.sources["equity_vol"].inputs[0]
+    assert vol_series == "fred.VIX"
     reader = _make_reader(
         {sid: i for i, sid in enumerate(sorted(needed - {vol_series}))},
         start="1980-01-01",

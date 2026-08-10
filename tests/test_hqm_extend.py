@@ -104,11 +104,22 @@ def test_donor_is_already_registered_and_live():
     assert r.min_start == "1919-01"
 
 
-def test_nothing_sealed_learned_the_new_rule():
+def test_the_sealed_read_path_learned_the_rule():
+    """INVERTED 2026-08-09 (campaign-3 wiring; AM-2026-08-09-002).
+
+    HISTORY, first state: pinned that neither sealed file referenced
+    PROXY-HQM10 or imported ``hqm_extend`` while the rule was verified but
+    unratified. The campaign-3 wiring put it on the read path
+    (``derive.hqm_curve_extended``); the pin inverts, and ``splice.py`` stays
+    clean (its registry never learned this family).
+    """
+    import json
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    for sealed in ("src/ah/data/splice.py", "src/ah/data/derive.py"):
-        text = (root / sealed).read_text(encoding="utf-8")
-        assert "PROXY-HQM10" not in text, f"{sealed} references the unratified rule"
-        assert "hqm_extend" not in text, f"{sealed} imports the unratified module"
+    derive_text = (root / "src/ah/data/derive.py").read_text(encoding="utf-8")
+    assert "hqm_extend" in derive_text and "PROXY-HQM10" in derive_text
+    splice_text = (root / "src/ah/data/splice.py").read_text(encoding="utf-8")
+    assert "hqm_extend" not in splice_text
+    lock = json.loads((root / "pre-registration.lock").read_text(encoding="utf-8"))
+    assert "src/ah/data/hqm_extend.py" in lock["hashed_files"]

@@ -92,7 +92,19 @@ pass/fail verdict on their own. **The invariant governs**, so
   ``seal_scope:`` calls those two documents the full accounting of what is hashed. That
   claim is now true, and
   ``tests/test_prereg.py::test_the_sealed_seal_scope_accounts_for_every_hashed_file``
-  keeps it true.
+  keeps it true;
+- *the ratified series-extension families on the read path, and the pinned data
+  the extended equity_vol read is defined over* (campaign-3 wiring,
+  AM-2026-08-09-002): ``src/ah/data/vol_extend.py``, ``vol_backcast.py``,
+  ``funding_extend.py``, ``hqm_extend.py``, ``ust2y_extend.py``,
+  ``ust10y_extend.py`` and ``fx_parity.py`` -- called at panel-read time by
+  ``ah.data.derive``'s ``*_extended`` helpers for seven factors, so their
+  fitted constants, chain rules and junction conventions shape sealed bands
+  exactly as ``splice.py``'s do -- plus two data files in ``splice.py``'s
+  "sealed input data" sense:
+  ``artifacts/volext/equity-vol-backcast-provenance.json`` (the registered HAR
+  fit and residual pool) and ``src/ah/data/equity_vol_pinned_draw.json`` (the
+  ONE seed-20260809 draw the panel serves for pre-1986 equity_vol).
 
 This module hashing its own source is intentional and non-circular: the digest lands in
 the lock file, never back inside ``prereg.py``. **Consequence, stated plainly so it is
@@ -302,6 +314,24 @@ _REQUIRED_JUDGED_SOURCES = (
     # 2023-2026 window) now shape sealed bands. An edit to the pinned constants
     # without an amendment is exactly the failure this list exists to prevent.
     ("src", "ah", "data", "splice.py"),
+    # CAMPAIGN-3 WIRING (AM-2026-08-09-002): the seven extension families join
+    # the read path -- ah.eval.panel and ah.gen.bootstrap now call them through
+    # ah.data.derive's *_extended helpers for equity_vol, funding_spread,
+    # hqm_curve, ust_2y, ust_10y, fx_usd and policy_rate. The amendment's own
+    # text makes this mandatory ("campaign-3's own pre-registration ... MUST
+    # hash the extension modules"): every fitted constant, chain rule and
+    # junction convention in these files now shapes sealed bands, and leaving
+    # them unhashed would be RFR-82 again -- code computing judged numbers,
+    # editable with no lock violation. They join in the same commit that puts
+    # them on the read path, which is the rule ablation.py's entry above
+    # records the cost of breaking.
+    ("src", "ah", "data", "vol_extend.py"),
+    ("src", "ah", "data", "vol_backcast.py"),
+    ("src", "ah", "data", "funding_extend.py"),
+    ("src", "ah", "data", "hqm_extend.py"),
+    ("src", "ah", "data", "ust2y_extend.py"),
+    ("src", "ah", "data", "ust10y_extend.py"),
+    ("src", "ah", "data", "fx_parity.py"),
 )
 
 # Sealed threshold DATA read by a sealed judging module. `ah/battery/report.py`
@@ -310,7 +340,18 @@ _REQUIRED_JUDGED_SOURCES = (
 # failure mode `_REQUIRED_JUDGED_FIXTURE_GLOBS` was introduced to close for the
 # authored conditional worlds. Every entry in it is `status: todo` and blocks nothing
 # today; that makes sealing it cheap, not unnecessary.
-_REQUIRED_JUDGED_DATA = (("src", "ah", "battery", "thresholds.yaml"),)
+_REQUIRED_JUDGED_DATA = (
+    ("src", "ah", "battery", "thresholds.yaml"),
+    # CAMPAIGN-3 WIRING (AM-2026-08-09-002): the two pinned artifacts the
+    # extended equity_vol read is defined over. The provenance JSON carries the
+    # registered HAR fit (coefficients + residual pool) every tail diagnostic
+    # regenerates its ensemble from; the pinned-draw JSON is the ONE
+    # seed-20260809 path the panel itself serves for 1953-04..1985-12. Both are
+    # data in the strictest "sealed estimator defined over them" sense: a byte
+    # change to either changes judged numbers with no code edit.
+    ("artifacts", "volext", "equity-vol-backcast-provenance.json"),
+    ("src", "ah", "data", "equity_vol_pinned_draw.json"),
+)
 
 # Sealed input DATA (not code) that an estimator is defined over: `(directory parts,
 # glob)` pairs. See the module docstring's "sealed input data an estimator is defined

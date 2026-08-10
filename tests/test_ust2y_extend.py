@@ -98,11 +98,22 @@ def test_donors_are_registered_warn_only():
         assert not r.enforce and r.min_start == "1953-04"
 
 
-def test_nothing_sealed_learned_the_new_rule():
+def test_the_sealed_read_path_learned_the_rule():
+    """INVERTED 2026-08-09 (campaign-3 wiring; AM-2026-08-09-002).
+
+    HISTORY, first state: pinned that neither sealed file referenced
+    PROXY-UST2Y or imported ``ust2y_extend`` while the rule was verified but
+    unratified. The campaign-3 wiring put it on the read path
+    (``derive.ust_2y_extended`` -- the BINDING factor of the ratified
+    1953-04 span); the pin inverts, and ``splice.py`` stays clean.
+    """
+    import json
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    for sealed in ("src/ah/data/splice.py", "src/ah/data/derive.py"):
-        text = (root / sealed).read_text(encoding="utf-8")
-        assert "PROXY-UST2Y" not in text, f"{sealed} references the unratified rule"
-        assert "ust2y_extend" not in text, f"{sealed} imports the unratified module"
+    derive_text = (root / "src/ah/data/derive.py").read_text(encoding="utf-8")
+    assert "ust2y_extend" in derive_text and "PROXY-UST2Y" in derive_text
+    splice_text = (root / "src/ah/data/splice.py").read_text(encoding="utf-8")
+    assert "ust2y_extend" not in splice_text
+    lock = json.loads((root / "pre-registration.lock").read_text(encoding="utf-8"))
+    assert "src/ah/data/ust2y_extend.py" in lock["hashed_files"]
