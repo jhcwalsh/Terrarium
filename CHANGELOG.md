@@ -13,6 +13,23 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **DATALAB — the streamlit interrogation console (owner-directed; spec +
+  rulings 2026-08-09).** `src/ah/datalab.py` is a pure, read-only,
+  guard-tested data layer (zero store-write call sites; no streamlit
+  import anywhere in `src/ah`); `apps/datalab/app.py` is the
+  presentation shell on port 8795 (`uv run --group console streamlit run
+  apps/datalab/app.py`). Six pages: Series (inventory, staleness vs SLA,
+  vintage/as-of time travel), Factors (the sealed read surface with
+  extended-vs-unextended overlay, proxy months shaded by rule_id, the
+  live per-factor proxy share), Extensions (the seven families + the
+  regenerated HAR ensemble fan beside the pinned draw, labeled MODEL
+  OUTPUT), Campaign lens (one factor, two vintages side by side),
+  Vintages (store diff), Spans (splits with the holdout marked SPENT).
+  CSV downloads embed licence tiers and the AQR attribution in their
+  bytes. `streamlit` enters as an optional `console` dependency group
+  only — tests, CI and the no-network invariant never see it. All six
+  pages driven exception-free via streamlit AppTest against the live
+  store before merge.
 - **THE CAMPAIGN-3 WIRING — AM-2026-08-09-003, the read-path flip
   AM-2026-08-09-002 deferred.** The seven ratified extension families join
   the sealed read surface: `ah.data.derive` gains `equity_vol_extended`,
