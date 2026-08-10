@@ -38,7 +38,9 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 # produced the bands and the file that seals them cannot silently diverge.
 # Campaign-2 (AM-2026-08-02-009): vintage moved with the reference_run block; the
 # seed stays 20260726 so pre-existing factors' bands compare bit-for-bit (RFR-61).
-CAMPAIGN_VINTAGE_ID = "2026-08-02.4"
+# Campaign-3: vintage moved again with the reference_run block (the first clean
+# weekday vintage carrying the extension donors and the AQR commodities series).
+CAMPAIGN_VINTAGE_ID = "2026-08-10.1"
 REFERENCE_SEED = 20260726
 N_RESAMPLES = 1000
 LEVEL = 0.9

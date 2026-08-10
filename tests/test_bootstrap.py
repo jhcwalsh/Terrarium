@@ -519,6 +519,11 @@ def _plausible_access(vix_start: str = "1950-01-01") -> DataAccess:
         "fred.DTWEXBGS": (long_dates, 100.0 + rng.normal(0.0, 5.0, size=n)),
         "fred.DTWEXM": (long_dates, 95.0 + rng.normal(0.0, 5.0, size=n)),
         "shiller.cape": (long_dates, 20.0 + rng.normal(0.0, 4.0, size=n)),
+        # campaign-3 factor (AM-2026-08-10-001): the AQR commodities excess
+        # return; commodities = add(aqr.cmdty_ew_excess, french.rf), the
+        # equity_mkt pattern. Drawn LAST so every earlier series' synthetic
+        # values are unchanged from the pre-campaign-3 fixture.
+        "aqr.cmdty_ew_excess": (long_dates, rng.normal(0.004, 0.045, size=n)),
     }
 
     def reader(series_id: str) -> pd.DataFrame:

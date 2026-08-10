@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:67384dcc6085edcdeabb3e3f1a856b581b637be5ca5220000527571424c0dccf",
+  "digest": "sha256:bb52353f487d9261173ed40899f26814365628eae9b8b1fbda9f75afb8dcff8b",
   "hashed_files": [
     "factors.yaml",
     "mappings/cashflow-tier0-v1.0.yaml",
@@ -27,5 +27,5 @@
     "taxonomy/sleeves.yaml"
   ],
   "prereg_path": "pre-registration-g3.yaml",
-  "sealed_at": "2026-08-09T21:15:00-07:00"
+  "sealed_at": "2026-08-10"
 }

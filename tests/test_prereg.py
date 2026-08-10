@@ -126,6 +126,12 @@ def test_load_real_file_explicit_path() -> None:
         "S2-SPREAD-FLOOR",
         "S2-NUMERAIRE-BIAS",
         "S2-ENDOWMENT-WEIGHTS",
+        # campaign-3's K-rulings (AM-2026-08-10-001), sealed before any
+        # training run; K4 ships OPEN (training gated on the owner's host call).
+        "S3-K1-FUTURE-HOLDOUT",
+        "S3-K2-COMMODITIES-CLOSE",
+        "S3-K3-HAR-MASKED-CELL",
+        "S3-K4-HARDWARE-GATE",
     }
     assert loaded.decisions["R5"].status == "CLOSED-deferred"
     assert loaded.decisions["J3"].status == "CLOSED-deferred"

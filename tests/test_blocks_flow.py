@@ -17,7 +17,13 @@ from ah.gen.blocks import data as bd
 from ah.gen.blocks import diffusion as df
 from ah.gen.blocks import flow as fl
 from ah.gen.blocks import losses as ls
-from ah.gen.bootstrap import FACTOR_SET
+
+# The campaign-2 pinned checkpoint AND every synthetic fixture in this file
+# (joinery_common.make_source) are fifteen-factor campaign-2 shapes; the flow
+# machinery itself is factor-set-agnostic. Campaign-3 moved the live
+# FACTOR_SET to sixteen (AM-2026-08-10-001); hier-flow-v2's own artifacts do
+# not exist until the K4 training run, so this file pins the campaign-2 set.
+from ah.gen.bootstrap import CAMPAIGN2_FACTOR_SET as FACTOR_SET
 from ah.gen.joinery import bridge
 from ah.gen.joinery.waypoints import (
     RATE_FLOOR_FACTORS,
@@ -699,8 +705,12 @@ class TestRegistry:
         assert meta["selection_lambda"] == 1.0
         # CAMPAIGN-2 PROMOTION: the primary pin is now the campaign-2 seed-0
         # artifact, trained on the sealed FIFTEEN-factor set. The geometry
-        # asserted is the checkpoint's OWN recorded factor list, which for this
-        # pin equals the sealed bootstrap_v1.factor_set.
+        # asserted is the checkpoint's OWN recorded factor list -- which is the
+        # CAMPAIGN-2 set: campaign-3 (AM-2026-08-10-001) moved the live
+        # FACTOR_SET to sixteen (commodities joined), but a trained artifact's
+        # feature dimensions are a fact about its own campaign and never track
+        # the live constant (the CAMPAIGN2_VINTAGE_ID split, applied to the
+        # factor set).
         assert std.x_mean.shape == (len(meta["factor_names"]),)
         assert tuple(meta["factor_names"]) == FACTOR_SET
 

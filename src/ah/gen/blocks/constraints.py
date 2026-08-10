@@ -76,7 +76,10 @@ LOG_FACTORS: tuple[str, ...] = ("cpi", "equity_vol", "fx_usd")
 IDENTITY_FACTORS: tuple[str, ...] = ("cape_v",)
 
 #: Simple monthly returns generated in log1p space (r > -1 by construction).
-LOG1P_FACTORS: tuple[str, ...] = ("equity_mkt", "smb", "hml", "mom")
+#: commodities (campaign-3, AM-2026-08-10-001): a capital-committing simple
+#: monthly TOTAL return (aqr.cmdty_ew_excess + french.rf), the exact
+#: equity_mkt shape -- r > -1 structurally imposed, same as the others.
+LOG1P_FACTORS: tuple[str, ...] = ("equity_mkt", "smb", "hml", "mom", "commodities")
 
 _SOFTPLUS_SATURATION = 30.0  # softplus(z) == z and softplus^-1(u) == u beyond this
 

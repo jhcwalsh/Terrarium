@@ -230,16 +230,20 @@ def test_the_comparison_set_keeps_the_computable_strategies_and_drops_the_others
 
 
 def test_the_sealed_documents_uncomputable_list_is_the_one_this_module_expects():
-    """Pinned against the real sealed file, so a vintage change is caught here."""
+    """Pinned against the real sealed file, so a vintage change is caught here --
+    and one did: campaign-3 (AM-2026-08-10-001) emptied the list. Through
+    campaign-2 this asserted {eqw_factors, endowment_proxy}; commodities'
+    sourcing (ruling K2) restored both, so ALL FIVE strategies are kept and
+    the assertion is updated to the new truth rather than relaxed."""
     import pathlib
 
     doc = yaml.safe_load(pathlib.Path(REPO_PREREG).read_text(encoding="utf-8"))
     uncomputable = tuple(doc["reference_run"]["uncomputable_d4_strategies"])
     sealed_ids = tuple(doc["d4_strategies"])
     assert len(sealed_ids) == 5
-    assert set(uncomputable) == {"eqw_factors", "endowment_proxy"}
+    assert uncomputable == ()
     kept = [sid for sid in sealed_ids if sid not in set(uncomputable)]
-    assert sorted(kept) == ["carry", "momentum", "sixty_forty"]
+    assert sorted(kept) == ["carry", "endowment_proxy", "eqw_factors", "momentum", "sixty_forty"]
 
 
 def test_the_comparison_set_raises_when_a_named_metric_is_absent():

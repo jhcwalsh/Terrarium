@@ -179,15 +179,24 @@ factor_sources:
       backward per proxy_for; the fred.VXO donor input is optional in
       ah.eval.panel's sense (empty on a pre-donor vintage; the helper falls back).
   commodities:
-    kind: unavailable
+    kind: derived
+    expr: add
+    inputs: [aqr.cmdty_ew_excess, french.rf]
+    units: ret
     numeraire: total_return
-    reason: >-
-      no Step-1 series registered; see governance/retrofit-register.md RFR-8 (RFR-1
-      originally assigned this to WP2.2, but WP2.2 Task 1 was citing RFR-1 as its own
-      reason -- circular -- so RFR-8 supersedes it with a real owner and reason; see
-      this file's header note). Carries weight in two D4 strategies (eqw_factors,
-      endowment_proxy) whose reference statistics are consequently unavailable at seal
-      time (pre-registration.yaml's rationale.d4_commodities_consequence).
+    notes: >-
+      CAMPAIGN-3 (ruling K2, AM-2026-08-10-001): AQR "Commodities for the Long
+      Run" equal-weight EXCESS return plus the one-month bill -- the exact
+      equity_mkt pattern (an excess series restored to the sealed
+      total-return numeraire by adding the rate it is quoted net of). Starts
+      1926-07 where french.rf starts; the 1877-1926 excess-only era is
+      EXCLUDED, never zero-filled (owner ruling C2). REG licence:
+      attribution required on every artifact, raw values never committed
+      (data/aqr/ is gitignored and a test pins that no committable path
+      carries the workbook). Supersedes the RFR-8 `unavailable` entry;
+      superseded reason kept in the git record: no free, already-connectored
+      commodities total-return series existed -- discharged by the
+      REG-licensed manual intake (AM-2026-08-08-001 precedent).
   ig_spread:
     kind: derived
     expr: difference

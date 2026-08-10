@@ -38,11 +38,17 @@ def _random_blocks(n: int, seed: int) -> np.ndarray:
 
 class TestCompilation:
     def test_evaluable_set_and_recorded_exclusions(self, compiled):
+        """Campaign-3 (AM-2026-08-10-001) flipped this: through campaign-2 the
+        compiled set was {sixty_forty, carry} with eqw_factors and
+        endowment_proxy excluded as the two sealed uncomputable strategies.
+        Commodities joining FACTOR_SET (ruling K2 + the owner's emission
+        ruling) makes both compilable, so only block-scale-degenerate momentum
+        remains excluded -- the assertion is updated to the new truth rather
+        than relaxed."""
         strategies, excluded = compiled
         ids = {s.strategy_id for s in strategies}
-        assert ids == {"sixty_forty", "carry"}
-        # The two sealed uncomputable strategies + block-scale-degenerate momentum.
-        assert set(excluded) == {"eqw_factors", "endowment_proxy", "momentum"}
+        assert ids == {"sixty_forty", "carry", "eqw_factors", "endowment_proxy"}
+        assert set(excluded) == {"momentum"}
         assert "degenerate at block scale" in excluded["momentum"]
 
     def test_nothing_is_hard_coded_weights_come_from_the_seal(self, compiled):
