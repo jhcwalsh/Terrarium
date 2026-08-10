@@ -1905,3 +1905,20 @@ amendments:
     from the live tree ended at AM-2026-08-09-003 and is unchanged by this event;
     the sealed campaign-2 artifacts stand.'
   type: protocol_change
+- amendment_id: AM-2026-08-10-002
+  date: '2026-08-10'
+  payload:
+    decision_id: S3-K4-HARDWARE-GATE
+    host: local RTX 3080 (10.7 GB), native Windows, torch 2.13.0+cu126
+    superseded_lock_digest: sha256:f48c777a67d117c25e962dcc4719a657bb309cf91b22b6a230e4a5935205c63d
+  post_hoc: false
+  rationale: 'THE K4 HARDWARE RULING, closing the one decision the campaign-3 seal
+    left OPEN. Owner ruled 2026-08-10: training runs on the local RTX 3080, the campaign-2
+    precedent host -- same-device bit-determinism verified at campaign-2 (identical
+    state-dict SHA-256 across runs), peak GPU memory 140 MiB, ~23 min per flow-cell
+    battery with the GPU sampler vs ~2.2 h on CPU. Cells run strictly sequentially
+    (one GPU). post_hoc FALSE: no campaign-3 training run exists; this ruling is what
+    permits the first one. One edit: decisions.S3-K4-HARDWARE-GATE OPEN -> CLOSED
+    with the superseded text kept verbatim; main lock re-sealed in the same commit
+    (G3/G5 do not hash this document and their digests are unchanged).'
+  type: protocol_change

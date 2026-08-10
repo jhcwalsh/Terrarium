@@ -1,5 +1,5 @@
 {
-  "digest": "sha256:f48c777a67d117c25e962dcc4719a657bb309cf91b22b6a230e4a5935205c63d",
+  "digest": "sha256:7421dd3e1241409aa99b9659e3b07791dd8522d2d218f5cdd7117c47ff8fc1cb",
   "hashed_files": [
     "artifacts/volext/equity-vol-backcast-provenance.json",
     "factors.yaml",

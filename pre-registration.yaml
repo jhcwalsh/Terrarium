@@ -3193,8 +3193,8 @@ decisions:
     status: SEALED
     consequence: "ablation system F + multi_seed_decision_rule.har_masked_ablation's demotion criterion"
   S3-K4-HARDWARE-GATE:
-    status: OPEN
-    consequence: "training does not start until the owner picks the host; ~2.2h/flow cell on CPU, grid at 4 neural systems x >=3 seeds; the seal does not wait for this call -- only training does"
+    status: CLOSED
+    consequence: "RULED 2026-08-10 (owner, AM-2026-08-10-002): the local RTX 3080 -- the campaign-2 precedent host. Grounds, all measured: same-device bit-determinism verified at campaign-2 (identical state-dict SHA-256), peak GPU memory 140 MiB against 10.7 GB, ~23 min per flow-cell battery with the GPU sampler vs ~2.2 h on CPU, zero setup, zero cost; a remote host buys only cross-cell parallelism at the price of shipping the vintage store and abandoning the verified same-device determinism. Cells run STRICTLY SEQUENTIALLY (one GPU). Superseded OPEN text: training does not start until the owner picks the host; ~2.2h/flow cell on CPU, grid at 4 neural systems x >=3 seeds; the seal does not wait for this call -- only training does."
 
 # --------------------------------------------------------------------------- #
 # structurally_unavailable_statistics -- names that are NaN on every ensemble, always.
