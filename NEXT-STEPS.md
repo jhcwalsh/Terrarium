@@ -1,5 +1,26 @@
 # NEXT-STEPS.md — after campaign-3
 
+## Resuming after a restart (checked 2026-08-11 at close)
+
+Everything is durable — nothing was pending when this was written:
+
+- **Git**: all work committed and pushed; `main` == `origin/main` at
+  `656cc66`. The only untracked file is a PowerPoint lock file
+  (`presentations/~$…pptx`) — an artifact of the deck being open, ignore it.
+- **No background jobs pending**: the H.10 waiter, fits, trainings, grids
+  and gates all completed; the Task Scheduler fallback was deleted after
+  use. Nothing needs rescue or resumption.
+- **Local-only state that survives restart on disk** (gitignored by
+  design): the vintage store under `data/`, and the campaign-3 fit/
+  checkpoint/grid artifacts under `experiments/campaign3/` (their pins and
+  manifests ARE committed — `configs/campaign3-seed-checkpoints.json`,
+  `artifacts/campaign3/*.json` — so the committed record verifies the
+  local artifacts rather than trusting them).
+- **To relaunch the datalab console** (optional):
+  `uv run --group console streamlit run apps/datalab/app.py --server.port 8795`
+- **To relaunch the session service / app** (product work):
+  `uv run uvicorn ah.serve:app --port 8787` and `cd app && npm run dev`.
+
 *Written 2026-08-11 at the campaign-3 close (verdict SHIP-BENCHMARK; K3
 demotion fired; severe leg passed by BOTH sides on its first posing). Owner
 priorities per standing rulings; nothing here starts without the owner's nod
