@@ -178,15 +178,18 @@ def _check_family(family: str) -> str:
 
 
 class GaussianResidualBlockSampler:
-    """System A's L3 replacement: iid multivariate-normal rows.
+    """System A's L3 replacement: iid multivariate-normal rows, drawn in the
+    UNCONSTRAINED coordinates of :mod:`ah.gen.blocks.constraints` and mapped
+    back (campaign-3; see the fit-record's ``coordinates`` field and the
+    comment in ``__init__`` for the grid failure that forced it).
 
     Implements :class:`~ah.gen.joinery.bridge.BlockSampler`. A block is
-    ``block_months`` independent draws from ``N(mu_R, Sigma)`` where ``R`` is the
-    conditioned regime label, ``mu_R`` is that stratum's mean (or the pooled mean
-    when the stratum is thinner than :data:`GAUSSIAN_MIN_REGIME_OBS`) and
-    ``Sigma`` is the single pooled sample covariance. See this module's docstring
-    for why the covariance is pooled and why that is the simplest defensible
-    choice rather than a shortcut.
+    ``block_months`` independent draws from ``N(mu_R, Sigma)`` -- fitted in
+    z-space -- where ``R`` is the conditioned regime label, ``mu_R`` is that
+    stratum's mean (or the pooled mean when the stratum is thinner than
+    :data:`GAUSSIAN_MIN_REGIME_OBS`) and ``Sigma`` is the single pooled sample
+    covariance. See this module's docstring for why the covariance is pooled
+    and why that is the simplest defensible choice rather than a shortcut.
 
     Only the regime component of ``c_b`` is read — a Gaussian residual model
     cannot aim at ``s_t``, ``h_t`` or ``Δw``, exactly as the bootstrap stand-in
@@ -202,6 +205,8 @@ class GaussianResidualBlockSampler:
     """
 
     def __init__(self, source: BootstrapSource, *, block_months: int = bridge.BLOCK_MONTHS) -> None:
+        from ah.gen.blocks import constraints as ct
+
         if block_months < 1:
             raise JoineryError("block_months must be >= 1")
         values = np.asarray(source.values, dtype=np.float64)
@@ -210,10 +215,23 @@ class GaussianResidualBlockSampler:
         self.block_months = int(block_months)
         self.factor_names = tuple(source.factor_names)
         self._n_factors = values.shape[1]
+        self._to_constrained = lambda z: ct.panel_to_constrained(z, self.factor_names)
+
+        # CAMPAIGN-3 FIX (2026-08-11, found by the grid's own A cells): the fit
+        # and the draws live in the UNCONSTRAINED coordinates of
+        # ah.gen.blocks.constraints -- log space for positive levels (cpi,
+        # equity_vol, fx_usd), log1p for returns, softplus-floor for
+        # rates/spreads -- exactly the trained samplers' geometry, with a
+        # Gaussian where they carry a network. RAW-SPACE draws crossed zero on
+        # the extended panel's cpi (~26..260; campaign-2's ~130..260 window
+        # merely masked it) and crashed the chaining rebase in every A cell.
+        # This also makes the docstring's old caveat obsolete: Gaussian draws
+        # are now floor-safe and positivity-safe BY CONSTRUCTION.
+        z_values = ct.panel_to_unconstrained(values, self.factor_names)
 
         labels = np.asarray(source.labels)
-        pooled_mean = values.mean(axis=0)
-        cov = np.cov(values, rowvar=False)
+        pooled_mean = z_values.mean(axis=0)
+        cov = np.cov(z_values, rowvar=False)
         jitter = 1e-12 * float(np.trace(cov)) / self._n_factors
         self._chol = np.linalg.cholesky(cov + jitter * np.eye(self._n_factors))
 
@@ -223,14 +241,15 @@ class GaussianResidualBlockSampler:
             mask = labels == label
             n_obs = int(mask.sum())
             use_regime = n_obs >= GAUSSIAN_MIN_REGIME_OBS
-            means[label] = values[mask].mean(axis=0) if use_regime else pooled_mean
+            means[label] = z_values[mask].mean(axis=0) if use_regime else pooled_mean
             record[label] = {
                 "n_obs": n_obs,
                 "mean_source": "regime" if use_regime else "pooled",
             }
         self._means = means
         self.fit_record: dict[str, Any] = {
-            "kind": "iid-multivariate-normal",
+            "kind": "iid-multivariate-normal-unconstrained",
+            "coordinates": "ah.gen.blocks.constraints unconstrained space",
             "mean_source": "regime-conditional with pooled fallback",
             "covariance_source": "pooled",
             "min_regime_obs": GAUSSIAN_MIN_REGIME_OBS,
@@ -245,7 +264,7 @@ class GaussianResidualBlockSampler:
     def sample_block(self, cond: bridge.BlockConditioning, rng: np.random.Generator) -> np.ndarray:
         label = REGIME_LABELS[int(np.argmax(cond.regime_onehot))]
         z = rng.standard_normal((self.block_months, self._n_factors))
-        return self._means[label] + z @ self._chol.T
+        return self._to_constrained(self._means[label] + z @ self._chol.T)
 
 
 class StructureOnlyV1:
