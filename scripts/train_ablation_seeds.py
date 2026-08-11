@@ -24,6 +24,7 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import replace as dc_replace
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -51,24 +52,62 @@ FAMILIES = {
         "space": _REPO_ROOT / "configs" / "wp28-diffusion-search-v1.yaml",
         "exp_prefix": "l3a-diffusion-final",
     },
+    # Campaign-3: the flow family trains hier-flow-v2 -- the sealed campaign-2
+    # SELECTION verbatim on the extended panel. Manifest keys are
+    # "hier-flow-v2:<k>" in the campaign-3 manifest; the wp210 manifest and
+    # the l3b-flow-final/campaign2-flow-* experiment dirs are frozen history.
     "flow": {
         "config_cls": FlowConfig,
         "tuning_exp": "l3b-flow-tuning-v1",
         "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
-        "exp_prefix": "l3b-flow-final",
+        "exp_prefix": "c3-flow-final",
+        "manifest_key": "hier-flow-v2",
+    },
+    # System F (ruling K3, AM-2026-08-10-001): the flow family's SELECTED config,
+    # space and seeds VERBATIM -- the sealed clause is "identical architecture,
+    # hyperparameters and seeds" -- trained on the har-masked dataset (equity_vol
+    # MISSING pre-1986-01, i.e. the campaign source restricted to the cutoff).
+    "har-masked": {
+        "config_cls": FlowConfig,
+        "tuning_exp": "l3b-flow-tuning-v1",
+        "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
+        "exp_prefix": "c3-flow-harmasked",
+        "manifest_key": "har-masked",
     },
 }
 
+#: hier-diffusion does not race at campaign-3 (the sealed ablation_systems.D
+#: note); its campaign-2 checkpoints and wp210 manifest entries are frozen
+#: history. Training it again requires a dated amendment first.
+CAMPAIGN3_FAMILIES = ("flow", "har-masked")
 
-def _dataset(catalog_root: Path, vintage: str):
+
+def _dataset(catalog_root: Path, vintage: str, *, masked: bool = False):
     """The campaign block dataset, built exactly as WP2.8/2.9 built it.
 
     Imported lazily from the tuning driver so 'same data' is a fact rather than a
     reimplementation (WP2.9 verified the two arms' datasets are byte-identical).
+    ``masked=True`` (system F) builds the SAME dataset from the har-masked
+    source -- same climate artifact, same pin check, same builder.
     """
-    from run_blocks_tuning import build_campaign_dataset
+    import run_blocks_tuning as rbt
 
-    return build_campaign_dataset(catalog_root, vintage)
+    if not masked:
+        return rbt.build_campaign_dataset(catalog_root, vintage)
+
+    from ah.factors import load_manifest as _load_manifest
+    from ah.gen.bootstrap import build_source, har_masked_source_from
+
+    manifest = _load_manifest()
+    from ah.data.catalog import Catalog as _Catalog
+
+    with _Catalog(catalog_root) as catalog:
+        access = rbt.catalog_access(catalog, vintage)
+        source = har_masked_source_from(build_source(access, manifest, vintage_id=vintage))
+    climate = rbt.load_climate(rbt.DEFAULT_CLIMATE_ARTIFACT)
+    if climate.meta["content_sha256"] != rbt.PINNED_CLIMATE_SHA256:
+        raise SystemExit("climate artifact sha != the pin; refusing to build the dataset")
+    return rbt.bd.build_dataset(source, climate)
 
 
 def main() -> None:
@@ -77,30 +116,53 @@ def main() -> None:
     parser.add_argument("--vintage", default=CAMPAIGN_VINTAGE_ID)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--created-at", required=True)
-    parser.add_argument("--indices", type=int, nargs="+", default=[1, 2])
-    parser.add_argument("--families", nargs="+", default=["diffusion", "flow"])
+    parser.add_argument("--indices", type=int, nargs="+", default=[0, 1, 2])
+    parser.add_argument("--families", nargs="+", default=list(CAMPAIGN3_FAMILIES))
     args = parser.parse_args()
+    for family in args.families:
+        if family not in CAMPAIGN3_FAMILIES:
+            raise SystemExit(
+                f"family '{family}' does not race at campaign-3 (sealed ablation_systems.D "
+                "note); training it needs a dated amendment first"
+            )
 
     torch.use_deterministic_algorithms(True)
     manifest_path = systems.seed_checkpoint_manifest_path()
     manifest_path.parent.mkdir(parents=True, exist_ok=True)
     manifest = json.loads(manifest_path.read_text("utf-8")) if manifest_path.exists() else {}
 
-    dataset = _dataset(args.catalog_root, args.vintage)
+    dataset_full = _dataset(args.catalog_root, args.vintage)
     print(
-        f"dataset: {dataset.n_train_raw} raw train blocks, "
-        f"{dataset.n_train_effective} effective/epoch",
+        f"dataset: {dataset_full.n_train_raw} raw train blocks, "
+        f"{dataset_full.n_train_effective} effective/epoch",
         flush=True,
     )
+    dataset_masked = None
+    if "har-masked" in args.families:
+        dataset_masked = _dataset(args.catalog_root, args.vintage, masked=True)
+        print(
+            f"har-masked dataset: {dataset_masked.n_train_raw} raw train blocks, "
+            f"{dataset_masked.n_train_effective} effective/epoch",
+            flush=True,
+        )
 
     for family in args.families:
         spec = FAMILIES[family]
+        dataset = dataset_masked if family == "har-masked" else dataset_full
+        assert dataset is not None
         _space, _budget, space_sha = tu.load_search_space(spec["space"], spec["config_cls"])
         final_budget = yaml.safe_load(Path(spec["space"]).read_text("utf-8"))["final"]
         selection = json.loads(
             (_REPO_ROOT / "experiments" / spec["tuning_exp"] / "selection.json").read_text("utf-8")
         )
-        config = spec["config_cls"](**selection["config"])
+        # Geometry follows the campaign's sealed factor set; hyperparameters
+        # stay the sealed selection. The campaign-2 precedent, verbatim from
+        # campaign2-flow-s0's own meta: "config = sealed WP2.9 selection;
+        # n_factors follows the sealed campaign-2 factor set; NOT re-searched".
+        # The selection was searched on the 12-factor panel; campaign-3's is 16.
+        config = dc_replace(
+            spec["config_cls"](**selection["config"]), n_factors=len(dataset.factor_names)
+        )
         print(
             f"\n=== {family}: selected config {selection['config_hash']} "
             f"(space sha {space_sha[:12]}) ===",
@@ -108,7 +170,7 @@ def main() -> None:
         )
 
         for index in args.indices:
-            key = f"{family}:{index}"
+            key = f"{spec['manifest_key']}:{index}"
             seed = systems.train_seed_for(family, index)
             exp_id = f"{spec['exp_prefix']}-s{index}"
             out = _REPO_ROOT / "experiments" / exp_id / "checkpoint.pt"
@@ -136,8 +198,8 @@ def main() -> None:
                 out,
                 extra_meta={
                     "generator_id": {
-                        "diffusion": "hier-diffusion-v1",
-                        "flow": "hier-flow-v1",
+                        "flow": "hier-flow-v2",
+                        "har-masked": "har-masked",
                     }[family],
                     "vintage_id": args.vintage,
                     "seed": seed,

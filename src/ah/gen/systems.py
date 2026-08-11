@@ -115,11 +115,14 @@ __all__ = [
     "SEED_PLAN",
     "SYSTEMS",
     "SYSTEM_A_ID",
+    "SYSTEM_D_V2_ID",
+    "SYSTEM_F_ID",
     "AblationSystem",
     "GaussianResidualBlockSampler",
     "SeedIndex",
     "StructureOnlyV1",
     "build",
+    "campaign2_seed_checkpoint_manifest_path",
     "neural_only_id",
     "neural_rollout_id",
     "seed_checkpoint_manifest_path",
@@ -128,6 +131,21 @@ __all__ = [
 _REPO_ROOT = Path(__file__).resolve().parents[3]
 
 SYSTEM_A_ID = "abl-a-structure-only"
+
+#: System F (ruling K3, AM-2026-08-10-001): the sealed ``ablation_systems.F``
+#: id. System D's flow architecture, hyperparameters and seeds, trained with
+#: equity_vol MISSING before 1986-01 (``bootstrap.har_masked_source``); at
+#: SAMPLING time the composition is identical to D's -- only the checkpoint
+#: differs. Its "family" is the flow family throughout: same config, same
+#: selection, same train seeds (``train_seed_for`` maps it to flow).
+SYSTEM_F_ID = "har-masked"
+
+#: The campaign-3 D sampler (sealed ``ablation_systems.D``: ONE sampler at
+#: campaign-3, hier-flow-v2 -- hier-diffusion does not race). The flow
+#: architecture and the sealed campaign-2 SELECTION verbatim, retrained on the
+#: extended panel; ``hier-flow-v1`` and its pins freeze as the campaign-2
+#: replay surface and never move again.
+SYSTEM_D_V2_ID = "hier-flow-v2"
 
 #: A regime stratum below this many months does not get its own mean (see the
 #: module docstring). Same shape of floor as
@@ -160,15 +178,18 @@ def _check_family(family: str) -> str:
 
 
 class GaussianResidualBlockSampler:
-    """System A's L3 replacement: iid multivariate-normal rows.
+    """System A's L3 replacement: iid multivariate-normal rows, drawn in the
+    UNCONSTRAINED coordinates of :mod:`ah.gen.blocks.constraints` and mapped
+    back (campaign-3; see the fit-record's ``coordinates`` field and the
+    comment in ``__init__`` for the grid failure that forced it).
 
     Implements :class:`~ah.gen.joinery.bridge.BlockSampler`. A block is
-    ``block_months`` independent draws from ``N(mu_R, Sigma)`` where ``R`` is the
-    conditioned regime label, ``mu_R`` is that stratum's mean (or the pooled mean
-    when the stratum is thinner than :data:`GAUSSIAN_MIN_REGIME_OBS`) and
-    ``Sigma`` is the single pooled sample covariance. See this module's docstring
-    for why the covariance is pooled and why that is the simplest defensible
-    choice rather than a shortcut.
+    ``block_months`` independent draws from ``N(mu_R, Sigma)`` -- fitted in
+    z-space -- where ``R`` is the conditioned regime label, ``mu_R`` is that
+    stratum's mean (or the pooled mean when the stratum is thinner than
+    :data:`GAUSSIAN_MIN_REGIME_OBS`) and ``Sigma`` is the single pooled sample
+    covariance. See this module's docstring for why the covariance is pooled
+    and why that is the simplest defensible choice rather than a shortcut.
 
     Only the regime component of ``c_b`` is read — a Gaussian residual model
     cannot aim at ``s_t``, ``h_t`` or ``Δw``, exactly as the bootstrap stand-in
@@ -184,6 +205,8 @@ class GaussianResidualBlockSampler:
     """
 
     def __init__(self, source: BootstrapSource, *, block_months: int = bridge.BLOCK_MONTHS) -> None:
+        from ah.gen.blocks import constraints as ct
+
         if block_months < 1:
             raise JoineryError("block_months must be >= 1")
         values = np.asarray(source.values, dtype=np.float64)
@@ -192,10 +215,23 @@ class GaussianResidualBlockSampler:
         self.block_months = int(block_months)
         self.factor_names = tuple(source.factor_names)
         self._n_factors = values.shape[1]
+        self._to_constrained = lambda z: ct.panel_to_constrained(z, self.factor_names)
+
+        # CAMPAIGN-3 FIX (2026-08-11, found by the grid's own A cells): the fit
+        # and the draws live in the UNCONSTRAINED coordinates of
+        # ah.gen.blocks.constraints -- log space for positive levels (cpi,
+        # equity_vol, fx_usd), log1p for returns, softplus-floor for
+        # rates/spreads -- exactly the trained samplers' geometry, with a
+        # Gaussian where they carry a network. RAW-SPACE draws crossed zero on
+        # the extended panel's cpi (~26..260; campaign-2's ~130..260 window
+        # merely masked it) and crashed the chaining rebase in every A cell.
+        # This also makes the docstring's old caveat obsolete: Gaussian draws
+        # are now floor-safe and positivity-safe BY CONSTRUCTION.
+        z_values = ct.panel_to_unconstrained(values, self.factor_names)
 
         labels = np.asarray(source.labels)
-        pooled_mean = values.mean(axis=0)
-        cov = np.cov(values, rowvar=False)
+        pooled_mean = z_values.mean(axis=0)
+        cov = np.cov(z_values, rowvar=False)
         jitter = 1e-12 * float(np.trace(cov)) / self._n_factors
         self._chol = np.linalg.cholesky(cov + jitter * np.eye(self._n_factors))
 
@@ -205,14 +241,15 @@ class GaussianResidualBlockSampler:
             mask = labels == label
             n_obs = int(mask.sum())
             use_regime = n_obs >= GAUSSIAN_MIN_REGIME_OBS
-            means[label] = values[mask].mean(axis=0) if use_regime else pooled_mean
+            means[label] = z_values[mask].mean(axis=0) if use_regime else pooled_mean
             record[label] = {
                 "n_obs": n_obs,
                 "mean_source": "regime" if use_regime else "pooled",
             }
         self._means = means
         self.fit_record: dict[str, Any] = {
-            "kind": "iid-multivariate-normal",
+            "kind": "iid-multivariate-normal-unconstrained",
+            "coordinates": "ah.gen.blocks.constraints unconstrained space",
             "mean_source": "regime-conditional with pooled fallback",
             "covariance_source": "pooled",
             "min_regime_obs": GAUSSIAN_MIN_REGIME_OBS,
@@ -227,7 +264,7 @@ class GaussianResidualBlockSampler:
     def sample_block(self, cond: bridge.BlockConditioning, rng: np.random.Generator) -> np.ndarray:
         label = REGIME_LABELS[int(np.argmax(cond.regime_onehot))]
         z = rng.standard_normal((self.block_months, self._n_factors))
-        return self._means[label] + z @ self._chol.T
+        return self._to_constrained(self._means[label] + z @ self._chol.T)
 
 
 class StructureOnlyV1:
@@ -298,18 +335,30 @@ class StructureOnlyV1:
         return self._assemble(n_paths=n_paths, seed=seed, months=months, world=None, config=config)
 
 
-def _pinned_layers() -> tuple[ClimateArtifact, RegimesArtifact]:
-    """The WP2.7-pinned L1/L2 artifacts, hash-verified — the same check every
-    registered hierarchical factory makes."""
+def _pinned_layers(*, campaign2: bool = False) -> tuple[ClimateArtifact, RegimesArtifact]:
+    """The pinned L1/L2 artifacts, hash-verified — the same check every
+    registered hierarchical factory makes. ``campaign2=True`` loads the frozen
+    campaign-2 layers (the v1 replay surfaces); the default is the live
+    campaign-3 pins (AM-2026-08-10-001)."""
     from ah.gen.climate.simulate import load_artifact as load_climate
+    from ah.gen.joinery.assemble import (
+        CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT,
+        CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT,
+        CAMPAIGN2_PINNED_CLIMATE_SHA256,
+        CAMPAIGN2_PINNED_REGIMES_SHA256,
+    )
     from ah.gen.regimes.semimarkov import load_artifact as load_regimes
 
-    climate = load_climate(DEFAULT_CLIMATE_ARTIFACT)
-    regimes = load_regimes(DEFAULT_REGIMES_ARTIFACT)
-    if climate.meta["content_sha256"] != PINNED_CLIMATE_SHA256:
-        raise JoineryError("climate artifact sha != WP2.7 pin")
-    if regimes.meta["content_sha256"] != PINNED_REGIMES_SHA256:
-        raise JoineryError("regimes artifact sha != WP2.7 pin")
+    climate_path = CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT if campaign2 else DEFAULT_CLIMATE_ARTIFACT
+    regimes_path = CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT if campaign2 else DEFAULT_REGIMES_ARTIFACT
+    climate_pin = CAMPAIGN2_PINNED_CLIMATE_SHA256 if campaign2 else PINNED_CLIMATE_SHA256
+    regimes_pin = CAMPAIGN2_PINNED_REGIMES_SHA256 if campaign2 else PINNED_REGIMES_SHA256
+    climate = load_climate(climate_path)
+    regimes = load_regimes(regimes_path)
+    if climate.meta["content_sha256"] != climate_pin:
+        raise JoineryError("climate artifact sha != its campaign's pin")
+    if regimes.meta["content_sha256"] != regimes_pin:
+        raise JoineryError("regimes artifact sha != its campaign's pin")
     return climate, regimes
 
 
@@ -326,13 +375,28 @@ def structure_only_v1_factory() -> StructureOnlyV1:
 
 
 def seed_checkpoint_manifest_path() -> Path:
-    """Where the per-training-seed checkpoint pins live.
+    """Where the LIVE campaign's per-training-seed checkpoint pins live.
 
     Written by ``scripts/train_ablation_seeds.py``, read here. Same posture as
     ``diffusion.PINNED_CHECKPOINT_SHA256``: a checkpoint whose recomputed weight
     hash differs from its pin is refused, so a run can never quietly cite a
     checkpoint nobody recorded.
+
+    CAMPAIGN-3 (AM-2026-08-10-001): this is the campaign-3 manifest. Retraining
+    under the wp210 keys would have OVERWRITTEN the campaign-2 entries and
+    broken every B/C/D seed replay -- the third instance of the campaign-split
+    trap (vintage id, factor set, now the checkpoint namespace). The frozen
+    campaign-2 manifest is :func:`campaign2_seed_checkpoint_manifest_path`,
+    and nothing here falls back to it silently.
     """
+    return _REPO_ROOT / "configs" / "campaign3-seed-checkpoints.json"
+
+
+def campaign2_seed_checkpoint_manifest_path() -> Path:
+    """HISTORICAL, never moves again: the wp210 (campaign-2) checkpoint pins.
+
+    Read by the campaign-2 replay surfaces (the diffusion arm, which does not
+    race at campaign-3, still resolves here)."""
     return _REPO_ROOT / "configs" / "wp210-seed-checkpoints.json"
 
 
@@ -352,47 +416,96 @@ def train_seed_for(family: str, seed_index: int) -> int:
     indices step it by :data:`SEED_STRIDE`. Keying the grid by INDEX rather than by
     absolute seed is what lets "seed index 1" mean one column across both arms
     despite that historical difference.
+
+    ``har-masked`` (system F) resolves to the FLOW seeds: the sealed K3 clause
+    is "identical architecture, hyperparameters and seeds".
     """
+    if family == SYSTEM_F_ID:
+        family = "flow"
     base = PRIMARY_TRAIN_SEED_BY_FAMILY[_check_family(family)]
     if seed_index < 0:
         raise JoineryError(f"seed_index must be >= 0; got {seed_index}")
     return base + SEED_STRIDE * int(seed_index)
 
 
-def _checkpoint_for(family: str, seed_index: int) -> tuple[Path, str]:
+def _manifest_entry(manifest_path: Path, key: str, expected_train_seed: int) -> tuple[Path, str]:
+    """Resolve ``key`` in one checkpoint manifest, seed-plan-checked."""
+    if not manifest_path.exists():
+        raise JoineryError(
+            f"no seed-checkpoint manifest at {manifest_path}; run scripts/train_ablation_seeds.py"
+        )
+    doc = json.loads(manifest_path.read_text("utf-8"))
+    if key not in doc:
+        raise JoineryError(
+            f"seed-checkpoint manifest {manifest_path.name} has no entry '{key}' "
+            f"(have: {sorted(doc)})"
+        )
+    entry = doc[key]
+    if int(entry["train_seed"]) != expected_train_seed:
+        raise JoineryError(
+            f"manifest entry '{key}' records train_seed {entry['train_seed']}, but the seed "
+            f"plan says {expected_train_seed}"
+        )
+    return _REPO_ROOT / entry["checkpoint"], str(entry["checkpoint_hash"])
+
+
+def _checkpoint_for(family: str, seed_index: int, *, campaign2: bool = False) -> tuple[Path, str]:
     """``(path, expected_weight_sha256)`` for one (family, seed index).
 
-    Index 0 resolves to the WP2.8/2.9 checkpoint and its module-level pin; every
-    other index resolves through the committed manifest.
+    ``campaign2=True`` is the EXPLICIT campaign-2 route (the hier-*-v1 replay
+    surfaces): module pin at index 0, wp210 manifest otherwise -- stated by the
+    caller, never inferred.
+
+    Campaign-3 resolution, per the AM-2026-08-10-001 grid:
+
+    - ``flow`` -- the LIVE flow weights are hier-flow-v2's, and EVERY index
+      (including 0) resolves through the campaign-3 manifest under
+      ``hier-flow-v2:<index>``. There is deliberately no fallback to the
+      wp210 manifest or the v1 module pin: a campaign-3 cell evaluated on
+      campaign-2 weights is exactly the silent failure this split exists to
+      make impossible. The v1 pins remain, untouched, on the flow module for
+      the campaign-2 replay surfaces that name them directly.
+    - ``har-masked`` (system F) -- campaign-3 manifest, ``har-masked:<index>``.
+    - ``diffusion`` -- does not race at campaign-3; still resolves the
+      CAMPAIGN-2 pins (module pin at index 0, wp210 manifest otherwise), as
+      its replay surfaces always did.
     """
+    if family == SYSTEM_F_ID:
+        return _manifest_entry(
+            seed_checkpoint_manifest_path(),
+            f"{SYSTEM_F_ID}:{seed_index}",
+            train_seed_for(SYSTEM_F_ID, seed_index),
+        )
+    if family == "flow" and not campaign2:
+        return _manifest_entry(
+            seed_checkpoint_manifest_path(),
+            f"{SYSTEM_D_V2_ID}:{seed_index}",
+            train_seed_for("flow", seed_index),
+        )
     module = _family_module(family)
     if seed_index == 0:
         pin = module.PINNED_CHECKPOINT_SHA256
         if pin is None:
             raise JoineryError(f"{family}: no pinned primary checkpoint (train first)")
         return Path(module.DEFAULT_CHECKPOINT), str(pin)
-    path = seed_checkpoint_manifest_path()
-    if not path.exists():
-        raise JoineryError(
-            f"no seed-checkpoint manifest at {path}; run scripts/train_ablation_seeds.py"
-        )
-    doc = json.loads(path.read_text("utf-8"))
-    key = f"{family}:{seed_index}"
-    if key not in doc:
-        raise JoineryError(f"seed-checkpoint manifest has no entry '{key}' (have: {sorted(doc)})")
-    entry = doc[key]
-    if int(entry["train_seed"]) != train_seed_for(family, seed_index):
-        raise JoineryError(
-            f"manifest entry '{key}' records train_seed {entry['train_seed']}, but the seed "
-            f"plan says {train_seed_for(family, seed_index)}"
-        )
-    return _REPO_ROOT / entry["checkpoint"], str(entry["checkpoint_hash"])
+    return _manifest_entry(
+        campaign2_seed_checkpoint_manifest_path(),
+        f"{family}:{seed_index}",
+        train_seed_for(family, seed_index),
+    )
 
 
-def _build_sampler(family: str, seed_index: int):
-    """Load and hash-verify one family's checkpoint at one seed index."""
+def _build_sampler(family: str, seed_index: int, *, campaign2: bool = False):
+    """Load and hash-verify one family's checkpoint at one seed index.
+
+    ``har-masked`` loads through the FLOW module (the architecture is D's) but
+    resolves its checkpoint under its own manifest keys. ``campaign2=True`` is
+    the explicit v1-replay route (see :func:`_checkpoint_for`).
+    """
+    path, expected = _checkpoint_for(family, seed_index, campaign2=campaign2)
+    if family == SYSTEM_F_ID:
+        family = "flow"
     module = _family_module(family)
-    path, expected = _checkpoint_for(family, seed_index)
     if not path.exists():
         raise JoineryError(f"{family} checkpoint for seed index {seed_index} not found: {path}")
     model, std, meta = module.load_checkpoint(path)
@@ -401,11 +514,17 @@ def _build_sampler(family: str, seed_index: int):
             f"{family} seed index {seed_index}: checkpoint {meta['checkpoint_hash'][:16]}... "
             f"!= pinned {expected[:16]}..."
         )
-    if meta.get("climate_sha256") != PINNED_CLIMATE_SHA256:
-        raise JoineryError(f"{family} seed index {seed_index} was trained against a different L1")
-    from ah.gen.bootstrap import campaign_source
+    # The lineage check names the checkpoint's OWN campaign's L1 pin: a
+    # campaign-2 replay checkpoint records the campaign-2 climate sha, a live
+    # (campaign-3) checkpoint records the campaign-3 one.
+    from ah.gen.joinery.assemble import CAMPAIGN2_PINNED_CLIMATE_SHA256
 
-    source = campaign_source()
+    expected_l1 = CAMPAIGN2_PINNED_CLIMATE_SHA256 if campaign2 else PINNED_CLIMATE_SHA256
+    if meta.get("climate_sha256") != expected_l1:
+        raise JoineryError(f"{family} seed index {seed_index} was trained against a different L1")
+    from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
+
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID) if campaign2 else campaign_source()
     kwargs: dict[str, Any] = dict(
         trained_fingerprint=meta["cb_fingerprint"],
         device=module.DEFAULT_SAMPLER_DEVICE,
@@ -460,6 +579,50 @@ def build(system_id: str, *, seed_index: int = 0):
     seed_index = int(seed_index)
     if system_id == SYSTEM_A_ID:
         return structure_only_v1_factory()
+    if system_id == SYSTEM_F_ID:
+        # System F (K3): D's flow composition verbatim -- full campaign source,
+        # pinned L1/L2, the standard joinery -- differing ONLY in the checkpoint,
+        # which was trained on the har-masked dataset and lives under F's own
+        # manifest keys. The mask is a TRAINING fact; sampling is identical.
+        from ah.gen.blocks.flow import HierFlowV1
+
+        sampler, source, meta = _build_sampler(SYSTEM_F_ID, seed_index)
+        climate, regimes = _pinned_layers()
+
+        class _HarMasked(HierFlowV1):
+            generator_id = SYSTEM_F_ID
+            system_description = (
+                "system D's flow architecture trained with equity_vol MISSING "
+                "pre-1986-01 (ruling K3; the har_masked_ablation cell)"
+            )
+
+        _HarMasked.__name__ = "HarMaskedFlow"
+        _HarMasked.__qualname__ = _HarMasked.__name__
+        system = _HarMasked(climate, regimes, source, sampler)
+        system.checkpoint_hash = meta["checkpoint_hash"]
+        system.config_hash = meta.get("config_hash")
+        return system
+    if system_id == SYSTEM_D_V2_ID:
+        # The campaign-3 D: hier-flow-v1's composition verbatim under the v2
+        # id, weights from the campaign-3 manifest (every index).
+        from ah.gen.blocks.flow import HierFlowV1
+
+        sampler, source, meta = _build_sampler("flow", seed_index)
+        climate, regimes = _pinned_layers()
+
+        class _HierFlowV2(HierFlowV1):
+            generator_id = SYSTEM_D_V2_ID
+            system_description = (
+                "L1+L2+L3(flow)+L4 retrained on the extended campaign-3 panel "
+                "(the sealed campaign-2 selection, never re-searched)"
+            )
+
+        _HierFlowV2.__name__ = "HierFlowV2"
+        _HierFlowV2.__qualname__ = _HierFlowV2.__name__
+        system = _HierFlowV2(climate, regimes, source, sampler)
+        system.checkpoint_hash = meta["checkpoint_hash"]
+        system.config_hash = meta.get("config_hash")
+        return system
     for letter in ("B", "C"):
         for family in ("diffusion", "flow"):
             builder = neural_rollout_id if letter == "B" else neural_only_id
@@ -477,10 +640,12 @@ def build(system_id: str, *, seed_index: int = 0):
         module = _family_module(family)
         if system_id != module.GENERATOR_ID:
             continue
+        # The v1 ids are CAMPAIGN-2 replay surfaces: explicit campaign-2
+        # checkpoint resolution, never the live (campaign-3) manifest.
         if seed_index == 0:
             return registry.resolve(system_id)
-        sampler, source, meta = _build_sampler(family, seed_index)
-        climate, regimes = _pinned_layers()
+        sampler, source, meta = _build_sampler(family, seed_index, campaign2=True)
+        climate, regimes = _pinned_layers(campaign2=True)
         cls = module.HierDiffusionV1 if family == "diffusion" else module.HierFlowV1
         system = cls(climate, regimes, source, sampler)
         system.checkpoint_hash = meta["checkpoint_hash"]
@@ -579,18 +744,15 @@ SYSTEMS: tuple[AblationSystem, ...] = (
         neural=True,
         family=_C_FAMILY,
     ),
+    # Campaign-3 (AM-2026-08-10-001): ONE trained sampler, hier-flow-v2 --
+    # hier-diffusion does not race (the sealed ablation_systems.D note: the
+    # flow family was the promoted line; a diffusion retrain spends the K4
+    # budget without a decision it would change). The campaign-2 table carried
+    # both v1 arms here; the v1 ids remain buildable as replay surfaces.
     AblationSystem(
         letter="D",
-        system_id="hier-diffusion-v1",
-        composition="L1 + L2 + L3(diffusion) + L4 (the proposed system, 3a arm)",
-        question="The proposed system",
-        neural=True,
-        family="diffusion",
-    ),
-    AblationSystem(
-        letter="D",
-        system_id="hier-flow-v1",
-        composition="L1 + L2 + L3(flow) + L4 (the proposed system, 3b arm)",
+        system_id=SYSTEM_D_V2_ID,
+        composition="L1 + L2 + L3(flow) + L4, retrained on the extended panel",
         question="The proposed system",
         neural=True,
         family="flow",
@@ -601,6 +763,18 @@ SYSTEMS: tuple[AblationSystem, ...] = (
         composition="Regime-stratified stationary block bootstrap (the frozen benchmark)",
         question="The transparent benchmark (G2 opponent)",
         neural=False,
+    ),
+    # Campaign-3 (ruling K3, AM-2026-08-10-001): the har-masked cell.
+    AblationSystem(
+        letter="F",
+        system_id=SYSTEM_F_ID,
+        composition=(
+            "system D's flow arm, trained with equity_vol MISSING pre-1986-01 "
+            "(identical architecture, hyperparameters and seeds)"
+        ),
+        question="How much does the model learn from our own HAR reconstruction?",
+        neural=True,
+        family="flow",
     ),
 )
 

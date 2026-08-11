@@ -13,6 +13,29 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+- **CAMPAIGN-3 VERDICT: SHIP-BENCHMARK; the K3 demotion FIRES; the severe
+  test passed by BOTH sides on its first posing.** The sealed four-clause
+  rule, computed from committed artifacts by `scripts/campaign3_promotion.py`
+  (`CAMPAIGN3-PROMOTION.md` + `artifacts/campaign3/promotion-verdict.json`):
+  hier-flow-v2 misses clause (1) on both routes (pooled d −0.137 inside its
+  own sd 0.161) and clause (2) in ≥1 seed — bootstrap-v1 on the extended
+  span remains the generator of record, now with stagflation in its draw
+  universe. K3: the har-masked variant (no HAR months, 57% fewer blocks)
+  clears the pooled route the included variant misses; both demotion terms
+  fire (b: 0.0867 > 0.0683; a: the pooled clause flips) — the masked
+  variant is the flow family's criterion-bearing configuration and the
+  standing lesson is sealed into the record: reconstructed months never
+  again serve as neural training data. Severe: all 12 cells pass —
+  hier-flow-v2 retrained without the 1970s AND the benchmark drawing only
+  outside the decade both keep every enforce statistic in-band regenerating
+  1966–84 (the benchmark's arm is NEW wiring; its one design judgment, the
+  interior seam, is stated in `run_severe_test.py`). The full training WP:
+  six checkpoints (v2 ×3, har-masked ×3) at the frozen selection with
+  panel geometry; the 18-cell grid (system A's raw-space Gaussian defect
+  found by its own cells and fixed into the constraints' unconstrained
+  coordinates, regression-tested); `CAMPAIGN3-ABLATION.md` generated from
+  the artifacts. `NEXT-STEPS.md` records the post-campaign plan.
+
 - **THE CAMPAIGN-3 SEAL — AM-2026-08-10-001, the first campaign sealed on the
   extended panel.** `campaign_vintage_id` moves to `2026-08-10.1` (the first
   clean weekday vintage carrying the extension donors and the AQR commodities

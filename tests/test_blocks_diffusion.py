@@ -493,7 +493,14 @@ class TestRegistry:
         # the trained contract must be the runtime's frozen cb-v1 contract
         assert meta["cb_fingerprint"] == bridge.contract_fingerprint()
         # ...and the L1/L2 lineage the WP2.7 joinery pins
-        from ah.gen.joinery.assemble import PINNED_CLIMATE_SHA256, PINNED_REGIMES_SHA256
+        # The campaign-2 checkpoint records the CAMPAIGN-2 layer shas; the live
+        # PINNED_* moved to campaign-3 at AM-2026-08-10-001.
+        from ah.gen.joinery.assemble import (
+            CAMPAIGN2_PINNED_CLIMATE_SHA256 as PINNED_CLIMATE_SHA256,
+        )
+        from ah.gen.joinery.assemble import (
+            CAMPAIGN2_PINNED_REGIMES_SHA256 as PINNED_REGIMES_SHA256,
+        )
 
         assert meta["climate_sha256"] == PINNED_CLIMATE_SHA256
         assert meta["regimes_sha256"] == PINNED_REGIMES_SHA256

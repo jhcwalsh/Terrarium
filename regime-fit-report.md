@@ -1,11 +1,11 @@
 # Regime skeleton fit report (WP2.6, Layer 2)
 
 - config_hash: `cfg:1758709d4009c6ff`
-- git_sha: `9f3c29b`
+- git_sha: `9f1d570`
 - seed: 20260727
-- vintage_id: `2026-07-26.1`
-- artifact content sha256: `e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d`
-- climate (L1) artifact sha256: `98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487`
+- vintage_id: `2026-08-10.1`
+- artifact content sha256: `59763881331993417df5eba0752b3be6eafaabb6d85a713f65ea7c950e478a26`
+- climate (L1) artifact sha256: `5d48def735ad98346e9316c613db1fc743df84ab8143085013870ccbd7066e6b`
 - ruleset: `regime_ruleset_v1`
 - label span: 1926-07-01 .. 2020-12-01 (1134 months, 130 spells; first spell left-truncated and dropped, last right-censored)
 - NUTS: 4 chain(s) x 1000 samples (1000 warmup), target_accept 0.9

@@ -124,13 +124,20 @@ LEVEL = 0.9
 BLOCK_LENGTH = 120
 SAMPLE_SEED_BASE = 20260727
 
-OUT_ROOT = _REPO_ROOT / "experiments" / "wp211"
+# CAMPAIGN-3 (AM-2026-08-10-001): the severe outputs moved. The wp211 root is
+# the CAMPAIGN-2 severe record, frozen; running here would collide with its
+# committed artifacts and manifest -- the fifth campaign-split trap (vintage,
+# factor set, checkpoint manifest, grid root, now the severe root).
+OUT_ROOT = _REPO_ROOT / "experiments" / "campaign3" / "severe"
 CHECKPOINT_MANIFEST = OUT_ROOT / "severe-checkpoints.json"
 
-#: The severe-test L1/L2 artifacts, produced by the two `--severe-test` fits.
+#: The severe-test L1/L2 artifacts, produced by the two `--severe-test` fits
+#: ON THE CAMPAIGN-3 VINTAGE (the campaign-2 severe fits live at the old
+#: un-prefixed experiments/ paths and are frozen history).
 SEVERE_CLIMATE_ARTIFACT = (
     _REPO_ROOT
     / "experiments"
+    / "campaign3"
     / "climate-l1-severe-f7d4119c7101-s20260726"
     / "climate-posterior.npz"
 )
@@ -164,8 +171,28 @@ FAMILIES: dict[str, dict[str, Any]] = {
         "train_tag": "severe-l3b-flow",
         "cell_tag": "flow",
         "grid_name": "severe-grid.json",
+        # Campaign-3: the flow arms ARE hier-flow-v2 (the primary resolves the
+        # campaign-3 manifest through systems._checkpoint_for; the severe
+        # retrain is v2's config on the excluded sample).
+        "generator_id": "hier-flow-v2",
+    },
+    # CAMPAIGN-3, NEW: the benchmark's severe leg -- posable for the first
+    # time (AM-2026-08-10-001 retired its exception). Its "fit" is its draw
+    # source, so "exclude the 1970s from the fitting sample" is the sealed
+    # bootstrap FORM verbatim over the reduced row set: rows outside the
+    # decade, geometric blocks, circular wrap. The sealed form already
+    # carries one seam by definition (2020-12 -> 1953-04); row removal adds
+    # one interior seam of the same kind (1969-12 -> 1980-01). Stated here
+    # and in the evidence rather than discovered.
+    "bootstrap": {
+        "cell_tag": "bootstrap",
+        "grid_name": "severe-grid-bootstrap.json",
     },
 }
+
+#: The families whose train stage may run at campaign-3. hier-diffusion does
+#: not race (sealed ablation_systems.D note); bootstrap has no train stage.
+CAMPAIGN3_TRAIN_FAMILIES = ("flow",)
 
 
 def spec_for(family: str) -> dict[str, Any]:
@@ -176,8 +203,13 @@ def spec_for(family: str) -> dict[str, Any]:
 
 
 def severe_regimes_artifact() -> Path:
-    """The single severe L2 artifact directory (its config hash is data-independent)."""
-    matches = sorted((_REPO_ROOT / "experiments").glob("regimes-l2-severe-*/regimes-posterior.npz"))
+    """The single CAMPAIGN-3 severe L2 artifact (config hash is data-independent).
+
+    Globs under experiments/campaign3/ only: the campaign-2 severe L2 still
+    exists at the old root and an un-scoped glob would find both and refuse."""
+    matches = sorted(
+        (_REPO_ROOT / "experiments" / "campaign3").glob("regimes-l2-severe-*/regimes-posterior.npz")
+    )
     if len(matches) != 1:
         raise SystemExit(
             f"expected exactly one severe L2 artifact, found {len(matches)}: {matches}"
@@ -247,16 +279,28 @@ def stage_train(args: argparse.Namespace) -> None:
     print(f"severe x_mean[:3]={std.x_mean[:3]}  c_mean[:3]={std.c_mean[:3]}", flush=True)
 
     family = args.family
+    if family not in CAMPAIGN3_TRAIN_FAMILIES:
+        raise SystemExit(
+            f"family '{family}' does not train at campaign-3 (sealed ablation_systems.D "
+            "note; bootstrap has no train stage); a dated amendment must precede it"
+        )
     spec = spec_for(family)
     _space, _budget, space_sha = tu.load_search_space(spec["space"], spec["config_cls"])
     final_budget = yaml.safe_load(Path(spec["space"]).read_text("utf-8"))["final"]
     selection = json.loads(
         (_REPO_ROOT / "experiments" / spec["tuning_exp"] / "selection.json").read_text("utf-8")
     )
-    config = spec["config_cls"](**selection["config"])
+    # Geometry follows the campaign's sealed factor set; hyperparameters stay
+    # the sealed selection (the campaign-2 precedent, applied at campaign-3's
+    # training stage too -- the selection was searched on the 12-factor panel).
+    from dataclasses import replace as dc_replace
+
+    config = dc_replace(
+        spec["config_cls"](**selection["config"]), n_factors=len(dataset.factor_names)
+    )
     print(
         f"FROZEN config {selection['config_hash']} (space sha {space_sha[:12]}); "
-        f"FROZEN budget {final_budget}",
+        f"FROZEN budget {final_budget}; n_factors={config.n_factors} (panel geometry)",
         flush=True,
     )
 
@@ -288,7 +332,7 @@ def stage_train(args: argparse.Namespace) -> None:
             dataset,
             ckpt_path,
             extra_meta={
-                "generator_id": spec["module"].GENERATOR_ID,
+                "generator_id": spec.get("generator_id", spec["module"].GENERATOR_ID),
                 "vintage_id": args.vintage,
                 "seed": seed,
                 "seed_index": index,
@@ -365,20 +409,47 @@ def _arm_class(family: str, arm: str) -> type:
     descriptions reproduce WP2.11 part 1's flow strings exactly -- they land in
     ensemble metadata and therefore in every committed ``summary.json``.
     """
-    module = spec_for(family)["module"]
+    spec = spec_for(family)
+    module = spec["module"]
+    gen_id = spec.get("generator_id", module.GENERATOR_ID)
     fit = "1970s EXCLUDED from the fit" if arm == "severe" else "full-sample fit"
     return type(
         f"_{arm.capitalize()}{family.capitalize()}",
         (HierBlockSystem,),
         {
-            "generator_id": module.GENERATOR_ID,
-            "system_description": f"L1+L2+L4 ({module.GENERATOR_ID} blocks), {fit}",
+            "generator_id": gen_id,
+            "system_description": f"L1+L2+L4 ({gen_id} blocks), {fit}",
         },
+    )
+
+
+def severe_bootstrap_source(source):
+    """The benchmark's severe draw source: the sealed form's rows OUTSIDE the
+    excluded decade (see the FAMILIES['bootstrap'] comment for the seam note)."""
+    import numpy as np
+
+    from ah.gen.bootstrap import BootstrapSource
+
+    keep = ~severe.contains_or_false(severe.SEVERE_TEST_EXCLUSION, source.dates)
+    idx = np.flatnonzero(keep)
+    return BootstrapSource(
+        factor_names=source.factor_names,
+        dates=source.dates[keep],
+        values=np.asarray(source.values)[idx],
+        labels=tuple(np.asarray(source.labels, dtype=object)[idx]),
+        ruleset_version=source.ruleset_version,
+        vintage_id=source.vintage_id,
+        active_blocks=source.active_blocks,
     )
 
 
 def build_arm(family: str, arm: str, seed_index: int, source, *, block_batch: int, device: str):
     """Construct the severe or the primary system for one family, from 1965."""
+    if family == "bootstrap":
+        from ah.gen.bootstrap import BootstrapV1
+
+        system = BootstrapV1(severe_bootstrap_source(source) if arm == "severe" else source)
+        return system, {}
     config = JoineryConfig(s0_date=severe.SEVERE_TEST_S0_DATE)
     cls = _arm_class(family, arm)
     if arm == "severe":
@@ -445,13 +516,20 @@ def run_cell(
 
     t = time.time()
     print(f"    assembling UNFILTERED ({n_paths} x {months}) seed {sample_seed}...", flush=True)
-    unfiltered = system.sample_months(months, n_paths, sample_seed, unfiltered=True)
-    timings["assemble_unfiltered_s"] = time.time() - t
+    if family == "bootstrap":
+        # No acceptance filter on this system (not joinery-assembled) -- the
+        # same posture as the grid runner's E cells.
+        unfiltered = system.sample_months(months, n_paths, sample_seed)
+        filtered = None
+        timings["assemble_unfiltered_s"] = time.time() - t
+    else:
+        unfiltered = system.sample_months(months, n_paths, sample_seed, unfiltered=True)
+        timings["assemble_unfiltered_s"] = time.time() - t
 
-    t = time.time()
-    print("    assembling FILTERED (same seed, filter on)...", flush=True)
-    filtered = system.sample_months(months, n_paths, sample_seed)
-    timings["assemble_filtered_s"] = time.time() - t
+        t = time.time()
+        print("    assembling FILTERED (same seed, filter on)...", flush=True)
+        filtered = system.sample_months(months, n_paths, sample_seed)
+        timings["assemble_filtered_s"] = time.time() - t
 
     t = time.time()
     print("    judging (sealed battery, unfiltered primary)...", flush=True)
@@ -470,7 +548,7 @@ def run_cell(
     (out_dir / "battery.json").write_text(report.to_json(), "utf-8")
     (out_dir / "battery.md").write_text(report.to_markdown(), "utf-8")
 
-    meta_c = unfiltered.meta.conditioning
+    meta_c = unfiltered.meta.conditioning or {}
     summary = {
         "arm": arm,
         "family": family,
@@ -513,8 +591,9 @@ def stage_battery(args: argparse.Namespace) -> None:
     torch.use_deterministic_algorithms(True)
     family = args.family
     spec = spec_for(family)
-    spec["module"].DEFAULT_BLOCK_BATCH = args.block_batch
-    spec["module"].DEFAULT_SAMPLER_DEVICE = args.sampler_device
+    if "module" in spec:  # bootstrap has no sampler module (deterministic, CPU)
+        spec["module"].DEFAULT_BLOCK_BATCH = args.block_batch
+        spec["module"].DEFAULT_SAMPLER_DEVICE = args.sampler_device
 
     manifest = load_manifest()
     prereg = prereg_mod.load(_REPO_ROOT / "pre-registration.yaml")

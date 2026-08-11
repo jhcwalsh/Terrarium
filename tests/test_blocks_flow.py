@@ -694,7 +694,15 @@ class TestRegistry:
         if fl.PINNED_CHECKPOINT_SHA256 is None or not fl.DEFAULT_CHECKPOINT.exists():
             pytest.skip("no primary flow checkpoint present (pre-training checkout)")
         from ah.gen.blocks.train import state_dict_sha256
-        from ah.gen.joinery.assemble import PINNED_CLIMATE_SHA256, PINNED_REGIMES_SHA256
+
+        # The campaign-2 checkpoint records the CAMPAIGN-2 layer shas; the live
+        # PINNED_* moved to campaign-3 at AM-2026-08-10-001.
+        from ah.gen.joinery.assemble import (
+            CAMPAIGN2_PINNED_CLIMATE_SHA256 as PINNED_CLIMATE_SHA256,
+        )
+        from ah.gen.joinery.assemble import (
+            CAMPAIGN2_PINNED_REGIMES_SHA256 as PINNED_REGIMES_SHA256,
+        )
 
         model, std, meta = fl.load_checkpoint(fl.DEFAULT_CHECKPOINT)
         assert meta["checkpoint_hash"] == fl.PINNED_CHECKPOINT_SHA256

@@ -8,9 +8,11 @@ no catalog, no checkpoints, no network. The REAL artifacts are exercised only by
 from __future__ import annotations
 
 import numpy as np
+import pandas as pd
 import pytest
 
 import joinery_common as jc
+from ah.gen import bootstrap as bs
 from ah.gen import registry, systems
 from ah.gen.joinery import assemble as asm
 from ah.gen.joinery import bridge
@@ -83,30 +85,95 @@ def test_gaussian_sampler_uses_a_regime_conditional_mean_when_the_stratum_is_big
     assert record["by_regime"]["STAG"]["mean_source"] == "pooled"
     assert record["covariance_source"] == "pooled"
 
+    # The sampler's moments are exact in ITS OWN coordinate (the constraints'
+    # unconstrained space, campaign-3); comparisons happen there.
+    from ah.gen.blocks import constraints as ct
+
+    z_source = ct.panel_to_unconstrained(np.asarray(source.values), source.factor_names)
     eq = list(source.factor_names).index("equity_mkt")
-    pooled_mean = float(source.values[:, eq].mean())
-    exp_mean = float(source.values[np.array(labels) == "EXP", eq].mean())
+    pooled_mean = float(z_source[:, eq].mean())
+    exp_mean = float(z_source[np.array(labels) == "EXP", eq].mean())
     # A large draw's sample mean must track the regime mean, not the pooled one.
     rng = np.random.Generator(np.random.PCG64(3))
-    draws = np.concatenate([sampler.sample_block(_cond_for("EXP"), rng)[:, eq] for _ in range(400)])
+    draws = np.concatenate(
+        [
+            ct.panel_to_unconstrained(
+                sampler.sample_block(_cond_for("EXP"), rng), source.factor_names
+            )[:, eq]
+            for _ in range(400)
+        ]
+    )
     assert abs(draws.mean() - exp_mean) < abs(draws.mean() - pooled_mean)
 
-    stag = np.concatenate([sampler.sample_block(_cond_for("STAG"), rng)[:, eq] for _ in range(400)])
+    stag = np.concatenate(
+        [
+            ct.panel_to_unconstrained(
+                sampler.sample_block(_cond_for("STAG"), rng), source.factor_names
+            )[:, eq]
+            for _ in range(400)
+        ]
+    )
     assert abs(stag.mean() - pooled_mean) < 5e-4
 
 
 def test_gaussian_sampler_reproduces_the_pooled_covariance(layers):
-    """The dispersion/correlation channel is pooled and PSD by construction."""
+    """The dispersion/correlation channel is pooled and PSD by construction --
+    exact in the sampler's own (unconstrained) coordinate, campaign-3."""
+    from ah.gen.blocks import constraints as ct
+
     _, _, source = layers
     sampler = systems.GaussianResidualBlockSampler(source)
     rng = np.random.Generator(np.random.PCG64(5))
-    draws = np.concatenate([sampler.sample_block(_cond_for("EXP"), rng) for _ in range(2000)])
-    want = np.cov(source.values, rowvar=False)
+    draws = np.concatenate(
+        [
+            ct.panel_to_unconstrained(
+                sampler.sample_block(_cond_for("EXP"), rng), source.factor_names
+            )
+            for _ in range(2000)
+        ]
+    )
+    want = np.cov(
+        ct.panel_to_unconstrained(np.asarray(source.values), source.factor_names), rowvar=False
+    )
     got = np.cov(draws, rowvar=False)
     # Loose: 12k draws against a 12x12 covariance. The claim is "this is the pooled
     # covariance", not "this matches to five places".
     scale = float(np.sqrt(np.outer(np.diag(want), np.diag(want))).max())
     assert np.abs(got - want).max() < 0.15 * scale
+
+
+def test_gaussian_sampler_never_emits_nonpositive_positive_levels():
+    """The campaign-3 grid regression (2026-08-11): on the extended panel,
+    cpi spans ~26..260 and RAW-SPACE Gaussian draws crossed zero, crashing
+    the chaining rebase ('needs positive levels') in all three A cells --
+    campaign-2's narrow window (~130..260) had merely masked it. The sampler
+    now draws in the constraints' unconstrained coordinates (log space for
+    positive levels, the trained samplers' own null geometry), so positivity
+    is structural, not sampled luck."""
+    from ah.gen.blocks import constraints as ct
+
+    n = 480
+    dates = pd.date_range("1953-04-01", periods=n, freq="MS")
+    rng = np.random.Generator(np.random.PCG64(3))
+    cpi = 26.0 * np.exp(0.005 * np.arange(n))  # ~26 -> ~260, the extended shape
+    eq = rng.normal(0.007, 0.04, size=n)
+    source = bs.BootstrapSource(
+        factor_names=("cpi", "equity_mkt"),
+        dates=dates,
+        values=np.column_stack([cpi, eq]),
+        labels=tuple(["EXP"] * n),
+        ruleset_version="regime_ruleset_v1",
+        vintage_id="test-v",
+        active_blocks=("global",),
+    )
+    sampler = systems.GaussianResidualBlockSampler(source)
+    draw_rng = np.random.Generator(np.random.PCG64(17))
+    blocks = np.stack([sampler.sample_block(_cond_for("EXP"), draw_rng) for _ in range(500)])
+    j = source.factor_names.index("cpi")
+    assert "cpi" in ct.LOG_FACTORS
+    assert np.all(blocks[..., j] > 0.0), "a positive level left its structural range"
+    k = source.factor_names.index("equity_mkt")
+    assert np.all(blocks[..., k] > -1.0)  # log1p returns: r > -1 by construction
 
 
 def test_gaussian_sampler_rows_are_iid_within_a_block(layers):
@@ -254,17 +321,23 @@ def test_every_ablation_system_is_registered_and_resolvable_by_id():
         assert system_id in registered, system_id
 
 
-def test_the_system_table_covers_dn11_letters_a_through_e():
+def test_the_system_table_covers_the_sealed_letters_a_through_f():
+    """Campaign-3 (AM-2026-08-10-001, ruling K3) added F -- through campaign-2
+    this asserted exactly DN-1.1's A-E; the sealed ablation_systems grid is
+    now six and the assertion is updated to the new truth, not relaxed."""
     letters = {row.letter for row in systems.SYSTEMS}
-    assert letters == {"A", "B", "C", "D", "E"}
+    assert letters == {"A", "B", "C", "D", "E", "F"}
+    # Campaign-3: ONE trained D sampler, hier-flow-v2 (hier-diffusion does not
+    # race; the campaign-2 table carried both v1 arms).
     d_ids = [row.system_id for row in systems.SYSTEMS if row.letter == "D"]
-    assert d_ids == ["hier-diffusion-v1", "hier-flow-v1"]
+    assert d_ids == ["hier-flow-v2"]
     assert [row.system_id for row in systems.SYSTEMS if row.letter == "E"] == ["bootstrap-v1"]
+    assert [row.system_id for row in systems.SYSTEMS if row.letter == "F"] == ["har-masked"]
 
 
 def test_neural_rows_declare_training_seeds_and_deterministic_rows_do_not():
     for row in systems.SYSTEMS:
-        if row.letter in {"B", "C", "D"}:
+        if row.letter in {"B", "C", "D", "F"}:
             assert row.neural is True
             assert row.family in {"diffusion", "flow"}
         else:

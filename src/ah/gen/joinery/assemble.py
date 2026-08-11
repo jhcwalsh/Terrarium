@@ -136,15 +136,42 @@ _NAN_PENALTY = 1e6
 # The default real artifacts (the fitted L1/L2 posteriors), pinned by content
 # SHA-256 exactly as the fit reports record them. Used only by the registered
 # factory / the battery script — unit tests build synthetic artifacts.
+#
+# CAMPAIGN-3 (AM-2026-08-10-001): the LIVE pins are the campaign-3 refits on
+# vintage 2026-08-10.1 (climate: 0 divergences, max R-hat 1.0014, min ESS
+# 1346; regimes: both variants clean, 18/18 acceptance bands inside). The
+# campaign-2 pins freeze below under CAMPAIGN2_* names — the same split as
+# CAMPAIGN2_VINTAGE_ID / CAMPAIGN2_FACTOR_SET — and the campaign-2 replay
+# surfaces (the hier-*-v1 factories, genconsole) name them explicitly.
 _REPO_ROOT = Path(__file__).resolve().parents[4]  # src/ah/gen/joinery -> repo root
 DEFAULT_CLIMATE_ARTIFACT = (
-    _REPO_ROOT / "experiments" / "climate-l1-f7d4119c7101-s20260726" / "climate-posterior.npz"
+    _REPO_ROOT
+    / "experiments"
+    / "campaign3"
+    / "climate-l1-f7d4119c7101-s20260726"
+    / "climate-posterior.npz"
 )
 DEFAULT_REGIMES_ARTIFACT = (
+    _REPO_ROOT
+    / "experiments"
+    / "campaign3"
+    / "regimes-l2-1758709d4009-s20260727"
+    / "regimes-posterior.npz"
+)
+PINNED_CLIMATE_SHA256 = "5d48def735ad98346e9316c613db1fc743df84ab8143085013870ccbd7066e6b"
+PINNED_REGIMES_SHA256 = "59763881331993417df5eba0752b3be6eafaabb6d85a713f65ea7c950e478a26"
+
+#: HISTORICAL, never move again: the campaign-2 artifacts and pins, exactly as
+#: sealed through AM-2026-08-09-005. Every campaign-2 trained checkpoint
+#: records these shas in its meta.
+CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT = (
+    _REPO_ROOT / "experiments" / "climate-l1-f7d4119c7101-s20260726" / "climate-posterior.npz"
+)
+CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT = (
     _REPO_ROOT / "experiments" / "regimes-l2-1758709d4009-s20260727" / "regimes-posterior.npz"
 )
-PINNED_CLIMATE_SHA256 = "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487"
-PINNED_REGIMES_SHA256 = "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
+CAMPAIGN2_PINNED_CLIMATE_SHA256 = "98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487"
+CAMPAIGN2_PINNED_REGIMES_SHA256 = "e83b9e86f73a679e61d5f5929ee2f552f9eac3c190ecc2a62e6947ef329ef47d"
 
 
 @dataclass(frozen=True)

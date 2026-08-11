@@ -89,11 +89,15 @@ def build_decade(
             f"checkpoint hash mismatch for {key}: manifest "
             f"{entry['checkpoint_hash'][:16]}..., loaded {meta['checkpoint_hash'][:16]}..."
         )
-    climate = load_climate(ja.DEFAULT_CLIMATE_ARTIFACT)
-    regimes = load_regimes(ja.DEFAULT_REGIMES_ARTIFACT)
-    if climate.meta["content_sha256"] != ja.PINNED_CLIMATE_SHA256:
+    # CAMPAIGN-2 layer pins: this whole path is a campaign-2 checkpoint replay
+    # (the manifest above is campaign2-checkpoints.json), so it names the
+    # frozen pins -- the live ja.PINNED_* moved to campaign-3 at
+    # AM-2026-08-10-001 and would refuse these checkpoints' lineage.
+    climate = load_climate(ja.CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT)
+    regimes = load_regimes(ja.CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT)
+    if climate.meta["content_sha256"] != ja.CAMPAIGN2_PINNED_CLIMATE_SHA256:
         raise ValueError("climate artifact sha256 != WP2.7 pin")
-    if regimes.meta["content_sha256"] != ja.PINNED_REGIMES_SHA256:
+    if regimes.meta["content_sha256"] != ja.CAMPAIGN2_PINNED_REGIMES_SHA256:
         raise ValueError("regimes artifact sha256 != WP2.7 pin")
 
     # A campaign-2 checkpoint replay: the vintage is pinned to the record the

@@ -1,7 +1,7 @@
 # Regime label sensitivity report (WP2.6: regime_ruleset_v1 vs v1b)
 
 - config_hash: `cfg:1758709d4009c6ff`
-- git_sha: `9f3c29b`
+- git_sha: `9f1d570`
 - span: 1926-07-01 .. 2020-12-01 (1134 months)
 - label agreement rate: 0.9083
 
