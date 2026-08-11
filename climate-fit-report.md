@@ -1,10 +1,10 @@
 # Climate model fit report (WP2.5, Layer 1)
 
 - config_hash: `cfg:f7d4119c7101fd08`
-- git_sha: `be1c119`
+- git_sha: `9f1d570`
 - seed: 20260726
-- vintage_id: `2026-07-26.1`
-- artifact content sha256: `98bdb68f3fd9753d5e10776772849bfa6bbe87f9a0fbd83952a7cad42000c487`
+- vintage_id: `2026-08-10.1`
+- artifact content sha256: `5d48def735ad98346e9316c613db1fc743df84ab8143085013870ccbd7066e6b`
 - span: 1871-01-01 .. 2021-01-01 (exclusive); 1800 months
 - NUTS: 4 chain(s) x 750 samples (800 warmup), target_accept 0.85
 

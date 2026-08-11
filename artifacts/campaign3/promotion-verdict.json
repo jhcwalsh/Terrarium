@@ -1,0 +1,60 @@
+{
+  "benchmark": "bootstrap-v1 (extended span)",
+  "campaign": "campaign-3 (AM-2026-08-10-001; K4 ruling AM-2026-08-10-002)",
+  "challenger": "hier-flow-v2",
+  "clauses_included": {
+    "clause_1_every_seed": false,
+    "clause_1_met": false,
+    "clause_1_pooled": false,
+    "clause_2_no_enforce_regression_every_seed": false,
+    "pooled_mean_d": -0.1367350618726976,
+    "pooled_sd_d": 0.1611792373717671
+  },
+  "clauses_masked": {
+    "clause_1_every_seed": false,
+    "clause_1_met": true,
+    "clause_1_pooled": true,
+    "clause_2_no_enforce_regression_every_seed": false,
+    "pooled_mean_d": -0.22340973047184143,
+    "pooled_sd_d": 0.04069217530820409
+  },
+  "inputs": {
+    "ablation": "artifacts/campaign3/ablation.json",
+    "severe_bootstrap_grid": "experiments/campaign3/severe/severe-grid-bootstrap.json",
+    "severe_flow_grid": "experiments/campaign3/severe/severe-grid.json"
+  },
+  "k3": {
+    "beats_margin_abs_mean_d": 0.1367350618726976,
+    "consequence": "the har-masked variant becomes the flow family's criterion-bearing configuration; the HAR-included variant reports only",
+    "criterion_a_clause_flips": {
+      "clause_1_every_seed": {
+        "flipped": false,
+        "included": false,
+        "masked": false
+      },
+      "clause_1_pooled": {
+        "flipped": true,
+        "included": false,
+        "masked": true
+      },
+      "clause_2": {
+        "flipped": false,
+        "included": false,
+        "masked": false
+      }
+    },
+    "criterion_a_fires": true,
+    "criterion_b_fires": true,
+    "demotion": true,
+    "half_margin": 0.0683675309363488,
+    "included_vs_masked_abs_diff": 0.08667466859914383
+  },
+  "severe": {
+    "bootstrap_primary_pass_all": true,
+    "bootstrap_severe_pass_all": true,
+    "flow_primary_pass_all": true,
+    "flow_severe_pass_all": true,
+    "n_cells": 12
+  },
+  "verdict": "SHIP-BENCHMARK"
+}
