@@ -24,6 +24,7 @@ import argparse
 import json
 import sys
 import time
+from dataclasses import replace as dc_replace
 from pathlib import Path
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -154,7 +155,14 @@ def main() -> None:
         selection = json.loads(
             (_REPO_ROOT / "experiments" / spec["tuning_exp"] / "selection.json").read_text("utf-8")
         )
-        config = spec["config_cls"](**selection["config"])
+        # Geometry follows the campaign's sealed factor set; hyperparameters
+        # stay the sealed selection. The campaign-2 precedent, verbatim from
+        # campaign2-flow-s0's own meta: "config = sealed WP2.9 selection;
+        # n_factors follows the sealed campaign-2 factor set; NOT re-searched".
+        # The selection was searched on the 12-factor panel; campaign-3's is 16.
+        config = dc_replace(
+            spec["config_cls"](**selection["config"]), n_factors=len(dataset.factor_names)
+        )
         print(
             f"\n=== {family}: selected config {selection['config_hash']} "
             f"(space sha {space_sha[:12]}) ===",
