@@ -26,17 +26,28 @@ one trained sampler (hier-diffusion does not race).*
    campaign-2 pins move to `CAMPAIGN2_*` names (the CAMPAIGN2_FACTOR_SET
    split, third application) and the campaign-3 shas become the live pins.
    gen/joinery is NOT lock-hashed — no re-seal.
-4. **System F (har-masked)** — new at this seal: system D's architecture,
-   hyperparameters and seeds with `equity_vol` treated as MISSING before
-   1986-01 in the TRAINING data only (`ah/gen/systems.py` composition +
-   dataset masking; the sealed demotion criterion lives in
-   `multi_seed_decision_rule.har_masked_ablation`).
-5. **hier-flow-v2 training** — the flow family retrained on the extended
-   16-factor/813-month panel at the sealed campaign-2 SELECTED config
-   (`cfg:5943f6cd2f6f1048` — retrained, never re-searched: the sealed trial
-   budget was spent at WP2.9 and nothing here re-selects), 3 training seeds
-   via `scripts/train_ablation_seeds.py`'s successor stage. B/C flow-arm
-   variants likewise. 12 neural cells total (B, C, D, F × 3 seeds).
+4. **System F (har-masked)** — DONE (commit `1d76c34`, TDD): the mask is the
+   row restriction it is provably equivalent to under the complete-case
+   block rule; F composes exactly as D-flow differing only in checkpoint;
+   flow config/space/selection/seeds verbatim; every F index resolves
+   through the manifest.
+5. **hier-flow-v2 training — DESIGN DECIDED, NOT YET WIRED.** The sealed grid
+   names D's campaign-3 sampler `hier-flow-v2`; `hier-flow-v1` freezes as the
+   campaign-2 replay surface (its DEFAULT_CHECKPOINT/pins untouched). THE
+   TRAP FOUND WHILE WIRING: retraining B/C/D at campaign-3 under the
+   existing manifest keys (`flow:<k>` in `configs/wp210-seed-checkpoints.json`)
+   would OVERWRITE the campaign-2 entries and break B/C/D seed replays — the
+   same class as the exp-root trap in stage 1. The split therefore applies to
+   the whole namespace, not just the D id: a NEW campaign-3 manifest
+   (`configs/campaign3-seed-checkpoints.json`), keys `hier-flow-v2:<k>`,
+   `abl-b-…-flow@c3:<k>` (exact key shape at implementation), and
+   `har-masked:<k>` MOVES THERE TOO (F is campaign-3-only, no collision, but
+   one manifest per campaign is the rule); `systems.build` resolves
+   campaign-3 ids against the campaign-3 manifest and never falls back
+   silently. `hier-flow-v2` registers as its own id (subclassing the flow
+   composition with `generator_id = "hier-flow-v2"`), config
+   `cfg:5943f6cd2f6f1048` retrained, never re-searched; 3 training seeds =
+   flow's own. 12 neural cells total (B, C, D=v2, F × 3 seeds).
 6. **The battery grid** — `scripts/run_ablation_grid.py` pattern over the
    campaign-3 cells (~23 min/flow cell with the GPU sampler at campaign-2;
    re-measure and record). Reference computed once and reused.
