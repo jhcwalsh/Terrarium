@@ -316,18 +316,30 @@ class StructureOnlyV1:
         return self._assemble(n_paths=n_paths, seed=seed, months=months, world=None, config=config)
 
 
-def _pinned_layers() -> tuple[ClimateArtifact, RegimesArtifact]:
-    """The WP2.7-pinned L1/L2 artifacts, hash-verified — the same check every
-    registered hierarchical factory makes."""
+def _pinned_layers(*, campaign2: bool = False) -> tuple[ClimateArtifact, RegimesArtifact]:
+    """The pinned L1/L2 artifacts, hash-verified — the same check every
+    registered hierarchical factory makes. ``campaign2=True`` loads the frozen
+    campaign-2 layers (the v1 replay surfaces); the default is the live
+    campaign-3 pins (AM-2026-08-10-001)."""
     from ah.gen.climate.simulate import load_artifact as load_climate
+    from ah.gen.joinery.assemble import (
+        CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT,
+        CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT,
+        CAMPAIGN2_PINNED_CLIMATE_SHA256,
+        CAMPAIGN2_PINNED_REGIMES_SHA256,
+    )
     from ah.gen.regimes.semimarkov import load_artifact as load_regimes
 
-    climate = load_climate(DEFAULT_CLIMATE_ARTIFACT)
-    regimes = load_regimes(DEFAULT_REGIMES_ARTIFACT)
-    if climate.meta["content_sha256"] != PINNED_CLIMATE_SHA256:
-        raise JoineryError("climate artifact sha != WP2.7 pin")
-    if regimes.meta["content_sha256"] != PINNED_REGIMES_SHA256:
-        raise JoineryError("regimes artifact sha != WP2.7 pin")
+    climate_path = CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT if campaign2 else DEFAULT_CLIMATE_ARTIFACT
+    regimes_path = CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT if campaign2 else DEFAULT_REGIMES_ARTIFACT
+    climate_pin = CAMPAIGN2_PINNED_CLIMATE_SHA256 if campaign2 else PINNED_CLIMATE_SHA256
+    regimes_pin = CAMPAIGN2_PINNED_REGIMES_SHA256 if campaign2 else PINNED_REGIMES_SHA256
+    climate = load_climate(climate_path)
+    regimes = load_regimes(regimes_path)
+    if climate.meta["content_sha256"] != climate_pin:
+        raise JoineryError("climate artifact sha != its campaign's pin")
+    if regimes.meta["content_sha256"] != regimes_pin:
+        raise JoineryError("regimes artifact sha != its campaign's pin")
     return climate, regimes
 
 
@@ -483,11 +495,17 @@ def _build_sampler(family: str, seed_index: int, *, campaign2: bool = False):
             f"{family} seed index {seed_index}: checkpoint {meta['checkpoint_hash'][:16]}... "
             f"!= pinned {expected[:16]}..."
         )
-    if meta.get("climate_sha256") != PINNED_CLIMATE_SHA256:
-        raise JoineryError(f"{family} seed index {seed_index} was trained against a different L1")
-    from ah.gen.bootstrap import campaign_source
+    # The lineage check names the checkpoint's OWN campaign's L1 pin: a
+    # campaign-2 replay checkpoint records the campaign-2 climate sha, a live
+    # (campaign-3) checkpoint records the campaign-3 one.
+    from ah.gen.joinery.assemble import CAMPAIGN2_PINNED_CLIMATE_SHA256
 
-    source = campaign_source()
+    expected_l1 = CAMPAIGN2_PINNED_CLIMATE_SHA256 if campaign2 else PINNED_CLIMATE_SHA256
+    if meta.get("climate_sha256") != expected_l1:
+        raise JoineryError(f"{family} seed index {seed_index} was trained against a different L1")
+    from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
+
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID) if campaign2 else campaign_source()
     kwargs: dict[str, Any] = dict(
         trained_fingerprint=meta["cb_fingerprint"],
         device=module.DEFAULT_SAMPLER_DEVICE,
@@ -608,7 +626,7 @@ def build(system_id: str, *, seed_index: int = 0):
         if seed_index == 0:
             return registry.resolve(system_id)
         sampler, source, meta = _build_sampler(family, seed_index, campaign2=True)
-        climate, regimes = _pinned_layers()
+        climate, regimes = _pinned_layers(campaign2=True)
         cls = module.HierDiffusionV1 if family == "diffusion" else module.HierFlowV1
         system = cls(climate, regimes, source, sampler)
         system.checkpoint_hash = meta["checkpoint_hash"]

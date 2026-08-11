@@ -540,11 +540,15 @@ def hier_flow_v1_factory() -> HierFlowV1:
     """
     from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
     from ah.gen.climate.simulate import load_artifact as load_climate
+
+    # CAMPAIGN-2 pins throughout: hier-flow-v1 is a campaign-2 artifact and
+    # its whole lineage -- checkpoint, L1/L2 layers, vintage -- is frozen
+    # history (the live PINNED_* moved to campaign-3 at AM-2026-08-10-001).
     from ah.gen.joinery.assemble import (
-        DEFAULT_CLIMATE_ARTIFACT,
-        DEFAULT_REGIMES_ARTIFACT,
-        PINNED_CLIMATE_SHA256,
-        PINNED_REGIMES_SHA256,
+        CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT,
+        CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT,
+        CAMPAIGN2_PINNED_CLIMATE_SHA256,
+        CAMPAIGN2_PINNED_REGIMES_SHA256,
     )
     from ah.gen.regimes.semimarkov import load_artifact as load_regimes
 
@@ -556,13 +560,13 @@ def hier_flow_v1_factory() -> HierFlowV1:
             f"checkpoint {meta['checkpoint_hash'][:16]}... != pinned "
             f"{PINNED_CHECKPOINT_SHA256[:16]}..."
         )
-    climate = load_climate(DEFAULT_CLIMATE_ARTIFACT)
-    regimes_artifact = load_regimes(DEFAULT_REGIMES_ARTIFACT)
-    if climate.meta["content_sha256"] != PINNED_CLIMATE_SHA256:
+    climate = load_climate(CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT)
+    regimes_artifact = load_regimes(CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT)
+    if climate.meta["content_sha256"] != CAMPAIGN2_PINNED_CLIMATE_SHA256:
         raise JoineryError("climate artifact sha != WP2.7 pin")
-    if regimes_artifact.meta["content_sha256"] != PINNED_REGIMES_SHA256:
+    if regimes_artifact.meta["content_sha256"] != CAMPAIGN2_PINNED_REGIMES_SHA256:
         raise JoineryError("regimes artifact sha != WP2.7 pin")
-    if meta.get("climate_sha256") != PINNED_CLIMATE_SHA256:
+    if meta.get("climate_sha256") != CAMPAIGN2_PINNED_CLIMATE_SHA256:
         raise JoineryError("checkpoint was trained against a different L1 artifact")
     # hier-flow-v1 is a CAMPAIGN-2 artifact: its checkpoint's feature
     # dimensions and c_b fingerprint are facts about the campaign-2 vintage,

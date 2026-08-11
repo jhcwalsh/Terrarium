@@ -791,11 +791,14 @@ def hier_diffusion_v1_factory() -> HierDiffusionV1:
     """
     from ah.gen.bootstrap import CAMPAIGN2_VINTAGE_ID, campaign_source
     from ah.gen.climate.simulate import load_artifact as load_climate
+
+    # CAMPAIGN-2 pins throughout: hier-diffusion-v1 is a campaign-2 artifact
+    # (and does not race at campaign-3); its whole lineage is frozen history.
     from ah.gen.joinery.assemble import (
-        DEFAULT_CLIMATE_ARTIFACT,
-        DEFAULT_REGIMES_ARTIFACT,
-        PINNED_CLIMATE_SHA256,
-        PINNED_REGIMES_SHA256,
+        CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT,
+        CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT,
+        CAMPAIGN2_PINNED_CLIMATE_SHA256,
+        CAMPAIGN2_PINNED_REGIMES_SHA256,
     )
     from ah.gen.regimes.semimarkov import load_artifact as load_regimes
 
@@ -807,13 +810,13 @@ def hier_diffusion_v1_factory() -> HierDiffusionV1:
             f"checkpoint {meta['checkpoint_hash'][:16]}... != pinned "
             f"{PINNED_CHECKPOINT_SHA256[:16]}..."
         )
-    climate = load_climate(DEFAULT_CLIMATE_ARTIFACT)
-    regimes_artifact = load_regimes(DEFAULT_REGIMES_ARTIFACT)
-    if climate.meta["content_sha256"] != PINNED_CLIMATE_SHA256:
+    climate = load_climate(CAMPAIGN2_DEFAULT_CLIMATE_ARTIFACT)
+    regimes_artifact = load_regimes(CAMPAIGN2_DEFAULT_REGIMES_ARTIFACT)
+    if climate.meta["content_sha256"] != CAMPAIGN2_PINNED_CLIMATE_SHA256:
         raise JoineryError("climate artifact sha != WP2.7 pin")
-    if regimes_artifact.meta["content_sha256"] != PINNED_REGIMES_SHA256:
+    if regimes_artifact.meta["content_sha256"] != CAMPAIGN2_PINNED_REGIMES_SHA256:
         raise JoineryError("regimes artifact sha != WP2.7 pin")
-    if meta.get("climate_sha256") != PINNED_CLIMATE_SHA256:
+    if meta.get("climate_sha256") != CAMPAIGN2_PINNED_CLIMATE_SHA256:
         raise JoineryError("checkpoint was trained against a different L1 artifact")
     # hier-diffusion-v1 is a CAMPAIGN-2 artifact; same vintage pin and reason
     # as hier-flow-v1's factory in ah.gen.blocks.flow.
