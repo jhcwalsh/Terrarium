@@ -58,9 +58,28 @@ one trained sampler (hier-diffusion does not race).*
 6. **The battery grid** — `scripts/run_ablation_grid.py` pattern over the
    campaign-3 cells (~23 min/flow cell with the GPU sampler at campaign-2;
    re-measure and record). Reference computed once and reused.
-7. **ABLATION.md + the race** — generated, never hand-assembled; the verdict
-   through the sealed four-clause rule with proxy_share_disclosure in every
-   table.
+7. **ABLATION.md** — DONE (CAMPAIGN3-ABLATION.md, 18/18 cells; system A fixed
+   mid-grid: raw-space Gaussians -> the constraints' unconstrained
+   coordinates, regression-tested). Headline: v2 pooled d = -0.137 (sd
+   0.161, does NOT clear clause 1); har-masked d = -0.223 (sd 0.041, the
+   ONLY system clearing the pooled beat) -- the K3 question answered sharply.
+8. **The severe legs — IN PROGRESS.** Severe L1 DONE (126 min, 0 div,
+   rhat 1.0030) and severe L2 DONE (0.3 min, 18/18 bands), both under
+   `experiments/campaign3/`. NEXT: `scripts/run_severe_test.py` needs the
+   FIFTH campaign-split adaptation before running -- its OUT_ROOT is the
+   frozen wp211 record, SEVERE_CLIMATE_ARTIFACT points at the campaign-2
+   severe fit (root `experiments/climate-l1-severe-…`), its FAMILIES are the
+   campaign-2 co-primaries (campaign-3: flow-only v2; decide whether F poses
+   the leg -- the sealed criterion says "a system that cannot pose the leg
+   FAILS it", and F is a system in the sealed grid), and THE BENCHMARK'S
+   SEVERE ARM IS NEW WIRING (never posable before AM-2026-08-10-001; the
+   blocks-exclusion machinery exists -- test_severe_blocks -- but no
+   bootstrap arm in the runner). Campaign-3 severe outputs go under
+   `experiments/campaign3/severe/`.
+9. **The race** — the verdict through the sealed four-clause rule computed by
+   the promotion machinery (campaign2_promotion.py's successor), the K3
+   demotion determination on its sealed decision-alpha terms, evidence doc
+   with proxy_share_disclosure in every table, CHANGELOG, full gate, merge.
 
 ## Standing constraints
 
