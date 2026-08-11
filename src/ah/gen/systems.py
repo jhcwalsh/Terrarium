@@ -115,12 +115,14 @@ __all__ = [
     "SEED_PLAN",
     "SYSTEMS",
     "SYSTEM_A_ID",
+    "SYSTEM_D_V2_ID",
     "SYSTEM_F_ID",
     "AblationSystem",
     "GaussianResidualBlockSampler",
     "SeedIndex",
     "StructureOnlyV1",
     "build",
+    "campaign2_seed_checkpoint_manifest_path",
     "neural_only_id",
     "neural_rollout_id",
     "seed_checkpoint_manifest_path",
@@ -137,6 +139,13 @@ SYSTEM_A_ID = "abl-a-structure-only"
 #: differs. Its "family" is the flow family throughout: same config, same
 #: selection, same train seeds (``train_seed_for`` maps it to flow).
 SYSTEM_F_ID = "har-masked"
+
+#: The campaign-3 D sampler (sealed ``ablation_systems.D``: ONE sampler at
+#: campaign-3, hier-flow-v2 -- hier-diffusion does not race). The flow
+#: architecture and the sealed campaign-2 SELECTION verbatim, retrained on the
+#: extended panel; ``hier-flow-v1`` and its pins freeze as the campaign-2
+#: replay surface and never move again.
+SYSTEM_D_V2_ID = "hier-flow-v2"
 
 #: A regime stratum below this many months does not get its own mean (see the
 #: module docstring). Same shape of floor as
@@ -335,13 +344,28 @@ def structure_only_v1_factory() -> StructureOnlyV1:
 
 
 def seed_checkpoint_manifest_path() -> Path:
-    """Where the per-training-seed checkpoint pins live.
+    """Where the LIVE campaign's per-training-seed checkpoint pins live.
 
     Written by ``scripts/train_ablation_seeds.py``, read here. Same posture as
     ``diffusion.PINNED_CHECKPOINT_SHA256``: a checkpoint whose recomputed weight
     hash differs from its pin is refused, so a run can never quietly cite a
     checkpoint nobody recorded.
+
+    CAMPAIGN-3 (AM-2026-08-10-001): this is the campaign-3 manifest. Retraining
+    under the wp210 keys would have OVERWRITTEN the campaign-2 entries and
+    broken every B/C/D seed replay -- the third instance of the campaign-split
+    trap (vintage id, factor set, now the checkpoint namespace). The frozen
+    campaign-2 manifest is :func:`campaign2_seed_checkpoint_manifest_path`,
+    and nothing here falls back to it silently.
     """
+    return _REPO_ROOT / "configs" / "campaign3-seed-checkpoints.json"
+
+
+def campaign2_seed_checkpoint_manifest_path() -> Path:
+    """HISTORICAL, never moves again: the wp210 (campaign-2) checkpoint pins.
+
+    Read by the campaign-2 replay surfaces (the diffusion arm, which does not
+    race at campaign-3, still resolves here)."""
     return _REPO_ROOT / "configs" / "wp210-seed-checkpoints.json"
 
 
@@ -373,65 +397,81 @@ def train_seed_for(family: str, seed_index: int) -> int:
     return base + SEED_STRIDE * int(seed_index)
 
 
-def _checkpoint_for(family: str, seed_index: int) -> tuple[Path, str]:
+def _manifest_entry(manifest_path: Path, key: str, expected_train_seed: int) -> tuple[Path, str]:
+    """Resolve ``key`` in one checkpoint manifest, seed-plan-checked."""
+    if not manifest_path.exists():
+        raise JoineryError(
+            f"no seed-checkpoint manifest at {manifest_path}; run scripts/train_ablation_seeds.py"
+        )
+    doc = json.loads(manifest_path.read_text("utf-8"))
+    if key not in doc:
+        raise JoineryError(
+            f"seed-checkpoint manifest {manifest_path.name} has no entry '{key}' "
+            f"(have: {sorted(doc)})"
+        )
+    entry = doc[key]
+    if int(entry["train_seed"]) != expected_train_seed:
+        raise JoineryError(
+            f"manifest entry '{key}' records train_seed {entry['train_seed']}, but the seed "
+            f"plan says {expected_train_seed}"
+        )
+    return _REPO_ROOT / entry["checkpoint"], str(entry["checkpoint_hash"])
+
+
+def _checkpoint_for(family: str, seed_index: int, *, campaign2: bool = False) -> tuple[Path, str]:
     """``(path, expected_weight_sha256)`` for one (family, seed index).
 
-    Index 0 resolves to the WP2.8/2.9 checkpoint and its module-level pin; every
-    other index resolves through the committed manifest. ``har-masked`` (system
-    F) has NO primary checkpoint -- it exists only from the campaign-3 training
-    run onward -- so EVERY index resolves through the manifest under keys
-    ``har-masked:<index>``.
+    ``campaign2=True`` is the EXPLICIT campaign-2 route (the hier-*-v1 replay
+    surfaces): module pin at index 0, wp210 manifest otherwise -- stated by the
+    caller, never inferred.
+
+    Campaign-3 resolution, per the AM-2026-08-10-001 grid:
+
+    - ``flow`` -- the LIVE flow weights are hier-flow-v2's, and EVERY index
+      (including 0) resolves through the campaign-3 manifest under
+      ``hier-flow-v2:<index>``. There is deliberately no fallback to the
+      wp210 manifest or the v1 module pin: a campaign-3 cell evaluated on
+      campaign-2 weights is exactly the silent failure this split exists to
+      make impossible. The v1 pins remain, untouched, on the flow module for
+      the campaign-2 replay surfaces that name them directly.
+    - ``har-masked`` (system F) -- campaign-3 manifest, ``har-masked:<index>``.
+    - ``diffusion`` -- does not race at campaign-3; still resolves the
+      CAMPAIGN-2 pins (module pin at index 0, wp210 manifest otherwise), as
+      its replay surfaces always did.
     """
     if family == SYSTEM_F_ID:
-        path = seed_checkpoint_manifest_path()
-        if not path.exists():
-            raise JoineryError(
-                f"no seed-checkpoint manifest at {path}; run scripts/train_ablation_seeds.py"
-            )
-        doc = json.loads(path.read_text("utf-8"))
-        key = f"{SYSTEM_F_ID}:{seed_index}"
-        if key not in doc:
-            raise JoineryError(
-                f"seed-checkpoint manifest has no entry '{key}' (have: {sorted(doc)})"
-            )
-        entry = doc[key]
-        if int(entry["train_seed"]) != train_seed_for(SYSTEM_F_ID, seed_index):
-            raise JoineryError(
-                f"manifest entry '{key}' records train_seed {entry['train_seed']}, but the "
-                f"seed plan says {train_seed_for(SYSTEM_F_ID, seed_index)}"
-            )
-        return _REPO_ROOT / entry["checkpoint"], str(entry["checkpoint_hash"])
+        return _manifest_entry(
+            seed_checkpoint_manifest_path(),
+            f"{SYSTEM_F_ID}:{seed_index}",
+            train_seed_for(SYSTEM_F_ID, seed_index),
+        )
+    if family == "flow" and not campaign2:
+        return _manifest_entry(
+            seed_checkpoint_manifest_path(),
+            f"{SYSTEM_D_V2_ID}:{seed_index}",
+            train_seed_for("flow", seed_index),
+        )
     module = _family_module(family)
     if seed_index == 0:
         pin = module.PINNED_CHECKPOINT_SHA256
         if pin is None:
             raise JoineryError(f"{family}: no pinned primary checkpoint (train first)")
         return Path(module.DEFAULT_CHECKPOINT), str(pin)
-    path = seed_checkpoint_manifest_path()
-    if not path.exists():
-        raise JoineryError(
-            f"no seed-checkpoint manifest at {path}; run scripts/train_ablation_seeds.py"
-        )
-    doc = json.loads(path.read_text("utf-8"))
-    key = f"{family}:{seed_index}"
-    if key not in doc:
-        raise JoineryError(f"seed-checkpoint manifest has no entry '{key}' (have: {sorted(doc)})")
-    entry = doc[key]
-    if int(entry["train_seed"]) != train_seed_for(family, seed_index):
-        raise JoineryError(
-            f"manifest entry '{key}' records train_seed {entry['train_seed']}, but the seed "
-            f"plan says {train_seed_for(family, seed_index)}"
-        )
-    return _REPO_ROOT / entry["checkpoint"], str(entry["checkpoint_hash"])
+    return _manifest_entry(
+        campaign2_seed_checkpoint_manifest_path(),
+        f"{family}:{seed_index}",
+        train_seed_for(family, seed_index),
+    )
 
 
-def _build_sampler(family: str, seed_index: int):
+def _build_sampler(family: str, seed_index: int, *, campaign2: bool = False):
     """Load and hash-verify one family's checkpoint at one seed index.
 
     ``har-masked`` loads through the FLOW module (the architecture is D's) but
-    resolves its checkpoint under its own manifest keys.
+    resolves its checkpoint under its own manifest keys. ``campaign2=True`` is
+    the explicit v1-replay route (see :func:`_checkpoint_for`).
     """
-    path, expected = _checkpoint_for(family, seed_index)
+    path, expected = _checkpoint_for(family, seed_index, campaign2=campaign2)
     if family == SYSTEM_F_ID:
         family = "flow"
     module = _family_module(family)
@@ -525,6 +565,27 @@ def build(system_id: str, *, seed_index: int = 0):
         system.checkpoint_hash = meta["checkpoint_hash"]
         system.config_hash = meta.get("config_hash")
         return system
+    if system_id == SYSTEM_D_V2_ID:
+        # The campaign-3 D: hier-flow-v1's composition verbatim under the v2
+        # id, weights from the campaign-3 manifest (every index).
+        from ah.gen.blocks.flow import HierFlowV1
+
+        sampler, source, meta = _build_sampler("flow", seed_index)
+        climate, regimes = _pinned_layers()
+
+        class _HierFlowV2(HierFlowV1):
+            generator_id = SYSTEM_D_V2_ID
+            system_description = (
+                "L1+L2+L3(flow)+L4 retrained on the extended campaign-3 panel "
+                "(the sealed campaign-2 selection, never re-searched)"
+            )
+
+        _HierFlowV2.__name__ = "HierFlowV2"
+        _HierFlowV2.__qualname__ = _HierFlowV2.__name__
+        system = _HierFlowV2(climate, regimes, source, sampler)
+        system.checkpoint_hash = meta["checkpoint_hash"]
+        system.config_hash = meta.get("config_hash")
+        return system
     for letter in ("B", "C"):
         for family in ("diffusion", "flow"):
             builder = neural_rollout_id if letter == "B" else neural_only_id
@@ -542,9 +603,11 @@ def build(system_id: str, *, seed_index: int = 0):
         module = _family_module(family)
         if system_id != module.GENERATOR_ID:
             continue
+        # The v1 ids are CAMPAIGN-2 replay surfaces: explicit campaign-2
+        # checkpoint resolution, never the live (campaign-3) manifest.
         if seed_index == 0:
             return registry.resolve(system_id)
-        sampler, source, meta = _build_sampler(family, seed_index)
+        sampler, source, meta = _build_sampler(family, seed_index, campaign2=True)
         climate, regimes = _pinned_layers()
         cls = module.HierDiffusionV1 if family == "diffusion" else module.HierFlowV1
         system = cls(climate, regimes, source, sampler)
@@ -644,18 +707,15 @@ SYSTEMS: tuple[AblationSystem, ...] = (
         neural=True,
         family=_C_FAMILY,
     ),
+    # Campaign-3 (AM-2026-08-10-001): ONE trained sampler, hier-flow-v2 --
+    # hier-diffusion does not race (the sealed ablation_systems.D note: the
+    # flow family was the promoted line; a diffusion retrain spends the K4
+    # budget without a decision it would change). The campaign-2 table carried
+    # both v1 arms here; the v1 ids remain buildable as replay surfaces.
     AblationSystem(
         letter="D",
-        system_id="hier-diffusion-v1",
-        composition="L1 + L2 + L3(diffusion) + L4 (the proposed system, 3a arm)",
-        question="The proposed system",
-        neural=True,
-        family="diffusion",
-    ),
-    AblationSystem(
-        letter="D",
-        system_id="hier-flow-v1",
-        composition="L1 + L2 + L3(flow) + L4 (the proposed system, 3b arm)",
+        system_id=SYSTEM_D_V2_ID,
+        composition="L1 + L2 + L3(flow) + L4, retrained on the extended panel",
         question="The proposed system",
         neural=True,
         family="flow",

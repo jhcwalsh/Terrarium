@@ -159,7 +159,8 @@ def test_the_plan_covers_every_system_at_every_seed_index() -> None:
     for row in systems.SYSTEMS:
         indices = sorted(c.seed_index for c in cells if c.system_id == row.system_id)
         assert indices == [s.index for s in systems.SEED_PLAN]
-    assert {c.letter for c in cells} == {"A", "B", "C", "D", "E"}
+    # Campaign-3 (AM-2026-08-10-001): the sealed six-letter grid, F included.
+    assert {c.letter for c in cells} == {"A", "B", "C", "D", "E", "F"}
 
 
 def test_every_cell_id_and_slug_is_unique() -> None:
@@ -186,13 +187,15 @@ def test_every_cell_at_one_seed_index_shares_the_sampling_seed() -> None:
 
 
 def test_the_plan_is_ordered_cheapest_first() -> None:
+    """Campaign-3: hier-diffusion left the grid (does not race), so the cost
+    ordering the campaign-2 assertion pinned -- diffusion strictly last, 4.6x
+    the flow arm -- no longer has a subject. What remains checkable is that
+    the deterministic systems run before every trained flow cell."""
     cells = grid.plan_cells()
     order = [c.system_id for c in cells]
-    assert order.index("bootstrap-v1") < order.index("hier-diffusion-v1")
-    assert order.index(systems.SYSTEM_A_ID) < order.index("hier-diffusion-v1")
-    assert order.index("hier-flow-v1") < order.index("hier-diffusion-v1")
-    # the most expensive family is strictly last
-    assert order[-len(systems.SEED_PLAN) :] == ["hier-diffusion-v1"] * len(systems.SEED_PLAN)
+    for cheap in ("bootstrap-v1", systems.SYSTEM_A_ID):
+        for trained in (systems.SYSTEM_D_V2_ID, systems.SYSTEM_F_ID):
+            assert order.index(cheap) < order.index(trained)
 
 
 def test_the_driver_defaults_to_the_sealed_criterion_size() -> None:

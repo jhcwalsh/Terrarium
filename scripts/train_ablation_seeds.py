@@ -51,11 +51,16 @@ FAMILIES = {
         "space": _REPO_ROOT / "configs" / "wp28-diffusion-search-v1.yaml",
         "exp_prefix": "l3a-diffusion-final",
     },
+    # Campaign-3: the flow family trains hier-flow-v2 -- the sealed campaign-2
+    # SELECTION verbatim on the extended panel. Manifest keys are
+    # "hier-flow-v2:<k>" in the campaign-3 manifest; the wp210 manifest and
+    # the l3b-flow-final/campaign2-flow-* experiment dirs are frozen history.
     "flow": {
         "config_cls": FlowConfig,
         "tuning_exp": "l3b-flow-tuning-v1",
         "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
-        "exp_prefix": "l3b-flow-final",
+        "exp_prefix": "c3-flow-final",
+        "manifest_key": "hier-flow-v2",
     },
     # System F (ruling K3, AM-2026-08-10-001): the flow family's SELECTED config,
     # space and seeds VERBATIM -- the sealed clause is "identical architecture,
@@ -65,9 +70,15 @@ FAMILIES = {
         "config_cls": FlowConfig,
         "tuning_exp": "l3b-flow-tuning-v1",
         "space": _REPO_ROOT / "configs" / "wp29-flow-search-v1.yaml",
-        "exp_prefix": "l3b-flow-harmasked",
+        "exp_prefix": "c3-flow-harmasked",
+        "manifest_key": "har-masked",
     },
 }
+
+#: hier-diffusion does not race at campaign-3 (the sealed ablation_systems.D
+#: note); its campaign-2 checkpoints and wp210 manifest entries are frozen
+#: history. Training it again requires a dated amendment first.
+CAMPAIGN3_FAMILIES = ("flow", "har-masked")
 
 
 def _dataset(catalog_root: Path, vintage: str, *, masked: bool = False):
@@ -104,9 +115,15 @@ def main() -> None:
     parser.add_argument("--vintage", default=CAMPAIGN_VINTAGE_ID)
     parser.add_argument("--device", default="cuda")
     parser.add_argument("--created-at", required=True)
-    parser.add_argument("--indices", type=int, nargs="+", default=[1, 2])
-    parser.add_argument("--families", nargs="+", default=["diffusion", "flow"])
+    parser.add_argument("--indices", type=int, nargs="+", default=[0, 1, 2])
+    parser.add_argument("--families", nargs="+", default=list(CAMPAIGN3_FAMILIES))
     args = parser.parse_args()
+    for family in args.families:
+        if family not in CAMPAIGN3_FAMILIES:
+            raise SystemExit(
+                f"family '{family}' does not race at campaign-3 (sealed ablation_systems.D "
+                "note); training it needs a dated amendment first"
+            )
 
     torch.use_deterministic_algorithms(True)
     manifest_path = systems.seed_checkpoint_manifest_path()
@@ -145,7 +162,7 @@ def main() -> None:
         )
 
         for index in args.indices:
-            key = f"{family}:{index}"
+            key = f"{spec['manifest_key']}:{index}"
             seed = systems.train_seed_for(family, index)
             exp_id = f"{spec['exp_prefix']}-s{index}"
             out = _REPO_ROOT / "experiments" / exp_id / "checkpoint.pt"
@@ -173,8 +190,7 @@ def main() -> None:
                 out,
                 extra_meta={
                     "generator_id": {
-                        "diffusion": "hier-diffusion-v1",
-                        "flow": "hier-flow-v1",
+                        "flow": "hier-flow-v2",
                         "har-masked": "har-masked",
                     }[family],
                     "vintage_id": args.vintage,

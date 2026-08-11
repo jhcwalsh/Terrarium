@@ -260,8 +260,10 @@ def test_the_system_table_covers_the_sealed_letters_a_through_f():
     now six and the assertion is updated to the new truth, not relaxed."""
     letters = {row.letter for row in systems.SYSTEMS}
     assert letters == {"A", "B", "C", "D", "E", "F"}
+    # Campaign-3: ONE trained D sampler, hier-flow-v2 (hier-diffusion does not
+    # race; the campaign-2 table carried both v1 arms).
     d_ids = [row.system_id for row in systems.SYSTEMS if row.letter == "D"]
-    assert d_ids == ["hier-diffusion-v1", "hier-flow-v1"]
+    assert d_ids == ["hier-flow-v2"]
     assert [row.system_id for row in systems.SYSTEMS if row.letter == "E"] == ["bootstrap-v1"]
     assert [row.system_id for row in systems.SYSTEMS if row.letter == "F"] == ["har-masked"]
 

@@ -69,7 +69,12 @@ N_RESAMPLES = 1000
 LEVEL = 0.9
 BLOCK_LENGTH = 120
 
-OUT_ROOT = _REPO_ROOT / "experiments" / "wp210"
+# CAMPAIGN-3 (AM-2026-08-10-001): the grid root moved. The wp210 root is the
+# CAMPAIGN-2 grid record, frozen; running the campaign-3 grid there would make
+# the checkpoint-resume logic silently SKIP every A/B/C/E cell (same cell ids,
+# campaign-2 summaries already on disk) -- the fourth instance of the
+# campaign-split trap (vintage id, factor set, checkpoint manifest, grid root).
+OUT_ROOT = _REPO_ROOT / "experiments" / "campaign3" / "grid"
 
 
 @dataclass(frozen=True)

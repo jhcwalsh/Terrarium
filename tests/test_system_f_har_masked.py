@@ -11,6 +11,8 @@ change (the architecture is sealed IDENTICAL).
 
 from __future__ import annotations
 
+from pathlib import Path
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -79,3 +81,52 @@ class TestSystemFRegistration:
         )
         with pytest.raises(JoineryError, match="manifest"):
             systems.build("har-masked", seed_index=0)
+
+
+class TestHierFlowV2:
+    """The campaign-3 D sampler (sealed ablation_systems.D: ONE sampler,
+    hier-flow-v2). hier-flow-v1 freezes as the campaign-2 replay surface; the
+    v2 id resolves ONLY through the campaign-3 manifest -- and so do the flow
+    checkpoints B/C compose at the live campaign, because a silent fallback to
+    the wp210 (campaign-2) manifest would evaluate campaign-3 cells on
+    campaign-2 weights."""
+
+    def test_v2_is_the_single_d_row(self):
+        d_rows = [r for r in systems.SYSTEMS if r.letter == "D"]
+        assert [r.system_id for r in d_rows] == [systems.SYSTEM_D_V2_ID]
+        assert systems.SYSTEM_D_V2_ID == "hier-flow-v2"
+        assert d_rows[0].family == "flow"
+
+    def test_v2_build_refuses_without_the_campaign3_manifest(self, tmp_path, monkeypatch):
+        monkeypatch.setattr(
+            systems, "seed_checkpoint_manifest_path", lambda: tmp_path / "absent.json"
+        )
+        with pytest.raises(JoineryError, match="manifest"):
+            systems.build("hier-flow-v2", seed_index=0)
+
+    def test_live_flow_resolution_never_falls_back_to_the_campaign2_manifest(
+        self, tmp_path, monkeypatch
+    ):
+        """B/C at the live campaign resolve v2 weights; an absent campaign-3
+        manifest is a refusal even though the wp210 manifest exists."""
+        monkeypatch.setattr(
+            systems, "seed_checkpoint_manifest_path", lambda: tmp_path / "absent.json"
+        )
+        with pytest.raises(JoineryError, match="manifest"):
+            systems.build(systems.neural_rollout_id("flow"), seed_index=1)
+
+    def test_the_campaign2_manifest_path_is_frozen_and_distinct(self):
+        live = systems.seed_checkpoint_manifest_path()
+        frozen = systems.campaign2_seed_checkpoint_manifest_path()
+        assert frozen.name == "wp210-seed-checkpoints.json"
+        assert live.name == "campaign3-seed-checkpoints.json"
+        assert live != frozen
+
+    def test_diffusion_still_resolves_the_campaign2_primary(self):
+        """hier-diffusion does not race at campaign-3; its replay surface keeps
+        resolving the campaign-2 pins exactly as before."""
+        path, expected = systems._checkpoint_for("diffusion", 0)
+        from ah.gen.blocks import diffusion as df
+
+        assert path == Path(df.DEFAULT_CHECKPOINT)
+        assert expected == df.PINNED_CHECKPOINT_SHA256

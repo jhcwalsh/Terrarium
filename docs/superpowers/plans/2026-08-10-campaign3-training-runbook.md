@@ -47,7 +47,14 @@ one trained sampler (hier-diffusion does not race).*
    silently. `hier-flow-v2` registers as its own id (subclassing the flow
    composition with `generator_id = "hier-flow-v2"`), config
    `cfg:5943f6cd2f6f1048` retrained, never re-searched; 3 training seeds =
-   flow's own. 12 neural cells total (B, C, D=v2, F × 3 seeds).
+   flow's own. WIRED (with F; traps 3+4 closed): B/C train NOTHING of their
+   own — they compose the same flow checkpoints as D — so campaign-3 trains
+   SIX checkpoints (v2 ×3, F ×3), evaluated across 12 neural cells; the grid
+   root moved to `experiments/campaign3/grid` (at the wp210 root the resume
+   logic would silently skip every A/B/C/E cell). Launch, after the pins
+   stage: `uv run python -u scripts/train_ablation_seeds.py --device cuda
+   --created-at <ts>`, then `uv run python -u scripts/run_ablation_grid.py
+   --block-batch 128 --sampler-device cuda`.
 6. **The battery grid** — `scripts/run_ablation_grid.py` pattern over the
    campaign-3 cells (~23 min/flow cell with the GPU sampler at campaign-2;
    re-measure and record). Reference computed once and reused.
