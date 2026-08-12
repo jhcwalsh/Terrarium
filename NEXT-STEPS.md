@@ -1,5 +1,17 @@
 # NEXT-STEPS.md — after the su-generated-worlds plan (2026-08-12)
 
+**Owner directives 2026-08-12** ("Put group play on the back burner for now.
+Ignore the old worlds. Do the housekeeping."): the cohort/multiplayer arc is
+BACK-BURNERED (no design work until the owner reopens it); the toy-engine
+realism family (ER-2/ER-5/ER-8-remainder/ER-9) is DEPRIORITIZED — the
+register entries stand as records, but no fix is scheduled while generated
+worlds are the product surface. Immediately superseded by **"Finish the
+single player game now"**: the game build (E1 commitment lever, E4 flinch
+review, drift twin, board_pack producer, realized-regime markers, generated
+programme walk) is the MAIN LINE; the governance housekeeping (gate-merge
+guard, citation checker, reference-parameter check) queues right behind it.
+ER-6 closed same day, unblocking E1.
+
 ## Where the last two days left us
 
 - **The su-generated-worlds plan (PD-2 phase 2) is COMPLETE** — merges
