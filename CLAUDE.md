@@ -186,12 +186,14 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   are faithful to their plans but not to an allocator's expectations. ER-1, ER-3, ER-4 and
   ER-7 (fat tails + the -99% limited-liability floor, closed in `toy-v0.5`) are closed;
   ER-2 (no meeting calendar / 25bp quantisation), ER-5 (crisis is a rectangular block;
-  pooled equity ACF well outside its drafted band), **ER-6 (~29% of every commitment is
-  never called; `rc_curve` is an ALB-A placeholder that was never fitted)**, ER-8
-  (toy-v0.5's typical months are milder; no shipped preset can trigger a forced
-  secondary) and ER-9 (t(6) tails print single months larger than whole historical
-  bear markets — a −86% equity month; the credibility console's tail bands now flag
-  this) are open. ER-5/ER-8/ER-9 are one family and best fixed together. Each entry says what a fix invalidates.
+  pooled equity ACF well outside its drafted band), ER-8 (typical months milder —
+  AMENDED: the ER-6 close-out revived forced secondaries on deflation_bust 6/20
+  seeds; other worlds still 0/20) and ER-9 (t(6) tails print single months larger
+  than whole historical bear markets; moot for GENERATED worlds — bounded by real
+  months) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
+  10 + expiry-at-lapse ledger; play alphas now `port-v2-cashflow`/`-gen`; the E1
+  commitment lever is unblocked). ER-5/ER-8/ER-9 remain one family for the toy
+  engine. Each entry says what a fix invalidates.
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 

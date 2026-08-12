@@ -31,7 +31,13 @@ class CohortError(ValueError):
 
 @dataclass(frozen=True)
 class CohortStep:
-    """One period's flows, as returned by :meth:`ClosedEndCohort.step`."""
+    """One period's flows, as returned by :meth:`ClosedEndCohort.step`.
+
+    ``expired_undrawn`` (ER-6 close-out, owner D1 option C): the residual
+    commitment cancelled at terminal lapse — a real LP event, ledgered
+    visibly instead of haunting the unfunded totals forever. Zero on every
+    non-terminal step.
+    """
 
     call: float
     distribution_income: float
@@ -39,6 +45,7 @@ class CohortStep:
     nav_growth: float
     fees_paid: float
     carry_crystallized: float
+    expired_undrawn: float = 0.0
 
     @property
     def distribution_total(self) -> float:
@@ -177,8 +184,14 @@ class ClosedEndCohort:
         life = self._contract.lifecycle.contractual_life_years
 
         terminal = self.age_years >= life and self.extension_status != "extended"
+        expired = 0.0
         if terminal:
             call = 0.0  # past end of life the commitment lapses: no further calls
+            # ER-6 (owner D1, option C): the residual commitment EXPIRES at
+            # lapse — cancelled and ledgered, exactly as an LP's undrawn
+            # commitment is released at fund term, never silently retained.
+            expired = self.unfunded
+            self.unfunded = 0.0
         else:
             rc_index = min(int(self.age_years), len(p.rc_curve) - 1)
             call_rate = min(1.0, p.rc_curve[rc_index] * f_call * years_per_period)
@@ -200,7 +213,7 @@ class ClosedEndCohort:
         self.unfunded -= call
         self.cumulative_distributions += dist
         self.age_years += years_per_period
-        self._last = CohortStep(call, income, capital, nav_growth, 0.0, 0.0)
+        self._last = CohortStep(call, income, capital, nav_growth, 0.0, 0.0, expired)
         self._check()
         return self._last
 

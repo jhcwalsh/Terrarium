@@ -113,7 +113,9 @@ class TestGeneratedSessions:
         sid = _play_through(client, rid, {23: "derisk"})
         outcome = client.get(f"/sessions/{sid}/outcome").json()
         assert outcome["decision_alpha_version"] == GEN_PLAY_ALPHA_VERSION
-        assert outcome["decision_alpha_version"] != "port-v1-cashflow"
+        from ah.play import PLAY_ALPHA_VERSION
+
+        assert outcome["decision_alpha_version"] != PLAY_ALPHA_VERSION
 
     def test_generated_book_marks_to_market(self, gen_service):
         client, _db, rid = gen_service

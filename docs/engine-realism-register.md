@@ -260,7 +260,25 @@ larger change, and is not what shipped here.
 
 ## ER-6 — A third of every commitment is never called
 
-**Status:** open
+**Status:** CLOSED 2026-08-12 (`er6-call-pacing` branch), owner decision D1
+"A plus C" (`docs/superpowers/plans/2026-08-12-er6-call-pacing-design.md`).
+The placeholder curve is superseded by a DECLARED curve —
+`[0.35, 0.40, 0.30, 0.25, 0.20, 0.15]`, class `declared`, landing ~90%
+called by year 10 (pinned in-band 85–95% by
+`test_called_fraction_lands_in_the_practitioner_band`) — and the residual at
+terminal lapse now EXPIRES visibly (`CohortStep.expired_undrawn`; the
+unfunded balance zeroes instead of haunting the totals). Both play-alpha
+stamps bumped to `port-v2-cashflow` / `port-v2-cashflow-gen`.
+
+**Close-out measurements, honestly stated:** `peak_unfunded_ratio` fell
+from 2.4–3.3 to ~0.96–1.29 across worlds — the pathology is gone, but the
+declared 0.25–0.75 band still flags because the RESIDUAL overhang belongs
+to the hold-course COMMITMENT PACE (18%/yr, the E1 lever's default) plus
+the denominator effect in crash decades; neither the band nor the pace was
+tuned to quiet it. And the ER-8 interplay paid out: faster calls revived
+the forced secondary on deflation_bust (6/20 seeds, 19 events, vs 0/20
+under the placeholder) — see ER-8's amendment.
+
 **Found:** 2026-08-05, the first run of the private-programme section of the
 credibility console (`ah credibility`) — the surface built specifically to
 look at the pacing model before the commitment lever is designed on top of
@@ -506,7 +524,15 @@ or earlier will no longer replay — which the QA console already surfaces on
 
 ## ER-8 — toy-v0.5's typical months are milder, and the forced-secondary mechanic is preset-unreachable
 
-**Status:** OPEN — a documented consequence of the ER-7 fix, not an oversight.
+**Status:** OPEN, AMENDED 2026-08-12 — partially closed by the ER-6
+close-out: the declared call curve's faster pace revived the forced
+secondary on **deflation_bust (6/20 seeds, 19 events, max 4 in one seed)**,
+near its pre-v0.5 behaviour (8/20 under v0.3), while stagflation,
+goldilocks, reflation_boom and the generated stagflation_1974 remain 0/20 —
+distress stays rare enough to mean something, and reachable again in the
+harshest playable world. The typical-months-milder half of this entry (the
+ER-7 trade) still stands, as does the ER-5 rectangular-crisis root for the
+worlds where the mechanic stays dormant.
 **Found:** 2026-08-06, by the v0.4 gate diagnosis; confirmed under v0.5.
 
 **What happens.** Variance-normalized Student-t keeps *declared* volatility

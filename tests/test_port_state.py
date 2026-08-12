@@ -98,6 +98,40 @@ class TestCohort:
                 cohort_id="x",
             )
 
+    def test_called_fraction_lands_in_the_practitioner_band(self):
+        """ER-6 close-out (owner D1: option A). A fresh commitment stepped
+        quarterly to year 10 at neutral linkage must pay in 85-95% of what
+        it committed — the practitioner band the placeholder curve missed by
+        ~20 points (70.75% called; ~29% silently never drawn)."""
+        fresh = ClosedEndCohort.new_commitment(
+            _doc("closed-end-cohort.example.json"),
+            committed=100.0,
+            vintage_year=2026,
+            cohort_id="er6-band",
+        )
+        for _ in range(40):
+            fresh.step(0.0, f_call=1.0, f_dist=1.0, years_per_period=0.25)
+        assert 85.0 <= fresh.paid_in <= 95.0, fresh.paid_in
+
+    def test_lapse_expires_residual_unfunded_with_a_ledger_line(self):
+        """ER-6 close-out (owner D1: option C). At terminal lapse the
+        residual commitment EXPIRES visibly: the step reports it and the
+        unfunded balance goes to zero, instead of haunting the totals
+        forever as a silent never-called tail."""
+        fresh = ClosedEndCohort.new_commitment(
+            _doc("closed-end-cohort.example.json"),
+            committed=100.0,
+            vintage_year=2026,
+            cohort_id="er6-expiry",
+        )
+        for _ in range(40):  # to age 10 = contractual life; all non-terminal
+            fresh.step(0.0, f_call=1.0, f_dist=1.0, years_per_period=0.25)
+        residual_before = fresh.unfunded
+        last = fresh.step(0.0, f_call=1.0, f_dist=1.0, years_per_period=0.25)  # terminal
+        assert last.expired_undrawn == pytest.approx(residual_before)
+        assert last.expired_undrawn > 0.0  # some tail exists even at the new curve
+        assert fresh.unfunded == 0.0
+
     def test_negative_linkage_refused(self, cohort):
         with pytest.raises(CohortError, match="non-negative"):
             cohort.step(0.01, f_call=-0.1)

@@ -78,7 +78,10 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 
 #: The product's own alpha identity. NOT ah.eval.decision_metrics's constant,
 #: which names Step 5's research definition and is sealed under G5.
-PLAY_ALPHA_VERSION = "port-v1-cashflow"
+# port-v2: the ER-6 close-out (declared call curve + expiry-at-lapse) changed
+# every book's numbers — leaderboards restart under the new stamp; old rows
+# remain readable under port-v1-cashflow.
+PLAY_ALPHA_VERSION = "port-v2-cashflow"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
 PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
