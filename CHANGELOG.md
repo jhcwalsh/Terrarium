@@ -13,6 +13,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
 ### Added
+
+- **Credibility console: declared tail bands (register ER-9)** — every
+  `PLAUSIBLE` band now declares a worst-single-month floor and a
+  worst-path-drawdown ceiling per asset, anchored to recorded history
+  (equity month −30 / Sept 1931, drawdown 90 / 1929-32), and the asset table
+  shows a `worst month %` column and the declared tail. Found by the owner
+  asking how a 96% equity / 100% PE worst drawdown on the stagflation preset
+  is justified: it is a single −86.3% equity month (t(6) tail artifact) and
+  the −99 limited-liability floor binding — now register **ER-9** (open,
+  sibling of ER-5/ER-8, same family; fix is a release event). The ER-1 HY
+  test scopes its no-flags assertion to non-tail flags while ER-9 is open —
+  the console also catches a −25.8% HY month, beyond October 2008.
 - **CAMPAIGN-3 VERDICT: SHIP-BENCHMARK; the K3 demotion FIRES; the severe
   test passed by BOTH sides on its first posing.** The sealed four-clause
   rule, computed from committed artifacts by `scripts/campaign3_promotion.py`

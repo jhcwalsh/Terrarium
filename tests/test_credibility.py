@@ -70,10 +70,16 @@ class TestAssetStats:
         current spread as carry with no loss offset, it printed 18.7%/yr on
         12.1% vol, a decade Sharpe of 1.54, and this asserted the flag fired.
         toy-v0.3 charges the defaults the spread is pricing, so the assertion
-        inverts. If a future change reintroduces free carry, this fails."""
+        inverts. If a future change reintroduces free carry, this fails.
+
+        ER-9's tail flags are excluded from the no-flags assertion: the t(6)
+        tails print a -26% HY month on this ensemble, which is ER-9's open
+        finding, not ER-1's closed one. When ER-9 closes in the engine, the
+        exclusion becomes vacuous rather than wrong."""
         hy = next(s for s in asset_stats(ensemble) if s.asset == "hy")
         assert hy.ann_median / hy.vol <= MAX_PLAUSIBLE_SHARPE, hy
-        assert not hy.flags, hy.flags
+        non_tail = [f for f in hy.flags if "worst month" not in f and "drawdown" not in f]
+        assert not non_tail, non_tail
 
     def test_a_flag_names_the_number_and_the_declared_edge(self):
         """Flag TEXT must carry the number and the edge it crossed. Checked
@@ -99,6 +105,59 @@ class TestAssetStats:
         for band in PLAUSIBLE.values():
             assert band.ret_lo < band.ret_hi
             assert 0.0 <= band.vol_lo < band.vol_hi
+
+
+class TestTailBands:
+    """Register ER-9: tail statistics need declared edges too.
+
+    Motivated by the 2026-08-11 stagflation review: the console showed a 96%
+    worst-path equity drawdown driven by a single -86% month (the whole of
+    1929-32 compressed into one month) and a 100% worst PE drawdown (the -99
+    limited-liability floor binding), and no band existed to flag either -
+    the owner had to squint at a cell. These bands make that a flag.
+    """
+
+    def test_bands_declare_tail_edges_for_every_asset(self):
+        for band in PLAUSIBLE.values():
+            assert -100.0 < band.month_lo < 0.0
+            assert 0.0 < band.dd_hi < 100.0
+
+    def test_a_catastrophic_month_and_its_drawdown_are_flagged(self):
+        """A -95% equity month breaches any defensible monthly floor, and the
+        drawdown it leaves breaches the path-drawdown ceiling; both must flag,
+        and quiet assets must stay quiet on both tail checks."""
+        from ah.core.engine import EnsembleResult
+
+        months = 24
+        flat = np.full((2, months), 0.5)
+        eq = flat.copy()
+        eq[0, 12] = -95.0
+        returns = {a: flat for a in ASSETS}
+        returns["equity"] = eq
+        ens = EnsembleResult(
+            months=months,
+            n_paths=2,
+            seeds=[SEED, SEED + 7919],
+            returns=returns,
+            reported={},
+        )
+        stats = {s.asset: s for s in asset_stats(ens)}
+        eq_flags = stats["equity"].flags
+        assert any("worst month" in f for f in eq_flags), eq_flags
+        assert any("drawdown" in f for f in eq_flags), eq_flags
+        for f in eq_flags:
+            assert "%" in f or "return/vol" in f
+        for asset, s in stats.items():
+            if asset == "equity":
+                continue
+            tail = [f for f in s.flags if "worst month" in f or "drawdown" in f]
+            assert not tail, (asset, tail)
+
+    def test_page_shows_the_tail_columns(self):
+        rep = build_report(_world(8), base_seed=SEED, n_paths=12)
+        page = render_credibility_page([rep])
+        assert "worst month %" in page
+        assert "declared tail" in page
 
 
 class TestFactorStats:
@@ -173,7 +232,7 @@ class TestReportAndPage:
             n_paths=rep.n_paths,
             base_seed=rep.base_seed,
             assets=[
-                type(a)(a.asset, a.ann_p5, a.ann_median, a.ann_p95, a.vol, 0.0, ())
+                type(a)(a.asset, a.ann_p5, a.ann_median, a.ann_p95, a.vol, 0.0, 0.0, ())
                 for a in rep.assets
             ],
             factors=[type(f)(f.name, f.start, f.end, f.mean, f.lo, f.hi, ()) for f in rep.factors],

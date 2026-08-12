@@ -51,27 +51,38 @@ __all__ = [
 
 @dataclass(frozen=True)
 class Band:
-    """A declared plausible range for a decade-long annualized statistic."""
+    """A declared plausible range for a decade-long annualized statistic.
+
+    ``month_lo`` and ``dd_hi`` (register ER-9) bound the tails: the worst
+    single month any path may print and the deepest peak-to-trough fall any
+    path may take. The defaults are inert so an ad-hoc band without a tail
+    view flags nothing it did not declare.
+    """
 
     ret_lo: float
     ret_hi: float
     vol_lo: float
     vol_hi: float
     note: str
+    month_lo: float = -100.0
+    dd_hi: float = 100.0
 
 
 # One allocator's priors, in annualized percent, for a TEN-YEAR holding period
 # in a stressed world. Deliberately wide: the job is to catch numbers that are
-# not arguable, not to enforce a house view.
+# not arguable, not to enforce a house view. Tail anchors: the worst recorded
+# US equity month is about -30 (September 1931) and the worst equity drawdown
+# about -89 (1929-32); a WORST path may approach history's worst, but a month
+# that outdoes the whole Depression is not an extreme outcome, it is ER-9.
 PLAUSIBLE: dict[str, Band] = {
-    "equity": Band(-8.0, 14.0, 12.0, 28.0, "public equity, stressed decade"),
-    "bonds": Band(-2.0, 9.0, 3.0, 12.0, "duration; rising rates can dominate"),
-    "hy": Band(0.0, 11.0, 6.0, 18.0, "carry NET of defaults, not gross spread"),
-    "commodities": Band(-6.0, 16.0, 12.0, 28.0, "wide by nature"),
-    "reits": Band(-8.0, 12.0, 12.0, 26.0, "levered real assets"),
-    "pe": Band(-10.0, 16.0, 15.0, 32.0, "true marks, not appraisals"),
-    "pc": Band(2.0, 11.0, 3.0, 12.0, "carry net of losses"),
-    "re": Band(-6.0, 11.0, 6.0, 18.0, "direct property, true marks"),
+    "equity": Band(-8.0, 14.0, 12.0, 28.0, "public equity, stressed decade", -30.0, 90.0),
+    "bonds": Band(-2.0, 9.0, 3.0, 12.0, "duration; rising rates can dominate", -12.0, 45.0),
+    "hy": Band(0.0, 11.0, 6.0, 18.0, "carry NET of defaults, not gross spread", -20.0, 60.0),
+    "commodities": Band(-6.0, 16.0, 12.0, 28.0, "wide by nature", -35.0, 85.0),
+    "reits": Band(-8.0, 12.0, 12.0, 26.0, "levered real assets", -35.0, 80.0),
+    "pe": Band(-10.0, 16.0, 15.0, 32.0, "true marks, not appraisals", -40.0, 90.0),
+    "pc": Band(2.0, 11.0, 3.0, 12.0, "carry net of losses", -20.0, 55.0),
+    "re": Band(-6.0, 11.0, 6.0, 18.0, "direct property, true marks", -25.0, 65.0),
 }
 
 # A decade Sharpe above this needs an explanation, whatever the asset.
@@ -86,6 +97,7 @@ class AssetStats:
     ann_p95: float
     vol: float
     worst_drawdown: float
+    worst_month: float
     flags: tuple[str, ...]
 
 
@@ -184,6 +196,8 @@ def asset_stats(ens: EnsembleResult) -> list[AssetStats]:
         ann = _annualized(r, ens.months) * 100.0
         p5, med, p95 = (float(v) for v in np.percentile(ann, [5, 50, 95]))
         vol = float(np.std(r, ddof=1)) * math.sqrt(12.0)
+        worst_dd = _worst_drawdown(r) * 100.0
+        worst_month = float(r.min())
         flags: list[str] = []
         band = PLAUSIBLE.get(a)
         if band is not None:
@@ -195,6 +209,16 @@ def asset_stats(ens: EnsembleResult) -> list[AssetStats]:
                 flags.append(f"vol {vol:.1f}%/yr below the declared floor {band.vol_lo:.1f}%")
             if vol > band.vol_hi:
                 flags.append(f"vol {vol:.1f}%/yr above the declared ceiling {band.vol_hi:.1f}%")
+            if worst_month < band.month_lo:
+                flags.append(
+                    f"worst month {worst_month:.1f}% breaches the declared "
+                    f"monthly floor {band.month_lo:.1f}%"
+                )
+            if worst_dd > band.dd_hi:
+                flags.append(
+                    f"worst path drawdown {worst_dd:.1f}% beyond the declared "
+                    f"ceiling {band.dd_hi:.1f}%"
+                )
         if vol > 0 and med / vol > MAX_PLAUSIBLE_SHARPE:
             flags.append(f"return/vol {med / vol:.2f} - a decade Sharpe above 1.0 needs a reason")
         out.append(
@@ -204,7 +228,8 @@ def asset_stats(ens: EnsembleResult) -> list[AssetStats]:
                 ann_median=med,
                 ann_p95=p95,
                 vol=vol,
-                worst_drawdown=_worst_drawdown(r) * 100.0,
+                worst_drawdown=worst_dd,
+                worst_month=worst_month,
                 flags=tuple(flags),
             )
         )
@@ -363,18 +388,21 @@ def _asset_table(rep: WorldReport) -> str:
         flags = "".join(f'<p class="flag">{_e(f)}</p>' for f in a.flags)
         ret_band = f"{band.ret_lo:+.0f}..{band.ret_hi:+.0f}" if band else ""
         vol_band = f"{band.vol_lo:.0f}..{band.vol_hi:.0f}" if band else ""
+        tail_band = f"mo {band.month_lo:+.0f} / dd {band.dd_hi:.0f}" if band else ""
         rows.append(
             f"<tr{cls}><td>{_e(a.asset)}{flags}</td>"
             f"<td>{a.ann_median:+.1f}</td><td>{a.ann_p5:+.1f}</td><td>{a.ann_p95:+.1f}</td>"
             f"<td>{a.vol:.1f}</td><td>{a.worst_drawdown:.0f}</td>"
+            f"<td>{a.worst_month:+.1f}</td>"
             f'<td class="note">{_e(ret_band)}</td>'
             f'<td class="note">{_e(vol_band)}</td>'
+            f'<td class="note">{_e(tail_band)}</td>'
             f'<td class="note">{_e(band.note) if band else ""}</td></tr>'
         )
     return (
         "<table><thead><tr><th>asset</th><th>median %/yr</th><th>p5</th><th>p95</th>"
-        "<th>vol %/yr</th><th>worst DD %</th><th>declared return</th>"
-        "<th>declared vol</th><th>prior</th></tr></thead><tbody>"
+        "<th>vol %/yr</th><th>worst DD %</th><th>worst month %</th><th>declared return</th>"
+        "<th>declared vol</th><th>declared tail</th><th>prior</th></tr></thead><tbody>"
         + "".join(rows)
         + "</tbody></table>"
     )
