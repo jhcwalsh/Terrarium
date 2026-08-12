@@ -14,6 +14,17 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **sp-04: the loose ends.** The `board_pack` finally has a producer — one
+  per decision window, assembled at build from the quarter's own numbers
+  and the wire (all five sections; the consultant section states process,
+  never a trade — the E5 rule, pinned); the app's feed renders its titled
+  sections. Generated bundles carry the REALIZED regime path as episode
+  markers (what the sampler drew, quarter by quarter, merged into segments)
+  instead of the authored wish. `build_programme_report` dispatches
+  generated worlds through the adapter — the console's "pending" note
+  retires and the CLI walks every world's programme again. Fixtures
+  regenerated.
+
 - **sp-03: the E4 annotations — the flinch cost and the arithmetic
   warning.** `ah/annotations.py`, computed from the session record alone at
   outcome time (no new state, per the register): a commitment cut is priced

@@ -193,6 +193,16 @@ class TestSizeAndCli:
         assert cred["verdict"] == "SHIP-BENCHMARK"
         assert cred["generator_id"] == "bootstrap-v1"
         assert "severe" in cred
+        # sp-04: episodes are the REALIZED regime path, not the authored wish
+        episodes = doc["summary"]["episodes"]
+        assert episodes
+        names = {"expansion", "recession", "reflation", "slowdown", "crisis", "stagflation"}
+        horizon_q = doc["meta"]["months"] // 3
+        for seg in episodes:
+            assert seg["regime"] in names
+            assert 0 <= seg["from_quarter"] <= seg["to_quarter"] < horizon_q
+        assert episodes[0]["from_quarter"] == 0
+        assert episodes[-1]["to_quarter"] == horizon_q - 1
         # the new sections carry their own integrity digest
         assert doc["meta"]["sections_seal"].startswith("sha256:")
 

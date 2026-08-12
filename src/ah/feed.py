@@ -39,6 +39,7 @@ from typing import Any
 import numpy as np
 
 from ah.artifacts.templates import (
+    board_pack,
     central_bank_statement,
     morning_digest,
     newspaper_front_page,
@@ -46,7 +47,7 @@ from ah.artifacts.templates import (
     release_page,
 )
 from ah.core.engine import EnginePaths, run_path
-from ah.core.institution import simulate_institution
+from ah.core.institution import decision_months, simulate_institution
 from ah.core.numericworld import NumericWorld
 
 __all__ = ["build_tier1_feed"]
@@ -285,6 +286,59 @@ def build_tier1_feed(
                     total_value=float(twin.total[m]),
                     net_flow=0.0,
                     peer_bands={f"p{q}": float(v) for q, v in zip(_QUANTS, qs, strict=True)},
+                ),
+            }
+        )
+
+    # sp-04: the board pack — one per decision window, assembled at build
+    # from the quarter's own numbers and the wire above (PD-4). The
+    # consultant section states process, never a trade (the E5 rule).
+    def _headline(it: dict[str, Any]) -> str | None:
+        p = it["payload"]
+        if p.get("lines"):
+            return str(p["lines"][0])
+        if p.get("headline"):
+            return str(p["headline"])
+        rows = p.get("rows")
+        if rows:
+            return f"{rows[0]['series']} {rows[0]['value']}"
+        return None
+
+    order = list(paths.asset_order)
+    for m in decision_months(nm):
+        if m >= nm:
+            continue
+        eq = np.asarray(paths.returns["equity"][max(0, m - 11) : m + 1]) / 100.0
+        trailing = float(np.prod(1.0 + eq) - 1.0)
+        weights = twin.weights[m]
+        recent = [
+            h
+            for it_month, h in ((i["month"], _headline(i)) for i in items)
+            if it_month <= m and h is not None
+        ][-6:]
+        items.append(
+            {
+                "month": m,
+                "type": "board_pack",
+                "payload": board_pack(
+                    world_id=wid,
+                    dateline=_dateline(m),
+                    performance=[
+                        f"Trailing 12-month public equity return: {trailing:+.1%}.",
+                        f"Hold-course book value: {float(twin.total[m]):.1f} against 100.0 at t0.",
+                    ],
+                    allocation=[f"{name}: {float(weights[i]):.1%}" for i, name in enumerate(order)],
+                    liquidity=[
+                        f"High-yield spread: {float(paths.spread[m]):.0f}bp.",
+                        f"Crisis months to date: {int(paths.crisis[: m + 1].sum())} of {m + 1}.",
+                    ],
+                    wire_digest=recent or ["A quiet stretch on the wire."],
+                    consultant_recommendation=[
+                        "Review coverage on both bases before deciding; the "
+                        "reported basis flatters exactly when values move.",
+                        "Holding to the pacing plan remains available as an "
+                        "explicit committed choice.",
+                    ],
                 ),
             }
         )

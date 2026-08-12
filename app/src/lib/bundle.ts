@@ -81,6 +81,8 @@ export interface FeedArtifact {
     lines?: string[];
     release_name?: string;
     rows?: { series: string; value: string; prior: string; revision: string }[];
+    /** sp-04: board packs carry titled sections */
+    sections?: { title: string; lines: string[] }[];
   };
 }
 

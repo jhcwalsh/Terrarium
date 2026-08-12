@@ -755,16 +755,28 @@ def build_programme_report(
     n_paths: int = PROGRAMME_PATHS,
     title: str | None = None,
 ) -> ProgrammeReport:
-    """Detail from path 0; statistics across the seed lineage."""
+    """Detail from path 0; statistics across the seed lineage.
+
+    Dispatches on the world's generator (sp-04): generated worlds walk the
+    programme exactly as toy ones, on the adapter tape with the generated
+    opening book — the console's pending note retires.
+    """
+    if world.engine_defaults.generator_id == "toy-v0":
+        path_fn, targets = run_path, None
+    else:
+        from ah.port.adapter import GEN_START_TARGETS, run_gen_path
+
+        path_fn, targets = run_gen_path, GEN_START_TARGETS
+
     per_path: list[dict[str, float]] = []
     path0_rows: list[ProgrammeQuarter] = []
     path0_result: PlayResult | None = None
     path0_stats: dict[str, float] = {}
 
     for k in range(max(1, n_paths)):
-        paths = run_path(world, base_seed + 7919 * k)
-        linked = simulate_play(paths)
-        unlinked = simulate_play(paths, linkage=False)
+        paths = path_fn(world, base_seed + 7919 * k)
+        linked = simulate_play(paths, start_targets=targets)
+        unlinked = simulate_play(paths, linkage=False, start_targets=targets)
         rows = programme_quarters(linked, unlinked)
         stats = path_stats(rows, linked)
         stats.update(

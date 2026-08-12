@@ -304,6 +304,26 @@ class TestConsoleV2:
         page = render_credibility_page([rep])
         assert "Gen" in page and 'class="fan"' in page
 
+    def test_programme_walks_a_generated_world(self):
+        """sp-04: the pending note retires — build_programme_report
+        dispatches to the adapter and the ladder renders."""
+        import ah.gen.bootstrap as bs
+        from ah.gen import registry
+        from ah.programme import build_programme_report
+        from conftest import make_synthetic_source_16
+
+        saved = registry.snapshot()
+        registry.register("bootstrap-v1", lambda: bs.BootstrapV1(make_synthetic_source_16()))
+        try:
+            doc: dict[str, Any] = copy.deepcopy(json.loads(PRESET.read_text(encoding="utf-8")))
+            doc["engine_defaults"]["generator_id"] = "bootstrap-v1"
+            world = project_numeric(WorldSpec.model_validate(doc))
+            rep = build_programme_report(world, base_seed=SEED, n_paths=3, title="GenProg")
+        finally:
+            registry.restore(saved)
+        assert rep.ladder  # years of commitments walked on the generated tape
+        assert rep.stats  # the declared-band table computed
+
 
 def test_console_cannot_reach_the_store_at_all():
     """It is an admin READ surface: looking at a world cannot change it.

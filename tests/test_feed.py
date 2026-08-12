@@ -36,6 +36,7 @@ class TestTier1Feed:
                 "quarterly_statement",
                 "wire_digest",
                 "newspaper",
+                "board_pack",  # sp-04: the pack finally has a producer
             }
 
     def test_calendar_cadence(self, feed_and_paths):
@@ -86,6 +87,27 @@ class TestTier1Feed:
         nw, paths, feed = feed_and_paths
         again = build_tier1_feed(nw, paths, base_seed=7, n_peer_paths=12)
         assert json.dumps(feed, sort_keys=True) == json.dumps(again, sort_keys=True)
+
+    def test_board_pack_lands_at_every_decision_window(self, feed_and_paths):
+        """sp-04: the board pack finally has a producer — one per decision
+        window, all five sections non-empty (the template refuses less), the
+        consultant section stating facts, never advice (the E5 rule)."""
+        from ah.artifacts.templates import BOARD_PACK_SECTIONS
+        from ah.core.institution import decision_months
+
+        _nw, paths, items = feed_and_paths
+        packs = [i for i in items if i["type"] == "board_pack"]
+        window_months = [m for m in decision_months(paths.months) if m < paths.months]
+        assert [p["month"] for p in packs] == window_months
+        for p in packs:
+            sections = p["payload"]["sections"]
+            assert len(sections) == len(BOARD_PACK_SECTIONS)
+            for s in sections:
+                assert s["lines"], s["title"]
+            consultant = next(s for s in sections if "Consultant" in s["title"])
+            joined = " ".join(consultant["lines"]).lower()
+            advice_words = ("recommend buying", "you should", "we advise", "sell now")
+            assert not any(w in joined for w in advice_words)
 
     def test_crisis_onset_lands_on_the_wire(self, feed_and_paths):
         """The stagflation preset declares a crisis window; its opening month
