@@ -280,9 +280,11 @@ class TestOutcome:
 
     def test_outcome_series_carry_three_slots(self, service):
         """E7 (DN-5 R-1): active + twin value series, one point per CLOSED
-        quarter (the twin's own cadence), with the drift twin's slot
-        EXPLICITLY null until its engine work lands — the arrival must be a
-        deliberate data change, not an interface change."""
+        quarter (the twin's own cadence). INVERTED at sp-01: this test
+        previously asserted ``drift_twin is None`` — the slot existed before
+        its data so the arrival would be a deliberate data change. The data
+        arrived (the fixed-schedule drift twin), so the assertion flips: the
+        third series is populated on the same cadence."""
         client, _db, rid = service
         sid = _play_through(client, rid, {11: "derisk"})
         out = client.get(f"/sessions/{sid}/outcome").json()
@@ -292,7 +294,8 @@ class TestOutcome:
         assert len(series["twin"]) == months // 3
         assert series["active"][-1] == pytest.approx(out["final_value"], abs=1e-3)
         assert series["twin"][-1] == pytest.approx(out["twin_final_value"], abs=1e-3)
-        assert series["drift_twin"] is None
+        assert len(series["drift_twin"]) == months // 3
+        assert all(isinstance(v, float) for v in series["drift_twin"])
 
     def test_ranked_completion_writes_the_board_once(self, service):
         client, db, rid = service

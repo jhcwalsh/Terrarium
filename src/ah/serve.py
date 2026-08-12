@@ -269,6 +269,12 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         decisions = {int(m): a for m, a in doc["decisions"].items()}
         active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
         twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
+        # sp-01: the DRIFT twin (DN-5's fixed nominal schedule) — E7's slot
+        # receives its data at last; the difference between these two series
+        # across a decade is the vintage-timing argument, drawn not argued.
+        drift = simulate_play(
+            paths, None, use_reported=use_reported, start_targets=targets, pacing_rule="fixed"
+        )
         attribution = window_contributions_play(
             paths, decisions, use_reported=use_reported, start_targets=targets
         )
@@ -316,7 +322,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                     round(float(q.nav_reported if use_reported else q.nav_true), 4)
                     for q in twin.quarters
                 ],
-                "drift_twin": None,
+                "drift_twin": [
+                    round(float(q.nav_reported if use_reported else q.nav_true), 4)
+                    for q in drift.quarters
+                ],
             },
             "windows": [
                 {"month": m, "action": a, "contribution": c}
