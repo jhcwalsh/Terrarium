@@ -141,15 +141,25 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   }, [advanceTo, session, nextWindow, months]);
 
   const commit = useCallback(
-    async (action: Action, timeOnWindowMs: number) => {
+    async (
+      action: Action,
+      timeOnWindowMs: number,
+      commitments: Record<string, number> | null = null,
+    ) => {
       if (!session || atWindow === null) return;
       setBusy(true);
       setError(null);
       try {
-        const updated = await decide(session.session_id, atWindow, action, {
-          time_on_window_ms: timeOnWindowMs,
-          ui_version: "su-app-02",
-        });
+        const updated = await decide(
+          session.session_id,
+          atWindow,
+          action,
+          {
+            time_on_window_ms: timeOnWindowMs,
+            ui_version: "su-app-02",
+          },
+          commitments,
+        );
         setSession(updated);
       } catch (e) {
         setError(e instanceof SessionApiError ? e.message : String(e));
@@ -452,6 +462,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               nextYear={nextYear}
               onCommit={commit}
               busy={busy}
+              planCommitments={session?.next_plan_commitments ?? null}
             />
           </section>
         </div>

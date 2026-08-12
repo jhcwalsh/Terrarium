@@ -149,6 +149,26 @@ class TestCommitmentLever:
         attribution = window_contributions_play(p, {})
         assert all(c == 0.0 for c in attribution.contributions)
 
+    def test_a_public_action_and_commitments_ride_together(self):
+        """sp-02: the kickoff says the four public actions PLUS the lever —
+        one window's decision can carry both, and both apply."""
+        p = _paths()
+        combined = simulate_play(
+            p,
+            {11: {"action": "derisk", "commitments": {a: 0.0 for a in PRIVATE_ASSETS}}},
+        )
+        q4 = next(q for q in combined.quarters if q.quarter == 4)
+        assert q4.new_commitments == 0.0  # the lever applied
+        commit_only = simulate_play(
+            p, {11: {"action": "commit", "commitments": {a: 0.0 for a in PRIVATE_ASSETS}}}
+        )
+        assert combined.final_value != commit_only.final_value  # the derisk applied too
+
+    def test_unknown_action_name_in_a_structured_decision_is_refused(self):
+        p = _paths()
+        with pytest.raises(ValueError, match="unknown"):
+            simulate_play(p, {11: {"action": "yolo", "commitments": {"pe": 1.0}}})
+
     def test_determinism(self):
         p = _paths()
         d = {11: self._commit({"pe": 1.0, "pc": 0.5, "re": 0.5}), 35: "leanin"}

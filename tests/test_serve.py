@@ -46,21 +46,21 @@ def service(tmp_path_factory):
     return client, db, run.stdout.strip()
 
 
-def _play_through(client, rid: str, actions: dict[int, str], **create_kwargs):
+def _play_through(client, rid: str, actions: dict[int, str], first_commitments=None, **create_kwargs):
     r = client.post("/sessions", json={"run_id": rid, **create_kwargs})
     assert r.status_code == 201, r.text
     sid = r.json()["session_id"]
     months = r.json()["months"]
-    for m in decision_months(months):
+    for i, m in enumerate(decision_months(months)):
         assert client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1}).status_code == 200
-        r = client.post(
-            f"/sessions/{sid}/decisions",
-            json={
-                "month": m,
-                "action": actions.get(m, "hold"),
-                "client_log": {"time_on_window_ms": 1000},
-            },
-        )
+        body = {
+            "month": m,
+            "action": actions.get(m, "hold"),
+            "client_log": {"time_on_window_ms": 1000},
+        }
+        if i == 0 and first_commitments is not None:
+            body["commitments"] = first_commitments
+        r = client.post(f"/sessions/{sid}/decisions", json=body)
         assert r.status_code == 200, r.text
     assert client.post(f"/sessions/{sid}/advance", json={"to_month": months}).status_code == 200
     assert client.post(f"/sessions/{sid}/complete").status_code == 200
@@ -126,6 +126,47 @@ class TestGeneratedSessions:
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["value"] is not None and doc["value"] > 0
         assert doc["twin_value"] is not None
+
+
+class TestCommitmentLeverAPI:
+    """sp-02: the lever reaches the session service — the server stays the
+    authority (it computes the flexed plan; the app renders and asks)."""
+
+    def test_session_exposes_the_next_plan_commitments(self, service):
+        client, _db, rid = service
+        r = client.post("/sessions", json={"run_id": rid})
+        sid = r.json()["session_id"]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": 12})
+        doc = client.get(f"/sessions/{sid}").json()
+        plan = doc["next_plan_commitments"]
+        assert set(plan) == {"pe", "pc", "re"}
+        assert all(v > 0 for v in plan.values())
+
+    def test_decide_accepts_commitments_and_scores_them(self, service):
+        client, _db, rid = service
+        sid = _play_through(
+            client,
+            rid,
+            {},
+            first_commitments={"pe": 0.0, "pc": 0.0, "re": 0.0},
+        )
+        out = client.get(f"/sessions/{sid}/outcome").json()
+        assert out["alpha"] != 0.0  # cutting to zero departs the plan
+        session = client.get(f"/sessions/{sid}").json()
+        first = session["window_log"][0]
+        assert first["commitments"] == {"pe": 0.0, "pc": 0.0, "re": 0.0}
+
+    def test_out_of_bounds_commitments_are_422(self, service):
+        client, _db, rid = service
+        r = client.post("/sessions", json={"run_id": rid})
+        sid = r.json()["session_id"]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": 12})
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": 11, "action": "hold", "commitments": {"pe": 99.0}},
+        )
+        assert r.status_code == 422
+        assert "commit" in r.json()["detail"]
 
 
 def test_request_survives_a_threadpool_thread_hop(service):

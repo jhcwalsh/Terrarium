@@ -14,6 +14,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **sp-02: the commitment lever in the player's hands (E1's decision
+  surface).** The decision window gains the lever: three per-sleeve inputs
+  pre-filled with the plan's next commitments — SERVER-computed at the
+  pointer (`next_plan_commitments` on the session, flexing with the
+  reported weight), so the app renders and asks and never invents a plan.
+  An untouched lever is holding to plan, silently; a touched one rides
+  along with ANY public action (`plus`, not `instead`) and is validated at
+  the door against the world's own targets (422, never a 500 in the
+  simulator). The store logs commitments verbatim in the window log
+  (DN-6 §8). Combined decisions apply both the trade and the lever —
+  pinned by test.
+
 - **sp-01: the pacing core — DN-5's twins and the commitment lever
   (server-side).** The POLICY twin now flexes annual commitments toward the
   t0 plan's private weight on reported marks (`g` linear, sensitivity 4.0,
