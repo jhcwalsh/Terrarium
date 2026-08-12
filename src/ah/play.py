@@ -78,10 +78,11 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 
 #: The product's own alpha identity. NOT ah.eval.decision_metrics's constant,
 #: which names Step 5's research definition and is sealed under G5.
-# port-v2: the ER-6 close-out (declared call curve + expiry-at-lapse) changed
-# every book's numbers — leaderboards restart under the new stamp; old rows
-# remain readable under port-v1-cashflow.
-PLAY_ALPHA_VERSION = "port-v2-cashflow"
+# port-v3: sp-01 replaced the twin's fixed pace with DN-5's ratified pacing
+# flex and added the commitment lever — the benchmark itself changed, so
+# alpha changes meaning. (port-v2 was the ER-6 close-out; port-v1 the first
+# cashflow twin. Leaderboards restart per stamp; old rows stay readable.)
+PLAY_ALPHA_VERSION = "port-v3-pacing"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
 PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
@@ -121,6 +122,44 @@ _SPREAD_REFERENCE_BPS = 400.0
 #: which sustains the weight against a ten-year life.
 _ANNUAL_COMMITMENT_RATE = 0.18
 _COMMITMENT_QUARTERS = 4  # commit once a year
+
+#: DN-5 §2.1 (sp-01): the POLICY twin flexes its pacing —
+#: ``target = base_pace * g(w_policy - w_reported)`` with ``g`` clipped to
+#: this band. Never zero (a twin that cuts to nothing reproduces 2009's
+#: most-criticised behaviour), never doubled. DN-5 leaves g's form open;
+#: DECLARED here: linear, ``1 + PACING_SENSITIVITY * gap`` — ten points
+#: overweight throttles commitments by 40%. The policy private weight is the
+#: t0 plan's own private share: the SAA expressed in commitment terms.
+PACING_BAND: tuple[float, float] = (0.5, 1.5)
+PACING_SENSITIVITY = 4.0
+
+#: The player's commitment lever (E1): a structured decision
+#: ``{"action": "commit", "commitments": {sleeve: points}}`` at a window
+#: overrides the NEXT commitment event's per-sleeve points. DECLARED bounds
+#: (recorded): 0 <= points <= COMMIT_CAP_MULTIPLE x the sleeve's plan pace.
+COMMIT_CAP_MULTIPLE = 2.0
+
+
+def _validate_commit_decisions(decisions: Mapping[int, Any], targets: Mapping[str, float]) -> None:
+    """Refuse malformed or out-of-bounds commit decisions loudly, up front."""
+    for month, action in decisions.items():
+        if isinstance(action, str):
+            continue
+        if not isinstance(action, Mapping) or action.get("action") != "commit":
+            raise ValueError(f"month {month}: unknown structured decision {action!r}")
+        pts = action.get("commitments")
+        if not isinstance(pts, Mapping):
+            raise ValueError(f"month {month}: commit decision needs a commitments map")
+        for asset, value in pts.items():
+            if asset not in PRIVATE_ASSETS:
+                raise ValueError(f"month {month}: commit names unknown sleeve '{asset}'")
+            cap = COMMIT_CAP_MULTIPLE * targets[asset] * _ANNUAL_COMMITMENT_RATE
+            if not 0.0 <= float(value) <= cap:
+                raise ValueError(
+                    f"month {month}: commit {asset}={value} outside [0, {cap:.4f}] "
+                    "(0..2x the sleeve's plan pace, the declared bound)"
+                )
+
 
 #: Decision mechanics, matched to the surface's four actions.
 _SHIFT_POINTS = 10.0
@@ -212,10 +251,11 @@ def _commit_new_vintage(
     base: dict[str, Any],
     asset: str,
     year: int,
-    targets: Mapping[str, float],
+    amount: float,
 ) -> None:
-    """Commit one year's new vintage into the ladder."""
-    amount = targets[asset] * _ANNUAL_COMMITMENT_RATE
+    """Commit one year's new vintage of ``amount`` into the ladder."""
+    if amount <= 0.0:
+        return  # a cut-to-zero year: no vintage, honestly nothing
     # a fresh fund carries none of the example's history: no performance to
     # date, no accrued carry, and a real vintage year rather than an offset
     fresh = json.loads(json.dumps(base))
@@ -318,12 +358,14 @@ def _secondary_sale(
 
 def simulate_play(
     paths: EnginePaths,
-    decisions: dict[int, str] | None = None,
+    decisions: Mapping[int, str | Mapping[str, Any]] | None = None,
     *,
     use_reported: bool = True,
     policy: Policy | None = None,
     linkage: bool = True,
     start_targets: Mapping[str, float] | None = None,
+    pacing_rule: str = "policy",
+    pacing_band: tuple[float, float] = PACING_BAND,
 ) -> PlayResult:
     """Run the institution over a tape, quarter by quarter, with consequences.
 
@@ -336,6 +378,8 @@ def simulate_play(
     It exists for the credibility console's counterfactual and is never used
     on the scored path.
     """
+    if pacing_rule not in ("policy", "fixed"):
+        raise ValueError(f"pacing_rule must be 'policy' or 'fixed', got {pacing_rule!r}")
     policy = policy or Policy()
     decisions = decisions or {}
     n_quarters = paths.months // 3
@@ -343,7 +387,10 @@ def simulate_play(
     # (generated worlds drop reits per OD-3); targets default to the toy book
     liquid = tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
+    _validate_commit_decisions(decisions, targets)
     portfolio, cohorts = _build_portfolio(policy, targets, liquid)
+    # DN-5 §2.1: the policy private weight is the t0 plan's own private share
+    w_policy = sum(targets[a] for a in PRIVATE_ASSETS) / (sum(targets.values()) + START_CASH)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
     ladders: dict[str, list[ClosedEndCohort]] = {a: [cohorts[a]] for a in PRIVATE_ASSETS}
@@ -380,12 +427,32 @@ def simulate_play(
         for asset in liquid:
             portfolio.liquid[asset].apply_return(float(q_returns[asset][q]))
 
-        # the pacing plan: a new vintage every year, in every private sleeve
+        # the pacing plan: a new vintage every year, in every private sleeve.
+        # DN-5 §2.1 (sp-01): under the POLICY rule the year's pace flexes
+        # toward the policy private weight on REPORTED marks (the books the
+        # committee actually sees), clipped to the band; the FIXED rule is
+        # the drift twin's nominal schedule. A player commit decision at the
+        # immediately preceding window overrides the per-sleeve points.
         committed_this_quarter = 0.0
         if q > 0 and q % _COMMITMENT_QUARTERS == 0:
+            if pacing_rule == "policy":
+                gap = w_policy - portfolio.private_weight_reported()
+                multiplier = min(
+                    pacing_band[1], max(pacing_band[0], 1.0 + PACING_SENSITIVITY * gap)
+                )
+            else:
+                multiplier = 1.0
+            override = decisions.get(q * 3 - 1)
+            override_pts = override.get("commitments") if isinstance(override, Mapping) else None
             for asset in PRIVATE_ASSETS:
-                _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4, targets)
-                committed_this_quarter += targets[asset] * _ANNUAL_COMMITMENT_RATE
+                plan_amount = targets[asset] * _ANNUAL_COMMITMENT_RATE * multiplier
+                amount = (
+                    float(override_pts[asset])
+                    if override_pts is not None and asset in override_pts
+                    else plan_amount
+                )
+                _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4, amount)
+                committed_this_quarter += amount
 
         calls = 0.0
         distributions = 0.0
@@ -450,7 +517,7 @@ def simulate_play(
 
 def play_alpha(
     paths: EnginePaths,
-    decisions: dict[int, str],
+    decisions: Mapping[int, str | Mapping[str, Any]],
     *,
     use_reported: bool = True,
     policy: Policy | None = None,
@@ -489,7 +556,7 @@ class PlayAttribution:
 
 def window_contributions_play(
     paths: EnginePaths,
-    decisions: dict[int, str],
+    decisions: Mapping[int, str | Mapping[str, Any]],
     *,
     use_reported: bool = True,
     policy: Policy | None = None,
@@ -509,7 +576,7 @@ def window_contributions_play(
 
     contributions: list[float] = []
     actions: list[str] = []
-    prefix: dict[int, str] = {}
+    prefix: dict[int, str | Mapping[str, Any]] = {}
     for month in months_list:
         action = decisions.get(month, "hold")
         prefix[month] = action
@@ -522,7 +589,9 @@ def window_contributions_play(
         )
         final = float(run.final_value)
         contributions.append(final - prev_final)
-        actions.append(action)
+        # the review line names the action; a structured commit renders as
+        # its action word, the payload lives in the decision log
+        actions.append(action if isinstance(action, str) else str(action.get("action")))
         prev_final = final
 
     return PlayAttribution(

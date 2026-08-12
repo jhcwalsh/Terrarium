@@ -14,6 +14,21 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **sp-01: the pacing core — DN-5's twins and the commitment lever
+  (server-side).** The POLICY twin now flexes annual commitments toward the
+  t0 plan's private weight on reported marks (`g` linear, sensitivity 4.0,
+  band 0.5–1.5 — declared parameters, recorded), per DN-5 §2.1's ratified
+  rule; the DRIFT twin (fixed nominal schedule) is computable and fills
+  E7's third outcome series (test inverted per its own docstring). The
+  player's per-sleeve annual commitment is a structured decision type
+  (`{"action": "commit", "commitments": {...}}`, bounds 0..2x plan pace,
+  validated loudly); committing the plan reproduces silence to the penny
+  ("hold to plan"). DN-5 §7 acceptance rows pinned: drift reduction,
+  pacing floor, telescoping with a commit decision, null player scores
+  exactly zero, determinism. Alpha stamps bump to `port-v3-pacing` /
+  `port-v3-pacing-gen` — the benchmark itself changed meaning. Fixtures
+  regenerated. Session-API and app surfaces for the lever are sp-02.
+
 - **ER-6 CLOSED: the call-pacing curve, declared (owner D1 "A plus C").**
   `rc_curve` is now `[0.35, 0.40, 0.30, 0.25, 0.20, 0.15]` — class
   `declared`, ~90% called by year 10, pinned in the 85–95% practitioner
