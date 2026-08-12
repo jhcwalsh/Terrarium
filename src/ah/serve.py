@@ -40,7 +40,9 @@ from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import (
     PLAY_ALPHA_VERSION,
+    plan_commitments,
     simulate_play,
+    validate_commitments,
     window_contributions_play,
 )
 from ah.store import sessions as session_store
@@ -82,6 +84,9 @@ class Advance(BaseModel):
 class Decide(BaseModel):
     month: int = Field(ge=0)
     action: str
+    # sp-02 (E1): per-sleeve commitment points riding along with the action;
+    # validated here against the world's own targets before storage.
+    commitments: dict[str, float] | None = None
     # DN-6 §8 client telemetry, verbatim passthrough (never used for scoring):
     # time_on_window_ms, basis_toggles, ui_version, ...
     client_log: dict[str, Any] = Field(default_factory=dict)
@@ -158,8 +163,6 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         ):
             doc[key] = None
         doc["forced_sales"] = []
-        if revealed < 3:  # nothing closes before the first quarter ends
-            return doc
         rec = get_run_record(conn, doc["run_id"])
         if rec is None:  # pragma: no cover - FK'd at creation
             return doc
@@ -167,6 +170,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         if world is None:  # pragma: no cover - FK'd at creation
             return doc
         ws = WorldSpec.model_validate(world)
+        # sp-02: the app's lever pre-fill is SERVER-computed — the plan the
+        # player would be holding to. Before any quarter closes it is the t0
+        # base pace; after, it flexes with the reported weight at the pointer.
+        base_targets = None
+        if ws.engine_defaults.generator_id != "toy-v0":
+            from ah.port.adapter import GEN_START_TARGETS
+
+            base_targets = GEN_START_TARGETS
+        doc["next_plan_commitments"] = {
+            k: round(v, 4)
+            for k, v in plan_commitments(0.0, base_targets, pacing_rule="fixed").items()
+        }
+        if revealed < 3:  # nothing closes before the first quarter ends
+            return doc
         nw = project_numeric(ws)
         paths, targets, _alpha = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
@@ -189,6 +206,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         doc["spending_paid"] = here.spending_paid
         doc["forced_sale_total"] = here.forced_sale_total
         doc["forced_sales"] = [e for e in active.sale_log if int(e["period"]) <= q + 1]
+        doc["next_plan_commitments"] = {
+            k: round(v, 4)
+            for k, v in plan_commitments(here.private_weight_reported, targets).items()
+        }
         return doc
 
     @app.get("/sessions/{sid}")
@@ -207,12 +228,35 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
 
     @app.post("/sessions/{sid}/decisions")
     def decide(sid: str, body: Decide, conn: sqlite3.Connection = Depends(db)):
-        _get(conn, sid)
+        doc = _get(conn, sid)
+        if body.commitments is not None:
+            # sp-02: the lever's bounds are checked HERE, against the world's
+            # own targets — a bad commit is a 422 at the door, never a 500
+            # inside the simulator.
+            rec = get_run_record(conn, doc["run_id"])
+            assert rec is not None  # FK'd at creation
+            world = get_world(conn, rec["world_id"])
+            assert world is not None
+            ws = WorldSpec.model_validate(world)
+            targets = None
+            if ws.engine_defaults.generator_id != "toy-v0":
+                from ah.port.adapter import GEN_START_TARGETS
+
+                targets = GEN_START_TARGETS
+            try:
+                validate_commitments(body.commitments, targets)
+            except ValueError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
         try:
             return _mark_to_market(
                 conn,
                 session_store.record_decision(
-                    conn, sid, month=body.month, action=body.action, client_log=body.client_log
+                    conn,
+                    sid,
+                    month=body.month,
+                    action=body.action,
+                    client_log=body.client_log,
+                    commitments=body.commitments,
                 ),
             )
         except session_store.SessionError as exc:

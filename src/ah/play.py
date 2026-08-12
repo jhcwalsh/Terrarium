@@ -140,12 +140,56 @@ PACING_SENSITIVITY = 4.0
 COMMIT_CAP_MULTIPLE = 2.0
 
 
+#: A structured decision may carry any public action (or plain "commit",
+#: which trades nothing) alongside its commitments — the kickoff's "four
+#: public actions PLUS the commitment lever" means plus, not instead.
+_KNOWN_ACTIONS = frozenset({"hold", "derisk", "leanin", "secondary", "commit"})
+
+
+def _action_name(action: str | Mapping[str, Any]) -> str:
+    return action if isinstance(action, str) else str(action.get("action"))
+
+
+def _policy_private_weight(targets: Mapping[str, float]) -> float:
+    """DN-5 §2.1: the policy private weight is the t0 plan's own share."""
+    return sum(targets[a] for a in PRIVATE_ASSETS) / (sum(targets.values()) + START_CASH)
+
+
+def _pacing_multiplier(
+    w_reported: float, targets: Mapping[str, float], band: tuple[float, float]
+) -> float:
+    gap = _policy_private_weight(targets) - w_reported
+    return min(band[1], max(band[0], 1.0 + PACING_SENSITIVITY * gap))
+
+
+def plan_commitments(
+    private_weight_reported: float,
+    targets: Mapping[str, float] | None = None,
+    *,
+    pacing_rule: str = "policy",
+    pacing_band: tuple[float, float] = PACING_BAND,
+) -> dict[str, float]:
+    """The plan's next per-sleeve commitment points at the given reported
+    weight — the server-computed pre-fill for the app's lever (sp-02)."""
+    t = dict(targets) if targets is not None else dict(START_TARGETS)
+    m = 1.0 if pacing_rule == "fixed" else _pacing_multiplier(private_weight_reported, t, pacing_band)
+    return {a: t[a] * _ANNUAL_COMMITMENT_RATE * m for a in PRIVATE_ASSETS}
+
+
+def validate_commitments(
+    commitments: Mapping[str, float], targets: Mapping[str, float] | None = None
+) -> None:
+    """The lever's declared bounds, as a public check for the service layer."""
+    t = dict(targets) if targets is not None else dict(START_TARGETS)
+    _validate_commit_decisions({-1: {"action": "hold", "commitments": dict(commitments)}}, t)
+
+
 def _validate_commit_decisions(decisions: Mapping[int, Any], targets: Mapping[str, float]) -> None:
     """Refuse malformed or out-of-bounds commit decisions loudly, up front."""
     for month, action in decisions.items():
         if isinstance(action, str):
             continue
-        if not isinstance(action, Mapping) or action.get("action") != "commit":
+        if not isinstance(action, Mapping) or action.get("action") not in _KNOWN_ACTIONS:
             raise ValueError(f"month {month}: unknown structured decision {action!r}")
         pts = action.get("commitments")
         if not isinstance(pts, Mapping):
@@ -184,6 +228,10 @@ class PlayQuarter:
     forced_sale_total: float
     private_weight_true: float
     unfunded_total: float
+    #: sp-02: the weight the COMMITTEE sees — the pacing flex reads this,
+    #: and the app's lever pre-fill is computed from it server-side.
+    private_weight_reported: float = 0.0
+    # (defaults from here down)
     #: The two CONTINUOUS market states tier 1's linkage consumes, and the
     #: multipliers they produced. Records only — computed here already, and
     #: discarded until the credibility console needed to show the mechanism.
@@ -389,8 +437,6 @@ def simulate_play(
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
     _validate_commit_decisions(decisions, targets)
     portfolio, cohorts = _build_portfolio(policy, targets, liquid)
-    # DN-5 §2.1: the policy private weight is the t0 plan's own private share
-    w_policy = sum(targets[a] for a in PRIVATE_ASSETS) / (sum(targets.values()) + START_CASH)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
     ladders: dict[str, list[ClosedEndCohort]] = {a: [cohorts[a]] for a in PRIVATE_ASSETS}
@@ -417,11 +463,12 @@ def simulate_play(
         # months, so quarter q acts on the decision taken at month q*3 - 1.
         for month, action in sorted(decisions.items()):
             if month == q * 3 - 1:
-                if action == "derisk":
+                name = _action_name(action)
+                if name == "derisk":
                     _rebalance(portfolio, _GROWTH, _DEFENSIVE, _SHIFT_POINTS)
-                elif action == "leanin":
+                elif name == "leanin":
                     _rebalance(portfolio, _DEFENSIVE, _GROWTH, _SHIFT_POINTS)
-                elif action == "secondary":
+                elif name == "secondary":
                     _secondary_sale(portfolio, {"pe_ladder": ladders["pe"]}, policy)
 
         for asset in liquid:
@@ -436,9 +483,8 @@ def simulate_play(
         committed_this_quarter = 0.0
         if q > 0 and q % _COMMITMENT_QUARTERS == 0:
             if pacing_rule == "policy":
-                gap = w_policy - portfolio.private_weight_reported()
-                multiplier = min(
-                    pacing_band[1], max(pacing_band[0], 1.0 + PACING_SENSITIVITY * gap)
+                multiplier = _pacing_multiplier(
+                    portfolio.private_weight_reported(), targets, pacing_band
                 )
             else:
                 multiplier = 1.0
@@ -492,6 +538,7 @@ def simulate_play(
                 spending_paid=report.spending_paid,
                 forced_sale_total=report.forced_sale_total,
                 private_weight_true=report.private_weight_true,
+                private_weight_reported=portfolio.private_weight_reported(),
                 unfunded_total=portfolio.total_unfunded(),
                 drawdown_depth=dd,
                 spread_ratio=sr,

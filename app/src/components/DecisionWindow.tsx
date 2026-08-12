@@ -48,6 +48,12 @@ const ACTION_COPY: Record<Action, { title: string; detail: string; k: string }> 
   },
 };
 
+const PRIVATE_SLEEVES: ReadonlyArray<readonly [string, string]> = [
+  ["pe", "Private equity"],
+  ["pc", "Private credit"],
+  ["re", "Real estate"],
+];
+
 interface DecisionWindowProps {
   /** true when the pointer is stopped at a window and a commit is required */
   open: boolean;
@@ -55,8 +61,15 @@ interface DecisionWindowProps {
   year: number;
   /** the year the next window opens, when this one is closed */
   nextYear?: number | null;
-  onCommit: (action: Action, timeOnWindowMs: number) => void;
+  onCommit: (
+    action: Action,
+    timeOnWindowMs: number,
+    commitments: Record<string, number> | null,
+  ) => void;
   busy?: boolean;
+  /** sp-02 (E1): the plan's next per-sleeve points, server-computed —
+   * the lever's pre-fill. Committing it unchanged IS holding to plan. */
+  planCommitments?: Record<string, number> | null;
 }
 
 export function DecisionWindow({
@@ -66,14 +79,19 @@ export function DecisionWindow({
   nextYear,
   onCommit,
   busy,
+  planCommitments,
 }: DecisionWindowProps) {
   const [selected, setSelected] = useState<Action | null>(null);
+  const [commitments, setCommitments] = useState<Record<string, number> | null>(null);
   const openedAt = useRef<number>(performance.now());
 
   useEffect(() => {
     openedAt.current = performance.now();
     setSelected(null);
+    setCommitments(null); // untouched lever => hold to the plan, silently
   }, [month, open]);
+
+  const effective = commitments ?? planCommitments ?? null;
 
   return (
     <section
@@ -126,6 +144,39 @@ export function DecisionWindow({
           );
         })}
       </div>
+      {open && planCommitments && (
+        <div className="commit-lever" aria-label="commitment lever">
+          <h3>Next year&apos;s commitments</h3>
+          <p className="lever-note">
+            The plan paces these automatically. Change them and the change is
+            yours — cuts starve distributions years out, raises call capital
+            you must fund.
+          </p>
+          {PRIVATE_SLEEVES.map(([key, label]) => (
+            <label key={key} className="lever-row">
+              <span>{label}</span>
+              <input
+                type="number"
+                min={0}
+                step={0.1}
+                value={(effective?.[key] ?? 0).toFixed(2)}
+                onChange={(e) =>
+                  setCommitments({
+                    ...(effective ?? {}),
+                    [key]: Math.max(0, Number(e.target.value)),
+                  })
+                }
+              />
+              <span className="lever-plan">plan {planCommitments[key]?.toFixed(2)}</span>
+            </label>
+          ))}
+          {commitments !== null && (
+            <button className="lever-reset" onClick={() => setCommitments(null)}>
+              back to plan
+            </button>
+          )}
+        </div>
+      )}
       {open && (
         <footer>
           <button
@@ -133,7 +184,11 @@ export function DecisionWindow({
             disabled={selected === null || busy}
             onClick={() => {
               if (selected !== null) {
-                onCommit(selected, Math.round(performance.now() - openedAt.current));
+                onCommit(
+                  selected,
+                  Math.round(performance.now() - openedAt.current),
+                  commitments,
+                );
               }
             }}
           >

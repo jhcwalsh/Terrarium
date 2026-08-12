@@ -37,6 +37,9 @@ export interface Session {
   spending_paid?: number | null;
   /** sum of every forced sale this quarter, across cause and kind */
   forced_sale_total?: number | null;
+  /** sp-02 (E1): the plan's next per-sleeve commitment points, SERVER-computed
+   * at the pointer — the lever's pre-fill; committing these IS holding to plan */
+  next_plan_commitments?: Record<string, number> | null;
   forced_sales?: {
     period: number;
     amount: number;
@@ -135,10 +138,16 @@ export function decide(
   month: number,
   action: Action,
   clientLog: ClientLog = {},
+  commitments: Record<string, number> | null = null,
 ): Promise<Session> {
   return request(`/sessions/${sid}/decisions`, {
     method: "POST",
-    body: JSON.stringify({ month, action, client_log: clientLog }),
+    body: JSON.stringify({
+      month,
+      action,
+      client_log: clientLog,
+      ...(commitments !== null ? { commitments } : {}),
+    }),
   });
 }
 

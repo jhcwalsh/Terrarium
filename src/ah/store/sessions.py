@@ -134,8 +134,13 @@ def record_decision(
     month: int,
     action: str,
     client_log: dict[str, Any] | None = None,
+    commitments: dict[str, float] | None = None,
 ) -> dict[str, Any]:
     """Record one decision at one window — validated, timestamped, final.
+
+    ``commitments`` (sp-02, the E1 lever): per-sleeve points riding along
+    with the public action; bounds are the SERVICE's job to check (it knows
+    the world's targets) — here they are stored and logged verbatim.
 
     The DN-6 §8 row: the client's self-reported fields (time_on_window_ms,
     basis_toggles) ride along verbatim; the server adds its own received-at
@@ -164,10 +169,13 @@ def record_decision(
         )
 
     decisions = dict(doc["decisions"])
-    decisions[str(month)] = action
+    decisions[str(month)] = (
+        action if commitments is None else {"action": action, "commitments": dict(commitments)}
+    )
     log_row = {
         "month": month,
         "action": action,
+        "commitments": dict(commitments) if commitments is not None else None,
         "server_received_at": _now(),
         "basis": doc["basis"],
         "ranked": doc["ranked"],
