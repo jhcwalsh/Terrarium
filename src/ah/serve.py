@@ -48,6 +48,22 @@ from ah.store.db import connect
 from ah.store.runrecords import get_run_record
 from ah.store.worlds import get_world
 
+
+def _resolve_engine(ws: WorldSpec, nw, seed: int):
+    """(paths, start_targets, alpha_version) for the world's generator.
+
+    su-gen-03: generated worlds route through the adapter with the generated
+    opening book, and their sessions score under a DISTINCT alpha version so
+    no leaderboard row can mix engines. Toy worlds are byte-identical to
+    before this dispatch existed.
+    """
+    if ws.engine_defaults.generator_id == "toy-v0":
+        return run_path(nw, seed), None, PLAY_ALPHA_VERSION
+    from ah.port.adapter import GEN_PLAY_ALPHA_VERSION, GEN_START_TARGETS, run_gen_path
+
+    return run_gen_path(nw, seed), GEN_START_TARGETS, GEN_PLAY_ALPHA_VERSION
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 
@@ -150,12 +166,13 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         world = get_world(conn, rec["world_id"])
         if world is None:  # pragma: no cover - FK'd at creation
             return doc
-        nw = project_numeric(WorldSpec.model_validate(world))
-        paths = run_path(nw, rec["seed"])
+        ws = WorldSpec.model_validate(world)
+        nw = project_numeric(ws)
+        paths, targets, _alpha = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported)
-        twin = simulate_play(paths, None, use_reported=use_reported)
+        active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
+        twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
         # only quarters that have CLOSED inside the revealed window
         q = min(revealed // 3, len(active.quarters)) - 1
         here, twin_here = active.quarters[q], twin.quarters[q]
@@ -245,16 +262,18 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         assert rec is not None  # FK'd at creation
         world = get_world(conn, rec["world_id"])
         assert world is not None
-        nw = project_numeric(WorldSpec.model_validate(world))
-        paths = run_path(nw, rec["seed"])
+        ws = WorldSpec.model_validate(world)
+        nw = project_numeric(ws)
+        paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported)
-        twin = simulate_play(paths, None, use_reported=use_reported)
-        attribution = window_contributions_play(paths, decisions, use_reported=use_reported)
+        active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
+        twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
+        attribution = window_contributions_play(
+            paths, decisions, use_reported=use_reported, start_targets=targets
+        )
 
         alpha = active.final_value - twin.final_value
-        alpha_version = PLAY_ALPHA_VERSION
 
         if doc["ranked"] and doc["participant"]:
             # One row per (world, seed, alpha-version, participant): a replayed

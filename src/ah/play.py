@@ -490,6 +490,7 @@ def window_contributions_play(
     *,
     use_reported: bool = True,
     policy: Policy | None = None,
+    start_targets: Mapping[str, float] | None = None,
 ) -> PlayAttribution:
     """K+1 runs for K windows — exact, no sampling.
 
@@ -498,7 +499,9 @@ def window_contributions_play(
     a partial decision map still decomposes correctly.
     """
     months_list = decision_months(paths.months)
-    twin = simulate_play(paths, None, use_reported=use_reported, policy=policy)
+    twin = simulate_play(
+        paths, None, use_reported=use_reported, policy=policy, start_targets=start_targets
+    )
     prev_final = float(twin.final_value)
 
     contributions: list[float] = []
@@ -507,7 +510,13 @@ def window_contributions_play(
     for month in months_list:
         action = decisions.get(month, "hold")
         prefix[month] = action
-        run = simulate_play(paths, dict(prefix), use_reported=use_reported, policy=policy)
+        run = simulate_play(
+            paths,
+            dict(prefix),
+            use_reported=use_reported,
+            policy=policy,
+            start_targets=start_targets,
+        )
         final = float(run.final_value)
         contributions.append(final - prev_final)
         actions.append(action)

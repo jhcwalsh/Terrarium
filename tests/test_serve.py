@@ -67,6 +67,65 @@ def _play_through(client, rid: str, actions: dict[int, str], **create_kwargs):
     return sid
 
 
+@pytest.fixture(scope="module")
+def gen_service(tmp_path_factory):
+    """A session service over the GENERATED 1974 world (su-gen-03), against
+    the synthetic bootstrap source — no vintage store, no network."""
+    import ah.gen.bootstrap as bs
+    from ah.gen import registry
+    from conftest import make_synthetic_source_16
+
+    saved = registry.snapshot()
+    registry.register("bootstrap-v1", lambda: bs.BootstrapV1(make_synthetic_source_16()))
+    tmp = tmp_path_factory.mktemp("gen-serve")
+    db = tmp / "ah.db"
+    try:
+        assert (
+            RUNNER.invoke(
+                cli_app, ["--db", str(db), "world", "build", "--preset", "stagflation_1974"]
+            ).exit_code
+            == 0
+        )
+        run = RUNNER.invoke(cli_app, ["--db", str(db), "run", "--paths", "8"])
+        assert run.exit_code == 0
+        client = TestClient(create_app(db))
+        yield client, db, run.stdout.strip().splitlines()[-1]
+    finally:
+        registry.restore(saved)
+
+
+class TestGeneratedSessions:
+    """su-gen-03: the server is the authority for generated worlds too."""
+
+    def test_generated_session_plays_end_to_end(self, gen_service):
+        client, _db, rid = gen_service
+        sid = _play_through(client, rid, {})
+        outcome = client.get(f"/sessions/{sid}/outcome").json()
+        assert outcome["alpha"] == pytest.approx(0.0, abs=1e-9)  # hold == twin
+        assert outcome["final_value"] > 0
+
+    def test_generated_outcome_carries_its_own_alpha_version(self, gen_service):
+        """Scores from generated worlds must never share a leaderboard row
+        with toy scores: a DISTINCT alpha version, not a bump (survey S3)."""
+        from ah.port.adapter import GEN_PLAY_ALPHA_VERSION
+
+        client, _db, rid = gen_service
+        sid = _play_through(client, rid, {23: "derisk"})
+        outcome = client.get(f"/sessions/{sid}/outcome").json()
+        assert outcome["decision_alpha_version"] == GEN_PLAY_ALPHA_VERSION
+        assert outcome["decision_alpha_version"] != "port-v1-cashflow"
+
+    def test_generated_book_marks_to_market(self, gen_service):
+        client, _db, rid = gen_service
+        r = client.post("/sessions", json={"run_id": rid})
+        assert r.status_code == 201, r.text
+        sid = r.json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["value"] is not None and doc["value"] > 0
+        assert doc["twin_value"] is not None
+
+
 def test_request_survives_a_threadpool_thread_hop(service):
     """Regression (found live, not by tests): FastAPI's threadpool can open
     the per-request connection on one worker thread and run the endpoint on

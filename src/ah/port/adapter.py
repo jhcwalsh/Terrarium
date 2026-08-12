@@ -102,6 +102,11 @@ GEN_START_TARGETS: dict[str, float] = {
     "re": 7.0,
 }
 
+# Scores from generated worlds carry their OWN alpha stamp — a distinct
+# value, not a bump of the toy one — so a leaderboard row can never mix
+# engines (survey S3; the world_id block separation is the second fence).
+GEN_PLAY_ALPHA_VERSION = "port-v1-cashflow-gen"
+
 GEN_START_MIX: dict[str, float] = {
     "equity": 0.35,
     "bonds": 0.10,

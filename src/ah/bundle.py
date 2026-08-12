@@ -42,7 +42,7 @@ import numpy as np
 
 from ah.artifacts.live import seal_tape
 from ah.core.digest import digest_ensemble
-from ah.core.engine import ASSETS, REPORTED_SLEEVES, EnginePaths, run_ensemble, run_path
+from ah.core.engine import REPORTED_SLEEVES, EnginePaths, run_ensemble, run_path
 from ah.core.institution import decision_months, hold_course_twin
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec

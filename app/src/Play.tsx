@@ -22,6 +22,7 @@ import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import { Leaderboard } from "./components/Leaderboard";
 import { PrivateMarkets } from "./components/PrivateMarkets";
+import Provenance from "./components/Provenance";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
 import type { PlayConfig } from "./RankedSetup";
@@ -436,6 +437,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               <span>{dateNow}</span>
             </div>
             <Feed artifacts={wire} revealedMonths={revealed} />
+            <Provenance bundle={bundle} />
           </section>
 
           <section className="decision-panel">

@@ -16,6 +16,7 @@ import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
 import { cacheGet, cacheList, cachePut } from "./lib/idb";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
+import Provenance from "./components/Provenance";
 import { ASSET_LABELS, Play } from "./Play";
 import { RankedSetup, type PlayConfig } from "./RankedSetup";
 
@@ -137,6 +138,7 @@ export default function App() {
             {bundle.meta.digest_verified ? "lineage verified" : "LINEAGE UNVERIFIED"}
           </span>
         </p>
+        <Provenance bundle={bundle} />
       </header>
 
       <section className="time-control">
