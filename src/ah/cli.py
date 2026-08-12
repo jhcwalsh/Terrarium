@@ -191,9 +191,25 @@ def run_cmd(
     resolved_seed = seed if seed is not None else (ed.base_seed if ed.base_seed is not None else 0)
     resolved_paths = paths if paths is not None else ed.n_paths
 
-    ensemble = run_ensemble(nw, resolved_paths, base_seed=resolved_seed)
+    if ed.generator_id == "toy-v0":
+        ensemble = run_ensemble(nw, resolved_paths, base_seed=resolved_seed)
+        twin = hold_course_twin(nw, resolved_seed)
+        engine_stamp = {
+            "generator_id": ed.generator_id,
+            # the resolved VERSION, not the family — so a RunRecord always
+            # says which engine produced its numbers (schema: "Exact trained
+            # version is resolved and pinned at run time")
+            "generator_version": TOY_ENGINE_VERSION,
+        }
+    else:
+        # su-gen-01: generated worlds run through the adapter and stamp the
+        # generator + campaign vintage that actually produced the numbers.
+        from ah.port.adapter import gen_hold_course_twin, gen_lineage, run_gen_ensemble
+
+        ensemble = run_gen_ensemble(nw, resolved_paths, base_seed=resolved_seed)
+        twin = gen_hold_course_twin(nw, resolved_seed)
+        engine_stamp = gen_lineage(nw)
     digest = digest_ensemble(ensemble)
-    twin = hold_course_twin(nw, resolved_seed)
 
     overrides: dict[str, int] = {}
     if seed is not None:
@@ -208,11 +224,7 @@ def run_cmd(
         run_id=run_id,
         world_id=wid,
         resolved_engine={
-            "generator_id": ed.generator_id,
-            # the resolved VERSION, not the family — so a RunRecord always
-            # says which engine produced its numbers (schema: "Exact trained
-            # version is resolved and pinned at run time")
-            "generator_version": TOY_ENGINE_VERSION,
+            **engine_stamp,
             "validator_version": VALIDATOR_VERSION,
             "battery_version": BATTERY_VERSION,
         },

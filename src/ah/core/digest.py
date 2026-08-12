@@ -20,7 +20,7 @@ from typing import Any
 
 import numpy as np
 
-from ah.core.engine import ASSETS, REPORTED_SLEEVES, EnginePaths, EnsembleResult
+from ah.core.engine import REPORTED_SLEEVES, EnginePaths, EnsembleResult
 
 _DECIMALS = 12
 
@@ -35,16 +35,25 @@ def sha256_of_arrays(arrays: Iterable[Any], *, decimals: int = _DECIMALS) -> str
 
 
 def digest_paths(paths: EnginePaths) -> str:
-    """Digest a single simulated history (factor paths + returns + reported marks)."""
+    """Digest a single simulated history (factor paths + returns + reported marks).
+
+    Iteration follows ``paths.asset_order`` — which defaults to the toy
+    ``ASSETS`` tuple, so every digest computed before the order was carried
+    on the dataclass is reproduced byte-identically.
+    """
     arrays: list[Any] = [paths.rate, paths.spread, paths.inflation, paths.crisis]
-    arrays += [paths.returns[a] for a in ASSETS]
+    arrays += [paths.returns[a] for a in paths.asset_order]
     arrays += [paths.reported[a] for a in REPORTED_SLEEVES]
     return sha256_of_arrays(arrays)
 
 
 def digest_ensemble(result: EnsembleResult) -> str:
-    """Digest an ensemble's return + reported tensors (the run's output tensor)."""
-    arrays: list[Any] = [result.returns[a] for a in ASSETS]
+    """Digest an ensemble's return + reported tensors (the run's output tensor).
+
+    Iteration follows ``result.asset_order`` (default: the toy ``ASSETS``
+    tuple — pre-existing digests unchanged).
+    """
+    arrays: list[Any] = [result.returns[a] for a in result.asset_order]
     arrays += [result.reported[a] for a in REPORTED_SLEEVES]
     return sha256_of_arrays(arrays)
 
