@@ -1,95 +1,67 @@
-# NEXT-STEPS.md — after campaign-3
+# NEXT-STEPS.md — after the su-generated-worlds plan (2026-08-12)
 
-## Resuming after a restart (checked 2026-08-11 at close)
+## Where the last two days left us
 
-Everything is durable — nothing was pending when this was written:
+- **The su-generated-worlds plan (PD-2 phase 2) is COMPLETE** — merges
+  `ffd05f9` (adapter + stagflation_1974, replay MATCH), `08eb59c`
+  (world-bundle-0.5 with factor lineage), `63ba0cb` (sessions under
+  `port-v1-cashflow-gen`; the player-facing provenance panel), `5dd7e40`
+  (the wire pinned). The playable app now runs a world spliced from real
+  1953–2020 months with its audit trail on screen. Tagline: "An alternate
+  history, relived."
+- **Register ER-9 opened and made moot for generated worlds** in the same
+  arc: the credibility console gained declared tail bands (merge `3bd9b41`)
+  which then caught the adapter's block-seam fabrications pre-merge —
+  source-space derivations fixed the class. The console also gained
+  scenario tabs + charts (console v2, merge `2c70999`).
+- Everything is committed and pushed; the vintage store and campaign
+  artifacts under `data/`/`experiments/` are local-only by design (OD-4).
 
-- **Git**: all work committed and pushed; `main` == `origin/main` at
-  `656cc66`. The only untracked file is a PowerPoint lock file
-  (`presentations/~$…pptx`) — an artifact of the deck being open, ignore it.
-- **No background jobs pending**: the H.10 waiter, fits, trainings, grids
-  and gates all completed; the Task Scheduler fallback was deleted after
-  use. Nothing needs rescue or resumption.
-- **Local-only state that survives restart on disk** (gitignored by
-  design): the vintage store under `data/`, and the campaign-3 fit/
-  checkpoint/grid artifacts under `experiments/campaign3/` (their pins and
-  manifests ARE committed — `configs/campaign3-seed-checkpoints.json`,
-  `artifacts/campaign3/*.json` — so the committed record verifies the
-  local artifacts rather than trusting them).
-- **To relaunch the datalab console** (optional):
-  `uv run --group console streamlit run apps/datalab/app.py --server.port 8795`
-- **To relaunch the session service / app** (product work):
-  `uv run uvicorn ah.serve:app --port 8787` and `cd app && npm run dev`.
+## 1. The next release event — ER-6, designed and awaiting D1
 
-*Written 2026-08-11 at the campaign-3 close (verdict SHIP-BENCHMARK; K3
-demotion fired; severe leg passed by BOTH sides on its first posing). Owner
-priorities per standing rulings; nothing here starts without the owner's nod
-except where marked.*
+`docs/superpowers/plans/2026-08-12-er6-call-pacing-design.md` (DRAFT).
+The call-pacing fix is play-layer only (no digests, no seals, both alpha
+stamps bump), unblocks the commitment lever (E1), and may revive ER-8's
+forced-sale mechanic for free. **Needs the owner's D1 call** (recommended:
+declared mid-band curve + an expiry-undrawn ledger line).
 
-## Where campaign-3 left us
+## 2. Cheap research probes (gaps, not instead)
 
-- **bootstrap-v1 on the extended span is the generator of record**: resamples
-  real 1953–2020 history including stagflation, survived a fair neural
-  challenge (clause 1 unmet on both routes), and passed the first-ever
-  posable severe test — as did the challenger. `CAMPAIGN3-PROMOTION.md` /
-  `artifacts/campaign3/promotion-verdict.json` are the record.
-- **The K3 finding is the campaign's discovery**: the har-masked variant
-  (no HAR months, 57% fewer training blocks) beat the benchmark's pooled
-  tail route while the HAR-fed variant did not; the sealed demotion
-  criterion fired on term (b) (0.0867 > 0.0683) and term (a) (the pooled
-  clause flips). Standing lesson, now on the record: **reconstructed months
-  serve reference bands and evaluation, never neural training data.**
-- The campaign-2 record is untouched and replayable (five campaign-split
-  freezes: vintage, factor set, checkpoint manifest, grid root, severe root).
+- **Seed-committee diagnostic** (~a day): pool the three v2 checkpoints,
+  re-judge; was campaign-3's neural loss variance or capability?
+- **JST cross-country scoping note** (no compute): 18 countries × ~150y as
+  REAL training data — the honest multiplier the K3 lesson demands.
 
-## 1. Product track — the main line (single-user first)
+## 3. Campaign-4 — the case has sharpened
 
-Per the owner's sequencing: single-user, then real-time cohort, then
-facilitated multiplayer. The campaign strengthened the story under the play
-surface ("resamples real history, survived a fair challenge"). First
-milestone to pick: next `su-app` increment off
-`Instructions/KICKOFF-PRODUCT-SU.md`. **Needs the owner's pick.**
+The stagflation-tilt finding (1974's equity median +11.5%/yr; regime
+conditioning pins block STARTS only) is the conditional-capability argument
+in product form. Preconditions unchanged: the two probes above, the
+re-aimed criterion, real-months-only training sealed as a rule.
 
-## 2. Cheap research follow-ups (adjacent; run in gaps, not instead)
+## 4. Standing owner questions
 
-- **Seed-committee diagnostic (~a day, no seal touched):** ensemble the three
-  existing v2 checkpoints into one sampler and re-judge — v2 lost on
-  cross-seed dispersion (|mean_d| 0.137 < sd 0.161), so if pooling seeds
-  clears clause (1), the gap is variance, not capability. Diagnostic only;
-  any promotion claim would need its own sealed campaign.
-- **JST cross-country scoping note (design doc, no compute):** the `jst`
-  source (18 countries, ~150y) as REAL training data — the honest multiplier
-  the HAR lesson says we need. Question for the note: L3 training with a
-  country embedding, generating US-conditioned paths; what the uk block
-  activation needs (`factors.yaml` uk factors are declared-unavailable).
+- **D1 (ER-6 curve source)** — see §1.
+- **PE sealed alpha**: generated-world PE flags at Sharpe 1.30, tracing to
+  the sealed `alpha_quarterly` 0.0332 — disclosure line or a G3 amendment
+  (which would also add the commodities/hy_spread regressors the sealed PM
+  loadings omit on vintage 2026-08-07.5).
+- **Do toy presets stay player-facing?** Decides how much the ER-5/ER-8
+  engine-family fix matters now that generated worlds play.
+- **K1 holdout**: post-2026-08 data accrues untouched; first read 2029-01.
 
-## 3. Campaign-4 — only when 1–2 say it's worth it
+## 5. Small successors recorded in the closed plan
 
-Preconditions before any new campaign seals:
-- The seed-committee result (if variance was the whole story, campaign-4 is
-  a training-stability campaign, not an architecture campaign).
-- The JST note (if real cross-country data is feasible, that beats
-  everything else).
-- **The re-aimed criterion**: judge "unconditional parity AND conditional
-  capability the benchmark structurally lacks" (the conditional tier exists,
-  reported-not-gating today). A resampler is near-unbeatable on
-  unconditional parity by construction; the hierarchy's value is what-ifs.
-- Training data: real months only (the K3 lesson, to be sealed as a rule).
-- hier-diffusion stays retired absent a dated amendment.
+`summary.episodes` still carries the authored sequence (realized regimes
+per path exist on the RegimeRecord, uncarried); `board_pack` has no
+producer; the programme walk shows a pending note for generated worlds.
 
-## 4. Standing owner calls, unchanged by the campaign
+## 6. To relaunch the surfaces
 
-- **ER register** (release events): ER-6 — `rc_curve` never fitted, ~29% of
-  commitments never called — gates the commitment lever (E1). ER-2, ER-5,
-  ER-8 open.
-- **Step 3 / G3**: the translation layer's honest G1-completion FAIL stands;
-  G3 was never taken. Any product claim resting on the twin inherits it.
-- **K1 holdout**: post-2026-08 data accrues untouched; first read 2029-01 at
-  the earliest, one read, spec sealed before reading.
-
-## 5. Hygiene (no owner input needed)
-
-- Delete merged local branches; keep the datalab console handy for vintage
-  interrogation (port 8795).
-- The repo-root `climate-fit-report.md` copy from the campaign-3 L1 refit
-  should be committed or removed with the evidence doc — check at merge.
+- Session service: `uv run uvicorn ah.serve:app --port 8787` (restart after
+  any serve.py change — the stale-listener trap).
+- App: `cd app && npm run dev` (5173, proxies /sessions → 8787); load
+  `stagflation-1974.bundle.gz` from the repo root.
+- Console: `uv run ah credibility --preset stagflation --preset goldilocks
+  --preset reflation_boom --preset deflation_bust --preset stagflation_1974
+  --out credibility.html`
