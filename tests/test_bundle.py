@@ -208,6 +208,33 @@ class TestSizeAndCli:
             assert verify_tape(tape, doc["revealed"]["tape_seal"]), name
             assert ("factors" in doc) is expect_factors, name
 
+    def test_generated_fixture_wire_is_prewritten_and_sane(self):
+        """su-gen-04 (PD-4): tier-1 artifacts ride the GENERATED bundle,
+        authored at build over spliced-history paths — every expected type
+        present, in-horizon, with values on their proper scales (percent
+        inflation from the source-space YoY channel, bp spreads from the
+        percent->bp conversion). Pins the plan's Task 4 acceptance."""
+        fixtures = Path(__file__).resolve().parents[1] / "app" / "fixtures"
+        doc = json.loads(gzip.decompress((fixtures / "gen.bundle.gz").read_bytes()))
+        months = doc["meta"]["months"]
+        arts = doc["feed"]["artifacts"]
+        types = {a["type"] for a in arts}
+        assert {"cb_statement", "release_page", "quarterly_statement", "newspaper"} <= types
+        assert all(0 <= a["month"] < months for a in arts)
+        # one release page per month, each carrying both wired rows with units
+        pages = [a for a in arts if a["type"] == "release_page"]
+        assert len(pages) == months
+        for a in pages:
+            rows = {r["series"]: r["value"] for r in a["payload"]["rows"]}
+            assert rows["CPI inflation"].endswith("%")
+            assert rows["High yield spread"].endswith("bp")
+            spread_bp = float(rows["High yield spread"].removesuffix("bp"))
+            assert 100 <= spread_bp <= 1100  # the panel's real range, in bp not %
+        # central bank statements quote a percent-scale policy rate
+        cb = next(a for a in arts if a["type"] == "cb_statement")
+        first_line = cb["payload"]["lines"][0]
+        assert "policy rate" in first_line and "%" in first_line
+
     def test_cli_builds_where_told(self, stored_run, tmp_path):
         db, rid = stored_run
         out = tmp_path / "world.bundle.gz"
