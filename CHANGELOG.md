@@ -14,6 +14,24 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **su-gen-01: the generator→engine adapter and the first generated world**
+  (`ah/port/adapter.py`). `run_gen_ensemble`/`run_gen_path` translate a
+  16-factor bootstrap `Ensemble` into the toy `EnsembleResult`/`EnginePaths`
+  contracts — digest, replay, twin, play and bundle unchanged. Owner
+  decisions applied: OD-3 (reits dropped, weight to equity), OD-4 (stamped
+  lineage: `resolved_engine` now carries `campaign_vintage_id`). Stated
+  conventions in the module docstring (bonds duration-8.5 verbatim from the
+  mapping layer; HY carry-net-of-losses; PM sleeves via the sealed loadings
+  at monthly frequency; spread channel = hy_spread in bps; YoY inflation
+  from the resampled CPI level with the block-seam caveat; crisis mask from
+  the realized regime record). `EnsembleResult`/`EnginePaths` gained
+  `asset_order` (default = toy tuple; a test pins byte-identical toy
+  digests); `simulate_institution` reads the sleeve set from it and accepts
+  a `start_mix`. New preset `stagflation_1974` (OD-1, world block …601,
+  vintage pinned via `x_campaign_vintage_id`): builds, runs through the
+  adapter, **replays MATCH against the real panel**, and its equity months
+  are bounded by the worst real month (ER-9 moot for generated worlds).
+
 - **Credibility console: declared tail bands (register ER-9)** — every
   `PLAUSIBLE` band now declares a worst-single-month floor and a
   worst-path-drawdown ceiling per asset, anchored to recorded history

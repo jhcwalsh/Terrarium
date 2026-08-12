@@ -140,7 +140,12 @@ class UnsupportedGeneratorError(ValueError):
 
 @dataclass(frozen=True)
 class EnginePaths:
-    """One simulated history (single seed)."""
+    """One simulated history (single seed).
+
+    ``asset_order`` is the digest/tape iteration order. It defaults to the toy
+    ``ASSETS`` tuple so every pre-existing digest is byte-identical; generated
+    worlds carry their own order (su-gen-01: reits dropped per OD-3).
+    """
 
     months: int
     seed: int
@@ -150,17 +155,22 @@ class EnginePaths:
     crisis: np.ndarray
     returns: dict[str, np.ndarray]
     reported: dict[str, np.ndarray]
+    asset_order: tuple[str, ...] = ASSETS
 
 
 @dataclass(frozen=True)
 class EnsembleResult:
-    """An ensemble of histories with returns stacked as ``(n_paths, months)``."""
+    """An ensemble of histories with returns stacked as ``(n_paths, months)``.
+
+    ``asset_order``: see :class:`EnginePaths` — same contract, same default.
+    """
 
     months: int
     n_paths: int
     seeds: list[int]
     returns: dict[str, np.ndarray]
     reported: dict[str, np.ndarray]
+    asset_order: tuple[str, ...] = ASSETS
 
 
 # --------------------------------------------------------------------------- #

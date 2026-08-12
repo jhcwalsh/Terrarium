@@ -100,25 +100,33 @@ def simulate_institution(
     decisions: Mapping[int, str] | None = None,
     *,
     use_reported: bool = False,
+    start_mix: Mapping[str, float] | None = None,
 ) -> InstitutionResult:
     """Run the institution over one engine path with a per-decision-month action map.
 
     ``decisions`` maps a decision month to an action; unmapped decision months
     default to ``hold``. Unknown actions are treated as ``hold``.
+
+    The sleeve set is ``paths.asset_order`` (the toy tuple by default, so toy
+    behaviour is unchanged); ``start_mix`` must cover exactly that set and
+    defaults to the toy ``START_MIX``. Generated worlds pass their own
+    (su-gen-01: reits dropped per OD-3, its weight moved to equity).
     """
     nm = paths.months
+    sleeves = paths.asset_order
+    mix = dict(start_mix) if start_mix is not None else dict(START_MIX)
     dmap = dict(decisions or {})
     dmonths = set(decision_months(nm))
-    targets = dict(START_MIX)
-    value = {s: START_MIX[s] * _INITIAL_VALUE for s in SLEEVES}
+    targets = dict(mix)
+    value = {s: mix[s] * _INITIAL_VALUE for s in sleeves}
 
     total_series = np.empty(nm)
-    weights_series = np.empty((nm, len(SLEEVES)))
+    weights_series = np.empty((nm, len(sleeves)))
     decision_log: list[tuple[int, str]] = []
 
     for m in range(nm):
         # Apply the month's returns (percent -> decimal), limited-liability floor.
-        for s in SLEEVES:
+        for s in sleeves:
             use_rep = use_reported and s in REPORTED_SLEEVES
             r = paths.reported[s][m] if use_rep else paths.returns[s][m]
             value[s] *= max(0.0, 1.0 + r / 100.0)
@@ -142,11 +150,11 @@ def simulate_institution(
                 targets["bonds"] += removed
                 _renormalize(targets)
             # annual rebalance to target mix
-            for s in SLEEVES:
+            for s in sleeves:
                 value[s] = targets[s] * total
 
         total_series[m] = total
-        for i, s in enumerate(SLEEVES):
+        for i, s in enumerate(sleeves):
             weights_series[m, i] = (value[s] / total) if total > 0 else 0.0
 
     return InstitutionResult(

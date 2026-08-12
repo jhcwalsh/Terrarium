@@ -29,9 +29,20 @@ TWIN_DEFINITION = "policy"  # value recorded, behaviour unchanged
 
 
 def compute_outputs_digest(world: dict[str, Any], seed: int, n_paths: int) -> str:
-    """Digest the ensemble a run would produce from ``world`` at ``seed``/``n_paths``."""
+    """Digest the ensemble a run would produce from ``world`` at ``seed``/``n_paths``.
+
+    Dispatches on the world's ``generator_id``: toy worlds through the toy
+    engine, generated worlds through the adapter (su-gen-01) — so
+    ``verify_run`` is the same reproducibility anchor for both. The adapter
+    import is lazy to keep the store layer's baseline dependency on ``core``
+    alone for toy worlds.
+    """
     nw = project_numeric(WorldSpec.model_validate(world))
-    return digest_ensemble(run_ensemble(nw, n_paths, base_seed=seed))
+    if nw.engine_defaults.generator_id == "toy-v0":
+        return digest_ensemble(run_ensemble(nw, n_paths, base_seed=seed))
+    from ah.port.adapter import run_gen_ensemble
+
+    return digest_ensemble(run_gen_ensemble(nw, n_paths, base_seed=seed))
 
 
 def save_run_record(
