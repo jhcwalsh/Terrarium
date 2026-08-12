@@ -236,7 +236,14 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
         "summary": {
             "twin_final_value": float(twin.final_value),
             "decision_months": decision_months(revealed.months),
-            "episodes": regimes.get("sequence") or [],
+            # sp-04: generated worlds carry the REALIZED regime path (what the
+            # sampler actually drew, quarter by quarter), not the authored
+            # wish — the timeline stops promising what the tape may not hold.
+            "episodes": (
+                _realized_episodes(nw, rec["seed"], revealed.months)
+                if generated
+                else (regimes.get("sequence") or [])
+            ),
             "summary_stats": rec["summary_stats"],
         },
         "feed": {
@@ -279,6 +286,45 @@ def _factor_names() -> list[str]:
     from ah.gen.bootstrap import FACTOR_SET
 
     return list(FACTOR_SET)
+
+
+_REGIME_DISPLAY = {
+    "EXP": "expansion",
+    "REC": "recession",
+    "REF": "reflation",
+    "SLOW": "slowdown",
+    "CRI": "crisis",
+    "STAG": "stagflation",
+}
+
+
+def _realized_episodes(nw: Any, seed: int, months: int) -> list[dict[str, Any]]:
+    """The revealed path's own regime segments, from the sampler's record.
+
+    One extra 1-path sample at the run's own seed (deterministic, a row
+    copy); each quarter takes its opening month's label; consecutive equal
+    quarters merge into `{from_quarter, to_quarter, regime}` segments.
+    """
+    from ah.gen import registry as gen_registry
+    from ah.gen.base import RegimeRecord
+
+    gen = gen_registry.resolve_for_world(nw)
+    ref = gen.sample(nw, 1, seed)
+    regimes_rec = ref.regimes
+    if not isinstance(regimes_rec, RegimeRecord):
+        raise BundleError(
+            "generated ensemble carries no regime record; realized episodes unavailable"
+        )
+    labels = np.asarray(regimes_rec.labels)[0]
+    legend = tuple(regimes_rec.legend)
+    segments: list[dict[str, Any]] = []
+    for q in range(months // 3):
+        name = _REGIME_DISPLAY.get(legend[int(labels[q * 3])], legend[int(labels[q * 3])])
+        if segments and segments[-1]["regime"] == name:
+            segments[-1]["to_quarter"] = q
+        else:
+            segments.append({"from_quarter": q, "to_quarter": q, "regime": name})
+    return segments
 
 
 def write_bundle(doc: dict[str, Any], path) -> int:

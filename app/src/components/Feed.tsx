@@ -17,6 +17,7 @@ const TYPE_LABEL: Record<string, string> = {
   wire_digest: "WIRE",
   newspaper: "THE MARKET RECORD",
   forced_sale: "FORCED SALE",
+  board_pack: "BOARD PACK",
 };
 
 export function Feed({
@@ -79,6 +80,14 @@ export function Feed({
               )}
               {body.map((line, j) => (
                 <p key={j}>{line}</p>
+              ))}
+              {(a.payload.sections ?? []).map((s) => (
+                <div key={s.title} className="feed-pack-section">
+                  <strong>{s.title}</strong>
+                  {s.lines.map((line, j) => (
+                    <p key={j}>{line}</p>
+                  ))}
+                </div>
               ))}
               <span className="feed-tag">{TYPE_LABEL[a.type] ?? a.type.toUpperCase()}</span>
             </div>
