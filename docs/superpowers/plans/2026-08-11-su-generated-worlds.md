@@ -99,7 +99,11 @@ exactly this line: *rearranged truth now; invented worlds only when earned.*
       stratification pins only block STARTS, so the all-months bound is the
       world bound. Feeds the tail bands and the player disclosure.
 
-**New owner decisions surfaced by the survey:**
+**New owner decisions surfaced by the survey — ALL RATIFIED as recommended,
+owner 2026-08-11 ("as recommended - start task 1"): OD-2 commodities
+playable; OD-3 reits dropped in generated worlds (5 points redistributed,
+no invented proxy); OD-4 build-time `data/` requirement with stamped
+lineage.**
 - **OD-3 (reits):** the 16-factor set has no REIT factor. Options: (a) drop
   the reits sleeve in generated worlds (redistributes its 5 points; twin
   numerics differ from toy worlds — fine, new alpha stamp anyway), or
