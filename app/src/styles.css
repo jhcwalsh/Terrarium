@@ -1358,3 +1358,33 @@ button.commit {
   font-size: 13.5px;
   max-width: 64ch;
 }
+
+/* -- the commitment primer (sp-05, E1's tutorial obligation) --------------- */
+.commit-primer {
+  margin: 16px 0;
+  padding: 12px 16px;
+  border-left: 3px solid var(--jade, #2fa183);
+  max-width: 62ch;
+}
+.commit-primer h2 {
+  font-size: 13px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin: 0 0 6px;
+  color: var(--dim, #7c9b99);
+}
+.commit-primer p { margin: 0; font-size: 14px; }
+.privates-trailing { font-size: 12px; color: var(--dim, #7c9b99); }
+.vintage-stack { margin-top: 8px; font-size: 12px; }
+.vintage-stack .stack-title {
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: var(--dim, #7c9b99);
+  font-size: 10.5px;
+}
+.vintage-stack .stack-row {
+  display: flex;
+  justify-content: space-between;
+  max-width: 220px;
+  font-variant-numeric: tabular-nums;
+}

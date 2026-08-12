@@ -40,6 +40,10 @@ export interface Session {
   /** sp-02 (E1): the plan's next per-sleeve commitment points, SERVER-computed
    * at the pointer — the lever's pre-fill; committing these IS holding to plan */
   next_plan_commitments?: Record<string, number> | null;
+  /** sp-05 (E1): the ladder by vintage at the pointer, and the trailing
+   * distribution series — visible at the moment of decision */
+  vintage_nav?: Record<string, number> | null;
+  trailing_distributions?: number[] | null;
   forced_sales?: {
     period: number;
     amount: number;

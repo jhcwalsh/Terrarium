@@ -56,11 +56,21 @@ pacing flex) and the decision space — ONE bump to `port-v3-pacing` /
 - [ ] The programme walk for generated worlds (the console's pending note
       goes away; `build_programme_report` dispatches like everything else).
 
-### sp-05 — the tutorial consequence + register close-out
-- [ ] Tutorial extension with one unmissable commitment consequence (E1's
-      last experience-side obligation).
-- [ ] Register rows E1/E4 close with pointers; E7's drift-twin slot filled;
-      E3's interpretation-guide second act written.
+### sp-05 — the tutorial consequence + register close-out — DONE 2026-08-12
+- [x] The commit-primer on the setup screen: one unmissable commitment
+      consequence, every player, every decade, pinned by test. Plus E1's
+      two remaining moment-of-decision gaps: the vintage stack by age and
+      trailing distributions (session-served, rendered in the ledger panel).
+- [x] Register rows E1/E3/E4 CLOSED with pointers (E3's I5 deferral
+      recorded); `docs/interpretation-guide.md` written with
+      coverage-on-both-bases as the toggle's second act; the stale
+      Reckoning copy now states the forced-secondary count.
+
+**PLAN COMPLETE 2026-08-12.** sp-01 `2443225` · sp-02 `01a0bf2` · sp-03
+`23ab335` · sp-04 `de9c207` · sp-05 (this merge). The single-player game is
+finished by the register's own definition of done. Next per the owner's
+standing order: the governance housekeeping (gate-merge guard, citation
+checker, reference-parameter check).
 
 **Gate per WP:** acceptance tests + full suite + ruff/pyright + CHANGELOG;
 merge `--no-ff` only after the gate log's EXIT line is read as its own step.

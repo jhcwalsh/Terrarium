@@ -58,6 +58,17 @@ describe("RankedSetup", () => {
   });
 });
 
+describe("the commitment primer", () => {
+  it("shows the unmissable consequence to every player, both arms (E1)", () => {
+    render(<RankedSetup onStart={() => {}} onCancel={() => {}} />);
+    const primer = host!.querySelector(".commit-primer");
+    expect(primer).toBeTruthy();
+    expect(primer!.textContent).toContain("pays nothing, forever");
+    expect(primer!.textContent).toContain("review will price");
+  });
+});
+
+
 describe("getLeaderboard", () => {
   it("sends the full triple key — never an unkeyed board", async () => {
     const fn = vi.fn(async () => ({

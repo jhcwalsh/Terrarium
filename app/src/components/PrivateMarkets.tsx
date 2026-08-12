@@ -111,6 +111,25 @@ export function PrivateMarkets({
           ? "No session yet — these are the hold-course twin's cashflows, not yours."
           : "Your book's calls and distributions for the quarter just closed."}
       </p>
+      {session?.trailing_distributions && session.trailing_distributions.length > 0 && (
+        <p className="privates-trailing">
+          trailing distributions:{" "}
+          {session.trailing_distributions.map((v) => v.toFixed(2)).join(" · ")}
+        </p>
+      )}
+      {session?.vintage_nav && Object.keys(session.vintage_nav).length > 0 && (
+        <div className="vintage-stack" aria-label="vintage stack by age">
+          <span className="stack-title">the ladder, by vintage</span>
+          {Object.entries(session.vintage_nav)
+            .sort(([a], [b]) => a.localeCompare(b))
+            .map(([id, nav]) => (
+              <div key={id} className="stack-row">
+                <span>{id}</span>
+                <span>{nav.toFixed(2)}</span>
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -69,10 +69,10 @@ export function Reckoning({
           </div>
         </div>
         <p className="outcome-note">
-          Alpha is your final value minus the twin that rebalanced to plan every
-          year and never deviated — same world, same shocks, only the decisions
-          differ. Forced-sale and coverage metrics join with the
-          institutional plane.
+          Alpha is your final value minus the policy twin — same world, same
+          shocks, only the decisions differ. The twin paces its commitments to
+          policy and never sells by choice; forced secondaries this run:{" "}
+          {outcome.forced_secondaries}.
         </p>
       </section>
 
