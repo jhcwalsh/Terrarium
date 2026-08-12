@@ -162,6 +162,8 @@ def build_tier1_feed(
     *,
     base_seed: int,
     n_peer_paths: int,
+    run_path_fn: Any = None,
+    start_mix: Any = None,
 ) -> list[dict[str, Any]]:
     """The deterministic wire for one revealed path.
 
@@ -169,15 +171,19 @@ def build_tier1_feed(
     lineage (``base_seed + 7919*k`` — the ensemble convention) and pushed
     through the SAME hold-course institution, so "peers" means "the same
     institution in the sibling histories of this very run".
+
+    ``run_path_fn``/``start_mix`` (su-gen-02) let a generated world supply
+    its own path generator and opening mix; defaults are the toy engine's.
     """
     nm = paths.months
     wid = world.world_id
-    twin = simulate_institution(paths, None)
+    path_fn = run_path_fn or run_path
+    twin = simulate_institution(paths, None, start_mix=start_mix)
 
     peer_totals = np.empty((n_peer_paths, nm))
     for k in range(n_peer_paths):
-        peer = run_path(world, base_seed + 7919 * k)
-        peer_totals[k] = simulate_institution(peer, None).total
+        peer = path_fn(world, base_seed + 7919 * k)
+        peer_totals[k] = simulate_institution(peer, None, start_mix=start_mix).total
 
     items: list[dict[str, Any]] = []
 

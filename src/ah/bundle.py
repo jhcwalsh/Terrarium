@@ -35,6 +35,7 @@ from __future__ import annotations
 import gzip
 import json
 import sqlite3
+from pathlib import Path
 from typing import Any
 
 import numpy as np
@@ -53,9 +54,63 @@ from ah.store.worlds import get_world
 
 __all__ = ["BUNDLE_VERSION", "MAX_COMPRESSED_BYTES", "BundleError", "build_bundle", "write_bundle"]
 
-BUNDLE_VERSION = "world-bundle-0.4"  # 0.4: the twin's ledger replaces the pacing preview
+BUNDLE_VERSION = "world-bundle-0.5"  # 0.5: factor lineage for generated worlds (su-gen-02)
 MAX_COMPRESSED_BYTES = 1_000_000  # W2's budget: a complete world under 1 MB compressed
 _QUANTILES = (5, 25, 50, 75, 95)
+
+# The generated-world draw span, for proxy-share disclosure (survey S4: the
+# per-factor share is reported over the months the sampler can actually draw)
+_DRAW_SPAN = ("1953-04-01", "2020-12-01")
+
+
+def factor_lineage(vintage_id: str) -> dict[str, Any]:
+    """The 16-factor lineage block for a generated bundle: names' units and
+    per-factor proxy shares (incl. the by-rule split the sealed
+    ``proxy_share_disclosure`` clause requires — HAR separately from VXO).
+
+    OD-4: this READS THE LOCAL CATALOG — building a generated bundle requires
+    ``data/`` to be present, and the resulting numbers ship in the bundle so
+    verification never needs the store. Raises :class:`BundleError` with the
+    decision's name when the store is absent.
+    """
+    from ah.data.catalog import Catalog
+    from ah.datalab import factor_read, proxy_share
+    from ah.factors import load_manifest
+    from ah.gen.bootstrap import FACTOR_SET
+
+    root = Path(__file__).resolve().parents[2] / "data"
+    if not (root / "catalog.duckdb").exists():
+        raise BundleError(
+            "generated bundles require the local vintage store (OD-4: build-time "
+            f"data/ requirement with stamped lineage); {root} has no catalog"
+        )
+    cat = Catalog(root)
+    manifest = load_manifest()
+    units: dict[str, str] = {}
+    shares: dict[str, Any] = {}
+    for name in FACTOR_SET:
+        fr = factor_read(cat, name, vintage=vintage_id)
+        if fr.frame is None:
+            raise BundleError(f"factor '{name}' unreadable on vintage {vintage_id}: {fr.note}")
+        units[name] = manifest.sources[name].units or ""
+        shares[name] = proxy_share(fr.frame, start=_DRAW_SPAN[0], end=_DRAW_SPAN[1])
+    return {"vintage_id": vintage_id, "units": units, "proxy_shares": shares}
+
+
+def _campaign_credibility(resolved_engine: dict[str, Any]) -> dict[str, Any]:
+    """The audit-trail pointers a generated bundle carries: the campaign-3
+    verdict (committed artifact, no store needed) plus the run's own lineage."""
+    verdict_path = Path(__file__).resolve().parents[2] / "artifacts" / "campaign3"
+    doc = json.loads((verdict_path / "promotion-verdict.json").read_text(encoding="utf-8"))
+    return {
+        "verdict": doc["verdict"],
+        "campaign": doc["campaign"],
+        "benchmark": doc["benchmark"],
+        "severe": doc["severe"],
+        "generator_id": resolved_engine.get("generator_id"),
+        "generator_version": resolved_engine.get("generator_version"),
+        "campaign_vintage_id": resolved_engine.get("campaign_vintage_id"),
+    }
 
 
 class BundleError(RuntimeError):
@@ -66,9 +121,11 @@ def _round(values: np.ndarray, places: int = 6) -> list[float]:
     return [round(float(v), places) for v in values]
 
 
-def _twin_ledger(revealed: EnginePaths) -> dict[str, list[float] | list[int]]:
+def _twin_ledger(
+    revealed: EnginePaths, start_targets: dict[str, float] | None = None
+) -> dict[str, list[float] | list[int]]:
     """The hold-course institution's quarterly cashflows, for the bundle."""
-    result = simulate_play(revealed, None)
+    result = simulate_play(revealed, None, start_targets=start_targets)
     return {
         "quarter_months": [q.month for q in result.quarters],
         "calls": _round(np.array([q.calls_paid for q in result.quarters])),
@@ -92,16 +149,36 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
 
     ws = WorldSpec.model_validate(world_doc)
     nw = project_numeric(ws)
-    revealed = run_path(nw, rec["seed"])
-    ensemble = run_ensemble(nw, rec["n_paths"], base_seed=rec["seed"])
+    generated = ws.engine_defaults.generator_id != "toy-v0"
+    if generated:
+        from ah.port.adapter import (
+            GEN_START_MIX,
+            GEN_START_TARGETS,
+            gen_hold_course_twin,
+            run_gen_ensemble,
+            run_gen_path,
+        )
+
+        revealed = run_gen_path(nw, rec["seed"])
+        ensemble = run_gen_ensemble(nw, rec["n_paths"], base_seed=rec["seed"])
+        twin = gen_hold_course_twin(nw, rec["seed"])
+        play_targets: dict[str, float] | None = GEN_START_TARGETS
+        feed_kwargs: dict[str, Any] = {"run_path_fn": run_gen_path, "start_mix": GEN_START_MIX}
+    else:
+        revealed = run_path(nw, rec["seed"])
+        ensemble = run_ensemble(nw, rec["n_paths"], base_seed=rec["seed"])
+        twin = hold_course_twin(nw, rec["seed"])
+        play_targets = None
+        feed_kwargs = {}
     verified = digest_ensemble(ensemble) == rec["outputs_digest"]
-    twin = hold_course_twin(nw, rec["seed"])
 
     # The numeric tape (months x series): asset returns then reported columns,
-    # in a fixed, recorded order — the t0 seal covers exactly these bytes.
-    series_order = [*ASSETS, *(f"{s}_reported" for s in REPORTED_SLEEVES)]
+    # in the tape's own recorded order — the t0 seal covers exactly these bytes.
+    asset_order = revealed.asset_order
+    series_order = [*asset_order, *(f"{s}_reported" for s in REPORTED_SLEEVES)]
     tape = np.column_stack(
-        [revealed.returns[a] for a in ASSETS] + [revealed.reported[s] for s in REPORTED_SLEEVES]
+        [revealed.returns[a] for a in asset_order]
+        + [revealed.reported[s] for s in REPORTED_SLEEVES]
     ).astype(np.float64)
     # The seal covers the bytes the bundle SHIPS: round first, seal the rounded
     # tape, store the same values -- a client re-sealing what it received must
@@ -109,7 +186,7 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
     tape = np.round(tape, 6)
 
     bands: dict[str, dict[str, list[float]]] = {}
-    for asset in ASSETS:
+    for asset in ensemble.asset_order:
         # engine returns are in PERCENT (see ah.core.engine notes) — divide
         # before compounding, or the cone explodes/goes negative (found live:
         # the first played decade rendered empty fans at the broken scale)
@@ -155,7 +232,7 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
         # construction — the twin never acts — so it stays pre-authorable at
         # build time (PD-4). The player's own ledger depends on their
         # decisions and is served per-session instead.
-        "twin_ledger": _twin_ledger(revealed),
+        "twin_ledger": _twin_ledger(revealed, play_targets),
         "summary": {
             "twin_final_value": float(twin.final_value),
             "decision_months": decision_months(revealed.months),
@@ -164,7 +241,7 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
         },
         "feed": {
             "artifacts": build_tier1_feed(
-                nw, revealed, base_seed=rec["seed"], n_peer_paths=rec["n_paths"]
+                nw, revealed, base_seed=rec["seed"], n_peer_paths=rec["n_paths"], **feed_kwargs
             ),
             "dispatches": narrative.get("dispatches") or [],
             "chronicle": [
@@ -178,7 +255,30 @@ def build_bundle(conn: sqlite3.Connection, run_id: str) -> dict[str, Any]:
             ],
         },
     }
+    if generated:
+        # su-gen-02: the factor lineage + the audit trail. Both are static
+        # data stamped at build; their integrity rides in meta.sections_seal
+        # (the tape_seal covers the tape alone).
+        import hashlib
+
+        from ah.core.digest import canonical_json
+
+        doc["factors"] = {
+            "names": _factor_names(),
+            **factor_lineage(str(rec["resolved_engine"].get("campaign_vintage_id"))),
+        }
+        doc["credibility"] = _campaign_credibility(rec["resolved_engine"])
+        extras = canonical_json({"factors": doc["factors"], "credibility": doc["credibility"]})
+        doc["meta"]["sections_seal"] = (
+            "sha256:" + hashlib.sha256(extras.encode("utf-8")).hexdigest()
+        )
     return doc
+
+
+def _factor_names() -> list[str]:
+    from ah.gen.bootstrap import FACTOR_SET
+
+    return list(FACTOR_SET)
 
 
 def write_bundle(doc: dict[str, Any], path) -> int:

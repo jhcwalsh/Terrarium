@@ -44,6 +44,7 @@ player is shown and the two must agree.
 from __future__ import annotations
 
 import json
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
@@ -208,9 +209,10 @@ def _commit_new_vintage(
     base: dict[str, Any],
     asset: str,
     year: int,
+    targets: Mapping[str, float],
 ) -> None:
     """Commit one year's new vintage into the ladder."""
-    amount = START_TARGETS[asset] * _ANNUAL_COMMITMENT_RATE
+    amount = targets[asset] * _ANNUAL_COMMITMENT_RATE
     # a fresh fund carries none of the example's history: no performance to
     # date, no accrued carry, and a real vintage year rather than an offset
     fresh = json.loads(json.dumps(base))
@@ -227,15 +229,19 @@ def _commit_new_vintage(
     ladders[asset].append(cohort)
 
 
-def _build_portfolio(policy: Policy) -> tuple[Portfolio, dict[str, ClosedEndCohort]]:
+def _build_portfolio(
+    policy: Policy,
+    targets: Mapping[str, float],
+    liquid: tuple[str, ...],
+) -> tuple[Portfolio, dict[str, ClosedEndCohort]]:
     """An ongoing institution at its target weights, with a cash buffer."""
     portfolio = Portfolio(cash=START_CASH)
     base = _doc("closed-end-cohort.example.json")
     liquid_doc = _doc("liquid-sleeve.example.json")
 
-    for asset in LIQUID_ASSETS:
+    for asset in liquid:
         sleeve = LiquidSleeve.from_document(liquid_doc)
-        sleeve.value = START_TARGETS[asset]
+        sleeve.value = targets[asset]
         portfolio.add(asset, sleeve)
 
     cohorts: dict[str, ClosedEndCohort] = {}
@@ -243,7 +249,7 @@ def _build_portfolio(policy: Policy) -> tuple[Portfolio, dict[str, ClosedEndCoho
         # scale the example cohort so its NAV lands on the target weight; it
         # keeps the document's age and unfunded ratio, so the institution opens
         # mid-programme rather than ramping in from nothing
-        scale = START_TARGETS[asset] / float(base["value"]["nav_true"])
+        scale = targets[asset] / float(base["value"]["nav_true"])
         doc = json.loads(json.dumps(base))
         doc["identity"] = {**base["identity"], "sleeve_id": asset, "cohort_id": f"{asset}-play"}
         for key in ("committed", "paid_in", "unfunded", "recallable_balance"):
@@ -314,6 +320,7 @@ def simulate_play(
     use_reported: bool = True,
     policy: Policy | None = None,
     linkage: bool = True,
+    start_targets: Mapping[str, float] | None = None,
 ) -> PlayResult:
     """Run the institution over a tape, quarter by quarter, with consequences.
 
@@ -329,7 +336,11 @@ def simulate_play(
     policy = policy or Policy()
     decisions = decisions or {}
     n_quarters = paths.months // 3
-    portfolio, cohorts = _build_portfolio(policy)
+    # the tape's own sleeve set: liquid = asset_order minus the privates
+    # (generated worlds drop reits per OD-3); targets default to the toy book
+    liquid = tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)
+    targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
+    portfolio, cohorts = _build_portfolio(policy, targets, liquid)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
     ladders: dict[str, list[ClosedEndCohort]] = {a: [cohorts[a]] for a in PRIVATE_ASSETS}
@@ -363,15 +374,15 @@ def simulate_play(
                 elif action == "secondary":
                     _secondary_sale(portfolio, {"pe_ladder": ladders["pe"]}, policy)
 
-        for asset in LIQUID_ASSETS:
+        for asset in liquid:
             portfolio.liquid[asset].apply_return(float(q_returns[asset][q]))
 
         # the pacing plan: a new vintage every year, in every private sleeve
         committed_this_quarter = 0.0
         if q > 0 and q % _COMMITMENT_QUARTERS == 0:
             for asset in PRIVATE_ASSETS:
-                _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4)
-                committed_this_quarter += START_TARGETS[asset] * _ANNUAL_COMMITMENT_RATE
+                _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4, targets)
+                committed_this_quarter += targets[asset] * _ANNUAL_COMMITMENT_RATE
 
         calls = 0.0
         distributions = 0.0

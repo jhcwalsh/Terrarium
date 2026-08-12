@@ -306,6 +306,46 @@ class TestTwinAndDispatch:
         assert lineage["campaign_vintage_id"] == "test-vintage"
 
 
+class TestPlayAndFeed:
+    """su-gen-02: the play walk and the tier-1 feed over generated tapes."""
+
+    def test_simulate_play_runs_a_generated_tape(self, synthetic_registry):
+        """The twin ledger's engine accepts the generated sleeve set: liquid
+        sleeves come from the tape's own asset_order (no reits), opening
+        targets from GEN_START_TARGETS (reits' 8 points to equity)."""
+        from ah.play import simulate_play
+        from ah.port.adapter import GEN_START_TARGETS
+
+        assert "reits" not in GEN_START_TARGETS
+        assert GEN_START_TARGETS["equity"] == pytest.approx(41.0)
+        assert sum(GEN_START_TARGETS.values()) == pytest.approx(98.0)  # +2 cash
+        p = run_gen_path(_gen_world(), SEED)
+        result = simulate_play(p, None, start_targets=GEN_START_TARGETS)
+        assert len(result.quarters) == p.months // 3
+        assert np.isfinite(result.quarters[-1].nav_true)
+
+    def test_feed_builds_on_a_generated_tape(self, synthetic_registry):
+        """The wire renders over a generated path: peers regenerate through
+        the supplied path function and the generated start mix."""
+        from ah.feed import build_tier1_feed
+        from ah.port.adapter import GEN_START_MIX
+
+        world = _gen_world()
+        p = run_gen_path(world, SEED)
+        items = build_tier1_feed(
+            world,
+            p,
+            base_seed=SEED,
+            n_peer_paths=3,
+            run_path_fn=run_gen_path,
+            start_mix=GEN_START_MIX,
+        )
+        assert items
+        types = {i["type"] for i in items}
+        assert "cb_statement" in types
+        assert all(0 <= i["month"] < p.months for i in items)
+
+
 @pytest.mark.skipif(
     not (ROOT / "data" / "catalog.duckdb").exists(),
     reason="vintage store is local-only by design (OD-4); the synthetic-source "
