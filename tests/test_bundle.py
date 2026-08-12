@@ -37,7 +37,10 @@ class TestContract:
     def test_sections_and_provenance(self, stored_run):
         db, rid = stored_run
         doc = build_bundle(connect(db), rid)
-        assert doc["bundle_version"] == "world-bundle-0.4"
+        assert doc["bundle_version"] == "world-bundle-0.5"
+        # toy worlds carry no factor-lineage sections (generated worlds only)
+        assert "factors" not in doc
+        assert "credibility" not in doc
         for section in ("meta", "revealed", "bands", "summary", "feed"):
             assert section in doc, section
         meta = doc["meta"]
@@ -139,6 +142,71 @@ class TestSizeAndCli:
         assert p1.read_bytes() == p2.read_bytes()  # mtime=0: byte-identical archives
         loaded = json.loads(gzip.decompress(p1.read_bytes()))
         assert loaded["meta"]["run_id"] == rid
+
+    def test_generated_bundle_carries_factor_lineage(self, tmp_path, monkeypatch):
+        """su-gen-02 acceptance: a generated world's bundle carries the 16
+        factor names with units and per-factor proxy shares (incl. the
+        HAR/VXO split), the campaign credibility pointers, a tape over the
+        generated asset order, and it verifies. The catalog read is behind
+        the ``factor_lineage`` seam (OD-4: the real build requires data/;
+        tests inject)."""
+        import ah.bundle as bundle_mod
+        import ah.gen.bootstrap as bs
+        from ah.gen import registry
+        from ah.port.adapter import GEN_ASSETS
+        from conftest import make_synthetic_source_16
+
+        fake_lineage = {
+            "vintage_id": "test-vintage",
+            "units": {n: "test-units" for n in bs.FACTOR_SET},
+            "proxy_shares": {
+                n: {"n_months": 72, "n_proxy": 0, "share": 0.0, "by_rule": {}}
+                for n in bs.FACTOR_SET
+            },
+        }
+        monkeypatch.setattr(bundle_mod, "factor_lineage", lambda vintage_id: fake_lineage)
+
+        saved = registry.snapshot()
+        registry.register("bootstrap-v1", lambda: bs.BootstrapV1(make_synthetic_source_16()))
+        try:
+            db = tmp_path / "gen.db"
+            assert _invoke(db, "world", "build", "--preset", "stagflation_1974").exit_code == 0
+            run = _invoke(db, "run", "--paths", "8")
+            assert run.exit_code == 0, run.output
+            rid = run.stdout.strip().splitlines()[-1]
+            doc = build_bundle(connect(db), rid)
+        finally:
+            registry.restore(saved)
+
+        assert doc["bundle_version"] == "world-bundle-0.5"
+        assert doc["meta"]["digest_verified"] is True
+        order = doc["revealed"]["series_order"]
+        assert order == [*GEN_ASSETS, *(f"{s}_reported" for s in REPORTED_SLEEVES)]
+        assert set(doc["bands"]) == set(GEN_ASSETS)
+        tape = np.array(doc["revealed"]["tape"], dtype=np.float64)
+        assert verify_tape(tape, doc["revealed"]["tape_seal"])
+        factors = doc["factors"]
+        assert set(factors["names"]) == set(bs.FACTOR_SET)
+        assert factors["vintage_id"] == "test-vintage"
+        assert set(factors["proxy_shares"]) == set(bs.FACTOR_SET)
+        cred = doc["credibility"]
+        assert cred["verdict"] == "SHIP-BENCHMARK"
+        assert cred["generator_id"] == "bootstrap-v1"
+        assert "severe" in cred
+        # the new sections carry their own integrity digest
+        assert doc["meta"]["sections_seal"].startswith("sha256:")
+
+    def test_committed_fixture_bundles_verify_in_this_suite(self):
+        """The 'both suites verify it' acceptance, python half: the committed
+        fixtures load, name a supported version, and their seals verify."""
+        fixtures = Path(__file__).resolve().parents[1] / "app" / "fixtures"
+        for name, expect_factors in (("toy.bundle.gz", False), ("gen.bundle.gz", True)):
+            raw = gzip.decompress((fixtures / name).read_bytes())
+            doc = json.loads(raw)
+            assert doc["bundle_version"] == "world-bundle-0.5", name
+            tape = np.array(doc["revealed"]["tape"], dtype=np.float64)
+            assert verify_tape(tape, doc["revealed"]["tape_seal"]), name
+            assert ("factors" in doc) is expect_factors, name
 
     def test_cli_builds_where_told(self, stored_run, tmp_path):
         db, rid = stored_run

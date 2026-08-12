@@ -25,7 +25,34 @@ export const SUPPORTED_BUNDLE_VERSIONS = [
   // quarterly cashflows, now that the play surface runs on the real
   // institutional twin instead of a toy target-mix simulator.
   "world-bundle-0.4",
+  // 0.5 (su-gen-02): generated worlds carry `factors` (the 16 factor names,
+  // units, per-factor proxy shares) and `credibility` (the campaign-3
+  // verdict + vintage - the audit trail behind "rearranged truth"). Toy
+  // bundles are unchanged in shape; the two sections are optional.
+  "world-bundle-0.5",
 ];
+
+/** su-gen-02: factor lineage for generated worlds (optional section). */
+export interface BundleFactors {
+  names: string[];
+  vintage_id: string;
+  units: Record<string, string>;
+  proxy_shares: Record<
+    string,
+    { n_months: number; n_proxy: number; share: number; by_rule: Record<string, number> }
+  >;
+}
+
+/** su-gen-02: the campaign audit trail (optional section). */
+export interface BundleCredibility {
+  verdict: string;
+  campaign: string;
+  benchmark: string;
+  severe: Record<string, unknown>;
+  generator_id: string | null;
+  generator_version: string | null;
+  campaign_vintage_id: string | null;
+}
 
 export interface BundleMeta {
   world_id: string;
@@ -78,6 +105,8 @@ export interface WorldBundle {
   bands: Record<string, Record<string, number[]>>;
   /** present from world-bundle-0.4; absent in older bundles */
   twin_ledger?: TwinLedger;
+  factors?: BundleFactors;
+  credibility?: BundleCredibility;
   summary: {
     twin_final_value: number;
     decision_months: number[];

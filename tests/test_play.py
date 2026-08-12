@@ -150,10 +150,10 @@ class TestDecisions:
         being sold later is exactly the decision the surface is meant to pose
         — but it is not what "the discount costs you something" means.
         """
-        from ah.play import _build_portfolio, _secondary_sale
+        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio, _secondary_sale
 
         policy = Policy()
-        portfolio, cohorts = _build_portfolio(policy)
+        portfolio, cohorts = _build_portfolio(policy, START_TARGETS, LIQUID_ASSETS)
         before_nav = cohorts["pe"].nav_true
         before_cash = portfolio.cash
         proceeds = _secondary_sale(portfolio, {"pe_ladder": [cohorts["pe"]]}, policy)

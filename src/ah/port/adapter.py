@@ -88,7 +88,20 @@ class AdapterError(ValueError):
 
 
 # OD-3: the reits start weight moves to equity — its 0.84-correlated public
-# neighbour — leaving the private allocation exactly as designed.
+# neighbour — leaving the private allocation exactly as designed. Two scales
+# for two layers: GEN_START_MIX mirrors the toy institution's fractions;
+# GEN_START_TARGETS mirrors the play layer's points-of-100 book (reits' 8
+# points to equity; privates and cash untouched).
+GEN_START_TARGETS: dict[str, float] = {
+    "equity": 41.0,
+    "bonds": 12.0,
+    "hy": 5.0,
+    "commodities": 5.0,
+    "pe": 20.0,
+    "pc": 8.0,
+    "re": 7.0,
+}
+
 GEN_START_MIX: dict[str, float] = {
     "equity": 0.35,
     "bonds": 0.10,

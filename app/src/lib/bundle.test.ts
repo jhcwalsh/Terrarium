@@ -20,19 +20,38 @@ if (!globalThis.crypto?.subtle) {
 
 // vitest's cwd is the app root; happy-dom rewrites import.meta.url, so no URL math
 const FIXTURE = resolve(process.cwd(), "fixtures", "toy.bundle.gz");
+const GEN_FIXTURE = resolve(process.cwd(), "fixtures", "gen.bundle.gz");
+
+function bytesOf(path: string): ArrayBuffer {
+  const buf = readFileSync(path);
+  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+}
 
 function fixtureBytes(): ArrayBuffer {
-  const buf = readFileSync(FIXTURE);
-  return buf.buffer.slice(buf.byteOffset, buf.byteOffset + buf.byteLength);
+  return bytesOf(FIXTURE);
 }
 
 describe("parseBundle", () => {
   it("loads the committed fixture and verifies its seal", async () => {
     const { bundle, sealVerified } = await parseBundle(fixtureBytes());
-    expect(bundle.bundle_version).toBe("world-bundle-0.4");
+    expect(bundle.bundle_version).toBe("world-bundle-0.5");
     expect(sealVerified).toBe(true);
     expect(bundle.revealed.tape.length).toBe(bundle.meta.months);
     expect(bundle.summary.decision_months.length).toBeGreaterThan(0);
+  });
+
+  it("loads the committed GENERATED fixture: seal, factors, credibility (su-gen-02)", async () => {
+    const { bundle, sealVerified } = await parseBundle(bytesOf(GEN_FIXTURE));
+    expect(bundle.bundle_version).toBe("world-bundle-0.5");
+    expect(sealVerified).toBe(true);
+    const factors = bundle.factors!;
+    expect(factors.names.length).toBe(16);
+    expect(Object.keys(factors.proxy_shares).length).toBe(16);
+    expect(factors.vintage_id).toBeTruthy();
+    const cred = bundle.credibility!;
+    expect(cred.verdict).toBe("SHIP-BENCHMARK");
+    // the generated tape has no reits column (OD-3)
+    expect(bundle.revealed.series_order).not.toContain("reits");
   });
 
   it("v0.4 carries the twin's ledger, aligned to quarter ends", async () => {
