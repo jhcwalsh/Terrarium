@@ -1,9 +1,10 @@
 # ER-6 close-out — the call-pacing curve, fitted or declared (DRAFT for owner review)
 
-> **Status: DRAFT.** A release event per the realism register — owner sign-off
-> on the calibration source (D1 below) before any code. Prepared 2026-08-12,
-> after the su-generated-worlds plan closed: generated worlds inherit ER-6
-> whole (survey S3: the arithmetic is age-driven, generator-independent), and
+> **Status: APPROVED — D1 ratified by the owner 2026-08-12: "A plus C"**
+> (the declared mid-band curve, plus the expiry-undrawn ledger line).
+> A release event per the realism register. Prepared after the
+> su-generated-worlds plan closed: generated worlds inherit ER-6 whole
+> (survey S3: the arithmetic is age-driven, generator-independent), and
 > ER-6 is the named prerequisite for the commitment lever (E1), the game's
 > most distinctive decision.
 

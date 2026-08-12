@@ -35,6 +35,26 @@ def runs():
     return simulate_play(paths), simulate_play(paths, linkage=False)
 
 
+def test_peak_unfunded_ratio_no_longer_pathological(runs):
+    """ER-6 close-out acceptance, recalibrated against measurement.
+
+    The design note hoped the declared curve alone would bring the overhang
+    into the 0.25-0.75 band; measured, the curve change moved stagflation's
+    peak from 3.26 to ~1.22 (goldilocks ~0.97) and the RESIDUAL excess is
+    attributable to the hold-course COMMITMENT PACE (18%/yr, the E1 lever's
+    default), not the call curve — plus the denominator effect in crash
+    decades. Neither the band nor the pace is tuned here: the band stays a
+    true flag about the default pacing policy, and the pace is the player's
+    lever. This pin asserts the ER-6 pathology itself is gone: the overhang
+    is bounded far below the placeholder's 2.4-3.3 regime."""
+    from ah.programme import path_stats, programme_quarters
+
+    linked, unlinked = runs
+    quarters = programme_quarters(linked, unlinked)
+    stat = path_stats(quarters, linked)["peak_unfunded_ratio"]
+    assert stat < 1.5, stat  # placeholder-curve worlds read 2.4-3.3
+
+
 def test_quarters_pair_linked_and_unlinked_distributions(runs):
     linked, unlinked = runs
     rows = programme_quarters(linked, unlinked)

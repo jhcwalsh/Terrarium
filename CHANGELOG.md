@@ -14,6 +14,21 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **ER-6 CLOSED: the call-pacing curve, declared (owner D1 "A plus C").**
+  `rc_curve` is now `[0.35, 0.40, 0.30, 0.25, 0.20, 0.15]` — class
+  `declared`, ~90% called by year 10, pinned in the 85–95% practitioner
+  band — and the residual commitment EXPIRES visibly at terminal lapse
+  (`CohortStep.expired_undrawn`; unfunded zeroes). A release event: both
+  play alphas bump to `port-v2-cashflow`/`port-v2-cashflow-gen`,
+  leaderboards restart under the new stamps, both fixtures regenerated.
+  Measured close-out: `peak_unfunded_ratio` 2.4–3.3 → 0.96–1.29 (still
+  above the 0.25–0.75 band — the residual belongs to the 18%/yr hold-course
+  commitment pace, the E1 lever's default, and crash-decade denominators;
+  neither band nor pace tuned). **ER-8 partially revived for free**:
+  deflation_bust forced secondaries 0/20 → 6/20 seeds (19 events); benign
+  worlds and the 1974 world stay 0/20. The E1 commitment lever is
+  unblocked. No digest, world_id, or seal moved (play-layer only).
+
 - **su-gen-04: the generated wire verified — the su-generated-worlds plan
   is COMPLETE.** Task 4's substance shipped with su-gen-02's feed dispatch;
   this WP pins it: `test_generated_fixture_wire_is_prewritten_and_sane`

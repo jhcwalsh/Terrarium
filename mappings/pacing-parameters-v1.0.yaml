@@ -43,10 +43,16 @@ sleeves:
                                     # PitchBook family; NOT reproducible from
                                     # primary data -- the register's stated
                                     # fallback while ALB-A is undelivered).
-    rc_curve: [0.25, 0.30, 0.20, 0.12, 0.08, 0.05]
-                                    # class: chosen; %/yr of unfunded by age
-                                    # year. Slow tail (34% uncalled at age 7)
-                                    # noted at I6 -- pending ALB-A item 1.
+    rc_curve: [0.35, 0.40, 0.30, 0.25, 0.20, 0.15]
+                                    # class: declared (ER-6 close-out, owner
+                                    # D1 2026-08-12 "A plus C"): one
+                                    # allocator's curve landing ~90% called
+                                    # by year 10, mid-band of the 85-95%
+                                    # practitioner expectation. Supersedes
+                                    # the ALB-A placeholder whose slow tail
+                                    # left ~29% never called (register ER-6).
+                                    # Residual at lapse now EXPIRES visibly
+                                    # (CohortStep.expired_undrawn).
 
 open_questions:
   - id: PQ-1

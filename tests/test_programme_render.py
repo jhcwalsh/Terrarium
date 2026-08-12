@@ -61,10 +61,12 @@ def test_model_block_is_deterministic():
 
 def test_model_curves_call_rate_matches_frozen_rc_curve():
     # rc_curve straight from fixtures/state/closed-end-cohort.example.json:
-    # [0.25, 0.3, 0.2, 0.12, 0.08, 0.05]
+    # [0.35, 0.4, 0.3, 0.25, 0.2, 0.15] — the ER-6 close-out's declared
+    # curve (owner D1 2026-08-12), superseding the ALB-A placeholder this
+    # test previously pinned ([0.25, 0.3, 0.2, 0.12, 0.08, 0.05]).
     curves = _model_curves()
-    assert curves["call_rate"][0] == 0.25
-    assert curves["call_rate"][5] == 0.05
+    assert curves["call_rate"][0] == 0.35
+    assert curves["call_rate"][5] == 0.15
 
 
 def test_model_curves_bow_reaches_yield_rate_at_terminal_age():
