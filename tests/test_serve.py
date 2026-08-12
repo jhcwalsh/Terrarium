@@ -46,7 +46,9 @@ def service(tmp_path_factory):
     return client, db, run.stdout.strip()
 
 
-def _play_through(client, rid: str, actions: dict[int, str], first_commitments=None, **create_kwargs):
+def _play_through(
+    client, rid: str, actions: dict[int, str], first_commitments=None, **create_kwargs
+):
     r = client.post("/sessions", json={"run_id": rid, **create_kwargs})
     assert r.status_code == 201, r.text
     sid = r.json()["session_id"]

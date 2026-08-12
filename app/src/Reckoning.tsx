@@ -107,6 +107,18 @@ export function Reckoning({
             alpha).
           </p>
         )}
+        {(outcome.annotations?.length ?? 0) > 0 && (
+          <div className="review-annotations" aria-label="annotations">
+            <h3>Two things the numbers noticed</h3>
+            <ul>
+              {outcome.annotations!.map((a) => (
+                <li key={`${a.type}-${a.month}`} className={`note-${a.type}`}>
+                  {a.text}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </section>
 
       {board}

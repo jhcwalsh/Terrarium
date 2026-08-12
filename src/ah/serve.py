@@ -323,6 +323,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             paths, decisions, use_reported=use_reported, start_targets=targets
         )
 
+        # sp-03 (E4): the flinch cost and the arithmetic warning ride the
+        # outcome — computed here (the server owns tone and number alike).
+        from ah.annotations import post_game_annotations
+
+        annotations = post_game_annotations(
+            paths, decisions, use_reported=use_reported, start_targets=targets
+        )
+
         alpha = active.final_value - twin.final_value
 
         if doc["ranked"] and doc["participant"]:
@@ -381,6 +389,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 )
             ],
             "window_contributions": list(attribution.contributions),
+            "annotations": annotations,
             "forced_secondaries": active.forced_secondaries,
         }
 

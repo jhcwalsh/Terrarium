@@ -74,6 +74,15 @@ export interface Outcome {
   window_contributions: number[];
   /** count of forced-secondary sales over the whole run. */
   forced_secondaries: number;
+  /** sp-03 (E4): the flinch cost and the arithmetic warning — server-authored
+   * lines, the number stated without smugness. */
+  annotations?: {
+    type: string;
+    month: number;
+    text: string;
+    distribution_shortfall?: number;
+    cost?: number;
+  }[];
 }
 
 export type Action = "hold" | "derisk" | "leanin" | "secondary";

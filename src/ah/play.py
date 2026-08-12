@@ -172,7 +172,11 @@ def plan_commitments(
     """The plan's next per-sleeve commitment points at the given reported
     weight — the server-computed pre-fill for the app's lever (sp-02)."""
     t = dict(targets) if targets is not None else dict(START_TARGETS)
-    m = 1.0 if pacing_rule == "fixed" else _pacing_multiplier(private_weight_reported, t, pacing_band)
+    m = (
+        1.0
+        if pacing_rule == "fixed"
+        else _pacing_multiplier(private_weight_reported, t, pacing_band)
+    )
     return {a: t[a] * _ANNUAL_COMMITMENT_RATE * m for a in PRIVATE_ASSETS}
 
 

@@ -14,6 +14,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **sp-03: the E4 annotations — the flinch cost and the arithmetic
+  warning.** `ah/annotations.py`, computed from the session record alone at
+  outcome time (no new state, per the register): a commitment cut is priced
+  by re-running the same decisions with only that window restored to plan
+  (the later distribution shortfall — fewer vintages can only pay less);
+  a de-risk or secondary taken while coverage's rise was denominator-driven
+  (reported value fell, obligations did not grow) is priced by its own
+  chain-link contribution when negative. Server-authored lines, tone per
+  the style guide ("state the number, never gloat" — pinned by a test that
+  rejects judgement words). The outcome payload carries `annotations`; the
+  review screen renders them under "Two things the numbers noticed."
+
 - **sp-02: the commitment lever in the player's hands (E1's decision
   surface).** The decision window gains the lever: three per-sleeve inputs
   pre-filled with the plan's next commitments — SERVER-computed at the
