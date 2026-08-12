@@ -14,6 +14,15 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **su-gen-04: the generated wire verified — the su-generated-worlds plan
+  is COMPLETE.** Task 4's substance shipped with su-gen-02's feed dispatch;
+  this WP pins it: `test_generated_fixture_wire_is_prewritten_and_sane`
+  asserts the committed generated fixture carries all tier-1 artifact types
+  in-horizon with values on their proper scales (percent CPI from the
+  source-space YoY channel, bp spreads, percent policy rate). Plan document
+  closed out with per-task completion pointers and the two standing owner
+  questions (PE sealed alpha; stagflation tilt).
+
 - **su-gen-03: sessions and the app on generated worlds.** The session
   service dispatches on the world's generator (`_resolve_engine`): generated
   sessions run the adapter tape with the generated opening book and score

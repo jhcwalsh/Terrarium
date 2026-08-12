@@ -129,29 +129,46 @@ task — a generator-backed `run_ensemble`/`run_path` returning the toy
 contracts, the seed-rule reconciliation, the vintage pin via `x_` extension,
 an honest `resolved_engine` stamp, and the OD-3 reits decision applied.
 The 1974 scenario (OD-1) is the acceptance vehicle.)*
-- [ ] An authored WorldSpec preset (e.g. `stagflation-1974` start-state)
-      naming `bootstrap-stratified`, base_seed, n_paths; validator V1–V12
-      green; world_id block distinct from toy presets.
-- [ ] `ah world build` produces a stored world + RunRecord with
-      `resolved_engine` pinning bootstrap-v1's version + campaign vintage.
-- [ ] Replay MATCH bit-identical.
+- [x] `stagflation_1974` preset naming `bootstrap-v1` (first-class id, not
+      the deprecated alias), base_seed 197400, world block …601, V1–V12
+      green. **DONE 2026-08-12**, merge `ffd05f9`.
+- [x] RunRecord stamps `generator_id`/`generator_version: bootstrap-v1` +
+      `campaign_vintage_id: 2026-08-10.1` (OD-4). Adapter in
+      `ah/port/adapter.py`; source-space fix after the console caught
+      block-seam fabrications (register ER-9's sibling finding).
+- [x] Replay MATCH bit-identical against the real panel; `ah verify` True.
 
-### Task 2: `su-gen-02 — bundle 0.5`
-- [ ] Bundle carries the generated ensemble slice the app needs, the
-      16-factor names, per-factor proxy shares, and the campaign-3
-      credibility pointers (verdict + vintage), <1MB gz, mtime=0.
-- [ ] `app/fixtures/` gains a committed generated toy-sized bundle; both
-      suites verify it.
+### Task 2: `su-gen-02 — bundle 0.5` — DONE 2026-08-12, merge `08eb59c`
+- [x] `world-bundle-0.5`: `factors` (16 names, units, per-factor proxy
+      shares over the draw span with the HAR/VXO by-rule split) +
+      `credibility` (campaign-3 verdict, severe flags, generator, vintage),
+      sealed in `meta.sections_seal`; gen bundle 29KB of the 1MB budget.
+- [x] `app/fixtures/gen.bundle.gz` committed
+      (`scripts/gen_bundle_fixtures.py`); BOTH suites verify BOTH fixtures
+      (the BUILD-SUMMARY gap closed).
 
-### Task 3: `su-gen-03 — session + app`
-- [ ] Session service serves generated worlds unchanged (server-authority
-      audit); app renders the 16-factor world; proxy months disclosed in
-      the display surface (the datalab posture, player-facing).
-- [ ] The credibility console walks a generated world.
+### Task 3: `su-gen-03 — session + app` — DONE 2026-08-12, merge `63ba0cb`
+- [x] Sessions dispatch by generator; generated scores stamp the DISTINCT
+      `port-v1-cashflow-gen` alpha version; app Provenance panel disclosed
+      proxy months to the player (verified live: hy_spread 100%, fx_usd
+      77.9%, equity_vol 54.2%…). Committee briefing keys equity by name.
+- [x] The credibility console walks a generated world (closed early by
+      console-v2, merge `2c70999` — Nineteen Seventy-Four is a tab).
 
-### Task 4: `su-gen-04 — pre-authored artifacts`
-- [ ] Tier-1 deterministic artifacts render over generated paths at build;
-      recorded in the bundle per PD-4.
+### Task 4: `su-gen-04 — pre-authored artifacts` — DONE 2026-08-12
+- [x] Tier-1 artifacts ride the generated bundle (238 items on the fixture:
+      release pages with %-scale CPI + bp-scale spreads, cb statements,
+      quarterly statements with peer bands, crisis digests off the regime
+      record). Substance shipped with su-gen-02's feed dispatch; pinned by
+      `test_generated_fixture_wire_is_prewritten_and_sane`.
+
+**PLAN COMPLETE.** Standing owner questions recorded along the way: the PE
+sealed-alpha disclosure (Sharpe 1.30 in generated worlds traces to the
+sealed `alpha_quarterly`), and the stagflation TILT (regime conditioning
+pins block starts only — the campaign-4 conditional-capability argument in
+product form). Open successors: bundle `summary.episodes` still carries the
+authored sequence rather than realized regimes; `board_pack` has no
+producer; the programme walk renders a pending note for generated worlds.
 
 **Gate per WP:** plan's acceptance tests + full suite + ruff/pyright +
 CHANGELOG; merge `--no-ff` on green.
