@@ -14,6 +14,20 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **su-gen-03: sessions and the app on generated worlds.** The session
+  service dispatches on the world's generator (`_resolve_engine`): generated
+  sessions run the adapter tape with the generated opening book and score
+  under a DISTINCT alpha stamp (`port-v1-cashflow-gen`) so no leaderboard
+  row can mix engines — mark-to-market, outcome, and the chain-link
+  attribution all threaded. The app gains the player-facing Provenance
+  panel (browse + play): the campaign verdict line ("every month is a real
+  month; only the sequence is new"), data vintage, and the per-factor
+  reconstruction disclosure with rule ids (HAR split from VXO) — renders
+  nothing for toy bundles. `committee.build_briefing` reads the public
+  return series by a named `equity_column` instead of trusting position 0
+  (the Task 0 landmine). The plan's Task 3 console criterion was already
+  closed by console-v2.
+
 - **su-gen-02: world-bundle-0.5 — factor lineage for generated worlds.**
   Generated bundles carry `factors` (the 16 names, units, per-factor proxy
   shares over the draw span incl. the HAR/VXO by-rule split, computed at

@@ -103,6 +103,7 @@ def build_briefing(
     coverage_liquid: float,
     wire_items: list[str],
     n_wire: int = 8,
+    equity_column: int = 0,
 ) -> str:
     """Deterministic briefing text over the revealed slice ONLY.
 
@@ -110,10 +111,15 @@ def build_briefing(
     and this function computes summary statistics only from what it holds
     (trailing returns, drawdown-to-date, latest levels). Weights are the
     REPORTED plane — the committee sees the marks in view, like a real one.
+
+    ``equity_column`` names which tape column is the public DECIMAL return
+    series (su-gen-03: the WP4.9 study tapes put it at 0 by construction,
+    but a factor-ordered tape's column 0 is cape_v — a caller must say
+    where equity lives rather than trust position).
     """
     if revealed.months_revealed == 0:
         raise CommitteeError("a briefing needs at least one revealed month")
-    series = revealed.data[:, 0]
+    series = revealed.data[:, equity_column]
     wealth = np.cumprod(1.0 + series)
     peaks = np.maximum.accumulate(np.concatenate([[1.0], wealth]))[1:]
     dd_to_date = float(np.max(1.0 - wealth / peaks))

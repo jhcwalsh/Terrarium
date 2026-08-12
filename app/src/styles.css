@@ -1266,3 +1266,33 @@ button.commit {
   font-size: 1.062rem;
   color: var(--muted);
 }
+
+/* -- provenance panel (su-gen-03): the generated-world audit trail -------- */
+.provenance-panel {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--dim, #7c9b99);
+}
+.provenance-panel summary {
+  cursor: pointer;
+  letter-spacing: 0.04em;
+}
+.provenance-panel .prov-verdict {
+  margin: 8px 0 4px;
+  max-width: 72ch;
+}
+.provenance-panel .prov-note {
+  margin: 6px 0 4px;
+  max-width: 72ch;
+}
+.prov-table {
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+.prov-table th,
+.prov-table td {
+  text-align: left;
+  padding: 3px 12px 3px 0;
+  border-bottom: 1px solid rgba(124, 155, 153, 0.25);
+  font-weight: 400;
+}

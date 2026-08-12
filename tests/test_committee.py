@@ -61,6 +61,41 @@ class TestBriefing:
         assert "months revealed: 60" in _briefing()
         assert "coverage (unfunded / liquid): 0.43" in _briefing()
 
+    def test_briefing_reads_equity_by_named_column(self):
+        """su-gen-03: the public-return column is a PARAMETER, not position 0.
+
+        The Task 0 survey found the briefing silently treating tape column 0
+        as an equity return — on a factor-ordered tape that column is cape_v
+        and the briefing renders nonsense without failing. A caller with a
+        non-first equity column must be able to say so, and the two reads
+        must agree."""
+        import numpy as np
+
+        # equity in column 2; junk (a level-like series) in column 0
+        months = 24
+        rng = np.random.default_rng(7)
+        tape = np.column_stack(
+            [
+                100.0 + np.arange(months),  # a level, poison if read as returns
+                rng.normal(0, 0.01, months),
+                rng.normal(0.005, 0.04, months),  # the actual equity column
+            ]
+        )
+        moved = com.build_briefing(
+            revealed=RevealedTape.cut(tape, months),
+            weights_reported=WEIGHTS,
+            coverage_liquid=0.4,
+            wire_items=[],
+            equity_column=2,
+        )
+        reference = com.build_briefing(
+            revealed=RevealedTape.cut(tape[:, [2, 1, 0]], months),
+            weights_reported=WEIGHTS,
+            coverage_liquid=0.4,
+            wire_items=[],
+        )
+        assert moved == reference
+
     def test_briefing_inherits_the_wall(self):
         """More reveal, different briefing — and the input object simply has
         no months beyond the pointer to leak."""
