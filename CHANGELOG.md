@@ -14,6 +14,21 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **Credibility console v2: scenario tabs, charts, condensed tables.** One
+  script-free CSS tab per world (radio + sibling selectors - the no-script
+  invariant keeps its test) instead of scrolling; per-world stat tiles;
+  hand-authored deterministic SVG charts - equity decade fan, per-asset
+  p5..p95 intervals drawn over the declared bands (flagged assets in red),
+  factor small multiples (median + p10-p90), true-vs-reported paired bars in
+  the app's jade/brass color language (palette validated with the dataviz
+  six-check validator on the console's own surface); correlation cells
+  shaded diverging. Every v1 table survives in a collapsible view; the
+  private programme renders inside its world's tab instead of at the page
+  foot. `build_report` now dispatches generated worlds through the su-gen-01
+  adapter (the Task 3 console criterion: Nineteen Seventy-Four walks as a
+  first-class tab), iterating the ensemble's own asset order; the CLI skips
+  the programme walk for generated worlds with a visible note (su-gen-03).
+
 - **su-gen-01: the generator→engine adapter and the first generated world**
   (`ah/port/adapter.py`). `run_gen_ensemble`/`run_gen_path` translate a
   16-factor bootstrap `Ensemble` into the toy `EnsembleResult`/`EnginePaths`

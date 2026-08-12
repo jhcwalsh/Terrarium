@@ -342,7 +342,11 @@ def credibility_cmd(
         world = project_numeric(ws)
         title = f"{narrative.get('title') or rec['world_id']} - run {rid[:8]}"
         reports.append(build_report(world, base_seed=rec["seed"], n_paths=paths, title=title))
-        programme.append(build_programme_report(world, base_seed=rec["seed"], title=title))
+        # the programme walk is play-layer (toy sleeves) until su-gen-03
+        if ws.engine_defaults.generator_id == "toy-v0":
+            programme.append(build_programme_report(world, base_seed=rec["seed"], title=title))
+        else:
+            programme.append(None)
 
     for name in preset:
         src = PRESETS_DIR / f"{name}.json"
@@ -354,7 +358,11 @@ def credibility_cmd(
         world = project_numeric(ws)
         title = f"{narrative.get('title') or name} - preset {name}"
         reports.append(build_report(world, base_seed=seed, n_paths=paths, title=title))
-        programme.append(build_programme_report(world, base_seed=seed, title=title))
+        # the programme walk is play-layer (toy sleeves) until su-gen-03
+        if ws.engine_defaults.generator_id == "toy-v0":
+            programme.append(build_programme_report(world, base_seed=seed, title=title))
+        else:
+            programme.append(None)
 
     target = out if out is not None else Path("credibility.html")
     target.parent.mkdir(parents=True, exist_ok=True)
