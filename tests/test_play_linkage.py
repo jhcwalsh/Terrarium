@@ -65,11 +65,14 @@ def test_default_run_is_unchanged_by_these_additions():
     Pinned against values recorded from the pre-change implementation, so a
     later edit that quietly moves a scored number fails here. Regenerated for
     toy-v0.5 (ER-7 closed): the engine moved underneath this test, not
-    play.py — toy-v0.3's value was 76.71221387563882.
+    play.py — toy-v0.3's value was 76.71221387563882. Regenerated again for
+    the ER-6 close-out (port-v2-cashflow: declared call curve + expiry at
+    lapse moved every book by design): toy-v0.5/port-v1's value was
+    86.89058776172098.
     """
     result = simulate_play(_paths())
     assert len(result.quarters) == 40
-    assert result.final_value == 86.89058776172098
+    assert result.final_value == 86.62159899795148
     assert result.forced_secondaries == 0
 
 

@@ -151,14 +151,24 @@ def test_vintage_stats_at_tier0_benchmark_growth_are_hand_checkable():
     # rc_curve[0] = 0.25 annual on unfunded, quarterly => 6.25% of 1.0
     # committed. Returns don't affect the first call, so this is unchanged
     # by the growth basis.
-    assert np.isclose(out["first_call"], 0.0625, rtol=1e-6)
-    # paid_in=0.6924, cumulative distributions=0.7729 over 36 quarters of
-    # tier-0 constant growth => dpi_age9 = 0.7729 / 0.6924 = 1.116.
-    assert np.isclose(out["dpi_age9"], 1.116, atol=1e-3)
-    assert np.isclose(out["call_rate_y1_3"], 0.1798, atol=1e-3)
-    # cumulative (distributions - calls) first turns positive at quarter
-    # index 34 (0-based, within the vintage's OWN 36-quarter window)
-    # => crossover_years = (34 + 1) / 4 = 8.75.
+    # rc_curve[0] = 0.35 annual on unfunded (the ER-6 declared curve,
+    # owner D1 2026-08-12), quarterly => 8.75% of 1.0 committed. The
+    # placeholder curve's value was 0.0625 (0.25/4).
+    assert np.isclose(out["first_call"], 0.0875, rtol=1e-6)
+    # under the declared curve: paid_in and cumulative distributions over 36
+    # quarters of tier-0 constant growth give dpi_age9 = 1.1127 (was 1.116
+    # under the placeholder — faster early calls raise paid_in slightly
+    # ahead of the distributions they fund).
+    assert np.isclose(out["dpi_age9"], 1.1127, atol=1e-3)
+    # years 1-3 average annual call rate on the declining unfunded balance:
+    # 0.2223 (curve entries 0.35/0.40/0.30 average 0.35, but each applies to
+    # a balance the prior calls already shrank).
+    assert np.isclose(out["call_rate_y1_3"], 0.2223, atol=1e-3)
+    # cumulative (distributions - calls) still first turns positive at
+    # quarter index 34 (0-based, within the vintage's OWN 36-quarter
+    # window) => crossover_years = (34 + 1) / 4 = 8.75 — faster calls
+    # front-load the J-curve's trough but tier-0's constant growth pays it
+    # back on the same schedule.
     assert out["crossover_years"] == 8.75
 
 
