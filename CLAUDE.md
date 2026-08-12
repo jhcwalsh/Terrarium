@@ -187,9 +187,11 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   ER-7 (fat tails + the -99% limited-liability floor, closed in `toy-v0.5`) are closed;
   ER-2 (no meeting calendar / 25bp quantisation), ER-5 (crisis is a rectangular block;
   pooled equity ACF well outside its drafted band), **ER-6 (~29% of every commitment is
-  never called; `rc_curve` is an ALB-A placeholder that was never fitted)** and ER-8
+  never called; `rc_curve` is an ALB-A placeholder that was never fitted)**, ER-8
   (toy-v0.5's typical months are milder; no shipped preset can trigger a forced
-  secondary) are open. Each entry says what a fix invalidates.
+  secondary) and ER-9 (t(6) tails print single months larger than whole historical
+  bear markets — a −86% equity month; the credibility console's tail bands now flag
+  this) are open. ER-5/ER-8/ER-9 are one family and best fixed together. Each entry says what a fix invalidates.
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 

@@ -530,3 +530,63 @@ one), or crisis-block realism (ER-5's fix) restoring clustered sustained
 drawdowns that exhaust liquid sleeves organically. Bundling it into ER-5 is
 attractive since both trace to "the crisis is a rectangular block".
 **A release event and the owner's call.**
+
+---
+
+## ER-9 — Single months larger than whole historical bear markets, with no economic ceiling
+
+**Status:** OPEN — the other face of the ER-7 fix, sibling to ER-8's milder
+typical months.
+**Found:** 2026-08-11, by the owner reading the credibility console's worst-DD
+column on the rebuilt stagflation world and asking how a 96%/100% worst
+drawdown is justified as an extreme outcome. It is not.
+
+**What happens.** Variance-normalized Student-t(6) holds *declared* volatility
+fixed by concentrating it into rare enormous months, and nothing between the
+sampler and the −99% limited-liability floor bounds how large one month can
+be. On the stagflation preset at its base seed (400 paths), the worst equity
+path's 95.8% drawdown is delivered by a **single −86.3% month** — the whole of
+1929–32 (about −89%) compressed into one month, against a worst *recorded* US
+equity month of about −30% (September 1931). PE, 0.98-correlated and levered,
+prints two months at the −99 floor (the "100%" drawdown, exactly the ~0.3%
+binding rate the ER-7 close-out predicted), and HY prints a −25.8% month
+against a worst recorded of about −16% (October 2008). The tail's *existence*
+is justified — 1 in 400 hostile decades should be terrible; its *anatomy* is
+not: no closing, circuit-broken market delivers a Depression in one month.
+
+**This is engine-wide, not a stagflation quirk.** With the tail bands in
+place, all four presets flag at 400 paths: **goldilocks — the benign world —
+prints a −57.9% equity month and an −80.8% PE month**; reflation_boom a
+−74.5% equity month and a floored −99% PE month; deflation_bust puts *equity
+itself* on the −99 floor. A world whose narrative is "nothing goes wrong"
+should not contain a month twice as bad as any in recorded history.
+
+**A second defect layered on the PE case:** the sleeve is one levered asset,
+but the thing it models is a diversified multi-cohort programme. One fund
+going to zero in a month is plausible; the whole programme doing so is not —
+diversification across funds should bound sleeve-level monthly moves well
+above the limited-liability floor.
+
+**Detection shipped with this entry** (console, unsealed, not a fix): the
+credibility console's `PLAUSIBLE` bands now declare per-asset tail edges —
+worst single month and worst path drawdown — and flag breaches like any other
+band (`credibility-tail-bands` branch). The stagflation review that found
+this entry now produces flags instead of requiring the owner to squint at a
+cell.
+
+**What a fix looks like.** A tempered tail: keep t(6) body behaviour but cap
+or exponentially temper single-month moves at an economically defensible
+floor per asset class (equity somewhere below the worst recorded month, with
+the cap documented as a modelling choice), and give the PE sleeve a
+diversification bound so programme-level months cannot reach a single-fund
+outcome. Tuning should re-check ER-8's other face: tempering the huge months
+pushes variance back into typical months, which may also revive the forced
+secondary. The three entries ER-5, ER-8 and ER-9 form one family — the crisis
+shape and the tail shape trade against each other under fixed declared vol —
+and are best fixed together, not piecemeal.
+
+**What it invalidates.** Any tail change moves every world's digests and the
+scored path: new `world_id` block, `TOY_ENGINE_VERSION` bump, and a
+`PLAY_ALPHA_VERSION` bump so leaderboards never mix engines. It does NOT
+touch `schemas/`, `mappings/`, or any seal. **A release event and the
+owner's call.**
