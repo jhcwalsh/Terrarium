@@ -14,6 +14,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **sp-05: the single-player game is FINISHED (the finish-single-player
+  plan completes).** The commit-primer on the setup screen delivers E1's
+  unmissable commitment consequence to every player before every decade
+  (pinned); the session serves the vintage stack by age and trailing
+  distributions, rendered at the moment of decision; the interpretation
+  guide exists (`docs/interpretation-guide.md`) with coverage-on-both-bases
+  as the toggle's second act; the Reckoning card states the
+  forced-secondary count instead of promising it. Register rows E1, E3
+  (I5 deferral recorded) and E4 CLOSED with pointers; E7's drift-twin data
+  arrival was sp-01. Vertical slice: every clause of the kickoff sentence
+  is now true.
+
 - **sp-04: the loose ends.** The `board_pack` finally has a producer — one
   per decision window, assembled at build from the quarter's own numbers
   and the wire (all five sections; the consultant section states process,

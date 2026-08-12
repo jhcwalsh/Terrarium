@@ -158,6 +158,31 @@ class TestCommitmentLeverAPI:
         first = session["window_log"][0]
         assert first["commitments"] == {"pe": 0.0, "pc": 0.0, "re": 0.0}
 
+    def test_session_exposes_the_vintage_stack_and_trailing_distributions(self, service):
+        """sp-05, closing E1's last engine-side gaps: at the moment of
+        decision the player can see the ladder BY AGE and the trailing
+        distribution series, both server-computed."""
+        client, _db, rid = service
+        r = client.post("/sessions", json={"run_id": rid})
+        sid = r.json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        assert (
+            client.post(
+                f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"}
+            ).status_code
+            == 200
+        )
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 24}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        stack = doc["vintage_nav"]
+        assert stack and all(v >= 0 for v in stack.values())
+        # the opening cohorts and at least one committed vintage by year 2
+        assert any("-play" in k for k in stack)
+        assert any("-v" in k for k in stack)
+        trailing = doc["trailing_distributions"]
+        assert len(trailing) == 4  # four closed quarters of history
+        assert all(v >= 0 for v in trailing)
+
     def test_out_of_bounds_commitments_are_422(self, service):
         client, _db, rid = service
         r = client.post("/sessions", json={"run_id": rid})

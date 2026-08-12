@@ -78,6 +78,18 @@ export function RankedSetup({
           </select>
         </label>
       </section>
+      <section className="commit-primer" aria-label="one thing to know">
+        {/* sp-05: E1's tutorial obligation — ONE unmissable commitment
+            consequence, shown to every player before every decade. */}
+        <h2>One thing to know before the decade starts</h2>
+        <p>
+          Each year you may set the next year&apos;s private commitments — or
+          hold to the plan. The consequence that catches people: a commitment
+          you cut pays nothing, forever. The vintage you skip in a bad year is
+          the one that would have paid distributions in the good ones, and the
+          post-game review will price exactly what the cut cost you.
+        </p>
+      </section>
       <button
         disabled={!ready}
         onClick={() =>

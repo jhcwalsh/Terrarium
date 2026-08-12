@@ -210,6 +210,13 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             k: round(v, 4)
             for k, v in plan_commitments(here.private_weight_reported, targets).items()
         }
+        # sp-05 (E1's last gaps): the ladder by age and the trailing
+        # distribution series, visible at the moment of decision.
+        doc["vintage_nav"] = {k: round(float(v), 4) for k, v in here.vintage_nav.items()}
+        doc["trailing_distributions"] = [
+            round(float(active.quarters[i].distributions_received), 4)
+            for i in range(max(0, q - 3), q + 1)
+        ]
         return doc
 
     @app.get("/sessions/{sid}")
