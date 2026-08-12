@@ -1,0 +1,24 @@
+#!/bin/sh
+# The gate-merge guard (housekeeping-01). Merging into main requires a
+# .gate-ok stamped by scripts/check_gate.py for EXACTLY the commit being
+# merged. Activated by: git config core.hooksPath githooks
+# Two incidents behind this hook - see scripts/check_gate.py's docstring.
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+git_dir=$(git rev-parse --git-dir)
+if [ "$branch" = "main" ] && [ -f "$git_dir/MERGE_HEAD" ]; then
+    merged=$(cat "$git_dir/MERGE_HEAD")
+    if [ ! -f .gate-ok ]; then
+        echo "REFUSED: merging into main needs a verified green gate."
+        echo "  On the branch: uv run python scripts/check_gate.py <gate-log>"
+        exit 1
+    fi
+    stamped=$(head -n 1 .gate-ok | tr -d '\r\n')
+    if [ "$stamped" != "$merged" ]; then
+        echo "REFUSED: .gate-ok is for $stamped, not the merged $merged."
+        echo "  Re-run the gate on the branch tip, then check_gate.py again."
+        exit 1
+    fi
+    rm -f .gate-ok
+fi
+exit 0

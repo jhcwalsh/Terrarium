@@ -14,6 +14,18 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **housekeeping-01: the governance debt paid down.** (1) The gate-merge
+  guard is mechanical: `scripts/check_gate.py` validates a gate log (EXIT: 0,
+  a positive pass count, zero failures) and stamps `.gate-ok` for the exact
+  branch commit; the committed `githooks/pre-commit` (activated via
+  `core.hooksPath`) refuses any merge into main without it — both of the
+  day's real incidents (the red-gate merge, the empty EXIT-128 log) are its
+  test cases. (2) The citation checker: every repo path a living document
+  cites must exist (one honest allowlisted gap, itself guarded against going
+  stale). (3) The RFR-96 class checked from the unsealed side: the committed
+  reference artifact's six parameters must equal the sealed declaration,
+  field by field.
+
 - **sp-05: the single-player game is FINISHED (the finish-single-player
   plan completes).** The commit-primer on the setup screen delivers E1's
   unmissable commitment consequence to every player before every decade
