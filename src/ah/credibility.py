@@ -133,6 +133,10 @@ class WorldReport:
     factors: list[FactorStats]
     smoothing: list[SmoothingStats]
     correlations: dict[str, dict[str, float]] = field(default_factory=dict)
+    # v2 chart payloads (rounded for byte-stability; empty = charts omitted)
+    asset_order: tuple[str, ...] = ()
+    equity_fan: dict[str, list[float]] = field(default_factory=dict)
+    factor_lines: dict[str, dict[str, list[float]]] = field(default_factory=dict)
 
     @property
     def flag_count(self) -> int:
@@ -189,9 +193,13 @@ def _quarterly_reported(reported_pct: np.ndarray) -> np.ndarray:
 
 
 def asset_stats(ens: EnsembleResult) -> list[AssetStats]:
-    """Per-asset decade statistics, with plausibility flags against PLAUSIBLE."""
+    """Per-asset decade statistics, with plausibility flags against PLAUSIBLE.
+
+    Iterates the ensemble's own ``asset_order`` — the toy tuple for toy
+    worlds, the generated set (no reits, OD-3) for generated ones.
+    """
     out: list[AssetStats] = []
-    for a in ASSETS:
+    for a in ens.asset_order:
         r = ens.returns[a]
         ann = _annualized(r, ens.months) * 100.0
         p5, med, p95 = (float(v) for v in np.percentile(ann, [5, 50, 95]))
@@ -307,9 +315,10 @@ def smoothing_stats(ens: EnsembleResult) -> list[SmoothingStats]:
 
 
 def _correlations(ens: EnsembleResult) -> dict[str, dict[str, float]]:
-    stacked = np.vstack([ens.returns[a].ravel() for a in ASSETS])
+    order = ens.asset_order
+    stacked = np.vstack([ens.returns[a].ravel() for a in order])
     c = np.corrcoef(stacked)
-    return {a: {b: float(c[i, j]) for j, b in enumerate(ASSETS)} for i, a in enumerate(ASSETS)}
+    return {a: {b: float(c[i, j]) for j, b in enumerate(order)} for i, a in enumerate(order)}
 
 
 # factor summaries are path-shaped, and 200 paths is plenty for a mean
@@ -323,11 +332,44 @@ def build_report(
     n_paths: int,
     title: str | None = None,
 ) -> WorldReport:
-    """Everything the console shows for one world, from its own seed lineage."""
-    from ah.core.engine import run_path
+    """Everything the console shows for one world, from its own seed lineage.
 
-    ens = run_ensemble(world, n_paths, base_seed=base_seed)
-    paths = [run_path(world, base_seed + 7919 * k) for k in range(min(n_paths, _MAX_FACTOR_PATHS))]
+    Dispatches on ``generator_id``: toy worlds through the toy engine,
+    generated worlds through the su-gen-01 adapter (the Task 3 console
+    criterion — a generated world walks exactly as a preset one).
+    """
+    n_factor_paths = min(n_paths, _MAX_FACTOR_PATHS)
+    if world.engine_defaults.generator_id == "toy-v0":
+        from ah.core.engine import run_path
+
+        ens = run_ensemble(world, n_paths, base_seed=base_seed)
+        paths = [run_path(world, base_seed + 7919 * k) for k in range(n_factor_paths)]
+    else:
+        from ah.port.adapter import run_gen_ensemble, run_gen_path
+
+        ens = run_gen_ensemble(world, n_paths, base_seed=base_seed)
+        paths = [run_gen_path(world, base_seed + 7919 * k) for k in range(n_factor_paths)]
+
+    growth = np.cumprod(1.0 + ens.returns["equity"] / 100.0, axis=1)
+    fan_qs = np.percentile(growth, [5, 25, 50, 75, 95], axis=0)
+    equity_fan = {
+        f"p{p}": [round(float(v), 4) for v in row]
+        for p, row in zip((5, 25, 50, 75, 95), fan_qs, strict=True)
+    }
+    factor_lines: dict[str, dict[str, list[float]]] = {}
+    for label, attr in (
+        ("policy rate (%)", "rate"),
+        ("HY spread (bp)", "spread"),
+        ("inflation (%)", "inflation"),
+    ):
+        v = np.array([getattr(p, attr) for p in paths], dtype=float)
+        p10, p50, p90 = np.percentile(v, [10, 50, 90], axis=0)
+        factor_lines[label] = {
+            "p10": [round(float(x), 3) for x in p10],
+            "p50": [round(float(x), 3) for x in p50],
+            "p90": [round(float(x), 3) for x in p90],
+        }
+
     return WorldReport(
         world_id=world.world_id,
         title=title or world.world_id,
@@ -338,6 +380,9 @@ def build_report(
         factors=factor_stats(paths),
         smoothing=smoothing_stats(ens),
         correlations=_correlations(ens),
+        asset_order=ens.asset_order,
+        equity_fan=equity_fan,
+        factor_lines=factor_lines,
     )
 
 
@@ -345,18 +390,22 @@ def build_report(
 # the page (self-contained, no external assets, byte-stable)
 # --------------------------------------------------------------------------- #
 
+# A committed single dark theme on the console's own surface. The three series
+# hues were run through the dataviz validator on #0d2226 (all six checks pass):
+# jade #2fa183 carries "true", brass #b9842b carries "reported" - the app's own
+# color language - and blue #3987e5 is the neutral accent for bands and paths.
+# #d03b3b is the reserved status color for flags, never a series.
 _CSS = """
 :root{--ink:#0d2226;--pane:#0f282b;--line:#20464b;--ice:#d7e6e3;--dim:#7c9b99;
---jade:#4fc3a1;--clay:#d2624f;--brass:#d6a24a}
+--jade:#2fa183;--brass:#b9842b;--blue:#3987e5;--clay:#d03b3b;
+--grid:#1b3d41;--muted:#6f8d8b}
 *{box-sizing:border-box}
-body{margin:0;padding:28px;background:var(--ink);color:var(--ice);
+body{margin:0;padding:24px 28px;background:var(--ink);color:var(--ice);
 font:14px/1.5 -apple-system,Segoe UI,sans-serif}
-h1{font-size:26px;margin:0 0 4px}h2{font-size:19px;margin:30px 0 8px}
-h3{font-size:15px;margin:20px 0 6px;color:var(--dim);text-transform:uppercase;
+h1{font-size:24px;margin:0 0 4px}
+h3{font-size:13px;margin:22px 0 8px;color:var(--dim);text-transform:uppercase;
 letter-spacing:.12em;font-weight:600}
-.lede{color:var(--dim);max-width:74ch;margin:0 0 20px}
-.world{border:1px solid var(--line);border-radius:12px;background:var(--pane);
-padding:20px 22px;margin:0 0 22px;overflow-x:auto}
+.lede{color:var(--dim);max-width:78ch;margin:0 0 16px}
 table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
 th,td{text-align:right;padding:5px 10px;border-bottom:1px solid #18383c}
 th{color:var(--dim);font-size:11px;text-transform:uppercase;letter-spacing:.1em;
@@ -370,9 +419,39 @@ padding:2px 10px;font-size:11px;color:var(--dim);margin-right:6px}
 .tag.good{border-color:var(--jade);color:var(--jade)}
 .note{color:var(--dim);font-size:12.5px}
 .corr td{font-size:12px;padding:3px 7px}
-.corr td.hi{color:var(--brass)}
+.corr td.c-hot{background:#153a5e;color:var(--ice)}
+.corr td.c-warm{background:#11304d66}
+.corr td.c-cool{background:#4a1e1e}
 footer{color:var(--dim);font-size:12px;margin-top:32px;border-top:1px solid
 var(--line);padding-top:12px}
+/* -- v2: scenario tabs (script-free: radio + sibling selectors) ------------ */
+.tabs>input{position:absolute;opacity:0;pointer-events:none}
+.tabbar{display:flex;gap:6px;flex-wrap:wrap;margin:14px 0 0}
+label.tab{padding:8px 16px;border:1px solid var(--line);cursor:pointer;
+color:var(--dim);border-radius:10px 10px 0 0;background:transparent;
+font-size:13.5px}
+label.tab .tag{margin-left:8px;margin-right:0}
+.panel{display:none;border:1px solid var(--line);border-radius:0 12px 12px 12px;
+background:var(--pane);padding:20px 22px;overflow-x:auto}
+/* -- charts ---------------------------------------------------------------- */
+.chartrow{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start}
+.chart{margin:0 0 6px}
+.chart figcaption{color:var(--dim);font-size:12px;margin:4px 0 0}
+svg text{font:11px -apple-system,Segoe UI,sans-serif;fill:var(--muted)}
+svg .axis{stroke:#2a4d52;stroke-width:1}
+svg .grid{stroke:var(--grid);stroke-width:1}
+.tiles{display:flex;gap:14px;flex-wrap:wrap;margin:14px 0 4px}
+.tile{border:1px solid var(--line);border-radius:10px;padding:10px 16px;
+min-width:130px}
+.tile .v{font-size:22px;font-variant-numeric:tabular-nums}
+.tile .k{color:var(--dim);font-size:11px;text-transform:uppercase;
+letter-spacing:.1em}
+.tile.bad .v{color:var(--clay)}
+details{margin:6px 0 14px}
+details summary{cursor:pointer;color:var(--dim);font-size:12.5px}
+.legend{color:var(--dim);font-size:12px;margin:2px 0 8px}
+.legend .sw{display:inline-block;width:10px;height:10px;border-radius:3px;
+margin:0 4px 0 12px;vertical-align:-1px}
 """
 
 
@@ -442,13 +521,23 @@ def _smoothing_table(rep: WorldReport) -> str:
 
 
 def _corr_table(rep: WorldReport) -> str:
-    head = "".join(f"<th>{_e(a)}</th>" for a in ASSETS)
+    order = rep.asset_order or tuple(ASSETS)
+    head = "".join(f"<th>{_e(a)}</th>" for a in order)
     rows = []
-    for a in ASSETS:
+    for a in order:
         cells = []
-        for b in ASSETS:
+        for b in order:
             v = rep.correlations[a][b]
-            cls = ' class="hi"' if a != b and abs(v) >= 0.7 else ""
+            if a == b:
+                cls = ""
+            elif v >= 0.7:
+                cls = ' class="c-hot"'
+            elif v >= 0.4:
+                cls = ' class="c-warm"'
+            elif v <= -0.4:
+                cls = ' class="c-cool"'
+            else:
+                cls = ""
             cells.append(f"<td{cls}>{v:+.2f}</td>")
         rows.append(f"<tr><td>{_e(a)}</td>{''.join(cells)}</tr>")
     return (
@@ -458,47 +547,302 @@ def _corr_table(rep: WorldReport) -> str:
     )
 
 
+# --------------------------------------------------------------------------- #
+# v2 charts: hand-authored SVG, deterministic, byte-stable, script-free.
+# Hover uses native SVG <title> tooltips (the no-script invariant is a test).
+# --------------------------------------------------------------------------- #
+
+
+def _sx(v: float) -> str:
+    return f"{v:.1f}"
+
+
+def _fan_chart(rep: WorldReport) -> str:
+    """The equity decade: growth-of-1 percentile fan (p5/25/50/75/95)."""
+    fan = rep.equity_fan
+    if not fan:
+        return ""
+    w, h, pl, pb = 560.0, 180.0, 44.0, 18.0
+    months = len(fan["p50"])
+    lo = min(min(fan["p5"]), 1.0)
+    hi = max(max(fan["p95"]), 1.0)
+    span = (hi - lo) or 1.0
+
+    def pt(i: int, v: float) -> str:
+        x = pl + (w - pl - 8) * (i / max(months - 1, 1))
+        y = (h - pb) - (h - pb - 10) * ((v - lo) / span)
+        return f"{_sx(x)},{_sx(y)}"
+
+    def band(upper: list[float], lower: list[float], opacity: str) -> str:
+        pts = [pt(i, v) for i, v in enumerate(upper)]
+        pts += [pt(i, v) for i, v in reversed(list(enumerate(lower)))]
+        return f'<polygon points="{" ".join(pts)}" fill="var(--blue)" opacity="{opacity}"/>'
+
+    median = " ".join(pt(i, v) for i, v in enumerate(fan["p50"]))
+    gridlines = []
+    for gv in (1.0, (lo + hi) / 2.0, hi):
+        gy = (h - pb) - (h - pb - 10) * ((gv - lo) / span)
+        gridlines.append(
+            f'<line class="grid" x1="{_sx(pl)}" y1="{_sx(gy)}" x2="{_sx(w - 8)}" y2="{_sx(gy)}"/>'
+            f'<text x="2" y="{_sx(gy + 4)}">{gv:.1f}x</text>'
+        )
+    final = fan["p50"][-1]
+    tip = (
+        f"equity, growth of 1 over {months} months - median ends {final:.2f}x, "
+        f"p5 {fan['p5'][-1]:.2f}x, p95 {fan['p95'][-1]:.2f}x"
+    )
+    return (
+        f'<figure class="chart"><svg class="fan" width="{w:.0f}" height="{h:.0f}" '
+        f'viewBox="0 0 {w:.0f} {h:.0f}" role="img"><title>{_e(tip)}</title>'
+        + "".join(gridlines)
+        + band(fan["p95"], fan["p5"], "0.18")
+        + band(fan["p75"], fan["p25"], "0.28")
+        + f'<polyline points="{median}" fill="none" stroke="var(--blue)" stroke-width="2"/>'
+        f'<line class="axis" x1="{_sx(pl)}" y1="{_sx(h - pb)}" x2="{_sx(w - 8)}" '
+        f'y2="{_sx(h - pb)}"/></svg>'
+        "<figcaption>equity, growth of 1 - median line, p25-p75 and p5-p95 bands"
+        "</figcaption></figure>"
+    )
+
+
+def _interval_chart(rep: WorldReport) -> str:
+    """Per-asset annualized outcome: p5..p95 interval + median dot, drawn over
+    the declared plausible band. The chart form of the big table."""
+    rows = rep.assets
+    if not rows:
+        return ""
+    rh, pl, w = 27.0, 96.0, 560.0
+    h = rh * len(rows) + 26.0
+    lo = min(min(a.ann_p5 for a in rows), min(b.ret_lo for b in PLAUSIBLE.values())) - 2.0
+    hi = max(max(a.ann_p95 for a in rows), max(b.ret_hi for b in PLAUSIBLE.values())) + 2.0
+    span = hi - lo
+
+    def x(v: float) -> float:
+        return pl + (w - pl - 10) * ((v - lo) / span)
+
+    parts = []
+    zx = x(0.0)
+    parts.append(
+        f'<line class="grid" x1="{_sx(zx)}" y1="6" x2="{_sx(zx)}" y2="{_sx(h - 18)}"/>'
+        f'<text x="{_sx(zx - 8)}" y="{_sx(h - 5)}">0%</text>'
+    )
+    for i, a in enumerate(rows):
+        cy = 16.0 + rh * i
+        band = PLAUSIBLE.get(a.asset)
+        color = "var(--clay)" if a.flags else "var(--jade)"
+        tip = (
+            f"{a.asset}: median {a.ann_median:+.1f}%/yr, p5 {a.ann_p5:+.1f}, "
+            f"p95 {a.ann_p95:+.1f}; declared {band.ret_lo:+.0f}..{band.ret_hi:+.0f}"
+            if band
+            else a.asset
+        )
+        parts.append(f"<g><title>{_e(tip)}</title>")
+        if band:
+            parts.append(
+                f'<rect x="{_sx(x(band.ret_lo))}" y="{_sx(cy - 7)}" '
+                f'width="{_sx(x(band.ret_hi) - x(band.ret_lo))}" height="14" '
+                'fill="var(--grid)" rx="3"/>'
+            )
+        parts.append(
+            f'<line x1="{_sx(x(a.ann_p5))}" y1="{_sx(cy)}" x2="{_sx(x(a.ann_p95))}" '
+            f'y2="{_sx(cy)}" stroke="{color}" stroke-width="4" stroke-linecap="round"/>'
+            f'<circle cx="{_sx(x(a.ann_median))}" cy="{_sx(cy)}" r="4.5" fill="{color}" '
+            'stroke="var(--pane)" stroke-width="2"/>'
+            f'<text x="2" y="{_sx(cy + 4)}">{_e(a.asset)}</text>'
+            f'<text x="{_sx(x(a.ann_p95) + 8)}" y="{_sx(cy + 4)}">{a.ann_median:+.1f}</text>'
+            "</g>"
+        )
+    return (
+        f'<figure class="chart"><svg class="intervals" width="{w:.0f}" height="{h:.0f}" '
+        f'viewBox="0 0 {w:.0f} {h:.0f}" role="img">' + "".join(parts) + "</svg>"
+        "<figcaption>annualized %/yr - p5..p95 interval, median dot, declared "
+        "band behind; flagged assets in red</figcaption></figure>"
+    )
+
+
+def _factor_small_multiples(rep: WorldReport) -> str:
+    """Median path with p10-p90 band, one small panel per factor channel."""
+    if not rep.factor_lines:
+        return ""
+    panels = []
+    for label, lines in rep.factor_lines.items():
+        w, h, pl = 250.0, 110.0, 8.0
+        months = len(lines["p50"])
+        lo, hi = min(lines["p10"]), max(lines["p90"])
+        span = (hi - lo) or 1.0
+
+        def pt(i: int, v: float, w=w, h=h, pl=pl, lo=lo, span=span, months=months) -> str:
+            x = pl + (w - pl - 6) * (i / max(months - 1, 1))
+            y = (h - 16) - (h - 30) * ((v - lo) / span)
+            return f"{_sx(x)},{_sx(y)}"
+
+        band_pts = [pt(i, v) for i, v in enumerate(lines["p90"])]
+        band_pts += [pt(i, v) for i, v in reversed(list(enumerate(lines["p10"])))]
+        median = " ".join(pt(i, v) for i, v in enumerate(lines["p50"]))
+        tip = f"{label}: median path, p10-p90 band; range {lo:.2f}..{hi:.2f}"
+        panels.append(
+            f'<figure class="chart"><svg class="factorline" width="{w:.0f}" '
+            f'height="{h:.0f}" viewBox="0 0 {w:.0f} {h:.0f}" role="img">'
+            f"<title>{_e(tip)}</title>"
+            f'<polygon points="{" ".join(band_pts)}" fill="var(--blue)" opacity="0.16"/>'
+            f'<polyline points="{median}" fill="none" stroke="var(--blue)" '
+            'stroke-width="2"/>'
+            f'<text x="{_sx(pl)}" y="11">{_e(label)}</text>'
+            f'<text x="{_sx(pl)}" y="{_sx(h - 4)}">{lo:.1f}..{hi:.1f}</text></svg></figure>'
+        )
+    return '<div class="chartrow">' + "".join(panels) + "</div>"
+
+
+def _smoothing_chart(rep: WorldReport) -> str:
+    """True vs reported vol per private asset: paired bars, jade vs brass."""
+    rows = rep.smoothing
+    if not rows:
+        return ""
+    rh, pl, w = 40.0, 40.0, 400.0
+    h = rh * len(rows) + 14.0
+    hi = max(max(s.true_vol for s in rows), 1e-9) * 1.08
+
+    def bw(v: float) -> float:
+        return max((w - pl - 46) * (v / hi), 1.0)
+
+    parts = []
+    for i, s in enumerate(rows):
+        cy = 8.0 + rh * i
+        tip = (
+            f"{s.sleeve}: true vol {s.true_vol:.1f}%/yr, reported {s.reported_vol:.1f} "
+            f"({s.vol_ratio:.2f}x), reported lag-1 autocorr {s.reported_autocorr:+.2f}"
+        )
+        parts.append(
+            f"<g><title>{_e(tip)}</title>"
+            f'<text x="2" y="{_sx(cy + 12)}">{_e(s.sleeve)}</text>'
+            f'<rect x="{_sx(pl)}" y="{_sx(cy)}" width="{_sx(bw(s.true_vol))}" height="9" '
+            'fill="var(--jade)" rx="3"/>'
+            f'<rect x="{_sx(pl)}" y="{_sx(cy + 12)}" width="{_sx(bw(s.reported_vol))}" '
+            'height="9" fill="var(--brass)" rx="3"/>'
+            f'<text x="{_sx(pl + bw(s.true_vol) + 6)}" y="{_sx(cy + 9)}">'
+            f"{s.true_vol:.1f}</text>"
+            f'<text x="{_sx(pl + bw(s.reported_vol) + 6)}" y="{_sx(cy + 21)}">'
+            f"{s.reported_vol:.1f}</text></g>"
+        )
+    legend = (
+        '<p class="legend">vol %/yr, quarter space'
+        '<span class="sw" style="background:var(--jade)"></span>true'
+        '<span class="sw" style="background:var(--brass)"></span>as reported</p>'
+    )
+    return (
+        f'<figure class="chart"><svg class="pairs" width="{w:.0f}" height="{h:.0f}" '
+        f'viewBox="0 0 {w:.0f} {h:.0f}" role="img">' + "".join(parts) + "</svg>"
+        f"{legend}</figure>"
+    )
+
+
+def _stat_tiles(rep: WorldReport) -> str:
+    eq = next((a for a in rep.assets if a.asset == "equity"), None)
+    infl = next((f for f in rep.factors if f.name.startswith("inflation")), None)
+    tiles = []
+    if eq:
+        tiles.append(("equity median", f"{eq.ann_median:+.1f}%/yr", ""))
+        tiles.append(("equity worst DD", f"{eq.worst_drawdown:.0f}%", ""))
+    if infl:
+        tiles.append(("inflation mean", f"{infl.mean:.1f}%", ""))
+    tiles.append(("flags", str(rep.flag_count), " bad" if rep.flag_count else ""))
+    return (
+        '<div class="tiles">'
+        + "".join(
+            f'<div class="tile{cls}"><div class="v">{_e(v)}</div><div class="k">{_e(k)}</div></div>'
+            for k, v, cls in tiles
+        )
+        + "</div>"
+    )
+
+
+def _details(summary: str, table_html: str) -> str:
+    return f"<details><summary>{_e(summary)}</summary>{table_html}</details>"
+
+
+def _panel(rep: WorldReport, prog: ProgrammeReport | None) -> str:
+    rtag = (
+        f'<span class="tag bad">{rep.flag_count} flags</span>'
+        if rep.flag_count
+        else '<span class="tag good">clean</span>'
+    )
+    prog_html = (
+        render_programme_section([prog])
+        if prog is not None
+        else '<p class="note">programme walk pending the generated-world play layer (su-gen-03)</p>'
+    )
+    return (
+        f'<p>{rtag}<span class="tag">{rep.months} months</span>'
+        f'<span class="tag">{rep.n_paths} paths</span>'
+        f'<span class="tag">base seed {rep.base_seed}</span>'
+        f'<span class="tag">{_e(rep.world_id)}</span></p>'
+        + _stat_tiles(rep)
+        + "<h3>The decade, and where each asset lands</h3>"
+        + '<div class="chartrow">'
+        + _fan_chart(rep)
+        + _interval_chart(rep)
+        + "</div>"
+        + _details("per-asset table (worst DD, worst month, declared bands)", _asset_table(rep))
+        + "<h3>Factor paths - where they spend their time</h3>"
+        + _factor_small_multiples(rep)
+        + _details("factor table", _factor_table(rep))
+        + "<h3>Reported vs true (appraisal smoothing, in quarter space)</h3>"
+        + _smoothing_chart(rep)
+        + _details("smoothing table", _smoothing_table(rep))
+        + "<h3>Pooled monthly correlations</h3>"
+        + _corr_table(rep)
+        + "<h3>The private programme</h3>"
+        + prog_html
+    )
+
+
 def render_credibility_page(
-    reports: list[WorldReport], programme: list[ProgrammeReport] | None = None
+    reports: list[WorldReport], programme: list[ProgrammeReport | None] | None = None
 ) -> str:
-    """A self-contained HTML page: one section per world, flags in the open."""
+    """A self-contained, script-free page: one TAB per world (v2), flags in
+    the open, every chart backed by its table in a collapsible view."""
     total = sum(r.flag_count for r in reports)
     tag = (
         f'<span class="tag bad">{total} flags to look at</span>'
         if total
         else '<span class="tag good">nothing flagged</span>'
     )
-    blocks = []
-    for r in reports:
-        rtag = (
-            f'<span class="tag bad">{r.flag_count} flags</span>'
+    progs: list[ProgrammeReport | None] = list(programme or [])
+    progs += [None] * (len(reports) - len(progs))
+
+    inputs, labels, panels, tabcss = [], [], [], []
+    for i, r in enumerate(reports):
+        checked = " checked" if i == 0 else ""
+        badge = (
+            f'<span class="tag bad">{r.flag_count}</span>'
             if r.flag_count
-            else '<span class="tag good">clean</span>'
+            else '<span class="tag good">ok</span>'
         )
-        blocks.append(
-            f'<section class="world"><h2>{_e(r.title)}</h2>'
-            f'<p>{rtag}<span class="tag">{r.months} months</span>'
-            f'<span class="tag">{r.n_paths} paths</span>'
-            f'<span class="tag">base seed {r.base_seed}</span>'
-            f'<span class="tag">{_e(r.world_id)}</span></p>'
-            f"<h3>Per-asset, annualized over the horizon</h3>{_asset_table(r)}"
-            f"<h3>Factor paths - where they spend their time</h3>{_factor_table(r)}"
-            f"<h3>Reported vs true (appraisal smoothing, in quarter space)</h3>{_smoothing_table(r)}"
-            f"<h3>Pooled monthly correlations</h3>{_corr_table(r)}"
-            "</section>"
+        inputs.append(f'<input type="radio" name="world-tab" id="w{i}"{checked}>')
+        labels.append(f'<label class="tab" for="w{i}">{_e(r.title)}{badge}</label>')
+        panels.append(f'<section class="panel" id="p{i}">{_panel(r, progs[i])}</section>')
+        tabcss.append(
+            f"#w{i}:checked~.tabbar label[for=w{i}]{{color:var(--ice);"
+            f"background:var(--pane);border-bottom-color:var(--pane)}}"
+            f"#w{i}:checked~#p{i}{{display:block}}"
         )
     return (
         '<!doctype html><html lang="en"><head><meta charset="utf-8">'
         "<title>Terrarium - credibility console</title>"
-        f"<style>{_CSS}{PROGRAMME_CSS}</style></head><body>"
+        f"<style>{_CSS}{PROGRAMME_CSS}{''.join(tabcss)}</style></head><body>"
         "<h1>Credibility console</h1>"
         f'<p class="lede">{tag}<br>Every figure is regenerated from the world\'s own '
         "seed lineage, so it is what a player would get. The declared columns are "
         "priors written down for argument, not truth - a flagged row is an "
         "invitation to look, and nothing here can fail a build. Judgements that "
         "survive review belong in <code>docs/engine-realism-register.md</code>.</p>"
-        + "".join(blocks)
-        + render_programme_section(programme or [])
-        + "<footer>Admin surface. Not sealed, not scored, never shown to a player."
+        '<div class="tabs">'
+        + "".join(inputs)
+        + '<div class="tabbar">'
+        + "".join(labels)
+        + "</div>"
+        + "".join(panels)
+        + "</div>"
+        "<footer>Admin surface. Not sealed, not scored, never shown to a player."
         "</footer></body></html>"
     )

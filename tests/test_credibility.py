@@ -246,6 +246,65 @@ class TestReportAndPage:
         assert "nothing flagged" in render_credibility_page([clean])
 
 
+class TestConsoleV2:
+    """The tabbed console: scenario switching without scrolling, charts over
+    tables, tables surviving in collapsible views — still script-free and
+    byte-stable."""
+
+    def _two(self):
+        a = build_report(_world(8), base_seed=SEED, n_paths=12, title="World A")
+        b = build_report(_world(8), base_seed=SEED + 1, n_paths=12, title="World B")
+        return a, b
+
+    def test_page_has_a_scenario_tab_per_world(self):
+        a, b = self._two()
+        page = render_credibility_page([a, b])
+        assert page.count('type="radio"') == 2
+        assert page.count('name="world-tab"') == 2
+        # exactly one input carries the checked ATTRIBUTE (the CSS uses
+        # :checked selectors, so count the attribute form, not the substring)
+        assert page.count(" checked>") == 1
+        assert "World A" in page and "World B" in page
+
+    def test_page_draws_charts_not_just_tables(self):
+        rep = build_report(_world(8), base_seed=SEED, n_paths=12)
+        page = render_credibility_page([rep])
+        assert "<svg" in page
+        assert 'class="fan"' in page  # the equity decade fan
+        assert 'class="intervals"' in page  # per-asset p5..p95 vs declared band
+        assert 'class="factorline"' in page  # factor small multiples
+
+    def test_tables_survive_in_collapsible_views(self):
+        rep = build_report(_world(8), base_seed=SEED, n_paths=12)
+        page = render_credibility_page([rep])
+        assert "<details" in page
+        assert "worst month %" in page
+        assert "declared tail" in page
+
+    def test_build_report_walks_a_generated_world(self):
+        """The Task 3 console criterion: a generated world reports through the
+        same build_report, over its own asset set (no reits, OD-3)."""
+        import ah.gen.bootstrap as bs
+        from ah.gen import registry
+        from ah.port.adapter import GEN_ASSETS
+        from conftest import make_synthetic_source_16
+
+        saved = registry.snapshot()
+        registry.register("bootstrap-v1", lambda: bs.BootstrapV1(make_synthetic_source_16()))
+        try:
+            doc: dict[str, Any] = json.loads(PRESET.read_text(encoding="utf-8"))
+            doc = copy.deepcopy(doc)
+            doc["engine_defaults"]["generator_id"] = "bootstrap-v1"
+            world = project_numeric(WorldSpec.model_validate(doc))
+            rep = build_report(world, base_seed=SEED, n_paths=8, title="Gen")
+        finally:
+            registry.restore(saved)
+        assert tuple(s.asset for s in rep.assets) == GEN_ASSETS
+        assert "reits" not in {s.asset for s in rep.assets}
+        page = render_credibility_page([rep])
+        assert "Gen" in page and 'class="fan"' in page
+
+
 def test_console_cannot_reach_the_store_at_all():
     """It is an admin READ surface: looking at a world cannot change it.
 
