@@ -9,6 +9,19 @@ stagflation reachable, severe-tested) instead of toy-v0 presets — flowing
 through the EXISTING world → bundle → session → app chain, changing as
 little of it as possible.
 
+**What "generated" means here — and what it does not (owner-ratified
+distinction, for the plan and all player-facing copy):** these are
+**bootstrap-v1 worlds: rearranged truth.** Every month in them is a real
+1953–2020 month; what is new is the *sequence* — decades that never happened,
+assembled from months that did. That is the campaign-3 generator of record,
+and it is why register ER-9 cannot occur in a generated world (no month can
+be worse than the worst real month on record). "Generated" does **NOT** mean
+the neural family (`hier-flow`): truly-invented months reach a player only
+after a re-aimed campaign demonstrates conditional capability the resampler
+structurally lacks (the campaign-4 preconditions in `NEXT-STEPS.md` §3). The
+player-facing disclosure and the bundle's credibility pointers should draw
+exactly this line: *rearranged truth now; invented worlds only when earned.*
+
 **Grounding facts (verified 2026-08-11):**
 - `schemas/` enum already admits `generator_id: "bootstrap-stratified"` (the
   sealed alias for bootstrap-v1); schemas stay read-only truth.

@@ -228,7 +228,13 @@ plays hand-authored toy scenarios; the proposal is to let it play worlds built
 by the generator that just survived three campaigns — decades spliced from real
 1953–2020 history, stagflation reachable, severe-tested. The story it enables
 is the product's credibility story: *this decade is rearranged truth, and here
-is the audit trail.* Two calls are the owner's before work starts: which
+is the audit trail.* One distinction is worth stating plainly, because the
+word "generated" invites confusion: these are the **collagist's** worlds —
+every month in them is a real month that actually occurred; only the sequence
+is new. The **apprentice's** truly-invented decades stay out of the product
+until a re-aimed contest shows it can invent credibly — *rearranged truth
+now; invented worlds only when earned* is both the engineering fact and the
+honest marketing sentence. Two calls are the owner's before work starts: which
 scenario ships first (a 1974-style stagflation start is the showcase; a 1965
 start is the boldest), and whether commodities becomes a playable sleeve now or
 stays display-only until the commitment-pacing fix lands.
