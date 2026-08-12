@@ -210,6 +210,91 @@ class TestDigestThreading:
         assert digest_ensemble(ens) == old_way
 
 
+class TestSourceSpaceDerivations:
+    """The 1974 console preview caught seam artifacts: differencing resampled
+    LEVEL factors across block seams fabricated an -88.8% bond month and a
+    21,755% mean inflation. The fix: every derived series is computed on the
+    SOURCE panel and indexed by the drawn rows, so a generated month's yield
+    change / trailing inflation is that real month's own value."""
+
+    @staticmethod
+    def _col(source, name):
+        return source.values[:, list(source.factor_names).index(name)]
+
+    def _expected_bond_pct(self, source):
+        y = self._col(source, "ust_10y") / 100.0
+        out = np.empty_like(y)
+        out[0] = y[0] / 12.0
+        out[1:] = y[:-1] / 12.0 + 8.5 * (y[:-1] - y[1:])
+        return out * 100.0
+
+    def _expected_infl_pct(self, source):
+        cpi = self._col(source, "cpi")
+        out = np.zeros_like(cpi)
+        for r in range(1, len(cpi)):
+            back = min(r, 12)
+            out[r] = ((cpi[r] / cpi[r - back]) ** (12.0 / back) - 1.0) * 100.0
+        return out
+
+    def test_the_ensemble_carries_the_drawn_row_indices(self, synthetic_registry):
+        world = _gen_world()
+        gen = registry.resolve_for_world(world)
+        ref = gen.sample(world, 2, SEED)
+        assert ref.row_indices is not None
+        assert ref.row_indices.shape == (2, ref.months)
+        n_rows = synthetic_registry.values.shape[0]
+        assert ref.row_indices.min() >= 0 and ref.row_indices.max() < n_rows
+        eq = self._col(synthetic_registry, "equity_mkt")
+        np.testing.assert_allclose(ref.factor("equity_mkt"), eq[ref.row_indices])
+
+    def test_bond_months_are_real_source_months(self, synthetic_registry):
+        """bonds[t] must equal the source-space bond return of the drawn row —
+        no yield change is ever computed across a block seam."""
+        world = _gen_world()
+        gen = registry.resolve_for_world(world)
+        ref = gen.sample(world, 1, SEED)
+        p = run_gen_path(world, SEED)
+        expected = self._expected_bond_pct(synthetic_registry)[ref.row_indices[0]]
+        np.testing.assert_allclose(p.returns["bonds"], expected)
+
+    def test_inflation_is_the_source_months_own_trailing_yoy(self, synthetic_registry):
+        world = _gen_world()
+        gen = registry.resolve_for_world(world)
+        ref = gen.sample(world, 1, SEED)
+        p = run_gen_path(world, SEED)
+        expected = self._expected_infl_pct(synthetic_registry)[ref.row_indices[0]]
+        np.testing.assert_allclose(p.inflation, expected)
+
+    def test_hy_carries_an_equity_sensitivity(self, synthetic_registry):
+        """Carry + spread duration alone gave HY a decade Sharpe of 2.18 in
+        the 1974 preview — real high yield moves with equities. The stated
+        convention adds beta 0.4 on the equity factor."""
+        world = _gen_world()
+        gen = registry.resolve_for_world(world)
+        ref = gen.sample(world, 1, SEED)
+        p = run_gen_path(world, SEED)
+        y10 = self._col(synthetic_registry, "ust_10y")
+        hs = self._col(synthetic_registry, "hy_spread")
+        all_in = y10 + 0.55 * hs
+        wide = y10 + hs
+        base = np.empty_like(y10)
+        base[0] = all_in[0] / 12.0
+        base[1:] = all_in[:-1] / 12.0 + 4.0 * (wide[:-1] - wide[1:])
+        rows = ref.row_indices[0]
+        expected = base[rows] + 0.4 * ref.factor("equity_mkt")[0] * 100.0
+        np.testing.assert_allclose(p.returns["hy"], expected)
+
+    def test_pm_sleeves_carry_their_sealed_residual_variance(self, synthetic_registry):
+        """pc collapsed to 0.0 vol (its sealed loadings are structural zeros);
+        the artifact's residual_sigma_annual must be drawn, reproducibly."""
+        r1 = run_gen_ensemble(_gen_world(), 2, base_seed=SEED)
+        r2 = run_gen_ensemble(_gen_world(), 2, base_seed=SEED)
+        pc = r1.returns["pc"]
+        assert float(np.std(pc)) > 0.05  # not a constant
+        np.testing.assert_array_equal(pc, r2.returns["pc"])  # deterministic
+        assert not np.allclose(pc[0], pc[1])  # paths differ
+
+
 class TestTwinAndDispatch:
     def test_gen_start_mix_moves_reits_weight_to_equity(self):
         """OD-3: reits' 5 points go to equity (its 0.84-correlated public

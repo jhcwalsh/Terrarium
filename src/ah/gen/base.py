@@ -120,12 +120,23 @@ class Ensemble:
     meta: EnsembleMeta
     regimes: RegimeRecord | AbsentLayer | None = None
     slow_states: SlowStateRecord | AbsentLayer | None = None
+    # (n_paths, months) source-row provenance for resamplers: which real month
+    # each generated month IS. None for generators that invent months. Added
+    # su-gen-01: the adapter derives yield-change/inflation series in SOURCE
+    # space through it (no differencing across block seams), and it is the
+    # prerequisite for per-month proxy attribution (survey S2 gap 6).
+    row_indices: np.ndarray | None = None
 
     def __post_init__(self) -> None:
         if self.paths.ndim != 3:
             raise ValueError(f"paths must be (n_paths, months, n_factors); got {self.paths.shape}")
         if self.paths.shape[2] != len(self.factor_names):
             raise ValueError("paths last dim must match len(factor_names)")
+        if self.row_indices is not None and tuple(self.row_indices.shape) != self.paths.shape[:2]:
+            raise ValueError(
+                f"row_indices must be (n_paths, months) {self.paths.shape[:2]}; "
+                f"got {tuple(self.row_indices.shape)}"
+            )
         if isinstance(self.regimes, RegimeRecord):
             expected = self.paths.shape[:2]
             if tuple(self.regimes.labels.shape) != expected:

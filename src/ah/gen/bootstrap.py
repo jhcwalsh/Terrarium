@@ -733,6 +733,14 @@ class BootstrapV1:
     def __init__(self, source: BootstrapSource | None = None) -> None:
         self._source = source
 
+    @property
+    def source(self) -> BootstrapSource:
+        """The fitted source panel (raises if unfitted) — the adapter derives
+        yield-change/inflation series on it in SOURCE space (su-gen-01)."""
+        if self._source is None:
+            raise BootstrapError("bootstrap-v1 is not fitted; call fit(build_source(...)) first")
+        return self._source
+
     # -- Generator protocol -------------------------------------------------- #
 
     def fit(self, data: Any) -> None:
@@ -837,6 +845,7 @@ class BootstrapV1:
             paths=paths,
             factor_names=list(source.factor_names),
             meta=meta,
+            row_indices=index,
             regimes=RegimeRecord(
                 labels=realized,
                 legend=REGIME_LABELS,
