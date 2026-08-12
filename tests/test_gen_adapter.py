@@ -253,6 +253,7 @@ class TestSourceSpaceDerivations:
         world = _gen_world()
         gen = registry.resolve_for_world(world)
         ref = gen.sample(world, 1, SEED)
+        assert ref.row_indices is not None
         p = run_gen_path(world, SEED)
         expected = self._expected_bond_pct(synthetic_registry)[ref.row_indices[0]]
         np.testing.assert_allclose(p.returns["bonds"], expected)
@@ -261,6 +262,7 @@ class TestSourceSpaceDerivations:
         world = _gen_world()
         gen = registry.resolve_for_world(world)
         ref = gen.sample(world, 1, SEED)
+        assert ref.row_indices is not None
         p = run_gen_path(world, SEED)
         expected = self._expected_infl_pct(synthetic_registry)[ref.row_indices[0]]
         np.testing.assert_allclose(p.inflation, expected)
@@ -272,6 +274,7 @@ class TestSourceSpaceDerivations:
         world = _gen_world()
         gen = registry.resolve_for_world(world)
         ref = gen.sample(world, 1, SEED)
+        assert ref.row_indices is not None
         p = run_gen_path(world, SEED)
         y10 = self._col(synthetic_registry, "ust_10y")
         hs = self._col(synthetic_registry, "hy_spread")
