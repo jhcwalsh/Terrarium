@@ -295,6 +295,9 @@ def main() -> None:
         )
 
     out = merge_artifact(v10, pm_rows)
+    # HF rows keep v1.0's campaign_vintage_id (their estimation input);
+    # the re-estimated PM rows record their own vintage machine-readably.
+    out["pm_vintage_id"] = str(vintage)
     header = (
         "# mappings/sleeve-mappings-v1.1.yaml - scripts/estimate_sleeve_mappings_v1_1.py\n"
         f"# AM-2026-08-12-001; vintage {vintage}; PM rows re-estimated (Dimson\n"

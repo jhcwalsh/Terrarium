@@ -315,3 +315,4 @@ cta_rule:
   - govt_tr_10y
   vol_target_annual: 0.1
   tc_drag_annual: 0.01
+pm_vintage_id: 2026-08-10.1
