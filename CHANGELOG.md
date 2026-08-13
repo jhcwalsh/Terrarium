@@ -14,6 +14,25 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **PM sleeve mappings v1.1 (AM-2026-08-12-001).** The private-market sleeve
+  loadings are re-estimated with a lagged (Dimson sum-beta) equity component:
+  the appraisal lag had been leaking market beta into alpha (pm_buyout equity
+  beta 0.35 under v1.0 vs a 1.2 design prior). v1.1: pm_buyout 0.84
+  (alpha_q 0.0332 → 0.0194), pm_re_value_add 0.37 (0.0154 → 0.0093),
+  pm_direct_lending re-anchored to the market-priced Cliffwater BDC index
+  de-levered 0.5x: equity beta 0 → 0.47, alpha_q 0.0157 → 0.0016. HF sleeves
+  verbatim from v1.0. New sealed artifact `mappings/sleeve-mappings-v1.1.yaml`
+  + estimator joined the G3 lock; v1.0 stays sealed as the G1-era record and
+  the G1-completion verdict is NOT re-scored. Runtime (`ah/port/mapping.py`)
+  now consumes v1.1; `stagflation_1974` moved world_id ...601 → ...602 so
+  leaderboard rows can never mix formula sets; gen bundle fixture regenerated.
+  Console walk: PE decade Sharpe 1.30 → 0.99 (no longer flagged), pe/pc/re
+  monthly correlation to equity 0.73/0.70/0.42, world flag count 7 → 5 with
+  no new flag class. The `_reported_marks` display defect (reported PM marks
+  discard 2 of 3 months) is documented in
+  `docs/superpowers/specs/2026-08-12-pm-remap-design.md` and deferred to a
+  later WP with a TOY_ENGINE_VERSION bump.
+
 - **housekeeping-01: the governance debt paid down.** (1) The gate-merge
   guard is mechanical: `scripts/check_gate.py` validates a gate log (EXIT: 0,
   a positive pass count, zero failures) and stamps `.gate-ok` for the exact
