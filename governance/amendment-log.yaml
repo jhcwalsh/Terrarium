@@ -1922,3 +1922,38 @@ amendments:
     with the superseded text kept verbatim; main lock re-sealed in the same commit
     (G3/G5 do not hash this document and their digests are unchanged).'
   type: protocol_change
+- amendment_id: AM-2026-08-12-001
+  date: '2026-08-12'
+  payload:
+    artifact: mappings/sleeve-mappings-v1.1.yaml
+    estimator: scripts/estimate_sleeve_mappings_v1_1.py
+    design_note: docs/superpowers/specs/2026-08-12-pm-remap-design.md
+    declared_parameters:
+      lagged_regressor: equity_mkt only; artifact loading is the Dimson sum
+      lag_rule: {n_ge_80: 4, n_40_to_79: 2, n_lt_40: prior_adopted}
+      bdc_anchor: {series: cliffwater.bdc_ret_m, delever_factor: 0.5,
+        applies_to: pm_direct_lending, alpha_source: albourne_dl_composite}
+      hf_sleeves: verbatim from v1.0
+      desmoothing: unchanged from v1.0 (family-routed)
+      world_fence: stagflation_1974 world_id -601 -> -602
+    superseded_lock_digest: PENDING-TASK-4
+  post_hoc: true
+  rationale: >-
+    PM sleeve loadings re-estimated with a lagged (Dimson sum-beta) component.
+    TRIGGER, disclosed: a product-surface credibility finding on the 1974
+    generated world (PE decade Sharpe 1.30; pe/pc/re visibly decoupled from
+    public factors) -- the realized form of the warning MAPPINGS.md itself
+    recorded at estimation time ("the de-smoother is under-correcting; the
+    equity-beta shortfall sorts by how equity-like the sleeve is") and of its
+    explicit instruction that pm_direct_lending "should not be used", which
+    v1.0 adoption drove past without an owner decision. post_hoc TRUE: v1.0
+    results were seen before this amendment. What keeps it honest: the
+    procedure (lag rule, de-lever factor, floor rule) is declared in the
+    design note and THIS entry before the v1.1 estimator ever runs; the
+    G1-completion verdict is NOT re-scored and stands under v1.0; v1.1 is
+    forward-only for the product surface and twin. The sealed v1.0 estimator
+    and artifact are untouched; the v1.1 estimator and artifact join
+    seal_scope in the commit that creates them (the AM-2026-08-01-001
+    planned-arrival pattern). superseded_lock_digest is filled at the Task-4
+    seal event in the same commit that reseals G3.
+  type: protocol_change
