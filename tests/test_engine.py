@@ -129,6 +129,46 @@ def test_reported_marks_present_at_quarter_ends() -> None:
         assert any(p.reported[sleeve][m] != 0.0 for m in quarter_ends)
 
 
+_PRESET_DIR = ROOT / "src" / "ah" / "presets"
+
+
+def _preset_world(name: str) -> tuple[NumericWorld, int]:
+    doc = json.loads((_PRESET_DIR / f"{name}.json").read_text(encoding="utf-8"))
+    world = project_numeric(WorldSpec.model_validate(doc))
+    seed = world.engine_defaults.base_seed
+    return world, (seed if seed is not None else 0)
+
+
+def test_reported_marks_catch_up_to_truth_er10() -> None:
+    """ER-10 (found 2026-08-12): the old _reported_marks filtered only the
+    quarter-end MONTH's return, silently discarding the other two months —
+    reported PM cumulated ~1/3 of truth (stagflation pc: 23% reported vs
+    77% true over the decade). Appraisal smoothing must DELAY returns, not
+    destroy them: over a long horizon, cumulative reported must land near
+    cumulative true. The old code fails this at ratio ~0.30.
+
+    Summed over a small deterministic ensemble (not one path): a single
+    40-quarter draw is a right-censored EWMA — whichever quarter lands last
+    is only partially caught up (nothing follows it to finish the catch-up),
+    so one path's ratio swings with that quarter's own size (observed 0.77-
+    1.39 across seeds on stagflation/re alone). Summing several paths keeps
+    the same invariant on the SAME fixture/weights but is no longer a bet on
+    one draw's final quarter.
+    """
+    for preset in ("stagflation", "goldilocks"):
+        world, seed = _preset_world(preset)
+        res = run_ensemble(world, n_paths=16, base_seed=seed)
+        for sleeve in REPORTED_SLEEVES:
+            true_sum = float(res.returns[sleeve].sum())
+            rep_sum = float(res.reported[sleeve].sum())
+            assert true_sum > 20.0, f"{preset}/{sleeve}: fixture drifted"
+            ratio = rep_sum / true_sum
+            assert 0.80 < ratio < 1.20, (
+                f"{preset}/{sleeve}: cumulative reported/true = {ratio:.2f} "
+                "- smoothing is destroying or inventing return (ER-10)"
+            )
+
+
 # --------------------------------------------------------------------------- #
 # ensemble + guards
 # --------------------------------------------------------------------------- #
