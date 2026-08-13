@@ -255,9 +255,16 @@ def main() -> None:
             n_obs = len(pd.concat([y.rename("y"), xq], axis=1, sort=True).dropna())
             lags = lag_count(n_obs)
             if lags == 0:
-                # refused: DN-5 prior adopted verbatim, recorded as such
+                # refused: DN-5 prior adopted verbatim, recorded as such.
+                # alpha recomputed net of the adopted priors; sigma keeps the
+                # v1.0 estimate - no fit exists on this route.
                 loadings = {r: prior_row[r][2] for r in REGRESSORS}
-                alpha = float(old["alpha_quarterly"])
+                joined = pd.concat([y.rename("y"), xq], axis=1, sort=True).dropna()
+                beta_vec = np.array([loadings[r] for r in REGRESSORS])
+                alpha = float(
+                    joined["y"].to_numpy().mean()
+                    - joined[list(REGRESSORS)].to_numpy().mean(axis=0) @ beta_vec
+                )
                 sigma = float(old["residual_sigma_annual"])
                 per_lag, route = np.array([]), "prior-adopted"
             else:
