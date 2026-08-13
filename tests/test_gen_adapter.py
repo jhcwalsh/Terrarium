@@ -373,6 +373,7 @@ class TestAgainstTheRealPanel:
         adapter, replay bit-identical, and stamp the honest lineage.
 
         re-pinned under map-2026.08.2 (AM-2026-08-12-001): world fence 601->602.
+        re-pinned again for ER-10 (toy-v0.6): world fence 602->603.
         """
         from typer.testing import CliRunner
 
@@ -388,7 +389,7 @@ class TestAgainstTheRealPanel:
             return r
 
         build = invoke("world", "build", "--preset", "stagflation_1974")
-        assert "00000000-0000-4000-9000-000000000602" in build.output
+        assert "00000000-0000-4000-9000-000000000603" in build.output
         rid = invoke("run", "--paths", "12").output.strip().splitlines()[-1]
         replay = invoke("replay", rid)
         assert "MATCH" in replay.output
