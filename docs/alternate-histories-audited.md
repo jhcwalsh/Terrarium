@@ -3,7 +3,11 @@
 *Where the work stands, what it has taught us about how to do this well, and the
 choices in front of us — before any new worlds are generated.*
 
-**11 August 2026 · Written after the close of the third generator campaign.**
+**11 August 2026 · Written after the close of the third generator campaign.
+Updated 12 August 2026**, after two intense days: the history-based worlds
+shipped into the game, the commitment lever and the post-game review were
+finished, and the pacing model was repaired. Sections below reflect the
+updated state.
 Published copy (same content, formatted):
 https://claude.ai/code/artifact/c51a265d-95dd-4407-b1e2-b5b2ea40ee44
 
@@ -105,17 +109,39 @@ documentation predicted it was weakest. Both results were published as-is.
 There is no spare untouched data left; a new reserve is accruing and won't be
 read before 2029.
 
-### The playable game
+### The playable game — now finished, on real history
 
-A working single-player app exists end to end: pick a world, watch the decade
-unfold, decide at each annual window, read the wire, flip between reported and
-true books, and finish on an outcome card against your twin, with the
-per-decision review and a leaderboard. The server owns every number that
-matters; the browser renders and asks, but never computes a score it could be
-trusted to fake. Today it plays on four hand-authored scenario worlds
-(stagflation, goldilocks, reflation boom, deflation bust) produced by a
-deliberately simple toy engine — which is precisely what the next piece of work
-would change.
+*(Rewritten in the 12 August update — this section originally described a
+game missing its central mechanic and playing only toy worlds.)*
+
+The single-player game is complete, and it plays worlds built by the
+collagist: **Nineteen Seventy-Four**, a decade spliced entirely from real
+months, ships with its audit trail on screen — a provenance panel stating
+the generator, the contest verdict, and exactly which underlying series are
+partly reconstructed rather than observed, factor by factor.
+
+A session now works like this. Before the decade starts, one unmissable
+warning: *a commitment you cut pays nothing, forever.* Each year the decade
+stops: the four public actions, plus the **commitment lever** — you set next
+year's private-fund commitments, pre-filled with the plan's own pace
+(computed by the server, flexing as your book drifts from policy), or you
+hold to plan as an explicit recorded choice. The wire brings central-bank
+statements, data releases, quarterly letters, and now a **board pack**
+before every decision. At the end, the reckoning: your line against TWO
+counterfactuals — the policy twin (rebalances and paces to plan) and the
+drift twin (never adjusts at all; the gap between the twins is what
+disciplined pacing is worth, with nobody arguing it) — a chess-style review
+pricing each window's decision exactly, and **two things the numbers
+noticed**: the *flinch cost* (your commitment cut, priced as the
+distributions it gave up by decade's end) and the *arithmetic warning* (a
+defensive move taken when the scary number was your own denominator
+falling, priced by what it cost). Stated numbers, no judgement words — a
+test literally forbids them.
+
+It was played end to end on the day it was finished: a year-one commitment
+cut priced at +1.9 points of final value *and* 4.7 points of distributions
+foregone — both truths on one screen, which is the lesson the game exists
+to teach. The server remains the sole authority for every scored number.
 
 ## Three contests
 
@@ -192,12 +218,28 @@ structurally cannot do: answer "what if" questions about conditions history
 never produced. Any future contest should judge exactly that, or it isn't worth
 running.
 
-**The remaining weak point: claims nothing checks.** The first campaign's
-review found the same class of defect seven times in three days — a sealed
-document asserting something no code mechanically verifies. The cheap fixes
-(automated citation checks, sealing-coverage tests) are named in the evidence,
-and none has yet been built or assigned. This is the project's known governance
-debt.
+**Claims nothing checks — the debt, now largely paid.** The first
+campaign's review found the same class of defect seven times in three days —
+a sealed document asserting something no code mechanically verifies. In the
+12 August update this stopped being an unowned list: a citation checker now
+verifies that every file a living document names actually exists; a
+parameter checker verifies the committed reference artifacts against the
+sealed declarations; and — after the process itself failed twice in one day
+(a failing test run was merged because a display command hid its exit code,
+and later a mis-directed command produced an empty log) — merging into the
+main branch now *physically requires* a machine-validated green test log
+for the exact code being merged. Both failures are preserved as the
+guard's test cases.
+
+**Two lessons the update added.** First: the credibility console caught two
+real defects in fresh code that a green unit-test suite had missed — the
+fabricated month-to-month jumps at splice seams, visible only when the
+output was judged against declared economic priors. A checking surface with
+different assumptions than your tests sees what your tests cannot; walking
+new numbers through the console before merging is now standing practice.
+Second: pre-commitment applies to processes as much as models — a
+discipline that lives in memory fails under pressure; the same discipline
+as a hook cannot.
 
 ## Known weaknesses, on the record
 
@@ -206,12 +248,13 @@ faithful to its plans but not to what a practitioner would believe. Each is a
 deliberate, owner-level decision to fix, because fixing any of them changes
 every world's numbers. Open items:
 
+*(Updated 12 August — the register moved substantially.)*
+
 | Item | In plain terms |
 |---|---|
-| Committed capital under-called | About 29% of every private-markets commitment is never drawn, against a real-world 85–95%. The call-pace curve was a placeholder awaiting data that never arrived. This one gates the game's marquee lever — choosing how much to commit — so it comes first. |
-| Crises are too rectangular | The toy engine's crisis is a uniform block of bad months, which leaves a statistical signature real markets don't have — the engine's largest remaining realism defect. |
-| Forced sales currently unreachable | A recent fix made typical months milder, and now no shipped scenario can trigger a forced sale — so the mechanic that makes voluntary sales a real decision is dormant in every playable world. |
-| Interest rates drift, committees decide | The simulated policy rate glides continuously rather than moving in quarter-point committee steps, so narrated "rate decisions" are numbers no committee could have taken. |
+| ~~Committed capital under-called~~ **FIXED** | The call-pace curve is now a declared, recorded choice landing ~90% of commitments drawn by year ten (mid-band of real-world practice), and any residual at a fund's end now expires visibly instead of haunting the books. The fix also partly revived the forced-sale mechanic (below), and it unblocked the commitment lever — which has since been built. |
+| Single months too extreme (new, then made moot) | The toy engine's fat-tail fix could compress a whole Depression into one month (an −86% equity month was found — by the console's new tail checks, in every toy scenario including the benign one). For the history-based worlds now in the game this cannot happen: no month can be worse than the worst real month on record (−22.6%, October 1987 — proven, not assumed). |
+| The toy-engine family (crises too rectangular; rates glide; forced sales rare) | Real, recorded, and now deliberately **deprioritized** by owner decision: the history-based worlds are the product surface, and the toy scenarios' remaining quirks matter only if they return to players. In the harshest toy world the forced-sale mechanic did revive (6 of 20 seeds) as a side effect of the pacing fix. |
 
 Two more caveats frame everything: the translation layer's 2022 failure stands
 un-remedied (its formal gate was never re-taken), and the holdout showed the
@@ -219,7 +262,26 @@ generator's predicted ranges simply do not cover an inflation regime like
 2021–23. Nothing built on this platform is decision-ready, and every evidence
 document says so.
 
-## Next steps we could contemplate
+## What happened to the next steps (the 12 August scoreboard)
+
+Of the six options below, written on 11 August: **1 is done** (the
+history-based worlds ship, play, and disclose their provenance — the plan
+ran survey-first exactly as proposed, and the audit trail reaches the
+player); **2 is done** (the commitment-pacing fix landed as a deliberate
+release event, and the game's commitment lever plus its post-game review
+were built on top — the single-player game is finished); **6 is done** (the
+merge guard, the citation checker, and the parameter checker exist, with
+the week's own process failures as their test cases); **5 is
+back-burnered** by owner decision (no group-play design work until
+reopened); **3 and 4 remain open** — the two research probes and the
+re-aimed fourth contest, whose case got *stronger*: the 1974 world's own
+timeline showed the resampler's conditioning is a tilt, not a guarantee,
+which is the "teach it to imagine" argument in product form. One question
+still parked: the private-equity return assumption inherited from the
+sealed estimate, which flags on the console and awaits a
+disclosure-or-re-estimate decision.
+
+## Next steps we could contemplate (as written 11 August)
 
 **1 · Put the campaign-tested worlds into the game.** The natural next move,
 and a draft plan already exists awaiting review
