@@ -362,7 +362,10 @@ class TestAgainstTheRealPanel:
 
     def test_the_1974_preset_builds_runs_and_replays_match(self, tmp_path):
         """Task 1 acceptance end to end: build the OD-1 world, run through the
-        adapter, replay bit-identical, and stamp the honest lineage."""
+        adapter, replay bit-identical, and stamp the honest lineage.
+
+        re-pinned under map-2026.08.2 (AM-2026-08-12-001): world fence 601->602.
+        """
         from typer.testing import CliRunner
 
         from ah.cli import app
@@ -377,7 +380,7 @@ class TestAgainstTheRealPanel:
             return r
 
         build = invoke("world", "build", "--preset", "stagflation_1974")
-        assert "00000000-0000-4000-9000-000000000601" in build.output
+        assert "00000000-0000-4000-9000-000000000602" in build.output
         rid = invoke("run", "--paths", "12").output.strip().splitlines()[-1]
         replay = invoke("replay", rid)
         assert "MATCH" in replay.output

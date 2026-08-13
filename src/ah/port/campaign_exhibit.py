@@ -152,10 +152,17 @@ def reported_plane(sleeve_id: str, true: pd.Series) -> pd.Series:
 
 
 def load_real_mapping() -> dict:
-    """The committed sleeve-mappings artifact, read-only."""
-    from ah.port.mapping import load_artifact
+    """The campaign-era sleeve-mappings artifact (v1.0), read-only.
 
-    return load_artifact()
+    Pinned EXPLICITLY: the exhibit is the campaign-r1 prior-vs-measured
+    record, whose "measured" side is the v1.0 estimate and whose "prior"
+    side is v1.0's prior_superseded field. The runtime default moved to
+    v1.1 (AM-2026-08-12-001); this exhibit stays with the sealed v1.0
+    record it documents.
+    """
+    from ah.port.mapping import _REPO_ROOT, load_artifact
+
+    return load_artifact(_REPO_ROOT / "mappings" / "sleeve-mappings-v1.0.yaml")
 
 
 # The exhibit's institution — chosen, stated, and NOT a sealed reference book:

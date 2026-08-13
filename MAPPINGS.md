@@ -5,6 +5,15 @@ final loadings on train+val, OOS diagnostic fit on train / scored on validation.
 Artifact: `mappings/sleeve-mappings-v1.0.yaml` (`map-2026.08`).
 `hf_cta` is a rule, not a regression (DN-5 §3.4) — see `ah/port/mapping.py`.
 
+Superseded for PM sleeves by `mappings/sleeve-mappings-v1.1.yaml` (`map-2026.08.2`)
+— PM rows re-estimated (Dimson sum-beta / BDC anchor / prior-adopted, per-row
+`route`), HF rows/`residual_correlation`/`cta_rule` carried over verbatim from
+v1.0. This is the artifact the runtime (`ah.port.mapping.ARTIFACT_PATH`) now
+loads (AM-2026-08-12-001). The HF table and diagnosis below still describe
+v1.0/v1.1's shared HF estimates; the PM table below is v1.0-only and is kept
+for the smoothing diagnosis it documents — see `mappings/sleeve-mappings-v1.1.yaml`
+for the numbers actually in force.
+
 | sleeve | equity_mkt | smb | hml | mom | d_level | d_slope | d_ig | resid sigma (ann) | R² | OOS R² | β_mkt smooth | β_mkt desm | β_mkt exp | β_mkt rec |
 |---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
 | hf_credit | +0.218 | +0.000 | +0.000 | +0.000 | +0.000 | +0.000 | -0.052 | 5.2% | 0.43 | 0.32 | +0.134 | +0.218 | +0.135 | +nan |

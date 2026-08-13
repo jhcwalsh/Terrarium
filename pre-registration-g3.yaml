@@ -176,6 +176,11 @@ seal_scope:
     # exist to keep sharp.
     - scripts/estimate_sleeve_mappings.py
     - mappings/sleeve-mappings-v1.0.yaml
+    # AM-2026-08-12-001 (post_hoc, disclosed): the v1.1 PM re-estimation joins
+    # in the commit that creates it - same planned-arrival pattern as -001.
+    # v1.0 stays sealed above as the G1-era record; v1.1 is forward-only.
+    - scripts/estimate_sleeve_mappings_v1_1.py
+    - mappings/sleeve-mappings-v1.1.yaml
     # AM-2026-08-01-003 (pre-hoc, same rule): WP3.3's smoothing-kernel estimate
     # joins — the sealed mark_lag criterion could be gamed through θ, so the
     # ESTIMATE seals; the kernel engine (src/ah/port/smoothing.py) stays
