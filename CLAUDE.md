@@ -175,6 +175,10 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   (b) deviations with reasons, (c) anything discovered that affects later WPs.
 - **Read the gate log as data.** Run it in the background to a file, then read the `EXIT:`
   line and the pass count before claiming anything. Never chain a merge onto a `tail`.
+  **The guard is now mechanical**: `git config core.hooksPath githooks` is set;
+  merging into main requires `uv run python scripts/check_gate.py <gate-log>` on the
+  branch first (validates the log, stamps `.gate-ok` for that exact commit; the
+  pre-commit hook refuses otherwise). On a fresh clone, re-run the `git config` line.
 - Never weaken a test to make it pass; never skip/xfail without a linked TODO. If a test you
   wrote to catch a defect starts failing because the defect is fixed, **invert it** and keep
   the history in the docstring — do not delete it.
