@@ -48,8 +48,9 @@ def _ensemble(n_paths: int = 6, months: int = 120, seed: int = 5) -> Ensemble:
 
 class TestArtifact:
     def test_artifact_exists_with_declared_shape_and_provenance(self):
+        """re-pinned under map-2026.08.2 (AM-2026-08-12-001)"""
         doc = mp.load_artifact()
-        assert doc["mapping_version"] == "map-2026.08"
+        assert doc["mapping_version"] == "map-2026.08.2"
         assert doc["desmoothing_method"].startswith("glm_ma")  # SM-10 pairing
         assert set(doc["sleeves"]) == {
             "hf_credit",
@@ -125,3 +126,13 @@ class TestApplier:
     def test_artifact_and_report_agree_on_version(self):
         text = (mp._REPO_ROOT / "MAPPINGS.md").read_text(encoding="utf-8")
         assert yaml.safe_load(mp.ARTIFACT_PATH.read_text("utf-8"))["mapping_version"] in text
+
+
+def test_runtime_consumes_the_v11_artifact():
+    """AM-2026-08-12-001: the runtime's default artifact is v1.1. Written
+    FAILING against v1.0 before ARTIFACT_PATH moved."""
+    from ah.port.mapping import load_artifact
+
+    doc = load_artifact()
+    assert doc["mapping_version"] == "map-2026.08.2"
+    assert doc["pm_sleeves"]["pm_direct_lending"]["route"] == "bdc-anchor*0.5"

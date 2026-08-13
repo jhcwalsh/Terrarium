@@ -1,6 +1,6 @@
 """Apply the estimated factor -> sleeve mappings to an ensemble (WP3.2 runtime).
 
-Loads the versioned artifact (``mappings/sleeve-mappings-v1.0.yaml``, the file
+Loads the versioned artifact (``mappings/sleeve-mappings-v1.1.yaml``, the file
 WorldSpec's ``mapping_version`` names) and turns a generated ensemble into TRUE
 sleeve returns: linear loadings + correlated residuals for six HF sleeves, and
 the CTA RULE (DN-5 §3.4 — a 12-month time-series-momentum overlay computed on
@@ -25,7 +25,7 @@ import yaml
 from ah.gen.base import Ensemble
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-ARTIFACT_PATH = _REPO_ROOT / "mappings" / "sleeve-mappings-v1.0.yaml"
+ARTIFACT_PATH = _REPO_ROOT / "mappings" / "sleeve-mappings-v1.1.yaml"
 
 SEED_STRIDE = 7919
 BOND_DURATION_YEARS = 8.5  # matches the sealed govt_tr_10y derived-series convention
