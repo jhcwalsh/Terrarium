@@ -1936,7 +1936,7 @@ amendments:
       hf_sleeves: verbatim from v1.0
       desmoothing: unchanged from v1.0 (family-routed)
       world_fence: stagflation_1974 world_id -601 -> -602
-    superseded_lock_digest: PENDING-TASK-4
+    superseded_lock_digest: sha256:bb52353f487d9261173ed40899f26814365628eae9b8b1fbda9f75afb8dcff8b
   post_hoc: true
   rationale: >-
     PM sleeve loadings re-estimated with a lagged (Dimson sum-beta) component.
