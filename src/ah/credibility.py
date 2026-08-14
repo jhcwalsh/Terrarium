@@ -559,7 +559,7 @@ def _smoothing_table(rep: WorldReport) -> str:
     return (
         "<table><thead><tr><th>private asset</th><th>true vol %/yr</th>"
         "<th>reported vol %/yr</th><th>ratio</th><th>reported lag-1 autocorr (quarters)</th>"
-        "<th>reported catch-up (base path)</th>"
+        "<th>reported catch-up (ensemble)</th>"
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
 
