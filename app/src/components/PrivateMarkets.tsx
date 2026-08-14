@@ -59,6 +59,45 @@ export function pickLedgerRow(
   return null;
 }
 
+interface LadderBar {
+  id: string;
+  nav: number;
+  /** height against the LARGEST rung, so the staircase's shape is readable */
+  share: number;
+}
+
+interface LadderSummary {
+  count: number;
+  total: number;
+  bars: LadderBar[];
+}
+
+/** The ladder as a bar strip rather than a row per cohort (ladder-01).
+ *
+ *  The opening book is a staggered ladder — one vintage per year of a fund's
+ *  life, so 30 rungs at open and 57 by the end of a decade. The vitrine is
+ *  pinned to one screen, and 57 text rows is not one screen. Bars scale to any
+ *  count; the count and total carry the numbers, and each bar keeps its own
+ *  id and NAV in a title so nothing is actually hidden. */
+export function ladderSummary(
+  vintageNav: Record<string, number> | null | undefined,
+): LadderSummary | null {
+  if (!vintageNav) return null;
+  const entries = Object.entries(vintageNav);
+  if (entries.length === 0) return null;
+  entries.sort(([a], [b]) => a.localeCompare(b));
+  const largest = Math.max(...entries.map(([, nav]) => nav));
+  return {
+    count: entries.length,
+    total: entries.reduce((sum, [, nav]) => sum + nav, 0),
+    bars: entries.map(([id, nav]) => ({
+      id,
+      nav,
+      share: largest > 0 ? nav / largest : 0,
+    })),
+  };
+}
+
 interface ExpiredCommitment {
   /** released this quarter — usually 0 */
   quarter: number;
@@ -102,6 +141,7 @@ export function PrivateMarkets({
   const quarter = ledger ? lastRevealedQuarter(ledger.quarter_months, revealedMonths) : -1;
   const row = pickLedgerRow(ledger, session, quarter);
   const expired = expiredCommitment(session);
+  const ladder = ladderSummary(session?.vintage_nav);
 
   if (!row) {
     return (
@@ -154,17 +194,20 @@ export function PrivateMarkets({
           {session.trailing_distributions.map((v) => v.toFixed(2)).join(" · ")}
         </p>
       )}
-      {session?.vintage_nav && Object.keys(session.vintage_nav).length > 0 && (
+      {ladder && (
         <div className="vintage-stack" aria-label="vintage stack by age">
-          <span className="stack-title">the ladder, by vintage</span>
-          {Object.entries(session.vintage_nav)
-            .sort(([a], [b]) => a.localeCompare(b))
-            .map(([id, nav]) => (
-              <div key={id} className="stack-row">
-                <span>{id}</span>
-                <span>{nav.toFixed(2)}</span>
-              </div>
+          <span className="stack-title">
+            the ladder — {ladder.count} vintages, {n2(ladder.total)} NAV
+          </span>
+          <div className="stack-bars">
+            {ladder.bars.map((bar) => (
+              <i
+                key={bar.id}
+                style={{ height: `${Math.max(2, bar.share * 100)}%` }}
+                title={`${bar.id}: ${n2(bar.nav)}`}
+              />
             ))}
+          </div>
         </div>
       )}
     </div>
