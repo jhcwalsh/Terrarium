@@ -14,6 +14,22 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **Choose your decade (sib-01), 2026-08-14: session service endpoints for
+  world discovery and playable bundles.** The session service gains two
+  read-only endpoints: `GET /worlds` (worlds + runs in the store,
+  newest-first, with seeds) and `GET /runs/{run_id}/bundle` (the world
+  bundle, byte-identical to `ah bundle` output, cached per run). The app's
+  landing lists available decades from `/worlds` and feeds the existing
+  verified-bundle loader; on any failure it falls back silently to the
+  file-picker/URL flow (static hosting unaffected). Four sibling runs of
+  `stagflation_1974` (seeds 205319/213238/221157/229076, the platform 7919
+  stride — each sibling's played history is a distinct ensemble path of the
+  same world, the intended "another draw of the same decade" semantics) were
+  console-walked: identical flag classes to the base seed, catch-up ratios
+  0.956–0.966, replay MATCH on all four — all four ship, no exclusions. One
+  walk note: the base world's PE Sharpe hovers at ~0.99–1.00, so its
+  threshold flag flickers with ensemble size (recorded; not a regression).
+
 - **ER-10 CLOSED, 2026-08-13: reported PM marks now catch up to true
   (`toy-v0.6`).** `_reported_marks` filtered only the quarter-end MONTH's
   true return through the appraisal filter, silently discarding the
