@@ -688,12 +688,10 @@ was common to player and twin alike.
 **Two permanent guards, so this cannot silently recur.**
 
 1. A catch-up invariant test on both paths that share `_reported_marks` —
-   the engine
-   (`tests/test_engine.py::test_reported_marks_catch_up_to_truth_er10`) and
-   the generator adapter
+   the engine test (`tests/test_engine.py::test_reported_marks_catch_up_to_truth_er10`)
+   pools a 16-path ensemble; the generator adapter test
    (`tests/test_gen_adapter.py::TestAgainstTheRealPanel::test_gen_reported_marks_catch_up_to_truth_er10`)
-   — pooling a small ensemble (a single path's ratio is a right-censored
-   EWMA and swings with its final quarter's own size) and asserting
+   is a single-path check that runs where the local data catalog is present. Both assert
    cumulative reported/true lands in `0.80–1.20`.
 2. The credibility console's reported-plane catch-up row
    (`src/ah/credibility.py`, `SmoothingStats.catchup_ratio`/`catchup_flagged`,
