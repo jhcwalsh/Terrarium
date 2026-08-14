@@ -96,6 +96,124 @@ def gen_service(tmp_path_factory):
         registry.restore(saved)
 
 
+def _patch_factor_lineage(monkeypatch) -> None:
+    """Bundle-building a generated world reads the REAL local vintage catalog
+    (OD-4) for factor lineage; tests inject a fake behind that seam instead
+    of requiring ``data/catalog.duckdb`` to exist, same as ``test_bundle.py``
+    (``test_generated_bundle_carries_factor_lineage``)."""
+    import ah.bundle as bundle_mod
+    import ah.gen.bootstrap as bs
+
+    fake_lineage = {
+        "vintage_id": "test-vintage",
+        "units": {n: "test-units" for n in bs.FACTOR_SET},
+        "proxy_shares": {
+            n: {"n_months": 72, "n_proxy": 0, "share": 0.0, "by_rule": {}} for n in bs.FACTOR_SET
+        },
+    }
+    monkeypatch.setattr(bundle_mod, "factor_lineage", lambda vintage_id: fake_lineage)
+
+
+@pytest.fixture(scope="module")
+def client_with_gen_run(gen_service):
+    """Adapts ``gen_service`` into the (client, run_id, world_id, seed) shape
+    Task 1's endpoints are exercised against — reuses the same generated-world
+    fixture as TestGeneratedSessions rather than standing up a second store."""
+    client, db, rid = gen_service
+    conn = connect(db)
+    rec = get_run_record(conn, rid)
+    assert rec is not None
+    return client, rid, rec["world_id"], rec["seed"]
+
+
+class TestWorldsAndBundles:
+    """Task 1 (sib-01): the two read-only listing endpoints — server-listed
+    decades (GET /worlds) and CLI-identical bundle bytes (GET /runs/{id}/bundle)."""
+
+    def test_worlds_lists_the_run_with_its_seed(self, client_with_gen_run):
+        client, run_id, world_id, seed = client_with_gen_run
+        doc = client.get("/worlds").json()
+        world = next(w for w in doc["worlds"] if w["world_id"] == world_id)
+        run = next(r for r in world["runs"] if r["run_id"] == run_id)
+        assert run["seed"] == seed
+        assert "created_at" in run
+
+    def test_worlds_entry_carries_title_and_generator_id(self, client_with_gen_run):
+        client, _run_id, world_id, _seed = client_with_gen_run
+        doc = client.get("/worlds").json()
+        world = next(w for w in doc["worlds"] if w["world_id"] == world_id)
+        assert world["title"]  # stagflation_1974 -> "Nineteen Seventy-Four"
+        assert world["generator_id"] and world["generator_id"] != "toy-v0"
+
+    def test_worlds_lists_toy_worlds_too_no_filtering(self, service):
+        """The store is the truth: toy AND generated worlds both appear."""
+        client, _db, rid = service
+        doc = client.get("/worlds").json()
+        assert any(w["generator_id"] == "toy-v0" for w in doc["worlds"])
+        assert any(rid == r["run_id"] for w in doc["worlds"] for r in w["runs"])
+
+    def test_worlds_with_no_runs_returns_empty_runs_list(self, tmp_path):
+        db = tmp_path / "empty.db"
+        assert (
+            RUNNER.invoke(
+                cli_app, ["--db", str(db), "world", "build", "--preset", "stagflation"]
+            ).exit_code
+            == 0
+        )
+        client = TestClient(create_app(db))
+        doc = client.get("/worlds").json()
+        assert len(doc["worlds"]) == 1
+        assert doc["worlds"][0]["runs"] == []
+
+    def test_worlds_runs_are_newest_first(self, client_with_gen_run):
+        client, run_id, world_id, _seed = client_with_gen_run
+        doc = client.get("/worlds").json()
+        world = next(w for w in doc["worlds"] if w["world_id"] == world_id)
+        created = [r["created_at"] for r in world["runs"]]
+        assert created == sorted(created, reverse=True)
+        assert run_id in [r["run_id"] for r in world["runs"]]
+
+    def test_bundle_bytes_match_the_cli_builder_exactly(self, gen_service, tmp_path, monkeypatch):
+        _patch_factor_lineage(monkeypatch)
+        client, db, run_id = gen_service
+        served = client.get(f"/runs/{run_id}/bundle")
+        assert served.status_code == 200
+        assert served.headers["content-type"].startswith("application/gzip")
+
+        # authority check: identical bytes to the library builder the CLI
+        # itself calls (ah.cli's bundle_cmd -> build_bundle + write_bundle)
+        from ah.bundle import build_bundle, write_bundle
+
+        conn = connect(db)
+        doc = build_bundle(conn, run_id)
+        out = tmp_path / "w.bundle.gz"
+        write_bundle(doc, out)
+        assert served.content == out.read_bytes()
+
+    def test_unknown_run_is_404(self, client_with_gen_run):
+        client, *_ = client_with_gen_run
+        assert client.get("/runs/no-such-run/bundle").status_code == 404
+
+    def test_bundle_is_cached_not_rebuilt(self, client_with_gen_run, monkeypatch):
+        _patch_factor_lineage(monkeypatch)  # in case this run is not yet cached
+        client, run_id, _world_id, _seed = client_with_gen_run
+        first = client.get(f"/runs/{run_id}/bundle").content
+
+        import ah.serve as serve_mod
+
+        real = serve_mod._build_bundle_bytes
+        calls = {"n": 0}
+
+        def spy(conn, rid):
+            calls["n"] += 1
+            return real(conn, rid)
+
+        monkeypatch.setattr(serve_mod, "_build_bundle_bytes", spy)
+        second = client.get(f"/runs/{run_id}/bundle").content
+        assert second == first
+        assert calls["n"] == 0  # cache hit: the (patched) builder never ran
+
+
 class TestGeneratedSessions:
     """su-gen-03: the server is the authority for generated worlds too."""
 
