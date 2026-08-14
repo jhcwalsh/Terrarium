@@ -116,6 +116,31 @@ class TestConsequence:
         assert stressed.forced_secondaries >= 1
         assert stressed.forced_secondary_nav > 0.0
 
+    def test_expired_commitment_is_ledgered_where_the_unfunded_balance_drops(self, held):
+        """ER-6's close-out said the residual "expires visibly instead of
+        haunting the books"; the audit (F2, 2026-08-14) found the number was
+        computed and then dropped by this loop, so nothing downstream could
+        see it. The play surface now carries it.
+
+        The seed cohorts open at age 5.25 against a 10-year contractual life,
+        so all three lapse in the same quarter of a decade — the one place a
+        player sees undrawn commitment cancelled rather than called.
+        """
+        expired = [q.expired_undrawn for q in held.quarters]
+        assert all(e >= 0.0 for e in expired)
+        fired = [q for q, e in enumerate(expired) if e > 0.0]
+        assert fired, "no commitment ever expires — the ER-6 lapse never fires"
+
+        # It is a REAL release, not a label: unfunded falls by at least the
+        # expired amount across the lapse quarter, net of that quarter's own
+        # calls (which also draw the balance down) and any new commitment.
+        for q in fired:
+            before = held.quarters[q - 1].unfunded_total if q else None
+            if before is None:
+                continue
+            drop = before - held.quarters[q].unfunded_total
+            assert drop >= expired[q] - held.quarters[q].new_commitments - 1e-9
+
     def test_every_sale_is_logged_with_a_cause(self, held):
         for entry in held.sale_log:
             assert entry["cause"]

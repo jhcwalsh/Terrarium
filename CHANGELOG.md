@@ -12,6 +12,27 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Added
+
+- **Expired commitment is visible on every surface (audit F2), 2026-08-14.**
+  ER-6's close-out made undrawn commitment expire at the end of a cohort's
+  contractual life "visibly instead of haunting the books" — but `ah/play.py`
+  computed `CohortStep.expired_undrawn` and dropped it, so it reached no
+  surface at all. Now: `PlayQuarter.expired_undrawn` carries the quarter's
+  release; the credibility console's commitment ladder gains an `expired`
+  column plus the note explaining the fall in `unfunded end` that `called`
+  cannot account for; the session service serves `expired_undrawn` and
+  `expired_undrawn_to_date` (masked like every other mark-to-market field
+  before reveal); the app's private-markets ledger shows the release in the
+  quarter it happens and the running total afterwards. **Measured on the
+  shipped presets: 9.02 (stagflation) and 8.86 (goldilocks) expire in quarter
+  19 — 17% and 14% of everything called that decade**, in a single quarter,
+  because all three seed cohorts open at age 5.25 against a 10-year life and
+  lapse together. Scope: the bundle's `TwinLedger` was NOT extended (a
+  contract-version change), so the line is session-only — browse mode shows
+  nothing rather than showing the twin's release as if it were the player's.
+  No engine change, no alpha-version bump, no sealed file.
+
 ### Fixed
 
 - **The smoothing kernel's zero-lag-mass branch double-counted every mark

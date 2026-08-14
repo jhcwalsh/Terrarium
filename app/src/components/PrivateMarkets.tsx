@@ -59,6 +59,30 @@ export function pickLedgerRow(
   return null;
 }
 
+interface ExpiredCommitment {
+  /** released this quarter — usually 0 */
+  quarter: number;
+  /** released so far this decade — what keeps the event on the page */
+  toDate: number;
+  justHappened: boolean;
+}
+
+/** Undrawn commitment CANCELLED at the end of a fund's contractual life
+ *  (ER-6's visible lapse; surfaced by audit F2). Session-only: the twin
+ *  ledger in the bundle carries no such series, and showing the twin's as
+ *  though it were the player's is exactly what `pickLedgerRow` exists to
+ *  prevent. Null means there is nothing to say — no session, nothing
+ *  expired yet, or the quarter is not revealed. */
+export function expiredCommitment(
+  session: { expired_undrawn?: number | null; expired_undrawn_to_date?: number | null } | null,
+): ExpiredCommitment | null {
+  if (!session) return null;
+  const toDate = session.expired_undrawn_to_date;
+  if (toDate == null || toDate <= 0) return null;
+  const quarter = session.expired_undrawn ?? 0;
+  return { quarter, toDate, justHappened: quarter > 0 };
+}
+
 const SOURCE_LABEL: Record<LedgerRow["source"], string> = {
   yours: "your book",
   twin: "hold-course twin",
@@ -77,6 +101,7 @@ export function PrivateMarkets({
 }) {
   const quarter = ledger ? lastRevealedQuarter(ledger.quarter_months, revealedMonths) : -1;
   const row = pickLedgerRow(ledger, session, quarter);
+  const expired = expiredCommitment(session);
 
   if (!row) {
     return (
@@ -111,6 +136,18 @@ export function PrivateMarkets({
           ? "No session yet — these are the hold-course twin's cashflows, not yours."
           : "Your book's calls and distributions for the quarter just closed."}
       </p>
+      {expired && (
+        <p className={expired.justHappened ? "privates-expired now" : "privates-expired"}>
+          {expired.justHappened
+            ? `commitment expired this quarter: ${n2(expired.quarter)}`
+            : `commitment expired to date: ${n2(expired.toDate)}`}
+          <span className="privates-note">
+            {" "}
+            — undrawn capital released at the end of a fund's life. It leaves your unfunded
+            total without ever being called, so you will never pay it.
+          </span>
+        </p>
+      )}
       {session?.trailing_distributions && session.trailing_distributions.length > 0 && (
         <p className="privates-trailing">
           trailing distributions:{" "}

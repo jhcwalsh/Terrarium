@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { lastRevealedQuarter, pickLedgerRow } from "./PrivateMarkets";
+import { expiredCommitment, lastRevealedQuarter, pickLedgerRow } from "./PrivateMarkets";
 
 const QUARTERS = [2, 5, 8, 11, 14, 17];
 
@@ -34,5 +34,40 @@ describe("pickLedgerRow", () => {
 
   it("returns nothing when neither is available", () => {
     expect(pickLedgerRow(undefined, null, 1)).toBeNull();
+  });
+});
+
+describe("expiredCommitment", () => {
+  // ER-6's terminal lapse (audit F2): undrawn capital CANCELLED at the end of
+  // a fund's life. It fires in one quarter of a decade, so the running total
+  // is what keeps it on the page afterwards. The twin bundle carries no such
+  // series, so this is a session-only line — browse mode shows nothing rather
+  // than showing the twin's as if it were yours.
+  it("is nothing without a session", () => {
+    expect(expiredCommitment(null)).toBeNull();
+  });
+
+  it("is nothing when no commitment has ever expired", () => {
+    expect(expiredCommitment({ expired_undrawn: 0, expired_undrawn_to_date: 0 })).toBeNull();
+  });
+
+  it("shows the quarter's own release when it happens", () => {
+    expect(expiredCommitment({ expired_undrawn: 9.02, expired_undrawn_to_date: 9.02 })).toEqual({
+      quarter: 9.02,
+      toDate: 9.02,
+      justHappened: true,
+    });
+  });
+
+  it("stays visible in later quarters, as a running total", () => {
+    expect(expiredCommitment({ expired_undrawn: 0, expired_undrawn_to_date: 9.02 })).toEqual({
+      quarter: 0,
+      toDate: 9.02,
+      justHappened: false,
+    });
+  });
+
+  it("treats the unrevealed nulls as nothing to show", () => {
+    expect(expiredCommitment({ expired_undrawn: null, expired_undrawn_to_date: null })).toBeNull();
   });
 });

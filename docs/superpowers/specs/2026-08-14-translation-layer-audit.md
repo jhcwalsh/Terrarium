@@ -84,6 +84,20 @@ reaches PlayQuarter, the programme console, or the player. The design's
 stated purpose was visibility. **Owner decision:** small WP to surface it
 (ledger line + programme table), or record the deviation.
 
+> **RESOLVED 2026-08-14 — surfaced** (`f2-01-surface-expired-undrawn`).
+> `PlayQuarter.expired_undrawn` carries it; the programme console's ladder
+> gains an `expired` column with the note explaining the unfunded drop that
+> `called` cannot; the session service serves the quarter's release AND a
+> running total (`expired_undrawn_to_date` — the event fires once per decade,
+> so it must outlive the quarter it happened in); the app's private-markets
+> ledger shows it. **Measured on the shipped presets: 9.02 (stagflation) /
+> 8.86 (goldilocks) expires in quarter 19 — 17% and 14% of everything called
+> that decade**, in a single quarter, previously invisible on every surface.
+> All three seed cohorts open at age 5.25 against a 10-year life, so they
+> lapse together. Scope note: the bundle's `TwinLedger` was NOT extended
+> (that is a contract-version change), so the line is session-only and browse
+> mode shows nothing rather than showing the twin's release as the player's.
+
 ### F3 — Distributions run slow: crossover misses its band (B3)
 
 Declared band for calls/distributions crossover: years 4–8. Measured on

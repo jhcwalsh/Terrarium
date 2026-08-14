@@ -103,6 +103,34 @@ def test_ladder_year_zero_commits_nothing_and_later_years_do(runs):
     assert years[1].committed > 0.0
 
 
+def test_expired_commitment_explains_the_unfunded_drop_calls_cannot(runs):
+    """Audit F2: ER-6's terminal lapse was computed and dropped before any
+    surface could show it, so the console's ladder had a year where unfunded
+    fell by far more than the year called — with nothing on the page to say
+    why. The seed cohorts lapse together in year 4 (age 5.25 + 4.75 = the
+    10-year contractual life).
+
+    Arithmetic by hand, per this file's rule: the year's expiry is the sum of
+    its own quarters' expiries, and the drop it explains is real.
+    """
+    linked, unlinked = runs
+    rows = programme_quarters(linked, unlinked)
+    years = ladder_years(rows, linked)
+
+    lapse = [y for y in years if y.expired > 0.0]
+    assert lapse, "no year expires any commitment — ER-6's lapse never fires"
+    y = lapse[0]
+    hand = sum(r.expired_undrawn for r in rows[y.year * 4 : y.year * 4 + 4])
+    assert np.isclose(y.expired, hand) and hand > 0.0
+
+    # the drop unfunded takes that year exceeds what calls alone can explain,
+    # and the expiry is what covers the difference
+    prior_unfunded = years[y.year - 1].unfunded_end
+    drop = prior_unfunded - y.unfunded_end
+    assert drop > y.called  # calls alone cannot account for it
+    assert np.isclose(drop, y.called + y.expired - y.committed, atol=1e-6)
+
+
 def test_called_to_date_is_cumulative(runs):
     linked, unlinked = runs
     years = ladder_years(programme_quarters(linked, unlinked), linked)

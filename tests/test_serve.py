@@ -370,6 +370,40 @@ class TestEndpoints:
         assert doc["calls_paid"] >= 0.0
         assert 0.0 <= doc["private_weight_true"] <= 1.0
 
+    def test_expired_commitment_reaches_the_player_and_stays_visible(self, service):
+        """Audit F2: ER-6's terminal lapse was computed and dropped, so the
+        player could watch unfunded commitment vanish with no line item saying
+        it had been cancelled rather than called. It fires in ONE quarter of a
+        decade, so the running total is what keeps it on the page afterwards.
+        """
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        # unrevealed: masked like every other mark-to-market field
+        assert client.get(f"/sessions/{sid}").json()["expired_undrawn"] is None
+
+        # quarter by quarter, holding at every window (the reveal pointer
+        # refuses to pass an undecided one)
+        pending = set(decision_months(120))
+        seen: list[float] = []
+        for month in range(3, 121, 3):
+            r = client.post(f"/sessions/{sid}/advance", json={"to_month": month})
+            assert r.status_code == 200, r.json()
+            doc = r.json()
+            seen.append(doc["expired_undrawn"])
+            # the running total never goes backwards and always covers the quarter
+            assert doc["expired_undrawn_to_date"] >= doc["expired_undrawn"] - 1e-9
+            for window in sorted(pending):
+                if window < month:  # revealed, so decidable
+                    client.post(
+                        f"/sessions/{sid}/decisions", json={"month": window, "action": "hold"}
+                    )
+                    pending.discard(window)
+        assert any(v > 0.0 for v in seen), "the lapse never reached the player"
+        final = client.get(f"/sessions/{sid}").json()
+        assert final["expired_undrawn_to_date"] == pytest.approx(sum(seen), abs=1e-6)
+        # and it outlives the quarter it happened in
+        assert final["expired_undrawn"] == 0.0 and final["expired_undrawn_to_date"] > 0.0
+
     def test_session_carries_the_product_alpha_version(self, service):
         from ah.play import PLAY_ALPHA_VERSION
 
