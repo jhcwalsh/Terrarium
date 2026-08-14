@@ -129,11 +129,20 @@ def test_run_window_refuses_windows_beyond_the_cohorts_contract():
 
 
 def test_pm_plane_stats_cover_every_mapped_sleeve_and_damp_volatility():
+    """Every sleeve, INCLUDING pm_direct_lending.
+
+    This assertion used to exclude DL, annotated "dl kernel is identity". It
+    was not: DL's ``[1.0, 0.0]`` theta hit a kernel branch that broadcast one
+    weight across the whole lag window and double-counted every mark, so its
+    reported vol came out ABOVE its true vol and the row had to be skipped to
+    keep the test green. The defect (audit F1, fixed 2026-08-14) is gone and
+    the exclusion with it — DL is now genuinely a passthrough, which this
+    assertion covers as the boundary case it always should have been.
+    """
     mapping = ce.load_real_mapping()
     rows = ce.pm_plane_stats("full_span", _window_frame(), mapping, source="prior")
     assert {r.sleeve for r in rows} == set(mapping["pm_sleeves"])
-    smoothed = [r for r in rows if r.sleeve != "pm_direct_lending"]  # dl kernel is identity
-    assert all(r.vol_reported_annual <= r.vol_true_annual + 1e-12 for r in smoothed)
+    assert all(r.vol_reported_annual <= r.vol_true_annual + 1e-12 for r in rows)
 
 
 def test_render_pins_the_guard_text():

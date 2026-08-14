@@ -699,3 +699,76 @@ was common to player and twin alike.
    `ah credibility` run, with a near-zero guard
    (`CATCHUP_NEAR_ZERO_PP = 5.0`) so a deflation-style world whose cumulative
    true return sits near zero reads "n/a" instead of a meaningless ratio.
+
+## ER-11 — The reported plane is the engine's filter, not the sealed per-sleeve kernel
+
+**Status:** CLOSED BY DECISION 2026-08-14 (owner accepted route (a) of the
+translation-layer audit's F1). No engine number moved.
+**Found:** 2026-08-14, the translation-layer audit
+(`docs/superpowers/specs/2026-08-14-translation-layer-audit.md`, finding F1)
+— three read-only auditors checking behavior against DESIGN documents.
+
+**What happens.** DN-5 SM-10 requires the reported plane to be "one model,
+two views": the sealed smoothing kernel (`mappings/smoothing-kernel-v1.0.yaml`,
+inside the G3 lock) paired with the de-smoother that judged the mappings, so
+that de-smoothing a reported series recovers the true one exactly. Two
+implementations of the forward direction exist:
+
+| | applies | where | granularity |
+|---|---|---|---|
+| engine filter | `rep_q = w*q_true + (1-w)*rep_{q-1}`, `w` = 0.35/0.30/0.35 | `ah/core/engine.py::_reported_marks` | three aggregates (pe/pc/re) |
+| sealed kernel | per-sleeve MA weights θ (buyout 85/15, VC 60/15/25, …) | `ah/port/smoothing.py` + the artifact | nine PM sleeves + seven HF |
+
+**Everything player-facing has always used the first one.** The port kernel
+is reached only by its own tests, `campaign_exhibit.pm_plane_stats`, and two
+inspection scripts — never by `ah/port/adapter.py`, the session service, the
+bundle, or the console. The two disagree materially: quarterly reported
+autocorrelation for buyout is **0.55** under the engine filter and **0.06**
+under the sealed kernel. The shipped blur is heavier and coarser than the
+sealed one.
+
+**The decision (owner, 2026-08-14).** The engine's filter IS the product's
+smoothing model. The SM-10 divergence is recorded here rather than closed by
+code, on these grounds: the filter is independently validated on its own
+evidence (ER-10's catch-up invariant, the console's catch-up row, the console
+walks on every shipped seed), and it is the surface every score and every
+committed fixture was built against. Routing the sealed kernel live remains
+available and is scoped below; it is a release event, not a cleanup.
+
+**What the shipped path does NOT get, stated plainly.** Per-sleeve mark
+behavior (a VC mark and a mezzanine mark blur identically today), the sealed
+kernel's HF residual-correlation and CTA rules on any player-facing surface,
+and the exact SM-10 inverse property — de-smoothing a shipped reported series
+does not recover the true series, because the series was not made by the
+sealed forward kernel.
+
+**What reopening it would cost** (estimated 2026-08-14, recorded so a future
+reader does not re-derive it): the sealed artifact is per-sleeve and the
+engine plane is three aggregates, so the first task is a design decision —
+how nine θ vectors collapse into three — which needs its own amendment
+because the seal does not cover it. Then the standard cascade:
+`TOY_ENGINE_VERSION` bump, new preset world-id block, fixture and golden
+regeneration, and a full revalidation (the catch-up band, the pacing
+counter-cyclicality numbers, and `peak_unfunded` all move, because pacing
+keys off the reported plane and less-sticky marks fall faster in a crash —
+expect a re-pin of the ER-6 ceiling like ER-10's). **≈3 working days, 4 with
+a re-pin cascade.** Applying the kernel per-sleeve at the port layer instead,
+and moving the play surface onto it, is a larger track (a week-plus) that also
+touches which module the scored surface reads from.
+
+**The bug this uncovered — FIXED, and it never touched a shipped number.**
+`ah/port/smoothing.py`'s stickiness branch built a weight vector one element
+short of the lag window whenever a sleeve's lag weights were all zero.
+NumPy's einsum broadcast that single weight across every lag slot, so each
+mark came out `true_t + true_{t-1}` at full weight — the return counted
+twice, every period. Only `pm_direct_lending` has such a θ (`[1.0, 0.0]`, a
+boundary fallback in the sealed artifact); compounded, its reported
+cumulative return ran **4.47x** true (+1126% vs +252%). Exposure, checked
+consumer by consumer: no `ah/eval/` module imports the kernel (no judged
+number could move); `scripts/run_2022_replay.py` — the G1-era evidence path
+— smooths with the non-degenerate `hf_event` θ, so the branch never fired
+there; and the one committed artifact that did run it
+(`docs/data/CAMPAIGN-R1-TRANSLATION.md`'s PM plane table) carried an
+all-zero direct-lending series, so the doubled numbers were zeros. The fix
+carries the full lag window explicitly and raises on any weight vector that
+does not span it, so a short vector can never be broadcast again.

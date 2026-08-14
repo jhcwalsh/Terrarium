@@ -12,6 +12,43 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Fixed
+
+- **The smoothing kernel's zero-lag-mass branch double-counted every mark
+  (audit F1), 2026-08-14.** `ah/port/smoothing.py`'s stickiness branch built
+  a weight vector one element short of the lag window whenever a sleeve's lag
+  weights summed to zero; numpy's einsum broadcast that single weight across
+  every lag slot, so each mark came out `true_t + true_{t-1}` at full weight.
+  Only `pm_direct_lending` carries such a theta (`[1.0, 0.0]`, a boundary
+  fallback in the sealed artifact) — compounded, its reported cumulative
+  return ran 4.47x true (+1126% vs +252%). The fix carries the full lag
+  window explicitly and raises on any weight vector that does not span it.
+  **No shipped or committed number changes:** the player-facing reported
+  plane uses the engine's filter, no `ah/eval/` module imports this kernel,
+  the G1-era `scripts/run_2022_replay.py` used the non-degenerate `hf_event`
+  theta, and the one committed artifact that ran the branch
+  (`docs/data/CAMPAIGN-R1-TRANSLATION.md`'s PM plane table) carried an
+  all-zero direct-lending series. `tests/test_campaign_exhibit.py`'s
+  plane-stats assertion had been written AROUND the defect (excluding
+  direct lending, annotated "dl kernel is identity" — it was not); the
+  exclusion is removed and the history kept in the test's docstring.
+
+### Changed
+
+- **SM-10 smoothing model: the engine filter is the product's, by decision
+  (ER-11), 2026-08-14.** The translation-layer audit found the sealed
+  smoothing kernel has never run on a player-facing path — the reported
+  plane has always been `ah/core/engine.py::_reported_marks`. The owner
+  declared the engine filter the product's smoothing model and recorded the
+  DN-5 SM-10 divergence rather than routing the kernel live: new
+  `docs/engine-realism-register.md` **ER-11** (what the shipped path forgoes
+  — per-sleeve mark behavior, the HF residual/CTA rules, the exact SM-10
+  inverse property — plus a ~3-working-day estimate to reverse), a
+  `governance/decision-register.md` entry, and a header on
+  `ah/port/smoothing.py` marking it off the live path. No sealed file
+  touched (the kernel artifact is inside the G3 lock and is unchanged); no
+  engine number moved; no `TOY_ENGINE_VERSION` bump.
+
 ### Added
 
 - **Choose your decade (sib-01), 2026-08-14: session service endpoints for

@@ -111,6 +111,34 @@ class TestSM10Inverse:
         x = _true_path(60)
         np.testing.assert_array_equal(sk.smooth(x, np.array([1.0])), x)
 
+    def test_zero_lag_mass_is_a_passthrough_not_a_double_count(self):
+        """FOUND by the translation-layer audit, 2026-08-14 (finding F1).
+
+        A theta with EXPLICIT zero lag weights — ``pm_direct_lending``'s
+        ``[1.0, 0.0]``, the only such row in the sealed artifact — took the
+        stickiness branch's ``else`` and built a weight vector one element
+        SHORT of the lag matrix. numpy's einsum broadcast that single column
+        across every lag slot, so each mark came out ``true_t + true_{t-1}``
+        with both at full weight: the sleeve's return counted twice, every
+        period. Compounded, DL's reported cumulative return ran 4.47x true
+        (+1126% vs +252%).
+
+        Nothing shipped moved — the live path uses the engine's own filter,
+        and the one artifact that ever ran this branch
+        (``campaign_exhibit.pm_plane_stats`` -> ``docs/data/
+        CAMPAIGN-R1-TRANSLATION.md``) carried an all-zero DL series. The
+        weights a kernel applies must sum to 1 over the FULL lag window,
+        which is what these assertions pin.
+        """
+        x = _true_path(60)
+        np.testing.assert_allclose(sk.smooth(x, np.array([1.0, 0.0])), x)
+        np.testing.assert_allclose(sk.smooth(x, np.array([1.0, 0.0, 0.0])), x)
+        # with the stickiness mechanism live there is still no lag mass to
+        # shed into, so the shed weight returns to theta0 and the mark stays
+        # the truth — never twice the truth.
+        d = sk.drawdown_state_from_returns(x)
+        np.testing.assert_allclose(sk.smooth(x, np.array([1.0, 0.0]), s=0.8, drawdown_state=d), x)
+
 
 class TestStickiness:
     def test_stickiness_leans_on_the_past_exactly_in_drawdowns(self):
