@@ -6,8 +6,12 @@ choices in front of us — before any new worlds are generated.*
 **11 August 2026 · Written after the close of the third generator campaign.
 Updated 12 August 2026**, after two intense days: the history-based worlds
 shipped into the game, the commitment lever and the post-game review were
-finished, and the pacing model was repaired. Sections below reflect the
-updated state.
+finished, and the pacing model was repaired. **Updated again 13 August 2026**
+after the returns audit: the owner read one chart, found two defects the
+entire test suite had been preserving, and both are now fixed — the
+private-market return formulas re-estimated under a sealed amendment, and
+the appraisal-smoothing bug repaired with an engine version bump. Sections
+below reflect the updated state.
 Published copy (same content, formatted):
 https://claude.ai/code/artifact/c51a265d-95dd-4407-b1e2-b5b2ea40ee44
 
@@ -143,6 +147,59 @@ cut priced at +1.9 points of final value *and* 4.7 points of distributions
 foregone — both truths on one screen, which is the lesson the game exists
 to teach. The server remains the sole authority for every scored number.
 
+*(13 August: the private-market returns inside this game were then audited
+and re-founded — see "The returns audit" below. The world was re-issued on a
+fresh leaderboard so scores under the old and new formulas can never mix.)*
+
+## The returns audit (12–13 August) — two defects, found by looking
+
+The day after the game was finished, the owner looked at its charts and
+asked one plain question: *why do the private assets flatline, disconnected
+from everything else?* The answer turned out to be two distinct defects —
+both years old, both sitting behind a fully green test suite — and both are
+the same disease: **appraisal smoothing**, the sluggish quarterly valuation
+of private assets, corrupting the platform in two different places.
+
+**Defect one: the formulas.** Private equity's monthly return was built from
+a market link of just 0.35× equities plus about 13% a year of guaranteed
+"alpha"; private credit had *no* market link at all. Those numbers had been
+honestly *estimated* from real private-market indices — but the estimation
+regressed appraisal-smoothed returns against the market with no lagged
+terms, the oldest trap in private-market analysis: smoothing hides the
+correlation, and everything it hides gets booked as skill. The estimation
+report had even *written down* the warning ("the de-smoother is
+under-correcting"; direct lending "should not be used") — and the artifact
+was adopted anyway, without the owner decision the report asked for. The
+fix went through the front door: a sealed amendment, its procedure declared
+*before* the re-estimation ran — lagged (Dimson sum-beta) terms so the
+appraisal lag stops leaking market exposure into alpha, and direct lending
+re-anchored to a *market-priced* index of the same asset class. Private
+equity's market link rose 0.35 → 0.84, private credit's 0 → 0.47, and the
+free alpha collapsed (private credit's from ~6.3% to ~0.6% a year). The
+console's absurd PE Sharpe of 1.30 fell to 0.99 and stopped flagging.
+
+**Defect two: the display.** The appraised marks the player sees were
+computed by smoothing *only the last month of each quarter* — silently
+discarding the other two months, forever. Reported private equity cumulated
+27% over a decade whose true figure was 125%. Real appraisal smoothing
+delays returns; this destroyed them. The fix (the quarter-end mark now
+smooths the whole quarter's compounded return) changed every world's
+numbers, so it shipped as a formal release event: engine version bumped,
+every scenario moved to a fresh leaderboard, shipped bundles rebuilt. On
+the fixed tape, reported PE cumulates 126.7% against 127.0% true.
+
+**One side-effect proved the point of both fixes.** With appraised books
+finally registering crashes, the pacing policy's counter-cyclical rule
+started leaning in during the simulated trough — committing more when
+values are depressed, exactly as designed. The broken smoothing had been
+anesthetizing the platform's own pacing policy; nobody knew, because the
+books it read never showed the crash.
+
+**And two permanent guards make recurrence impossible:** an invariant test
+that appraised value must catch up to true value (the old code fails it at
+roughly one-third), and a new row in the credibility console auditing the
+appraised plane it was previously blind to.
+
 ## Three contests
 
 ### 1 · The first race (late July 2026) — apprentice promoted
@@ -241,6 +298,21 @@ Second: pre-commitment applies to processes as much as models — a
 discipline that lives in memory fails under pressure; the same discipline
 as a hook cannot.
 
+**Two more from the returns audit (13 August).** First: **a test that pins
+numbers can entomb a bug.** The platform's golden tests assert that numbers
+*don't change* — determinism, not sense. A deterministic bug passes them
+forever; the appraisal-smoothing defect survived four review gates behind
+green suites precisely because every test asserted stability and none
+asserted the one economic invariant that mattered (appraised value must
+catch up to truth). The costliest bugs are missing-invariant bugs, and the
+fix for the class is to write the invariant down as a test the moment a
+human articulates it. Second: **a written warning nobody must answer is a
+warning nobody answers.** The estimation report flagged its own weakness
+and explicitly deferred adoption to an owner decision; the artifact was
+consumed anyway and the warning sat unread in a committed file for weeks.
+Warnings must be routed to a decision point that blocks — the same lesson
+as the unenforced thresholds, wearing different clothes.
+
 ## Known weaknesses, on the record
 
 The platform keeps a standing register of places where the simulation is
@@ -248,11 +320,14 @@ faithful to its plans but not to what a practitioner would believe. Each is a
 deliberate, owner-level decision to fix, because fixing any of them changes
 every world's numbers. Open items:
 
-*(Updated 12 August — the register moved substantially.)*
+*(Updated 12 August — the register moved substantially. Updated 13 August —
+the returns audit closed two more, including one that had never been on it.)*
 
 | Item | In plain terms |
 |---|---|
 | ~~Committed capital under-called~~ **FIXED** | The call-pace curve is now a declared, recorded choice landing ~90% of commitments drawn by year ten (mid-band of real-world practice), and any residual at a fund's end now expires visibly instead of haunting the books. The fix also partly revived the forced-sale mechanic (below), and it unblocked the commitment lever — which has since been built. |
+| ~~Private returns under-linked to markets~~ **FIXED (13 Aug)** | The sealed loading estimates had leaked market exposure into "alpha" via un-corrected appraisal smoothing (PE at 0.35× the market with 13%/yr free alpha). Re-estimated by amendment with lagged terms and a market-priced anchor; PE now 0.84×, private credit 0.47×, alphas collapsed to plausible levels. |
+| ~~Appraised marks destroyed returns~~ **FIXED (13 Aug, ER-10)** | The reported private marks smoothed only one month in three, so appraised books showed ~1/3 of true growth — a display *and* reported-basis-scoring defect present since the first engine. Fixed with an engine version bump; guarded by a permanent catch-up invariant and a new console check. |
 | Single months too extreme (new, then made moot) | The toy engine's fat-tail fix could compress a whole Depression into one month (an −86% equity month was found — by the console's new tail checks, in every toy scenario including the benign one). For the history-based worlds now in the game this cannot happen: no month can be worse than the worst real month on record (−22.6%, October 1987 — proven, not assumed). |
 | The toy-engine family (crises too rectangular; rates glide; forced sales rare) | Real, recorded, and now deliberately **deprioritized** by owner decision: the history-based worlds are the product surface, and the toy scenarios' remaining quirks matter only if they return to players. In the harshest toy world the forced-sale mechanic did revive (6 of 20 seeds) as a side effect of the pacing fix. |
 
@@ -276,10 +351,11 @@ back-burnered** by owner decision (no group-play design work until
 reopened); **3 and 4 remain open** — the two research probes and the
 re-aimed fourth contest, whose case got *stronger*: the 1974 world's own
 timeline showed the resampler's conditioning is a tilt, not a guarantee,
-which is the "teach it to imagine" argument in product form. One question
-still parked: the private-equity return assumption inherited from the
-sealed estimate, which flags on the console and awaits a
-disclosure-or-re-estimate decision.
+which is the "teach it to imagine" argument in product form. The one
+question that was parked here — the private-equity return assumption
+inherited from the sealed estimate, flagging on the console — was **closed
+on 13 August** by the returns audit: re-estimated under amendment, the flag
+is gone, and the decision is on the amendment log rather than parked.
 
 ## Next steps we could contemplate (as written 11 August)
 
