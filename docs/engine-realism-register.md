@@ -270,6 +270,19 @@ terminal lapse now EXPIRES visibly (`CohortStep.expired_undrawn`; the
 unfunded balance zeroes instead of haunting the totals). Both play-alpha
 stamps bumped to `port-v2-cashflow` / `port-v2-cashflow-gen`.
 
+**"Visibly" became true on 2026-08-14, not at the close-out.** The
+translation-layer audit (F2) found the number was computed and then dropped
+by `ah/play.py`'s loop — it reached no surface at all, so the design's whole
+stated purpose was unmet for two days. Now carried on `PlayQuarter`, shown as
+the programme ladder's `expired` column, served to the player as the
+quarter's release plus a running total, and rendered in the app's ledger
+(`f2-01-surface-expired-undrawn`). Worth the fix at the measured size: **9.02
+(stagflation) / 8.86 (goldilocks) expires in quarter 19 — 17% and 14% of
+everything called that decade**, in one quarter, because all three seed
+cohorts open at age 5.25 against a 10-year contractual life and lapse
+together. A player watching unfunded commitment fall by that much had no line
+item saying it had been cancelled rather than called.
+
 **Close-out measurements, honestly stated:** `peak_unfunded_ratio` fell
 from 2.4–3.3 to ~0.96–1.29 across worlds — the pathology is gone, but the
 declared 0.25–0.75 band still flags because the RESIDUAL overhang belongs

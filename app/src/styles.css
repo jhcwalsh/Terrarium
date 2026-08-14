@@ -1375,6 +1375,11 @@ button.commit {
 }
 .commit-primer p { margin: 0; font-size: 14px; }
 .privates-trailing { font-size: 12px; color: var(--dim, #7c9b99); }
+/* ER-6's visible lapse: quiet as a running total, emphasized in the one
+   quarter it actually happens (audit F2). */
+.privates-expired { font-size: 12px; color: var(--dim, #7c9b99); margin: 8px 0 0; }
+.privates-expired.now { color: var(--clay, #c56b4a); font-weight: 600; }
+.privates-expired .privates-note { display: inline; font-weight: 400; }
 .vintage-stack { margin-top: 8px; font-size: 12px; }
 .vintage-stack .stack-title {
   text-transform: uppercase;

@@ -246,6 +246,13 @@ class PlayQuarter:
     f_call: float = 1.0
     #: New commitments made into the ladder this quarter (the pacing plan).
     new_commitments: float = 0.0
+    #: Undrawn commitment CANCELLED at terminal lapse this quarter (ER-6's
+    #: close-out, ``CohortStep.expired_undrawn``). Zero in most quarters and
+    #: a real release in the few where a cohort reaches the end of its
+    #: contractual life: the balance leaves the unfunded total without ever
+    #: being called. Carried here because the design's stated purpose was
+    #: that it expire VISIBLY — computed but dropped until audit F2.
+    expired_undrawn: float = 0.0
     #: NAV by cohort id at quarter close, for the per-vintage stack.
     #:
     #: Snapshotted BEFORE ``engine.run_quarter`` runs, so a forced secondary
@@ -506,6 +513,7 @@ def simulate_play(
 
         calls = 0.0
         distributions = 0.0
+        expired = 0.0
         dd = float(depth[q])
         sr = float(spread_ratio[q])
         fc = tier1_f_call(dd) if linkage else 1.0
@@ -520,6 +528,7 @@ def simulate_play(
                 )
                 calls += step.call
                 distributions += step.distribution_total
+                expired += step.expired_undrawn
                 # the reported mark follows the tape the player is shown
                 grown = cohort.nav_reported * (1.0 + float(q_reported[asset][q]))
                 cohort.report(max(0.0, grown + step.call - step.distribution_total))
@@ -544,6 +553,7 @@ def simulate_play(
                 private_weight_true=report.private_weight_true,
                 private_weight_reported=portfolio.private_weight_reported(),
                 unfunded_total=portfolio.total_unfunded(),
+                expired_undrawn=expired,
                 drawdown_depth=dd,
                 spread_ratio=sr,
                 f_dist=fd,

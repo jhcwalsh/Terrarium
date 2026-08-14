@@ -80,6 +80,8 @@ class ProgrammeQuarter:
     coverage_true: float
     coverage_reported: float
     forced_sale_total: float
+    #: Undrawn commitment cancelled at terminal lapse (ER-6 / audit F2).
+    expired_undrawn: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -94,6 +96,11 @@ class LadderYear:
     called_to_date: float
     unfunded_end: float
     private_nav_end: float
+    #: Commitment that left the ladder WITHOUT being called, this year. The
+    #: unfunded balance falls by this much with no cash moving — the one
+    #: column that explains a drop in ``unfunded_end`` that ``called`` does
+    #: not account for (ER-6's visible expiry; surfaced by audit F2).
+    expired: float = 0.0
 
 
 def _safe_ratio(numerator: float, denominator: float) -> float:
@@ -137,6 +144,7 @@ def programme_quarters(linked: PlayResult, unlinked: PlayResult) -> list[Program
                 coverage_true=_safe_ratio(q.unfunded_total, q.nav_true),
                 coverage_reported=_safe_ratio(q.unfunded_total, q.nav_reported),
                 forced_sale_total=q.forced_sale_total,
+                expired_undrawn=q.expired_undrawn,
             )
         )
     return rows
@@ -171,6 +179,7 @@ def ladder_years(quarters: list[ProgrammeQuarter], linked: PlayResult) -> list[L
                 called_to_date=running_called,
                 unfunded_end=block[-1].unfunded,
                 private_nav_end=block[-1].private_nav,
+                expired=sum(r.expired_undrawn for r in block),
             )
         )
     return years
@@ -814,18 +823,27 @@ PROGRAMME_CSS = """
 def _ladder_table(rep: ProgrammeReport) -> str:
     head = (
         "<tr><th>year</th><th>committed</th><th>called</th><th>distributed</th>"
-        "<th>net</th><th>called to date</th><th>unfunded end</th>"
+        "<th>net</th><th>called to date</th><th>expired</th><th>unfunded end</th>"
         "<th>private NAV end</th></tr>"
     )
     rows = "".join(
         f"<tr><td>{y.year}</td><td>{_f(y.committed)}</td><td>{_f(y.called)}</td>"
         f"<td>{_f(y.distributed)}</td>"
         f"<td class='{'pos' if y.net >= 0 else 'neg'}'>{_f(y.net)}</td>"
-        f"<td>{_f(y.called_to_date)}</td><td>{_f(y.unfunded_end)}</td>"
+        f"<td>{_f(y.called_to_date)}</td>"
+        f"<td class='{'neg' if y.expired > 0 else ''}'>{_f(y.expired)}</td>"
+        f"<td>{_f(y.unfunded_end)}</td>"
         f"<td>{_f(y.private_nav_end)}</td></tr>"
         for y in rep.ladder
     )
-    return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>"
+    note = (
+        "<p class='note'><strong>expired</strong> is undrawn commitment "
+        "CANCELLED at the end of a cohort's contractual life (ER-6's visible "
+        "lapse) — it leaves <em>unfunded end</em> without any cash being "
+        "called, so a year where <em>unfunded end</em> falls by more than "
+        "<em>called</em> is explained here and nowhere else.</p>"
+    )
+    return f"<table class='prog'><thead>{head}</thead><tbody>{rows}</tbody></table>{note}"
 
 
 def _linkage_effect(q: ProgrammeQuarter) -> float:

@@ -37,6 +37,11 @@ export interface Session {
   spending_paid?: number | null;
   /** sum of every forced sale this quarter, across cause and kind */
   forced_sale_total?: number | null;
+  /** ER-6's visible lapse (audit F2): undrawn commitment CANCELLED at the end
+   * of a fund's contractual life — released, never called. It fires in one
+   * quarter of a decade, so the running total is what keeps it on the page. */
+  expired_undrawn?: number | null;
+  expired_undrawn_to_date?: number | null;
   /** sp-02 (E1): the plan's next per-sleeve commitment points, SERVER-computed
    * at the pointer — the lever's pre-fill; committing these IS holding to plan */
   next_plan_commitments?: Record<string, number> | null;

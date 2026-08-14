@@ -226,6 +226,8 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "distributions_received",
             "spending_paid",
             "forced_sale_total",
+            "expired_undrawn",
+            "expired_undrawn_to_date",
         ):
             doc[key] = None
         doc["forced_sales"] = []
@@ -271,6 +273,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         doc["distributions_received"] = here.distributions_received
         doc["spending_paid"] = here.spending_paid
         doc["forced_sale_total"] = here.forced_sale_total
+        # ER-6's visible lapse (audit F2): undrawn commitment CANCELLED at the
+        # end of a cohort's life — it leaves the unfunded balance without a
+        # call. It fires in one quarter of a decade, so the running total is
+        # what keeps it visible after the quarter it happened in.
+        doc["expired_undrawn"] = here.expired_undrawn
+        doc["expired_undrawn_to_date"] = sum(
+            active.quarters[i].expired_undrawn for i in range(q + 1)
+        )
         doc["forced_sales"] = [e for e in active.sale_log if int(e["period"]) <= q + 1]
         doc["next_plan_commitments"] = {
             k: round(v, 4)
