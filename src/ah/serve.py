@@ -25,13 +25,16 @@ fields); the engine underneath remains clock-free.
 Run locally:  uv run uvicorn ah.serve:app --port 8787
 """
 
+import json
 import sqlite3
+import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
 from fastapi import Depends, FastAPI, HTTPException
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
 from ah.core.engine import run_path
@@ -66,6 +69,25 @@ def _resolve_engine(ws: WorldSpec, nw, seed: int):
     return run_gen_path(nw, seed), GEN_START_TARGETS, GEN_PLAY_ALPHA_VERSION
 
 
+def _build_bundle_bytes(conn: sqlite3.Connection, run_id: str) -> bytes:
+    """The exact compressed bytes ``ah bundle`` would write for this run.
+
+    Reuses ``ah.bundle.build_bundle`` + ``ah.bundle.write_bundle`` verbatim —
+    not a reimplementation — so served bytes are byte-identical to the CLI
+    path (sib-01). ``write_bundle`` only knows how to write to a path, so a
+    TemporaryDirectory stands in for an in-memory buffer; cleanup is best-
+    effort (Windows can leave a sqlite-adjacent handle open past the `with`,
+    per the same quirk noted in ``scripts/gen_bundle_fixtures.py``).
+    """
+    from ah.bundle import build_bundle, write_bundle
+
+    doc = build_bundle(conn, run_id)
+    with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+        target = Path(tmp) / "bundle.gz"
+        write_bundle(doc, target)
+        return target.read_bytes()
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 
@@ -94,6 +116,9 @@ class Decide(BaseModel):
 
 def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     app = FastAPI(title="ah session service", version="0.1.0")
+    # sib-01: bundles are immutable per run_id, so this cache is never
+    # invalidated — one entry per run, for the app's lifetime (dict[str, bytes]).
+    app.state.bundle_cache = {}
 
     @contextmanager
     def _conn() -> Iterator[sqlite3.Connection]:
@@ -115,6 +140,47 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             return session_store.get_session(conn, sid)
         except session_store.SessionError as exc:
             raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+    @app.get("/worlds")
+    def list_worlds(conn: sqlite3.Connection = Depends(db)):
+        """sib-01: the decade picker's data — distinct worlds from the store,
+        each with its runs newest-first. No filtering by engine: toy and
+        generated worlds are both listed exactly as the store holds them."""
+        world_rows = conn.execute("SELECT world_id, json FROM worlds").fetchall()
+        run_rows = conn.execute(
+            "SELECT run_id, world_id, seed, created_at FROM run_records "
+            "ORDER BY created_at DESC, run_id DESC"
+        ).fetchall()
+        runs_by_world: dict[str, list[dict[str, Any]]] = {}
+        for r in run_rows:
+            runs_by_world.setdefault(r["world_id"], []).append(
+                {"run_id": r["run_id"], "seed": r["seed"], "created_at": r["created_at"]}
+            )
+        worlds = []
+        for row in world_rows:
+            doc = json.loads(row["json"])
+            narrative = doc.get("narrative") or {}
+            engine_defaults = doc.get("engine_defaults") or {}
+            worlds.append(
+                {
+                    "world_id": row["world_id"],
+                    "title": narrative.get("title"),
+                    "generator_id": engine_defaults.get("generator_id"),
+                    "runs": runs_by_world.get(row["world_id"], []),
+                }
+            )
+        return {"worlds": worlds}
+
+    @app.get("/runs/{run_id}/bundle")
+    def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):
+        """sib-01: served bytes are byte-identical to ``ah bundle`` — same
+        builder, cached per run_id since a RunRecord's bundle never changes."""
+        cache: dict[str, bytes] = app.state.bundle_cache
+        if run_id not in cache:
+            if get_run_record(conn, run_id) is None:
+                raise HTTPException(status_code=404, detail=f"no run_record {run_id}")
+            cache[run_id] = _build_bundle_bytes(conn, run_id)
+        return Response(content=cache[run_id], media_type="application/gzip")
 
     @app.post("/sessions", status_code=201)
     def create_session(body: CreateSession, conn: sqlite3.Connection = Depends(db)):

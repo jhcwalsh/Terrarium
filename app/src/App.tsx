@@ -14,6 +14,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
 import { cacheGet, cacheList, cachePut } from "./lib/idb";
+import { fetchWorlds, WorldPicker, type WorldsDoc } from "./lib/worlds";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import Provenance from "./components/Provenance";
@@ -29,10 +30,20 @@ export default function App() {
   const [error, setError] = useState<string | null>(null);
   const [mode, setMode] = useState<Mode>("browse");
   const [playConfig, setPlayConfig] = useState<PlayConfig | undefined>();
+  const [worldsDoc, setWorldsDoc] = useState<WorldsDoc | null>(null);
 
   useEffect(() => {
     cacheList().then(setCached).catch(() => setCached([]));
   }, [loaded]);
+
+  useEffect(() => {
+    // sib-01: progressive enhancement — a failed/missing /worlds (service
+    // down, static hosting) just leaves the list empty; the picker/URL flow
+    // below is unconditionally present either way.
+    fetchWorlds()
+      .then(setWorldsDoc)
+      .catch(() => setWorldsDoc(null));
+  }, []);
 
   const openBytes = useCallback(async (bytes: ArrayBuffer, cacheKey?: string) => {
     try {
@@ -77,6 +88,7 @@ export default function App() {
       <main className="shell">
         <h1>Alternate Histories</h1>
         <p className="tagline">Load a world bundle to begin.</p>
+        <WorldPicker doc={worldsDoc} onOpen={openUrl} />
         <input
           type="file"
           accept=".gz"
