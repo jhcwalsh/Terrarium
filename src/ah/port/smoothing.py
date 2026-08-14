@@ -21,6 +21,15 @@ The Geltner appraisal family (RE/infrastructure) is deliberately ABSENT here:
 unparameterized in the artifact (no PM data), and an unparameterized family
 raises rather than pretending. Engines don't seal; estimates do — this module
 is lineage-pinned by ``kernel_version``, the artifact is inside the G3 lock.
+
+**NOT ON THE PLAYER-FACING PATH (ER-11, owner decision 2026-08-14).** The
+product's reported plane is the toy engine's own filter
+(``ah/core/engine.py::_reported_marks``), not this kernel — a recorded
+divergence from SM-10, with the reasoning, the cost of reversing it, and what
+the shipped path forgoes in ``docs/engine-realism-register.md`` ER-11. This
+module is reached by its own tests, ``ah/port/campaign_exhibit.py`` and the
+inspection scripts. Anything here that would change a player-facing number
+changes nothing today; check ER-11 before assuming otherwise.
 """
 
 from __future__ import annotations
@@ -172,7 +181,20 @@ def smooth(
                 [theta0_eff[:, None], theta[None, 1:] * scale[:, None]], axis=1
             )
         else:
-            weights = np.concatenate([theta0_eff[:, None] + shed[:, None]], axis=1)
+            # No lag mass to shed into: the mechanism is inert, so the shed
+            # weight returns to theta0 and the (zero) lag weights stand. The
+            # lag columns MUST be carried explicitly — a short vector here is
+            # broadcast across the whole lag window by the einsum below and
+            # silently double-counts (audit F1, 2026-08-14).
+            weights = np.concatenate(
+                [
+                    theta0_eff[:, None] + shed[:, None],
+                    np.broadcast_to(theta[None, 1:], (n_paths, k)),
+                ],
+                axis=1,
+            )
+        if weights.shape != (n_paths, k + 1):  # never broadcast a weight again
+            raise SmoothingError(f"weights {weights.shape} do not span the {k + 1}-slot lag window")
         out[:, t] = np.einsum("pi,ip->p", weights, lags[:, :, t])
 
     return out[0] if np.asarray(true_returns).ndim == 1 else out

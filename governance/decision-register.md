@@ -155,3 +155,24 @@ in the design note. SHIP-BENCHMARK stands; bootstrap-v1 remains the
 product engine. All Phase-0 numbers are dev-grade under provisional
 definitions; no sealed file was touched; no campaign-4 block ever entered
 `pre-registration.yaml`.
+
+**SM-10 SMOOTHING MODEL — ROUTE (a), the engine filter (owner decision,
+2026-08-14).** The translation-layer audit
+(`docs/superpowers/specs/2026-08-14-translation-layer-audit.md`, F1) found
+that the sealed smoothing kernel (`mappings/smoothing-kernel-v1.0.yaml` +
+`ah/port/smoothing.py`) has never run on a player-facing path: the reported
+plane is produced by the toy engine's own filter throughout. The owner
+declared the engine filter the product's smoothing model and recorded the
+DN-5 SM-10 divergence rather than routing the kernel live. Grounds: the
+filter is validated on its own evidence (ER-10 catch-up invariant, console
+catch-up row, per-seed console walks) and is what every shipped score and
+committed fixture was built against; routing the kernel live is a ~3-day
+release event that moves every engine number again, and the seal does not
+cover the per-sleeve-to-aggregate collapse it would require. Full record,
+including what the shipped path forgoes and the cost of reopening:
+`docs/engine-realism-register.md` ER-11. NO sealed file was touched — the
+kernel artifact is inside the G3 lock and is unchanged; `ah/port/smoothing.py`
+is in no lock scope, and no `ah/eval/` module imports it, so no judged number
+could move. The latent 4.47x double-counting defect the audit found in the
+unused applier was fixed under the same decision (branch
+`f1-01-smoothing-degenerate-theta`); it had never affected a committed number.

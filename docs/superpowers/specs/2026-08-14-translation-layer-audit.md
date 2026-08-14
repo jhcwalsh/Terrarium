@@ -62,6 +62,19 @@ smoothing model and retire/fix the port kernel explicitly (recording the
 SM-10 deviation), or (b) route the sealed kernel live (a larger WP:
 engine numbers change again). The bug gets fixed under either.
 
+> **RESOLVED 2026-08-14 — route (a).** The owner declared the engine
+> filter the product's smoothing model; the SM-10 divergence is recorded
+> as `docs/engine-realism-register.md` **ER-11** (what the shipped path
+> forgoes; reopening scoped at ~3 working days) and in
+> `governance/decision-register.md`. The 4.47x bug is FIXED
+> (`f1-01-smoothing-degenerate-theta`) with a guard that refuses any
+> weight vector not spanning the lag window. Exposure was checked consumer
+> by consumer and is nil: no `ah/eval/` module imports the kernel;
+> `scripts/run_2022_replay.py` used the non-degenerate `hf_event` theta;
+> and the only committed artifact that ran the branch
+> (`docs/data/CAMPAIGN-R1-TRANSLATION.md`'s PM plane) carried an all-zero
+> direct-lending series. No shipped or committed number changes.
+
 ### F2 — Computed but invisible: the ER-6 expiry line never reaches a surface (B1)
 
 `ClosedEndCohort.step` produces `expired_undrawn` exactly as the ER-6
