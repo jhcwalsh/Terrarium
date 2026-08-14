@@ -176,3 +176,25 @@ is in no lock scope, and no `ah/eval/` module imports it, so no judged number
 could move. The latent 4.47x double-counting defect the audit found in the
 unused applier was fixed under the same decision (branch
 `f1-01-smoothing-degenerate-theta`); it had never affected a committed number.
+
+**F3 CROSSOVER BAND — ACCEPTED AND RECORDED (owner decision, 2026-08-14).**
+The translation-layer audit found the calls/distributions crossover running
+past its declared 4-8 year band: median 8.875 on the 1974 decades with 3 of 5
+seeds never crossing inside the decade, and 8.75 on stagflation with 8 of 20
+seeds outside. The owner accepted it rather than opening a design review of
+distribution pace. Grounds: the mechanism is the tier-1 stress linkage working
+as designed (distributions throttle in drawdowns, and the worlds we ship are
+long drawdowns), and age-9 DPI lands inside its own band -- the capital
+arrives late, not never. The band was drafted for AVERAGE conditions and the
+shipped world class is not average.
+
+**The cost of the acceptance, stated so it is not rediscovered as a surprise.**
+A band that flags on 8 of 20 seeds is no longer discriminating. The console
+will keep flagging `crossover_years`, and that flag should now be read as
+"this world distributes late, as stressed worlds do" -- not as an anomaly to
+chase. The band value is deliberately UNCHANGED rather than widened: tuning it
+to stop flagging would destroy the only signal it still carries, which is the
+comparison between worlds. What this acceptance gives up is the ability to
+notice a world that distributes late for some OTHER reason; that case will
+look identical on this surface. If distribution pace is ever reviewed on its
+merits, this entry is the thing to reopen.

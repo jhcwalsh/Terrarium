@@ -109,6 +109,15 @@ decision:** accept-and-record (a stagflation decade SHOULD distribute
 late; the band was drafted for average conditions) or a design review of
 the distribution pace.
 
+> **RESOLVED 2026-08-14 — ACCEPTED AND RECORDED**, no code. Full entry with
+> the reasoning and the cost in `governance/decision-register.md`. Confirmed
+> beyond the 1974 decades before accepting: stagflation reads 8.75 with 8 of
+> 20 seeds outside the band, so this is the world class, not one preset. The
+> band value is deliberately LEFT UNCHANGED so the flag keeps firing —
+> widening it to stop the flag would destroy the only signal it still
+> carries. What the acceptance gives up: a world that distributes late for
+> some other reason will look identical on this surface.
+
 ### F4 — Scored-surface opacities (C1/C3)
 
 Two transparency gaps, neither a math error: the "next plan" pre-fill the
