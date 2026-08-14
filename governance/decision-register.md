@@ -140,3 +140,18 @@ both are named "D4" in their respective source documents, and neither renames th
 other -- a later reader who sees "D4" in a Step 2 document should understand it means
 the benchmark-strategy set, and "D4" in this file's first table means the correlation
 regime model.
+
+**CAMPAIGN-4 GATED OUT (owner decision, 2026-08-14).** The campaign-4 design
+(`docs/superpowers/specs/2026-08-13-campaign4-design.md`, approved with its
+Phase-0 amendment the same day) never reached a seal: the Phase-0
+development gate returned NO-GO — conditional delivery fails 2 of 3
+scenarios under every conditioning convention tested (the L2 regime label
+pins; the trajectories beneath do not follow), and the only tail fix that
+met the dev bar collapsed the clause-(i) objective edge ~14x (the edge and
+the excess co-movement trade off roughly linearly in the sampling knob).
+The owner accepted the NO-GO and shelved the apprentice; reopening
+conditions (three named numbers, all architecture-level work) are recorded
+in the design note. SHIP-BENCHMARK stands; bootstrap-v1 remains the
+product engine. All Phase-0 numbers are dev-grade under provisional
+definitions; no sealed file was touched; no campaign-4 block ever entered
+`pre-registration.yaml`.

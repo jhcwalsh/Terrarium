@@ -1,10 +1,62 @@
-# Campaign-4 — design spec (DRAFT for owner approval)
+# Campaign-4 — design spec (CLOSED: NO-GO at the Phase-0 gate)
 
-**Status: DRAFT — nothing here is sealed, no work begins until the owner
-approves this note.** Written 2026-08-13, the day both preconditions
-returned: the seed-committee diagnostic
+**Status: CLOSED 2026-08-14 — the owner accepted the Phase-0 NO-GO. The
+campaign was never sealed and never ran; the apprentice is shelved with
+the reopening conditions below.** Written 2026-08-13, the day both
+preconditions returned: the seed-committee diagnostic
 (`experiments/probe-seed-committee/REPORT.md`) and the JST scoping note
-(`docs/superpowers/specs/2026-08-13-jst-scoping-note.md`).
+(`docs/superpowers/specs/2026-08-13-jst-scoping-note.md`). Amended
+2026-08-14 to add the Phase-0 gate; gated out the same day.
+
+## The Phase-0 outcome (2026-08-14) — why this closed
+
+Full evidence: `experiments/probe-campaign4-phase0/PHASE0-REPORT.md`
+(gitignored store; the durable summary is this section). Dev-grade
+numbers, provisional scenario definitions, no seal touched.
+
+- **P0.a, delivery:** the committee's regime conditioning is skin-deep —
+  the pinned regime LABEL obeys, the trajectories underneath do not (a
+  sampled decade ran declining CPI through a pinned STAG regime). Primary
+  interpretation (regime-sequence conditioning only): committee behind
+  the benchmark on all three scenarios (stagflation ratio 0.0,
+  disinflation boom 0.37, crisis 0.0). Under the most favorable
+  convention (factor_conditions bound): stagflation clears at 20.5x but
+  disinflation stays even (0.95x) and crisis collapses (0.017x, with an
+  open hy_spread waypoint-binding question). 2 of 3 scenarios fail the
+  2x bar under every interpretation tested.
+- **P0.b, tails:** the sampling-time knob (guidance_scale 0.25) met the
+  literal <= 10-exceedance dev bar (8/8/10 of 139 usable bands — the
+  seed-committee report's "63" was a counting error, corrected) but
+  still exceeded the benchmark's own counts (7/5/6) in every seed, and
+  it collapsed the clause-(i) objective edge ~14x (mean_d -0.171 ->
+  -0.012). Tail conformance and the objective edge trade off roughly
+  linearly in the knob — evidence the edge partly RIDES on the excess
+  co-movement. The retrain attempts (A/C) were not run: the stop-rule's
+  letter was met, and the independent delivery wall made them moot.
+- **Verdict:** two independent walls (shallow conditioning; tail/edge
+  coupling), both architecture-level. The gate's purpose was to avoid
+  buying a sealed FAIL that was already measurable — it did, for ~85
+  minutes of GPU.
+
+**Reopening conditions (verbatim substance from the report):**
+1. Committee delivery must reach >= 2x the benchmark's own rate on
+   stagflation AND crisis under regime-sequence conditioning alone — or a
+   future campaign formally rules that D3 requests may bind
+   factor_conditions, and the diagnostic is re-run under that ruling.
+2. The crisis scenario additionally needs the hy_spread waypoint-binding
+   question resolved (if the conditioning channel never reaches the
+   factor's reconciliation target, no ruling fixes delivery).
+3. Any tail fix must beat the benchmark's OWN exceedance count in every
+   seed while keeping |mean_d| a meaningful multiple of sd_d — attempt A
+   (a training-time penalty) is the named next idea, since sampling-time
+   knobs demonstrably cannot reach both targets at once.
+These are architecture/training-recipe work, not more seeds of the same
+recipe. Until someone brings a design that plausibly moves them,
+`SHIP-BENCHMARK` stands and the collagist is the product engine.
+
+---
+
+*The design below is preserved as written, for whoever reopens this.*
 
 ## Objective
 

@@ -1,79 +1,64 @@
-# NEXT-STEPS.md — after the su-generated-worlds plan (2026-08-12)
+# NEXT-STEPS.md — after the campaign-4 NO-GO (2026-08-14)
 
-**Owner directives 2026-08-12** ("Put group play on the back burner for now.
-Ignore the old worlds. Do the housekeeping."): the cohort/multiplayer arc is
-BACK-BURNERED (no design work until the owner reopens it); the toy-engine
-realism family (ER-2/ER-5/ER-8-remainder/ER-9) is DEPRIORITIZED — the
-register entries stand as records, but no fix is scheduled while generated
-worlds are the product surface. Immediately superseded by **"Finish the
-single player game now"**: the game build (E1 commitment lever, E4 flinch
-review, drift twin, board_pack producer, realized-regime markers, generated
-programme walk) is the MAIN LINE; the governance housekeeping (gate-merge
-guard, citation checker, reference-parameter check) queues right behind it.
-ER-6 closed same day, unblocking E1.
+**State of the world:** the single-player game is FINISHED and runs on
+`stagflation_1974` world `…603` (toy presets `511–514`), engine `toy-v0.6`,
+mappings `v1.1` (`map-2026.08.2`). Everything merged and pushed through
+`f192a8b`+; the write-up (docs/alternate-histories-audited.md + published
+artifact) is current through the 13-Aug returns audit.
 
-## Where the last two days left us
+## What just closed (2026-08-12 → 08-14)
 
-- **The su-generated-worlds plan (PD-2 phase 2) is COMPLETE** — merges
-  `ffd05f9` (adapter + stagflation_1974, replay MATCH), `08eb59c`
-  (world-bundle-0.5 with factor lineage), `63ba0cb` (sessions under
-  `port-v1-cashflow-gen`; the player-facing provenance panel), `5dd7e40`
-  (the wire pinned). The playable app now runs a world spliced from real
-  1953–2020 months with its audit trail on screen. Tagline: "An alternate
-  history, relived."
-- **Register ER-9 opened and made moot for generated worlds** in the same
-  arc: the credibility console gained declared tail bands (merge `3bd9b41`)
-  which then caught the adapter's block-seam fabrications pre-merge —
-  source-space derivations fixed the class. The console also gained
-  scenario tabs + charts (console v2, merge `2c70999`).
-- Everything is committed and pushed; the vintage store and campaign
-  artifacts under `data/`/`experiments/` are local-only by design (OD-4).
+- **The returns audit** — both owner-found defects fixed and guarded:
+  PM loadings re-estimated with Dimson sum-betas under `AM-2026-08-12-001`
+  (PE beta 0.35→0.84, DL re-anchored to the BDC index); the ER-10
+  reported-marks fix (`toy-v0.6`, catch-up invariant + console
+  reported-plane row). The parked "PE sealed alpha" question is CLOSED.
+- **Both research probes** — seed-committee diagnostic (clause-i failure
+  was variance, 80x dispersion collapse; clause-ii tail failure is
+  architectural) and the JST scoping note (annual data; no honest monthly
+  multiplier; a cheap research-only widening of the existing connector is
+  the only GO inside it).
+- **Campaign-4 — CLOSED, NO-GO at the Phase-0 gate** (owner accepted
+  2026-08-14). Two architecture-level walls: conditioning is skin-deep
+  (pinned regime labels, non-following trajectories) and the tail/edge
+  trade-off is coupled in sampling. Design + reopening conditions:
+  `docs/superpowers/specs/2026-08-13-campaign4-design.md`. SHIP-BENCHMARK
+  stands; the collagist is the product engine. The apprentice shelf is not
+  ambiguous: three named numbers must move, all architecture work.
 
-## 1. The next release event — ER-6, designed and awaiting D1
+## The main line now: collagist product
 
-`docs/superpowers/plans/2026-08-12-er6-call-pacing-design.md` (DRAFT).
-The call-pacing fix is play-layer only (no digests, no seals, both alpha
-stamps bump), unblocks the commitment lever (E1), and may revive ER-8's
-forced-sale mechanic for free. **Needs the owner's D1 call** (recommended:
-declared mid-band curve + an expiry-undrawn ledger line).
+Owner directives standing: group play BACK-BURNERED; toy-engine realism
+family (ER-2/ER-5/ER-8-remainder/ER-9) DEPRIORITIZED. Candidate next
+builds, owner's pick:
 
-## 2. Cheap research probes (gaps, not instead)
+1. **A second playable world** — the 1965 start ("the boldest" per the
+   su-gen survey) or a second 1974-class seed; the adapter/bundle/session
+   path is proven, so each new world is mostly preset + console walk +
+   fixtures.
+2. **World variety within a scenario** — surfacing sibling seeds of 1974
+   as selectable runs (leaderboards already fence per (world_id, seed)).
+3. **JST research-only widening** (from the scoping note): unfilter the
+   17 non-US countries for L1 partial pooling + held-out-regime backtests;
+   fix the LICENSE-REGISTRY.md misclassification (JST is CC BY-NC-SA,
+   NON-commercial — flagged 2026-08-13, still open).
 
-- **Seed-committee diagnostic** (~a day): pool the three v2 checkpoints,
-  re-judge; was campaign-3's neural loss variance or capability?
-- **JST cross-country scoping note** (no compute): 18 countries × ~150y as
-  REAL training data — the honest multiplier the K3 lesson demands.
+## Housekeeping (small, unscheduled)
 
-## 3. Campaign-4 — the case has sharpened
+- `docs/data/LICENSE-REGISTRY.md` JST row — misclassified as
+  commercial-free; correct to CC BY-NC-SA (see scoping note §1).
+- Sealed v1.1 erratum: DL row's `n_quarters: 195` counts MONTHLY BDC obs —
+  fold the correction into the next reseal event, not its own.
+- `scripts/gen_bundle_fixtures.py` writes nondeterministic
+  run_id/created_at on regen; `fixtures/compiler` CRLF churn under Windows
+  autocrlf — both deferred, one small WP if they annoy again.
+- The probe worktree (`../Terrarium-probe`) is removable once the Phase-0
+  artifacts have been reviewed (they live in the real `experiments/`
+  store via junction; nothing is lost with the worktree).
 
-The stagflation-tilt finding (1974's equity median +11.5%/yr; regime
-conditioning pins block STARTS only) is the conditional-capability argument
-in product form. Preconditions unchanged: the two probes above, the
-re-aimed criterion, real-months-only training sealed as a rule.
+## Standing owner questions
 
-## 4. Standing owner questions
-
-- **D1 (ER-6 curve source)** — see §1.
-- **PE sealed alpha**: generated-world PE flags at Sharpe 1.30, tracing to
-  the sealed `alpha_quarterly` 0.0332 — disclosure line or a G3 amendment
-  (which would also add the commodities/hy_spread regressors the sealed PM
-  loadings omit on vintage 2026-08-07.5).
-- **Do toy presets stay player-facing?** Decides how much the ER-5/ER-8
-  engine-family fix matters now that generated worlds play.
-- **K1 holdout**: post-2026-08 data accrues untouched; first read 2029-01.
-
-## 5. Small successors recorded in the closed plan
-
-`summary.episodes` still carries the authored sequence (realized regimes
-per path exist on the RegimeRecord, uncarried); `board_pack` has no
-producer; the programme walk shows a pending note for generated worlds.
-
-## 6. To relaunch the surfaces
-
-- Session service: `uv run uvicorn ah.serve:app --port 8787` (restart after
-  any serve.py change — the stale-listener trap).
-- App: `cd app && npm run dev` (5173, proxies /sessions → 8787); load
-  `stagflation-1974.bundle.gz` from the repo root.
-- Console: `uv run ah credibility --preset stagflation --preset goldilocks
-  --preset reflation_boom --preset deflation_bust --preset stagflation_1974
-  --out credibility.html`
+- **Which product build next** (§ above, 1/2/3 or something else).
+- **Group play** — stays back-burnered until reopened.
+- **Toy presets player-facing?** — unchanged; decides whether the
+  ER-5/ER-8 family ever gets scheduled.
