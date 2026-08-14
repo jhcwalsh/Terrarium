@@ -70,6 +70,15 @@ interface DecisionWindowProps {
   /** sp-02 (E1): the plan's next per-sleeve points, server-computed —
    * the lever's pre-fill. Committing it unchanged IS holding to plan. */
   planCommitments?: Record<string, number> | null;
+  /** Audit F4: the state that pre-fill was computed from. It is the plan at
+   * the last CLOSED quarter; the engine commits on the weight at the
+   * commitment quarter, which cannot be known here without revealing that
+   * quarter's returns. Declared rather than silently approximate. */
+  planBasis?: {
+    as_of_quarter: number;
+    as_of_month: number;
+    private_weight_reported: number;
+  } | null;
 }
 
 export function DecisionWindow({
@@ -80,6 +89,7 @@ export function DecisionWindow({
   onCommit,
   busy,
   planCommitments,
+  planBasis,
 }: DecisionWindowProps) {
   const [selected, setSelected] = useState<Action | null>(null);
   const [commitments, setCommitments] = useState<Record<string, number> | null>(null);
@@ -91,7 +101,11 @@ export function DecisionWindow({
     setCommitments(null); // untouched lever => hold to the plan, silently
   }, [month, open]);
 
-  const effective = commitments ?? planCommitments ?? null;
+  // `commitments` holds ONLY the sleeves the player has actually edited
+  // (audit F4). Anything absent is sent as nothing, and the server recomputes
+  // the plan for it at the commitment quarter — which is the exact plan,
+  // where the pre-fill shown here is a quarter stale.
+  const shown = (key: string) => commitments?.[key] ?? planCommitments?.[key] ?? 0;
 
   return (
     <section
@@ -159,10 +173,10 @@ export function DecisionWindow({
                 type="number"
                 min={0}
                 step={0.1}
-                value={(effective?.[key] ?? 0).toFixed(2)}
+                value={shown(key).toFixed(2)}
                 onChange={(e) =>
                   setCommitments({
-                    ...(effective ?? {}),
+                    ...(commitments ?? {}),
                     [key]: Math.max(0, Number(e.target.value)),
                   })
                 }
@@ -170,6 +184,15 @@ export function DecisionWindow({
               <span className="lever-plan">plan {planCommitments[key]?.toFixed(2)}</span>
             </label>
           ))}
+          {planBasis && (
+            <p className="lever-basis">
+              Plan figures are as at month {planBasis.as_of_month} (the last quarter
+              closed), when the private book was{" "}
+              {(planBasis.private_weight_reported * 100).toFixed(1)}% on reported marks.
+              A sleeve you leave alone is paced fresh at the moment of commitment, so
+              it holds to plan exactly; a sleeve you edit is yours at the number shown.
+            </p>
+          )}
           {commitments !== null && (
             <button className="lever-reset" onClick={() => setCommitments(null)}>
               back to plan

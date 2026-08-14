@@ -55,6 +55,15 @@ class QuarterReport:
     distributions_received: float
     calls_paid: float
     spending_paid: float
+    #: The value the spending rate was applied to: the trailing mean of
+    #: reported NAV sampled INSIDE the waterfall (after calls, before
+    #: spending and any forced sale). Reported so the charge is rederivable
+    #: off the surface that makes it — quarter-end ``nav_reported`` is
+    #: sampled later and does not reproduce it (audit F4).
+    spending_basis: float
+    #: The annual rate applied to that basis, from the policy in force, so
+    #: the identity closes without knowing this engine's defaults.
+    spending_rate_annual: float
     forced_sale_total: float
     cash_end: float
     private_weight_true: float
@@ -96,7 +105,8 @@ class PortfolioEngine:
         # 3. spending, off the trailing average of REPORTED value (§7)
         self._reported_history.append(p.nav_reported())
         window = self._reported_history[-policy.spending_trailing_quarters :]
-        spending = (policy.spending_rate_annual / 4.0) * (sum(window) / len(window))
+        spending_basis = sum(window) / len(window)
+        spending = (policy.spending_rate_annual / 4.0) * spending_basis
         p.cash -= spending
 
         # 4. shortfall resolution
@@ -160,6 +170,8 @@ class PortfolioEngine:
             distributions_received=distributions + evergreen_income,
             calls_paid=calls,
             spending_paid=spending,
+            spending_basis=spending_basis,
+            spending_rate_annual=policy.spending_rate_annual,
             forced_sale_total=forced_total,
             cash_end=p.cash,
             private_weight_true=w_true,

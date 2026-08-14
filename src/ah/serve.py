@@ -228,6 +228,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "forced_sale_total",
             "expired_undrawn",
             "expired_undrawn_to_date",
+            "spending_basis",
+            "spending_rate_annual",
+            "private_weight_reported",
+            "next_plan_basis",
         ):
             doc[key] = None
         doc["forced_sales"] = []
@@ -282,9 +286,27 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             active.quarters[i].expired_undrawn for i in range(q + 1)
         )
         doc["forced_sales"] = [e for e in active.sale_log if int(e["period"]) <= q + 1]
+        # audit F4: spending is charged on a mean sampled INSIDE the waterfall,
+        # so quarter-end nav_reported cannot reproduce it. Serve the basis and
+        # the rate, and the charge closes on the surface that makes it.
+        doc["spending_basis"] = here.spending_basis
+        doc["spending_rate_annual"] = here.spending_rate_annual
+        doc["private_weight_reported"] = here.private_weight_reported
         doc["next_plan_commitments"] = {
             k: round(v, 4)
             for k, v in plan_commitments(here.private_weight_reported, targets).items()
+        }
+        # audit F4: the pre-fill is the plan AT THE LAST CLOSED QUARTER. The
+        # engine commits on the weight at the commitment quarter — one quarter
+        # later, up to 7.9% different — and that quarter's returns are
+        # unrevealed here, so an exact pre-fill would leak the tape. It is
+        # therefore DECLARED rather than silently approximate. An untouched
+        # lever still commits the exact plan: the app sends no commitments and
+        # the simulator recomputes.
+        doc["next_plan_basis"] = {
+            "as_of_quarter": here.quarter,
+            "as_of_month": here.month,
+            "private_weight_reported": here.private_weight_reported,
         }
         # sp-05 (E1's last gaps): the ladder by age and the trailing
         # distribution series, visible at the moment of decision.

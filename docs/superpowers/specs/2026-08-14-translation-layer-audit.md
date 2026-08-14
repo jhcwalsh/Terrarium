@@ -120,6 +120,32 @@ series lets an outside party rederive it (a pre/post-waterfall NAV
 distinction is invisible downstream, ~1–3% mismatch if attempted).
 **Owner decision:** batch both into one small display/API WP, or record.
 
+> **RESOLVED 2026-08-14 — batched and fixed** (`f4-01-scored-surface-auditability`),
+> ahead of E1 at the owner's direction, since the lever is built on the pre-fill.
+>
+> **The pre-fill cannot be made exact, and that is the finding.** It is
+> computed at the last CLOSED quarter; the engine paces on the weight at the
+> commitment quarter, whose returns are unrevealed at decision time —
+> computing the pre-fill from them would leak the tape. So it is now
+> DECLARED: `next_plan_basis` (as-of quarter, as-of month, and the reported
+> weight it used) is served and the lever states it on the page.
+>
+> **A sharper defect was found underneath it.** The app merged the whole
+> pre-fill into its state as soon as ONE sleeve was edited, then sent all
+> three — so touching `pe` silently froze `pc` and `re` at stale numbers the
+> player believed were "the plan". The engine already supports partial
+> commitments (per-asset fallback to `plan_amount`), so the lever now sends
+> only the sleeves actually touched: an untouched sleeve is paced fresh
+> server-side and holds to plan EXACTLY, rather than being committed at a
+> quarter-stale approximation of it.
+>
+> **Spending is rederivable.** `spending_basis` and `spending_rate_annual`
+> are served, so `spending_paid == rate / 4 * spending_basis` closes on the
+> API alone (pinned to `rel=1e-12` across a full decade walk). The basis is
+> the trailing mean sampled INSIDE the waterfall — after calls, before
+> spending and any forced sale — which is why quarter-end `nav_reported`
+> never reproduced it.
+
 ### F5 — Calibration drift (A2/A3)
 
 - CTA rule realizes 0.1595 vol vs its declared 0.10 target on this world

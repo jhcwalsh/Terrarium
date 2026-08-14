@@ -246,6 +246,12 @@ class PlayQuarter:
     f_call: float = 1.0
     #: New commitments made into the ladder this quarter (the pacing plan).
     new_commitments: float = 0.0
+    #: What the spending rate was applied to this quarter, and the rate, so
+    #: ``spending_paid`` is rederivable by anyone holding only these numbers
+    #: (audit F4 — quarter-end ``nav_reported`` is sampled after the
+    #: waterfall and does NOT reproduce the charge).
+    spending_basis: float = 0.0
+    spending_rate_annual: float = 0.0
     #: Undrawn commitment CANCELLED at terminal lapse this quarter (ER-6's
     #: close-out, ``CohortStep.expired_undrawn``). Zero in most quarters and
     #: a real release in the few where a cohort reaches the end of its
@@ -553,6 +559,8 @@ def simulate_play(
                 private_weight_true=report.private_weight_true,
                 private_weight_reported=portfolio.private_weight_reported(),
                 unfunded_total=portfolio.total_unfunded(),
+                spending_basis=report.spending_basis,
+                spending_rate_annual=report.spending_rate_annual,
                 expired_undrawn=expired,
                 drawdown_depth=dd,
                 spread_ratio=sr,
