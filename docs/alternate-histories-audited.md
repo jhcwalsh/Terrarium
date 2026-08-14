@@ -10,8 +10,11 @@ finished, and the pacing model was repaired. **Updated again 13 August 2026**
 after the returns audit: the owner read one chart, found two defects the
 entire test suite had been preserving, and both are now fixed — the
 private-market return formulas re-estimated under a sealed amendment, and
-the appraisal-smoothing bug repaired with an engine version bump. Sections
-below reflect the updated state.
+the appraisal-smoothing bug repaired with an engine version bump.
+**Updated again 14 August 2026**: the fourth contest was designed, gated,
+and closed NO-GO in a single day — the apprentice is shelved with precise
+reopening conditions, and the collagist is confirmed as the product engine.
+Sections below reflect the updated state.
 Published copy (same content, formatted):
 https://claude.ai/code/artifact/c51a265d-95dd-4407-b1e2-b5b2ea40ee44
 
@@ -236,6 +239,39 @@ the 1965 starting point. Both contestants passed every check. And it surfaced
 the campaign's real discovery — the finding about our own reconstructed data,
 below.
 
+### 4 · The contest that wasn't (13–14 August 2026) — gated out for the price of a coffee break
+
+A fourth contest was designed — and then, deliberately, never run. Two cheap
+diagnostics came first. The *seed-committee probe* (~an hour of computing)
+pooled the apprentice's three trained copies and discovered that half of the
+contest-3 loss was pure training luck: averaged together, the copies beat the
+benchmark on the scored objective by 84× the required margin, with the
+run-to-run disagreement collapsing 80-fold. For a day it looked like the
+apprentice had been robbed. Then the *Phase-0 gate* — added at the owner's
+direction so that seal-grade prices are never paid for dev-grade information —
+measured the two things that had never been measured, and both walls held:
+
+- **Its obedience is skin-deep.** Asked for a stagflation decade, the model
+  pins the *label* faithfully while the world underneath ignores it — one
+  sampled decade ran *falling* inflation straight through a pinned
+  stagflation regime. Two of three scenario requests failed under every
+  conditioning convention tried. The one capability that justified a fourth
+  contest — decades made to order — is the one it doesn't have.
+- **Its edge and its flaw are the same knob.** The model's excess
+  everything-crashes-together could be dialed away at sampling time — but
+  the decision-quality edge collapsed 14-fold in the same motion. The two
+  trade off almost linearly: some of what looked like skill *was* the
+  exaggeration.
+
+Total cost of the answer: ~85 minutes of computing across both diagnostics,
+against the two sealed weeks a formal contest would have burned to stamp the
+same verdict. The apprentice is shelved — not ambiguously, but with three
+named numbers that must move (deep conditioning, the crisis channel, a tail
+fix that doesn't spend the edge), all architecture work, recorded in the
+campaign-4 design note and the decision register. The collagist remains the
+product engine, and the standing sentence survives its fourth test:
+*rearranged truth now; invented worlds only when earned.*
+
 ## What this has taught us about method
 
 **Seal the rules before running the race.** Every contest's pass/fail criteria
@@ -298,6 +334,18 @@ Second: pre-commitment applies to processes as much as models — a
 discipline that lives in memory fails under pressure; the same discipline
 as a hook cannot.
 
+**Measure before you commit — the development gate (14 August).** The
+fourth contest's design originally sealed first and experimented second; the
+owner's question — "shouldn't we build a better model instead of testing
+this one?" — exposed the flaw, and the answer was neither option but a
+reorder: a pre-seal gate of dev-grade measurements, with the expensive
+sealed contest bought only if they showed a live path. They didn't, and the
+gate converted a two-week sealed failure into a same-day NO-GO with better
+evidence than the contest would have produced. The general form: when a
+commitment is expensive and a measurement is cheap, the measurement goes
+first, and the commitment's budget is pre-declared so sunk costs never
+renegotiate it.
+
 **Two more from the returns audit (13 August).** First: **a test that pins
 numbers can entomb a bug.** The platform's golden tests assert that numbers
 *don't change* — determinism, not sense. A deterministic bug passes them
@@ -348,14 +396,17 @@ were built on top — the single-player game is finished); **6 is done** (the
 merge guard, the citation checker, and the parameter checker exist, with
 the week's own process failures as their test cases); **5 is
 back-burnered** by owner decision (no group-play design work until
-reopened); **3 and 4 remain open** — the two research probes and the
-re-aimed fourth contest, whose case got *stronger*: the 1974 world's own
-timeline showed the resampler's conditioning is a tilt, not a guarantee,
-which is the "teach it to imagine" argument in product form. The one
-question that was parked here — the private-equity return assumption
-inherited from the sealed estimate, flagging on the console — was **closed
-on 13 August** by the returns audit: re-estimated under amendment, the flag
-is gone, and the decision is on the amendment log rather than parked.
+reopened); **3 and 4 are now closed too (14 August)** — both research
+probes ran (the seed-committee diagnostic and the JST scoping note), the
+re-aimed fourth contest was designed, and its Phase-0 gate returned a NO-GO
+the owner accepted: the apprentice is shelved with precise reopening
+conditions and the collagist is the product engine for the foreseeable
+future (contest 4's story is told above). The one question that was parked
+here — the private-equity return assumption inherited from the sealed
+estimate, flagging on the console — was **closed on 13 August** by the
+returns audit: re-estimated under amendment, the flag is gone, and the
+decision is on the amendment log rather than parked. Every item on the
+11-August list is now resolved or deliberately parked by owner decision.
 
 ## Next steps we could contemplate (as written 11 August)
 
