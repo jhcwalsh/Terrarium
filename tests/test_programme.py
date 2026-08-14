@@ -46,13 +46,20 @@ def test_peak_unfunded_ratio_no_longer_pathological(runs):
     decades. Neither the band nor the pace is tuned here: the band stays a
     true flag about the default pacing policy, and the pace is the player's
     lever. This pin asserts the ER-6 pathology itself is gone: the overhang
-    is bounded far below the placeholder's 2.4-3.3 regime."""
+    is bounded far below the placeholder's 2.4-3.3 regime.
+
+    Regenerated for ER-10 (toy-v0.6): reported marks now track crashes, so
+    the counter-cyclical pacing rule commits MORE in the trough - the
+    measured peak moved 1.22 -> 1.52 on this seed (quarter 20, the
+    stagflation trough; numerator up via the leaned-in multiplier,
+    denominator down via depressed true NAV). The pathology band 2.4-3.3
+    remains far away; the old ceiling was 1.5."""
     from ah.programme import path_stats, programme_quarters
 
     linked, unlinked = runs
     quarters = programme_quarters(linked, unlinked)
     stat = path_stats(quarters, linked)["peak_unfunded_ratio"]
-    assert stat < 1.5, stat  # placeholder-curve worlds read 2.4-3.3
+    assert stat < 1.6, stat  # placeholder-curve worlds read 2.4-3.3
 
 
 def test_quarters_pair_linked_and_unlinked_distributions(runs):

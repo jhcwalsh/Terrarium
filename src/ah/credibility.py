@@ -88,6 +88,14 @@ PLAUSIBLE: dict[str, Band] = {
 # A decade Sharpe above this needs an explanation, whatever the asset.
 MAX_PLAUSIBLE_SHARPE = 1.0
 
+# ER-10: below this many cumulative TRUE percentage points, per path, over
+# the horizon, a reported/true catch-up ratio is noise, not signal
+# (deflation-style worlds can land a private sleeve's cumulative true return
+# near zero) - so the ratio reads as None ("n/a") rather than flagging.
+CATCHUP_NEAR_ZERO_PP = 5.0
+# The declared plausible band for the catch-up ratio itself.
+CATCHUP_LO, CATCHUP_HI = 0.8, 1.2
+
 
 @dataclass(frozen=True)
 class AssetStats:
@@ -119,6 +127,12 @@ class SmoothingStats:
     reported_vol: float
     vol_ratio: float
     reported_autocorr: float
+    # ER-10: cumulative reported / cumulative true, pooled over the
+    # ensemble's own base-seed lineage - the check whose absence let
+    # reported PM marks cumulate ~1/3 of truth go unseen. None when the
+    # true side is too small to divide by meaningfully (CATCHUP_NEAR_ZERO_PP).
+    catchup_ratio: float | None
+    catchup_flagged: bool
     flags: tuple[str, ...]
 
 
@@ -310,7 +324,34 @@ def smoothing_stats(ens: EnsembleResult) -> list[SmoothingStats]:
             flags.append(f"reported vol is {ratio:.2f}x true - the smoothing is not smoothing")
         if ac <= 0.0:
             flags.append(f"reported autocorrelation {ac:+.2f} - appraisals should trend")
-        out.append(SmoothingStats(s, tv, rv, ratio, ac, tuple(flags)))
+
+        # ER-10: does the reported PLANE actually catch up to the true one,
+        # cumulatively, over the ensemble's own seed lineage? A single path
+        # is dominated by month-to-month noise (the filter's unit-DC-gain
+        # property is a law-of-large-numbers statement); pooling the whole
+        # ensemble is the same base-seed-lineage data build_report already
+        # holds, at the scale where the property actually shows up. The
+        # near-zero guard reads on a PER-PATH (percentage points over one
+        # horizon) scale, so it divides the pooled sum back down first.
+        true_cum = float(ens.returns[s].sum())
+        rep_cum = float(ens.reported[s].sum())
+        true_per_path = true_cum / ens.n_paths
+        catchup_ratio: float | None
+        catchup_flagged: bool
+        if abs(true_per_path) < CATCHUP_NEAR_ZERO_PP:
+            catchup_ratio = None
+            catchup_flagged = False
+        else:
+            catchup_ratio = rep_cum / true_cum
+            catchup_flagged = not (CATCHUP_LO < catchup_ratio < CATCHUP_HI)
+            if catchup_flagged:
+                flags.append(
+                    f"reported catch-up {catchup_ratio:.2f}x - cumulative reported diverges "
+                    f"from cumulative true ({CATCHUP_LO:.1f}..{CATCHUP_HI:.1f} expected)"
+                )
+        out.append(
+            SmoothingStats(s, tv, rv, ratio, ac, catchup_ratio, catchup_flagged, tuple(flags))
+        )
     return out
 
 
@@ -508,14 +549,17 @@ def _smoothing_table(rep: WorldReport) -> str:
     for s in rep.smoothing:
         cls = ' class="flagged"' if s.flags else ""
         flags = "".join(f'<p class="flag">{_e(x)}</p>' for x in s.flags)
+        catchup = f"{s.catchup_ratio:.2f}x" if s.catchup_ratio is not None else "n/a"
         rows.append(
             f"<tr{cls}><td>{_e(s.sleeve)}{flags}</td><td>{s.true_vol:.1f}</td>"
             f"<td>{s.reported_vol:.1f}</td><td>{s.vol_ratio:.2f}</td>"
-            f"<td>{s.reported_autocorr:+.2f}</td></tr>"
+            f"<td>{s.reported_autocorr:+.2f}</td>"
+            f'<td class="note">reported catch-up {catchup}</td></tr>'
         )
     return (
         "<table><thead><tr><th>private asset</th><th>true vol %/yr</th>"
         "<th>reported vol %/yr</th><th>ratio</th><th>reported lag-1 autocorr (quarters)</th>"
+        "<th>reported catch-up (ensemble)</th>"
         "</tr></thead><tbody>" + "".join(rows) + "</tbody></table>"
     )
 

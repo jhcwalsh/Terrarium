@@ -48,7 +48,12 @@ TOY_GENERATOR_ID = "toy-v0"
 #         ~2 paths per 600 on stagflation), which no long-only asset can do
 #         and which NaN-poisons cumulative growth. Every monthly return is
 #         floored at -99% (limited liability). Tails otherwise unchanged.
-TOY_ENGINE_VERSION = "toy-v0.5"
+#   v0.6  ER-10: the quarter-end appraisal mark filtered only the closing
+#         MONTH's return, silently discarding the quarter's other two months
+#         (reported PM cumulated ~1/3 of truth). Now filters the whole
+#         quarter's compounded true return, so cumulative reported catches
+#         up to cumulative true.
+TOY_ENGINE_VERSION = "toy-v0.6"
 
 # -- register ER-7 close-out: limited liability ----------------------------- #
 # A holder of a long-only asset cannot lose more than everything: monthly
@@ -444,7 +449,15 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
 
 
 def _reported_marks(world: NumericWorld, returns: dict[str, np.ndarray]) -> dict[str, np.ndarray]:
-    """Appraisal-smoothed marks for pe/pc/re: nonzero only at quarter-ends."""
+    """Appraisal-smoothed marks for pe/pc/re: nonzero only at quarter-ends.
+
+    The quarter-end mark filters the WHOLE quarter's compounded true return:
+    ``rep_q = w * q_true + (1 - w) * rep_{q-1}`` (Geltner partial
+    adjustment, unit DC gain, so cumulative reported catches up to
+    cumulative true). History: until toy-v0.6 this filtered only the
+    closing MONTH's return, discarding the quarter's other two months —
+    reported PM cumulated ~1/3 of truth (ER-10, found 2026-08-12 by the
+    owner reading a chart)."""
     smoothing = world.structural.smoothing
     weights_model = smoothing.weights_on_truth if smoothing else None
     weights = {
@@ -460,7 +473,13 @@ def _reported_marks(world: NumericWorld, returns: dict[str, np.ndarray]) -> dict
         prev = 0.0
         for m in range(len(true)):
             if (m + 1) % 3 == 0:  # quarter-end month
-                prev = w * true[m] + (1.0 - w) * prev
+                q_true = (
+                    (1.0 + true[m - 2] / 100.0)
+                    * (1.0 + true[m - 1] / 100.0)
+                    * (1.0 + true[m] / 100.0)
+                    - 1.0
+                ) * 100.0
+                prev = w * q_true + (1.0 - w) * prev
                 rep[m] = prev
         out[sleeve] = rep
     return out

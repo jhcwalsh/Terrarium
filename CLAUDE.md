@@ -196,8 +196,12 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   than whole historical bear markets; moot for GENERATED worlds — bounded by real
   months) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
   10 + expiry-at-lapse ledger; play alphas now `port-v2-cashflow`/`-gen`; the E1
-  commitment lever is unblocked). ER-5/ER-8/ER-9 remain one family for the toy
-  engine. Each entry says what a fix invalidates.
+  commitment lever is unblocked). **ER-10 CLOSED 2026-08-13** (`_reported_marks`
+  filtered only the quarter-end month's true return through the appraisal
+  filter, silently dropping the other two months of every quarter — reported
+  ran at ~1/3 of true; fixed by compounding the full quarter before filtering;
+  `toy-v0.6`). ER-5/ER-8/ER-9 remain one family for the toy engine. Each entry
+  says what a fix invalidates.
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 

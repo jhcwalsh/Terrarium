@@ -346,6 +346,14 @@ class TestPlayAndFeed:
         assert all(0 <= i["month"] < p.months for i in items)
 
 
+PRESET_1974 = ROOT / "src" / "ah" / "presets" / "stagflation_1974.json"
+
+
+def _gen_world_1974():
+    doc = json.loads(PRESET_1974.read_text(encoding="utf-8"))
+    return project_numeric(WorldSpec.model_validate(doc))
+
+
 @pytest.mark.skipif(
     not (ROOT / "data" / "catalog.duckdb").exists(),
     reason="vintage store is local-only by design (OD-4); the synthetic-source "
@@ -365,6 +373,7 @@ class TestAgainstTheRealPanel:
         adapter, replay bit-identical, and stamp the honest lineage.
 
         re-pinned under map-2026.08.2 (AM-2026-08-12-001): world fence 601->602.
+        re-pinned again for ER-10 (toy-v0.6): world fence 602->603.
         """
         from typer.testing import CliRunner
 
@@ -380,7 +389,7 @@ class TestAgainstTheRealPanel:
             return r
 
         build = invoke("world", "build", "--preset", "stagflation_1974")
-        assert "00000000-0000-4000-9000-000000000602" in build.output
+        assert "00000000-0000-4000-9000-000000000603" in build.output
         rid = invoke("run", "--paths", "12").output.strip().splitlines()[-1]
         replay = invoke("replay", rid)
         assert "MATCH" in replay.output
@@ -394,3 +403,16 @@ class TestAgainstTheRealPanel:
         assert rec["resolved_engine"]["generator_id"] == "bootstrap-v1"
         assert rec["resolved_engine"]["generator_version"] == "bootstrap-v1"
         assert rec["resolved_engine"]["campaign_vintage_id"] == "2026-08-10.1"
+
+    def test_gen_reported_marks_catch_up_to_truth_er10(self):
+        """ER-10 on the generated path: the adapter shares _reported_marks, so
+        the 1974 world inherited the same 1/3-of-truth defect (pe: 27% reported
+        vs 125% true)."""
+        world = _gen_world_1974()
+        seed = world.engine_defaults.base_seed
+        p = run_gen_path(world, seed if seed is not None else SEED)
+        for sleeve in ("pe", "pc", "re"):
+            true_sum = float(p.returns[sleeve].sum())
+            rep_sum = float(p.reported[sleeve].sum())
+            ratio = rep_sum / true_sum
+            assert 0.80 < ratio < 1.20, f"{sleeve}: reported/true {ratio:.2f}"

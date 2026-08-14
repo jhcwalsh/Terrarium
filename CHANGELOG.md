@@ -14,6 +14,35 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **ER-10 CLOSED, 2026-08-13: reported PM marks now catch up to true
+  (`toy-v0.6`).** `_reported_marks` filtered only the quarter-end MONTH's
+  true return through the appraisal filter, silently discarding the
+  quarter's other two months; a unit-DC-gain filter fed a 1-of-3-month
+  sample converged to roughly a third of the signal it was meant to track
+  (stagflation pc 23% reported vs 77% true over the decade; the 1974
+  generated world's pe 27% vs 125%). Fixed by compounding the whole
+  quarter's true return before filtering:
+  `rep_q = w * q_true + (1 - w) * rep_{q-1}`. `TOY_ENGINE_VERSION`
+  `toy-v0.5` → `toy-v0.6`; engine golden digest re-pinned
+  `6c3f7c89...` → `61e78e60...`; preset world-id fences moved so scores
+  under the two engines can never share a leaderboard row (`501-504` →
+  `511-514`, generated `stagflation_1974` `602` → `603` — old rows fenced,
+  not deleted); both committed bundles rebuilt; the play-linkage golden
+  moved `86.32350859293307` → `98.04417427685921`; the ER-6
+  `peak_unfunded_ratio` acceptance ceiling moved `1.5` → `1.6` (measured
+  peak `1.22` → `1.52` at quarter 20 — crash-responsive reported marks make
+  the DN-5 counter-cyclical pacing lean harder into the trough; the
+  declared pathology band `2.4-3.3` stays far away). Alpha is
+  player-minus-twin, so the bias largely cancelled there — levels were
+  wrong, rankings mostly weren't; the defect lived in the display and
+  reported-basis session value. Two permanent guards ship with the fix: a
+  catch-up invariant test on the engine and the generator adapter (pooled
+  over a small ensemble, bounds 0.80-1.20) and the credibility console's
+  reported-plane catch-up row (flags outside 0.80-1.20, with a near-zero
+  guard so a deflation-style world's near-zero cumulative true return
+  reads "n/a" instead of a meaningless ratio). Register entry:
+  `docs/engine-realism-register.md` ER-10.
+
 - **PM sleeve mappings v1.1 (AM-2026-08-12-001).** The private-market sleeve
   loadings are re-estimated with a lagged (Dimson sum-beta) equity component:
   the appraisal lag had been leaking market beta into alpha (pm_buyout equity
