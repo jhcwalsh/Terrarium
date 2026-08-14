@@ -70,11 +70,12 @@ def test_default_run_is_unchanged_by_these_additions():
     lapse moved every book by design): toy-v0.5/port-v1's value was
     86.89058776172098. Regenerated again at sp-01 (port-v3-pacing: the
     default twin now flexes its pacing per DN-5 §2.1): port-v2's value was
-    86.62159899795148.
+    86.62159899795148. Regenerated for ER-10 (toy-v0.6: reported marks
+    filter the whole quarter): port-v3's value was 86.32350859293307.
     """
     result = simulate_play(_paths())
     assert len(result.quarters) == 40
-    assert result.final_value == 86.32350859293307
+    assert result.final_value == 98.04417427685921
     assert result.forced_secondaries == 0
 
 

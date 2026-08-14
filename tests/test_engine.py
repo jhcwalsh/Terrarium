@@ -43,7 +43,9 @@ GOLDEN_SEED = 42
 # Regenerated because the engine's numbers changed by design, which is what a
 # golden snapshot exists to force someone to notice. Prior value, toy-v0.3:
 # d6da53bc277c9b95922f2e5f2912b94843892383b5198e9bb3624d3800de9180
-GOLDEN_DIGEST = "6c3f7c896a552b49eccbdb07aff4aed175ef9eebf6df9d98919a5e136a9a1f83"
+# Re-pinned under toy-v0.6 (ER-10). Prior value, toy-v0.5:
+# 6c3f7c896a552b49eccbdb07aff4aed175ef9eebf6df9d98919a5e136a9a1f83
+GOLDEN_DIGEST = "61e78e609d2a360b573a641abe0c8a1eea693f8cb527ac3148419280a218d6f5"
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:
