@@ -616,3 +616,88 @@ scored path: new `world_id` block, `TOY_ENGINE_VERSION` bump, and a
 `PLAY_ALPHA_VERSION` bump so leaderboards never mix engines. It does NOT
 touch `schemas/`, `mappings/`, or any seal. **A release event and the
 owner's call.**
+
+---
+
+## ER-10 — Reported PM marks filtered one month in three, not the whole quarter
+
+**Status:** CLOSED 2026-08-13 (`toy-v0.6`, `er10-01-reported-marks` branch)
+**Found:** 2026-08-12, the owner reading the 1974 generated world's fan
+charts — the reported private-market plane visibly failed to catch up to
+the true one over the decade.
+
+**What happens.** `_reported_marks` (`src/ah/core/engine.py`) applies the
+appraisal filter `rep = w * true + (1 - w) * prev` at quarter-end months
+only, as designed — that part is `emit_reported_marks`/`weights_on_truth`
+working as declared. The defect is what `true` meant in that line: until
+this fix it was the quarter-end MONTH's own return alone. The two months
+either side of it were never read by the filter — not smoothed in, simply
+discarded. A unit-DC-gain filter fed one month in three converges to
+roughly a third of the signal it was meant to track: cumulative reported
+return lands near 1/3 of cumulative true, not delayed-but-equal to it.
+
+**Magnitude, measured on shipped worlds over the full decade:**
+
+| world | sleeve | reported | true |
+|---|---|---|---|
+| stagflation | pc | 23% | 77% |
+| stagflation_1974 (generated) | pe | 27% | 125% |
+
+**What shipped.** The quarter-end mark now compounds the whole quarter's
+true return before filtering: `rep_q = w * q_true + (1 - w) * rep_{q-1}`,
+where `q_true` is the three months' own compounded return (Geltner partial
+adjustment, unit DC gain, applied to the quantity — the quarter — the
+filter was always meant to be smoothing, not to one-third of it). Cumulative
+reported now catches up to cumulative true over a long horizon: pooled over
+a 16-path ensemble, the ratio lands in 0.80–1.20 on both the real-panel
+(`stagflation`, `goldilocks`) and generated (`stagflation_1974`) paths,
+which share the same `_reported_marks` call via `ah/port/adapter.py`.
+
+**Consequences — what the fix invalidated.**
+
+- `TOY_ENGINE_VERSION` `toy-v0.5` → `toy-v0.6`; the engine golden digest
+  re-pinned `6c3f7c896a552b49...` → `61e78e609d2a360b...`.
+- Preset world-id fences moved so scores made under the two engines can
+  never share a leaderboard row: the shipped presets' 50x sub-block
+  `501–504` → the 51x sub-block `511–514`, and the generated
+  `stagflation_1974` `602` → `603`. Old rows are FENCED, not deleted —
+  the leaderboard key already carries world identity.
+- Both committed bundles rebuilt and re-verified (`app/fixtures/toy.bundle.gz`,
+  `app/fixtures/gen.bundle.gz`).
+- The play-linkage golden moved `86.32350859293307` → `98.04417427685921`
+  (`tests/test_play_linkage.py`) — a materially larger move than the fix's
+  own description suggests, because reported marks now track the crash
+  instead of lagging behind a right-censored one-month sample.
+- The ER-6 `peak_unfunded_ratio` acceptance ceiling moved `1.5` → `1.6`
+  (`tests/test_programme.py`): crash-responsive reported marks make the
+  DN-5 counter-cyclical pacing rule lean harder into the trough, and the
+  measured peak on the pinned seed moved `1.22` → `1.52` at quarter 20 (the
+  stagflation trough — numerator up via the leaned-in commitment multiplier,
+  denominator down via depressed true NAV). The declared pathology band
+  `2.4–3.3` stays far away; this is a ceiling re-pin, not a regression
+  toward the pathology ER-6 closed.
+
+**Scoring note.** Reported marks feed the DISPLAY plane and the
+reported-basis session value, not the alpha computation: alpha is
+player-minus-twin, and both sides of that subtraction carried the same
+one-month-in-three bias, so it largely cancelled. Levels were wrong — a
+player watching the reported PM line over a decade saw roughly a third of
+the true cumulative return — but rankings mostly weren't, because the bias
+was common to player and twin alike.
+
+**Two permanent guards, so this cannot silently recur.**
+
+1. A catch-up invariant test on both paths that share `_reported_marks` —
+   the engine
+   (`tests/test_engine.py::test_reported_marks_catch_up_to_truth_er10`) and
+   the generator adapter
+   (`tests/test_gen_adapter.py::TestAgainstTheRealPanel::test_gen_reported_marks_catch_up_to_truth_er10`)
+   — pooling a small ensemble (a single path's ratio is a right-censored
+   EWMA and swings with its final quarter's own size) and asserting
+   cumulative reported/true lands in `0.80–1.20`.
+2. The credibility console's reported-plane catch-up row
+   (`src/ah/credibility.py`, `SmoothingStats.catchup_ratio`/`catchup_flagged`,
+   `CATCHUP_LO/HI = 0.8/1.2`): flags any sleeve outside that band on every
+   `ah credibility` run, with a near-zero guard
+   (`CATCHUP_NEAR_ZERO_PP = 5.0`) so a deflation-style world whose cumulative
+   true return sits near zero reads "n/a" instead of a meaningless ratio.
