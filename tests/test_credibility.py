@@ -197,6 +197,117 @@ class TestSmoothing:
             assert r.vol_ratio < 1.0
             assert not r.flags, r.flags
 
+    def test_console_carries_reported_catchup_ratio_er10(self):
+        """ER-10 follow-through: the console now audits the REPORTED plane.
+        The 2026-08-12 defect (reported ~1/3 of truth) was invisible because
+        the console only checked true series' vol/autocorrelation, never
+        whether the cumulative reported number actually catches up to the
+        cumulative true one over the ensemble's base-seed lineage. The
+        unit-DC-gain property is a law-of-large-numbers statement, so this
+        needs the full-horizon preset (not the truncated 8-quarter world
+        used by the v2 chart tests) to actually converge near 1.0."""
+        rep = build_report(_world(), base_seed=SEED, n_paths=12)
+        by_sleeve = {s.sleeve: s for s in rep.smoothing}
+        for sleeve in ("pe", "pc", "re"):
+            entry = by_sleeve[sleeve]
+            assert entry.catchup_ratio is not None
+            assert 0.8 < entry.catchup_ratio < 1.2
+            assert entry.catchup_flagged is False
+
+    def test_console_carries_reported_catchup_ratio_for_a_generated_world(self):
+        """The same audit over the su-gen-01 adapter path (Task 3's
+        criterion): a generated world walks build_report exactly like a
+        preset one, so the ER-10 check must fire there too."""
+        import ah.gen.bootstrap as bs
+        from ah.gen import registry
+        from conftest import make_synthetic_source_16
+
+        saved = registry.snapshot()
+        registry.register("bootstrap-v1", lambda: bs.BootstrapV1(make_synthetic_source_16()))
+        try:
+            doc: dict[str, Any] = copy.deepcopy(json.loads(PRESET.read_text(encoding="utf-8")))
+            doc["engine_defaults"]["generator_id"] = "bootstrap-v1"
+            world = project_numeric(WorldSpec.model_validate(doc))
+            rep = build_report(world, base_seed=SEED, n_paths=8, title="Gen")
+        finally:
+            registry.restore(saved)
+        by_sleeve = {s.sleeve: s for s in rep.smoothing}
+        for sleeve in ("pe", "pc", "re"):
+            entry = by_sleeve[sleeve]
+            assert entry.catchup_ratio is not None
+            assert 0.8 < entry.catchup_ratio < 1.2
+            assert entry.catchup_flagged is False
+
+    def test_catchup_ratio_is_none_and_unflagged_near_zero(self):
+        """Near-zero guard: a base path whose cumulative TRUE return is
+        under 5 percentage points over the horizon makes the ratio noise,
+        not signal — deflation-style worlds can land re sums near zero, and
+        a ratio there must read n/a, never flag."""
+        from ah.core.engine import EnsembleResult
+
+        months = 12
+        true = np.zeros((2, months))
+        # +2 then -2 percentage points each quarter: true cumulates to ~0
+        true[:, 2::3] = 2.0
+        true[:, 0::3] = -2.0
+        reported = np.zeros((2, months))
+        reported[:, 2::3] = 50.0  # wildly outside (0.8, 1.2) if the guard were absent
+        returns = {a: np.full((2, months), 0.1) for a in ASSETS}
+        for s in REPORTED_SLEEVES:
+            returns[s] = true
+        rep_dict = {s: reported for s in REPORTED_SLEEVES}
+        ens = EnsembleResult(
+            months=months,
+            n_paths=2,
+            seeds=[SEED, SEED + 7919],
+            returns=returns,
+            reported=rep_dict,
+        )
+        rows = smoothing_stats(ens)
+        for r in rows:
+            assert abs(true[0].sum()) < 5.0
+            assert r.catchup_ratio is None
+            assert r.catchup_flagged is False
+            assert not any("catch-up" in f for f in r.flags)
+
+    def test_catchup_ratio_flags_outside_the_band(self):
+        """A base path whose reported plane cumulates to well outside
+        (0.8, 1.2) of the true plane must flag, and the flag text must
+        carry the ratio."""
+        from ah.core.engine import EnsembleResult
+
+        months = 12
+        true = np.zeros((2, months))
+        true[:, 2::3] = 10.0  # cumulative true well above the 5pp guard
+        reported = np.zeros((2, months))
+        reported[:, 2::3] = 3.3  # ~1/3 of true, the ER-10 shape
+        returns = {a: np.full((2, months), 0.1) for a in ASSETS}
+        for s in REPORTED_SLEEVES:
+            returns[s] = true
+        rep_dict = {s: reported for s in REPORTED_SLEEVES}
+        ens = EnsembleResult(
+            months=months,
+            n_paths=2,
+            seeds=[SEED, SEED + 7919],
+            returns=returns,
+            reported=rep_dict,
+        )
+        rows = smoothing_stats(ens)
+        for r in rows:
+            assert r.catchup_ratio is not None
+            assert r.catchup_ratio < 0.8
+            assert r.catchup_flagged is True
+            assert any("catch-up" in f for f in r.flags), r.flags
+            assert any(f"{r.catchup_ratio:.2f}" in f for f in r.flags), r.flags
+
+    def test_page_renders_the_reported_catchup_row(self):
+        rep = build_report(_world(), base_seed=SEED, n_paths=12)
+        page = render_credibility_page([rep])
+        assert "reported catch-up" in page.lower()
+        for s in rep.smoothing:
+            assert s.catchup_ratio is not None
+            assert f"{s.catchup_ratio:.2f}x" in page
+
 
 class TestReportAndPage:
     def test_report_is_deterministic(self):
@@ -237,7 +348,16 @@ class TestReportAndPage:
             ],
             factors=[type(f)(f.name, f.start, f.end, f.mean, f.lo, f.hi, ()) for f in rep.factors],
             smoothing=[
-                type(s)(s.sleeve, s.true_vol, s.reported_vol, s.vol_ratio, s.reported_autocorr, ())
+                type(s)(
+                    s.sleeve,
+                    s.true_vol,
+                    s.reported_vol,
+                    s.vol_ratio,
+                    s.reported_autocorr,
+                    s.catchup_ratio,
+                    False,
+                    (),
+                )
                 for s in rep.smoothing
             ],
             correlations=rep.correlations,
