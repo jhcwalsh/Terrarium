@@ -73,11 +73,41 @@ promotes, how it is named for the product surface is a separate owner
 decision; the campaign judges the system under a campaign-local id, exactly
 as campaign-3 judged its systems.
 
-## D2. The tail-calibration phase — capped, in the sealed document
+## Phase 0 — the development gate (unsealed, BEFORE anything is sealed)
+
+*(Added 2026-08-14 at owner direction: don't pay seal-grade prices for
+information dev-grade experiments can deliver first.)*
+
+Two measurements, both on the EXISTING checkpoints, both dev-side
+(train+val only, dev metrics, no seal touched, no campaign implied —
+the seed-committee probe's discipline exactly):
+
+- **P0.a — conditional-delivery diagnostic.** Measure, for the first time
+  on any system, the delivery rate: committee vs benchmark, conditioned on
+  the three D3 scenarios under PROVISIONAL dev definitions (marked as
+  such; the sealed thresholds are set later at the seal event, from
+  reference machinery, never from these results). Answers: is the untested
+  clause already passable?
+- **P0.b — the tail-calibration attempts** (moved here from the sealed
+  phase, same budget: the three attempts of D2, ≤ 4 working days,
+  cheapest first — attempt B is hours and no retrain). Dev bar unchanged:
+  cross-block exceedance ≤ 10 of 63 on the development battery.
+
+**The gate:** the campaign is sealed and bought ONLY if Phase 0 shows a
+live path on BOTH fronts — some attempt meets the tail dev bar, AND the
+delivery diagnostic shows the committee ahead of the benchmark by enough
+that 2x at seal-grade is plausible. Otherwise the outcome is a shelf note
+with precise numbers (what must move, by how much) for ~3 unsealed days,
+instead of a two-week sealed FAIL. Honesty line: Phase 0 results are
+dev-grade and are NOT campaign evidence; sealed thresholds are derived
+from the reference machinery per RFR-77, never tuned to what Phase 0
+achieved; the campaign trains FRESH seeds under the sealed recipe.
+
+## D2. The tail-calibration phase — capped (runs inside Phase 0)
 
 The named problem: **excess cross-factor tail co-movement** (too much
-joint-crash, not too little). Pre-declared attempt budget, sealed so sunk
-costs cannot renegotiate it:
+joint-crash, not too little). Pre-declared attempt budget, recorded here
+so sunk costs cannot renegotiate it:
 
 - **Attempt A — tail-co-movement penalty:** add an explicit penalty on
   cross-block lower/upper tail dependence of generated paths against the
@@ -92,10 +122,11 @@ costs cannot renegotiate it:
 **Budget: these three attempts or 4 working days, whichever ends first.**
 Phase success bar (dev-side, train+val only, never the sealed bands
 themselves): cross-block exceedance ≤ 10 of 63 on the development battery.
-Whatever exists when the budget ends is what the campaign freezes and
-judges — **the campaign runs either way**; a tail phase that fails its dev
-bar produces an honest sealed FAIL, not an extension. Every attempt (incl.
-failures) goes in the evidence pack.
+This phase now runs UNSEALED inside Phase 0, and its result feeds the
+gate: meet the bar and the campaign seals the winning recipe; miss it and
+the shelf note records the attempts — no sealed FAIL is bought for a
+failure already measured. Every attempt (incl. failures) goes in the
+evidence pack either way.
 
 ## D3. The re-aimed criterion: conditional delivery
 
@@ -159,25 +190,29 @@ Four-clause structure retained, applied to the committee:
 
 ## Order of work
 
-1. Owner approves this note (and sets: K, the D2 budget if different, the
-   D3 scenario thresholds or delegates their tabling to the seal event).
-2. Pre-seal repairs, committed before the campaign block is written: the
+1. Owner approves this note. **[APPROVED with the Phase-0 amendment,
+   2026-08-14.]**
+2. **Phase 0** (unsealed, ~3–5 days): P0.a delivery diagnostic + P0.b
+   tail attempts. Ends with a go/no-go on the owner's desk, with numbers.
+3. **Owner go/no-go.** On go, the owner also sets: K (3 or 5) and the D3
+   scenario thresholds (or delegates their tabling to the seal event).
+4. Pre-seal repairs, committed before the campaign block is written: the
    promotion-script AND fix (+ its test); the conditional-delivery metric
    implementation (+ tests) — the judge must exist to be hashed.
-3. **The seal event**: campaign-4 block in `pre-registration.yaml` — rule
-   text, thresholds, D2 budget, committee construction, checkpoint-hash
-   placeholders declared as planned arrivals — all three locks re-sealed
-   in one commit with superseded digests recorded.
-4. Tail-calibration phase (≤ 4 working days, D2).
-5. Train K fresh seeds under the final recipe; freeze; hashes join the
+5. **The seal event**: campaign-4 block in `pre-registration.yaml` — rule
+   text, thresholds, the frozen recipe from Phase 0, committee
+   construction, checkpoint-hash placeholders declared as planned
+   arrivals — all three locks re-sealed in one commit with superseded
+   digests recorded.
+6. Train K fresh seeds under the sealed recipe; freeze; hashes join the
    seal by dated amendment (planned arrival, post_hoc false).
-6. Batteries + severe legs + conditional-delivery grids, both systems.
-7. Verdict via the fixed script; evidence doc; owner receives the result.
+7. Batteries + severe legs + conditional-delivery grids, both systems.
+8. Verdict via the fixed script; evidence doc; owner receives the result.
 
-**Timeline: best case ~7 working days, capped case ~12.** Owner
-touchpoints: steps 1, 3 (ratify), 7 (receive) — roughly an hour each.
-Collagist product work continues in the main tree throughout; the GPU
-belongs to the campaign.
+**Timeline: Phase 0 ~3–5 days → go/no-go → campaign ~5–7 days on a go.**
+Owner touchpoints: steps 1 (done), 3 (go/no-go, the substantive one),
+5 (ratify), 8 (receive). Collagist product work continues in the main
+tree throughout; the GPU belongs to the campaign.
 
 ## Honesty clauses
 
