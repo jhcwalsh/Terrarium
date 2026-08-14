@@ -12,7 +12,38 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Fixed
+
+- **The lever committed stale plan figures for sleeves the player never
+  touched (audit F4), 2026-08-14.** The app merged the whole server pre-fill
+  into its state as soon as ONE sleeve was edited and sent all three, so
+  editing `pe` silently committed `pc` and `re` at numbers up to 7.9% off
+  plan — while the UI still showed them as the plan. The engine has always
+  supported partial commitments (per-asset fallback to `plan_amount`), so the
+  lever now sends only the sleeves actually edited: an untouched sleeve is
+  paced fresh at the commitment quarter and holds to plan EXACTLY. Scores
+  were never wrong for a player who left the lever alone (nothing was sent);
+  this fixes the player who edited one sleeve.
+
 ### Added
+
+- **The scored surface can now be audited from the API alone (F4),
+  2026-08-14.** Two numbers the service showed or charged could not be
+  checked from outside the code. (1) **Spending** is charged on the trailing
+  twelve-quarter mean of reported NAV sampled INSIDE the waterfall — after
+  calls, before spending and any forced sale — which the quarter-end
+  `nav_reported` the API served does not reproduce (1–3% out, with no way to
+  tell which side was wrong). `QuarterReport`/`PlayQuarter` now carry
+  `spending_basis` and `spending_rate_annual`, and the session serves both,
+  so `spending_paid == rate / 4 * spending_basis` closes exactly (pinned at
+  `rel=1e-12` across a full decade walk). (2) **The lever's pre-fill** is the
+  plan as at the last CLOSED quarter, while the engine paces on the weight at
+  the commitment quarter — and it CANNOT be made exact, because that
+  quarter's returns are unrevealed at decision time and using them would leak
+  the tape. It is therefore declared: `next_plan_basis` (as-of quarter,
+  as-of month, reported weight) is served, `private_weight_reported` with it,
+  and the lever states its as-of on the page. No engine change, no alpha
+  version bump, no sealed file.
 
 - **Expired commitment is visible on every surface (audit F2), 2026-08-14.**
   ER-6's close-out made undrawn commitment expire at the end of a cohort's

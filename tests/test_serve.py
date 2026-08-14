@@ -404,6 +404,61 @@ class TestEndpoints:
         # and it outlives the quarter it happened in
         assert final["expired_undrawn"] == 0.0 and final["expired_undrawn_to_date"] > 0.0
 
+    def test_spending_is_rederivable_from_what_the_session_exposes(self, service):
+        """Audit F4: spending is correct internally (4.4e-16) but no exposed
+        series let an outside party CHECK it. The value the rate is applied to
+        is the trailing twelve-quarter mean of reported NAV as sampled INSIDE
+        the waterfall (after calls, before spending and any forced sale) — not
+        the quarter-end `nav_reported` the session serves, which is sampled
+        after both. Averaging the served series lands 1-3% out and there was
+        no way to tell which side was wrong.
+
+        The basis is now served, so the charge closes on the surface that
+        makes it: spending_paid == (rate / 4) * spending_basis, exactly.
+        """
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        assert client.get(f"/sessions/{sid}").json()["spending_basis"] is None
+
+        pending = set(decision_months(120))
+        for month in range(3, 121, 3):
+            doc = client.post(f"/sessions/{sid}/advance", json={"to_month": month}).json()
+            assert doc["spending_basis"] > 0.0
+            assert doc["spending_paid"] == pytest.approx(
+                doc["spending_rate_annual"] / 4.0 * doc["spending_basis"], rel=1e-12
+            )
+            for window in sorted(pending):
+                if window < month:
+                    client.post(
+                        f"/sessions/{sid}/decisions", json={"month": window, "action": "hold"}
+                    )
+                    pending.discard(window)
+
+    def test_the_plan_prefill_declares_the_state_it_was_computed_from(self, service):
+        """Audit F4: the lever's pre-fill is computed at the last CLOSED
+        quarter, while the engine commits using the weight at the commitment
+        quarter — one quarter later, and up to 7.9% different.
+
+        It cannot be made exact: the commitment quarter's own returns are
+        unrevealed at decision time, so computing the pre-fill from them would
+        leak the tape. The honest fix is disclosure — the session states the
+        weight and the quarter its pre-fill came from, and the app labels it.
+        """
+        from ah.play import plan_commitments
+
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        doc = client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).json()
+
+        basis = doc["next_plan_basis"]
+        assert basis["as_of_quarter"] == 3  # months 9-11, the last closed
+        assert basis["as_of_month"] == doc["revealed_months"] - 1
+        assert basis["private_weight_reported"] == pytest.approx(doc["private_weight_reported"])
+        # the pre-fill is exactly the plan AT THAT STATE, and says so
+        expected = plan_commitments(basis["private_weight_reported"])
+        for sleeve, points in doc["next_plan_commitments"].items():
+            assert points == pytest.approx(expected[sleeve], abs=1e-4)
+
     def test_session_carries_the_product_alpha_version(self, service):
         from ah.play import PLAY_ALPHA_VERSION
 

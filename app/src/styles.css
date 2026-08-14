@@ -1335,6 +1335,14 @@ button.commit {
   color: var(--dim, #7c9b99);
   font-size: 11.5px;
 }
+/* audit F4: the pre-fill declares the state it was computed from */
+.lever-basis {
+  margin: 8px 0 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: var(--dim, #7c9b99);
+  max-width: 52ch;
+}
 .lever-reset {
   margin-top: 6px;
   font-size: 11.5px;

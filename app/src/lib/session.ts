@@ -45,6 +45,22 @@ export interface Session {
   /** sp-02 (E1): the plan's next per-sleeve commitment points, SERVER-computed
    * at the pointer — the lever's pre-fill; committing these IS holding to plan */
   next_plan_commitments?: Record<string, number> | null;
+  /** audit F4: the state the pre-fill was computed from — the last CLOSED
+   * quarter. The engine paces on the weight at the commitment quarter, whose
+   * returns are unrevealed here, so the pre-fill is declared rather than
+   * silently approximate. An untouched sleeve is paced fresh server-side. */
+  next_plan_basis?: {
+    as_of_quarter: number;
+    as_of_month: number;
+    private_weight_reported: number;
+  } | null;
+  /** audit F4: what the spending rate was applied to, and the rate — so
+   * `spending_paid` is rederivable from this document alone. Quarter-end
+   * `nav_reported` is sampled after the waterfall and does NOT reproduce it. */
+  spending_basis?: number | null;
+  spending_rate_annual?: number | null;
+  /** the weight the COMMITTEE sees, which is what the pacing rule reads */
+  private_weight_reported?: number | null;
   /** sp-05 (E1): the ladder by vintage at the pointer, and the trailing
    * distribution series — visible at the moment of decision */
   vintage_nav?: Record<string, number> | null;

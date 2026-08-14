@@ -463,6 +463,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               onCommit={commit}
               busy={busy}
               planCommitments={session?.next_plan_commitments ?? null}
+              planBasis={session?.next_plan_basis ?? null}
             />
           </section>
         </div>
