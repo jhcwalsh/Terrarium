@@ -92,4 +92,22 @@ describe("CioDashboard", () => {
     render(<CioDashboard view={nulled} onPlaneChange={() => {}} />);
     expect(host!.textContent).not.toContain("+0.0%");
   });
+
+  it("prints em dashes for null call rates and coverage, never a fabricated 0.0%", () => {
+    // Nullable<Ratio> means "denominator was zero" — a real state the
+    // builder emits, not an absent field. Number(null) coercion must never
+    // leak a fabricated "0.0%" for callRateUnfunded/callRateNav/coverage.
+    const nulled: CioView = JSON.parse(JSON.stringify(view));
+    for (const seriesId of ["aggregate", "pe"]) {
+      for (const row of nulled.privateCashflows.series[seriesId]) {
+        row.callRateUnfunded = null;
+        row.callRateNav = null;
+        row.coverage = null;
+      }
+    }
+    render(
+      <CioDashboard view={nulled} onPlaneChange={() => {}} initialTab="private" />,
+    );
+    expect(host!.textContent).not.toMatch(/0\.0%/);
+  });
 });

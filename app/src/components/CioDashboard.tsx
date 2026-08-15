@@ -918,8 +918,8 @@ function PrivateTab() {
         <Tile label="Unfunded" value={money(cur.unfundedClose, u)} />
         <Tile label="Unfunded ÷ NAV" value={num(cur.coverage)} sub={isNum(anchor) ? `${num(anchor)} anchor` : undefined}
           tone={isNum(danger) && Number(cur.coverage) > danger ? C.warn : undefined} />
-        <Tile label="Calls ÷ unfunded" value={pct(Number(cur.callRateUnfunded) * 100)} sub="quarterly call rate" />
-        <Tile label="Calls ÷ NAV" value={pct(Number(cur.callRateNav) * 100)} sub="quarterly" />
+        <Tile label="Calls ÷ unfunded" value={pct(isNum(cur.callRateUnfunded) ? cur.callRateUnfunded * 100 : null)} sub="quarterly call rate" />
+        <Tile label="Calls ÷ NAV" value={pct(isNum(cur.callRateNav) ? cur.callRateNav * 100 : null)} sub="quarterly" />
         <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
           sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
       </div>
@@ -968,7 +968,7 @@ function PrivateTab() {
                     <td style={td}>{money(s(h, "calls"), u)}</td>
                     <td style={td}>{money(s(h, "distributions"), u)}</td>
                     <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{money(s(h, "net"), u)}</td>
-                    <td style={{ ...td, color: C.mist }}>{pct(Number(c.callRateUnfunded) * 100)}</td>
+                    <td style={{ ...td, color: C.mist }}>{pct(isNum(c.callRateUnfunded) ? c.callRateUnfunded * 100 : null)}</td>
                     <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? money(s(fw, "net"), u) : NA}</td>
                   </tr>
                 );
