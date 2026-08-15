@@ -1,64 +1,88 @@
-# NEXT-STEPS.md — after the campaign-4 NO-GO (2026-08-14)
+# NEXT-STEPS.md — after the translation-layer audit (2026-08-14)
 
 **State of the world:** the single-player game is FINISHED and runs on
 `stagflation_1974` world `…603` (toy presets `511–514`), engine `toy-v0.6`,
-mappings `v1.1` (`map-2026.08.2`). Everything merged and pushed through
-`f192a8b`+; the write-up (docs/alternate-histories-audited.md + published
-artifact) is current through the 13-Aug returns audit.
+mappings `v1.1` (`map-2026.08.2`), play alphas **`port-v4-ladder` /
+`port-v4-ladder-gen`** (bumped by ER-12 — old leaderboard rows are fenced, not
+deleted). Everything merged and pushed through `b401425`.
 
-## What just closed (2026-08-12 → 08-14)
+## What closed today (2026-08-14)
 
-- **The returns audit** — both owner-found defects fixed and guarded:
-  PM loadings re-estimated with Dimson sum-betas under `AM-2026-08-12-001`
-  (PE beta 0.35→0.84, DL re-anchored to the BDC index); the ER-10
-  reported-marks fix (`toy-v0.6`, catch-up invariant + console
-  reported-plane row). The parked "PE sealed alpha" question is CLOSED.
-- **Both research probes** — seed-committee diagnostic (clause-i failure
-  was variance, 80x dispersion collapse; clause-ii tail failure is
-  architectural) and the JST scoping note (annual data; no honest monthly
-  multiplier; a cheap research-only widening of the existing connector is
-  the only GO inside it).
-- **Campaign-4 — CLOSED, NO-GO at the Phase-0 gate** (owner accepted
-  2026-08-14). Two architecture-level walls: conditioning is skin-deep
-  (pinned regime labels, non-following trajectories) and the tail/edge
-  trade-off is coupled in sampling. Design + reopening conditions:
-  `docs/superpowers/specs/2026-08-13-campaign4-design.md`. SHIP-BENCHMARK
-  stands; the collagist is the product engine. The apprentice shelf is not
-  ambiguous: three named numbers must move, all architecture work.
+The translation-layer audit ran three independent read-only auditors against
+the DESIGN documents rather than the test suite
+(`docs/superpowers/specs/2026-08-14-translation-layer-audit.md`). Its verdict —
+"the numeric spine is exact; the gaps are dead design, computed-but-invisible,
+and calibration drift" — held up, and four of its five findings are now closed.
 
-## The main line now: collagist product
+- **F1 — the sealed smoothing kernel never ran.** Owner route (a): the toy
+  engine's filter IS the product's smoothing model, recorded as **ER-11** with
+  what the shipped path forgoes and a ~3-day price for reversing it. The
+  latent 4.47x double-count in the unused applier is fixed; exposure was
+  checked consumer by consumer and was nil.
+- **F2 — ER-6's expiry line reached no surface.** Now on `PlayQuarter`, the
+  console ladder (`expired` column), the session (`expired_undrawn` plus a
+  running total) and the app's ledger.
+- **F4 — the scored surface could not be audited from outside.** Spending is
+  rederivable (`spending_basis` x rate closes to 1e-12); the lever's pre-fill
+  declares the state it was computed from, since it CANNOT be made exact
+  without leaking unrevealed months; and the lever now sends only the sleeves
+  the player touched, so untouched ones hold to plan exactly.
+- **F3 — the crossover band.** ACCEPTED AND RECORDED, with its cost stated:
+  the band keeps flagging and that flag now means "this world distributes late,
+  as stressed worlds do". Re-measured after ER-12 and unchanged at 8.750.
+- **F5 — calibration drift** (CTA vol, PM betas short of prior, Gaussian PM
+  residuals vs sealed SM-8) is the one still OPEN. Record-only; batch it into
+  the next amendment cycle rather than doing it alone.
 
-Owner directives standing: group play BACK-BURNERED; toy-engine realism
-family (ER-2/ER-5/ER-8-remainder/ER-9) DEPRIORITIZED. Candidate next
-builds, owner's pick:
+**ER-12, which the audit's own F2 column exposed:** the opening private book
+was three clones of one age-5.25 cohort, so the whole programme lapsed in the
+same quarter. It is now a staggered ladder, one rung per year of fund life.
+`peak_unfunded_ratio` **cleared its declared band** (1.288 -> 0.716) — the
+metric ER-6's close-out could not fix, whose real cause was upstream of
+everything ER-6 blamed. `linkage_bite` was the casualty (annual wind-ups broke
+its window-exclusion rule) and was restored in a SEPARATE change so attribution
+stayed clean: netted by amount, 0.778 median, band unchanged and not needing to
+change. `linkage_shortfall` sits at 0.027, below its floor — recorded, not
+tuned.
 
-1. **A second playable world** — the 1965 start ("the boldest" per the
-   su-gen survey) or a second 1974-class seed; the adapter/bundle/session
-   path is proven, so each new world is mostly preset + console walk +
-   fixtures.
-2. **World variety within a scenario** — surfacing sibling seeds of 1974
-   as selectable runs (leaderboards already fence per (world_id, seed)).
-3. **JST research-only widening** (from the scoping note): unfilter the
-   17 non-US countries for L1 partial pooling + held-out-regime backtests;
-   fix the LICENSE-REGISTRY.md misclassification (JST is CC BY-NC-SA,
-   NON-commercial — flagged 2026-08-13, still open).
+## The main line now: the CIO dashboard
 
-## Housekeeping (small, unscheduled)
+The owner's design spec and implementation plan are in the repo
+(`docs/superpowers/specs/2026-08-14-cio-dashboard-design.md`,
+`docs/superpowers/plans/2026-08-14-cio-01-view-builder.md`): the dashboard
+becomes the play surface, `Play.tsx`'s panels retire after cutover, and
+`buildCioView` lives SERVER-side in Python because the server is the authority
+for value (DN-3 W5). Work happens on `cio-01-view-builder`, not on main.
 
-- `docs/data/LICENSE-REGISTRY.md` JST row — misclassified as
-  commercial-free; correct to CC BY-NC-SA (see scoping note §1).
-- Sealed v1.1 erratum: DL row's `n_quarters: 195` counts MONTHLY BDC obs —
-  fold the correction into the next reseal event, not its own.
-- `scripts/gen_bundle_fixtures.py` writes nondeterministic
-  run_id/created_at on regen; `fixtures/compiler` CRLF churn under Windows
-  autocrlf — both deferred, one small WP if they annoy again.
-- The probe worktree (`../Terrarium-probe`) is removable once the Phase-0
-  artifacts have been reviewed (they live in the real `experiments/`
-  store via junction; nothing is lost with the worktree).
+Two things to settle inside cio-01 rather than around it:
+
+1. **`docs/CIO Dashboard.zip`** — Task 1 vendors DN-8 and the renderer out of
+   it, so the DN-8 document it unpacks into `Instructions/` becomes the citable
+   contract. A binary nobody can diff should not remain the authority once
+   unpacked. (Not cited as a path here: it does not exist until that task runs,
+   and `tests/test_citations.py` rightly refuses a path that is not there.)
+2. **What the dashboard renders about the linkage.** `linkage_bite` is alive
+   again but `linkage_shortfall` is below its floor; if a panel shows either,
+   decide what a flagged band means on a player-facing surface before it ships.
 
 ## Standing owner questions
 
-- **Which product build next** (§ above, 1/2/3 or something else).
-- **Group play** — stays back-burnered until reopened.
-- **Toy presets player-facing?** — unchanged; decides whether the
-  ER-5/ER-8 family ever gets scheduled.
+- **Group play** — back-burnered until reopened.
+- **Toy-engine realism family** (ER-2 / ER-5 / ER-8 remainder / ER-9) —
+  deprioritized; decides whether toy presets are ever player-facing.
+- **ER-11 route (b)** — routing the sealed per-sleeve kernel live, ~3 working
+  days, available as a release event whenever the realism is wanted.
+- **JST commercial use** — the licence registry now says plainly that JST is
+  non-commercial (corrected 2026-08-14). Whether a generator trained on
+  JST-derived priors may back a commercial play surface is a licensing
+  judgment, not an engineering one, and is unanswered.
+
+## Housekeeping (small, unscheduled)
+
+- Sealed `v1.1` erratum: the DL row's `n_quarters: 195` counts MONTHLY BDC
+  observations — fold the correction into the next reseal event, not its own.
+- `scripts/gen_bundle_fixtures.py` writes nondeterministic `run_id`/`created_at`
+  on regen (exercised again at ER-12); `fixtures/compiler` CRLF churn under
+  Windows autocrlf. Both still deferred.
+- The probe worktree (`../Terrarium-probe`) is removable once the Phase-0
+  artifacts have been reviewed.

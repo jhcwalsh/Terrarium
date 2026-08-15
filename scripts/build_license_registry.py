@@ -158,7 +158,11 @@ def main() -> int:
             continue
         lines += ["| series | source | frequency | priority | notes |", "|---|---|---|---|---|"]
         for r in entries:
-            note = (r.notes or "").split(".")[0][:110] if r.notes else ""
+            # First sentence only, split on ". " rather than "." — a bare
+            # period is part of a version number, and splitting on it cut
+            # "CC BY-NC-SA 4.0 -- NON-COMMERCIAL" down to "CC BY-NC-SA 4",
+            # dropping the one word a licence registry exists to show.
+            note = (r.notes or "").split(". ")[0][:110] if r.notes else ""
             lines.append(
                 f"| `{r.series_id}` | {r.source} | {r.frequency} | {r.priority} | {note} |"
             )

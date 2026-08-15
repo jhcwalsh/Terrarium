@@ -18,6 +18,34 @@ def test_every_series_declares_a_tier_and_only_free_is_redistributable():
         assert r.redistributable == (r.license_tier == "FREE"), r.series_id
 
 
+def test_jst_is_registered_non_commercial_and_says_so():
+    """FOUND 2026-08-13 by the JST scoping note (§1), corrected 2026-08-14.
+
+    All eight `jst.*` series were carried as FREE — a tier this registry
+    defines as "no licence needed for commercial use". Jordà-Schularick-Taylor
+    is CC BY-NC-SA 4.0, and the Macrohistory Lab forbids commercial providers
+    from integrating or reselling the data outright. Being wrong in the
+    PERMISSIVE direction on a licence is the failure mode a licence registry
+    exists to prevent, so it is pinned here rather than left to the next
+    regeneration.
+
+    REG is the closest tier this schema has (its `redistributable` is False,
+    which is the consequence that matters); the flat prohibition, which REG's
+    "check the terms" wording understates, is carried in the notes and in the
+    registry's own header.
+    """
+    jst = [r for r in load_requirements() if r.source == "jst"]
+    assert len(jst) == 8, "the JST series set changed — re-check its licence"
+    for r in jst:
+        assert r.license_tier == "REG", r.series_id
+        assert not r.redistributable, r.series_id
+        assert "NON-COMMERCIAL" in (r.notes or "").upper(), r.series_id
+
+    text = REGISTRY.read_text(encoding="utf-8")
+    assert "CC BY-NC-SA" in text, "the registry must name the licence it is flagging"
+    assert "strictly forbidden" in text, "the prohibition must be quoted, not paraphrased"
+
+
 def test_the_funding_stress_legs_are_registered_free_and_distinct():
     """TED retired in 2022-01. Its replacement legs must be free, and the
     daily secondary-market bill series must NOT be confused with the monthly
