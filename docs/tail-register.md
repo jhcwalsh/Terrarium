@@ -30,12 +30,12 @@ motivates the register).
 | Acceptance test | Spec §6.1: bit-exact real rows, whole-row blocks, determinism, coherence-vs-panel. Commit order (§7) proves the rule preceded any portfolio measurement |
 | Ablation arm | Same seeds with `entry_percentile: 100` (unrestricted) on every segment — the severity contribution is the measured delta against that arm, per world |
 
-## TR-2 — Persistence rule · PROPOSED · ⚑ D-SC-1
+## TR-2 — Persistence rule · DECIDED 2026-08-15 (P1+P2) · D-SC-1
 
 | field | value |
 |---|---|
 | Layer | Generator — same module, spec §4.3(d) |
-| Parameter | Form P1 / P2 / P3 and its constants — **owner decision, not taken** (spec §11) |
+| Parameter | **P1+P2 composed, owner ruling 2026-08-15** (`governance/decision-register.md`). P1 (severe re-entry inside a stress segment) is the shipped sampler's behaviour, pinned by `test_restarts_land_in_the_severity_pool`; P2 (declared stress coverage) is authored per scenario with its precedent. P3 held back |
 | Estimator | None for P1/P2 (declared shape). P3's bound must be **precedent-derived** (Japan post-1990, UK 1973–75 real, US 1966–82 real) and committed before any portfolio measurement |
 | Data source | Sealed panel; precedent episodes for the bound |
 | Acceptance test | Realised stressed-state duration distribution reported against the cited precedent episodes; P3 additionally requires the rule-1 policing note in spec §4.3(d) satisfied (bound never adjusted against ladder readings) |

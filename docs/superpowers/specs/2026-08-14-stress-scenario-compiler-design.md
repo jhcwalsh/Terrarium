@@ -459,7 +459,7 @@ acceptance tests, not a limits-section sentence.
 
 | key | ⚑/⚖ | decision | proposal on the table |
 |---|---|---|---|
-| **D-SC-1** | ⚑ | Persistence-rule parameterisation (§4.3(d)) | P1+P2 composed as the start; P3 held back until the rule-1 policing is designed |
+| **D-SC-1** | ✅ **DECIDED 2026-08-15** | Persistence-rule parameterisation (§4.3(d)) | Owner adopted P1+P2 composed (P3 held back). P1 is the shipped sampler's re-entry behaviour, already pinned by test; P2 is authored per scenario. Ruling recorded in `governance/decision-register.md`; built as stress-02 |
 | **D-SC-2** | ⚑ | Premise compiler: scoped now or deferred | Not scoped here, deliberately. The split table above is the placeholder |
 | **D-SC-3** | ⚑ | Reverse stress testing (§3) in the institutional tier at M6, or later | Conditions are specified; timing is open |
 | **D-SC-4** | ⚖ | International-panel licensing (§9) | Counsel first; the JST non-commercial correction (2026-08-14) is unresolved and upstream |
