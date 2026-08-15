@@ -462,11 +462,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               {cioError ? (
                 <div className="empty">{cioError}</div>
               ) : cioView ? (
-                <CioDashboard
-                  view={cioView}
-                  onPlaneChange={setPlane}
-                  chrome="embedded"
-                />
+                <CioDashboard view={cioView} onPlaneChange={setPlane} chrome="embedded" />
               ) : (
                 <div className="empty">Loading the CIO view...</div>
               )}
@@ -550,7 +546,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
             </section>
           )}
 
-          <section>
+          <section className="wire-panel">
             <div className="eyebrow">
               <span>The wire</span>
               <span>{dateNow}</span>

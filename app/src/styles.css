@@ -1135,19 +1135,35 @@ button.commit {
   margin-bottom: 9px;
 }
 
-/* the wire keeps a floor: it is the reason the right column exists */
-.vgrid .right > section:nth-child(2) {
+/* the wire keeps a floor: it is the reason the right column exists.
+   Targeted by class (cio-03 task 2 fix), not nth-child(2): cockpit mode
+   drops the book section, which moved the wire from child 2 to child 1
+   and left this rule (and the three below it) pointed at the wrong
+   section. Class-based selectors hold in both modes regardless of how
+   many siblings the wire has. */
+.vgrid .right .wire-panel {
   min-height: 150px;
 }
 
 /* When a window is open the decision IS the screen: the wire gives up most
    of its room, and the panel scrolls inside itself rather than spilling over
-   the footer if a viewport is still too short for it. */
+   the footer if a viewport is still too short for it. Book mode only: the
+   column still has 3 rows (book, wire, decision) here. */
 .vgrid .right.deciding {
   grid-template-rows: auto minmax(0, 0.3fr) minmax(0, 1fr);
 }
 
-.vgrid .right.deciding > section:nth-child(2) {
+/* Cockpit mode's deciding template: only 2 rows (wire, decision) since the
+   book section never renders in CIO mode. Same intent as the book-mode rule
+   above — the wire cedes room, the decision panel takes it — but with one
+   fewer track. Four classes beats both `.vgrid .right.deciding` and
+   `.cockpit .vgrid .right` (three classes each) on specificity, so this
+   wins outright rather than depending on source order. */
+.cockpit .vgrid .right.deciding {
+  grid-template-rows: minmax(0, 0.3fr) minmax(0, 1fr);
+}
+
+.vgrid .right.deciding .wire-panel {
   min-height: 84px;
 }
 
@@ -1155,8 +1171,9 @@ button.commit {
    briefing and the commit button are pinned, and the CARDS scroll between
    them if a viewport is too short. (A sticky footer cannot work here — as
    the last child it already sits at its parent's bottom, so sticky has
-   nothing to stick past.) */
-.vgrid .right > section:nth-child(3) {
+   nothing to stick past.) Targeted by class, not nth-child(3) — see note
+   above the wire's floor rule. */
+.vgrid .right .decision-panel {
   overflow: hidden;
 }
 
