@@ -160,6 +160,39 @@ taken, `stress_1974` stands as declared: a coherent, precedented, materially
 deeper decade than the label-driven worlds it replaces, and not yet one that
 exhausts this institution's liquidity.
 
+## The second declared scenario, measured (2026-08-15): the persistence ruling's empirical limit
+
+`stress_1990` — "The Lost Decade", world `…702` — implements the owner's
+persistence ruling (D-SC-1, P1+P2): a 21-month worst-decile crisis on the
+1973–74 span, a worst-third squeeze on every other quarter, and **no recovery
+segment** on the Japan precedent, with percentiles deliberately unchanged from
+`stress_1974` so the only new severity is the declared shape (a test pins
+this). Declared and committed before measurement, as always. Measured once:
+
+- Depth: median peak-to-trough **−30.1%** over 13 months — statistically
+  indistinguishable from `stress_1974`'s −29.9%. Coherence held (ac1 0.0593
+  vs panel 0.0611). Plausibility: median 3.70 vs panel p95 5.69.
+- Ladder: **0/20 / 0/20 / none ruinous** again. Median final value fell 226 →
+  202 — the decade grinds harder — but every seed still ends well above its
+  start (minimum 132 on 100).
+
+**The finding, recorded untuned:** persistence-by-shape saturates. With
+18-month mean blocks, a 120-month decade contains roughly seven block
+entries, so the severity rule — however much of the decade it covers —
+influences about seven moments while the other ~113 months run unfiltered
+through real history, whose drift is upward. Widening the declared coverage
+from 4 to 40 stressed quarters moved the median decade by ~10% of final
+value and the drawdown by 0.2 points. **The binding dial is block length
+(the coherence dial), not the percentile and not the shape.** The design
+already names this trade (§4.3(b), §10.1) and already prescribes the honest
+way to set it: measure the coherence cost of shorter stress blocks against
+the panel (a generator-only measurement, no portfolio outcomes involved),
+pick the shortest block that keeps coherence acceptable, declare it, and
+only then measure the institution once. That study, and any change to the
+declared block length, is the next owner decision — it is not taken here,
+because taking it after reading this ladder would be the circularity rule 1
+forbids.
+
 ## Limits, stated
 
 - **No mechanism — and therefore no causal narration.** The compiler has no

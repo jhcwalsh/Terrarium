@@ -351,8 +351,9 @@ def test_sample_raises_when_the_world_declares_no_x_stress():
 # --------------------------------------------------------------------------- #
 
 
-def test_the_stress_preset_builds_samples_and_replays(tmp_path):
-    doc = json.loads((PRESETS / "stress_1974.json").read_text(encoding="utf-8"))
+@pytest.mark.parametrize("preset", ["stress_1974.json", "stress_1990.json"])
+def test_the_stress_preset_builds_samples_and_replays(tmp_path, preset):
+    doc = json.loads((PRESETS / preset).read_text(encoding="utf-8"))
     nw = project_numeric(WorldSpec.model_validate(doc))
     assert nw.engine_defaults.generator_id == "bootstrap-stratified"
     assert nw.stress is not None and nw.stress.functional == "all_down"
@@ -360,6 +361,26 @@ def test_the_stress_preset_builds_samples_and_replays(tmp_path):
     a = gen.sample(nw, n_paths=4, seed=197400)
     b = gen.sample(nw, n_paths=4, seed=197400)
     np.testing.assert_array_equal(a.paths, b.paths)
+
+
+def test_the_lost_decade_declares_persistence_not_deeper_percentiles():
+    """The D-SC-1 discipline, pinned: stress_1990's extra severity comes ONLY
+    from the declared SHAPE (a 21-month crisis, no recovery segment, 40/40
+    quarters restricted) - its percentiles are byte-for-byte stress_1974's
+    (10 crisis / 35 squeeze). If a future edit tightens a percentile, this
+    test asks for the precedent."""
+    d74 = json.loads((PRESETS / "stress_1974.json").read_text(encoding="utf-8"))
+    d90 = json.loads((PRESETS / "stress_1990.json").read_text(encoding="utf-8"))
+    p74 = {s["entry_percentile"] for s in d74["extensions"]["x_stress"]["segments"]}
+    segs90 = d90["extensions"]["x_stress"]["segments"]
+    p90 = {s["entry_percentile"] for s in segs90}
+    assert p90 == p74 - {100.0}, "only the unrestricted tail may disappear"
+    assert max(s["to_quarter"] for s in segs90) == 39
+    assert all(s["entry_percentile"] <= 35 for s in segs90), "no recovery segment"
+    crisis = [s for s in segs90 if s["entry_percentile"] == 10]
+    assert len(crisis) == 1
+    months = (crisis[0]["to_quarter"] - crisis[0]["from_quarter"] + 1) * 3
+    assert months == 21, "the crisis length IS the 1973-74 precedent"
 
 
 def test_a_stress_world_without_a_declared_rule_is_refused():

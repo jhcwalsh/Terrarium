@@ -174,6 +174,23 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The Lost Decade and the persistence ruling's limit (stress-02),
+  2026-08-15.** `stress_1990` (world `...702`) implements D-SC-1 (P1+P2):
+  a 21-month worst-decile crisis (the 1973-74 span), a worst-third squeeze
+  on every other quarter, NO recovery segment (Japan 1990-2003), and
+  percentiles byte-identical to stress_1974 - a test pins that the only
+  new severity is the declared shape. Declared at the pre-registration
+  commit, measured once after: depth -30.1% median (vs -29.9%), coherence
+  held (ac1 0.0593 vs panel 0.0611), ladder again 0/20-0/20-none, median
+  final 202 vs 226. FINDING, recorded untuned: persistence-by-shape
+  saturates - ~7 block entries per decade at 18-month mean blocks means
+  the severity rule touches ~7 moments and real history's upward drift
+  runs the other ~113 months. The binding dial is BLOCK LENGTH (the
+  coherence dial, spec S4.3(b)/S10.1), and the spec's own prescription -
+  measure the coherence cost of shorter stress blocks with no portfolio
+  outcome in sight, then declare - is the next owner decision, not taken
+  here.
+
 - **The stress-scenario compiler (stress-01), 2026-08-15.** `ah/gen/stress.py`
   implements `bootstrap-stratified` per the design spec (v0.2): a declared
   scenario — regime shape plus a per-segment severity draw rule
