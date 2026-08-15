@@ -203,6 +203,21 @@ export interface Liquidity {
   coverageAnchor?: Ratio;
   /** P-B. Above this, coverage renders in the alert colour. UNSET until P-B is filled. */
   coverageDanger?: Ratio;
+  /**
+   * unfunded ÷ (cash + every non-private sleeve value) for the active
+   * plane's as-of quarter — the same liquid base as tiers t1+t2. This is
+   * P-B's binding ratio (decision_metrics.py's liquidity_shortfall_probability
+   * docstring: breaching 1.0 means unfunded commitments exceed everything
+   * sellable). The E1 measurement (docs/superpowers/specs/2026-08-15-
+   * e1-overcommitment-measurement.md) found it monotone in the player's
+   * allocation while forced secondaries stayed unreachable — cov-01's
+   * teaching surface, in place of unfundedToNav.
+   */
+  unfundedToLiquid?: Ratio;
+  /** Always 1.0 — decision_metrics.py's binding-ratio breach line (cov-01). */
+  breachLine?: Ratio;
+  /** Running maximum of unfundedToLiquid over every CLOSED quarter so far. */
+  worstUnfundedToLiquid?: Ratio;
   /** How the next 12 months of outflow is met. Should sum to the gross outflow. */
   sourcing?: { label: string; value: Money; colour?: string }[];
   tierFootnote?: string;
@@ -382,6 +397,12 @@ export function validateCioView(v: CioView): string[] {
     const net = f.distributions + f.income - f.calls - f.payout;
     if (!near(net, f.net, 1)) e.push(`liquidity.forecast12m.net is ${f.net}, components imply ${net.toFixed(1)}`);
   }
+  (["unfundedToLiquid", "worstUnfundedToLiquid"] as const).forEach((k) => {
+    const val = v.liquidity[k];
+    if (finite(val) && (val as number) < 0) e.push(`liquidity.${k} must be a non-negative ratio`);
+  });
+  if (v.liquidity.breachLine != null && v.liquidity.breachLine !== 1.0)
+    e.push(`liquidity.breachLine is ${v.liquidity.breachLine}, expected exactly 1.0`);
 
   // private series are aligned and internally consistent
   const pcf = v.privateCashflows;

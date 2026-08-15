@@ -186,6 +186,7 @@
   ]
  },
  "liquidity": {
+  "breachLine": 1.0,
   "coverageAnchor": 0.5,
   "flowFootnote": "Roll-forward at the current market state; the model has no income line, so income is a true zero, not a gap.",
   "forecast12m": {
@@ -235,7 +236,9 @@
     "value": 27.1135
    }
   ],
-  "unfundedToNav": 0.224
+  "unfundedToLiquid": 0.3974,
+  "unfundedToNav": 0.224,
+  "worstUnfundedToLiquid": 0.4404
  },
  "markets": {
   "correlationNote": "current: trailing 12m; baseline: full revealed window; both computed on this world's own months only, excluding the inherited decade.",

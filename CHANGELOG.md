@@ -14,6 +14,32 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The coverage ratio and its breach line land on the CIO teaching surface
+  (cov-01), 2026-08-15.** Owner ruling (spec v0.3 changelog,
+  `docs/superpowers/specs/2026-08-14-stress-scenario-compiler-design.md`),
+  driven by the E1 over-commitment measurement
+  (`docs/superpowers/specs/2026-08-15-e1-overcommitment-measurement.md`):
+  worst coverage (unfunded ÷ liquid) is monotone in the player's allocation
+  (0.10 -> 1.57 across the declared policy range) while forced secondaries
+  stay unreachable, so the coverage ratio and its 1.0 breach line — not
+  `unfundedToNav` — are the teachable signal. `_liquidity()` (`src/ah/
+  cioview.py`) now serves `unfundedToLiquid` (unfunded ÷ (cash + all liquid
+  sleeve values), the same liquid base as tiers t1+t2), `breachLine`
+  (always `COVERAGE_BREACH_LINE = 1.0`, decision_metrics.py's binding-ratio
+  convention), and `worstUnfundedToLiquid` (the running max of that ratio
+  over every closed quarter so far — the E1 ladder's statistic, live).
+  `unfundedToNav`/`coverageAnchor` are unchanged. Both validator twins
+  (`validate_cio_view` in `cioview.py`, `validateCioView` in `app/src/lib/
+  cioView.ts`) check the new fields non-negative and `breachLine` exactly
+  1.0. The dashboard's Liquidity tab (`CioDashboard.tsx`) gained a "Coverage
+  unfunded / liquid" panel: current + running-worst tiles, a bar scale with
+  the 1.0 breach line marked, and a plain-language note. Committed golden
+  fixtures regenerated (`scripts/gen_cio_fixture.py`); the diff is confined
+  to the three new `liquidity` keys. `linkageVersion` was left at
+  `public-0.1` — every prior additive `CioView` change (cio-03's
+  `expiredUndrawn`/`vintages`, cio-04's `preRunLabel`/`worldStartLabel`)
+  went in without a version bump, so this followed the same precedent.
+
 - **The CIO dashboard renders (cio-02), 2026-08-14.** The DN-8 renderer
   converted to typed TSX (`app/src/components/CioDashboard.tsx`) on the
   vitrine palette, mock block deleted; `CioView` adopted as the wire type
