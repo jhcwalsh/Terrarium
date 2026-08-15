@@ -82,10 +82,23 @@ def test_prehistory_market_paths_are_monthly_and_complete():
 
 def test_prehistory_returns_are_not_degenerate():
     """The validator flags an exact zero in a return column as a possible
-    unreached period; a flat pre-history would manufacture those."""
+    unreached period; a flat pre-history would manufacture those. Checked on
+    BOTH planes: the CIO view defaults to REPORTED (cioview.py:203), which is
+    what the validator's exact-zero check will actually see in practice, not
+    just the true plane.
+
+    Scope, stated: this guards the realistic failure mode -- a flat or
+    degenerate pre-history manufacturing exact-zero quarters -- not the
+    validator's literal condition. The validator's own check runs on
+    ``performance.total``, an aggregated/annualised period return; this
+    module computes and exports raw quarterly returns, a different
+    (related but not identical) quantity.
+    """
     p = build_prehistory(771204, 100.0, 98.0)
     assert len({round(r, 6) for r in p.quarterly_returns_true}) > 20
     assert all(r != 0.0 for r in p.quarterly_returns_true)
+    assert len({round(r, 6) for r in p.quarterly_returns_reported}) > 20
+    assert all(r != 0.0 for r in p.quarterly_returns_reported)
 
 
 def test_prehistory_returns_are_scale_invariant():
@@ -96,6 +109,45 @@ def test_prehistory_returns_are_scale_invariant():
     b = build_prehistory(771204, 250.0, 40.0)
     assert a.quarterly_returns_true == b.quarterly_returns_true
     assert a.quarterly_returns_reported == b.quarterly_returns_reported
+
+
+def _boundary_returns(months: tuple[float, ...], n_quarters: int) -> tuple[float, ...]:
+    """Ratios between successive quarter-boundary marks in an EXPORTED
+    (already scaled) monthly NAV series.
+
+    Scale-invariant by construction -- a constant multiplier applied to
+    every level cancels in any ratio of two levels -- so this can compare
+    directly against ``quarterly_returns_{true,reported}`` regardless of
+    which terminal NAVs were used to build the ``PreHistory``.
+    """
+    closes = [months[q * 3 + 2] for q in range(n_quarters)]
+    return tuple(closes[i + 1] / closes[i] - 1.0 for i in range(n_quarters - 1))
+
+
+def test_prehistory_exported_months_reproduce_quarterly_returns():
+    """Pins an identity that is currently true only by accident of
+    ``play.py``'s implementation: ``PlayQuarter.nav_true_months[2]`` and
+    ``PlayQuarter.nav_true`` are the same ``portfolio.nav_true()`` call
+    (src/ah/play.py:699 and :711) -- same for the reported pair. Nothing in
+    ``simulate_play``'s contract guarantees that stays true. If a future
+    change sampled the month-2 mark before the quarter's waterfall ran,
+    Task 3's chart (built from ``nav_*_months``) and its printed return
+    columns (built from ``quarterly_returns_*``) would silently disagree,
+    while ``test_prehistory_returns_are_scale_invariant`` -- which never
+    reads ``nav_*_months`` at all -- would stay green.
+
+    Quarter 0 is excluded: its return needs a pre-quarter-0 opening level,
+    which is not part of the exported months array (by design -- the array
+    starts at month 0 of the pre-history, not before it).
+    """
+    p = build_prehistory(771204, 100.0, 98.0)
+    n = PREHISTORY_QUARTERS
+    boundary_true = _boundary_returns(p.nav_true_months, n)
+    boundary_reported = _boundary_returns(p.nav_reported_months, n)
+    for got, want in zip(boundary_true, p.quarterly_returns_true[1:], strict=True):
+        assert abs(got - want) < 1e-12
+    for got, want in zip(boundary_reported, p.quarterly_returns_reported[1:], strict=True):
+        assert abs(got - want) < 1e-12
 
 
 def test_prehistory_rejects_degenerate_terminal_values():
