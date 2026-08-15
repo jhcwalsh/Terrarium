@@ -2,13 +2,15 @@
 
 from __future__ import annotations
 
+import sqlite3
+
 import pytest
 from typer.testing import CliRunner
 
 from ah.cli import app
 from ah.core.institution import decision_months
 from ah.store import sessions as ss
-from ah.store.db import connect
+from ah.store.db import connect, migrate
 
 RUNNER = CliRunner()
 
@@ -217,6 +219,57 @@ class TestRationale:
         )
         assert after["decisions"][str(first)] == "hold"
         assert "rationale" not in str(after["decisions"])
+
+    def test_a_pre_change_database_upgrades_in_place(self):
+        """The retrofit-r1 precedent (tests/test_retrofit_r1.py:127-152),
+        applied to the sessions table: simulate a database created before
+        narr-02 -- a ``sessions`` table with no ``rationale_schema_version``
+        column, one legacy row. ``migrate()`` adds the column; the old row
+        reads back stampless (NULL) and otherwise unchanged. No version
+        break, no rewrite of existing bytes."""
+        conn = sqlite3.connect(":memory:")
+        conn.row_factory = sqlite3.Row
+        conn.executescript(
+            """
+            CREATE TABLE worlds (world_id TEXT PRIMARY KEY, spec_version TEXT NOT NULL,
+                status TEXT NOT NULL, json TEXT NOT NULL, created_at TEXT NOT NULL);
+            CREATE TABLE run_records (run_id TEXT PRIMARY KEY, world_id TEXT NOT NULL,
+                resolved_engine TEXT NOT NULL, seed INTEGER NOT NULL,
+                n_paths INTEGER NOT NULL, overrides TEXT NOT NULL,
+                outputs_digest TEXT NOT NULL, summary_stats TEXT NOT NULL,
+                created_at TEXT NOT NULL);
+            CREATE TABLE sessions (
+                session_id      TEXT PRIMARY KEY,
+                run_id          TEXT NOT NULL REFERENCES run_records(run_id),
+                world_id        TEXT NOT NULL REFERENCES worlds(world_id),
+                months          INTEGER NOT NULL,
+                revealed_months INTEGER NOT NULL DEFAULT 0,
+                basis           TEXT NOT NULL,
+                ranked          INTEGER NOT NULL DEFAULT 0,
+                participant     TEXT,
+                decisions       TEXT NOT NULL DEFAULT '{}',
+                window_log      TEXT NOT NULL DEFAULT '[]',
+                status          TEXT NOT NULL DEFAULT 'active',
+                created_at      TEXT NOT NULL,
+                updated_at      TEXT NOT NULL
+            );
+            INSERT INTO worlds VALUES ('w0', '1.0.0', 'active', '{}', 't0');
+            INSERT INTO run_records VALUES ('legacy-run', 'w0', '{}', 1, 2, '{}',
+                'sha256:legacy', '{}', 't0');
+            INSERT INTO sessions VALUES ('legacy-session', 'legacy-run', 'w0', 120, 0,
+                'reported', 0, NULL, '{}', '[]', 'active', 't0', 't0');
+            """
+        )
+        migrate(conn)
+        migrate(conn)  # idempotent
+        legacy = ss.get_session(conn, "legacy-session")
+        assert legacy["rationale_schema_version"] is None
+        assert legacy["basis"] == "reported" and legacy["status"] == "active"
+        assert legacy["decisions"] == {} and legacy["window_log"] == []
+        # the next session created against this same (now migrated) connection
+        # carries the stamp -- the migration only spares rows already written
+        new_doc = ss.create_session(conn, run_id="legacy-run", months=120)
+        assert new_doc["rationale_schema_version"] == "1.0"
 
 
 def test_full_play_completes(stored_run):
