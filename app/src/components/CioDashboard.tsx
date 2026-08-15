@@ -1166,8 +1166,13 @@ export default function CioDashboard({
 
   return (
     <ViewCtx.Provider value={view}>
-      <div className={`ciodash${chrome === "embedded" ? " ciodash-embedded" : ""}`} style={{ padding: "18px 20px 40px", color: C.ice, font: `14px ${F.body}` }}>
-        <div style={{ maxWidth: 1220, margin: "0 auto" }}>
+      {/* full chrome's outer padding and the inner 1220px document width are
+          both inline styles, which no stylesheet selector (short of
+          !important) can override for an embedded host — see cio-03 task 2
+          report. Embedded (the cockpit) computes its own values here instead
+          of fighting the inline style from outside. */}
+      <div className={`ciodash${chrome === "embedded" ? " ciodash-embedded" : ""}`} style={{ padding: chrome === "embedded" ? "12px 16px 20px" : "18px 20px 40px", color: C.ice, font: `14px ${F.body}` }}>
+        <div style={{ maxWidth: chrome === "embedded" ? undefined : 1220, margin: "0 auto" }}>
           <header style={{ display: "flex", alignItems: "flex-end", gap: 20, flexWrap: "wrap", paddingBottom: 12 }}>
             <div>
               <div style={{ font: `10px ${F.body}`, letterSpacing: "0.22em", color: C.faint }}>TERRARIUM · CIO DASHBOARD</div>

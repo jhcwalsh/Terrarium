@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { cioFetchKey } from "./Play";
+import { cioFetchKey, cockpitClass } from "./Play";
 
 describe("cio view fetch policy", () => {
   it("refetches when the reveal pointer moves", () => {
@@ -29,5 +29,16 @@ describe("cio view fetch policy", () => {
   // dashboard must refetch on decisionCount alone, same pointer and plane.
   it("refetches when a decision lands, same pointer and plane", () => {
     expect(cioFetchKey("s", 12, "reported", 1)).not.toBe(cioFetchKey("s", 12, "reported", 2));
+  });
+});
+
+describe("cockpit layout mode", () => {
+  it("marks the vitrine as a cockpit only in cio mode", () => {
+    expect(cockpitClass("cio", "reported")).toContain("cockpit");
+    expect(cockpitClass("book", "reported")).not.toContain("cockpit");
+  });
+  it("keeps the plane class in both modes", () => {
+    expect(cockpitClass("cio", "true")).toContain("plane-true");
+    expect(cockpitClass("book", "true")).toContain("plane-true");
   });
 });

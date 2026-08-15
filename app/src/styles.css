@@ -478,6 +478,30 @@ button.t {
   border-bottom: 0;
 }
 
+/* ---- cockpit mode (cio-03) ------------------------------------------
+   The dashboard is a tall document; the vitrine is a fixed one-screen
+   frame. Only the dashboard pane scrolls, so the header, ticker, rail,
+   wire and decision panel never move (the one-screen rule at the top of
+   this file). Nothing here applies in book mode.
+
+   Note: the dashboard's outer padding and its inner 1220px document
+   width are both set via the style PROP (inline styles), so no selector
+   here — regardless of specificity, short of !important — can override
+   them for the embedded host. CioDashboard computes those two values
+   itself when chrome="embedded" instead (see components/CioDashboard.tsx);
+   there is deliberately no CSS override for them in this file. */
+.cockpit .vgrid .left > .cockpit-pane {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+/* two children in cockpit mode: wire, then decision */
+.cockpit .vgrid .right {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
 .eyebrow {
   font-family: "IBM Plex Mono", monospace;
   font-size: 12.5px;

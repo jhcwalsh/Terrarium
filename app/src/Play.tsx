@@ -79,6 +79,13 @@ export function cioFetchKey(
   return `${sid}:${revealedMonths}:${plane}:${decisionCount}`;
 }
 
+/** The vitrine's class list. CIO mode is a distinct layout mode, not a
+ * swapped panel: the dashboard pane scrolls inside itself so the header,
+ * ticker, rail and decision panel stay put (styles.css one-screen rule). */
+export function cockpitClass(viewMode: "book" | "cio", plane: Plane): string {
+  return `vitrine plane-${plane}${viewMode === "cio" ? " cockpit" : ""}`;
+}
+
 interface PlayProps {
   bundle: WorldBundle;
   config?: PlayConfig;
@@ -319,7 +326,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const transportLocked = busy || atWindow !== null || revealed >= months;
 
   return (
-    <main className={`vitrine plane-${plane}`}>
+    <main className={cockpitClass(viewMode, plane)}>
       <header className="topbar">
         <div>
           <div className="brand">Terrarium</div>
@@ -451,13 +458,19 @@ export function Play({ bundle, config, onExit }: PlayProps) {
       <div className="vgrid">
         <div className="left">
           {viewMode === "cio" ? (
-            cioError ? (
-              <div className="empty">{cioError}</div>
-            ) : cioView ? (
-              <CioDashboard view={cioView} onPlaneChange={setPlane} />
-            ) : (
-              <div className="empty">Loading CIO view...</div>
-            )
+            <div className="cockpit-pane">
+              {cioError ? (
+                <div className="empty">{cioError}</div>
+              ) : cioView ? (
+                <CioDashboard
+                  view={cioView}
+                  onPlaneChange={setPlane}
+                  chrome="embedded"
+                />
+              ) : (
+                <div className="empty">Loading the CIO view...</div>
+              )}
+            </div>
           ) : (
           <section>
             <div className="eyebrow">
@@ -527,13 +540,15 @@ export function Play({ bundle, config, onExit }: PlayProps) {
         </div>
 
         <div className={`right${atWindow !== null ? " deciding" : ""}`}>
-          <section>
-            <div className="eyebrow">
-              <span>The book</span>
-              <span>cash, coverage, policy band</span>
-            </div>
-            <Book session={session} />
-          </section>
+          {viewMode === "book" && (
+            <section>
+              <div className="eyebrow">
+                <span>The book</span>
+                <span>cash, coverage, policy band</span>
+              </div>
+              <Book session={session} />
+            </section>
+          )}
 
           <section>
             <div className="eyebrow">
