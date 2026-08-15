@@ -16,13 +16,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Book } from "./components/Book";
 import CioDashboard from "./components/CioDashboard";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import { Leaderboard } from "./components/Leaderboard";
-import { PrivateMarkets } from "./components/PrivateMarkets";
 import Provenance from "./components/Provenance";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
@@ -505,47 +503,23 @@ export function Play({ bundle, config, onExit }: PlayProps) {
                   />
                 );
               })}
-              {bundle.twin_ledger ? (
-                <div className="ninth">
-                  <div className="eyebrow">
-                    <span>Private markets</span>
-                    <span>quarterly pacing</span>
-                  </div>
-                  <PrivateMarkets
-                    ledger={bundle.twin_ledger}
-                    session={session}
-                    revealedMonths={revealed}
-                  />
-                </div>
-              ) : (
-                <p className="fan-key stacked">
-                  <span className="key-swatch key-revealed" /> this world, as
-                  revealed
-                  <br />
-                  <span className="key-swatch key-inner" /> middle half of{" "}
-                  {bundle.meta.n_paths} sibling runs
-                  <br />
-                  <span className="key-swatch key-outer" /> 5–95% of siblings
-                  <br />
-                  <span className="key-swatch key-median" /> median sibling
-                </p>
-              )}
+              <p className="fan-key stacked">
+                <span className="key-swatch key-revealed" /> this world, as
+                revealed
+                <br />
+                <span className="key-swatch key-inner" /> middle half of{" "}
+                {bundle.meta.n_paths} sibling runs
+                <br />
+                <span className="key-swatch key-outer" /> 5–95% of siblings
+                <br />
+                <span className="key-swatch key-median" /> median sibling
+              </p>
             </div>
           </section>
           )}
         </div>
 
         <div className={`right${atWindow !== null ? " deciding" : ""}`}>
-          {viewMode === "book" && (
-            <section>
-              <div className="eyebrow">
-                <span>The book</span>
-                <span>cash, coverage, policy band</span>
-              </div>
-              <Book session={session} />
-            </section>
-          )}
-
           <section className="wire-panel">
             <div className="eyebrow">
               <span>The wire</span>
