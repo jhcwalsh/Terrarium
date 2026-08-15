@@ -54,11 +54,24 @@ core: `app/src/components/DecisionWindow.tsx` (`f04de07`, su-app-02, merge
 `5c9932c`) makes hold course a radio selection with the same weight as the
 other three actions, and the commit button is dead until something is chosen —
 there is no click-through default, pinned by test. Coverage **on both bases**
-is on screen at the moment of decision: `app/src/components/Book.tsx`
-(`8141ab2`) renders true coverage in the rail and states reported against true
-in the note. The Book, the ledger and the decision window co-render on one
-screen (`app/src/Play.tsx`), so "at the moment of decision" is satisfied for
-what is shown.
+was on screen at the moment of decision: the retired `Book` panel (`8141ab2`)
+rendered true coverage in the rail and stated reported against true in the
+note. The Book, the ledger and the decision window co-rendered on one
+screen (`app/src/Play.tsx`), so "at the moment of decision" was satisfied for
+what was shown.
+
+**Retired 2026-08-15 (cio-03, `d077ba3`).** `Book` and `PrivateMarkets` were
+removed when the CIO dashboard (`app/src/components/CioDashboard.tsx`) became
+the play surface; their content did not simply move, it split. Coverage now
+renders in the dashboard's Liquidity tab — the unfunded-÷-NAV tile
+(`liquidity.unfundedToNav`) against a stated coverage anchor
+(`liquidity.coverageAnchor`) — and in the allocation bands on the Plan tab.
+**This is not equivalent to what it replaces**: the dashboard is
+plane-sensitive, showing one basis (true or reported) at a time under the
+plane control, where the retired Book printed both bases side by side in the
+same rail. The both-bases-at-once presentation did not survive the cutover;
+a follow-up is logged for it, and this register should not be read as
+claiming parity on that point.
 
 **Not landed.**
 - **The vintage stack by age.** `PrivateMarkets.tsx` shows the last revealed
@@ -87,13 +100,16 @@ secondary discount. The wire itself ships and reveals in-timeline:
 `Feed.tsx` labels them `FORCED SALE` (`1bca4bc`, merge `1194e2e`).
 
 **Not landed.** Three of the five classes are written but nothing renders
-them. Capital calls and distributions appear as ledger rows in
-`PrivateMarkets.tsx`/`Book.tsx`, not as wire events in the cash-account voice
+them. Capital calls and distributions appeared as ledger rows in the retired
+`PrivateMarkets`/`Book` panels, not as wire events in the cash-account voice
 the row specifies; coverage-band crossing and secondary discount have
 templates and no call site. `build_tier1_feed` emits crisis digests, release
 pages, newspapers, central-bank statements and quarterly statements only —
 the cashflow classes are session-dependent and were never wired the way the
-forced sale was.
+forced sale was. Since the 2026-08-15 cio-03 retirement (`d077ba3`, see
+§E1), calls and distributions render as ledger rows in the CIO dashboard's
+Private tab instead — still ledger rows, not wire events; this gap is
+unchanged by the cutover.
 
 ### §E3 — CLOSED 2026-08-12 (sp-05), deferral recorded
 
