@@ -1957,3 +1957,76 @@ amendments:
     planned-arrival pattern). superseded_lock_digest is filled at the Task-4
     seal event in the same commit that reseals G3.
   type: protocol_change
+- amendment_id: AM-2026-08-15-001
+  date: '2026-08-15'
+  payload:
+    artifact: mappings/sleeve-mappings-v1.2.yaml (NOT YET PRODUCED)
+    declares:
+      C1_form: b_infl * (trailing K=8q annualised CPI - c_anchor); c_anchor = mean
+        over train+val, written to the artifact
+      C1_values:
+        label: chosen
+        pm_infra: 0.6
+        pm_re_value_add: 0.3
+      C2_acceptance: cumulative DL loss 2008Q1-2010Q4 within +/-30% of CDLI; a miss
+        is a functional-form write-up, never tuned away
+      C2_alpha_rebase: alpha_adj = alpha_v1.1 + mean(loss_q over train+val)
+      C2_form: theta_sleeve * max(ig_spread_{t-4} - s_bar, 0); s_bar = median ig_spread
+        over train+val
+      C2_theta_rule: theta_DL matches mean(loss_q) over train+val to the CDLI mean
+        annualised net realised-loss rate / 4; mezz = 1.5x DL, distressed = 0.5x DL
+      r2_train_val: restored to every PM row via the v1.1 reproduction check
+      ruling_A: governance/decision-register.md, SM-RULING-A
+    design_note: docs/superpowers/specs/2026-08-15-inflation-passthrough-credit-loss-design.md
+    estimator: scripts/estimate_sleeve_mappings_v1_2.py
+    out_of_scope:
+    - HF sleeves (verbatim)
+    - smoothing kernel
+    - decision_alpha_version
+    - hy_spread (sealed missing-factor on this vintage)
+    - escalator caps/floors (documented asymmetry, deferred)
+    seal_impact: none; main/G3/G5 lock digests unchanged. v1.2 estimator + artifact
+      join G3 seal_scope together at the run/adoption event (deviation recorded in
+      rationale).
+    sensitivities_recorded_not_adopted:
+    - K=4
+    - K=12
+    - theta x [0.5, 2]
+    supersedes: nothing; sleeve-mappings-v1.1.yaml remains sealed and unedited
+  post_hoc: true
+  rationale: 'Two authored structural terms added to the sleeve-mapping artifact:
+    C1, an inflation pass-through on the real-asset sleeves; C2, a convex credit loss
+    term on the three credit sleeves. TRIGGER, disclosed: a design-review finding
+    -- the mapping had no slow inflation channel at all, and the linear credit payoff
+    understates stressed-state losses. post_hoc TRUE: v1.1 results were seen before
+    this amendment.
+
+    WHAT KEEPS IT HONEST. The forms, lags, anchors, adoption rules and theta match
+    rule are declared in the design note and in THIS entry before the v1.2 estimator
+    ever runs. Both terms are demeaned/re-based by construction (C1 applies to trail
+    - c_anchor; C2 re-bases alpha by mean(loss_q)), so adoption changes each sleeve''s
+    state-dependence and leaves its unconditional mean where v1.1 put it -- a term
+    that moved the mean would be indistinguishable from tuning toward the Sharpe ceiling.
+    Neither term is measurable on the composites and neither is labelled ''measured'':
+    C1''s only identifying inflation episode (2021-23) is past the sealed train+validation
+    boundary, and C2''s asymmetry is a tail property with two spread episodes in-sample.
+    Both are labelled ''chosen'' with named upgrade paths.
+
+    MEASURED PLANE UNTOUCHED. v1.1''s loadings are carried verbatim; the v1.2 estimator
+    REFITS the v1.1 regression solely to recover residuals for the restored r2_train_val
+    field, and refuses (tol 1e-3) if the reproduced betas do not match the sealed
+    artifact -- so the R2 restoration doubles as a reproducibility check on v1.1.
+
+    SEAL. Nothing hashed in pre-registration.lock, -g3.lock or -g5.lock is edited
+    by this amendment; all three digests are unchanged. DEVIATION from the AM-2026-08-12-001
+    planned-arrival pattern, stated with its reason: that entry had the v1.1 estimator
+    and artifact join the G3 seal scope in the commit that created them. Here the
+    estimator exists but the artifact cannot -- sleeve-mappings-v1.2.yaml is blocked
+    on two external exports (Cliffwater CDLI, NCREIF NPI) that are not in hand. Sealing
+    half the pair would split one seal event across two commits and hash an estimator
+    whose output nothing can yet check. Both therefore join the G3 seal scope together,
+    at the run/adoption event, and this entry is the record of that choice.
+
+    RULING A, ratified by the owner on 2026-08-15, is entered in governance/decision-register.md
+    as dated precedent -- it does not live only in the design note.'
+  type: protocol_change
