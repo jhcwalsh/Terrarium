@@ -27,6 +27,29 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Fixed
 
+- **ER-6's lapse and the vintage ladder are reachable again (cio-03b),
+  2026-08-15.** Task 3's cutover retired `PrivateMarkets.tsx` and, with it,
+  the only two client surfaces reading `expired_undrawn` and `vintage_nav` —
+  silently reversing audit F2 ("ER-6's lapse is visible on every surface")
+  even though the server still computed and shipped both. Added task, filed
+  from the Task 3 review. `PlayQuarter.private_expired: dict[str, float]`
+  is a pure per-asset read of `expired_undrawn`, mirroring `private_calls`/
+  `private_distributions` exactly (`tests/test_cioview.py::
+  test_per_asset_expired_sums_to_the_quarter_total`; the golden digest and
+  `test_play_linkage.py` pass byte-for-byte untouched — nothing scored
+  moved). `_private_cashflows` gained `expiredUndrawn` per quarter (aggregate
+  equals the sum of the class rows by construction, checked by
+  `validate_cio_view`/`validateCioView`) and `vintages`: the as-of quarter's
+  cohort NAV stack, oldest first — ordered by parsing each cohort id's
+  seed/commitment offset (`_vintage_sort_key`), never by inventing a
+  calendar year. **`navReported` per cohort is not tracked anywhere in the
+  engine and is deliberately NOT emitted** — the footnote says so instead of
+  fabricating a plausible number, which is the whole reason this task exists.
+  `CioDashboard.tsx`'s Private tab renders both: a "Lapsed to date" tile and
+  table column (zero as a muted dash, a real lapse in the alert colour) and
+  a small horizontal "Vintage ladder" panel — both degrade cleanly when a
+  payload omits them. `PrivateMarkets.tsx` stays retired.
+
 - **`linkage_bite` computes again: the terminal lump is netted by amount, not
   by index (ER-12 follow-up), 2026-08-14.** The console's only linkage
   diagnostic dropped any trailing four-quarter window overlapping a cohort

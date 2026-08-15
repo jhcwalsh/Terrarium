@@ -29,6 +29,7 @@ import type {
   AssetClass,
   PrivateQuarter,
   MarketSeries,
+  VintageRung,
 } from "../lib/cioView";
 
 /* ---------------------------------------------------------------- *
@@ -881,6 +882,64 @@ function RatioChart({
   );
 }
 
+/** ER-6's terminal lapse (undrawn commitment cancelled, never called): a
+ *  real value in the alert colour, a zero as a muted dash — never a bare
+ *  "$0m" that reads as just another figure in the row. */
+function lapseCell(v: number | null | undefined, u: string) {
+  if (!isNum(v) || v <= 0) return <span style={{ color: C.faint }}>{NA}</span>;
+  return <span style={{ color: C.warn }}>{money(v, u)}</span>;
+}
+
+/** The programme's cohort NAV stack at the as-of quarter, oldest vintage
+ *  first — the successor to the retired PrivateMarkets.ladderSummary
+ *  (cio-03b). Context, not a headline: kept small and unlabelled per bar,
+ *  with the id/NAV in a title and a class-level legend below. */
+function VintageLadder({
+  vintages,
+  classes,
+  unit,
+}: {
+  vintages: VintageRung[];
+  classes: { id: string; label: string }[];
+  unit: string;
+}) {
+  const total = vintages.reduce((s, v) => s + v.navTrue, 0);
+  const colourOf = (assetId: string) => {
+    const i = classes.findIndex((c) => c.id === assetId);
+    return FALLBACK[(i < 0 ? 0 : i) % FALLBACK.length];
+  };
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          height: 14,
+          width: "100%",
+          borderRadius: 2,
+          overflow: "hidden",
+          border: `1px solid ${C.rule}`,
+        }}
+      >
+        {vintages.map((v) => {
+          const asset = v.id.split("-")[0];
+          const w = total > 0 ? Math.max(0.4, (v.navTrue / total) * 100) : 100 / vintages.length;
+          return (
+            <div
+              key={v.id}
+              className="vintage-rung"
+              title={`${v.label}: ${money(v.navTrue, unit)}`}
+              style={{ width: `${w}%`, background: colourOf(asset), opacity: 0.78 }}
+            />
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 6 }}>
+        <Legend items={classes.map((c, i) => ({ label: c.label, c: FALLBACK[i % FALLBACK.length] }))} />
+      </div>
+    </div>
+  );
+}
+
 function PrivateTab() {
   const { privateCashflows: pcf, plan, liquidity, meta } = useView();
   const [sel, setSel] = useState<string>("aggregate");
@@ -894,6 +953,10 @@ function PrivateTab() {
   const ltm = rows.slice(Math.max(0, H - 4), H);
   const fwd = rows.slice(H, H + 4);
   const cur = rows[H - 1];
+  // ER-6's terminal lapse: undrawn commitment cancelled at the end of a
+  // cohort's life. Real but rare — an LTM window mostly reads zero, so this
+  // sums the FULL realised history, not just the trailing four quarters.
+  const lapsedToDate = rows.slice(0, H).reduce((s, r) => s + (r.expiredUndrawn || 0), 0);
   const anchor = liquidity && liquidity.coverageAnchor;
   const danger = liquidity && liquidity.coverageDanger;
 
@@ -923,6 +986,9 @@ function PrivateTab() {
         <Tile label="Calls ÷ NAV" value={pct(isNum(cur.callRateNav) ? cur.callRateNav * 100 : null)} sub="quarterly" />
         <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
           sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
+        <Tile label="Lapsed to date" value={lapsedToDate > 0 ? money(lapsedToDate, u) : NA}
+          tone={lapsedToDate > 0 ? C.warn : undefined}
+          sub="ER-6: undrawn commitment released, never called" />
       </div>
 
       <Panel title="Capital calls, distributions and net"
@@ -948,7 +1014,7 @@ function PrivateTab() {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 780 }}>
             <thead>
               <tr>
-                {["Asset class", "NAV", "Unfunded", "Unf ÷ NAV", "Calls LTM", "Dists LTM", "Net LTM", "Call rate", "Net next 4q"].map((h, i) => (
+                {["Asset class", "NAV", "Unfunded", "Unf ÷ NAV", "Calls LTM", "Dists LTM", "Net LTM", "Call rate", "Lapsed to date", "Net next 4q"].map((h, i) => (
                   <th key={h} style={{ font: `10px ${F.body}`, letterSpacing: "0.1em", color: C.faint, textTransform: "uppercase", padding: "0 8px 7px", textAlign: i ? "right" : "left" }}>{h}</th>
                 ))}
               </tr>
@@ -958,6 +1024,7 @@ function PrivateTab() {
                 const rs = pcf.series[cl.id]; if (!rs) return null;
                 const h = rs.slice(Math.max(0, H - 4), H), fw = rs.slice(H, H + 4), c = rs[H - 1];
                 const s = (a: PrivateQuarter[], k: "calls" | "distributions" | "net") => a.reduce((x, r) => x + (r[k] || 0), 0);
+                const lapsed = rs.slice(0, H).reduce((x, r) => x + (r.expiredUndrawn || 0), 0);
                 const agg = cl.id === "aggregate";
                 const td: React.CSSProperties = { font: `13px ${F.mono}`, color: C.ice, padding: "6px 8px", textAlign: "right" };
                 return (
@@ -970,6 +1037,7 @@ function PrivateTab() {
                     <td style={td}>{money(s(h, "distributions"), u)}</td>
                     <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{money(s(h, "net"), u)}</td>
                     <td style={{ ...td, color: C.mist }}>{pct(isNum(c.callRateUnfunded) ? c.callRateUnfunded * 100 : null)}</td>
+                    <td style={td}>{lapseCell(lapsed, u)}</td>
                     <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? money(s(fw, "net"), u) : NA}</td>
                   </tr>
                 );
@@ -979,6 +1047,12 @@ function PrivateTab() {
         </div>
         {pcf.footnote && <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 8 }}>{pcf.footnote}</div>}
       </Panel>
+
+      {pcf.vintages && pcf.vintages.length > 0 && (
+        <Panel title="Vintage ladder" note="as-of quarter · true NAV · oldest first" style={{ marginTop: 10 }}>
+          <VintageLadder vintages={pcf.vintages} classes={pcf.classes} unit={u} />
+        </Panel>
+      )}
     </Fragment>
   );
 }

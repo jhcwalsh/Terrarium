@@ -31,6 +31,13 @@ def test_per_asset_private_flows_sum_to_totals():
         assert set(q.private_calls) == set(PRIVATE_ASSETS)
 
 
+def test_per_asset_expired_sums_to_the_quarter_total():
+    result = simulate_play(_paths(), None)
+    for q in result.quarters:
+        assert abs(sum(q.private_expired.values()) - q.expired_undrawn) < 1e-9
+        assert set(q.private_expired) == set(PRIVATE_ASSETS)
+
+
 def test_per_asset_values_close_against_the_book():
     result = simulate_play(_paths(), None)
     for q in result.quarters:
@@ -72,6 +79,7 @@ def _pq(label: str, forecast: bool) -> dict[str, Any]:
         "callRateUnfunded": 0.0667,
         "callRateNav": 0.0333,
         "coverage": 0.459,
+        "expiredUndrawn": 0.0,
     }
 
 
@@ -161,6 +169,12 @@ def test_validator_catches_forecast_flag_mismatch():
     assert any("forecast flag" in e for e in validate_cio_view(v))
 
 
+def test_validator_catches_expired_undrawn_aggregate_mismatch():
+    v = _minimal_view()
+    v["privateCashflows"]["series"]["aggregate"][0]["expiredUndrawn"] = 9.0
+    assert any("expiredUndrawn" in e for e in validate_cio_view(v))
+
+
 def test_validator_catches_net_identity_break():
     v = _minimal_view()
     v["liquidity"]["forecast12m"]["net"] = 5.0
@@ -245,9 +259,50 @@ def test_aggregate_private_series_is_the_sum_of_classes():
     pcf = v["privateCashflows"]
     ids = [c["id"] for c in pcf["classes"]]
     for i, agg in enumerate(pcf["series"]["aggregate"]):
-        for field_name in ("calls", "distributions", "navClose", "unfundedClose"):
+        for field_name in ("calls", "distributions", "navClose", "unfundedClose", "expiredUndrawn"):
             s = sum(pcf["series"][cid][i][field_name] for cid in ids)
             assert abs(s - agg[field_name]) < 0.51, (i, field_name)
+
+
+def test_expired_undrawn_is_a_positive_magnitude_present_on_every_row():
+    v = _view()
+    pcf = v["privateCashflows"]
+    for rows in pcf["series"].values():
+        for r in rows:
+            assert r["expiredUndrawn"] >= 0.0
+
+
+def test_vintage_ladder_is_nonempty_and_ordered_oldest_first():
+    v = _view()
+    vintages = v["privateCashflows"]["vintages"]
+    assert vintages
+
+    def chrono_key(cohort_id: str) -> int:
+        # asset-sK is the seeded ladder: K=0 is the newest rung, larger K
+        # is older. asset-vY is a commitment made during play: larger Y is
+        # newer. Both encode an offset from the same base vintage year, so
+        # -K and +Y are directly comparable across assets.
+        _, tag = cohort_id.rsplit("-", 1)
+        n = int(tag[1:])
+        return -n if tag[0] == "s" else n
+
+    keys = [chrono_key(x["id"]) for x in vintages]
+    assert keys == sorted(keys)
+    for x in vintages:
+        assert x["navTrue"] >= 0.0
+        assert x["label"]
+        # honesty: reported NAV per cohort is not tracked by the engine, so
+        # it must not appear as a fabricated figure.
+        assert "navReported" not in x
+
+
+def test_vintage_ladder_ids_are_the_as_of_quarters_cohorts():
+    v = _view()
+    result = simulate_play(_paths(), {})
+    n_q = v["meta"]["asOfMonth"] // 3 + 1
+    expected = set(result.quarters[n_q - 1].vintage_nav)
+    got = {x["id"] for x in v["privateCashflows"]["vintages"]}
+    assert got == expected
 
 
 def test_forecast12m_net_identity_and_signs():

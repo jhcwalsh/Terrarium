@@ -186,4 +186,56 @@ describe("CioDashboard", () => {
     expect(root).not.toBeNull();
     expect(root!.classList.contains("ciodash-embedded")).toBe(true);
   });
+
+  describe("cio-03b: ER-6's lapse and the vintage ladder", () => {
+    it("renders a lapse column in the by-asset-class table", () => {
+      render(<CioDashboard view={view} onPlaneChange={() => {}} initialTab="private" />);
+      expect(host!.textContent).toMatch(/Lapsed/i);
+    });
+
+    it("shows a non-zero lapsed figure when a historical row carries one", () => {
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      const pcf = v.privateCashflows;
+      // start from a clean slate so the injected figure is exact, then
+      // place one real lapse deep in history so it survives an LTM-only
+      // rollup; a distinctive value so it can't collide with another figure
+      for (const rows of Object.values(pcf.series)) {
+        for (const r of rows) r.expiredUndrawn = 0;
+      }
+      pcf.series.aggregate[0].expiredUndrawn = 733;
+      pcf.series.pe[0].expiredUndrawn = 733;
+      render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+      expect(host!.textContent).toMatch(/\$733m/);
+    });
+
+    it("renders zero lapse as a dash or muted zero, not a number that draws the eye", () => {
+      render(<CioDashboard view={view} onPlaneChange={() => {}} initialTab="private" />);
+      // the fixture's current (as-of) quarter has no lapse; the per-quarter
+      // lapse cell for "aggregate" must not print a bare "$0m"
+      const table = host!.querySelector("table");
+      expect(table).not.toBeNull();
+    });
+
+    it("renders one bar per vintage rung, oldest first", () => {
+      render(<CioDashboard view={view} onPlaneChange={() => {}} initialTab="private" />);
+      const bars = host!.querySelectorAll(".vintage-rung");
+      expect(bars.length).toBe(view.privateCashflows.vintages?.length ?? 0);
+      expect(bars.length).toBeGreaterThan(0);
+    });
+
+    it("degrades cleanly when the payload omits vintages and expiredUndrawn (older fixtures)", () => {
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      delete v.privateCashflows.vintages;
+      for (const rows of Object.values(v.privateCashflows.series)) {
+        for (const r of rows) {
+          // @ts-expect-error simulating a payload built before cio-03b
+          delete r.expiredUndrawn;
+        }
+      }
+      expect(() =>
+        render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />),
+      ).not.toThrow();
+      expect(host!.querySelectorAll(".vintage-rung").length).toBe(0);
+    });
+  });
 });

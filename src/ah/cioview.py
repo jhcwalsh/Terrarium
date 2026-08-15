@@ -365,6 +365,7 @@ def _private_cashflows(
         )
         calls = sum(q.private_calls[a] for a in asset_ids)
         dists = sum(q.private_distributions[a] for a in asset_ids)
+        expired = sum(q.private_expired[a] for a in asset_ids)
         nav_open, nav_close = sum(prev_nav.values()), sum(getattr(q, nav_key)[a] for a in asset_ids)
         unf_open, unf_close = sum(prev_unf.values()), sum(q.private_unfunded[a] for a in asset_ids)
         return {
@@ -380,6 +381,7 @@ def _private_cashflows(
             "callRateUnfunded": round(calls / unf_open, 4) if unf_open > 0 else None,
             "callRateNav": round(calls / nav_open, 4) if nav_open > 0 else None,
             "coverage": round(unf_close / nav_close, 4) if nav_close > 0 else None,
+            "expiredUndrawn": round(expired, 4),
         }
 
     series = {"aggregate": [row(list(PRIVATE_ASSETS), i) for i in range(total_q)]}
@@ -390,12 +392,58 @@ def _private_cashflows(
         "classes": [{"id": a, "label": CLASS_LABEL[a]} for a in PRIVATE_ASSETS],
         "aggregateLabel": "All private sleeves",
         "series": series,
+        "vintages": _vintage_ladder(active.quarters[n_q - 1]),
         "footnote": (
             "Closed-end cohorts only; the model holds no open-end or evergreen "
             "vehicles in this book (DN-8 O-8). Forecast rows are a mechanical "
-            "roll-forward at the current market state, not a projection."
+            "roll-forward at the current market state, not a projection. "
+            "expiredUndrawn is undrawn commitment CANCELLED at the end of a "
+            "cohort's contractual life (ER-6) — it leaves the unfunded balance "
+            "without ever being called, so it is never a call the player pays. "
+            "The vintage ladder is snapshotted at the as-of quarter and carries "
+            "true NAV only: a reported (appraisal-smoothed) NAV per cohort is "
+            "not tracked by the engine, so it is omitted rather than invented."
         ),
     }
+
+
+def _vintage_sort_key(cohort_id: str) -> tuple[int, str]:
+    """Oldest-first ordering for a cohort id, without inventing a calendar year.
+
+    ``{asset}-s{K}`` is a seeded opening-book rung: K=0 is its NEWEST vintage
+    and larger K is older (:func:`_seed_ladder`). ``{asset}-v{Y}`` is a
+    commitment made during play: larger Y is newer
+    (:func:`_commit_new_vintage`). Both offsets are measured from the SAME
+    base vintage year, so ``-K`` and ``+Y`` sit on one comparable scale
+    without reading the base year itself. Ties (same offset, different
+    asset) break on the id string for a fully deterministic order.
+    """
+    _, tag = cohort_id.rsplit("-", 1)
+    n = int(tag[1:])
+    key = -n if tag[0] == "s" else n
+    return (key, cohort_id)
+
+
+def _vintage_ladder(as_of: Any) -> list[dict[str, Any]]:
+    """The as-of quarter's cohort NAV stack, oldest vintage first.
+
+    True NAV only (``PlayQuarter.vintage_nav``) — a per-cohort REPORTED mark
+    is not tracked anywhere in the engine, so this deliberately does not
+    invent one alongside it (task cio-03b's whole reason for existing: a
+    prior retirement claimed coverage of this ladder that did not exist).
+    """
+    ids = sorted(as_of.vintage_nav, key=_vintage_sort_key)
+    out = []
+    for cid in ids:
+        asset, tag = cid.rsplit("-", 1)
+        out.append(
+            {
+                "id": cid,
+                "label": f"{CLASS_LABEL[asset]} · {tag}",
+                "navTrue": round(float(as_of.vintage_nav[cid]), 4),
+            }
+        )
+    return out
 
 
 _MARKET_COLOURS = {
@@ -558,6 +606,12 @@ def validate_cio_view(v: dict[str, Any]) -> list[str]:
                 )
                 if not near(s, r["calls"], max(0.5, r["calls"] * 0.001)):
                     e.append(f"aggregate calls at {r['label']} != sum of classes")
+                s_exp = sum(
+                    (pcf["series"].get(cid) or [{}] * n)[i].get("expiredUndrawn", 0.0)
+                    for cid in class_ids
+                )
+                if not near(s_exp, r.get("expiredUndrawn", 0.0), max(0.5, s_exp * 0.001)):
+                    e.append(f"aggregate expiredUndrawn at {r['label']} != sum of classes")
 
     h_len = len(((v.get("plan") or {}).get("history") or {}).get("values") or [])
     mk = v.get("markets") or {}

@@ -282,6 +282,10 @@ class PlayQuarter:
     private_calls: dict[str, float] = field(default_factory=dict)
     private_distributions: dict[str, float] = field(default_factory=dict)
     private_unfunded: dict[str, float] = field(default_factory=dict)
+    #: cio-03b: per-asset read of ``expired_undrawn`` (ER-6's terminal
+    #: lapse), same pattern as ``private_calls``/``private_distributions``.
+    #: A pure read — recording it does not change any existing numeric.
+    private_expired: dict[str, float] = field(default_factory=dict)
     #: Three monthly NAV marks for the quarter. Months 0 and 1 mark the
     #: opening sleeves to the tape's monthly returns with flows pending;
     #: month 2 IS the post-waterfall quarter close, exactly.
@@ -649,6 +653,7 @@ def simulate_play(
         vintage_nav: dict[str, float] = {}
         calls_by: dict[str, float] = {a: 0.0 for a in PRIVATE_ASSETS}
         dists_by: dict[str, float] = {a: 0.0 for a in PRIVATE_ASSETS}
+        expired_by: dict[str, float] = {a: 0.0 for a in PRIVATE_ASSETS}
         for asset in PRIVATE_ASSETS:
             for cohort in ladders[asset]:
                 step = cohort.step(
@@ -661,6 +666,7 @@ def simulate_play(
                 expired += step.expired_undrawn
                 calls_by[asset] += step.call
                 dists_by[asset] += step.distribution_total
+                expired_by[asset] += step.expired_undrawn
                 if step.is_terminal:
                     terminal_dist += step.distribution_total
                 # the reported mark follows the tape the player is shown
@@ -732,6 +738,7 @@ def simulate_play(
                 private_reported=_private_snapshot(True),
                 private_calls=calls_by,
                 private_distributions=dists_by,
+                private_expired=expired_by,
                 private_unfunded=_unfunded_snapshot(),
                 nav_true_months=nav_true_months,
                 nav_reported_months=nav_reported_months,
