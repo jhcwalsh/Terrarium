@@ -26,9 +26,10 @@ single-field truth, the validator (WP0.3) owns coherence.
 
 from __future__ import annotations
 
+from itertools import pairwise
 from typing import Annotated, Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 
 # --------------------------------------------------------------------------- #
 # Shared enums / aliases
@@ -133,6 +134,53 @@ class Narrative(_Base):
     summary: str = Field(max_length=1200)
     lesson: str = Field(max_length=600)
     dispatches: list[Dispatch] = Field(min_length=3, max_length=10)
+
+
+# --------------------------------------------------------------------------- #
+# stress scenarios
+# --------------------------------------------------------------------------- #
+
+
+SeverityFunctional = Literal["equity", "joint_risk", "all_down"]
+
+
+class StressSegment(_Base):
+    """One segment of a declared stress scenario.
+
+    ``entry_percentile`` restricts which rows may START a block during this
+    segment: 10 means "the worst decile by the declared functional", 100 means
+    unrestricted. It is NOT a filter on every month — see the design note §4.3.
+    """
+
+    from_quarter: int = Field(ge=0)
+    to_quarter: int = Field(ge=0)
+    entry_percentile: float = Field(gt=0.0, le=100.0)
+    mean_block_months: int = Field(ge=1, le=120)
+
+
+class StressSpec(_Base):
+    """A declared stress scenario: severity by segment, and its precedent."""
+
+    functional: SeverityFunctional
+    segments: list[StressSegment] = Field(min_length=1)
+    join_tolerance: dict[str, float] = Field(default_factory=dict)
+    precedent: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _segments_tile(self) -> StressSpec:
+        ordered = sorted(self.segments, key=lambda s: s.from_quarter)
+        for seg in ordered:
+            if seg.to_quarter < seg.from_quarter:
+                raise ValueError(f"segment {seg.from_quarter}-{seg.to_quarter} runs backwards")
+        for prev, nxt in pairwise(ordered):
+            if nxt.from_quarter != prev.to_quarter + 1:
+                raise ValueError(
+                    "stress segments must tile the horizon with no gap or overlap; "
+                    f"{prev.to_quarter} is followed by {nxt.from_quarter}"
+                )
+        if ordered[0].from_quarter != 0:
+            raise ValueError("stress segments must tile the horizon from quarter 0")
+        return self
 
 
 # --------------------------------------------------------------------------- #
