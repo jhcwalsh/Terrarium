@@ -8,10 +8,13 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from statistics import median
 from typing import Any
 
 import pytest
 
+from ah.cioview import build_cio_view, validate_cio_view
+from ah.core.engine import run_path
 from ah.core.loader import load_worldspec
 from ah.core.numericworld import project_numeric
 from ah.core.validator import validate
@@ -157,3 +160,71 @@ def test_prehistory_rejects_degenerate_terminal_values():
         build_prehistory(771204, 100.0, float("nan"))
     with pytest.raises(ValueError):
         build_prehistory(771204, float("inf"), 98.0)
+
+
+# --- Task 3: the inherited decade landing on build_cio_view's payload -----
+
+
+def _paths(preset: str = "stagflation"):
+    doc = _doc(preset)
+    spec = load_worldspec(doc)
+    nw = project_numeric(spec)
+    return run_path(nw, doc["engine_defaults"]["base_seed"])
+
+
+def _view(
+    *,
+    prehistory: bool,
+    revealed: int,
+    plane: str = "reported",
+    fq: int = 4,
+    preset: str = "stagflation",
+) -> dict[str, Any]:
+    return build_cio_view(
+        _paths(preset),
+        {},
+        run_id="r-test",
+        seed=42,
+        world_title="Stagflation",
+        world_version="toy-v0.6",
+        alpha_version="port-v4-ladder",
+        start_targets=None,
+        plane=plane,
+        revealed_months=revealed,
+        forecast_quarters=fq,
+        prehistory=prehistory,
+    )
+
+
+def test_view_with_prehistory_validates_and_fills_the_long_columns():
+    v = _view(prehistory=True, revealed=12)  # one year into the world
+    assert validate_cio_view(v) == []
+    h = v["plan"]["history"]
+    assert h["worldStartIndex"] == PREHISTORY_QUARTERS * 3
+    assert len(h["values"]) == h["worldStartIndex"] + 12
+    idx = {p: i for i, p in enumerate(v["performance"]["periods"])}
+    for period in ("3Y", "5Y", "10Y"):
+        assert v["performance"]["total"][idx[period]] is not None, period
+
+
+def test_prehistory_is_continuous_at_the_world_boundary():
+    """No step at month 0: the inherited path terminates on the opening book."""
+    v = _view(prehistory=True, revealed=12)
+    values = v["plan"]["history"]["values"]
+    i = v["plan"]["history"]["worldStartIndex"]
+    joint = abs(values[i] / values[i - 1] - 1.0)
+    typical = median(abs(values[k] / values[k - 1] - 1.0) for k in range(1, i))
+    assert joint < 5 * typical, "visible discontinuity at the world boundary"
+
+
+def test_market_paths_stay_coupled_to_plan_history():
+    v = _view(prehistory=True, revealed=12)
+    n = len(v["plan"]["history"]["values"])
+    for s in v["markets"]["returns"]:
+        assert len(s["path"]) == n
+
+
+def test_prehistory_off_reproduces_the_old_shape():
+    v = _view(prehistory=False, revealed=60)
+    assert v["plan"]["history"]["worldStartIndex"] == 0
+    assert len(v["plan"]["history"]["values"]) == 60

@@ -19,6 +19,7 @@ from ah.core.engine import run_path
 from ah.core.institution import decision_months
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
+from ah.prehistory import PREHISTORY_QUARTERS
 from ah.serve import create_app
 from ah.store import sessions as session_store
 from ah.store.db import connect
@@ -646,6 +647,12 @@ class TestOutcome:
 
 
 def test_cio_view_endpoint(service):
+    """cio-04 made ``build_cio_view``'s ``prehistory`` default to True; the
+    ``service`` fixture's world is ``toy-v0`` (stagflation), and this
+    endpoint does not yet pass the flag (that wiring is cio-04's own next
+    task), so the inherited decade lands here too — the plan history is now
+    the pre-history's 40 quarters plus the 4 revealed world quarters, not
+    the 4 world quarters alone."""
     client, _db, rid = service
     r = client.post("/sessions", json={"run_id": rid})
     sid = r.json()["session_id"]
@@ -655,7 +662,8 @@ def test_cio_view_endpoint(service):
     v = r.json()
     assert v["meta"]["plane"] == "reported"
     assert v["meta"]["planesAvailable"] == ["reported", "true"]
-    assert len(v["plan"]["history"]["values"]) == 12
+    assert v["plan"]["history"]["worldStartIndex"] == PREHISTORY_QUARTERS * 3
+    assert len(v["plan"]["history"]["values"]) == PREHISTORY_QUARTERS * 3 + 12
     r_true = client.get(f"/sessions/{sid}/cio", params={"plane": "true"})
     assert r_true.status_code == 200
     assert r_true.json()["meta"]["plane"] == "true"
