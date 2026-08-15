@@ -421,6 +421,8 @@ def test_the_dispatcher_exposes_the_campaign_panel_as_its_source(monkeypatch):
 
     monkeypatch.setattr("ah.gen.bootstrap.campaign_source", fake_campaign_source)
     d = stress_mod.stress_or_legacy_factory()
+    # narrow from the Generator protocol: .source is the dispatcher's own seam
+    assert isinstance(d, stress_mod._StressOrLegacyDispatch)
     a = d.source
     b = d.source
     assert a is b and calls["n"] == 1  # lazy, cached
