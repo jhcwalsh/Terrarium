@@ -84,6 +84,35 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The stress-scenario compiler (stress-01), 2026-08-15.** `ah/gen/stress.py`
+  implements `bootstrap-stratified` per the design spec (v0.2): a declared
+  scenario — regime shape plus a per-segment severity draw rule
+  (`extensions.x_stress`) — compiles to deterministic decades whose every
+  month is a real 1953-2020 panel row with real cross-asset co-movement.
+  Severity restricts block ENTRY only (functionals equity / joint_risk /
+  all_down); blocks run forward through real history unfiltered; joins are
+  level-disciplined (no spread teleports; the sampler continues rather than
+  jumping when nothing is reachable). Per-path RNG streams
+  (`PCG64(seed).jumped(p)`) make a path's tape independent of `n_paths` — a
+  determinism defect found by review in the plan's own reference sampler.
+  The shared schema id is served by a DISPATCHER (spec v0.2 erratum: the
+  slot was a live alias, not unused): a world without `x_stress` still
+  resolves to `bootstrap-v1` bit-identically (sealed 1.0.x fixture worlds
+  and the eval sweep verified), a world with it reaches the compiler.
+  `stress_1974` (world `...701`, new fence) was DECLARED in an earlier
+  commit than any measurement — commit order is the pre-registration.
+  Measured once, never tuned: median peak-to-trough -29.9% over 12 months
+  (vs -19.5% for the label-driven draw it replaces); coherence preserved
+  (ac1 0.0612 vs panel 0.0611; max join level jump 1.494 vs 1.5 declared);
+  adequacy ladder 0/20 coverage breaches, 0/20 forced secondaries. Recorded
+  as the spec's reading 1 — the rule is milder than its cited -48/-50%
+  precedent because only 12 of 120 months are severe at entry: the
+  persistence gap (spec S4.3(d)), whose remedy is reserved decision D-SC-1.
+  Reports (`scripts/stress_report.py`): emergent depth, coherence vs panel,
+  Mahalanobis plausibility (median 3.64 vs panel p95 5.69, max 13.87) —
+  measurements for argument, never gates. No sealed file touched;
+  `bootstrap-v1` unmodified.
+
 - **The CIO view builder (cio-01), 2026-08-14.** `ah/cioview.py` builds
   DN-8's `CioView` server-side — the pure-renderer contract's engine half —
   from the same truncated replay `_mark_to_market` uses, plus a frozen-tape

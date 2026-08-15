@@ -132,6 +132,34 @@ its rule actually produced, plus its measured plausibility. So the argument is
 conducted on history, in the open, by comparing the emergent depth against the
 episodes cited. You never have to read the sampler to dispute the severity.
 
+## The first declared scenario, measured (2026-08-15)
+
+`stress_1974` (world `…701`) was declared and committed — rule plus precedent —
+before anything was run through the institution; the measurement landed in a
+later commit, per rule 3. What the declared rule produced, reported as found:
+
+- **Emergent depth:** median peak-to-trough **−29.9%** over a median 12 months;
+  HY spread peak 6.9. Coherence held almost exactly (lag-1 autocorrelation
+  0.0612 generated vs 0.0611 panel; largest level jump at any join 1.494
+  against the declared 1.5 tolerance). Plausibility: Mahalanobis median 3.64
+  against the panel's own p95 of 5.69; max 13.87.
+- **Adequacy ladder:** coverage breached **0/20** (worst 0.449 against the 1.0
+  binding ratio), forced secondaries **0/20**, no seed ended below its
+  starting value (minimum final 129.9 on 100).
+
+The rule was **not** adjusted in response. Of the two honest readings, the
+evidence selects the first: **the declared rule is milder than the precedent
+cited for it** — the episodes it names ran −48% to −50% over 17–21 sustained
+months, while the declared shape makes only 12 of 120 months severe at entry
+and inherits real history's recoveries for the rest. This is the persistence
+gap the design already names (rule 4): entry severity produces episodes; the
+institutional tail is a sustained decade. The remedy — extending the declared
+stress coverage of the decade on Japan-1990s / US-1970s precedent — is the
+reserved persistence decision (D-SC-1) and sits with the owner. Until it is
+taken, `stress_1974` stands as declared: a coherent, precedented, materially
+deeper decade than the label-driven worlds it replaces, and not yet one that
+exhausts this institution's liquidity.
+
 ## Limits, stated
 
 - **No mechanism — and therefore no causal narration.** The compiler has no
