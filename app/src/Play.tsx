@@ -68,21 +68,24 @@ export type BundleBands = Record<string, Record<string, number[]>>;
  * is why it rides as an injected tab and never moves into the dashboard
  * (DN-8 §1 - the dashboard renders one CioView and nothing else).
  *
- * `revealed` takes either a flat series (applied to every matching asset)
- * or a per-asset accessor — Play always passes the latter: `column`, the
- * accessor it already builds off `bundle.revealed.tape` and resolves per
- * key through the reported/true plane switch for private assets. The flat
- * form exists so this factory is testable without a bundle in scope.
+ * `seriesFor` is the accessor Play already holds — `column`, built off
+ * `bundle.revealed.tape`, called per asset key so private assets resolve
+ * through the reported/true plane switch (`${key}_reported` vs `key`)
+ * before this factory ever sees them.
+ *
+ * Deliberately omits book mode's eyebrow and non-stacked `.fan-key`
+ * description paragraph — those stay put in `Play`'s book-mode section
+ * so this tab doesn't double them. Only the `.chart-grid` (the eight
+ * charts plus the stacked legend) is shared.
  */
 export function peerTabs(
   bands: BundleBands | null,
-  revealed: number[] | ((assetKey: string) => number[]),
+  seriesFor: (assetKey: string) => number[],
   revealedMonths: number,
   plane: Plane = "reported",
   nPaths = 0,
 ): ExtraTab[] {
   if (!bands) return [];
-  const column = typeof revealed === "function" ? revealed : () => revealed;
   return [
     {
       key: "peers",
@@ -98,7 +101,7 @@ export function peerTabs(
                 label={name}
                 className={isPrivate ? "private" : undefined}
                 bands={bands[key]}
-                revealed={cumulativeGrowth(column(source))}
+                revealed={cumulativeGrowth(seriesFor(source))}
                 revealedMonths={revealedMonths}
               />
             );

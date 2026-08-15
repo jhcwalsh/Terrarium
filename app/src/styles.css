@@ -604,7 +604,14 @@ button.t {
 /* fan charts ------------------------------------------------------------ */
 /* Two columns x four rows: all eight asset classes visible at once, sized
    from whatever vertical budget the vitrine has left rather than a fixed
-   pixel height. */
+   pixel height.
+   cio-03 task 4: this `flex: 1` height chain assumes book mode's flex
+   ancestry. Inside the cockpit's injected Peers tab the ancestors are
+   CioDashboard's plain block divs under `.cockpit-pane { overflow-y:
+   auto }`, so `flex: 1` is likely inert there and rows fall back to
+   content sizing (probably a taller, scrolling grid, not collapsed
+   charts) — unverified in a browser. Not fixed speculatively; see cio-03
+   task 4 fix report. */
 .chart-grid {
   flex: 1;
   min-height: 0;
