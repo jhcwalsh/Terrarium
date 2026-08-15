@@ -9,7 +9,7 @@
  */
 
 import { describe, expect, it } from "vitest";
-import { cioFetchKey, cockpitClass } from "./Play";
+import { cioFetchKey, cockpitClass, peerTabs } from "./Play";
 
 describe("cio view fetch policy", () => {
   it("refetches when the reveal pointer moves", () => {
@@ -40,5 +40,21 @@ describe("cockpit layout mode", () => {
   it("keeps the plane class in both modes", () => {
     expect(cockpitClass("cio", "true")).toContain("plane-true");
     expect(cockpitClass("book", "true")).toContain("plane-true");
+  });
+});
+
+// cio-03 task 4: the peer-cone fan-chart grid rides into the dashboard as a
+// host-injected tab (DN-8 §1 - the dashboard renders one CioView and nothing
+// else, so the bundle-owned peer cone cannot move inside it).
+describe("peer tab injection", () => {
+  it("offers no peers tab without bands", () => {
+    expect(peerTabs(null, [], 0)).toHaveLength(0);
+  });
+  it("offers exactly one peers tab when bands exist", () => {
+    const bands = { equity: [1, 2, 3] };
+    const tabs = peerTabs(bands as never, [100, 101, 102], 3);
+    expect(tabs).toHaveLength(1);
+    expect(tabs[0].key).toBe("peers");
+    expect(tabs[0].label).toBe("Peers");
   });
 });

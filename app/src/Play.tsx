@@ -16,7 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import CioDashboard from "./components/CioDashboard";
+import CioDashboard, { type ExtraTab } from "./components/CioDashboard";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
@@ -58,6 +58,67 @@ const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 // Plane is re-exported from lib/cioView.ts (cio-02) rather than declared
 // here a second time — it is the same "reported" | "true" domain the plane
 // switch has always driven, and the CIO dashboard now shares the switch.
+
+/** percentile name -> cumulative growth series, per asset — bundle.bands' shape. */
+export type BundleBands = Record<string, Record<string, number[]>>;
+
+/**
+ * The peer-cone tab the cockpit injects into the dashboard. Host-owned
+ * content: the cone comes from the world bundle, not from CioView, which
+ * is why it rides as an injected tab and never moves into the dashboard
+ * (DN-8 §1 - the dashboard renders one CioView and nothing else).
+ *
+ * `revealed` takes either a flat series (applied to every matching asset)
+ * or a per-asset accessor — Play always passes the latter: `column`, the
+ * accessor it already builds off `bundle.revealed.tape` and resolves per
+ * key through the reported/true plane switch for private assets. The flat
+ * form exists so this factory is testable without a bundle in scope.
+ */
+export function peerTabs(
+  bands: BundleBands | null,
+  revealed: number[] | ((assetKey: string) => number[]),
+  revealedMonths: number,
+  plane: Plane = "reported",
+  nPaths = 0,
+): ExtraTab[] {
+  if (!bands) return [];
+  const column = typeof revealed === "function" ? revealed : () => revealed;
+  return [
+    {
+      key: "peers",
+      label: "Peers",
+      render: () => (
+        <div className="chart-grid">
+          {ASSET_LABELS.filter(([key]) => bands[key]).map(([key, name]) => {
+            const isPrivate = PRIVATE_ASSETS.has(key);
+            const source = isPrivate && plane === "reported" ? `${key}_reported` : key;
+            return (
+              <FanChart
+                key={key}
+                label={name}
+                className={isPrivate ? "private" : undefined}
+                bands={bands[key]}
+                revealed={cumulativeGrowth(column(source))}
+                revealedMonths={revealedMonths}
+              />
+            );
+          })}
+          <p className="fan-key stacked">
+            <span className="key-swatch key-revealed" /> this world, as
+            revealed
+            <br />
+            <span className="key-swatch key-inner" /> middle half of{" "}
+            {nPaths} sibling runs
+            <br />
+            <span className="key-swatch key-outer" /> 5–95% of siblings
+            <br />
+            <span className="key-swatch key-median" /> median sibling
+          </p>
+        </div>
+      ),
+    },
+  ];
+}
 
 /**
  * When the CIO view must refetch: the pointer moved, the plane changed, or a
@@ -268,6 +329,10 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const order = bundle.revealed.series_order;
   const column = (name: string) =>
     bundle.revealed.tape.map((row) => row[order.indexOf(name)]);
+  // cio-03 task 4: the eight peer-cone fan charts live in exactly one place
+  // now — this factory call, rendered as book mode's chart section AND as
+  // the cockpit's injected Peers tab.
+  const peerTab = peerTabs(bundle.bands, column, revealed, plane, bundle.meta.n_paths);
 
   if (outcome) {
     return (
@@ -460,7 +525,12 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               {cioError ? (
                 <div className="empty">{cioError}</div>
               ) : cioView ? (
-                <CioDashboard view={cioView} onPlaneChange={setPlane} chrome="embedded" />
+                <CioDashboard
+                  view={cioView}
+                  onPlaneChange={setPlane}
+                  chrome="embedded"
+                  extraTabs={peerTab}
+                />
               ) : (
                 <div className="empty">Loading the CIO view...</div>
               )}
@@ -487,34 +557,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               {" · "}
               hatched is sealed
             </p>
-            <div className="chart-grid">
-              {ASSET_LABELS.filter(([key]) => bundle.bands[key]).map(([key, name]) => {
-                const isPrivate = PRIVATE_ASSETS.has(key);
-                const source =
-                  isPrivate && plane === "reported" ? `${key}_reported` : key;
-                return (
-                  <FanChart
-                    key={key}
-                    label={name}
-                    className={isPrivate ? "private" : undefined}
-                    bands={bundle.bands[key]}
-                    revealed={cumulativeGrowth(column(source))}
-                    revealedMonths={revealed}
-                  />
-                );
-              })}
-              <p className="fan-key stacked">
-                <span className="key-swatch key-revealed" /> this world, as
-                revealed
-                <br />
-                <span className="key-swatch key-inner" /> middle half of{" "}
-                {bundle.meta.n_paths} sibling runs
-                <br />
-                <span className="key-swatch key-outer" /> 5–95% of siblings
-                <br />
-                <span className="key-swatch key-median" /> median sibling
-              </p>
-            </div>
+            {peerTab[0]?.render()}
           </section>
           )}
         </div>

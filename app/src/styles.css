@@ -614,8 +614,7 @@ button.t {
   gap: 8px 14px;
 }
 
-/* the key is one line under the eyebrow; the grid's ninth cell carries the
-   private-markets ledger instead */
+/* the key is one line under the eyebrow */
 .fan-key {
   font-size: 12.5px;
   color: var(--muted);
@@ -628,73 +627,6 @@ button.t {
   margin: 0;
   border-left: 1px solid var(--hair);
   padding-left: 12px;
-}
-
-/* the ninth cell: the private programmes' pacing ledger */
-.ninth {
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  border-left: 1px solid var(--hair);
-  padding-left: 12px;
-  overflow: hidden;
-}
-
-.privates {
-  min-height: 0;
-  overflow: auto;
-}
-
-.privates table {
-  width: 100%;
-  border-collapse: collapse;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 11.5px;
-  font-variant-numeric: tabular-nums;
-}
-
-.privates th {
-  font-size: 9.5px;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--dim);
-  text-align: right;
-  padding: 0 0 6px;
-  font-weight: 500;
-}
-
-.privates th:first-child,
-.privates td:first-child {
-  text-align: left;
-}
-
-.privates td {
-  text-align: right;
-  padding: 5px 0 5px 8px;
-  border-top: 1px solid var(--hair);
-  color: var(--muted);
-}
-
-.privates td:first-child {
-  color: var(--ice);
-  font-family: Archivo, sans-serif;
-  font-size: 12px;
-  padding-left: 0;
-}
-
-.privates td.call {
-  color: var(--clay);
-}
-
-.privates td.dist {
-  color: var(--jade);
-}
-
-.privates-note {
-  font-size: 11px;
-  color: var(--dim);
-  line-height: 1.45;
-  margin: 8px 0 0;
 }
 
 .key-swatch {
@@ -1456,37 +1388,3 @@ button.commit {
   color: var(--dim, #7c9b99);
 }
 .commit-primer p { margin: 0; font-size: 14px; }
-.privates-trailing { font-size: 12px; color: var(--dim, #7c9b99); }
-/* ER-6's visible lapse: quiet as a running total, emphasized in the one
-   quarter it actually happens (audit F2). */
-.privates-expired { font-size: 12px; color: var(--dim, #7c9b99); margin: 8px 0 0; }
-.privates-expired.now { color: var(--clay, #c56b4a); font-weight: 600; }
-.privates-expired .privates-note { display: inline; font-weight: 400; }
-.vintage-stack { margin-top: 8px; font-size: 12px; }
-.vintage-stack .stack-title {
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--dim, #7c9b99);
-  font-size: 10.5px;
-}
-/* ladder-01: one bar per rung. A staggered ladder is 30 vintages at open and
-   57 by the end of a decade — the vitrine is one screen, so the ladder is a
-   strip, not a list. Each bar keeps its id and NAV in a title. */
-.vintage-stack .stack-bars {
-  display: flex;
-  align-items: flex-end;
-  gap: 1px;
-  height: 34px;
-  margin-top: 4px;
-  max-width: 260px;
-}
-.vintage-stack .stack-bars i {
-  display: block;
-  flex: 1;
-  min-width: 2px;
-  background: var(--jade, #4fc3a1);
-  opacity: 0.55;
-}
-.vintage-stack .stack-bars i:hover {
-  opacity: 1;
-}
