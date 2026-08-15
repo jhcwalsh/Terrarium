@@ -224,3 +224,54 @@ def test_benchmark_is_the_twin():
     v = _view()
     assert v["performance"]["benchmarkLabel"] == "Policy twin (hold course)"
     assert v["performance"]["benchmark"][0] is not None
+
+
+def test_forecast_rows_are_flagged_and_suppressable():
+    v = _view(fq=4)
+    pcf = v["privateCashflows"]
+    n_hist = pcf["histCount"]
+    for _key, rows in pcf["series"].items():
+        assert len(rows) == n_hist + 4
+        assert all(r["forecast"] is (i >= n_hist) for i, r in enumerate(rows))
+    v0 = _view(fq=0)
+    assert all(
+        not r["forecast"] for rows in v0["privateCashflows"]["series"].values() for r in rows
+    )
+    assert len(v0["privateCashflows"]["series"]["aggregate"]) == v0["privateCashflows"]["histCount"]
+
+
+def test_aggregate_private_series_is_the_sum_of_classes():
+    v = _view()
+    pcf = v["privateCashflows"]
+    ids = [c["id"] for c in pcf["classes"]]
+    for i, agg in enumerate(pcf["series"]["aggregate"]):
+        for field_name in ("calls", "distributions", "navClose", "unfundedClose"):
+            s = sum(pcf["series"][cid][i][field_name] for cid in ids)
+            assert abs(s - agg[field_name]) < 0.51, (i, field_name)
+
+
+def test_forecast12m_net_identity_and_signs():
+    v = _view()
+    f = v["liquidity"]["forecast12m"]
+    for k in ("distributions", "income", "calls", "payout"):
+        assert f[k] >= 0.0
+    assert abs(f["net"] - (f["distributions"] + f["income"] - f["calls"] - f["payout"])) < 1.0
+
+
+def test_tiers_close_on_plan_total_and_privates_are_illiquid():
+    v = _view()
+    tiers = v["liquidity"]["tiers"]
+    assert (
+        abs(sum(t["value"] for t in tiers) - v["plan"]["totalValue"])
+        < v["plan"]["totalValue"] * 0.005
+    )
+    illiquid = [t for t in tiers if t.get("liquid") is False]
+    assert illiquid and set(illiquid[0]["classIds"]) == set(PRIVATE_ASSETS)
+
+
+def test_markets_has_no_conditions_and_paths_match_history():
+    v = _view()
+    assert "conditions" not in v.get("markets", {})
+    h = len(v["plan"]["history"]["values"])
+    for s in v["markets"]["returns"]:
+        assert len(s["path"]) == h

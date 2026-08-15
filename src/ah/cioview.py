@@ -273,6 +273,177 @@ def _class_returns(tape: Mapping[str, np.ndarray], cid: str, n_q: int) -> list[f
     return _period_row(q_rets, n_q - 1)
 
 
+def _liquidity(
+    active: PlayResult,
+    targets: Mapping[str, float],
+    plane: str,
+    n_q: int,
+    forecast_quarters: int,
+) -> dict[str, Any]:
+    last = active.quarters[n_q - 1]
+    total = last.nav_reported if plane == "reported" else last.nav_true
+    private = last.private_reported if plane == "reported" else last.private_true
+    liquid_ids = [a for a in targets if a not in PRIVATE_ASSETS]
+    t1_ids = ["cash"] + [a for a in TIER1_CLASSES if a in liquid_ids]
+    t2_ids = [a for a in TIER2_CLASSES if a in liquid_ids]
+    t1 = last.cash + sum(last.liquid_values[a] for a in t1_ids if a != "cash")
+    t2 = sum(last.liquid_values[a] for a in t2_ids)
+    illiquid = sum(private.values())
+    fwd = active.quarters[n_q : n_q + forecast_quarters]
+    dist = sum(q.distributions_received for q in fwd)
+    calls = sum(q.calls_paid for q in fwd)
+    payout = sum(q.spending_paid for q in fwd)
+    return {
+        "tiers": [
+            {
+                "id": "t1",
+                "tier": 1,
+                "label": "Tier 1",
+                "note": "cash + core bonds",
+                "value": round(t1, 4),
+                "classIds": t1_ids,
+            },
+            {
+                "id": "t2",
+                "tier": 2,
+                "label": "Tier 2",
+                "note": "listed markets",
+                "value": round(t2, 4),
+                "classIds": t2_ids,
+            },
+            {
+                "id": "illiquid",
+                "label": "Illiquid",
+                "note": "closed-end private sleeves",
+                "value": round(illiquid, 4),
+                "liquid": False,
+                "classIds": list(PRIVATE_ASSETS),
+            },
+        ],
+        "forecast12m": {
+            "distributions": round(dist, 4),
+            "income": 0.0,
+            "calls": round(calls, 4),
+            "payout": round(payout, 4),
+            "net": round(dist + 0.0 - calls - payout, 4),
+        },
+        "payoutLabel": "spending",
+        "unfundedToNav": round(last.unfunded_total / total, 4) if total > 0 else None,
+        "coverageAnchor": COVERAGE_ANCHOR,
+        "tierFootnote": "Static class-to-tier mapping (DN-8 O-4); behavioural re-tiering deferred.",
+        "flowFootnote": (
+            "Roll-forward at the current market state; the model has no income "
+            "line, so income is a true zero, not a gap."
+        ),
+    }
+
+
+def _private_cashflows(
+    active: PlayResult, n_q: int, forecast_quarters: int, plane: str
+) -> dict[str, Any]:
+    total_q = n_q + forecast_quarters
+    nav_key = "private_reported" if plane == "reported" else "private_true"
+
+    def row(asset_ids: list[str], i: int) -> dict[str, Any]:
+        q = active.quarters[i]
+        prev_nav = (
+            {a: active.opening[nav_key][a] for a in asset_ids}
+            if i == 0
+            else {a: getattr(active.quarters[i - 1], nav_key)[a] for a in asset_ids}
+        )
+        prev_unf = (
+            {a: active.opening["private_unfunded"][a] for a in asset_ids}
+            if i == 0
+            else {a: active.quarters[i - 1].private_unfunded[a] for a in asset_ids}
+        )
+        calls = sum(q.private_calls[a] for a in asset_ids)
+        dists = sum(q.private_distributions[a] for a in asset_ids)
+        nav_open, nav_close = sum(prev_nav.values()), sum(getattr(q, nav_key)[a] for a in asset_ids)
+        unf_open, unf_close = sum(prev_unf.values()), sum(q.private_unfunded[a] for a in asset_ids)
+        return {
+            "label": f"Y{i // 4 + 1}Q{i % 4 + 1}",
+            "forecast": i >= n_q,
+            "calls": round(calls, 4),
+            "distributions": round(dists, 4),
+            "net": round(dists - calls, 4),
+            "navOpen": round(nav_open, 4),
+            "navClose": round(nav_close, 4),
+            "unfundedOpen": round(unf_open, 4),
+            "unfundedClose": round(unf_close, 4),
+            "callRateUnfunded": round(calls / unf_open, 4) if unf_open > 0 else None,
+            "callRateNav": round(calls / nav_open, 4) if nav_open > 0 else None,
+            "coverage": round(unf_close / nav_close, 4) if nav_close > 0 else None,
+        }
+
+    series = {"aggregate": [row(list(PRIVATE_ASSETS), i) for i in range(total_q)]}
+    for a in PRIVATE_ASSETS:
+        series[a] = [row([a], i) for i in range(total_q)]
+    return {
+        "histCount": n_q,
+        "classes": [{"id": a, "label": CLASS_LABEL[a]} for a in PRIVATE_ASSETS],
+        "aggregateLabel": "All private sleeves",
+        "series": series,
+        "footnote": (
+            "Closed-end cohorts only; the model holds no open-end or evergreen "
+            "vehicles in this book (DN-8 O-8). Forecast rows are a mechanical "
+            "roll-forward at the current market state, not a projection."
+        ),
+    }
+
+
+_MARKET_COLOURS = {
+    "equity": "#F0C46A",
+    "bonds": "#6E9BD1",
+    "hy": "#D9705A",
+    "commodities": "#58B49E",
+    "reits": "#A88BC4",
+}
+
+
+def _markets(paths: EnginePaths, hist_months: int, plane: str) -> dict[str, Any] | None:
+    if hist_months < 2:
+        return None
+    liquid = [a for a in paths.asset_order if a not in PRIVATE_ASSETS]
+    out: dict[str, Any] = {
+        "tiles": [
+            {"label": "Policy rate", "value": f"{float(paths.rate[hist_months - 1]):.2f}%"},
+            {"label": "HY spread", "value": f"{float(paths.spread[hist_months - 1]):.0f}bps"},
+            {"label": "Inflation", "value": f"{float(paths.inflation[hist_months - 1]):.1f}%"},
+        ],
+        "returns": [],
+        "returnsFootnote": "Indexed to 100 at world start; revealed tape only.",
+    }
+    for a in liquid:
+        monthly = paths.returns[a][:hist_months]
+        path = 100.0 * np.cumprod(1.0 + monthly / 100.0)
+        out["returns"].append(
+            {
+                "id": a,
+                "label": CLASS_LABEL[a],
+                "colour": _MARKET_COLOURS.get(a, "#8FA2BE"),
+                "path": [round(float(x), 2) for x in path],
+            }
+        )
+    if hist_months >= 24:
+        eq = paths.returns["equity"][:hist_months]
+        corrs = []
+        for a in liquid:
+            if a == "equity":
+                continue
+            s = paths.returns[a][:hist_months]
+            corrs.append(
+                {
+                    "id": a,
+                    "label": CLASS_LABEL[a],
+                    "current": round(float(np.corrcoef(eq[-12:], s[-12:])[0, 1]), 2),
+                    "baseline": round(float(np.corrcoef(eq, s)[0, 1]), 2),
+                }
+            )
+        out["correlations"] = corrs
+        out["correlationNote"] = "current: trailing 12m; baseline: full revealed window"
+    return out
+
+
 def validate_cio_view(v: dict[str, Any]) -> list[str]:
     """Port of ``validateCioView`` — empty list means the payload is valid."""
     e: list[str] = []
