@@ -273,21 +273,46 @@ def test_expired_undrawn_is_a_positive_magnitude_present_on_every_row():
 
 
 def test_vintage_ladder_is_nonempty_and_ordered_oldest_first():
+    """The ladder renders oldest vintage first.
+
+    I-3: a prior version of this test defined a local ``chrono_key`` that was
+    a verbatim reimplementation of ``_vintage_sort_key`` and then asserted
+    ``keys == sorted(keys)`` — "sorted by f is sorted by f", true by
+    construction regardless of whether the s/v sign convention inside
+    ``_vintage_sort_key`` is right or backwards, since the same (possibly
+    inverted) convention would appear on both sides of the comparison and
+    the test could never catch it.
+
+    This version asserts literal, meaning-derived orderings instead, read
+    off what the ids mean rather than off the function under test: ``pe-s3``
+    (a seeded rung three years older than ``pe-s0``) must precede
+    ``pe-s0``, and ``pe-s0`` (the newest seeded rung) must precede
+    ``pe-v1`` (the first commitment made during play — necessarily newer
+    than every seeded rung).
+
+    Confirmed to bite (manual check, not committed as a test): with
+    ``_vintage_sort_key``'s sign flipped (``key = n if tag[0] == "s" else
+    -n``) monkeypatched in, both assertions below fail. And reproducing the
+    original vulnerability exactly — the OLD test's hardcoded ``chrono_key``
+    ALSO rewritten with the same flipped convention, simulating the sign
+    having been backwards in both places from day one — the old
+    ``keys == sorted(keys)`` form still PASSES (vacuously; both sides share
+    the same wrong convention), while the two assertions below both
+    correctly fail, because they derive from the cohorts' actual
+    ``vintage_year`` construction in ``play.py`` (``_seed_ladder``,
+    ``_commit_new_vintage``), not from ``_vintage_sort_key``'s own formula.
+    """
     v = _view()
     vintages = v["privateCashflows"]["vintages"]
     assert vintages
-
-    def chrono_key(cohort_id: str) -> int:
-        # asset-sK is the seeded ladder: K=0 is the newest rung, larger K
-        # is older. asset-vY is a commitment made during play: larger Y is
-        # newer. Both encode an offset from the same base vintage year, so
-        # -K and +Y are directly comparable across assets.
-        _, tag = cohort_id.rsplit("-", 1)
-        n = int(tag[1:])
-        return -n if tag[0] == "s" else n
-
-    keys = [chrono_key(x["id"]) for x in vintages]
-    assert keys == sorted(keys)
+    ids = [x["id"] for x in vintages]
+    assert "pe-s3" in ids and "pe-s0" in ids and "pe-v1" in ids
+    # pe-s3 is three years older than pe-s0 (both seeded rungs; s-K: larger
+    # K is older) -- must render before it.
+    assert ids.index("pe-s3") < ids.index("pe-s0")
+    # pe-s0 is the newest seeded rung; pe-v1 is the first vintage committed
+    # during play, strictly newer than any seeded rung -- must render after it.
+    assert ids.index("pe-s0") < ids.index("pe-v1")
     for x in vintages:
         assert x["navTrue"] >= 0.0
         assert x["label"]

@@ -473,7 +473,19 @@ export function Play({ bundle, config, onExit }: PlayProps) {
 
       <div className="rail">
         <div className="stat">
-          <div className="k">Your book</div>
+          {/* session.value is computed server-side on the session's FIXED
+              scoring basis (serve.py: use_reported = doc["basis"] ==
+              "reported"), while the CIO dashboard's plan.totalValue is
+              plane-sensitive (cioview.py::_quarterly_returns keys on
+              nav_reported/nav_true; DN-8 s4 lists plan.totalValue as
+              plane-sensitive). Deleting Book.tsx did not close the basis
+              mismatch the way the plan claimed — it moved to this rail: the
+              two value figures sit inches apart the moment a player flips
+              the plane away from the session basis. Book.tsx used to carry
+              this exact label (f35e64d) for the same reason; restored here
+              so the rail's headline is never silently read as the same
+              number as the dashboard's plan total (I-4). */}
+          <div className="k">Your book · {session.basis} basis</div>
           <div className={`v ${aheadOfTwin === null ? "" : aheadOfTwin >= 0 ? "pos" : "neg"}`}>
             {session.value == null ? "100.0" : session.value.toFixed(1)}
           </div>

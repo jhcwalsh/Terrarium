@@ -179,10 +179,14 @@ Exhaustive. Anything else is a contract violation.
 - excess = `total[i] − benchmark[i]`
 - breach test = `|currentPct − targetPct| > bandPct`
 - watch test = `|currentPct − targetPct| ≥ watchFraction × bandPct`, only where `watchFraction` is supplied
-- LTM and next-4q sums over supplied quarterly figures
+- LTM and next-4q sums over supplied quarterly figures — generalised: sums over
+  any contiguous window of supplied quarterly figures, which is what
+  `lapsedToDate` (`CioDashboard.tsx:998`, per-class at `:1079`) is: `Σ
+  expiredUndrawn` over the realised quarters
 - market window change = `last / path[0] − 1` (indexed series) or `last − path[0]` (level series)
 - correlation delta = `current − baseline`
 - `forecast12m.net` fallback = Σ of the supplied flow components, when `net` is absent
+- vintage share of ladder = `rung.navTrue / Σ navTrue` (`VintageLadder`, `CioDashboard.tsx:942,957`)
 
 Each is a sum or a ratio of supplied figures with no model content. Anything with a parameter in it belongs in the engine.
 
@@ -226,6 +230,7 @@ The dashboard is the in-session play surface (the cockpit).
 
 | Version | Date | Change |
 |---|---|---|
+| 0.2.1 | Aug 2026 | I-1 (cio-03 final review): §8's "exhaustive" permitted-arithmetic list omitted two computations task 3b already shipped — `lapsedToDate` (a sum over the realised history) and the vintage ladder's `navTrue`/`Σ navTrue` share. Added both; generalised the LTM/next-4q entry to any contiguous window. |
 | 0.2 | Aug 2026 | Added alert levels (`ok` / `watch` / `breach`), `AlertPolicy`, and the threshold-provenance rule. Renderer v0.3 gains flags on the allocation and performance tables, watch zones inside the bars, donut rims and panel roll-ups. O-10 logged. |
 | 0.1 | Aug 2026 | First draft. Contract extracted from dashboard mockup v0.2; renderer refactored to v0.3 as a pure renderer over `CioView`. Nine open items logged. |
 

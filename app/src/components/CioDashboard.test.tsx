@@ -210,7 +210,36 @@ describe("CioDashboard", () => {
       expect(host!.textContent).toMatch(/\$733m/);
     });
 
-    it("renders zero lapse as a dash, never a bare $0m, when every row is genuinely zero", () => {
+    it("shows the current-quarter lapse alongside the running total, not only the total (I-2)", () => {
+      // F2's closure required both halves: the release in the quarter it
+      // happens, and the running total afterwards. The "Lapsed to date"
+      // tile only ever showed the second half after cio-03b's restoration
+      // — a monotonically-rising cumulative can't say which quarter moved,
+      // which matters post-ER-12 (lapse is ~0.47-0.49/year spread across
+      // many quarters, not one big event). Zero every row, then set ONLY
+      // the as-of quarter (rows[histCount-1], what PrivateTab's `cur` and
+      // the tile's sub text both read) non-zero, so a pass here can only be
+      // explained by the current-quarter figure actually reaching the tile.
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      const pcf = v.privateCashflows;
+      const H = pcf.histCount;
+      for (const rows of Object.values(pcf.series)) {
+        for (const r of rows) r.expiredUndrawn = 0;
+      }
+      pcf.series.aggregate[H - 1].expiredUndrawn = 415;
+      render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+      expect(host!.textContent).toMatch(/\$415m this quarter/);
+    });
+
+    it("renders zero lapse as a muted $0m, never the missing-data dash (M-1)", () => {
+      // DN-8 s3: an em dash means UNAVAILABLE. A known, tracked zero must
+      // not borrow it — this WAS the bug (`lapseCell` returned NA for
+      // `v <= 0`), which made a class that genuinely never lapsed
+      // indistinguishable from one where lapse isn't tracked in a table
+      // where "—" also marks an unreached forecast column. Fixed by
+      // rendering a muted "$0m" instead: colour signals "don't worry about
+      // this", the glyph stays reserved for "no data".
+      //
       // The committed fixture is the wrong vehicle for this: every class's
       // and the aggregate's lapsed-to-date sum is already non-zero there
       // (0.54 / 1.35 / 0.47 / 2.37), so the zero branch is never reached
@@ -228,11 +257,12 @@ describe("CioDashboard", () => {
       // one per row of the "By asset class" table (classes + aggregate)
       expect(lapseCells.length).toBeGreaterThan(0);
       for (const cell of lapseCells) {
-        expect(cell.textContent).toBe("—");
+        expect(cell.textContent).toBe("$0m");
+        expect(cell.textContent).not.toBe("—");
       }
     });
 
-    it("renders one bar per vintage rung, oldest first", () => {
+    it("renders exactly one bar per vintage rung (I-3: count, not order — order is pinned server-side in test_cioview.py)", () => {
       render(<CioDashboard view={view} onPlaneChange={() => {}} initialTab="private" />);
       const bars = host!.querySelectorAll(".vintage-rung");
       expect(bars.length).toBe(view.privateCashflows.vintages?.length ?? 0);

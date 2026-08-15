@@ -919,13 +919,20 @@ function RatioChart({
 }
 
 /** ER-6's terminal lapse (undrawn commitment cancelled, never called): a
- *  real value in the alert colour, a zero as a muted dash — never a bare
- *  "$0m" that reads as just another figure in the row. `lapse-value`
- *  className is a stable test hook (CioDashboard.test.tsx's zero-lapse
- *  assertion targets it, since the surrounding table has plenty of
- *  legitimate "$0m" cells in unrelated columns). */
+ *  real value in the alert colour, a zero as a muted (never shouting)
+ *  "$0m". DN-8 s3's `NA` ("—") means UNAVAILABLE — an unreached forecast
+ *  quarter, a field the engine never tracked — and a known, tracked zero
+ *  must not borrow that glyph: in a table where "—" already marks an
+ *  unreached forecast column, a class that genuinely never lapsed would
+ *  become indistinguishable from one where lapse isn't tracked at all
+ *  (M-1). Missing (`null`/`undefined`) still renders `NA`; only a known
+ *  zero moved off it. `lapse-value` className is a stable test hook
+ *  (CioDashboard.test.tsx's zero-lapse assertion targets it, since the
+ *  surrounding table has plenty of legitimate "$0m" cells in unrelated
+ *  columns). */
 function lapseCell(v: number | null | undefined, u: string) {
-  if (!isNum(v) || v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{NA}</span>;
+  if (!isNum(v)) return <span className="lapse-value" style={{ color: C.faint }}>{NA}</span>;
+  if (v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{money(0, u)}</span>;
   return <span className="lapse-value" style={{ color: C.warn }}>{money(v, u)}</span>;
 }
 
@@ -1038,9 +1045,18 @@ function PrivateTab() {
         <Tile label="Calls ÷ NAV" value={pct(isNum(cur.callRateNav) ? cur.callRateNav * 100 : null)} sub="quarterly" />
         <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
           sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
+        {/* F2's closure required both halves: the release in the quarter it
+            happens AND the running total afterwards. `lapsedToDate` gives the
+            second; without the first, a monotonically-rising cumulative never
+            says which quarter moved — and post-ER-12 the lapse is ~0.47-0.49
+            a year spread across many quarters, not one large event, so that
+            distinction is the whole point (I-2). `cur` is the as-of quarter's
+            row, already bound above. */}
         <Tile label="Lapsed to date" value={lapsedToDate > 0 ? money(lapsedToDate, u) : NA}
           tone={lapsedToDate > 0 ? C.warn : undefined}
-          sub="ER-6: undrawn commitment released, never called" />
+          sub={isNum(cur.expiredUndrawn) && cur.expiredUndrawn > 0
+            ? `${money(cur.expiredUndrawn, u)} this quarter · ER-6`
+            : "ER-6: undrawn commitment released, never called"} />
       </div>
 
       <Panel title="Capital calls, distributions and net"

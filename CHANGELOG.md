@@ -27,6 +27,44 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Fixed
 
+- **cio-03 whole-branch review fix wave, 2026-08-15.** Four Important
+  findings and one Minor from the final pre-merge review.
+  - **I-4** — the plan's claim that deleting `Book` "closes the basis
+    mismatch outright" was wrong: the mismatch moved to the stat rail.
+    `session.value` is fixed to the session's scoring basis (`serve.py:
+    use_reported = doc["basis"] == "reported"`); the CIO dashboard's
+    `plan.totalValue` is plane-sensitive (DN-8 §4). Restored the basis
+    label ("Your book · {session.basis} basis") on `Play.tsx`'s rail tile
+    — the annotation `Book.tsx` carried for exactly this reason before its
+    retirement.
+  - **I-1** — DN-8 §8 called its permitted-arithmetic list "exhaustive"
+    while omitting two computations task 3b already shipped:
+    `lapsedToDate` and the vintage ladder's `navTrue`/`Σ navTrue` share.
+    Added both to the list; the LTM/next-4q entry generalised to any
+    contiguous window.
+  - **I-2** — task 3b restored only the running-total half of audit F2's
+    closure ("the release in the quarter it happens **and** the running
+    total afterwards"). Post-ER-12 the lapse is ~0.47-0.49/year spread
+    across many quarters rather than one event, so a cumulative alone
+    can't say which quarter moved. The "Lapsed to date" tile's `sub` now
+    shows the current-quarter figure when non-zero
+    (`CioDashboard.tsx:1041`), pinned by a new test.
+  - **I-3** — `test_vintage_ladder_is_nonempty_and_ordered_oldest_first`
+    asserted `keys == sorted(keys)` against a local `chrono_key` that was a
+    verbatim copy of `_vintage_sort_key` — true by construction even if the
+    s/v sign convention were backwards in both places at once (demonstrated
+    manually: flipping the sign in both the implementation and an
+    identically-flipped copy of the old test's `chrono_key` still passes
+    vacuously). Replaced with literal orderings derived from `play.py`'s
+    cohort construction (`pe-s3` before `pe-s0` before `pe-v1`), which does
+    catch the flip. The TS companion test renamed to describe what it
+    actually checks — bar count, not order.
+  - **M-1** — `lapseCell` rendered the missing-data em dash (DN-8 §3) for a
+    known zero lapse, making a class that genuinely never lapsed
+    indistinguishable from one where lapse isn't tracked. Now renders a
+    muted `$0m`; missing (`null`/`undefined`) still renders the dash.
+  No version constant bumped; no client-side value/alpha computation added.
+
 - **ER-6's lapse and the vintage ladder are reachable again (cio-03b),
   2026-08-15.** Task 3's cutover retired `PrivateMarkets.tsx` and, with it,
   the only two client surfaces reading `expired_undrawn` and `vintage_nav` —
