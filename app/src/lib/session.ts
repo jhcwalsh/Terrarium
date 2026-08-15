@@ -7,6 +7,8 @@
  * refusing an illegal move is the mechanic, not a UI convention.
  */
 
+import type { CioView, Plane } from "./cioView";
+
 export interface Session {
   session_id: string;
   run_id: string;
@@ -217,4 +219,19 @@ export function getLeaderboard(
     alpha_version: alphaVersion,
   });
   return request(`/leaderboard/${worldId}?${params}`);
+}
+
+/** cio-02: the CIO dashboard's payload. Plane change is a REFETCH —
+ * the client never transforms planes (DN-8 §2). 409 before the first
+ * closed quarter surfaces as SessionApiError(409). */
+export function getCioView(
+  sid: string,
+  plane: Plane,
+  forecastQuarters?: number,
+): Promise<CioView> {
+  const params = new URLSearchParams({ plane });
+  if (forecastQuarters !== undefined) {
+    params.set("forecast_quarters", String(forecastQuarters));
+  }
+  return request(`/sessions/${sid}/cio?${params}`);
 }

@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Book } from "./components/Book";
+import CioDashboard from "./components/CioDashboard";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
@@ -27,11 +28,13 @@ import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
 import type { PlayConfig } from "./RankedSetup";
 import type { WorldBundle } from "./lib/bundle";
+import { type CioView, type Plane, validateCioView } from "./lib/cioView";
 import {
   advance,
   complete,
   createSession,
   decide,
+  getCioView,
   getOutcome,
   SessionApiError,
   type Action,
@@ -54,7 +57,27 @@ export const ASSET_LABELS: ReadonlyArray<readonly [string, string]> = [
 
 const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 
-type Plane = "reported" | "true";
+// Plane is re-exported from lib/cioView.ts (cio-02) rather than declared
+// here a second time — it is the same "reported" | "true" domain the plane
+// switch has always driven, and the CIO dashboard now shares the switch.
+
+/**
+ * When the CIO view must refetch: the pointer moved, the plane changed, or a
+ * decision landed. `decisionCount` is `Object.keys(session.decisions).length`
+ * — deciding a window updates the session without moving revealed_months (the
+ * pointer only advances on the next `advance()` call), so the pointer+plane
+ * key alone goes stale the instant `decide()` resolves while CIO mode is on
+ * screen. The server rebuilds the CioView from the session's decisions; the
+ * client must refetch whenever that input changed.
+ */
+export function cioFetchKey(
+  sid: string,
+  revealedMonths: number,
+  plane: Plane,
+  decisionCount: number,
+): string {
+  return `${sid}:${revealedMonths}:${plane}:${decisionCount}`;
+}
 
 interface PlayProps {
   bundle: WorldBundle;
@@ -69,6 +92,9 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [plane, setPlane] = useState<Plane>("reported");
+  const [viewMode, setViewMode] = useState<"book" | "cio">("book");
+  const [cioView, setCioView] = useState<CioView | null>(null);
+  const [cioError, setCioError] = useState<string | null>(null);
 
   const months = bundle.meta.months;
   const windows = bundle.summary.decision_months;
@@ -83,6 +109,56 @@ export function Play({ bundle, config, onExit }: PlayProps) {
       .then(setSession)
       .catch((e) => setError(String(e)));
   }, [bundle.meta.run_id, basis, config?.ranked, config?.participant]);
+
+  // cio-02: fetch the CIO view only while that mode is on screen, and only
+  // when the pointer, the plane, or the decided-window count actually moved
+  // (cioFetchKey). The client never derives the dashboard's numbers itself —
+  // a plane change (or a decision) is a REFETCH of the server's own
+  // recomputation, same as everywhere else in this file (DN-8 §2).
+  //
+  // The key is computed once here (not re-derived separately for the effect
+  // deps) so the two cannot drift: whatever cioFetchKey consumes IS what
+  // retriggers the fetch. The effect body reads `session`/`plane` fresh off
+  // the closure — they are current as of the render that produced this key.
+  const cioKey = session
+    ? cioFetchKey(
+        session.session_id,
+        session.revealed_months,
+        plane,
+        Object.keys(session.decisions).length,
+      )
+    : null;
+
+  useEffect(() => {
+    if (viewMode !== "cio" || !session) return;
+    let stale = false;
+    setCioError(null);
+    getCioView(session.session_id, plane)
+      .then((v) => {
+        if (stale) return;
+        if (import.meta.env.DEV) {
+          const errs = validateCioView(v);
+          if (errs.length) console.warn("[cioView] contract violations:", errs);
+        }
+        setCioView(v);
+      })
+      .catch((e) => {
+        if (stale) return;
+        if (e instanceof SessionApiError && e.status === 409) {
+          setCioView(null);
+          setCioError("No closed quarter yet - advance past the first quarter.");
+        } else {
+          setCioError(String(e.message ?? e));
+        }
+      });
+    return () => {
+      stale = true;
+    };
+    // Deps are [viewMode, cioKey] rather than the individual fields cioKey
+    // is built from (session?.session_id, session?.revealed_months, plane,
+    // decisionCount) on purpose — cioKey IS those fields, so there is only
+    // one signal to keep in sync with what the effect body reads.
+  }, [viewMode, cioKey]);
 
   /** The next undecided window, or null when all are decided. */
   const nextWindow = useMemo(() => {
@@ -307,6 +383,14 @@ export function Play({ bundle, config, onExit }: PlayProps) {
           <span>As true</span>
         </div>
 
+        <button
+          className="modeswitch"
+          aria-pressed={viewMode === "cio"}
+          onClick={() => setViewMode(viewMode === "cio" ? "book" : "cio")}
+        >
+          {viewMode === "cio" ? "Book view" : "CIO view"}
+        </button>
+
         <button className="t" onClick={onExit} title="Exit to browse" aria-label="Exit">
           ✕
         </button>
@@ -366,6 +450,15 @@ export function Play({ bundle, config, onExit }: PlayProps) {
 
       <div className="vgrid">
         <div className="left">
+          {viewMode === "cio" ? (
+            cioError ? (
+              <div className="empty">{cioError}</div>
+            ) : cioView ? (
+              <CioDashboard view={cioView} onPlaneChange={setPlane} />
+            ) : (
+              <div className="empty">Loading CIO view...</div>
+            )
+          ) : (
           <section>
             <div className="eyebrow">
               <span>The market against its siblings</span>
@@ -430,6 +523,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               )}
             </div>
           </section>
+          )}
         </div>
 
         <div className={`right${atWindow !== null ? " deciding" : ""}`}>

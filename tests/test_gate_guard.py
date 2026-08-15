@@ -11,9 +11,7 @@ import importlib.util
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
-_spec = importlib.util.spec_from_file_location(
-    "check_gate", _ROOT / "scripts" / "check_gate.py"
-)
+_spec = importlib.util.spec_from_file_location("check_gate", _ROOT / "scripts" / "check_gate.py")
 assert _spec is not None and _spec.loader is not None
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)

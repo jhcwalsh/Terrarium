@@ -288,6 +288,39 @@ button.t {
   color: var(--jade);
 }
 
+/* the CIO/book view toggle (cio-02): a single button beside the plane
+   switch, styled from the same shell so the header reads as one system. */
+.modeswitch {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #0b2225;
+  color: var(--ice);
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  padding: 8px 13px;
+}
+
+.modeswitch[aria-pressed="true"] {
+  border-color: var(--jade);
+  color: var(--jade);
+}
+
+/* CIO view's loading / error placeholder, filling the same slot the fan
+   charts occupy in book mode */
+.empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  padding: 24px;
+  text-align: center;
+  color: var(--muted);
+  font-size: 14px;
+}
+
 /* ticker tape */
 .tape {
   display: flex;

@@ -43,6 +43,16 @@ describe("Book", () => {
     expect(PRIVATE_BAND).toEqual([0.15, 0.4]);
   });
 
+  it("labels Value with the session's fixed basis and Coverage/Private weight as true basis, so it never shows an unexplained number beside the CIO dashboard's plane-driven figures", () => {
+    render(<Book session={base} />);
+    expect(host!.textContent).toMatch(/value.*reported basis/i);
+    expect(host!.textContent).toMatch(/coverage.*true basis/i);
+    expect(host!.textContent).toMatch(/private weight.*true basis/i);
+
+    act(() => root!.render(<Book session={{ ...base, basis: "actual" }} />));
+    expect(host!.textContent).toMatch(/value.*actual basis/i);
+  });
+
   it("states the reported-vs-true gap rather than hiding it", () => {
     render(<Book session={{ ...base, coverage_true: 0.31, coverage_reported: 0.29 }} />);
     expect(host!.textContent).toMatch(/reported/i);

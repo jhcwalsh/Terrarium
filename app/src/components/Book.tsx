@@ -29,7 +29,12 @@ export function Book({ session }: { session: Session }) {
     <div className="book" aria-label="the book">
       <div className="book-rail">
         <div>
-          <span className="k">Value</span>
+          {/* Value is session.value, computed server-side on this session's
+              FIXED scoring basis (doc["basis"]) — the CIO dashboard's own
+              value follows the live plane toggle instead, so the two panels
+              can legitimately disagree in CIO mode. Label it so a reader
+              never has to guess which number is which. */}
+          <span className="k">Value &middot; {session.basis} basis</span>
           <span className="v">{num(session.value)}</span>
         </div>
         <div>
@@ -39,7 +44,10 @@ export function Book({ session }: { session: Session }) {
           </span>
         </div>
         <div>
-          <span className="k">Coverage</span>
+          {/* coverage_true is unconditionally true-basis, independent of
+              session.basis and of any plane toggle — labelled for the same
+              reason as Value above. */}
+          <span className="k">Coverage &middot; true basis</span>
           <span className="v">{pct(session.coverage_true)}</span>
         </div>
       </div>
@@ -47,7 +55,7 @@ export function Book({ session }: { session: Session }) {
       <table>
         <tbody>
           <tr>
-            <td>Private weight</td>
+            <td>Private weight &middot; true basis</td>
             <td>{pct(pw)}</td>
             <td className={breached ? "band-breach" : "band-ok"}>
               {breached ? "outside" : "inside"} {pct(lo, 0)}–{pct(hi, 0)}
