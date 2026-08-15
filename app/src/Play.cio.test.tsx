@@ -10,7 +10,7 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it } from "vitest";
-import { cioFetchKey, cockpitClass, peerTabs } from "./Play";
+import { bookLabel, cioFetchKey, cockpitClass, peerTabs } from "./Play";
 
 describe("cio view fetch policy", () => {
   it("refetches when the reveal pointer moves", () => {
@@ -30,6 +30,20 @@ describe("cio view fetch policy", () => {
   // dashboard must refetch on decisionCount alone, same pointer and plane.
   it("refetches when a decision lands, same pointer and plane", () => {
     expect(cioFetchKey("s", 12, "reported", 1)).not.toBe(cioFetchKey("s", 12, "reported", 2));
+  });
+});
+
+// I-4: the stat rail's "Your book" label must name the session's actual
+// FIXED scoring basis (session.basis: "reported" | "actual", see
+// lib/session.ts), never a hardcoded string — a hardcode would silently
+// mislabel the figure the instant a player's session used the other basis.
+// Both real values are asserted so a constant return value cannot pass.
+describe("book label names the real scoring basis (I-4)", () => {
+  it("names the reported basis", () => {
+    expect(bookLabel("reported")).toBe("Your book · reported basis");
+  });
+  it("names the actual basis, not a hardcoded 'reported'", () => {
+    expect(bookLabel("actual")).toBe("Your book · actual basis");
   });
 });
 

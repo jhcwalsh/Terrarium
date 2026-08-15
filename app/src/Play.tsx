@@ -148,6 +148,18 @@ export function cockpitClass(viewMode: "book" | "cio", plane: Plane): string {
   return `vitrine plane-${plane}${viewMode === "cio" ? " cockpit" : ""}`;
 }
 
+/** The stat rail's "Your book" label, naming the FIXED scoring basis the
+ * figure below it is computed on (`session.basis`, `serve.py`'s
+ * `use_reported`) — never the dashboard's live plane, which can disagree
+ * with it the instant a player flips the plane switch (I-4; DN-8 §4 lists
+ * `plan.totalValue` as plane-sensitive). Extracted as a pure seam, like
+ * `cioFetchKey`/`cockpitClass` above, so the label — and specifically that
+ * it reads the real `session.basis` rather than a hardcoded string — is
+ * pinned by a test without mounting the session-backed component. */
+export function bookLabel(basis: string): string {
+  return `Your book · ${basis} basis`;
+}
+
 interface PlayProps {
   bundle: WorldBundle;
   config?: PlayConfig;
@@ -484,8 +496,9 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               the plane away from the session basis. Book.tsx used to carry
               this exact label (f35e64d) for the same reason; restored here
               so the rail's headline is never silently read as the same
-              number as the dashboard's plan total (I-4). */}
-          <div className="k">Your book · {session.basis} basis</div>
+              number as the dashboard's plan total (I-4). `bookLabel` is
+              pinned in Play.cio.test.tsx. */}
+          <div className="k">{bookLabel(session.basis)}</div>
           <div className={`v ${aheadOfTwin === null ? "" : aheadOfTwin >= 0 ? "pos" : "neg"}`}>
             {session.value == null ? "100.0" : session.value.toFixed(1)}
           </div>
