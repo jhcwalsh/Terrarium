@@ -97,6 +97,14 @@ EXCLUDED_FROM_SEAL: dict[str, str] = {
         "generator id -> factory resolution; selects the judged system by its sealed "
         "id, computes nothing about it."
     ),
+    "src/ah/gen/stress.py": (
+        "the stress-scenario compiler (stress-01) — judged, not judge, the same "
+        "argument as bootstrap.py: it produces ensembles and touches no criterion. "
+        "Reachable only because ah/gen/__init__ imports it for its registration "
+        "side effect (the bootstrap-stratified dispatcher). Its worlds are "
+        "declared-severity scenarios that never enter the battery or any G-gate "
+        "(design spec S1), so sealing it would put a generator inside the judge."
+    ),
 }
 
 
