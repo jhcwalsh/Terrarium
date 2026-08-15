@@ -7,7 +7,7 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { advance, createSession, decide, SessionApiError } from "./session";
+import { advance, createSession, decide, getCioView, SessionApiError } from "./session";
 
 function mockFetch(status: number, body: unknown) {
   const fn = vi.fn(async () => ({
@@ -49,5 +49,26 @@ describe("session client", () => {
     expect(err).toBeInstanceOf(SessionApiError);
     expect(err.status).toBe(409);
     expect(err.message).toBe("windows are decided in order");
+  });
+});
+
+describe("getCioView", () => {
+  it("requests the plane and forecast quarters it was given", async () => {
+    const fn = mockFetch(200, { meta: { plane: "true" } });
+    const v = await getCioView("s-1", "true", 0);
+    expect(fn).toHaveBeenCalledWith(
+      "/sessions/s-1/cio?plane=true&forecast_quarters=0",
+      expect.anything(),
+    );
+    expect(v.meta.plane).toBe("true");
+  });
+
+  it("defaults forecast quarters to the server default (omits the param)", async () => {
+    const fn = mockFetch(200, { meta: { plane: "reported" } });
+    await getCioView("s-1", "reported");
+    expect(fn).toHaveBeenCalledWith(
+      "/sessions/s-1/cio?plane=reported",
+      expect.anything(),
+    );
   });
 });
