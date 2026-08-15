@@ -72,6 +72,22 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Changed
 
+- **The CIO dashboard is the play surface (cio-03), 2026-08-14.** The cockpit
+  cutover: the dashboard renders in its own scrolling pane so the header,
+  ticker, rail, wire and decision panel never move (the one-screen rule
+  restored, which cio-02's scaffold had broken); the host owns the plane
+  control and the footer (`chrome="embedded"`), ending the duplicate controls;
+  the peer cone rides as a host-injected `Peers` tab, which keeps the
+  dashboard a pure renderer of one `CioView`. `Book` and `PrivateMarkets`
+  retire - their content is the allocation bands, liquidity coverage and the
+  Private cashflows tab, where the ER-6 lapse and vintage ladder audit (F2)
+  are restored via `expiredUndrawn` per quarter and `vintages` per cohort.
+  Ratio lines now break at nulls instead of plotting them on the floor, and
+  refuse to draw an empty domain. A decisions-bearing golden fixture pins the
+  excess row. DN-8 §8's "exhaustive" arithmetic list amended to match the
+  ratified renderer, with the two hardcoded tone thresholds recorded as a
+  known exception.
+
 - **The opening private book is a staggered ladder of vintages (ER-12),
   2026-08-14.** `_build_portfolio` opened the institution by cloning the
   committed fixture cohort — age 5.25 against a 10-year life — once per

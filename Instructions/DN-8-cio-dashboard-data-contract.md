@@ -180,8 +180,13 @@ Exhaustive. Anything else is a contract violation.
 - breach test = `|currentPct − targetPct| > bandPct`
 - watch test = `|currentPct − targetPct| ≥ watchFraction × bandPct`, only where `watchFraction` is supplied
 - LTM and next-4q sums over supplied quarterly figures
+- market window change = `last / path[0] − 1` (indexed series) or `last − path[0]` (level series)
+- correlation delta = `current − baseline`
+- `forecast12m.net` fallback = Σ of the supplied flow components, when `net` is absent
 
 Each is a sum or a ratio of supplied figures with no model content. Anything with a parameter in it belongs in the engine.
+
+**Known exception (recorded 2026-08-14, cio-03).** Two display tones carry hardcoded parameters the renderer should not own: the tier-1 cash tile warns below 2% of plan, and a correlation warns above a 0.1 delta from baseline. Both are vendored from renderer v0.3. They colour a tile; they never change a number. They belong in the payload (an `alert` on the tier, a `tone` on the correlation row) and should move there when the engine next touches either block — until then this note is the disclosure, not the fix.
 
 ---
 
