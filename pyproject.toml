@@ -101,7 +101,10 @@ src = ["src", "tests"]
 # Instructions/REFERENCE-vix_backcast.py is the owner's specification sketch
 # for WP-DATA-VOLEXT ("treat it as a specification sketch, not code to
 # vendor") - the rewrite it specifies is src/ah/data/vol_backcast.py.
-extend-exclude = ["*.md", "docs/data/client.py", "Instructions/REFERENCE-vix_backcast.py"]
+# spikes/ holds vendored prototypes (DN-9's wire_proto.py: "a spike, not
+# ratified, reference for structure never values") - the same
+# contract-document class as client.py; linting would alter the record.
+extend-exclude = ["*.md", "docs/data/client.py", "Instructions/REFERENCE-vix_backcast.py", "spikes/"]
 
 [tool.ruff.lint]
 select = [
