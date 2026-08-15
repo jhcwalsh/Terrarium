@@ -610,7 +610,8 @@ def validate_cio_view(v: dict[str, Any]) -> list[str]:
                     (pcf["series"].get(cid) or [{}] * n)[i].get("expiredUndrawn", 0.0)
                     for cid in class_ids
                 )
-                if not near(s_exp, r.get("expiredUndrawn", 0.0), max(0.5, s_exp * 0.001)):
+                r_exp = r.get("expiredUndrawn", 0.0)
+                if not near(s_exp, r_exp, max(0.5, r_exp * 0.001)):
                     e.append(f"aggregate expiredUndrawn at {r['label']} != sum of classes")
 
     h_len = len(((v.get("plan") or {}).get("history") or {}).get("values") or [])

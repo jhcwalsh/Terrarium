@@ -208,12 +208,26 @@ describe("CioDashboard", () => {
       expect(host!.textContent).toMatch(/\$733m/);
     });
 
-    it("renders zero lapse as a dash or muted zero, not a number that draws the eye", () => {
-      render(<CioDashboard view={view} onPlaneChange={() => {}} initialTab="private" />);
-      // the fixture's current (as-of) quarter has no lapse; the per-quarter
-      // lapse cell for "aggregate" must not print a bare "$0m"
-      const table = host!.querySelector("table");
-      expect(table).not.toBeNull();
+    it("renders zero lapse as a dash, never a bare $0m, when every row is genuinely zero", () => {
+      // The committed fixture is the wrong vehicle for this: every class's
+      // and the aggregate's lapsed-to-date sum is already non-zero there
+      // (0.54 / 1.35 / 0.47 / 2.37), so the zero branch is never reached
+      // against it. Zero out expiredUndrawn on EVERY row of EVERY series so
+      // the "By asset class" table's "Lapsed to date" column is genuinely
+      // zero for every row, then check the actual lapse cells — not the
+      // whole table's text, which legitimately prints "$0m" elsewhere
+      // (Net LTM / Net next 4q for the quieter classes).
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      for (const rows of Object.values(v.privateCashflows.series)) {
+        for (const r of rows) r.expiredUndrawn = 0;
+      }
+      render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+      const lapseCells = [...host!.querySelectorAll(".lapse-value")];
+      // one per row of the "By asset class" table (classes + aggregate)
+      expect(lapseCells.length).toBeGreaterThan(0);
+      for (const cell of lapseCells) {
+        expect(cell.textContent).toBe("—");
+      }
     });
 
     it("renders one bar per vintage rung, oldest first", () => {

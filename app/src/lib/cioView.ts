@@ -403,7 +403,8 @@ export function validateCioView(v: CioView): string[] {
         const s = pcf.classes.reduce((acc, c) => acc + (pcf.series[c.id]?.[i]?.calls ?? 0), 0);
         if (!near(s, r.calls, Math.max(0.5, r.calls * 0.001))) e.push(`aggregate calls at ${r.label} ≠ sum of classes`);
         const sExp = pcf.classes.reduce((acc, c) => acc + (pcf.series[c.id]?.[i]?.expiredUndrawn ?? 0), 0);
-        if (!near(sExp, r.expiredUndrawn ?? 0, Math.max(0.5, sExp * 0.001))) e.push(`aggregate expiredUndrawn at ${r.label} ≠ sum of classes`);
+        const rExp = r.expiredUndrawn ?? 0;
+        if (!near(sExp, rExp, Math.max(0.5, rExp * 0.001))) e.push(`aggregate expiredUndrawn at ${r.label} ≠ sum of classes`);
       });
     }
   }

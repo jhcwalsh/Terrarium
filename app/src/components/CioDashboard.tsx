@@ -884,10 +884,13 @@ function RatioChart({
 
 /** ER-6's terminal lapse (undrawn commitment cancelled, never called): a
  *  real value in the alert colour, a zero as a muted dash — never a bare
- *  "$0m" that reads as just another figure in the row. */
+ *  "$0m" that reads as just another figure in the row. `lapse-value`
+ *  className is a stable test hook (CioDashboard.test.tsx's zero-lapse
+ *  assertion targets it, since the surrounding table has plenty of
+ *  legitimate "$0m" cells in unrelated columns). */
 function lapseCell(v: number | null | undefined, u: string) {
-  if (!isNum(v) || v <= 0) return <span style={{ color: C.faint }}>{NA}</span>;
-  return <span style={{ color: C.warn }}>{money(v, u)}</span>;
+  if (!isNum(v) || v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{NA}</span>;
+  return <span className="lapse-value" style={{ color: C.warn }}>{money(v, u)}</span>;
 }
 
 /** The programme's cohort NAV stack at the as-of quarter, oldest vintage
