@@ -332,9 +332,27 @@ jointly the recommended starting point; P3 is the strongest and the most dangero
   disclosure, not failure, and the statistic exists precisely so the novelty of the
   assembled sequence is measured rather than waved at (Kritzman, Czasonis &
   Turkington, MIT Sloan WP 6246-21).
-- **The adequacy ladder.** Coverage breaches, forced secondaries, ruinous seeds —
-  the reference shape being 20/20 coverage breached, 4–8/20 forced secondary, 1+
-  ruinous. **Measured once, after the rule is fixed.**
+- **The adequacy ladder.** Coverage behaviour, forced secondaries, ruinous seeds.
+  **Measured once, after the rule is fixed.** *Re-anchored 2026-08-15 (owner
+  ruling, on the E1 over-commitment measurement):* the original reference shape
+  (20/20 coverage breached, 4–8/20 forced secondary, 1+ ruinous) is RETIRED as a
+  drafting artifact — it describes no book reachable from precedented markets ×
+  declared-or-precedented allocations. The reference is now **coverage-based,
+  per allocation band**, drawn from the measured grid on the deepest declared
+  world (`2026-08-15-e1-overcommitment-measurement.md`):
+
+  | opening private allocation | expected worst coverage (unfunded/liquid) | breach (≥1.0) |
+  |---|---|---|
+  | policy floor (15) | ~0.10–0.16 | not expected |
+  | default (35) | ~0.31–0.54 | not expected |
+  | policy ceiling (40) | ~0.38–0.69 | not expected |
+  | beyond policy (55) | ~0.72–1.57 | expected on some seeds |
+
+  A stress world whose measured coverage falls far outside its band is the
+  finding — in either direction. The **forced secondary** is re-classified as
+  the catastrophic-tail event beyond the breach line: rare because the model is
+  honest, expected only for books beyond the declared policy range, and never a
+  target incidence.
 
 **If the ladder disappoints, the response is to re-examine the severity rule against
 historical precedent — never to dial until it passes.** A 0/20 reading has two honest
@@ -475,5 +493,6 @@ assigned at ratification there, not here.
 | version | date | change |
 |---|---|---|
 | v0.1 | 2026-08-14 | Initial design (commit `fa5dbe7`) |
+| v0.3 | 2026-08-15 | Owner rulings after the measurement arc: §6.2's adequacy-ladder reference shape RETIRED and re-anchored to coverage-per-allocation-band (the E1 grid); the forced secondary re-classified as the catastrophic-tail event beyond the breach line. Ship ruling: world `…703` (Lost Decade, 6-month blocks) ships to the players' library with its declared-stress disclosure; `…702` retired as a record. Coverage ratio + breach line promoted to the teaching surface (product WP) |
 | v0.2 erratum | 2026-08-14 | §5's "unused slot" premise for `bootstrap-stratified` was false — the id is a live deprecated alias for `bootstrap-v1`, load-bearing for sealed 1.0.x fixture worlds. Resolved by dispatch-on-declaration (see §5), preserving legacy behavior bit-identically. Found by the Task 4 implementer during the build |
 | v0.2 | 2026-08-14 | Phase 0 attribution test run and cited in §2 (result: the motivating claim stands; the severity gap is wider than v0.1 stated). Amendments: **A1** applied — coherence/fidelity split into gating vs exempt tiers, exemption named by battery test id (§1, §6.1). **A2** applied — claim restated as *real months, invented sequence, precedented severity rule*; Mahalanobis plausibility statistic added, reported never gating (§1, §6.2, §5, §8). **A3** applied as proposal — persistence rule §4.3(d) with three candidate forms; parameterisation reserved ⚑ D-SC-1. **A4** applied — international pool named first-choice remedy ahead of 1929–32, Barro & Ursúa / Barro & Jin cited; licence-blocked ⚖ D-SC-4. **A5** applied — two-compiler split stated with the hard narration rule (§11); premise-compiler scoping reserved ⚑ D-SC-2. **A6** applied — reverse-stress-testing carve-out on rule 1 with three mandatory conditions, ECB WP 2941 cited (§3); ship timing reserved ⚑ D-SC-3. **A7** applied — `docs/tail-register.md` created and seeded; severity/incidence separation stated (§8, register TR-7) |
