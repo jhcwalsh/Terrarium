@@ -7,7 +7,7 @@ all_down (equity + credit + yields, the default — closes the flight-to-quality
 
 from __future__ import annotations
 
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 
 import numpy as np
 
@@ -63,3 +63,34 @@ def eligible_rows(scores: np.ndarray, percentile: float) -> np.ndarray:
         return np.arange(s.size, dtype=np.int64)
     keep = max(1, int(np.floor(s.size * percentile / 100.0)))
     return np.sort(np.argsort(s, kind="stable")[:keep]).astype(np.int64)
+
+
+#: Of the sealed 14-factor panel, these nine are LEVELS rather than increments.
+#: Splicing a level at a block join teleports it; splicing a return does not.
+LEVEL_FACTORS: tuple[str, ...] = (
+    "equity_vol", "ig_spread", "hy_spread", "policy_rate",
+    "ust_2y", "ust_10y", "cpi", "hqm_curve", "funding_spread",
+)
+
+
+def join_candidates(
+    values: np.ndarray,
+    factor_names: Sequence[str],
+    current_row: int,
+    tolerance: Mapping[str, float],
+    pool: np.ndarray,
+) -> np.ndarray:
+    """Rows in ``pool`` reachable from ``current_row`` without a level teleport.
+
+    A factor with no declared tolerance does not constrain. May return an empty
+    array; the caller decides what to do (the sampler continues the block).
+    """
+    names = list(factor_names)
+    x = np.asarray(values, dtype=np.float64)
+    keep = np.ones(pool.size, dtype=bool)
+    for factor, tol in tolerance.items():
+        if factor not in names:
+            raise ValueError(f"join tolerance names unknown factor '{factor}'")
+        column = x[:, names.index(factor)]
+        keep &= np.abs(column[pool] - column[int(current_row)]) <= float(tol)
+    return pool[keep]
