@@ -626,13 +626,21 @@ def test_an_authored_world_names_a_registered_generator() -> None:
     assert named in registry.registered()
 
 
-def test_both_ids_are_registered_to_the_same_factory() -> None:
-    """The alias is a second name, not a second generator."""
+def test_the_shared_id_now_resolves_to_the_stress_dispatcher() -> None:
+    """Until stress-01 (2026-08-15) both ids resolved to bootstrap_v1_factory --
+    the alias was a second name for the same generator. The stress compiler's
+    dispatcher now owns the schema id and routes on the presence of
+    extensions.x_stress: a world without it (every sealed 1.0.x fixture world)
+    still reaches bootstrap-v1, which test_the_shared_id_routes_a_legacy_world_
+    to_bootstrap_v1 in test_gen_stress.py pins. Spec: docs/superpowers/specs/
+    2026-08-14-stress-scenario-compiler-design.md S5 erratum."""
+    import ah.gen  # noqa: F401  - trigger both registrations in order
     from ah.gen import registry
+    from ah.gen.stress import stress_or_legacy_factory
 
     snapshot = registry.snapshot()
     assert snapshot[bs.GENERATOR_ID] is bs.bootstrap_v1_factory
-    assert snapshot[bs.SCHEMA_GENERATOR_ID] is bs.bootstrap_v1_factory
+    assert snapshot[bs.SCHEMA_GENERATOR_ID] is stress_or_legacy_factory
 
 
 def test_the_alias_is_the_id_the_schema_actually_permits() -> None:
