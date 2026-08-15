@@ -197,22 +197,44 @@ def build_cio_view(
         if pre is not None
         else []
     )
+    performance_footnote = "Payout added back; time-weighted. Twin holds the t0 plan."
+    if pre is not None:
+        performance_footnote += (
+            " 3Y/5Y/10Y include the inherited decade (simulated, scaled to the "
+            "opening book - not this world's own history); 1Y crosses that "
+            "seam whenever fewer than four world quarters have been played; "
+            "Excess is near zero in every long column by construction, "
+            "because the twin shares the identical inherited prefix, not "
+            "because the plan tracked the benchmark for a decade; private "
+            "classes show an em dash in the long columns because a per-class "
+            "inherited tape is not exported - not because the inherited "
+            "decade has no private history (it ran the full book, privates "
+            "included, which is why the true and reported series differ at "
+            "all)."
+        )
 
     plan: dict[str, Any] = {
         "totalValue": round(total, 4),
         "growthPct": (round((total / opening_nav - 1.0) * 100.0, 4) if opening_nav > 0 else None),
         "netOfFlows": (round(total - opening_nav + spend_total, 4) if opening_nav > 0 else None),
-        "windowLabel": (
-            "Inherited decade + since inception" if pre is not None else "Since inception"
-        ),
+        # growthPct/netOfFlows above are since-inception (world month 0) only
+        # — windowLabel describes THEM, not the chart's hatched band, so it
+        # stays "Since inception" regardless of prehistory (review finding,
+        # Critical 1: the brief's original instruction to change this was
+        # wrong — a decade label beside a one-year figure is the defect).
+        "windowLabel": "Since inception",
         "history": {"values": history_values, "worldStartIndex": world_start_index},
     }
     if pre is not None:
-        plan["preRunLabel"] = (
-            "Inherited decade - simulated, scaled to land on the opening book. "
-            "Not part of this world's scored history."
-        )
-        plan["worldStartLabel"] = "World start - the scored history begins here"
+        # Tag-length, not sentence-length: these render as un-wrapping SVG
+        # <text> in a fixed-width band on the plan chart (app/src/components/
+        # CioDashboard.tsx renders the renderer's own hatch/boundary
+        # annotations unchanged — DN-8's "dashboard unchanged" promise, so
+        # the copy has to fit the existing slot rather than the slot
+        # growing to fit the copy). The full sentence lives in
+        # performance.footnote instead.
+        plan["preRunLabel"] = "INHERITED DECADE"
+        plan["worldStartLabel"] = "WORLD BEGINS"
 
     view: dict[str, Any] = {
         "meta": {
@@ -253,7 +275,7 @@ def build_cio_view(
             "total": _period_row(pre_q_rets + q_rets, n_q - 1),
             "benchmark": _period_row(pre_q_rets + twin_rets, n_q - 1),
             "benchmarkLabel": "Policy twin (hold course)",
-            "footnote": "Payout added back; time-weighted. Twin holds the t0 plan.",
+            "footnote": performance_footnote,
         },
         "liquidity": _liquidity(active, targets, plane, n_q, forecast_quarters),
         "privateCashflows": _private_cashflows(active, n_q, forecast_quarters, plane),

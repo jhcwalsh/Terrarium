@@ -91,9 +91,11 @@ export interface Plan {
     /** Monthly, oldest first. Length sets the window; ticks are drawn every 12. */
     values: number[];
     /**
-     * Index into values at which the invented decade begins. Everything
-     * before it is drawn hatched and dashed. Set 0 if the world supplies
-     * no pre-history — see DN-8 §O-1, which is the governing open item.
+     * Index into values at which the WORLD's own history begins (i.e. the
+     * inherited decade, if any, occupies indices before this one).
+     * Everything before it is drawn hatched and dashed. Set 0 if the world
+     * supplies no pre-history — see DN-8 §O-1, which is the governing open
+     * item.
      */
     worldStartIndex: number;
   };
