@@ -8,8 +8,20 @@ all_down (equity + credit + yields, the default — closes the flight-to-quality
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
+from typing import Any
 
 import numpy as np
+
+from ah.core.numericworld import NumericWorld
+from ah.core.worldspec import StressSegment, StressSpec
+from ah.gen.base import AbsentLayer, Ensemble, EnsembleMeta, RegimeRecord
+from ah.gen.bootstrap import REGIME_LABELS, BootstrapSource
+
+
+class StressError(ValueError):
+    """Raised for any bootstrap-stratified stress-sampler misuse: an unfitted
+    generator, a world with no declared x_stress, a quarter no segment covers,
+    or a spec/args combination the sampler cannot honour."""
 
 
 def _z(column: np.ndarray) -> np.ndarray:
@@ -94,3 +106,153 @@ def join_candidates(
         column = x[:, names.index(factor)]
         keep &= np.abs(column[pool] - column[int(current_row)]) <= float(tol)
     return pool[keep]
+
+
+def _segment_for(stress: StressSpec, quarter: int) -> StressSegment:
+    """The segment covering ``quarter``.
+
+    Raises :class:`StressError` naming the quarter when no segment covers it.
+    ``StressSpec`` only checks that its segments tile with no gap or overlap;
+    it never checks against a world's horizon, so a scenario that ends short
+    of the sampled horizon must fail loudly here rather than silently running
+    past the declared stress window.
+    """
+    for seg in stress.segments:
+        if seg.from_quarter <= quarter <= seg.to_quarter:
+            return seg
+    last = max(seg.to_quarter for seg in stress.segments)
+    raise StressError(
+        f"quarter {quarter} is covered by no stress segment; segments end at quarter {last}"
+    )
+
+
+class StressBootstrap:
+    """The stress-scenario compiler. Implements ah.gen.base.Generator."""
+
+    generator_id = "bootstrap-stratified"
+
+    def __init__(self, source: BootstrapSource | None = None) -> None:
+        self._source = source
+
+    @property
+    def source(self) -> BootstrapSource:
+        if self._source is None:
+            raise StressError("bootstrap-stratified is not fitted; call fit(campaign_source())")
+        return self._source
+
+    def fit(self, data: Any) -> None:
+        if not isinstance(data, BootstrapSource):
+            raise StressError(
+                f"fit expects a BootstrapSource (see ah.gen.bootstrap.campaign_source); "
+                f"got {type(data).__name__}"
+            )
+        self._source = data
+
+    def sample(self, world: NumericWorld, n_paths: int, seed: int) -> Ensemble:
+        if world.stress is None:
+            raise StressError(
+                f"world '{world.world_id}' selects bootstrap-stratified but declares no "
+                "extensions.x_stress; a stress world must declare its severity rule"
+            )
+        months = int(world.horizon.quarters) * 3
+        return self.sample_months(months, n_paths, seed, world=world, stress=world.stress)
+
+    def sample_months(self, months, n_paths, seed, *, world=None, stress=None) -> Ensemble:
+        source = self.source
+        if stress is None:
+            raise StressError("bootstrap-stratified requires a StressSpec")
+        months, n_paths = int(months), int(n_paths)
+        if months < 1 or n_paths < 1:
+            raise StressError(f"months and n_paths must be >= 1; got {months}, {n_paths}")
+
+        scores = severity_score(source.values, source.factor_names, stress.functional)
+        # month -> (pool, restart probability) from the segment covering it
+        pools: list[np.ndarray] = []
+        probs: list[float] = []
+        per_segment_pool: dict[int, np.ndarray] = {}
+        for m in range(months):
+            quarter = m // 3
+            seg = _segment_for(stress, quarter)
+            key = seg.from_quarter
+            if key not in per_segment_pool:
+                per_segment_pool[key] = eligible_rows(scores, seg.entry_percentile)
+            pools.append(per_segment_pool[key])
+            probs.append(1.0 / float(seg.mean_block_months))
+
+        index = self._draw(source, months, n_paths, seed, pools, probs, stress.join_tolerance)
+        paths = source.values[index]
+
+        label_codes = {label: i for i, label in enumerate(REGIME_LABELS)}
+        source_codes = np.array(
+            [label_codes[label] for label in source.labels], dtype=np.int64
+        )
+
+        conditioning = {
+            "mode": "declared-stress-scenario",
+            "functional": stress.functional,
+            "segments": [
+                {"from_quarter": s.from_quarter, "to_quarter": s.to_quarter,
+                 "entry_percentile": s.entry_percentile,
+                 "mean_block_months": s.mean_block_months}
+                for s in stress.segments
+            ],
+            "pool_sizes": [int(per_segment_pool[s.from_quarter].size) for s in stress.segments],
+            "join_tolerance": dict(stress.join_tolerance),
+            "precedent": list(stress.precedent),
+            "ruleset_version": source.ruleset_version,
+            "block_draw_span": {
+                "start": str(source.dates[0].date()),
+                "end": str(source.dates[-1].date()),
+                "months": source.n_rows,
+            },
+            # This generator honours no factor_conditions either: severity is
+            # declared through x_stress, not through an inflation average.
+            "factor_conditions_honoured": False,
+            # Spec v0.2 (S5): a hand-declared scenario. A reverse-search world
+            # (D-SC-3, not built) would stamp "search-derived" here instead.
+            "provenance": "declared",
+        }
+        meta = EnsembleMeta(
+            generator_id=self.generator_id, vintage_id=source.vintage_id, seed=int(seed),
+            n_paths=n_paths, months=months, conditioning=conditioning,
+            active_blocks=tuple(source.active_blocks),
+        )
+        return Ensemble(
+            paths=paths, factor_names=list(source.factor_names), meta=meta, row_indices=index,
+            regimes=RegimeRecord(labels=source_codes[index], legend=REGIME_LABELS,
+                                 mode="realized-declared-stress",
+                                 ruleset_version=source.ruleset_version),
+            slow_states=AbsentLayer(reason="a resampler has no slow-state layer"),
+        )
+
+    def _draw(self, source, months, n_paths, seed, pools, probs, tolerance) -> np.ndarray:
+        rng = np.random.Generator(np.random.PCG64(int(seed)))
+        n = source.n_rows
+        index = np.empty((n_paths, months), dtype=np.int64)
+
+        first = pools[0]
+        index[:, 0] = first[rng.integers(0, first.size, size=n_paths)]
+        draws = rng.random((n_paths, months))
+        for m in range(1, months):
+            pool = pools[m]
+            for p in range(n_paths):
+                previous = int(index[p, m - 1])
+                advanced = (previous + 1) % n
+                if draws[p, m] >= probs[m]:
+                    index[p, m] = advanced
+                    continue
+                # Exclude the current row itself: with an exact-match tolerance
+                # (e.g. 0.0) a row trivially matches itself, which would count
+                # as a "reachable join" that goes nowhere. A join must land
+                # somewhere other than where the block already is.
+                candidates = join_candidates(
+                    source.values, source.factor_names, previous, tolerance,
+                    pool[pool != previous],
+                )
+                # Severity is a preference over entries, never a licence to
+                # teleport: with nothing reachable the block simply continues.
+                index[p, m] = (
+                    advanced if candidates.size == 0
+                    else int(candidates[rng.integers(0, candidates.size)])
+                )
+        return index

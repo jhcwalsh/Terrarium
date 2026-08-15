@@ -5,7 +5,13 @@ from __future__ import annotations
 import numpy as np
 import pytest
 
-from ah.gen.stress import eligible_rows, join_candidates, severity_score
+from ah.gen.stress import (
+    StressBootstrap,
+    StressError,
+    eligible_rows,
+    join_candidates,
+    severity_score,
+)
 
 NAMES = ["equity_mkt", "hy_spread", "ust_10y", "cpi"]
 
@@ -97,3 +103,142 @@ def test_join_candidates_may_be_empty_and_the_caller_decides():
     pool = np.array([1], dtype=np.int64)
     got = join_candidates(values, names, 0, {"hy_spread": 0.1}, pool)
     assert got.size == 0
+
+
+# --------------------------------------------------------------------------- #
+# Task 4: the sampler (StressBootstrap)
+# --------------------------------------------------------------------------- #
+
+
+def _tiny_source():
+    """A BootstrapSource whose every column is injective in the row index, so
+    'this month IS that historical month' can be checked exactly rather than
+    statistically — the technique tests/test_bootstrap.py uses."""
+    import pandas as pd
+
+    from ah.gen.bootstrap import BootstrapSource
+
+    n = 60
+    rows = np.arange(n, dtype=np.float64)
+    values = np.column_stack([rows, rows + 1000.0, rows + 2000.0, rows + 3000.0])
+    return BootstrapSource(
+        factor_names=("equity_mkt", "hy_spread", "ust_10y", "cpi"),
+        dates=pd.date_range("1960-01-31", periods=n, freq="ME"),
+        values=values,
+        labels=tuple(["EXP"] * n),
+        ruleset_version="test",
+        vintage_id="test-vintage",
+        active_blocks=("global",),
+    )
+
+
+def _spec(entry_percentile=100.0, mean_block_months=6, tolerance=None):
+    from ah.core.worldspec import StressSegment, StressSpec
+
+    return StressSpec(
+        functional="all_down",
+        segments=[StressSegment(from_quarter=0, to_quarter=39,
+                                entry_percentile=entry_percentile,
+                                mean_block_months=mean_block_months)],
+        join_tolerance=tolerance or {},
+        precedent=["test"],
+    )
+
+
+def test_every_emitted_month_is_a_real_panel_row():
+    """THE claim. Bit-exact on the whole factor vector, not approximately."""
+    gen = StressBootstrap(_tiny_source())
+    ens = gen.sample_months(120, 8, seed=11, stress=_spec())
+    assert ens.row_indices is not None
+    src = gen.source.values
+    for p in range(ens.n_paths):
+        for m in range(ens.months):
+            row = int(ens.row_indices[p, m])
+            np.testing.assert_array_equal(ens.paths[p, m, :], src[row, :])
+
+
+def test_blocks_are_contiguous_runs_of_whole_rows():
+    """Co-movement is real because a block is ONE shared row index across every
+    factor, advancing by one month at a time."""
+    gen = StressBootstrap(_tiny_source())
+    ens = gen.sample_months(120, 8, seed=11, stress=_spec())
+    assert ens.row_indices is not None
+    idx = ens.row_indices
+    n = gen.source.n_rows
+    steps = (idx[:, 1:] - idx[:, :-1]) % n
+    continued = steps == 1
+    assert continued.mean() > 0.5, "most months must continue a block, not restart it"
+
+
+def test_same_seed_same_tape():
+    gen = StressBootstrap(_tiny_source())
+    a = gen.sample_months(60, 4, seed=7, stress=_spec())
+    b = gen.sample_months(60, 4, seed=7, stress=_spec())
+    np.testing.assert_array_equal(a.paths, b.paths)
+    c = gen.sample_months(60, 4, seed=8, stress=_spec())
+    assert not np.array_equal(a.paths, c.paths)
+
+
+def test_restarts_land_in_the_severity_pool():
+    """Severity binds where it is supposed to: on ENTRY. Every restart row must
+    be in the declared pool; continuation rows need not be."""
+    source = _tiny_source()
+    gen = StressBootstrap(source)
+    spec = _spec(entry_percentile=20.0)
+    ens = gen.sample_months(120, 8, seed=3, stress=spec)
+    assert ens.row_indices is not None
+    pool = set(eligible_rows(
+        severity_score(source.values, source.factor_names, "all_down"), 20.0).tolist())
+    idx = ens.row_indices
+    n = source.n_rows
+    for p in range(idx.shape[0]):
+        assert int(idx[p, 0]) in pool
+        for m in range(1, idx.shape[1]):
+            if (int(idx[p, m]) - int(idx[p, m - 1])) % n != 1:
+                assert int(idx[p, m]) in pool, "a restart landed outside the severity pool"
+
+
+def test_a_block_continues_rather_than_teleporting_when_no_join_is_reachable():
+    """With an impossibly tight tolerance nothing is reachable, so the sampler
+    must keep advancing through real history rather than jumping."""
+    source = _tiny_source()
+    gen = StressBootstrap(source)
+    ens = gen.sample_months(60, 4, seed=5,
+                            stress=_spec(entry_percentile=20.0, tolerance={"hy_spread": 0.0}))
+    assert ens.row_indices is not None
+    idx = ens.row_indices
+    n = source.n_rows
+    steps = (idx[:, 1:] - idx[:, :-1]) % n
+    assert bool(np.all(steps == 1)), "no join was reachable; every month must continue"
+
+
+def test_the_ensemble_stamps_the_scenario_for_audit():
+    gen = StressBootstrap(_tiny_source())
+    ens = gen.sample_months(60, 4, seed=5, stress=_spec(entry_percentile=15.0))
+    c = ens.meta.conditioning
+    assert ens.meta.generator_id == "bootstrap-stratified"
+    assert c["functional"] == "all_down"
+    assert c["segments"][0]["entry_percentile"] == 15.0
+    assert c["pool_sizes"][0] > 0
+    assert c["factor_conditions_honoured"] is False
+    assert c["provenance"] == "declared"   # spec v0.2 S5: never search-derived here
+
+
+def test_a_quarter_outside_every_segment_raises_a_named_stress_error():
+    """StressSpec only checks that segments tile with no gap/overlap; it never
+    checks against the world's horizon (parked finding from Task 1's review).
+    A spec that tiles quarters 0-19 sampled for 40 quarters (120 months) must
+    raise, naming the offending quarter, rather than silently running past the
+    declared scenario."""
+    from ah.core.worldspec import StressSegment, StressSpec
+
+    short_spec = StressSpec(
+        functional="all_down",
+        segments=[StressSegment(from_quarter=0, to_quarter=19,
+                                entry_percentile=100.0, mean_block_months=6)],
+        join_tolerance={},
+        precedent=["test"],
+    )
+    gen = StressBootstrap(_tiny_source())
+    with pytest.raises(StressError, match="quarter 20 is covered by no stress segment; segments end at quarter 19"):
+        gen.sample_months(120, 2, seed=1, stress=short_spec)
