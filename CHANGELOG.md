@@ -146,6 +146,47 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Changed
 
+- **The documentation estate is sectioned: `docs/current/` and
+  `docs/historic/`, 2026-08-15.** The methodology had evolved twice (the third
+  campaign's reversal to the collagist, then the prescribe-not-predict turn)
+  while the August 5-8 documents still described a predictive hierarchical
+  generator, with nothing marking which governed. **No code was touched** - a
+  deliberate constraint, and the thing that shaped the design.
+  - `docs/current/README.md` is the new register: every document with a status
+    (GOVERNING / CURRENT IN KIND / SUPERSEDED / RECORD / GENERATED), where it
+    lives, and why. `docs/current/METHOD.md` is the new current account of what
+    has been built and by what method, sourced only from committed records.
+  - Moved to `docs/current/`: `stress-scenario-methodology.md`,
+    `tail-register.md`, `alternate-histories-audited.md`, `DROP-MANIFEST.md`
+    (previously untracked, now tracked). Moved to `docs/historic/`:
+    `RESULTS-EDITION-SUMMARY.md`, `CIO Dashboard.zip` (superseded by its own
+    unpacking; NEXT-STEPS item settled), `narration.zip`.
+  - **Banner-marked in place rather than moved**, because `src/ah/hub.py` serves
+    them from a hard-coded allowlist and moving them would require a code
+    change: `METHODOLOGY.md`, `D-05-methodology-note.md` and the `P1` preprint
+    (SUPERSEDED in framing, explicitly *not* replaced as accounts - the gap is
+    recorded); `BUILD-SUMMARY.md`, `USER-MANUAL.md`,
+    `PLAIN-ENGLISH-USER-MANUAL.md` (CURRENT IN KIND, each with a specific drift
+    table: `toy-v0.5`->`toy-v0.6`, 5xx presets->`...603`, mappings
+    `v1.0`->`v1.1`, `port-v2`->`port-v4-ladder`). The banner is the stronger
+    instrument anyway: it reaches a reader arriving through the hub, which a
+    directory move would not.
+  - **Two things the plan got wrong and the repo corrected.** Gate logs were to
+    be filed under `docs/historic/gate-logs/`; `.gitignore:214` is `/gate*.log`,
+    root-anchored deliberately, so filing them would have made local run logs
+    tracked. They stay at root. And `docs/engine-realism-register.md` was to
+    move; it is cited from `src/ah/battery/thresholds.yaml`, which is inside the
+    pre-registration seal, so moving it would strand a wrong path in a sealed
+    file. It stays in `docs/`, indexed with the reason.
+  - Generated reports (`ABLATION.md`, `CAMPAIGN3-*`, `DESMOOTHING.md`, the three
+    fit reports) got no banner by design - they carry "do not edit by hand" and
+    `tests/test_ablation_report.py` asserts reproducibility.
+  - Live citations repointed (`README-console.md`, `NEXT-STEPS.md`, `CLAUDE.md`,
+    the two still-governing specs); dated records under `docs/superpowers/` left
+    citing the old paths, per the principle `tests/test_citations.py` states in
+    its own docstring. Verified: `test_citations`, `test_seal_guards`,
+    `test_port_mapping`, `test_ablation_report`, `test_hub` - 52 passed, EXIT 0.
+
 - **The CIO dashboard is the play surface (cio-03), 2026-08-14.** The cockpit
   cutover: the dashboard renders in its own scrolling pane so the header,
   ticker, rail, wire and decision panel never move (the one-screen rule

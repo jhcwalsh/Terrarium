@@ -1,3 +1,19 @@
+> **STATUS · SUPERSEDED — 2026-08-15.** The framing here is replaced by
+> `docs/current/METHOD.md`. This note answers the sceptical practitioner about a
+> *predictive* system whose research spine is the four-layer hierarchical
+> generator. Two later findings move it: the third campaign (2026-08-11) kept
+> the collagist over the apprentice, and the stress-scenario turn (2026-08-14)
+> replaced prediction with declared severity for the worlds that ship.
+>
+> It is **not** replaced as an account — this remains the only
+> practitioner-facing explanation of the system at this depth, and a rewrite is
+> outstanding work recorded in `docs/current/README.md`. Its anchors are stable
+> and the help agent still cites into it.
+>
+> Index: `docs/current/README.md`.
+
+---
+
 # How Terrarium Works — and How You'd Catch It Being Wrong
 ## D-05 · Methodology note · Draft v0.3 · August 2026 · v0.3 fills the G2 results slots in §6, adds §6.1 and two results figures
 
