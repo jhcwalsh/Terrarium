@@ -643,3 +643,64 @@ class TestOutcome:
         client.get(f"/sessions/{sid}/outcome")
         after = connect(db).execute("SELECT COUNT(*) c FROM leaderboard").fetchone()["c"]
         assert after == before
+
+
+def test_cio_view_endpoint(service):
+    client, _db, rid = service
+    r = client.post("/sessions", json={"run_id": rid})
+    sid = r.json()["session_id"]
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+    r = client.get(f"/sessions/{sid}/cio")
+    assert r.status_code == 200, r.text
+    v = r.json()
+    assert v["meta"]["plane"] == "reported"
+    assert v["meta"]["planesAvailable"] == ["reported", "true"]
+    assert len(v["plan"]["history"]["values"]) == 12
+    r_true = client.get(f"/sessions/{sid}/cio", params={"plane": "true"})
+    assert r_true.status_code == 200
+    assert r_true.json()["meta"]["plane"] == "true"
+    assert r_true.json()["plan"]["totalValue"] != v["plan"]["totalValue"]
+
+
+def test_cio_view_rejects_bad_params(service):
+    client, _db, rid = service
+    r = client.post("/sessions", json={"run_id": rid})
+    sid = r.json()["session_id"]
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": 6}).status_code == 200
+    assert client.get(f"/sessions/{sid}/cio", params={"plane": "both"}).status_code == 422
+    assert client.get(f"/sessions/{sid}/cio", params={"forecast_quarters": 9}).status_code == 422
+    assert client.get("/sessions/nope/cio").status_code == 404
+
+
+def test_cio_view_needs_a_closed_quarter(service):
+    client, _db, rid = service
+    r = client.post("/sessions", json={"run_id": rid})
+    sid = r.json()["session_id"]
+    assert client.get(f"/sessions/{sid}/cio").status_code == 409
+
+
+def test_cio_view_parity_with_mark_to_market(service):
+    """The two payloads can never disagree on the book (spec section 5)."""
+    client, _db, rid = service
+    r = client.post("/sessions", json={"run_id": rid})
+    sid = r.json()["session_id"]
+    # Decision window 11 blocks the reveal pointer past month 12 (the game's
+    # commit-before-you-see-it rule) — deciding it is required to reach
+    # month 24, not part of the parity claim under test.
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+    assert (
+        client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"}).status_code
+        == 200
+    )
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": 24}).status_code == 200
+    doc = client.get(f"/sessions/{sid}").json()
+    v = client.get(f"/sessions/{sid}/cio").json()
+    # build_cio_view rounds every figure to 4dp (its published contract);
+    # _mark_to_market does not, so parity is exact up to that rounding, not
+    # to float epsilon. Tolerance set to the max single-figure rounding error
+    # (5e-5) with margin, not the un-rounded 1e-6 the brief's draft assumed.
+    assert abs(v["plan"]["totalValue"] - doc["value"]) < 1e-4
+    cash_class = next(c for c in v["allocation"]["classes"] if c["id"] == "cash")
+    assert abs(cash_class["value"] - doc["cash"]) < 1e-4
+    priv = sum(c["value"] for c in v["allocation"]["classes"] if c.get("isPrivate"))
+    assert abs(priv / v["plan"]["totalValue"] - doc["private_weight_reported"]) < 1e-4

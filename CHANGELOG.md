@@ -84,6 +84,17 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The CIO view builder (cio-01), 2026-08-14.** `ah/cioview.py` builds
+  DN-8's `CioView` server-side — the pure-renderer contract's engine half —
+  from the same truncated replay `_mark_to_market` uses, plus a frozen-tape
+  roll-forward for the 12-month liquidity forecast and forecast quarters
+  (pacing schedule held, linkage at the current market state, `forecast:
+  true` on every forward row). New endpoint `GET /sessions/{sid}/cio`
+  (plane is a refetch; `markets.conditions` never emitted per O-3).
+  `PlayQuarter` gains per-asset and monthly book state as pure reads;
+  quarterly numerics byte-identical. DN-8 vendored to `Instructions/` with
+  the 2026-08-14 resolutions recorded.
+
 - **The scored surface can now be audited from the API alone (F4),
   2026-08-14.** Two numbers the service showed or charged could not be
   checked from outside the code. (1) **Spending** is charged on the trailing

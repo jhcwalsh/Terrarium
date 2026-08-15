@@ -37,6 +37,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
+from ah.cioview import PLANES, build_cio_view
 from ah.core.engine import run_path
 from ah.core.institution import decision_months
 from ah.core.numericworld import project_numeric
@@ -322,6 +323,47 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         doc = _get(conn, sid)
         doc["decision_windows"] = decision_months(doc["months"])
         return _mark_to_market(conn, doc)
+
+    @app.get("/sessions/{sid}/cio")
+    def cio_view(
+        sid: str,
+        plane: str = "reported",
+        forecast_quarters: int = 4,
+        conn: sqlite3.Connection = Depends(db),
+    ):
+        """cio-01: the CIO dashboard's payload — DN-8's CioView, built
+        server-side from the same truncated replay `_mark_to_market` uses.
+        The renderer computes nothing; plane change is a refetch."""
+        if plane not in PLANES:
+            raise HTTPException(status_code=422, detail=f"plane must be one of {PLANES}")
+        if not 0 <= forecast_quarters <= 8:
+            raise HTTPException(status_code=422, detail="forecast_quarters must be 0..8")
+        doc = _get(conn, sid)
+        revealed = int(doc.get("revealed_months") or 0)
+        if revealed < 3:
+            raise HTTPException(status_code=409, detail="no closed quarter yet")
+        rec = get_run_record(conn, doc["run_id"])
+        assert rec is not None  # FK'd at creation
+        world = get_world(conn, rec["world_id"])
+        assert world is not None
+        ws = WorldSpec.model_validate(world)
+        nw = project_numeric(ws)
+        paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
+        decisions = {int(m): a for m, a in doc["decisions"].items()}
+        resolved = rec.get("resolved_engine") or {}
+        return build_cio_view(
+            paths,
+            decisions,
+            run_id=doc["run_id"],
+            seed=rec["seed"],
+            world_title=str((world.get("narrative") or {}).get("title") or doc["run_id"]),
+            world_version=str(resolved.get("generator_version") or ""),
+            alpha_version=alpha_version,
+            start_targets=targets,
+            plane=plane,
+            revealed_months=revealed,
+            forecast_quarters=forecast_quarters,
+        )
 
     @app.post("/sessions/{sid}/advance")
     def advance(sid: str, body: Advance, conn: sqlite3.Connection = Depends(db)):
