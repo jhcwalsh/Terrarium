@@ -57,8 +57,10 @@ for value (DN-3 W5). Work happens on `cio-01-view-builder`, not on main.
 Two things to settle inside cio-01 rather than around it:
 
 1. **`docs/CIO Dashboard.zip`** — Task 1 vendors DN-8 and the renderer out of
-   it, so the extracted `Instructions/DN-8-...md` becomes the citable contract.
-   A binary nobody can diff should not remain the authority once unpacked.
+   it, so the DN-8 document it unpacks into `Instructions/` becomes the citable
+   contract. A binary nobody can diff should not remain the authority once
+   unpacked. (Not cited as a path here: it does not exist until that task runs,
+   and `tests/test_citations.py` rightly refuses a path that is not there.)
 2. **What the dashboard renders about the linkage.** `linkage_bite` is alive
    again but `linkage_shortfall` is below its floor; if a panel shows either,
    decide what a flagged band means on a player-facing surface before it ships.
