@@ -64,6 +64,10 @@ def _decided_map() -> dict[int, str]:
     """
     nm = REVEALED_MONTHS + FORECAST_QUARTERS * 3
     months = decision_months(nm)
+    assert len(months) >= 2, (
+        f"need at least two decision months inside a {nm}-month horizon to "
+        f"build a derisk/leanin map, got {months}"
+    )
     first, second = months[0], months[1]
     return {first: "derisk", second: "leanin"}
 

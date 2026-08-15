@@ -999,16 +999,23 @@ function PrivateTab() {
   const anchor = liquidity && liquidity.coverageAnchor;
   const danger = liquidity && liquidity.coverageDanger;
 
-  // Empty domains (Math.min/max of []) would otherwise yield Infinity/-Infinity
-  // and feed NaN coordinates into RatioChart; RatioChart itself now renders its
-  // empty state when a series is entirely null, but these domains still need
-  // to stay finite so they never become the source of a stray NaN.
+  // Two ways a domain can stop being a domain, both of which RatioChart's
+  // y() turns into NaN (division by a zero span): an empty input array
+  // (Math.min/max of [] -> Infinity/-Infinity), and a *nonempty* one that's
+  // uniformly a single finite value (e.g. every present call rate reading
+  // exactly 0 - real and reachable per cioview.py's callRateNav = calls /
+  // navOpen) collapsing hi === lo. Both are guarded here so the domains
+  // handed to RatioChart are always finite AND have a nonzero span.
+  const finiteSpan = (lo: number, hi: number): [number, number] =>
+    hi > lo ? [lo, hi] : [lo, lo + 1];
   const covVals = rows.map((r) => r.coverage).filter(isNum);
   const covDom: [number, number] = covVals.length
-    ? [Math.max(0, Math.min(...covVals) - 0.1), Math.max(...covVals) + 0.1]
+    ? finiteSpan(Math.max(0, Math.min(...covVals) - 0.1), Math.max(...covVals) + 0.1)
     : [0, 1];
   const rateVals = rows.flatMap((r) => [r.callRateUnfunded, r.callRateNav]).filter(isNum);
-  const rateDom: [number, number] = rateVals.length ? [0, Math.max(...rateVals) * 1.25] : [0, 1];
+  const rateDom: [number, number] = rateVals.length
+    ? finiteSpan(0, Math.max(...rateVals) * 1.25)
+    : [0, 1];
 
   return (
     <Fragment>

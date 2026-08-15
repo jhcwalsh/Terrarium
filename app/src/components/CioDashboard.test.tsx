@@ -273,19 +273,49 @@ describe("CioDashboard", () => {
         for (const r of rows) { r.coverage = null; r.callRateUnfunded = null; r.callRateNav = null; }
       }
       const warn = vi.spyOn(console, "error").mockImplementation(() => {});
-      render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
-      const paths = [...host!.querySelectorAll("path")].map((p) => p.getAttribute("d") ?? "");
-      expect(paths.join(" ")).not.toContain("NaN");
-      // Scoped to "Received NaN" specifically, not "console.error was never
-      // called": this environment (happy-dom, no IS_REACT_ACT_ENVIRONMENT)
-      // unconditionally logs a "not configured to support act(...)" warning
-      // on every render, in every test in this file, regardless of this
-      // defect — asserting zero calls would false-fail on correct code.
-      const nanWarnings = warn.mock.calls.filter((args) =>
-        args.some((a) => typeof a === "string" && a.includes("NaN")),
-      );
-      expect(nanWarnings).toEqual([]);
-      warn.mockRestore();
+      try {
+        render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+        const paths = [...host!.querySelectorAll("path")].map((p) => p.getAttribute("d") ?? "");
+        expect(paths.join(" ")).not.toContain("NaN");
+        // Scoped to "Received NaN" specifically, not "console.error was never
+        // called": this environment (happy-dom, no IS_REACT_ACT_ENVIRONMENT)
+        // unconditionally logs a "not configured to support act(...)" warning
+        // on every render, in every test in this file, regardless of this
+        // defect — asserting zero calls would false-fail on correct code.
+        const nanWarnings = warn.mock.calls.filter((args) =>
+          args.some((a) => typeof a === "string" && a.includes("NaN")),
+        );
+        expect(nanWarnings).toEqual([]);
+      } finally {
+        // try/finally: an earlier expect() throwing must not leave the spy
+        // in place — this project sets neither restoreMocks nor
+        // clearMocks, so a leaked mock would silently swallow
+        // console.error (and mask NaN warnings) in every later test.
+        warn.mockRestore();
+      }
+    });
+
+    it("breaks a zero-span rate domain into a nonzero range instead of NaN", () => {
+      // Every present call-rate reading exactly 0 (a real, reachable state
+      // per cioview.py's callRateNav = calls / navOpen) collapses
+      // rateDom to [0, 0] unless the domain guard also checks the span,
+      // not just that the input array was nonempty.
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      for (const rows of Object.values(v.privateCashflows.series)) {
+        for (const r of rows) { r.callRateUnfunded = 0; r.callRateNav = 0; }
+      }
+      const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+      try {
+        render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+        const svgs = [...host!.querySelectorAll("svg")].map((s) => s.outerHTML);
+        expect(svgs.join(" ")).not.toContain("NaN");
+        const nanWarnings = warn.mock.calls.filter((args) =>
+          args.some((a) => typeof a === "string" && a.includes("NaN")),
+        );
+        expect(nanWarnings).toEqual([]);
+      } finally {
+        warn.mockRestore();
+      }
     });
   });
 
