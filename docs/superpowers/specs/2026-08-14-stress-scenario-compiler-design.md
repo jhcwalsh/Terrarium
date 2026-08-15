@@ -380,7 +380,7 @@ Every surface that shows a stress world states what it is:
   value) with no probabilistic content. If the library over-serves stressed worlds
   without saying so, the product has attached an implied probability to a scenario
   and broken "not a forecast" by accident. The serving ratio goes in the RunRecord;
-  the disclosure goes on the world card. Register row TR-7 (`docs/tail-register.md`)
+  the disclosure goes on the world card. Register row TR-7 (`docs/current/tail-register.md`)
   carries the test.
 
 ---

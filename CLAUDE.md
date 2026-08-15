@@ -31,6 +31,14 @@ sealed criterion and is **not a convincing model of history** — regime persist
 undercalled, drawdowns understated ~2×, the decade tier 73% structurally unavailable
 (`G2-EVIDENCE.md` §7–8). Nothing built on it is decision-ready.
 
+**Documentation has a register.** `docs/current/README.md` says which documents govern, which
+are records, and which are current-in-kind but written against an older repository state —
+read it before citing any document as authoritative. `docs/current/METHOD.md` is the current
+account of what has been built and by what method. The August 5–8 methodology layer
+(`docs/METHODOLOGY.md`, `docs/D-05-methodology-note.md`,
+`docs/P1-specified-world-models-preprint.md`) is **superseded in framing** and banner-marked
+in place; it predates both the third campaign's reversal and the prescribe-not-predict turn.
+
 **Plans are authoritative.** `STEP0-PLAN.md` and `STEP1-DATA-PLAN.md` sit at the repo root;
 every other plan, amendment and KICKOFF wrapper lives in `Instructions/` (Steps 2, 2R, 3, 4,
 5 plus `KICKOFF-PRODUCT-SU.md` and the `plain-english-step*.md` companions). Read the

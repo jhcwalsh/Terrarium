@@ -1,3 +1,20 @@
+> **STATUS · SUPERSEDED — 2026-08-15.** The framing here is replaced by
+> `docs/current/METHOD.md`. This document describes the platform as a
+> *predictive* system built on the hierarchical generator; on 2026-08-14 the
+> method turned to **prescribe, not predict** (stress scenarios: real months,
+> invented sequence, precedented severity rule), and on 2026-08-11 the third
+> campaign made the collagist — not the neural apprentice — the generator of
+> record.
+>
+> It is **not** replaced as an account: no current internal methodology summary
+> exists at this length, which is why the document is kept, still served by the
+> tools hub, and still citable. Read it as a record of how the method was
+> understood in early August 2026, not as current guidance.
+>
+> Index: `docs/current/README.md`.
+
+---
+
 # The Terrarium Method
 ## The approach we took, its academic underpinnings, and a plain-English guide to the process
 

@@ -1,3 +1,21 @@
+> **STATUS · CURRENT IN KIND, AS OF 2026-08-05.** The commands and the shape of
+> the workflow still hold; the recorded outputs are from a repository that has
+> since moved, so treat printed version strings and ids as illustrative rather
+> than as what your terminal will show. Known drift:
+>
+> | it says | today |
+> |---|---|
+> | engine `toy-v0.5` (outputs captured under `toy-v0.3`) | `toy-v0.6` |
+> | preset world ids moved 3xx → 5xx | toy presets `511–514`; the shipped world is `stagflation_1974` `…603`; stress worlds `…701/702/703` |
+> | `schemas/worldspec-v1.2.schema.json` | `worldspec-v1.3.schema.json` has landed alongside it |
+> | four presets are the worlds you can play | the product surface plays collagist worlds spliced from real 1953–2020 history, and declared stress scenarios |
+> | — | `ah bundle`, the session service and the CIO dashboard have all moved since; `uv run ah --help` is authoritative over this document |
+>
+> No command in here has been re-run for this note; nothing below was edited.
+> Index: `docs/current/README.md`.
+
+---
+
 # USER-MANUAL.md — how to drive it
 
 *For someone competent with a terminal who has never seen this codebase. Every

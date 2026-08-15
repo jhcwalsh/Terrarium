@@ -1,3 +1,13 @@
+> **STATUS · HISTORIC RECORD — filed 2026-08-15.** A completed task record: it
+> reports which `[[slots]]` in `D-05` and `P1` were filled on 2026-08-05 and
+> which were left open. Both parent documents have since been marked
+> SUPERSEDED, which makes this a record of a finished editing pass rather than a
+> live tracker. Its numbers are read from sealed artifacts and stand as reported.
+>
+> Index: `docs/current/README.md`.
+
+---
+
 # Results edition — closing summary
 
 *Task 2 + addendum, completed 2026-08-05 on branch `docs-results-edition`.
