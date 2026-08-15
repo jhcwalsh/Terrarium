@@ -1,3 +1,20 @@
+> **STATUS · CURRENT IN KIND, AS OF 2026-08-07.** The explanation still holds;
+> the specifics have moved. Two corrections matter most to a first-time reader:
+> the engine is now **`toy-v0.6`**, not `toy-v0.5`; and the sentence below that
+> "the research-grade generator exists in the codebase but is not connected to
+> anything you can play" is **no longer true in the way it reads** — the worlds
+> that ship are built by the *collagist* (a block bootstrap that splices real
+> 1953–2020 months into new sequences) and are fully playable. What stayed out
+> of the product is the *neural* generator, which lost the third campaign and
+> was shelved after the fourth was gated NO-GO on 2026-08-14.
+>
+> The four honest warnings below still stand, and the standing caveat is
+> unchanged: nothing built on this platform is decision-ready.
+>
+> Index: `docs/current/README.md` · current account: `docs/current/METHOD.md`.
+
+---
+
 # The user manual in plain English
 
 *A companion to `docs/USER-MANUAL.md`. That document governs; this one just

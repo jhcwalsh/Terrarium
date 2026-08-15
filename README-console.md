@@ -246,7 +246,8 @@ ledger display agree bit for bit.
 - **The battery viewer reads report metadata, not git history.** Ratification
   status is derived from each metric's `severity` (`enforce` → pre-registered
   gate; `report` → descriptive) and `status`. The per-gate git determination
-  lives in `docs/RESULTS-EDITION-SUMMARY.md`; the console does not duplicate it.
+  lives in `docs/historic/RESULTS-EDITION-SUMMARY.md` (filed 2026-08-15); the
+  console does not duplicate it.
 - **Battery reports under `experiments/` are gitignored.** The viewer scans both
   `artifacts/` and `experiments/`, so on a clean clone the campaign-2 cells that
   carry the sealed digest will not be listed.

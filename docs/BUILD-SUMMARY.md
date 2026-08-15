@@ -1,3 +1,23 @@
+> **STATUS · CURRENT IN KIND, AS OF 2026-08-05.** Still the most detailed
+> inventory of the codebase, and its method (report the code, record the gaps)
+> is unchanged. But it was assembled from `main` @ `545a2ac` and the repository
+> has moved since. Known drift, so you can read it with the right discount:
+>
+> | it says | today |
+> |---|---|
+> | engine `toy-v0.3` / `toy-v0.5` | `toy-v0.6` (ER-10, the quarter-compounding fix) |
+> | `schemas/worldspec-v1.2.schema.json` | `worldspec-v1.3.schema.json` has landed alongside it |
+> | toy presets in the 5xx block | toy presets `511–514`; the shipped world is `stagflation_1974` `…603`; stress worlds are `…701/702/703` |
+> | sleeve mappings `v1.0` | `v1.1` (`map-2026.08.2`) — PM rows re-estimated under AM-2026-08-12-001 |
+> | the play surface is `Play.tsx`'s panels | the CIO dashboard is the play surface (cio-03); `Book`/`PrivateMarkets` retired |
+> | — | the stress-scenario compiler (`src/ah/gen/stress.py`) did not exist |
+> | — | play alphas are `port-v4-ladder` / `port-v4-ladder-gen` |
+>
+> For what has been built and by what method as it stands today, read
+> `docs/current/METHOD.md` first. Index: `docs/current/README.md`.
+
+---
+
 # BUILD-SUMMARY.md — what actually exists
 
 *Assembled 2026-08-05 from the repository at `main` @ `545a2ac`, by reading the

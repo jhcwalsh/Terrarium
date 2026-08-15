@@ -1,8 +1,13 @@
 # CIO Dashboard — Design
 
-*2026-08-14 · Approved design for integrating the `docs/CIO Dashboard.zip` drop (DN-8 v0.2,
+*2026-08-14 · Approved design for integrating the CIO Dashboard drop (DN-8 v0.2,
 `cioView.ts`, renderer v0.3) into the SU product surface. Companion to
 `Instructions/DN-8-cio-dashboard-data-contract.md` once unpacked (WP cio-01).*
+
+*Path note, 2026-08-15: the drop shipped as `docs/CIO Dashboard.zip` and was filed to
+`docs/historic/CIO Dashboard.zip` once unpacked. The vendored contract at
+`Instructions/DN-8-cio-dashboard-data-contract.md` and the renderer at
+`docs/cio-dashboard/` are the authorities now — see `docs/current/README.md`.*
 
 ---
 

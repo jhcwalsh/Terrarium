@@ -1,3 +1,21 @@
+> **STATUS · SUPERSEDED — 2026-08-15.** The framing here is replaced by
+> `docs/current/METHOD.md`. This working paper argues the specified-world-model
+> design with the four-layer hierarchical generator as its instantiation. Since
+> v0.3 was drafted (2026-08-06), the third campaign kept the **collagist** — a
+> block bootstrap over real 1953–2020 history — as the generator of record
+> (2026-08-11), the fourth contest was gated out NO-GO (2026-08-14), and the
+> worlds that ship are now **declared stress scenarios** rather than predictive
+> draws.
+>
+> The §8 empirical results remain the sealed ones and are not withdrawn; what is
+> superseded is the framing around them. **The paper has no current replacement**
+> — no post-turn academic write-up exists — and that gap is recorded as
+> outstanding work in `docs/current/README.md`. Kept, served and citable.
+>
+> Index: `docs/current/README.md`.
+
+---
+
 # Specified World Models
 ### Auditable environments for evaluating sequential decisions under designed partial observability
 
