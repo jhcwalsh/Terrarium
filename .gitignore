@@ -218,3 +218,6 @@ app/public/*.bundle.bin
 /uvicorn.log
 /credibility.html
 .gate-ok
+
+# Claude Code worktrees — a worktree must never be committed as a gitlink
+.claude/worktrees/

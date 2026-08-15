@@ -198,3 +198,14 @@ comparison between worlds. What this acceptance gives up is the ability to
 notice a world that distributes late for some OTHER reason; that case will
 look identical on this surface. If distribution pace is ever reviewed on its
 merits, this entry is the thing to reopen.
+
+**F3 RE-MEASURED AFTER ladder-01, ACCEPTANCE UNCHANGED (2026-08-14).** The
+staggered seed ladder (ER-12) landed hours after F3 was accepted, and it moves
+the institution the F3 numbers were measured on — so the measurement was
+repeated rather than assumed to carry. `crossover_years` reads **8.750 median,
+p10-p90 8.250-9.000, 8 of 20 seeds outside the 4-8 band: identical to the
+pre-ladder figures**, so the acceptance above stands on its own evidence. The
+J-curve crossover is set by the in-play commitment programme, not by the shape
+of the opening book. Two neighbouring statistics DID move and are recorded in
+ER-12, not here: `peak_unfunded_ratio` cleared its band (1.288 -> 0.716) and
+`linkage_bite` became uncomputable under annual wind-ups.

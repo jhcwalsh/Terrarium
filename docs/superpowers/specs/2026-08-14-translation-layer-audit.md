@@ -94,7 +94,12 @@ stated purpose was visibility. **Owner decision:** small WP to surface it
 > 8.86 (goldilocks) expires in quarter 19 — 17% and 14% of everything called
 > that decade**, in a single quarter, previously invisible on every surface.
 > All three seed cohorts open at age 5.25 against a 10-year life, so they
-> lapse together. Scope note: the bundle's `TwinLedger` was NOT extended
+> lapse together. **Those figures are now HISTORY:** the synchronized lapse
+> they exposed was itself the defect, fixed the same day as **ER-12**
+> (`ladder-01`, a staggered ladder of one vintage per year). The same total
+> now expires as ~0.47–0.49 a year across quarters 3, 7, 11 … 39. This
+> column is what made it visible — the finding did its job twice.
+> Scope note: the bundle's `TwinLedger` was NOT extended
 > (that is a contract-version change), so the line is session-only and browse
 > mode shows nothing rather than showing the twin's release as the player's.
 

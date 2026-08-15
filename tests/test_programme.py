@@ -18,7 +18,7 @@ from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import PlayResult, simulate_play
-from ah.programme import ladder_years, programme_quarters
+from ah.programme import ladder_years, path_stats, programme_quarters
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -119,16 +119,48 @@ def test_expired_commitment_explains_the_unfunded_drop_calls_cannot(runs):
 
     lapse = [y for y in years if y.expired > 0.0]
     assert lapse, "no year expires any commitment — ER-6's lapse never fires"
-    y = lapse[0]
-    hand = sum(r.expired_undrawn for r in rows[y.year * 4 : y.year * 4 + 4])
-    assert np.isclose(y.expired, hand) and hand > 0.0
 
-    # the drop unfunded takes that year exceeds what calls alone can explain,
-    # and the expiry is what covers the difference
-    prior_unfunded = years[y.year - 1].unfunded_end
-    drop = prior_unfunded - y.unfunded_end
-    assert drop > y.called  # calls alone cannot account for it
-    assert np.isclose(drop, y.called + y.expired - y.committed, atol=1e-6)
+    # HISTORY: this asserted ONE lapse year whose unfunded drop EXCEEDED that
+    # year's calls. That was true only while the opening book was three clones
+    # of a single mid-life cohort, so the whole ladder lapsed in one quarter.
+    # The seed ladder is staggered now (one vintage per year of a fund's life,
+    # `ladder-01`), so a rung retires every year and none of them dominates.
+    # The clause that survives is the substantive one — the expiry is the term
+    # without which the unfunded balance cannot be reconciled — and it is now
+    # checked on EVERY lapse year rather than the one big one.
+    assert len(lapse) > 1, "a staggered ladder retires a rung a year, not all at once"
+    for y in lapse:
+        hand = sum(r.expired_undrawn for r in rows[y.year * 4 : y.year * 4 + 4])
+        assert np.isclose(y.expired, hand) and hand > 0.0
+        if y.year == 0:
+            continue  # no prior year to difference against
+        drop = years[y.year - 1].unfunded_end - y.unfunded_end
+        assert np.isclose(drop, y.called + y.expired - y.committed, atol=1e-6)
+
+
+def test_linkage_bite_survives_a_ladder_that_retires_a_rung_every_year(runs):
+    """ER-12's casualty, and the reason the statistic was redefined.
+
+    linkage_bite used to drop any trailing four-quarter window that OVERLAPPED
+    a cohort wind-up. That was affordable while the opening book was three
+    clones of one cohort and wind-ups happened once a decade. A staggered
+    ladder retires a rung every year, so with a four-quarter window EVERY
+    window overlapped one and the statistic went undefined on 20 of 20 paths —
+    the console's only linkage diagnostic, dead.
+
+    It is now netted by AMOUNT rather than by index: the terminal lump is
+    subtracted from the window's numerator and the window is kept. This pins
+    the property that failed — on the real programme, the statistic exists.
+    """
+    linked, unlinked = runs
+    rows = programme_quarters(linked, unlinked)
+    stats = path_stats(rows, linked)
+    assert "linkage_bite" in stats, "the linkage diagnostic is undefined on a real path"
+    assert stats["linkage_bite"] > 0.0
+
+    # and the lumps are real on this path — the netting is doing work, not
+    # quietly subtracting zero
+    assert sum(r.terminal_distributions for r in rows) > 0.0
 
 
 def test_called_to_date_is_cumulative(runs):

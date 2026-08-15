@@ -785,3 +785,89 @@ there; and the one committed artifact that did run it
 all-zero direct-lending series, so the doubled numbers were zeros. The fix
 carries the full lag window explicitly and raises on any weight vector that
 does not span it, so a short vector can never be broadcast again.
+
+## ER-12 — The whole private programme was one age, and retired in one quarter
+
+**Status:** CLOSED 2026-08-14 (`ladder-01-staggered-vintages`; play-alpha
+stamps `port-v3-pacing`/`-gen` -> `port-v4-ladder`/`port-v4-ladder-gen`).
+**Found:** 2026-08-14, in the credibility console's commitment ladder — on the
+`expired` column that audit F2 had added hours earlier. The column was the
+first surface on which this was visible at all.
+
+**Scope note.** Like ER-3 and ER-6 this is about the cohort/institution model
+in `ah/port/` and `ah/play.py`, not the `toy-v0` return process. No engine
+change; `TOY_ENGINE_VERSION` is untouched at `toy-v0.6`.
+
+**What happened.** `_build_portfolio` opened the institution by cloning the
+committed fixture cohort once per private sleeve and scaling it to the target
+weight. The fixture is age 5.25 against a 10-year contractual life, so all
+three sleeves reached terminal lapse in the SAME quarter: on stagflation, 9.02
+of undrawn commitment expired in quarter 19 (17% of the decade's calls), every
+seed cohort liquidated at once (distributions 21.23 in year 4 against 2-5 in
+every other year), and private NAV fell 28.10 -> 9.56 on the fund calendar
+rather than on anything the market did. An institution that has been
+committing for years holds one live vintage per year of a fund's life; ours
+held one vintage, three times.
+
+**What shipped.** `_seed_ladder` builds a rung per year of the contractual
+life (10), each a fresh commitment warmed forward BY THE MODEL ITSELF to its
+own age, then scales the rungs together so the sleeve opens at exactly the
+same NAV as before. The warm-up rate (2.6816%/quarter) is not chosen: it is
+the rate that reproduces the committed fixture's own TVPI (1.44) at the
+fixture's own age (5.25) through the same cohort model, and a test re-solves
+it if the model moves. Because the ladder is scaled to target, that rate sets
+the SHAPE across vintages and never the level.
+
+**What it moved, measured on stagflation's 20-seed lineage.**
+
+| statistic | cloned book | staggered ladder | declared band |
+|---|---|---|---|
+| peak_unfunded_ratio | 1.288 (FLAGGED) | **0.716 — in band** | 0.25–0.75 |
+| linkage_shortfall | 0.063 | **0.027 (FLAGGED, below floor)** | 0.05–0.35 |
+| linkage_bite | 0.928 | **uncomputable (FLAGGED)** | 0.50–1.20 |
+| crossover_years | 8.750 (flagged) | 8.750 (flagged) — unchanged | 4.00–8.00 |
+| dpi_age9 · call_rate_y1_3 · forced_secondaries | unchanged | unchanged | — |
+
+`peak_unfunded_ratio` is the headline: ER-6's close-out could not bring it
+into band (it left 0.96–1.29 and attributed the residual to commitment pace
+and the denominator effect in crash decades). The real cause was in the
+opening book — three mid-life clones each carrying 37.5% unfunded at the same
+moment. A real ladder holds old rungs that are nearly fully drawn, and the
+ratio lands inside its declared band without anything being tuned.
+
+**The cost, stated plainly: `linkage_bite` no longer computes at all.** It is
+the trailing four-quarter distribution rate with any window overlapping a
+cohort wind-up excluded — and its own docstring rejects the softer rule
+("excluding only the liquidation quarter would leave the defect in place under
+a different index"). With one lapse a year and a four-quarter window, EVERY
+window overlaps one, on every path. The metric assumed wind-ups are rare; a
+realistic ladder makes them annual. This was NOT patched here: redefining a
+measurement inside the same change that moves the thing measured destroys the
+ability to attribute either.
+
+> **Follow-up DONE, 2026-08-14 (`linkage-02-bite-net-of-lumps`), as its own
+> change so the attribution stayed clean.** The lump is now netted by AMOUNT
+> and the window kept: `CohortStep.is_terminal` records the wind-up at source,
+> `PlayQuarter.terminal_distributions` carries the amount, and
+> `_trailing_distribution_rates` subtracts it. The index-based exclusion and
+> its inference helper `_terminal_liquidation_quarters` are retired — the
+> recorded amount is strictly more precise, because a forced secondary also
+> drives a cohort's NAV to zero but pays no distribution, and the inference
+> could not tell them apart. **Measured: 0.778 median on 20 of 20 paths,
+> unflagged.** The band was NOT re-declared and did not need to be: its own
+> drafting note records the four presets reading 0.74–0.85, and 0.778 lands
+> inside that range — the statistic came back to where the band was drafted
+> for, which is the evidence that the redefinition is the same measurement
+> rather than a new one wearing its name.
+
+`linkage_shortfall` remains flagged at 0.027 — below its floor, recorded, not
+tuned.
+
+**What the fix invalidated.** Both play-alpha stamps bumped, so no leaderboard
+row can mix the two institutions. `tests/test_play_linkage.py`'s golden moved
+98.04417427685921 -> 101.5169845720086. Both committed bundles rebuilt
+(`app/fixtures/toy.bundle.gz`, `gen.bundle.gz`). The app's vintage stack is a
+bar strip rather than a row per cohort: a staggered ladder is 30 rungs at open
+and 57 by decade end, and the vitrine is one screen. Audit F2's measured
+numbers (9.02 expiring in one quarter) are now HISTORY — the same total
+expires as ~0.47-0.49 a year, and the F2 record says so.

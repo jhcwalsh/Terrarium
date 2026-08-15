@@ -9,6 +9,7 @@ back to being a slider.
 
 from __future__ import annotations
 
+import itertools
 import json
 from pathlib import Path
 from typing import Any
@@ -26,6 +27,7 @@ from ah.play import (
     play_alpha,
     simulate_play,
 )
+from ah.port.cohort import ClosedEndCohort
 from ah.port.engine import Policy
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -69,6 +71,65 @@ class TestShapeAndDeterminism:
         total = sum(START_TARGETS.values())
         private = sum(START_TARGETS[a] for a in PRIVATE_ASSETS)
         assert lo < private / total < hi
+
+
+class TestSeedLadder:
+    """ladder-01: the opening private book is a staggered ladder of vintages.
+
+    Found by the audit-F2 expiry column, the first surface on which it was
+    visible: the book used to open as three clones of the fixture cohort at
+    age 5.25, so the ENTIRE private programme reached the end of its life in
+    one quarter — 9.02 of undrawn commitment expiring at once, 17% of the
+    decade's calls, and every seed cohort winding up together.
+    """
+
+    def test_the_ladder_is_staggered_one_rung_per_year_of_fund_life(self):
+        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio, _doc
+
+        life = int(_doc("closed-end-cohort.example.json")["lifecycle"]["contractual_life_years"])
+        _, cohorts = _build_portfolio(Policy(), START_TARGETS, LIQUID_ASSETS)
+        for asset in PRIVATE_ASSETS:
+            ages = [c.age_years for c in cohorts[asset]]
+            assert len(ages) == life
+            assert ages == sorted(ages)  # a staircase
+            assert len(set(ages)) == life  # no two rungs share an age
+            assert max(ages) < life  # nothing opens already lapsed
+
+    def test_the_ladder_opens_at_exactly_the_same_allocation_as_before(self):
+        """The shape of the opening book changed; the institution's allocation
+        did not. Each sleeve still opens at its target weight."""
+        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio
+
+        _, cohorts = _build_portfolio(Policy(), START_TARGETS, LIQUID_ASSETS)
+        for asset in PRIVATE_ASSETS:
+            opening = sum(c.nav_true for c in cohorts[asset])
+            assert opening == pytest.approx(START_TARGETS[asset], rel=1e-12)
+
+    def test_the_warmup_rate_reproduces_the_fixtures_own_tvpi(self):
+        """The rate the ladder is warmed at is ANCHORED, not chosen: it is the
+        one that reproduces the committed fixture's TVPI at the fixture's own
+        age, through the same cohort model the game runs. If the cohort model
+        changes, this fails and the constant is re-solved — it never silently
+        drifts into meaning something else."""
+        from ah.play import _WARMUP_QUARTERLY_RETURN, _doc
+
+        base = _doc("closed-end-cohort.example.json")
+        cohort = ClosedEndCohort.new_commitment(
+            base, committed=100.0, vintage_year=2019, cohort_id="warmup-check"
+        )
+        for _ in range(round(base["lifecycle"]["age_years"] * 4)):
+            cohort.step(_WARMUP_QUARTERLY_RETURN)
+        tvpi = (cohort.nav_true + cohort.cumulative_distributions) / cohort.paid_in
+        assert tvpi == pytest.approx(base["performance"]["tvpi"], abs=5e-4)
+
+    def test_commitment_retires_a_rung_a_year_instead_of_all_at_once(self, held):
+        """The behaviour the change exists for. Under the cloned book every
+        expiry landed in a single quarter; a staggered ladder retires one rung
+        per year, which is what a steady-state programme does."""
+        fired = [q.quarter for q in held.quarters if q.expired_undrawn > 0.0]
+        assert len(fired) >= 8  # a decade of annual lapses, not one event
+        gaps = {b - a for a, b in itertools.pairwise(fired)}
+        assert gaps == {4}  # exactly one a year, evenly spaced
 
 
 class TestConsequence:
@@ -179,11 +240,16 @@ class TestDecisions:
 
         policy = Policy()
         portfolio, cohorts = _build_portfolio(policy, START_TARGETS, LIQUID_ASSETS)
-        before_nav = cohorts["pe"].nav_true
+        # the opening book is a STAGGERED ladder (one vintage per year of a
+        # fund's life), so the sale is exercised across every rung — which is
+        # what a real secondary is sold out of
+        ladder = cohorts["pe"]
+        assert len(ladder) > 1
+        before_nav = sum(c.nav_true for c in ladder)
         before_cash = portfolio.cash
-        proceeds = _secondary_sale(portfolio, {"pe_ladder": [cohorts["pe"]]}, policy)
+        proceeds = _secondary_sale(portfolio, {"pe_ladder": ladder}, policy)
 
-        nav_given_up = before_nav - cohorts["pe"].nav_true
+        nav_given_up = before_nav - sum(c.nav_true for c in ladder)
         assert nav_given_up > 0.0
         assert portfolio.cash == pytest.approx(before_cash + proceeds)
         assert proceeds == pytest.approx(nav_given_up * (1.0 - policy.secondary_haircut))

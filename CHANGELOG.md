@@ -14,6 +14,63 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Fixed
 
+- **`linkage_bite` computes again: the terminal lump is netted by amount, not
+  by index (ER-12 follow-up), 2026-08-14.** The console's only linkage
+  diagnostic dropped any trailing four-quarter window overlapping a cohort
+  wind-up — affordable when wind-ups happened once a decade, fatal once the
+  staggered ladder retired a rung every year: every window overlapped one and
+  the statistic went undefined on 20 of 20 paths. It is now netted by amount:
+  `CohortStep.is_terminal` records the wind-up at source,
+  `PlayQuarter.terminal_distributions` carries it, and
+  `_trailing_distribution_rates` subtracts it while keeping the window. The
+  index-based exclusion and its inference helper
+  `_terminal_liquidation_quarters` are retired — the recorded amount is
+  strictly more precise, since a forced secondary also zeroes a cohort's NAV
+  but pays no distribution, and the inference could not tell them apart.
+  **Measured: 0.778 median across 20 of 20 paths, unflagged, and the band was
+  NOT re-declared** — its own drafting note records the four presets at
+  0.74–0.85, so the statistic returned to where the band was drafted for,
+  which is the evidence that this is the same measurement rather than a new
+  one under an old name. Done as its own change, after ER-12 rather than
+  inside it, so the attribution stayed clean.
+
+### Changed
+
+- **The opening private book is a staggered ladder of vintages (ER-12),
+  2026-08-14.** `_build_portfolio` opened the institution by cloning the
+  committed fixture cohort — age 5.25 against a 10-year life — once per
+  private sleeve, so the ENTIRE private programme reached terminal lapse in
+  the same quarter: 9.02 of undrawn commitment expiring at once on
+  stagflation (17% of the decade's calls), every seed cohort liquidating
+  together, private NAV falling 28.10 → 9.56 on the fund calendar rather than
+  on anything the market did. Found on audit F2's `expired` column, the first
+  surface that made it visible. `_seed_ladder` now builds one rung per year of
+  the contractual life, each warmed forward BY THE COHORT MODEL to its own
+  age, then scales the rungs together so the sleeve opens at exactly the same
+  NAV as before — the shape of the opening book changes, the institution's
+  allocation does not. The warm-up rate (2.6816%/qtr) is anchored, not chosen:
+  it reproduces the fixture's own TVPI (1.44) at the fixture's own age, and a
+  test re-solves it if the cohort model moves.
+  **Measured (stagflation, 20-seed lineage):** `peak_unfunded_ratio` 1.288 →
+  **0.716, inside its declared 0.25–0.75 band** — the metric ER-6's close-out
+  could not bring in, whose real cause was three mid-life clones each carrying
+  37.5% unfunded simultaneously; `crossover_years` unchanged at 8.750 (so the
+  F3 acceptance recorded the same day stands on re-measurement);
+  `linkage_shortfall` 0.063 → 0.027, now below its floor, recorded not tuned;
+  and **`linkage_bite` no longer computes at all** — it excludes any
+  four-quarter window overlapping a cohort wind-up, and annual lapses mean
+  every window overlaps one. That is NOT patched here: redefining a
+  measurement inside the change that moves the measured thing destroys
+  attribution. Follow-up recorded in ER-12.
+  **Fences:** play-alpha stamps `port-v3-pacing`/`-gen` → `port-v4-ladder`/
+  `port-v4-ladder-gen`, so no leaderboard row mixes the two institutions. The
+  `test_play_linkage` golden moved 98.04417427685921 → 101.5169845720086;
+  both committed bundles rebuilt; the app's vintage stack became a bar strip
+  (30 rungs at open, 57 by decade end, and the vitrine is one screen). No
+  engine change — `TOY_ENGINE_VERSION` stays `toy-v0.6`.
+
+### Fixed
+
 - **The lever committed stale plan figures for sleeves the player never
   touched (audit F4), 2026-08-14.** The app merged the whole server pre-fill
   into its state as soon as ONE sleeve was edited and sent all three, so

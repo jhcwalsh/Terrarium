@@ -1,0 +1,18 @@
+warning: `VIRTUAL_ENV=C:\Users\james\PycharmProjects\Terrarium\.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+# Validation battery report (battery-0.1)
+
+- paths: 64 x 120 months
+- active_blocks: global, us, fx, valuation
+
+| metric | value | min | max | status | ok |
+| --- | --- | --- | --- | --- | --- |
+| excess_kurtosis | 1.644 | 0.5 | 8.0 | enforce | yes |
+| skewness | 0.02007 | -1.5 | 0.5 | enforce | yes |
+| hill_tail_index | 4.45 | 2.0 | 6.0 | enforce | yes |
+| acf_r_lag1 | 0.4111 | -0.2 | 0.2 | todo | NO |
+| acf_abs_lag1 | 0.3345 | 0.05 | 0.4 | todo | yes |
+| max_drawdown_median | -0.6015 | -0.65 | -0.12 | enforce | yes |
+| corr_distance | 4.133 |  |  | todo | yes |
+
+**enforce failures: 0**
+EXIT: 0

@@ -78,11 +78,14 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 
 #: The product's own alpha identity. NOT ah.eval.decision_metrics's constant,
 #: which names Step 5's research definition and is sealed under G5.
-# port-v3: sp-01 replaced the twin's fixed pace with DN-5's ratified pacing
-# flex and added the commitment lever — the benchmark itself changed, so
-# alpha changes meaning. (port-v2 was the ER-6 close-out; port-v1 the first
-# cashflow twin. Leaderboards restart per stamp; old rows stay readable.)
-PLAY_ALPHA_VERSION = "port-v3-pacing"
+# port-v4: the opening private book is a STAGGERED ladder of vintages rather
+# than three clones of one mid-life cohort (ladder-01), so the twin the player
+# is scored against holds a different institution from its first quarter —
+# alpha changes meaning and old rows must not share a leaderboard with new
+# ones. (port-v3 was sp-01's pacing flex + the lever; port-v2 the ER-6
+# close-out; port-v1 the first cashflow twin. Leaderboards restart per stamp;
+# old rows stay readable.)
+PLAY_ALPHA_VERSION = "port-v4-ladder"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
 PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
@@ -259,6 +262,11 @@ class PlayQuarter:
     #: being called. Carried here because the design's stated purpose was
     #: that it expire VISIBLY — computed but dropped until audit F2.
     expired_undrawn: float = 0.0
+    #: The part of this quarter's distributions that was a fund WINDING UP —
+    #: its whole remaining NAV paid out on the fund's clock, not the market's.
+    #: Any statistic about distribution rates has to net this out or it
+    #: measures the fund calendar (ER-12 follow-up; see `programme.py`).
+    terminal_distributions: float = 0.0
     #: NAV by cohort id at quarter close, for the per-vintage stack.
     #:
     #: Snapshotted BEFORE ``engine.run_quarter`` runs, so a forced secondary
@@ -351,12 +359,93 @@ def _commit_new_vintage(
     ladders[asset].append(cohort)
 
 
+#: The quarter-phase the committed fixture itself sits on (age 5.25), kept so
+#: the seed ladder's rungs land on the same quarter boundary the document does.
+_SEED_AGE_OFFSET = 0.25
+#: The flat quarterly return the seed ladder is warmed forward at. NOT invented:
+#: it is the rate that reproduces the committed fixture's OWN TVPI (1.44) at the
+#: fixture's OWN age (5.25) through the same cohort model the game runs. Because
+#: the finished ladder is then scaled to the sleeve's target weight, this rate
+#: sets only the SHAPE across vintages — the J-curve staircase — never the level.
+_WARMUP_QUARTERLY_RETURN = 0.026816
+
+
+def _scaled_cohort(cohort: ClosedEndCohort, scale: float) -> ClosedEndCohort:
+    """The same cohort with every monetary quantity multiplied by ``scale``.
+
+    Round-trips through the state contract, so a scaled rung is re-validated
+    rather than assumed — serialization IS the contract (``to_document``).
+    """
+    doc = cohort.to_document()
+    for key in ("committed", "paid_in", "unfunded", "recallable_balance", "cumulative_recycled"):
+        doc["commitment"][key] *= scale
+    for key in ("nav_true", "nav_reported", "cumulative_distributions"):
+        doc["value"][key] *= scale
+    for key in doc["flows"]:
+        doc["flows"][key] *= scale
+    return ClosedEndCohort.from_document(doc)
+
+
+def _seed_ladder(base: dict[str, Any], asset: str, target_nav: float) -> list[ClosedEndCohort]:
+    """The opening book for one private sleeve: a STAGGERED ladder of vintages.
+
+    An institution that has been committing for years holds one live vintage
+    per year of a fund's contractual life — a staircase of ages, each at a
+    different point on its J-curve. The play surface used to open with a
+    single mid-life cohort per sleeve instead, cloned from the fixture at age
+    5.25, which meant the ENTIRE opening private book reached the end of its
+    life in the same quarter: all three sleeves lapsed together in quarter 19,
+    expiring 9.0 of undrawn commitment (17% of the decade's calls) and winding
+    up their NAV at once. Found 2026-08-14 by the audit-F2 expiry column, the
+    first surface on which it was visible.
+
+    Each rung is built by the model itself — a fresh commitment stepped
+    forward to its age at ``_WARMUP_QUARTERLY_RETURN`` — so paid-in, unfunded,
+    NAV and distributions-to-date are age-consistent by construction rather
+    than invented per rung. Reported marks are set to true at the end of
+    warm-up: under a constant return the appraisal filter has converged, so
+    any lag would be an artifact of where warm-up happened to stop.
+
+    The rungs are then scaled together so the sleeve opens at exactly the same
+    private NAV as before — the ladder changes the SHAPE of the opening book,
+    never the institution's allocation.
+    """
+    life = int(base["lifecycle"]["contractual_life_years"])
+    vintage0 = int(base["identity"]["vintage_year"])
+    rungs: list[ClosedEndCohort] = []
+    for k in range(life):
+        age = k + _SEED_AGE_OFFSET
+        doc = json.loads(json.dumps(base))
+        doc["identity"] = {**base["identity"], "sleeve_id": asset}
+        cohort = ClosedEndCohort.new_commitment(
+            doc,
+            committed=1.0,
+            vintage_year=vintage0 - k,
+            cohort_id=f"{asset}-s{k}",
+        )
+        for _ in range(round(age * 4)):
+            cohort.step(_WARMUP_QUARTERLY_RETURN)
+        cohort.report(cohort.nav_true)
+        rungs.append(cohort)
+
+    total = sum(c.nav_true for c in rungs)
+    if total <= 0.0:  # pragma: no cover - the warm-up return is positive
+        raise ValueError("seed ladder warmed up to zero NAV")
+    return [_scaled_cohort(c, target_nav / total) for c in rungs]
+
+
 def _build_portfolio(
     policy: Policy,
     targets: Mapping[str, float],
     liquid: tuple[str, ...],
-) -> tuple[Portfolio, dict[str, ClosedEndCohort]]:
-    """An ongoing institution at its target weights, with a cash buffer."""
+) -> tuple[Portfolio, dict[str, list[ClosedEndCohort]]]:
+    """An ongoing institution at its target weights, with a cash buffer.
+
+    "Ongoing" now means a staggered ladder per private sleeve (see
+    :func:`_seed_ladder`), not one mid-life cohort: the institution opens at
+    the same allocation it always did, but its vintages mature one a year
+    instead of all at once.
+    """
     portfolio = Portfolio(cash=START_CASH)
     base = _doc("closed-end-cohort.example.json")
     liquid_doc = _doc("liquid-sleeve.example.json")
@@ -366,22 +455,12 @@ def _build_portfolio(
         sleeve.value = targets[asset]
         portfolio.add(asset, sleeve)
 
-    cohorts: dict[str, ClosedEndCohort] = {}
+    cohorts: dict[str, list[ClosedEndCohort]] = {}
     for asset in PRIVATE_ASSETS:
-        # scale the example cohort so its NAV lands on the target weight; it
-        # keeps the document's age and unfunded ratio, so the institution opens
-        # mid-programme rather than ramping in from nothing
-        scale = targets[asset] / float(base["value"]["nav_true"])
-        doc = json.loads(json.dumps(base))
-        doc["identity"] = {**base["identity"], "sleeve_id": asset, "cohort_id": f"{asset}-play"}
-        for key in ("committed", "paid_in", "unfunded", "recallable_balance"):
-            doc["commitment"][key] = base["commitment"][key] * scale
-        doc["commitment"]["cumulative_recycled"] = base["commitment"]["cumulative_recycled"] * scale
-        for key in ("nav_true", "nav_reported", "cumulative_distributions"):
-            doc["value"][key] = base["value"][key] * scale
-        cohort = ClosedEndCohort.from_document(doc)
-        portfolio.add(asset, cohort)
-        cohorts[asset] = cohort
+        rungs = _seed_ladder(base, asset, float(targets[asset]))
+        for cohort in rungs:
+            portfolio.add(cohort.contract.identity.cohort_id, cohort)
+        cohorts[asset] = rungs
     return portfolio, cohorts
 
 
@@ -470,7 +549,7 @@ def simulate_play(
     portfolio, cohorts = _build_portfolio(policy, targets, liquid)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
-    ladders: dict[str, list[ClosedEndCohort]] = {a: [cohorts[a]] for a in PRIVATE_ASSETS}
+    ladders: dict[str, list[ClosedEndCohort]] = {a: list(cohorts[a]) for a in PRIVATE_ASSETS}
 
     def _liquid_snapshot() -> dict[str, float]:
         return {a: float(portfolio.liquid[a].value) for a in liquid}
@@ -562,6 +641,7 @@ def simulate_play(
         calls = 0.0
         distributions = 0.0
         expired = 0.0
+        terminal_dist = 0.0
         dd = float(depth[q])
         sr = float(spread_ratio[q])
         fc = tier1_f_call(dd) if linkage else 1.0
@@ -581,6 +661,8 @@ def simulate_play(
                 expired += step.expired_undrawn
                 calls_by[asset] += step.call
                 dists_by[asset] += step.distribution_total
+                if step.is_terminal:
+                    terminal_dist += step.distribution_total
                 # the reported mark follows the tape the player is shown
                 grown = cohort.nav_reported * (1.0 + float(q_reported[asset][q]))
                 cohort.report(max(0.0, grown + step.call - step.distribution_total))
@@ -638,6 +720,7 @@ def simulate_play(
                 spending_basis=report.spending_basis,
                 spending_rate_annual=report.spending_rate_annual,
                 expired_undrawn=expired,
+                terminal_distributions=terminal_dist,
                 drawdown_depth=dd,
                 spread_ratio=sr,
                 f_dist=fd,

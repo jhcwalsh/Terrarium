@@ -1,0 +1,158 @@
+warning: `VIRTUAL_ENV=C:\Users\james\PycharmProjects\Terrarium\.venv` does not match the project environment path `.venv` and will be ignored; use `--active` to target the active environment instead
+EF...F..                                                                 [100%]
+=================================== ERRORS ====================================
+_______ ERROR at setup of test_stages_arrive_in_order_with_real_shapes ________
+
+    @pytest.fixture(scope="module")
+    def events() -> list[tuple[str, dict]]:
+        out: list[tuple[str, dict]] = []
+>       gc.build_decade(3, 0, on_stage=lambda name, payload: out.append((name, payload)))
+
+tests\test_genconsole.py:15: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+src\ah\genconsole.py:106: in build_decade
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\ah\gen\bootstrap.py:982: in campaign_source
+    return build_source(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+access = <ah.splits.DataAccess object at 0x0000022B46317950>
+manifest = FactorManifest(blocks=mappingproxy({'global': ('equity_mkt', 'smb', 'hml', 'mom', 'equity_vol', 'commodities', 'ig_spr....cpi connector, see Instructions/WP1.12-UK-CONNECTORS.md.', notes=None, numeraire=None, proxy=False, proxy_for=None)}))
+vintage_id = '2026-08-02.4', enforce_sealed_span = True
+expected_span = ('1990-01-01', '2020-12-01', 372)
+expected_factor_set = ('cape_v', 'cpi', 'equity_mkt', 'equity_vol', 'funding_spread', 'fx_usd', ...)
+
+    def build_source(
+        access: DataAccess,
+        manifest: FactorManifest,
+        *,
+        vintage_id: str = CAMPAIGN_VINTAGE_ID,
+        enforce_sealed_span: bool = True,
+        expected_span: tuple[str, str, int] | None = None,
+        expected_factor_set: tuple[str, ...] | None = None,
+    ) -> BootstrapSource:
+        """Assemble the sealed draw span, its factor matrix and its regime labels.
+    
+        The span is derived, never asserted: every available active factor's frame is joined
+        on date and the rows where **all** of them are simultaneously observed are kept --
+        which is the sealed ``block_draw_span_rule`` verbatim, and which is why the result is
+        checked against the sealed ``block_draw_span`` rather than trusted to match it.
+        ``enforce_sealed_span=False`` exists only for a caller deliberately measuring a
+        different vintage (a provenance script); a production fit leaves it on.
+    
+        Raises :class:`BootstrapError` if the derived factor set or span disagrees with the
+        seal -- a benchmark quietly resampling a different window, or a different set of
+        factors, than the one every sealed band was reasoned about is exactly the failure the
+        seal exists to make impossible.
+        """
+        active_blocks = validated_active_blocks(manifest)
+        frames = read_factor_frames(access, manifest)
+    
+        factors = tuple(sorted(frames))
+        # The factor-set expectation, like the span expectation below, is a fact
+        # about the VINTAGE being read: a campaign-2 replay resolves the fifteen
+        # factors its checkpoints were trained on (CAMPAIGN2_FACTOR_SET), while a
+        # live read must resolve exactly the live sealed set.
+        sealed_set = FACTOR_SET if expected_factor_set is None else expected_factor_set
+        if enforce_sealed_span and factors != sealed_set:
+>           raise BootstrapError(
+                f"resolved factor set {factors} != the sealed bootstrap_v1.factor_set "
+                f"{sealed_set}; the benchmark must emit exactly the sealed set"
+            )
+E           ah.gen.bootstrap.BootstrapError: resolved factor set () != the sealed bootstrap_v1.factor_set ('cape_v', 'cpi', 'equity_mkt', 'equity_vol', 'funding_spread', 'fx_usd', 'hml', 'hqm_curve', 'hy_spread', 'ig_spread', 'mom', 'policy_rate', 'smb', 'ust_10y', 'ust_2y'); the benchmark must emit exactly the sealed set
+
+src\ah\gen\bootstrap.py:641: BootstrapError
+================================== FAILURES ===================================
+_______________________ test_same_seed_is_bit_identical _______________________
+
+    def test_same_seed_is_bit_identical():
+        def run(seed: int) -> list[tuple[str, dict]]:
+            out: list[tuple[str, dict]] = []
+            gc.build_decade(seed, 0, on_stage=lambda name, payload: out.append((name, payload)))
+            return out
+    
+>       a, b = run(7), run(7)
+               ^^^^^^
+
+tests\test_genconsole.py:38: 
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+tests\test_genconsole.py:35: in run
+    gc.build_decade(seed, 0, on_stage=lambda name, payload: out.append((name, payload)))
+src\ah\genconsole.py:106: in build_decade
+    source = campaign_source(vintage_id=CAMPAIGN2_VINTAGE_ID)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+src\ah\gen\bootstrap.py:982: in campaign_source
+    return build_source(
+_ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _
+
+access = <ah.splits.DataAccess object at 0x0000022B4D248C20>
+manifest = FactorManifest(blocks=mappingproxy({'global': ('equity_mkt', 'smb', 'hml', 'mom', 'equity_vol', 'commodities', 'ig_spr....cpi connector, see Instructions/WP1.12-UK-CONNECTORS.md.', notes=None, numeraire=None, proxy=False, proxy_for=None)}))
+vintage_id = '2026-08-02.4', enforce_sealed_span = True
+expected_span = ('1990-01-01', '2020-12-01', 372)
+expected_factor_set = ('cape_v', 'cpi', 'equity_mkt', 'equity_vol', 'funding_spread', 'fx_usd', ...)
+
+    def build_source(
+        access: DataAccess,
+        manifest: FactorManifest,
+        *,
+        vintage_id: str = CAMPAIGN_VINTAGE_ID,
+        enforce_sealed_span: bool = True,
+        expected_span: tuple[str, str, int] | None = None,
+        expected_factor_set: tuple[str, ...] | None = None,
+    ) -> BootstrapSource:
+        """Assemble the sealed draw span, its factor matrix and its regime labels.
+    
+        The span is derived, never asserted: every available active factor's frame is joined
+        on date and the rows where **all** of them are simultaneously observed are kept --
+        which is the sealed ``block_draw_span_rule`` verbatim, and which is why the result is
+        checked against the sealed ``block_draw_span`` rather than trusted to match it.
+        ``enforce_sealed_span=False`` exists only for a caller deliberately measuring a
+        different vintage (a provenance script); a production fit leaves it on.
+    
+        Raises :class:`BootstrapError` if the derived factor set or span disagrees with the
+        seal -- a benchmark quietly resampling a different window, or a different set of
+        factors, than the one every sealed band was reasoned about is exactly the failure the
+        seal exists to make impossible.
+        """
+        active_blocks = validated_active_blocks(manifest)
+        frames = read_factor_frames(access, manifest)
+    
+        factors = tuple(sorted(frames))
+        # The factor-set expectation, like the span expectation below, is a fact
+        # about the VINTAGE being read: a campaign-2 replay resolves the fifteen
+        # factors its checkpoints were trained on (CAMPAIGN2_FACTOR_SET), while a
+        # live read must resolve exactly the live sealed set.
+        sealed_set = FACTOR_SET if expected_factor_set is None else expected_factor_set
+        if enforce_sealed_span and factors != sealed_set:
+>           raise BootstrapError(
+                f"resolved factor set {factors} != the sealed bootstrap_v1.factor_set "
+                f"{sealed_set}; the benchmark must emit exactly the sealed set"
+            )
+E           ah.gen.bootstrap.BootstrapError: resolved factor set () != the sealed bootstrap_v1.factor_set ('cape_v', 'cpi', 'equity_mkt', 'equity_vol', 'funding_spread', 'fx_usd', 'hml', 'hqm_curve', 'hy_spread', 'ig_spread', 'mom', 'policy_rate', 'smb', 'ust_10y', 'ust_2y'); the benchmark must emit exactly the sealed set
+
+src\ah\gen\bootstrap.py:641: BootstrapError
+_______________ test_app_builds_a_decade_and_serves_the_stages ________________
+
+    @pytest.mark.enable_socket
+    def test_app_builds_a_decade_and_serves_the_stages():
+        import time
+    
+        from fastapi.testclient import TestClient
+    
+        client = TestClient(gc.app)
+        r = client.post("/api/decade", json={"seed": 5, "checkpoint": 0})
+        run_id = r.json()["run_id"]
+        for _ in range(600):
+            state = client.get(f"/api/decade/{run_id}").json()
+            if state["done"]:
+                break
+            time.sleep(0.5)
+>       assert state["done"] and state["error"] is None
+E       assert (True and "resolved factor set () != the sealed bootstrap_v1.factor_set ('cape_v', 'cpi', 'equity_mkt', 'equity_vol', 'funding_s...pread', 'ig_spread', 'mom', 'policy_rate', 'smb', 'ust_10y', 'ust_2y'); the benchmark must emit exactly the sealed set" is None)
+
+tests\test_genconsole.py:98: AssertionError
+=========================== short test summary info ===========================
+FAILED tests/test_genconsole.py::test_same_seed_is_bit_identical - ah.gen.boo...
+FAILED tests/test_genconsole.py::test_app_builds_a_decade_and_serves_the_stages
+ERROR tests/test_genconsole.py::test_stages_arrive_in_order_with_real_shapes
