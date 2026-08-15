@@ -150,4 +150,40 @@ describe("CioDashboard", () => {
     );
     expect(host!.textContent).not.toMatch(/0\.0%/);
   });
+
+  it("embedded chrome hides the dashboard's own plane control and footer", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} chrome="embedded" />);
+    // the host owns these in cockpit mode
+    expect(host!.querySelector(".ciodash-planes")).toBeNull();
+    expect(host!.querySelector(".ciodash-footer")).toBeNull();
+    // the payload itself still renders
+    expect(host!.textContent).toContain("Stagflation");
+  });
+
+  it("full chrome (the default) keeps them", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    expect(host!.querySelector(".ciodash-planes")).not.toBeNull();
+    expect(host!.querySelector(".ciodash-footer")).not.toBeNull();
+  });
+
+  it("renders host-supplied extra tabs and calls their render only when selected", () => {
+    let renders = 0;
+    const extraTabs = [
+      { key: "peers", label: "Peers", render: () => { renders++; return <p>peer content</p>; } },
+    ];
+    render(<CioDashboard view={view} onPlaneChange={() => {}} extraTabs={extraTabs} />);
+    expect(renders).toBe(0);
+    expect(host!.textContent).toContain("Peers");
+    const tab = [...host!.querySelectorAll("button")].find((b) => b.textContent === "Peers");
+    act(() => { tab!.dispatchEvent(new MouseEvent("click", { bubbles: true })); });
+    expect(host!.textContent).toContain("peer content");
+    expect(renders).toBeGreaterThan(0);
+  });
+
+  it("carries the class hooks the cockpit CSS needs", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} chrome="embedded" />);
+    const root = host!.querySelector(".ciodash");
+    expect(root).not.toBeNull();
+    expect(root!.classList.contains("ciodash-embedded")).toBe(true);
+  });
 });

@@ -18,6 +18,7 @@
  * ================================================================== */
 
 import { useState, useMemo, useContext, createContext, Fragment } from "react";
+import type { ReactNode } from "react";
 import type {
   CioView,
   Plane,
@@ -1137,22 +1138,35 @@ const TABS: [TabKey, string][] = [
   ["private", "Private cashflows"], ["markets", "Markets"],
 ];
 
+export interface ExtraTab {
+  key: string;
+  label: string;
+  /** Host-owned content. Called only while its tab is selected. */
+  render: () => ReactNode;
+}
+
 export default function CioDashboard({
   view,
   onPlaneChange,
   initialTab = "plan",
+  chrome = "full",
+  extraTabs = [],
 }: {
   view: CioView;
   onPlaneChange: (p: Plane) => void;
   initialTab?: TabKey;
+  /** "embedded": the host owns the plane control and the footer (cockpit). */
+  chrome?: "full" | "embedded";
+  extraTabs?: ExtraTab[];
 }) {
-  const [tab, setTab] = useState<TabKey>(initialTab);
+  const [tab, setTab] = useState<string>(initialTab);
   const { meta, plan } = view;
   const planes = meta.planesAvailable ?? ["reported"];
+  const allTabs = [...TABS, ...extraTabs.map((t) => [t.key, t.label] as const)];
 
   return (
     <ViewCtx.Provider value={view}>
-      <div style={{ padding: "18px 20px 40px", color: C.ice, font: `14px ${F.body}` }}>
+      <div className={`ciodash${chrome === "embedded" ? " ciodash-embedded" : ""}`} style={{ padding: "18px 20px 40px", color: C.ice, font: `14px ${F.body}` }}>
         <div style={{ maxWidth: 1220, margin: "0 auto" }}>
           <header style={{ display: "flex", alignItems: "flex-end", gap: 20, flexWrap: "wrap", paddingBottom: 12 }}>
             <div>
@@ -1165,8 +1179,8 @@ export default function CioDashboard({
             </div>
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14, paddingBottom: 2 }}>
               {meta.regime && <span style={{ font: `12px ${F.body}`, color: C.warn, letterSpacing: "0.1em" }}>REGIME · {meta.regime.toUpperCase()}</span>}
-              {planes.length > 1 && (
-                <div style={{ display: "flex", border: `1px solid ${C.rule}`, borderRadius: 2, overflow: "hidden" }}>
+              {chrome !== "embedded" && planes.length > 1 && (
+                <div className="ciodash-planes" style={{ display: "flex", border: `1px solid ${C.rule}`, borderRadius: 2, overflow: "hidden" }}>
                   {planes.map((k) => (
                     <button key={k} onClick={() => onPlaneChange(k)} style={{
                       padding: "6px 14px", cursor: "pointer", border: "none", font: `13px ${F.body}`,
@@ -1179,7 +1193,7 @@ export default function CioDashboard({
           </header>
 
           <nav style={{ display: "flex", gap: 26, borderBottom: `1px solid ${C.rule}`, marginBottom: 12 }}>
-            {TABS.map(([k, l]) => (
+            {allTabs.map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 background: "none", border: "none", cursor: "pointer", padding: "0 0 9px",
                 font: `${tab === k ? 600 : 400} 15px ${F.body}`, color: tab === k ? C.ice : C.faint,
@@ -1217,11 +1231,15 @@ export default function CioDashboard({
           {tab === "private" && <PrivateTab />}
           {tab === "markets" && <MarketsTab />}
 
-          <footer style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.ruleSoft}`, font: `11px ${F.body}`, color: C.faint, display: "flex", gap: 18, flexWrap: "wrap" }}>
-            <span style={{ letterSpacing: "0.14em" }}>{meta.watermark || "SIMULATED WORLD — NOT A FORECAST"}</span>
-            <span>{meta.disclaimer}</span>
-            <span style={{ marginLeft: "auto", font: `11px ${F.mono}` }}>run {meta.runId} · replayable from RunRecord</span>
-          </footer>
+          {extraTabs.map((t) => (tab === t.key ? <Fragment key={t.key}>{t.render()}</Fragment> : null))}
+
+          {chrome !== "embedded" && (
+            <footer className="ciodash-footer" style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.ruleSoft}`, font: `11px ${F.body}`, color: C.faint, display: "flex", gap: 18, flexWrap: "wrap" }}>
+              <span style={{ letterSpacing: "0.14em" }}>{meta.watermark || "SIMULATED WORLD — NOT A FORECAST"}</span>
+              <span>{meta.disclaimer}</span>
+              <span style={{ marginLeft: "auto", font: `11px ${F.mono}` }}>run {meta.runId} · replayable from RunRecord</span>
+            </footer>
+          )}
         </div>
       </div>
     </ViewCtx.Provider>
