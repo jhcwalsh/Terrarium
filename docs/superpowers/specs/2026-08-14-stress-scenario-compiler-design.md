@@ -266,9 +266,19 @@ jointly the recommended starting point; P3 is the strongest and the most dangero
 
 ## 5. Contracts and placement
 
-- **`generator_id: bootstrap-stratified`** — an unused slot in the sealed schema
+- **`generator_id: bootstrap-stratified`** — a slot already in the sealed schema
   enum, so no schema change. Accurate (this *is* a stratified bootstrap; the stratum
   is severity), with the noted confusion risk that `bootstrap-v1` also stratifies.
+  **Erratum, found at build (2026-08-14):** the slot is NOT unused as v0.1–v0.2
+  claimed. `bootstrap.py:1063` registers it as a deprecated ALIAS for
+  `bootstrap-v1`, load-bearing for the sealed 1.0.x fixture worlds
+  (`fixtures/worlds/conditional/`) and referenced by sealed eval code
+  (`ah/eval/metrics/conditional.py`). Resolution, preserving both uses:
+  `stress.py` re-registers the id with a **dispatcher** — a world declaring
+  `extensions.x_stress` routes to the stress compiler; a world without it routes
+  to `bootstrap_v1_factory` exactly as the alias always did, bit-identical.
+  Registration order is deterministic (`ah/gen/__init__` imports bootstrap, then
+  stress; package init always runs), and a test pins both routes.
 - **Scenario declared in `extensions.x_stress`** — the schema's namespaced escape
   hatch. Precedent already exists: `stagflation_1974` carries a load-bearing
   `x_campaign_vintage_id`. An engine that does not recognise the extension ignores it,
@@ -465,4 +475,5 @@ assigned at ratification there, not here.
 | version | date | change |
 |---|---|---|
 | v0.1 | 2026-08-14 | Initial design (commit `fa5dbe7`) |
+| v0.2 erratum | 2026-08-14 | §5's "unused slot" premise for `bootstrap-stratified` was false — the id is a live deprecated alias for `bootstrap-v1`, load-bearing for sealed 1.0.x fixture worlds. Resolved by dispatch-on-declaration (see §5), preserving legacy behavior bit-identically. Found by the Task 4 implementer during the build |
 | v0.2 | 2026-08-14 | Phase 0 attribution test run and cited in §2 (result: the motivating claim stands; the severity gap is wider than v0.1 stated). Amendments: **A1** applied — coherence/fidelity split into gating vs exempt tiers, exemption named by battery test id (§1, §6.1). **A2** applied — claim restated as *real months, invented sequence, precedented severity rule*; Mahalanobis plausibility statistic added, reported never gating (§1, §6.2, §5, §8). **A3** applied as proposal — persistence rule §4.3(d) with three candidate forms; parameterisation reserved ⚑ D-SC-1. **A4** applied — international pool named first-choice remedy ahead of 1929–32, Barro & Ursúa / Barro & Jin cited; licence-blocked ⚖ D-SC-4. **A5** applied — two-compiler split stated with the hard narration rule (§11); premise-compiler scoping reserved ⚑ D-SC-2. **A6** applied — reverse-stress-testing carve-out on rule 1 with three mandatory conditions, ECB WP 2941 cited (§3); ship timing reserved ⚑ D-SC-3. **A7** applied — `docs/tail-register.md` created and seeded; severity/incidence separation stated (§8, register TR-7) |
