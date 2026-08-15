@@ -46,6 +46,15 @@ class CohortStep:
     fees_paid: float
     carry_crystallized: float
     expired_undrawn: float = 0.0
+    #: True on the step where the fund reaches the end of its contractual life
+    #: and liquidates. The whole remaining NAV leaves as one distribution on
+    #: the FUND's clock, saying nothing about the market — so any statistic
+    #: about distribution RATES has to know which part of the quarter's
+    #: distributions was this, and recording it beats inferring it from a NAV
+    #: that fell to zero (a forced secondary does that too, without paying a
+    #: distribution). ``expired_undrawn`` cannot stand in: it is zero on the
+    #: lapse of a fund that was fully drawn.
+    is_terminal: bool = False
 
     @property
     def distribution_total(self) -> float:
@@ -213,7 +222,7 @@ class ClosedEndCohort:
         self.unfunded -= call
         self.cumulative_distributions += dist
         self.age_years += years_per_period
-        self._last = CohortStep(call, income, capital, nav_growth, 0.0, 0.0, expired)
+        self._last = CohortStep(call, income, capital, nav_growth, 0.0, 0.0, expired, terminal)
         self._check()
         return self._last
 

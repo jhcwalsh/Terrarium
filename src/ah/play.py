@@ -262,6 +262,11 @@ class PlayQuarter:
     #: being called. Carried here because the design's stated purpose was
     #: that it expire VISIBLY — computed but dropped until audit F2.
     expired_undrawn: float = 0.0
+    #: The part of this quarter's distributions that was a fund WINDING UP —
+    #: its whole remaining NAV paid out on the fund's clock, not the market's.
+    #: Any statistic about distribution rates has to net this out or it
+    #: measures the fund calendar (ER-12 follow-up; see `programme.py`).
+    terminal_distributions: float = 0.0
     #: NAV by cohort id at quarter close, for the per-vintage stack.
     #:
     #: Snapshotted BEFORE ``engine.run_quarter`` runs, so a forced secondary
@@ -594,6 +599,7 @@ def simulate_play(
         calls = 0.0
         distributions = 0.0
         expired = 0.0
+        terminal_dist = 0.0
         dd = float(depth[q])
         sr = float(spread_ratio[q])
         fc = tier1_f_call(dd) if linkage else 1.0
@@ -609,6 +615,8 @@ def simulate_play(
                 calls += step.call
                 distributions += step.distribution_total
                 expired += step.expired_undrawn
+                if step.is_terminal:
+                    terminal_dist += step.distribution_total
                 # the reported mark follows the tape the player is shown
                 grown = cohort.nav_reported * (1.0 + float(q_reported[asset][q]))
                 cohort.report(max(0.0, grown + step.call - step.distribution_total))
@@ -636,6 +644,7 @@ def simulate_play(
                 spending_basis=report.spending_basis,
                 spending_rate_annual=report.spending_rate_annual,
                 expired_undrawn=expired,
+                terminal_distributions=terminal_dist,
                 drawdown_depth=dd,
                 spread_ratio=sr,
                 f_dist=fd,
