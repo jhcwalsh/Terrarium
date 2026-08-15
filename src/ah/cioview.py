@@ -12,7 +12,14 @@ the TS validator runs dev-side only.
 
 from __future__ import annotations
 
+from collections.abc import Mapping
+from dataclasses import replace
 from typing import Any
+
+import numpy as np
+
+from ah.core.engine import EnginePaths
+from ah.play import PRIVATE_ASSETS, START_CASH, START_TARGETS, PlayResult, simulate_play
 
 PLANES: tuple[str, str] = ("reported", "true")
 LINKAGE_VERSION = "public-0.1"
@@ -73,6 +80,197 @@ GOAL_TOLERANCE_PCT = 5.0
 TIER1_CLASSES: tuple[str, ...] = ("cash", "bonds")
 TIER2_CLASSES: tuple[str, ...] = ("equity", "hy", "commodities", "reits")
 # everything in PRIVATE_ASSETS is the illiquid remainder (liquid: False)
+
+
+def _frozen_paths(paths: EnginePaths, hist_months: int, extra_quarters: int) -> EnginePaths:
+    """The revealed tape verbatim plus flat forecast months."""
+    n, extra = hist_months, extra_quarters * 3
+    hold = lambda a: np.concatenate([a[:n], np.full(extra, float(a[n - 1]))])  # noqa: E731
+    flat = lambda d: {k: np.concatenate([v[:n], np.zeros(extra)]) for k, v in d.items()}  # noqa: E731
+    return replace(
+        paths,
+        months=n + extra,
+        rate=hold(paths.rate),
+        spread=hold(paths.spread),
+        inflation=hold(paths.inflation),
+        crisis=np.concatenate([paths.crisis[:n], np.zeros(extra)]),
+        returns=flat(paths.returns),
+        reported=flat(paths.reported),
+    )
+
+
+PERIODS = ("1Q", "YTD", "1Y", "3Y", "5Y", "10Y")
+ANNUALISED_FROM = 3  # 3Y onward annualised
+_WINDOW_QUARTERS = {"1Q": 1, "1Y": 4, "3Y": 12, "5Y": 20, "10Y": 40}
+
+
+def _quarterly_returns(result: PlayResult, plane: str, n_quarters: int) -> list[float]:
+    key = "nav_reported" if plane == "reported" else "nav_true"
+    navs = [result.opening[key]] + [getattr(q, key) for q in result.quarters[:n_quarters]]
+    return [
+        (navs[i + 1] + result.quarters[i].spending_paid) / navs[i] - 1.0 for i in range(n_quarters)
+    ]
+
+
+def _window_return(q_rets: list[float], n: int, annualise: bool) -> float | None:
+    if n > len(q_rets):
+        return None
+    growth = float(np.prod([1.0 + r for r in q_rets[-n:]]))
+    if annualise:
+        return round((growth ** (4.0 / n) - 1.0) * 100.0, 4)
+    return round((growth - 1.0) * 100.0, 4)
+
+
+def _period_row(q_rets: list[float], last_q: int) -> list[float | None]:
+    out: list[float | None] = []
+    for i, p in enumerate(PERIODS):
+        n = (last_q % 4) + 1 if p == "YTD" else _WINDOW_QUARTERS[p]
+        out.append(_window_return(q_rets, n, i >= ANNUALISED_FROM))
+    return out
+
+
+def build_cio_view(
+    paths: EnginePaths,
+    decisions: Mapping[int, Any],
+    *,
+    run_id: str,
+    seed: int,
+    world_title: str,
+    world_version: str,
+    alpha_version: str,
+    start_targets: Mapping[str, float] | None,
+    plane: str,
+    revealed_months: int,
+    forecast_quarters: int = 4,
+) -> dict[str, Any]:
+    if plane not in PLANES:
+        raise ValueError(f"plane must be one of {PLANES}, got {plane!r}")
+    n_q = revealed_months // 3
+    if n_q < 1:
+        raise ValueError("no closed quarter inside the revealed window")
+    hist_months = n_q * 3
+    frozen = _frozen_paths(paths, hist_months, forecast_quarters)
+    active = simulate_play(frozen, dict(decisions), start_targets=start_targets)
+    twin = simulate_play(frozen, None, start_targets=start_targets)
+    targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
+    last = active.quarters[n_q - 1]
+    q_rets = _quarterly_returns(active, plane, n_q)
+    twin_rets = _quarterly_returns(twin, plane, n_q)
+
+    nav_attr = "nav_reported_months" if plane == "reported" else "nav_true_months"
+    history = [round(m, 4) for q in active.quarters[:n_q] for m in getattr(q, nav_attr)]
+    total = last.nav_reported if plane == "reported" else last.nav_true
+    opening_nav = active.opening["nav_reported" if plane == "reported" else "nav_true"]
+    spend_total = sum(q.spending_paid for q in active.quarters[:n_q])
+
+    view: dict[str, Any] = {
+        "meta": {
+            "runId": run_id,
+            "seed": str(seed),
+            "worldTitle": world_title,
+            "worldVersion": world_version,
+            "linkageVersion": LINKAGE_VERSION,
+            "decisionAlphaVersion": alpha_version,
+            "asOfLabel": f"Y{(n_q - 1) // 4 + 1} Q{(n_q - 1) % 4 + 1}",
+            "asOfMonth": hist_months - 1,
+            "plane": plane,
+            "planesAvailable": list(PLANES),
+            "unitLabel": UNIT_LABEL,
+            "unitSuffix": UNIT_SUFFIX,
+            "currency": CURRENCY,
+            "watermark": WATERMARK,
+            "disclaimer": DISCLAIMER,
+        },
+        "plan": {
+            "totalValue": round(total, 4),
+            "growthPct": round((total / opening_nav - 1.0) * 100.0, 4),
+            "netOfFlows": round(total - opening_nav + spend_total, 4),
+            "windowLabel": "Since inception",
+            "history": {"values": history, "worldStartIndex": 0},
+        },
+        "allocation": _allocation(
+            active,
+            targets,
+            plane,
+            n_q,
+            frozen.reported if plane == "reported" else frozen.returns,
+        ),
+        "performance": {
+            "periods": list(PERIODS),
+            "annualisedFromIndex": ANNUALISED_FROM,
+            "total": _period_row(q_rets, n_q - 1),
+            "benchmark": _period_row(twin_rets, n_q - 1),
+            "benchmarkLabel": "Policy twin (hold course)",
+            "footnote": "Payout added back; time-weighted. Twin holds the t0 plan.",
+        },
+        "liquidity": _liquidity(active, targets, plane, n_q, forecast_quarters),
+        "privateCashflows": _private_cashflows(active, n_q, forecast_quarters, plane),
+    }
+    markets = _markets(paths, hist_months, plane)
+    if markets is not None:
+        view["markets"] = markets
+    return view
+
+
+def _allocation(
+    active: PlayResult,
+    targets: Mapping[str, float],
+    plane: str,
+    n_q: int,
+    tape: Mapping[str, np.ndarray],
+) -> dict[str, Any]:
+    last = active.quarters[n_q - 1]
+    total = last.nav_reported if plane == "reported" else last.nav_true
+    target_total = sum(targets.values()) + START_CASH
+    private = last.private_reported if plane == "reported" else last.private_true
+
+    def value_of(cid: str) -> float:
+        if cid == "cash":
+            return last.cash
+        if cid in PRIVATE_ASSETS:
+            return private[cid]
+        return last.liquid_values[cid]
+
+    ids = [*targets.keys(), "cash"]
+    ordered = [cid for gid, _ in GOALS for cid in ids if GOAL_OF[cid] == gid]
+    classes = []
+    for cid in ordered:
+        points = START_CASH if cid == "cash" else targets[cid]
+        classes.append(
+            {
+                "id": cid,
+                "label": CLASS_LABEL[cid],
+                "goalId": GOAL_OF[cid],
+                "targetPct": round(points / target_total * 100.0, 4),
+                "bandPct": BAND_PCT[cid],
+                "currentPct": round(value_of(cid) / total * 100.0, 4),
+                "value": round(value_of(cid), 4),
+                "returns": _class_returns(tape, cid, n_q),
+                **({"isPrivate": True} if cid in PRIVATE_ASSETS else {}),
+            }
+        )
+    goal_ids = {c["goalId"] for c in classes}
+    return {
+        "goals": [
+            {"id": gid, "label": label, "tolerancePct": GOAL_TOLERANCE_PCT}
+            for gid, label in GOALS
+            if gid in goal_ids
+        ],
+        "classes": classes,
+        "alertPolicy": {
+            "watchFraction": WATCH_FRACTION,
+            "label": "amber inside the last quarter of the band",
+        },
+    }
+
+
+def _class_returns(tape: Mapping[str, np.ndarray], cid: str, n_q: int) -> list[float | None]:
+    """Per-class period returns from the sleeve tape (cash has none -> nulls)."""
+    if cid not in tape:  # cash has no tape
+        return [None] * len(PERIODS)
+    monthly = tape[cid][: n_q * 3]
+    q_rets = [float(np.prod(1.0 + monthly[i * 3 : i * 3 + 3] / 100.0)) - 1.0 for i in range(n_q)]
+    return _period_row(q_rets, n_q - 1)
 
 
 def validate_cio_view(v: dict[str, Any]) -> list[str]:

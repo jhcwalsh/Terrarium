@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ah.cioview import validate_cio_view
+from ah.cioview import build_cio_view, validate_cio_view
 from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
@@ -172,3 +172,55 @@ def test_validator_catches_plane_not_available():
     v["meta"]["plane"] = "true"
     v["meta"]["planesAvailable"] = ["reported"]
     assert any("planesAvailable" in e for e in validate_cio_view(v))
+
+
+def _view(plane: str = "reported", revealed: int = 60, fq: int = 4, preset: str = "stagflation"):
+    return build_cio_view(
+        _paths(preset),
+        {},
+        run_id="r-test",
+        seed=42,
+        world_title="Stagflation",
+        world_version="toy-v0.6",
+        alpha_version="port-v4-ladder",
+        start_targets=None,
+        plane=plane,
+        revealed_months=revealed,
+        forecast_quarters=fq,
+    )
+
+
+def test_view_validates_clean_on_both_planes():
+    for plane in ("reported", "true"):
+        assert validate_cio_view(_view(plane)) == []
+
+
+def test_plan_history_is_monthly_and_truncated_at_the_pointer():
+    v = _view(revealed=60)
+    assert len(v["plan"]["history"]["values"]) == 60  # 20 closed quarters * 3
+    assert v["plan"]["history"]["worldStartIndex"] == 0
+    assert v["meta"]["asOfLabel"] == "Y5 Q4"
+
+
+def test_planes_disagree_where_smoothing_bites():
+    rep, tru = _view("reported"), _view("true")
+    assert rep["plan"]["totalValue"] != tru["plan"]["totalValue"]
+    # plane-invariant: the cash account has no planes (DN-8 section 4)
+    rep_cash = next(t for t in rep["liquidity"]["tiers"] if "cash" in t["classIds"])
+    tru_cash = next(t for t in tru["liquidity"]["tiers"] if "cash" in t["classIds"])
+    assert rep_cash["value"] == tru_cash["value"]
+
+
+def test_unreached_windows_are_null_not_zero():
+    v = _view(revealed=15)  # 5 closed quarters: 3Y/5Y/10Y unreachable
+    idx = {p: i for i, p in enumerate(v["performance"]["periods"])}
+    for p in ("3Y", "5Y", "10Y"):
+        assert v["performance"]["total"][idx[p]] is None
+    for p in ("1Q", "1Y"):
+        assert v["performance"]["total"][idx[p]] is not None
+
+
+def test_benchmark_is_the_twin():
+    v = _view()
+    assert v["performance"]["benchmarkLabel"] == "Policy twin (hold course)"
+    assert v["performance"]["benchmark"][0] is not None
