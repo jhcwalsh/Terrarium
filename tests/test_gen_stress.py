@@ -242,3 +242,67 @@ def test_a_quarter_outside_every_segment_raises_a_named_stress_error():
     gen = StressBootstrap(_tiny_source())
     with pytest.raises(StressError, match="quarter 20 is covered by no stress segment; segments end at quarter 19"):
         gen.sample_months(120, 2, seed=1, stress=short_spec)
+
+
+def test_a_paths_tape_does_not_depend_on_how_many_paths_ride_along():
+    """Path 0's tape must be a pure function of (seed, path index) -- never of
+    n_paths. A shared RNG stream consumed path-major would make an earlier
+    path's outcome depend on how many later paths are drawn alongside it,
+    because the entry draw and every restart's destination draw consume a
+    variable, path-count-dependent number of stream words. Reviewed finding:
+    reproduced with the pre-fix code (seed=7, 60 months, empty tolerance) as
+    path 0 = [59, 0, 1, 2, ...] at n_paths=4 but [59, 0, 52, 53, ...] at
+    n_paths=8 -- the SAME logical path, different outcomes."""
+    gen = StressBootstrap(_tiny_source())
+    a = gen.sample_months(60, 4, seed=7, stress=_spec())
+    b = gen.sample_months(60, 8, seed=7, stress=_spec())
+    assert a.row_indices is not None
+    assert b.row_indices is not None
+    np.testing.assert_array_equal(a.row_indices[0], b.row_indices[0])
+
+
+def test_pool_sizes_are_stamped_for_every_declared_segment_even_unvisited_ones():
+    """pool_sizes describes the DECLARED spec, not a trace of what the draw
+    happened to visit. A two-segment spec sampled for fewer months than needed
+    to reach the second segment must still succeed and stamp both segments'
+    pool sizes, rather than KeyError on the segment the draw never touched."""
+    from ah.core.worldspec import StressSegment, StressSpec
+
+    two_segment_spec = StressSpec(
+        functional="all_down",
+        segments=[
+            StressSegment(from_quarter=0, to_quarter=19,
+                          entry_percentile=100.0, mean_block_months=6),
+            StressSegment(from_quarter=20, to_quarter=39,
+                          entry_percentile=50.0, mean_block_months=6),
+        ],
+        join_tolerance={},
+        precedent=["test"],
+    )
+    gen = StressBootstrap(_tiny_source())
+    # 60 months = quarters 0-19 only; the second segment (quarters 20-39) is
+    # never reached by the draw.
+    ens = gen.sample_months(60, 2, seed=1, stress=two_segment_spec)
+    pool_sizes = ens.meta.conditioning["pool_sizes"]
+    assert len(pool_sizes) == 2
+    assert all(size > 0 for size in pool_sizes)
+
+
+def test_sample_raises_when_the_world_declares_no_x_stress():
+    """sample() (not sample_months()) is the Generator-protocol entry point;
+    it must refuse a world that selects bootstrap-stratified but never
+    declared extensions.x_stress, naming x_stress in the error."""
+    import json
+    from pathlib import Path
+
+    from ah.core.numericworld import project_numeric
+    from ah.core.worldspec import WorldSpec
+
+    presets = Path(__file__).resolve().parents[1] / "src" / "ah" / "presets"
+    doc = json.loads((presets / "stagflation_1974.json").read_text(encoding="utf-8"))
+    world = project_numeric(WorldSpec.model_validate(doc))
+    assert world.stress is None  # this preset declares no x_stress
+
+    gen = StressBootstrap(_tiny_source())
+    with pytest.raises(StressError, match="x_stress"):
+        gen.sample(world, n_paths=2, seed=1)

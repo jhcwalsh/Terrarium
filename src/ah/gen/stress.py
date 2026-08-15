@@ -157,7 +157,15 @@ class StressBootstrap:
         months = int(world.horizon.quarters) * 3
         return self.sample_months(months, n_paths, seed, world=world, stress=world.stress)
 
-    def sample_months(self, months, n_paths, seed, *, world=None, stress=None) -> Ensemble:
+    def sample_months(
+        self,
+        months: int,
+        n_paths: int,
+        seed: int,
+        *,
+        world: NumericWorld | None = None,
+        stress: StressSpec | None = None,
+    ) -> Ensemble:
         source = self.source
         if stress is None:
             raise StressError("bootstrap-stratified requires a StressSpec")
@@ -166,17 +174,20 @@ class StressBootstrap:
             raise StressError(f"months and n_paths must be >= 1; got {months}, {n_paths}")
 
         scores = severity_score(source.values, source.factor_names, stress.functional)
+        # Every DECLARED segment's pool is built up front -- pool_sizes below
+        # stamps the whole spec, not just whatever the sampled months happen
+        # to touch, so a segment past the sampled horizon still gets a size.
+        per_segment_pool: dict[int, np.ndarray] = {
+            seg.from_quarter: eligible_rows(scores, seg.entry_percentile)
+            for seg in stress.segments
+        }
         # month -> (pool, restart probability) from the segment covering it
         pools: list[np.ndarray] = []
         probs: list[float] = []
-        per_segment_pool: dict[int, np.ndarray] = {}
         for m in range(months):
             quarter = m // 3
             seg = _segment_for(stress, quarter)
-            key = seg.from_quarter
-            if key not in per_segment_pool:
-                per_segment_pool[key] = eligible_rows(scores, seg.entry_percentile)
-            pools.append(per_segment_pool[key])
+            pools.append(per_segment_pool[seg.from_quarter])
             probs.append(1.0 / float(seg.mean_block_months))
 
         index = self._draw(source, months, n_paths, seed, pools, probs, stress.join_tolerance)
@@ -212,6 +223,8 @@ class StressBootstrap:
             # (D-SC-3, not built) would stamp "search-derived" here instead.
             "provenance": "declared",
         }
+        if world is not None:
+            conditioning["world_id"] = world.world_id
         meta = EnsembleMeta(
             generator_id=self.generator_id, vintage_id=source.vintage_id, seed=int(seed),
             n_paths=n_paths, months=months, conditioning=conditioning,
@@ -225,20 +238,37 @@ class StressBootstrap:
             slow_states=AbsentLayer(reason="a resampler has no slow-state layer"),
         )
 
-    def _draw(self, source, months, n_paths, seed, pools, probs, tolerance) -> np.ndarray:
-        rng = np.random.Generator(np.random.PCG64(int(seed)))
+    def _draw(
+        self,
+        source: BootstrapSource,
+        months: int,
+        n_paths: int,
+        seed: int,
+        pools: list[np.ndarray],
+        probs: list[float],
+        tolerance: Mapping[str, float],
+    ) -> np.ndarray:
         n = source.n_rows
         index = np.empty((n_paths, months), dtype=np.int64)
 
-        first = pools[0]
-        index[:, 0] = first[rng.integers(0, first.size, size=n_paths)]
-        draws = rng.random((n_paths, months))
-        for m in range(1, months):
-            pool = pools[m]
-            for p in range(n_paths):
+        for p in range(n_paths):
+            # Each path draws from its own independent stream (a PCG64 jump of
+            # p * 2**128 steps): path p's tape then depends only on (seed, p),
+            # never on how many OTHER paths are being drawn alongside it. A
+            # single shared stream consumed path-major (draw all path-0
+            # values, then path-1, ...) would make an earlier path's outcome
+            # depend on n_paths, because the entry draw at m=0 and every
+            # restart's destination draw consume a variable, path-count-
+            # dependent number of stream words before the next path starts.
+            rng = np.random.Generator(np.random.PCG64(int(seed)).jumped(p))
+            first = pools[0]
+            index[p, 0] = int(first[rng.integers(0, first.size)])
+            for m in range(1, months):
+                pool = pools[m]
                 previous = int(index[p, m - 1])
                 advanced = (previous + 1) % n
-                if draws[p, m] >= probs[m]:
+                trigger = rng.random()
+                if trigger >= probs[m]:
                     index[p, m] = advanced
                     continue
                 # Exclude the current row itself: with an exact-match tolerance
