@@ -17,6 +17,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Book } from "./components/Book";
+import CioDashboard from "./components/CioDashboard";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
@@ -27,11 +28,13 @@ import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
 import type { PlayConfig } from "./RankedSetup";
 import type { WorldBundle } from "./lib/bundle";
+import { type CioView, type Plane, validateCioView } from "./lib/cioView";
 import {
   advance,
   complete,
   createSession,
   decide,
+  getCioView,
   getOutcome,
   SessionApiError,
   type Action,
@@ -54,7 +57,14 @@ export const ASSET_LABELS: ReadonlyArray<readonly [string, string]> = [
 
 const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 
-type Plane = "reported" | "true";
+// Plane is re-exported from lib/cioView.ts (cio-02) rather than declared
+// here a second time — it is the same "reported" | "true" domain the plane
+// switch has always driven, and the CIO dashboard now shares the switch.
+
+/** When the CIO view must refetch: the pointer moved, or the plane changed. */
+export function cioFetchKey(sid: string, revealedMonths: number, plane: Plane): string {
+  return `${sid}:${revealedMonths}:${plane}`;
+}
 
 interface PlayProps {
   bundle: WorldBundle;
@@ -69,6 +79,9 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [plane, setPlane] = useState<Plane>("reported");
+  const [viewMode, setViewMode] = useState<"book" | "cio">("book");
+  const [cioView, setCioView] = useState<CioView | null>(null);
+  const [cioError, setCioError] = useState<string | null>(null);
 
   const months = bundle.meta.months;
   const windows = bundle.summary.decision_months;
@@ -83,6 +96,41 @@ export function Play({ bundle, config, onExit }: PlayProps) {
       .then(setSession)
       .catch((e) => setError(String(e)));
   }, [bundle.meta.run_id, basis, config?.ranked, config?.participant]);
+
+  // cio-02: fetch the CIO view only while that mode is on screen, and only
+  // when the pointer or the plane actually moved (cioFetchKey). The client
+  // never derives the dashboard's numbers itself — a plane change is a
+  // REFETCH of the server's own recomputation, same as everywhere else in
+  // this file (DN-8 §2).
+  useEffect(() => {
+    if (viewMode !== "cio" || !session) return;
+    let stale = false;
+    setCioError(null);
+    getCioView(session.session_id, plane)
+      .then((v) => {
+        if (stale) return;
+        if (import.meta.env.DEV) {
+          const errs = validateCioView(v);
+          if (errs.length) console.warn("[cioView] contract violations:", errs);
+        }
+        setCioView(v);
+      })
+      .catch((e) => {
+        if (stale) return;
+        if (e instanceof SessionApiError && e.status === 409) {
+          setCioView(null);
+          setCioError("No closed quarter yet - advance past the first quarter.");
+        } else {
+          setCioError(String(e.message ?? e));
+        }
+      });
+    return () => {
+      stale = true;
+    };
+    // deps keyed on the three primitives cioFetchKey combines, not on a
+    // computed string — this file has no eslint-disable idiom elsewhere,
+    // so exhaustive-deps stays satisfiable without a pragma.
+  }, [viewMode, session?.session_id, session?.revealed_months, plane]);
 
   /** The next undecided window, or null when all are decided. */
   const nextWindow = useMemo(() => {
@@ -307,6 +355,14 @@ export function Play({ bundle, config, onExit }: PlayProps) {
           <span>As true</span>
         </div>
 
+        <button
+          className="modeswitch"
+          aria-pressed={viewMode === "cio"}
+          onClick={() => setViewMode(viewMode === "cio" ? "book" : "cio")}
+        >
+          {viewMode === "cio" ? "Book view" : "CIO view"}
+        </button>
+
         <button className="t" onClick={onExit} title="Exit to browse" aria-label="Exit">
           ✕
         </button>
@@ -366,6 +422,15 @@ export function Play({ bundle, config, onExit }: PlayProps) {
 
       <div className="vgrid">
         <div className="left">
+          {viewMode === "cio" ? (
+            cioError ? (
+              <div className="empty">{cioError}</div>
+            ) : cioView ? (
+              <CioDashboard view={cioView} onPlaneChange={setPlane} />
+            ) : (
+              <div className="empty">Loading CIO view...</div>
+            )
+          ) : (
           <section>
             <div className="eyebrow">
               <span>The market against its siblings</span>
@@ -430,6 +495,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               )}
             </div>
           </section>
+          )}
         </div>
 
         <div className={`right${atWindow !== null ? " deciding" : ""}`}>
