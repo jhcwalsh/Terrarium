@@ -37,6 +37,40 @@ the stress-01 measurement: coverage breach (unfunded/liquid ever ≥ 1.0),
 forced-secondary incidence and events, worst coverage, final-value
 distribution. **One run per arm; whatever it says is the record.**
 
-## Results
+## Results — run once, 2026-08-15, recorded as found
 
-*(appended after the declaration commit)*
+| arm | private points | coverage breach (≥1.0 ever) | forced secondaries | worst coverage med · max | final min · med | seeds below 100/75/50 |
+|---|---|---|---|---|---|---|
+| floor | 15 | 0/20 | 0/20 | 0.103 · 0.164 | 86.6 · 145.0 | 2/0/0 |
+| default | 35 | 0/20 | 0/20 | 0.309 · 0.540 | 94.2 · 154.1 | 2/0/0 |
+| ceiling | 40 | 0/20 | 0/20 | 0.382 · 0.694 | 95.1 · 156.6 | 2/0/0 |
+| breach | 55 | **1/20** | **0/20** | 0.719 · **1.571** | 93.4 · 161.9 | 2/0/0 |
+
+## Reading, stated plainly
+
+1. **The lever is real and beautifully legible.** Worst coverage is
+   monotone in allocation across a 15× range (0.10 → 1.57), and the breach
+   book produces the programme's first coverage breach anywhere in the
+   measured space. Allocation is the variable that moves liquidity risk;
+   the market tape, at the edge of precedent, is not.
+2. **The hypothesis is only half-confirmed.** Over-commitment reaches the
+   coverage *warning* line; it does not reach the forced *sale*. Even a
+   book that ignores its own policy range keeps enough liquid assets
+   (43 points) to fund calls and spending through the deepest declared
+   decade on 19 of 20 seeds, and never exhausts them outright.
+3. **The reference ladder shape is a drafting artifact.** "20/20 breached,
+   4–8/20 forced secondary" is unreachable anywhere in the space of
+   precedented markets × declared-or-precedented allocations. The forced
+   secondary as built requires conditions outside both — it fires only in
+   the schema-bound maximal test world. It should be treated as the
+   catastrophic-tail event that honest robustness makes rare, not as a
+   target incidence.
+4. **Product implication (owner's to take up):** the teachable,
+   allocation-sensitive signal this measurement surfaces is the coverage
+   ratio and its breach line — monotone, legible, and it moves with the
+   player's own lever. The forced secondary remains the endgame beyond it.
+5. **A curiosity recorded without interpretation:** median final value
+   *rises* with allocation (145 → 162) even in the Lost Decade — the
+   private sleeves out-compound the liquid ones on this tape. Risk here is
+   a liquidity phenomenon, not a return phenomenon, which is exactly the
+   lesson the institutional model exists to teach.
