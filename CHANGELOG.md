@@ -14,6 +14,16 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The Lost Decade ships (owner ruling, 2026-08-15).** World `...703`
+  ("The Lost Decade (declared stress)") is live for players, verified
+  end-to-end with zero code changes needed: listed by `/worlds` with its
+  declared-stress title and tagline carrying the disclosure, bundle builds
+  (29,929 bytes gz), a full 120-month session with nine decision windows
+  completes, outcome and CIO view serve, and the leaderboard triple key
+  (world, seed 199001, `port-v4-ladder-gen`) fences its scores from every
+  other engine and world. Worlds `...701`/`...702` remain in the store as
+  records; the ruling ships `...703` only.
+
 - **The coverage ratio and its breach line land on the CIO teaching surface
   (cov-01), 2026-08-15.** Owner ruling (spec v0.3 changelog,
   `docs/superpowers/specs/2026-08-14-stress-scenario-compiler-design.md`),
