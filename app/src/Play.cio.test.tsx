@@ -13,14 +13,21 @@ import { cioFetchKey } from "./Play";
 
 describe("cio view fetch policy", () => {
   it("refetches when the reveal pointer moves", () => {
-    expect(cioFetchKey("s", 12, "reported")).not.toBe(cioFetchKey("s", 15, "reported"));
+    expect(cioFetchKey("s", 12, "reported", 0)).not.toBe(cioFetchKey("s", 15, "reported", 0));
   });
 
   it("refetches when the plane changes, same pointer", () => {
-    expect(cioFetchKey("s", 12, "reported")).not.toBe(cioFetchKey("s", 12, "true"));
+    expect(cioFetchKey("s", 12, "reported", 0)).not.toBe(cioFetchKey("s", 12, "true", 0));
   });
 
   it("is stable when nothing moved", () => {
-    expect(cioFetchKey("s", 12, "true")).toBe(cioFetchKey("s", 12, "true"));
+    expect(cioFetchKey("s", 12, "true", 2)).toBe(cioFetchKey("s", 12, "true", 2));
+  });
+
+  // I-1: deciding a window updates session.decisions without moving
+  // revealed_months (the pointer only advances on advance()), so the CIO
+  // dashboard must refetch on decisionCount alone, same pointer and plane.
+  it("refetches when a decision lands, same pointer and plane", () => {
+    expect(cioFetchKey("s", 12, "reported", 1)).not.toBe(cioFetchKey("s", 12, "reported", 2));
   });
 });

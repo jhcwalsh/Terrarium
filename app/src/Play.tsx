@@ -61,9 +61,22 @@ const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 // here a second time — it is the same "reported" | "true" domain the plane
 // switch has always driven, and the CIO dashboard now shares the switch.
 
-/** When the CIO view must refetch: the pointer moved, or the plane changed. */
-export function cioFetchKey(sid: string, revealedMonths: number, plane: Plane): string {
-  return `${sid}:${revealedMonths}:${plane}`;
+/**
+ * When the CIO view must refetch: the pointer moved, the plane changed, or a
+ * decision landed. `decisionCount` is `Object.keys(session.decisions).length`
+ * — deciding a window updates the session without moving revealed_months (the
+ * pointer only advances on the next `advance()` call), so the pointer+plane
+ * key alone goes stale the instant `decide()` resolves while CIO mode is on
+ * screen. The server rebuilds the CioView from the session's decisions; the
+ * client must refetch whenever that input changed.
+ */
+export function cioFetchKey(
+  sid: string,
+  revealedMonths: number,
+  plane: Plane,
+  decisionCount: number,
+): string {
+  return `${sid}:${revealedMonths}:${plane}:${decisionCount}`;
 }
 
 interface PlayProps {
@@ -98,10 +111,24 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   }, [bundle.meta.run_id, basis, config?.ranked, config?.participant]);
 
   // cio-02: fetch the CIO view only while that mode is on screen, and only
-  // when the pointer or the plane actually moved (cioFetchKey). The client
-  // never derives the dashboard's numbers itself — a plane change is a
-  // REFETCH of the server's own recomputation, same as everywhere else in
-  // this file (DN-8 §2).
+  // when the pointer, the plane, or the decided-window count actually moved
+  // (cioFetchKey). The client never derives the dashboard's numbers itself —
+  // a plane change (or a decision) is a REFETCH of the server's own
+  // recomputation, same as everywhere else in this file (DN-8 §2).
+  //
+  // The key is computed once here (not re-derived separately for the effect
+  // deps) so the two cannot drift: whatever cioFetchKey consumes IS what
+  // retriggers the fetch. The effect body reads `session`/`plane` fresh off
+  // the closure — they are current as of the render that produced this key.
+  const cioKey = session
+    ? cioFetchKey(
+        session.session_id,
+        session.revealed_months,
+        plane,
+        Object.keys(session.decisions).length,
+      )
+    : null;
+
   useEffect(() => {
     if (viewMode !== "cio" || !session) return;
     let stale = false;
@@ -127,10 +154,11 @@ export function Play({ bundle, config, onExit }: PlayProps) {
     return () => {
       stale = true;
     };
-    // deps keyed on the three primitives cioFetchKey combines, not on a
-    // computed string — this file has no eslint-disable idiom elsewhere,
-    // so exhaustive-deps stays satisfiable without a pragma.
-  }, [viewMode, session?.session_id, session?.revealed_months, plane]);
+    // Deps are [viewMode, cioKey] rather than the individual fields cioKey
+    // is built from (session?.session_id, session?.revealed_months, plane,
+    // decisionCount) on purpose — cioKey IS those fields, so there is only
+    // one signal to keep in sync with what the effect body reads.
+  }, [viewMode, cioKey]);
 
   /** The next undecided window, or null when all are decided. */
   const nextWindow = useMemo(() => {

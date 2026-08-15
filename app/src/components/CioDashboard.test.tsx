@@ -86,11 +86,43 @@ describe("CioDashboard", () => {
     expect(host!.textContent).not.toMatch(/Net outflow, 12m/i);
   });
 
-  it("prints em dashes for null returns, never +0.0", () => {
+  it("prints em dashes for null returns, never a fabricated number", () => {
+    // The old form of this test (`not.toContain("+0.0%")`) was vacuous:
+    // sgn() — which renders every performance cell — never appends "%" (see
+    // CioDashboard.tsx's `sgn`), so that string can never appear regardless
+    // of what nulling did. A plain `not.toContain("+0.0")` would also have
+    // been wrong the other way: the fixture's Excess row legitimately prints
+    // "+0.0" where total and benchmark tie, so it would false-fail on
+    // correct output.
+    //
+    // Instead: scope to the "Total plan" row (exactly what
+    // performance.total feeds, per CioDashboard.tsx's PerfTable) and prove
+    // nulling increases its em-dash count. The fixture's Total plan row
+    // already carries one legitimate null (the unreached 10Y column), so
+    // "contains a dash" alone would pass by accident even if the OTHER five
+    // nulled cells rendered as fabricated numbers — the count comparison is
+    // what actually catches that.
+    const totalPlanRowDashes = (h: HTMLElement) => {
+      const row = [...h.querySelectorAll("tr")].find(
+        (tr) => tr.querySelector("td")?.textContent?.trim() === "Total plan",
+      );
+      if (!row) throw new Error('no "Total plan" row found');
+      return (row.textContent?.match(/—/g) ?? []).length;
+    };
+
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const baselineHost = host!;
+    const baselineDashes = totalPlanRowDashes(baselineHost);
+    act(() => root!.unmount());
+    baselineHost.remove();
+
     const nulled: CioView = JSON.parse(JSON.stringify(view));
     nulled.performance.total = nulled.performance.total.map(() => null);
     render(<CioDashboard view={nulled} onPlaneChange={() => {}} />);
-    expect(host!.textContent).not.toContain("+0.0%");
+    const nulledDashes = totalPlanRowDashes(host!);
+
+    expect(nulledDashes).toBeGreaterThan(baselineDashes);
+    expect(nulledDashes).toBe(nulled.performance.total.length);
   });
 
   it("prints em dashes for null call rates and coverage, never a fabricated 0.0%", () => {
