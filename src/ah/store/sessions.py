@@ -18,6 +18,14 @@ Wall-clock note, stated because the repo's determinism invariant forbids it
 elsewhere: the ENGINE stays clock-free; the service layer records server
 timestamps because DN-6 §8's research schema requires them. That is the one
 sanctioned use.
+
+narr-02 (DN-9 N-af): each window's optional ``rationale`` (free_text + tags,
+player-authored) rides on the ``window_log`` row alongside its decision --
+never on the ``decisions`` dict, which is the exact action/commitments shape
+``ah.play.simulate_play`` consumes and must never see rationale reach.
+``rationale_schema_version`` stamps the session row itself, inert, so a
+session can state what produced it (the task's "RunRecord" maps to this
+store in the live session/serve architecture).
 """
 
 from __future__ import annotations
@@ -31,6 +39,7 @@ from typing import Any
 from ah.core.institution import ACTIONS, decision_months
 
 __all__ = [
+    "RATIONALE_SCHEMA_VERSION",
     "SessionError",
     "advance_reveal",
     "complete_session",
@@ -38,6 +47,11 @@ __all__ = [
     "get_session",
     "record_decision",
 ]
+
+# narr-02: bump only via a version break, never in place -- the tag enum is
+# frozen at "1.0" (schemas/, sealed files and the engine are untouched by
+# this WP; this stamp exists so a session can state what produced it).
+RATIONALE_SCHEMA_VERSION = "1.0"
 
 
 class SessionError(ValueError):
@@ -77,9 +91,21 @@ def create_session(
     conn.execute(
         """INSERT INTO sessions
            (session_id, run_id, world_id, months, revealed_months, basis, ranked,
-            participant, decisions, window_log, status, created_at, updated_at)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?, '{}', '[]', 'active', ?, ?)""",
-        (session_id, run_id, rec["world_id"], months, basis, int(ranked), participant, now, now),
+            participant, decisions, window_log, status, created_at, updated_at,
+            rationale_schema_version)
+           VALUES (?, ?, ?, ?, 0, ?, ?, ?, '{}', '[]', 'active', ?, ?, ?)""",
+        (
+            session_id,
+            run_id,
+            rec["world_id"],
+            months,
+            basis,
+            int(ranked),
+            participant,
+            now,
+            now,
+            RATIONALE_SCHEMA_VERSION,
+        ),
     )
     conn.commit()
     return get_session(conn, session_id)
@@ -135,6 +161,7 @@ def record_decision(
     action: str,
     client_log: dict[str, Any] | None = None,
     commitments: dict[str, float] | None = None,
+    rationale: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """Record one decision at one window — validated, timestamped, final.
 
@@ -147,6 +174,20 @@ def record_decision(
     timestamp and the session's arm fields (basis, ranked). Server fields are
     authoritative; client fields are research telemetry, never trusted for
     scoring.
+
+    ``rationale`` (narr-02, DN-9 N-af): optional ``{"free_text": str | None,
+    "tags": list[str] | None}``, already validated at the door (the tag
+    enum, the 600-char cap) by the caller -- this layer stores it verbatim
+    plus its own ``recorded_at`` stamp. ``None`` means "not supplied": the
+    window_log row then gets NO ``rationale`` key at all, so a session with
+    rationale absent everywhere is byte-identical to the pre-narr-02 format
+    except the session-level ``rationale_schema_version`` stamp (acceptance
+    2). An explicitly-submitted empty rationale (``{}``) is NOT the same as
+    absent -- it still gets a key, both fields null, timestamped: the player
+    opened the box and said nothing, which is different from never being
+    asked. Never written to ``decisions`` -- that dict is what
+    ``ah.play.simulate_play`` consumes and must stay exactly the action/
+    commitments shape it always was.
     """
     doc = get_session(conn, session_id)
     if doc["status"] != "active":
@@ -181,6 +222,12 @@ def record_decision(
         "ranked": doc["ranked"],
         "client": dict(client_log or {}),
     }
+    if rationale is not None:
+        log_row["rationale"] = {
+            "free_text": rationale.get("free_text"),
+            "tags": rationale.get("tags"),
+            "recorded_at": _now(),
+        }
     window_log = [*doc["window_log"], log_row]
     conn.execute(
         "UPDATE sessions SET decisions = ?, window_log = ?, updated_at = ? WHERE session_id = ?",

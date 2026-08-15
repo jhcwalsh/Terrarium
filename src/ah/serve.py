@@ -31,7 +31,7 @@ import tempfile
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import Response
@@ -104,6 +104,40 @@ class Advance(BaseModel):
     to_month: int = Field(ge=0)
 
 
+# narr-02 (DN-9 N-af): the rationale tag enum, frozen in the task and
+# extensible only by a version bump (rationale_schema_version) -- never in
+# place. Do not derive tags from free_text; do not add tags here without a
+# bump.
+RationaleTag = Literal[
+    "valuation",
+    "liquidity",
+    "policy_outlook",
+    "peer_positioning",
+    "risk_reduction",
+    "risk_addition",
+    "rebalancing_discipline",
+    "pacing",
+    "governance",
+    "other",
+]
+
+
+class Rationale(BaseModel):
+    """The player's stated reason for one window's decision (narr-02).
+
+    Optional at every level -- a bare ``{}`` is valid (the player opened the
+    box and said nothing). ``free_text`` is stored verbatim, never parsed,
+    never scored, and never served on any surface another player can see
+    (only the session's own owner, via GET /sessions/{sid} and its own
+    outcome). ``tags`` is the closed enum above, at most 3, rejected (not
+    coerced or dropped) if any tag falls outside it -- FastAPI/pydantic give
+    the 422 for both constraints without custom validation code.
+    """
+
+    free_text: str | None = Field(default=None, max_length=600)
+    tags: list[RationaleTag] | None = Field(default=None, max_length=3)
+
+
 class Decide(BaseModel):
     month: int = Field(ge=0)
     action: str
@@ -113,6 +147,9 @@ class Decide(BaseModel):
     # DN-6 §8 client telemetry, verbatim passthrough (never used for scoring):
     # time_on_window_ms, basis_toggles, ui_version, ...
     client_log: dict[str, Any] = Field(default_factory=dict)
+    # narr-02: optional, null-valid; never reaches simulate_play (see
+    # ah.store.sessions.record_decision's docstring).
+    rationale: Rationale | None = None
 
 
 def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
@@ -399,6 +436,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 validate_commitments(body.commitments, targets)
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # narr-02: pass the already-validated rationale through as a plain
+        # dict (or None) -- the store layer stores it verbatim plus its own
+        # server-clock recorded_at, never touching `decisions`.
+        rationale = (
+            None
+            if body.rationale is None
+            else {"free_text": body.rationale.free_text, "tags": body.rationale.tags}
+        )
         try:
             return _mark_to_market(
                 conn,
@@ -409,6 +454,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                     action=body.action,
                     client_log=body.client_log,
                     commitments=body.commitments,
+                    rationale=rationale,
                 ),
             )
         except session_store.SessionError as exc:
