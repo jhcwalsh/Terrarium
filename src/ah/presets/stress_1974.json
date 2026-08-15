@@ -1,0 +1,112 @@
+{
+  "engine_defaults": {
+    "base_seed": 197400,
+    "generator_id": "bootstrap-stratified",
+    "n_paths": 1000
+  },
+  "extensions": {
+    "x_campaign_vintage_id": "2026-08-10.1",
+    "x_stress": {
+      "functional": "all_down",
+      "segments": [
+        {"from_quarter": 0,  "to_quarter": 15, "entry_percentile": 35, "mean_block_months": 18},
+        {"from_quarter": 16, "to_quarter": 19, "entry_percentile": 10, "mean_block_months": 18},
+        {"from_quarter": 20, "to_quarter": 31, "entry_percentile": 35, "mean_block_months": 18},
+        {"from_quarter": 32, "to_quarter": 39, "entry_percentile": 100, "mean_block_months": 12}
+      ],
+      "join_tolerance": {"hy_spread": 1.5, "policy_rate": 1.0},
+      "precedent": [
+        "crisis entry at the worst decile: 2007-09 ran -50% over 17 months",
+        "1973-74 ran -48% over 21 months with inflation above 10%",
+        "all_down: 2022 ran equities and bonds down together, with no flight-to-quality bid",
+        "stagflation entry at the worst third: 1973-82 spent most of a decade below trend"
+      ]
+    }
+  },
+  "factor_conditions": {
+    "correlation": {
+      "equity_bond_regime": "inflation_conditional"
+    },
+    "equity": {
+      "drift_annual_pct": 3.0,
+      "vol_annual_pct": 20.0
+    },
+    "inflation": {
+      "average_pct": 6.5,
+      "peak_pct": 9.5,
+      "peak_quarter": 6
+    },
+    "policy_rate": {
+      "end_pct": 8.0,
+      "start_pct": 6.0
+    }
+  },
+  "horizon": {
+    "quarters": 40,
+    "start": "1974-Q1"
+  },
+  "narrative": {
+    "dispatches": [
+      {
+        "date": "1974",
+        "headline": "Nineteen Seventy-Four — the year the prices broke loose"
+      },
+      {
+        "date": "1978",
+        "headline": "Nineteen Seventy-Four — the squeeze"
+      },
+      {
+        "date": "1982",
+        "headline": "Nineteen Seventy-Four — the long climb out"
+      }
+    ],
+    "language": "en",
+    "lesson": "Every month in this decade is a real month from 1953-2020; only the sequence is new. Rearranged truth, with the audit trail to prove it.",
+    "summary": "A DECLARED STRESS SCENARIO compiled by bootstrap-stratified: real 1953-2020 months, entered at severity-tilted percentiles per the declared x_stress rule (worst-decile crisis entry, worst-third stagflation entry), with precedent cited inline — 2007-09, 1973-74, 2022, and 1973-82. Severe and internally coherent by construction; not a probability-weighted forecast.",
+    "tagline": "A declared stress scenario, not a forecast.",
+    "title": "The Long Squeeze (declared stress)"
+  },
+  "provenance": {
+    "author": "sso:preset",
+    "created_at": "2026-08-11T00:00:00Z",
+    "source": {
+      "kind": "preset"
+    }
+  },
+  "regimes": {
+    "mode": "sequence",
+    "sequence": [
+      {
+        "from_quarter": 0,
+        "regime": "stagflation",
+        "to_quarter": 15
+      },
+      {
+        "from_quarter": 16,
+        "regime": "crisis",
+        "to_quarter": 19
+      },
+      {
+        "from_quarter": 20,
+        "regime": "stagflation",
+        "to_quarter": 31
+      },
+      {
+        "from_quarter": 32,
+        "regime": "recovery",
+        "to_quarter": 39
+      }
+    ]
+  },
+  "spec_version": "1.2.0",
+  "status": "draft",
+  "structural": {
+    "parameter_vintage": "custom",
+    "private_equity": {
+      "entry_multiple_drift_annual_pct": -2.0,
+      "illiquidity_premium_annual_pct": 2.0,
+      "leverage_turns": 5.5
+    }
+  },
+  "world_id": "00000000-0000-4000-9000-000000000701"
+}

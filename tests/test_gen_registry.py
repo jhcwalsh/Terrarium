@@ -59,12 +59,16 @@ def test_unknown_generator_errors() -> None:
 
 
 def test_resolve_for_world_uses_generator_id() -> None:
-    registry.register("bootstrap-stratified", _FakeGen)
-    doc = copy.deepcopy(_EXAMPLE)
-    doc["engine_defaults"]["generator_id"] = "bootstrap-stratified"
-    world = project_numeric(WorldSpec.model_validate(doc))
-    g = registry.resolve_for_world(world)
-    assert g.generator_id == "fake-v0"  # the registered factory
+    saved = registry.snapshot()
+    try:
+        registry.register("bootstrap-stratified", _FakeGen)
+        doc = copy.deepcopy(_EXAMPLE)
+        doc["engine_defaults"]["generator_id"] = "bootstrap-stratified"
+        world = project_numeric(WorldSpec.model_validate(doc))
+        g = registry.resolve_for_world(world)
+        assert g.generator_id == "fake-v0"  # the registered factory
+    finally:
+        registry.restore(saved)
 
 
 def test_ensemble_meta_active_blocks_defaults_empty_and_round_trips() -> None:

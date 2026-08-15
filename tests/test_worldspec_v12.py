@@ -99,7 +99,11 @@ class TestNamespaceResolution:
         snapshot/restore so the assertion is about the MODULE WIRING, not about
         whatever a previously-run test left in the process-global registry
         (test_gen_registry deliberately overwrites 'bootstrap-stratified' with a
-        fake and does not restore)."""
+        fake and does not restore). Since stress-01 (2026-08-15) the live
+        binding for 'bootstrap-stratified' is the stress dispatcher
+        (ah.gen.stress.stress_or_legacy_factory), not bs.bootstrap_v1_factory
+        directly; this test deliberately re-registers the legacy factory inside
+        its own snapshot/restore window to check the wiring in isolation."""
         from ah.gen import bootstrap as bs
         from ah.gen import registry
         from ah.gen.blocks import diffusion as df

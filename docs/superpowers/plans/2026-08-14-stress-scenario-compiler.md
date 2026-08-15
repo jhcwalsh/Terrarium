@@ -763,7 +763,82 @@ def test_a_stress_world_without_a_declared_rule_is_refused():
         StressBootstrap(_tiny_source()).sample(nw, n_paths=2, seed=1)
 ```
 
-- [ ] **Step 3: Register** the factory alongside `bootstrap-v1`'s, resolving the source through `campaign_source()`.
+- [ ] **Step 3: Register — as a DISPATCHER, not a plain factory.** (Spec v0.2 erratum, found at Task 4: `bootstrap-stratified` is NOT an unused slot — `bootstrap.py:1063` registers it as a deprecated alias for `bootstrap-v1`, load-bearing for the sealed 1.0.x fixture worlds in `fixtures/worlds/conditional/` and referenced by sealed eval code. Those worlds declare no `x_stress` and must keep resolving to `bootstrap-v1` bit-identically.)
+
+  In `src/ah/gen/stress.py`, add a module-level factory and register it:
+
+```python
+def stress_or_legacy_factory() -> Generator:
+    """The `bootstrap-stratified` id serves two masters (spec v0.2 erratum).
+
+    Sealed 1.0.x worlds carry the id as a deprecated alias for bootstrap-v1 and
+    declare no x_stress; they must keep resolving to the legacy factory
+    bit-identically. A stress world declares extensions.x_stress and routes to
+    the compiler. Dispatch happens at sample() time on the world itself.
+    """
+    return _StressOrLegacyDispatch()
+
+
+class _StressOrLegacyDispatch:
+    generator_id = "bootstrap-stratified"
+
+    def fit(self, data: Any) -> None:  # parity with the Generator protocol
+        raise StressError("the dispatcher is not fitted; it resolves per world")
+
+    def sample(self, world: NumericWorld, n_paths: int, seed: int) -> Ensemble:
+        from ah.gen.bootstrap import bootstrap_v1_factory, campaign_source
+
+        if world.stress is None:
+            return bootstrap_v1_factory().sample(world, n_paths, seed)
+        gen = StressBootstrap()
+        gen.fit(campaign_source())
+        return gen.sample(world, n_paths, seed)
+
+
+registry.register("bootstrap-stratified", stress_or_legacy_factory)
+```
+
+  Then add `from ah.gen import stress as stress` to `src/ah/gen/__init__.py` AFTER the bootstrap import, with a comment mirroring bootstrap's ("imported for its side effect — re-registers `bootstrap-stratified` as the x_stress dispatcher; must import after bootstrap so this registration wins"). Package init runs before any submodule import, so the order is deterministic for every consumer.
+
+  Add two route tests (registry-restoring via `registry.snapshot()`/`restore` if they mutate):
+
+```python
+def test_the_shared_id_routes_a_legacy_world_to_bootstrap_v1():
+    """Sealed 1.0.x worlds carry bootstrap-stratified with no x_stress and must
+    keep resolving to the legacy generator (spec v0.2 erratum)."""
+    import ah.gen  # noqa: F401  - trigger both registrations in order
+    from ah.gen import registry
+
+    gen = registry.resolve("bootstrap-stratified")
+    doc = json.loads((PRESETS / "stagflation_1974.json").read_text(encoding="utf-8"))
+    doc["engine_defaults"]["generator_id"] = "bootstrap-stratified"
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.stress is None
+    # the dispatcher exists precisely so this world does NOT hit StressError;
+    # resolving the legacy route needs the catalog, so assert on the routing
+    # object rather than sampling (no data/ dependency in unit tests)
+    assert type(gen).__name__ == "_StressOrLegacyDispatch"
+
+
+def test_the_shared_id_routes_a_stress_world_to_the_compiler(monkeypatch):
+    """A world WITH x_stress must reach StressBootstrap through the dispatcher."""
+    from ah.gen import stress as stress_mod
+
+    captured = {}
+
+    def fake_campaign_source():
+        captured["called"] = True
+        return _tiny_source()
+
+    monkeypatch.setattr("ah.gen.bootstrap.campaign_source", fake_campaign_source)
+    doc = json.loads((PRESETS / "stress_1974.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    dispatcher = stress_mod.stress_or_legacy_factory()
+    ens = dispatcher.sample(nw, n_paths=2, seed=3)
+    assert captured.get("called") is True
+    assert ens.meta.generator_id == "bootstrap-stratified"
+    assert ens.meta.conditioning["mode"] == "declared-stress-scenario"
+```
 
 - [ ] **Step 4: Green; ruff + pyright clean.**
 

@@ -18,6 +18,7 @@ from ah.core.worldspec import (
     FactorConditions,
     Horizon,
     Regimes,
+    StressSpec,
     Structural,
     WorldSpec,
 )
@@ -38,6 +39,19 @@ class NumericWorld:
     factor_conditions: FactorConditions
     structural: Structural
     engine_defaults: EngineDefaults
+    stress: StressSpec | None = None
+
+
+def _stress_of(world: WorldSpec) -> StressSpec | None:
+    """The declared stress scenario, or None.
+
+    Only `x_stress` is projected — NOT the whole extensions dict. NumericWorld
+    is the narrative-blind projection, and a free-form dict would be a channel
+    for narrative to reach the engine.
+    """
+    ext = world.extensions or {}
+    raw = ext.get("x_stress")
+    return None if raw is None else StressSpec.model_validate(raw)
 
 
 def project_numeric(world: WorldSpec) -> NumericWorld:
@@ -50,4 +64,5 @@ def project_numeric(world: WorldSpec) -> NumericWorld:
         factor_conditions=world.factor_conditions,
         structural=world.structural,
         engine_defaults=world.engine_defaults,
+        stress=_stress_of(world),
     )

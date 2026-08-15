@@ -24,10 +24,12 @@ from ah.core.loader import (
     load_worldspec,
     validate_against_schema,
 )
-from ah.core.worldspec import WorldSpec
+from ah.core.numericworld import project_numeric
+from ah.core.worldspec import StressSpec, WorldSpec
 
 ROOT = Path(__file__).resolve().parents[1]
 EXAMPLE_PATH = ROOT / "schemas" / "example-long-stagflation.worldspec.json"
+PRESETS = ROOT / "src" / "ah" / "presets"
 EXAMPLE: dict[str, Any] = json.loads(EXAMPLE_PATH.read_text(encoding="utf-8"))
 
 
@@ -209,3 +211,94 @@ def test_pydantic_accepts_iff_jsonschema_accepts(data: st.DataObject) -> None:
     for _ in range(data.draw(st.integers(0, 4))):
         data.draw(st.sampled_from(_MUTATORS))(doc, data)
     assert _pydantic_accepts(doc) == is_schema_valid(doc), doc
+
+
+# --------------------------------------------------------------------------- #
+# stress scenario contract (stress-01)
+# --------------------------------------------------------------------------- #
+
+
+def test_stress_spec_projects_onto_numericworld() -> None:
+    doc = json.loads((PRESETS / "stagflation_1974.json").read_text(encoding="utf-8"))
+    doc["extensions"] = {
+        **(doc.get("extensions") or {}),
+        "x_stress": {
+            "functional": "all_down",
+            "segments": [
+                {
+                    "from_quarter": 0,
+                    "to_quarter": 19,
+                    "entry_percentile": 35,
+                    "mean_block_months": 18,
+                },
+                {
+                    "from_quarter": 20,
+                    "to_quarter": 39,
+                    "entry_percentile": 100,
+                    "mean_block_months": 12,
+                },
+            ],
+            "join_tolerance": {"hy_spread": 1.5},
+            "precedent": ["2007-09 ran -50% over 17 months"],
+        },
+    }
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.stress is not None
+    assert nw.stress.functional == "all_down"
+    assert nw.stress.segments[0].entry_percentile == 35
+    assert nw.stress.join_tolerance["hy_spread"] == 1.5
+
+
+def test_a_world_without_x_stress_projects_none() -> None:
+    """Every existing world must keep working: stress is optional."""
+    doc = json.loads((PRESETS / "stagflation_1974.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.stress is None
+
+
+def test_stress_segments_must_tile_the_horizon_exactly() -> None:
+    """A gap would leave months with no declared severity; an overlap would make
+    the draw rule ambiguous. Both are author errors and must fail loudly."""
+    base = {"functional": "all_down", "join_tolerance": {}, "precedent": ["x"]}
+    gap = {
+        **base,
+        "segments": [
+            {"from_quarter": 0, "to_quarter": 10, "entry_percentile": 35, "mean_block_months": 18},
+            {
+                "from_quarter": 12,
+                "to_quarter": 39,
+                "entry_percentile": 100,
+                "mean_block_months": 12,
+            },
+        ],
+    }
+    with pytest.raises(ValidationError, match="tile"):
+        StressSpec.model_validate(gap)
+
+    overlap = {
+        **base,
+        "segments": [
+            {"from_quarter": 0, "to_quarter": 20, "entry_percentile": 35, "mean_block_months": 18},
+            {
+                "from_quarter": 20,
+                "to_quarter": 39,
+                "entry_percentile": 100,
+                "mean_block_months": 12,
+            },
+        ],
+    }
+    with pytest.raises(ValidationError, match="tile"):
+        StressSpec.model_validate(overlap)
+
+
+def test_unknown_severity_functional_is_refused() -> None:
+    spec = {
+        "functional": "vibes",
+        "join_tolerance": {},
+        "precedent": ["x"],
+        "segments": [
+            {"from_quarter": 0, "to_quarter": 39, "entry_percentile": 10, "mean_block_months": 18}
+        ],
+    }
+    with pytest.raises(ValidationError):
+        StressSpec.model_validate(spec)
