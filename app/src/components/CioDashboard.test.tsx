@@ -97,11 +97,13 @@ describe("CioDashboard", () => {
     //
     // Instead: scope to the "Total plan" row (exactly what
     // performance.total feeds, per CioDashboard.tsx's PerfTable) and prove
-    // nulling increases its em-dash count. The fixture's Total plan row
-    // already carries one legitimate null (the unreached 10Y column), so
-    // "contains a dash" alone would pass by accident even if the OTHER five
-    // nulled cells rendered as fabricated numbers — the count comparison is
-    // what actually catches that.
+    // nulling increases its em-dash count. (cio-04: the fixture's Total plan
+    // row used to carry one legitimate null — the unreached 10Y column —
+    // before regeneration; the inherited decade now makes 10Y reachable, so
+    // the baseline has zero dashes. The count comparison below still holds
+    // either way, and still catches the failure mode a plain "contains a
+    // dash" check would miss: any of the six nulled cells rendering as a
+    // fabricated number instead of a dash.)
     const totalPlanRowDashes = (h: HTMLElement) => {
       const row = [...h.querySelectorAll("tr")].find(
         (tr) => tr.querySelector("td")?.textContent?.trim() === "Total plan",

@@ -4,6 +4,11 @@ The app's renderer tests consume these; a Python test asserts regeneration
 reproduces the committed bytes, so the fixture can never drift from the
 builder. Deterministic: stagflation preset, its own base_seed, revealed=60,
 forecast_quarters=4.
+
+cio-04: stagflation is a ``toy-v0`` world, so the fixtures now carry the
+inherited decade (``prehistory=True``, passed explicitly here to mirror the
+endpoint's explicit flag in ``ah/serve.py`` rather than relying on the
+builder's default) — the fixtures are substantially larger as a result.
 """
 
 from __future__ import annotations
@@ -37,6 +42,7 @@ def build(plane: str) -> str:
         plane=plane,
         revealed_months=60,
         forecast_quarters=4,
+        prehistory=True,
     )
     return json.dumps(view, sort_keys=True, indent=1) + "\n"
 

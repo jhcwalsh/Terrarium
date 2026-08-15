@@ -647,12 +647,12 @@ class TestOutcome:
 
 
 def test_cio_view_endpoint(service):
-    """cio-04 made ``build_cio_view``'s ``prehistory`` default to True; the
-    ``service`` fixture's world is ``toy-v0`` (stagflation), and this
-    endpoint does not yet pass the flag (that wiring is cio-04's own next
-    task), so the inherited decade lands here too — the plan history is now
-    the pre-history's 40 quarters plus the 4 revealed world quarters, not
-    the 4 world quarters alone."""
+    """cio-04 made ``build_cio_view``'s ``prehistory`` default to True, and
+    the endpoint now passes ``prehistory=(generator_id == "toy-v0")``
+    explicitly. The ``service`` fixture's world is ``toy-v0`` (stagflation),
+    so the flag resolves True either way and the inherited decade lands
+    here — the plan history is now the pre-history's 40 quarters plus the 4
+    revealed world quarters, not the 4 world quarters alone."""
     client, _db, rid = service
     r = client.post("/sessions", json={"run_id": rid})
     sid = r.json()["session_id"]
@@ -712,3 +712,17 @@ def test_cio_view_parity_with_mark_to_market(service):
     assert abs(cash_class["value"] - doc["cash"]) < 1e-4
     priv = sum(c["value"] for c in v["allocation"]["classes"] if c.get("isPrivate"))
     assert abs(priv / v["plan"]["totalValue"] - doc["private_weight_reported"]) < 1e-4
+
+
+def test_cio_view_carries_the_inherited_decade(service):
+    """cio-04's endpoint wiring: a toy-v0 world's /cio response splices in
+    the inherited decade, so the plan history starts before world month 0
+    and the long return windows (e.g. 10Y) are no longer null this early."""
+    client, _db, rid = service
+    sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+    v = client.get(f"/sessions/{sid}/cio").json()
+    assert v["plan"]["history"]["worldStartIndex"] > 0
+    assert v["plan"]["preRunLabel"]
+    idx = {p: i for i, p in enumerate(v["performance"]["periods"])}
+    assert v["performance"]["total"][idx["10Y"]] is not None
