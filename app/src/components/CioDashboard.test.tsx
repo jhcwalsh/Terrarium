@@ -97,13 +97,21 @@ describe("CioDashboard", () => {
     // Nullable<Ratio> means "denominator was zero" — a real state the
     // builder emits, not an absent field. Number(null) coercion must never
     // leak a fabricated "0.0%" for callRateUnfunded/callRateNav/coverage.
+    //
+    // Only the LAST HISTORICAL row (index histCount-1 — the exact row
+    // PrivateTab's `cur` and the "By asset class" table's `c` both read,
+    // rows[H-1]) is nulled, and only on the aggregate and pe series.
+    // Nulling every row of a whole series instead empties RatioChart's
+    // covVals/rateVals, which trips a SEPARATE, out-of-scope vendored bug
+    // (Math.min(...[]) -> Infinity domains -> NaN SVG coordinates -> React
+    // console warnings on every run) that this test must not exercise.
     const nulled: CioView = JSON.parse(JSON.stringify(view));
+    const lastHistorical = nulled.privateCashflows.histCount - 1;
     for (const seriesId of ["aggregate", "pe"]) {
-      for (const row of nulled.privateCashflows.series[seriesId]) {
-        row.callRateUnfunded = null;
-        row.callRateNav = null;
-        row.coverage = null;
-      }
+      const row = nulled.privateCashflows.series[seriesId][lastHistorical];
+      row.callRateUnfunded = null;
+      row.callRateNav = null;
+      row.coverage = null;
     }
     render(
       <CioDashboard view={nulled} onPlaneChange={() => {}} initialTab="private" />,
