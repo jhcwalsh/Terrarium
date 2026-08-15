@@ -6,7 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
-from ah.cioview import build_cio_view, validate_cio_view
+from ah.cioview import _frozen_paths, build_cio_view, validate_cio_view
 from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
@@ -275,3 +275,54 @@ def test_markets_has_no_conditions_and_paths_match_history():
     h = len(v["plan"]["history"]["values"])
     for s in v["markets"]["returns"]:
         assert len(s["path"]) == h
+
+
+def test_listed_and_private_classes_have_returns_on_both_planes():
+    # liquid sleeves have no reporting plane (port/portfolio.py:73 - "liquid
+    # marks are true"); the reported-plane allocation tape must still carry
+    # them from the true tape, or six of nine classes ship null columns.
+    for plane in ("reported", "true"):
+        v = _view(plane)
+        by_id = {c["id"]: c for c in v["allocation"]["classes"]}
+        assert by_id["equity"]["returns"][0] is not None
+        assert by_id["pe"]["returns"][0] is not None
+
+
+def test_frozen_paths_agree_with_the_live_run_over_the_revealed_window():
+    paths = _paths()
+    live = simulate_play(paths, None)
+    frozen = simulate_play(_frozen_paths(paths, 60, 4), None)
+    for i in range(20):
+        lq, fq = live.quarters[i], frozen.quarters[i]
+        assert abs(lq.nav_true - fq.nav_true) < 1e-9
+        assert abs(lq.nav_reported - fq.nav_reported) < 1e-9
+        assert abs(lq.calls_paid - fq.calls_paid) < 1e-9
+        assert abs(lq.distributions_received - fq.distributions_received) < 1e-9
+
+
+def test_allocation_guards_zero_total_instead_of_raising():
+    from ah.cioview import _allocation
+    from ah.play import PlayQuarter, PlayResult
+
+    zeroed = PlayQuarter(
+        quarter=0,
+        month=2,
+        cash=0.0,
+        nav_true=0.0,
+        nav_reported=0.0,
+        calls_paid=0.0,
+        distributions_received=0.0,
+        spending_paid=0.0,
+        forced_sale_total=0.0,
+        private_weight_true=0.0,
+        unfunded_total=0.0,
+        liquid_values={"equity": 0.0},
+        private_true={},
+        private_reported={},
+    )
+    active = PlayResult(
+        quarters=[zeroed], final_value=0.0, forced_sale_quarters=0, total_forced_sales=0.0
+    )
+    alloc = _allocation(active, {"equity": 0.0}, "true", 1, {})
+    equity = next(c for c in alloc["classes"] if c["id"] == "equity")
+    assert equity["currentPct"] is None

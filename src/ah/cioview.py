@@ -183,8 +183,12 @@ def build_cio_view(
         },
         "plan": {
             "totalValue": round(total, 4),
-            "growthPct": round((total / opening_nav - 1.0) * 100.0, 4),
-            "netOfFlows": round(total - opening_nav + spend_total, 4),
+            "growthPct": (
+                round((total / opening_nav - 1.0) * 100.0, 4) if opening_nav > 0 else None
+            ),
+            "netOfFlows": (
+                round(total - opening_nav + spend_total, 4) if opening_nav > 0 else None
+            ),
             "windowLabel": "Since inception",
             "history": {"values": history, "worldStartIndex": 0},
         },
@@ -193,7 +197,10 @@ def build_cio_view(
             targets,
             plane,
             n_q,
-            frozen.reported if plane == "reported" else frozen.returns,
+            # liquid sleeves have no reporting plane (port/portfolio.py:73 -
+            # "liquid marks are true"); on the reported plane, private marks
+            # come from the reported tape, listed marks from the true tape.
+            {**frozen.returns, **frozen.reported} if plane == "reported" else frozen.returns,
         ),
         "performance": {
             "periods": list(PERIODS),
@@ -243,7 +250,7 @@ def _allocation(
                 "goalId": GOAL_OF[cid],
                 "targetPct": round(points / target_total * 100.0, 4),
                 "bandPct": BAND_PCT[cid],
-                "currentPct": round(value_of(cid) / total * 100.0, 4),
+                "currentPct": (round(value_of(cid) / total * 100.0, 4) if total > 0 else None),
                 "value": round(value_of(cid), 4),
                 "returns": _class_returns(tape, cid, n_q),
                 **({"isPrivate": True} if cid in PRIVATE_ASSETS else {}),
