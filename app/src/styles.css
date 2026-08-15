@@ -1395,9 +1395,24 @@ button.commit {
   color: var(--dim, #7c9b99);
   font-size: 10.5px;
 }
-.vintage-stack .stack-row {
+/* ladder-01: one bar per rung. A staggered ladder is 30 vintages at open and
+   57 by the end of a decade — the vitrine is one screen, so the ladder is a
+   strip, not a list. Each bar keeps its id and NAV in a title. */
+.vintage-stack .stack-bars {
   display: flex;
-  justify-content: space-between;
-  max-width: 220px;
-  font-variant-numeric: tabular-nums;
+  align-items: flex-end;
+  gap: 1px;
+  height: 34px;
+  margin-top: 4px;
+  max-width: 260px;
+}
+.vintage-stack .stack-bars i {
+  display: block;
+  flex: 1;
+  min-width: 2px;
+  background: var(--jade, #4fc3a1);
+  opacity: 0.55;
+}
+.vintage-stack .stack-bars i:hover {
+  opacity: 1;
 }

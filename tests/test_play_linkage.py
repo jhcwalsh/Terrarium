@@ -72,10 +72,14 @@ def test_default_run_is_unchanged_by_these_additions():
     default twin now flexes its pacing per DN-5 §2.1): port-v2's value was
     86.62159899795148. Regenerated for ER-10 (toy-v0.6: reported marks
     filter the whole quarter): port-v3's value was 86.32350859293307.
+    Regenerated for ladder-01 (port-v4-ladder: the opening private book is a
+    staggered ladder of one vintage per year of a fund's life, instead of
+    three clones of one age-5.25 cohort, so every book differs from its first
+    quarter): toy-v0.6/port-v3's value was 98.04417427685921.
     """
     result = simulate_play(_paths())
     assert len(result.quarters) == 40
-    assert result.final_value == 98.04417427685921
+    assert result.final_value == 101.5169845720086
     assert result.forced_secondaries == 0
 
 

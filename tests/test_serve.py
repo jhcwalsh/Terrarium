@@ -294,8 +294,11 @@ class TestCommitmentLeverAPI:
         doc = client.get(f"/sessions/{sid}").json()
         stack = doc["vintage_nav"]
         assert stack and all(v >= 0 for v in stack.values())
-        # the opening cohorts and at least one committed vintage by year 2
-        assert any("-play" in k for k in stack)
+        # the opening cohorts and at least one committed vintage by year 2.
+        # The opening book is a staggered LADDER now (ladder-01), so the seed
+        # rungs are `<sleeve>-s<k>` — one per year of a fund's life — where
+        # there used to be a single `<sleeve>-play` clone.
+        assert sum(1 for k in stack if "-s" in k) > 3
         assert any("-v" in k for k in stack)
         trailing = doc["trailing_distributions"]
         assert len(trailing) == 4  # four closed quarters of history
@@ -401,8 +404,15 @@ class TestEndpoints:
         assert any(v > 0.0 for v in seen), "the lapse never reached the player"
         final = client.get(f"/sessions/{sid}").json()
         assert final["expired_undrawn_to_date"] == pytest.approx(sum(seen), abs=1e-6)
-        # and it outlives the quarter it happened in
-        assert final["expired_undrawn"] == 0.0 and final["expired_undrawn_to_date"] > 0.0
+        # and it outlives the quarter it happened in: with a staggered ladder
+        # (ladder-01) a rung retires once a year, so most quarters release
+        # nothing while the running total still carries what the earlier ones
+        # did. (This used to check the FINAL quarter, which held under the old
+        # single mid-decade lapse and is now itself a lapse quarter.)
+        quiet_after_a_lapse = [
+            i for i, v in enumerate(seen) if v == 0.0 and any(e > 0.0 for e in seen[:i])
+        ]
+        assert quiet_after_a_lapse, "no quarter follows a lapse without one of its own"
 
     def test_spending_is_rederivable_from_what_the_session_exposes(self, service):
         """Audit F4: spending is correct internally (4.4e-16) but no exposed

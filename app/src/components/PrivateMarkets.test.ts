@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { expiredCommitment, lastRevealedQuarter, pickLedgerRow } from "./PrivateMarkets";
+import {
+  expiredCommitment,
+  ladderSummary,
+  lastRevealedQuarter,
+  pickLedgerRow,
+} from "./PrivateMarkets";
 
 const QUARTERS = [2, 5, 8, 11, 14, 17];
 
@@ -34,6 +39,35 @@ describe("pickLedgerRow", () => {
 
   it("returns nothing when neither is available", () => {
     expect(pickLedgerRow(undefined, null, 1)).toBeNull();
+  });
+});
+
+describe("ladderSummary", () => {
+  // ladder-01: the opening book is a staggered ladder — 10 rungs per sleeve,
+  // 30 at open and 57 by the end of a decade. The vitrine must fit ONE screen,
+  // so the ladder is a bar strip with a count and a total, not 57 text rows.
+  it("is nothing when there is no ladder", () => {
+    expect(ladderSummary(null)).toBeNull();
+    expect(ladderSummary({})).toBeNull();
+  });
+
+  it("counts, totals, and orders the rungs oldest-first", () => {
+    const summary = ladderSummary({ "pe-s1": 4, "pe-s0": 6, "pe-v2": 2 })!;
+    expect(summary.count).toBe(3);
+    expect(summary.total).toBe(12);
+    expect(summary.bars.map((b) => b.id)).toEqual(["pe-s0", "pe-s1", "pe-v2"]);
+  });
+
+  it("scales each bar against the largest rung, never against the total", () => {
+    const summary = ladderSummary({ a: 5, b: 10 })!;
+    expect(summary.bars.find((b) => b.id === "b")!.share).toBe(1);
+    expect(summary.bars.find((b) => b.id === "a")!.share).toBe(0.5);
+  });
+
+  it("survives a ladder whose rungs have all wound up", () => {
+    const summary = ladderSummary({ a: 0, b: 0 })!;
+    expect(summary.total).toBe(0);
+    expect(summary.bars.every((b) => b.share === 0)).toBe(true);
   });
 });
 
