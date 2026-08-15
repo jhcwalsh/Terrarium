@@ -303,16 +303,30 @@ def stress_or_legacy_factory() -> Generator:
 class _StressOrLegacyDispatch:
     generator_id = "bootstrap-stratified"
 
+    def __init__(self) -> None:
+        self._source: BootstrapSource | None = None
+
+    @property
+    def source(self) -> BootstrapSource:
+        """The campaign panel - identical for both dispatch routes (the legacy
+        generator and the compiler are both fitted from campaign_source()), so
+        the adapter's source-space derivations (_source_of) are route-blind."""
+        if self._source is None:
+            from ah.gen.bootstrap import campaign_source
+
+            self._source = campaign_source()
+        return self._source
+
     def fit(self, data: Any) -> None:  # parity with the Generator protocol
         raise StressError("the dispatcher is not fitted; it resolves per world")
 
     def sample(self, world: NumericWorld, n_paths: int, seed: int) -> Ensemble:
-        from ah.gen.bootstrap import bootstrap_v1_factory, campaign_source
+        from ah.gen.bootstrap import bootstrap_v1_factory
 
         if world.stress is None:
             return bootstrap_v1_factory().sample(world, n_paths, seed)
         gen = StressBootstrap()
-        gen.fit(campaign_source())
+        gen.fit(self.source)
         return gen.sample(world, n_paths, seed)
 
 

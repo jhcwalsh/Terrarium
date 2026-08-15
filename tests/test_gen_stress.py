@@ -407,6 +407,25 @@ def test_the_shared_id_routes_a_stress_world_to_the_compiler(monkeypatch):
     assert ens.meta.conditioning["mode"] == "declared-stress-scenario"
 
 
+def test_the_dispatcher_exposes_the_campaign_panel_as_its_source(monkeypatch):
+    """ah/port/adapter.py's _source_of reads .source off the resolved generator
+    (adapter.py:166); without this property every generated-world surface
+    (ah run, the bundle, the programme console) fails with AdapterError."""
+    from ah.gen import stress as stress_mod
+
+    calls = {"n": 0}
+
+    def fake_campaign_source():
+        calls["n"] += 1
+        return _tiny_source()
+
+    monkeypatch.setattr("ah.gen.bootstrap.campaign_source", fake_campaign_source)
+    d = stress_mod.stress_or_legacy_factory()
+    a = d.source
+    b = d.source
+    assert a is b and calls["n"] == 1  # lazy, cached
+
+
 # --------------------------------------------------------------------------- #
 # Task 6: the reports -- emergent depth, coherence, plausibility
 # --------------------------------------------------------------------------- #
