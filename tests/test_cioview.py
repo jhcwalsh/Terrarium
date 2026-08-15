@@ -326,3 +326,17 @@ def test_allocation_guards_zero_total_instead_of_raising():
     alloc = _allocation(active, {"equity": 0.0}, "true", 1, {})
     equity = next(c for c in alloc["classes"] if c["id"] == "equity")
     assert equity["currentPct"] is None
+
+
+def test_view_is_byte_deterministic():
+    a = json.dumps(_view(), sort_keys=True, separators=(",", ":"))
+    b = json.dumps(_view(), sort_keys=True, separators=(",", ":"))
+    assert a == b
+
+
+def test_golden_views_validate_on_every_preset():
+    for preset in ("stagflation", "goldilocks"):
+        for plane in ("reported", "true"):
+            for revealed in (12, 60, 120):
+                errors = validate_cio_view(_view(plane, revealed, preset=preset))
+                assert errors == [], (preset, plane, revealed, errors)
