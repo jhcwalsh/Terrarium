@@ -82,6 +82,8 @@ class ProgrammeQuarter:
     forced_sale_total: float
     #: Undrawn commitment cancelled at terminal lapse (ER-6 / audit F2).
     expired_undrawn: float = 0.0
+    #: The part of ``distributions`` that was a fund winding up (ER-12).
+    terminal_distributions: float = 0.0
 
 
 @dataclass(frozen=True)
@@ -145,6 +147,7 @@ def programme_quarters(linked: PlayResult, unlinked: PlayResult) -> list[Program
                 coverage_reported=_safe_ratio(q.unfunded_total, q.nav_reported),
                 forced_sale_total=q.forced_sale_total,
                 expired_undrawn=q.expired_undrawn,
+                terminal_distributions=q.terminal_distributions,
             )
         )
     return rows
@@ -346,66 +349,49 @@ def vintage_stats(
 _BITE_WINDOW = 4
 
 
-def _terminal_liquidation_quarters(result: PlayResult) -> set[int]:
-    """Quarter indices (0-based, list position) in which a cohort wound up.
-
-    A cohort's terminal liquidation pays its whole remaining NAV out in one
-    quarter. That lump is a CONTRACTUAL event on the fund's clock -- it says
-    nothing about how the market linkage is behaving -- but it lands in the
-    same ``distributions_received`` field as ordinary yield, so any
-    distribution-rate statistic that includes it measures the fund calendar
-    rather than the linkage. Worse, the lump also removes the NAV it came
-    from, so it inflates the numerator and deflates the denominator at once.
-    Quarters carrying one are therefore excluded from ``linkage_bite``
-    entirely rather than being smoothed.
-
-    Detected from the per-cohort NAV ``ah.play`` already records: a cohort
-    whose ``vintage_nav`` was positive in the previous quarter and is zero or
-    absent in this one has wound up (whether at term or sold to zero in a
-    forced secondary -- both dump a lump into the same field).
-
-    The returned set is used for MEMBERSHIP ONLY, never iterated, so it
-    cannot make this module's output order-dependent.
-    """
-    out: set[int] = set()
-    previous: dict[str, float] = {}
-    for i, q in enumerate(result.quarters):
-        if i > 0 and any(
-            nav > 0.0 and q.vintage_nav.get(name, 0.0) <= 0.0 for name, nav in previous.items()
-        ):
-            out.add(i)
-        previous = q.vintage_nav
-    return out
-
-
 def _trailing_distribution_rates(
-    quarters: list[ProgrammeQuarter], liquidations: set[int]
+    quarters: list[ProgrammeQuarter],
 ) -> list[tuple[float, float]]:
     """``(trailing distribution rate, that quarter's drawdown depth)`` pairs.
 
     The rate is ``_BITE_WINDOW`` quarters of distributions (this quarter and
-    the three before it) over the private NAV at the START of that window --
-    the closing private NAV of the quarter before the window, falling back to
-    the window's own first quarter when the window starts at quarter 0 and
-    there is no earlier close to read. A trailing figure means one large
-    quarter is at most a quarter of the numerator instead of all of it.
+    the three before it), NET of any fund winding up, over the private NAV at
+    the START of that window -- the closing private NAV of the quarter before
+    the window, falling back to the window's own first quarter when the window
+    starts at quarter 0 and there is no earlier close to read. A trailing
+    figure means one large quarter is at most a quarter of the numerator
+    instead of all of it. Quarters without a full window of history are
+    excluded rather than computed on a short one.
 
-    Quarters without a full window of history are excluded rather than
-    computed on a short one, and so is any quarter whose window OVERLAPS a
-    terminal liquidation: a lump three quarters back pollutes a trailing
-    numerator exactly as much as one in the quarter itself, so excluding only
-    the liquidation quarter would leave the defect in place under a different
-    index.
+    **The terminal lump is netted by AMOUNT, not by index (ER-12 follow-up).**
+    A fund reaching the end of its life pays its whole remaining NAV out in
+    one quarter; that is a contractual event on the FUND's clock and says
+    nothing about the market linkage, but it lands in the same
+    ``distributions`` field as ordinary yield. Review round 2 (C2) handled it
+    by dropping every window that overlapped a wind-up, correctly reasoning
+    that a lump three quarters back pollutes a trailing numerator as much as
+    one in the quarter itself. That rule assumed wind-ups are RARE. Once the
+    opening book became a staggered ladder (ER-12) a rung retires every year,
+    every four-quarter window overlapped one, and the statistic went undefined
+    on 20 of 20 paths -- the console's only linkage diagnostic, dead.
+
+    Subtracting the lump keeps the same protection without discarding the
+    window, and is strictly more precise than the old inference: it uses the
+    amount the cohort model REPORTED as terminal
+    (``CohortStep.is_terminal``), so a forced secondary -- which also drives a
+    cohort's NAV to zero but pays no distribution -- is no longer mistaken for
+    a wind-up.
     """
     out: list[tuple[float, float]] = []
     for i in range(_BITE_WINDOW - 1, len(quarters)):
         first = i - _BITE_WINDOW + 1
-        if any(j in liquidations for j in range(first, i + 1)):
-            continue
         opening = quarters[first - 1].private_nav if first > 0 else quarters[first].private_nav
         if opening <= 0.0:
             continue
-        total = sum(quarters[j].distributions for j in range(first, i + 1))
+        total = sum(
+            quarters[j].distributions - quarters[j].terminal_distributions
+            for j in range(first, i + 1)
+        )
         out.append((total / opening, quarters[i].drawdown_depth))
     return out
 
@@ -425,7 +411,7 @@ def path_stats(quarters: list[ProgrammeQuarter], result: PlayResult) -> dict[str
     # suppressed distributions, above 1.0 means it did not. The worst quarter
     # is chosen on DRAWDOWN DEPTH and never on the distribution value, or the
     # statistic would be circular.
-    rates = _trailing_distribution_rates(quarters, _terminal_liquidation_quarters(result))
+    rates = _trailing_distribution_rates(quarters)
     if rates:
         worst = max(rates, key=lambda pair: pair[1])[0]
         median = float(np.median([r for r, _ in rates]))

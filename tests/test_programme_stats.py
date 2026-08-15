@@ -6,20 +6,26 @@ ARITHMETIC, never the priors, so re-declaring a band never breaks a test.
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from typing import Any
 
 import numpy as np
 
-from ah.play import PlayQuarter, PlayResult
+from ah.play import PlayResult
+from ah.port.cohort import ClosedEndCohort
 from ah.programme import (
+    _BITE_WINDOW,
     _QUARTERS_PER_YEAR,
     PROGRAMME_PLAUSIBLE,
     ProgrammeQuarter,
-    _terminal_liquidation_quarters,
+    _trailing_distribution_rates,
     path_stats,
     programme_stats,
     vintage_stats,
 )
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def _pq(**overrides: Any) -> ProgrammeQuarter:
@@ -267,85 +273,93 @@ def test_path_stats_worst_quarter_is_selected_by_drawdown_not_distribution():
     assert np.isclose(out["linkage_bite"], 3.0, atol=1e-9)
 
 
-def _play_result_with_navs(navs: list[dict[str, float]]) -> PlayResult:
-    """A PlayResult carrying per-cohort NAV, which is all
-    ``_terminal_liquidation_quarters`` reads."""
-    return PlayResult(
-        quarters=[
-            PlayQuarter(
-                quarter=i,
-                month=i * 3 + 2,
-                cash=0.0,
-                nav_true=0.0,
-                nav_reported=0.0,
-                calls_paid=0.0,
-                distributions_received=0.0,
-                spending_paid=0.0,
-                forced_sale_total=0.0,
-                private_weight_true=0.0,
-                unfunded_total=0.0,
-                vintage_nav=dict(nav),
-            )
-            for i, nav in enumerate(navs)
-        ],
-        final_value=0.0,
-        forced_sale_quarters=0,
-        total_forced_sales=0.0,
-    )
-
-
-def test_terminal_liquidation_quarters_finds_the_quarter_a_cohort_wound_up():
-    """A cohort with positive NAV in one quarter and zero (or no entry) in
-    the next has wound up IN that next quarter -- review round 2, C2."""
-    navs: list[dict[str, float]] = [{"c0": 10.0}] * 6 + [{"c0": 0.0}] * 6
-    assert _terminal_liquidation_quarters(_play_result_with_navs(navs)) == {6}
-
-    # a cohort that simply vanishes from the dict counts the same way
-    dropped: list[dict[str, float]] = [{"c0": 10.0}] * 3 + [{}] * 3
-    assert _terminal_liquidation_quarters(_play_result_with_navs(dropped)) == {3}
-
-    # a programme where nothing ever winds up has no such quarters
-    steady: list[dict[str, float]] = [{"c0": 10.0}] * 8
-    assert _terminal_liquidation_quarters(_play_result_with_navs(steady)) == set()
-
-
-def test_path_stats_linkage_bite_excludes_a_cohort_wind_up_lump():
-    """Review round 2, C2: the defect this exists to prevent.
+def test_path_stats_linkage_bite_nets_out_a_cohort_wind_up_lump():
+    """Review round 2, C2: the defect this exists to prevent — and ER-12's
+    change to HOW it is prevented.
 
     A cohort winds up in quarter 6, paying its whole remaining NAV out as a
-    10.0 lump against a baseline of 0.05 a quarter -- and quarter 6 is also
-    the deepest drawdown, exactly the coincidence that produced
-    linkage_bite = 110.65 on deflation_bust path 0 before the fix.
+    10.0 lump against a baseline of 0.05 a quarter, and quarter 6 is also the
+    deepest drawdown — exactly the coincidence that produced
+    linkage_bite = 110.65 on deflation_bust path 0 before C2.
 
-    With the lump included, the trailing windows containing quarter 6
-    (i = 6, 7, 8, 9) read 0.15 + 10.0 = 10.15 against 0.20 elsewhere;
-    median(0.20 x5, 10.15 x4) = 0.20 and the worst-drawdown window is the
-    lump's own, giving 10.15 / 0.20 = 50.75 -- a report that distributions
-    ROSE fifty-fold in the worst quarter of the decade.
+    Unguarded, the trailing windows containing quarter 6 (i = 6, 7, 8, 9)
+    read 0.15 + 10.0 = 10.15 against 0.20 elsewhere; median(0.20 x5,
+    10.15 x4) = 0.20 and the worst-drawdown window is the lump's own, giving
+    50.75 — a report that distributions ROSE fiftyfold in the worst quarter
+    of the decade.
 
-    With those four windows excluded, every surviving window reads 0.20,
-    the deepest REMAINING drawdown is quarter 5, and the answer is 1.0.
+    HISTORY: C2 fixed this by DROPPING every window that overlapped the
+    wind-up, and this test asserted the surviving windows read 1.0. That rule
+    assumed wind-ups are rare; ER-12's staggered ladder retires a rung every
+    year, every four-quarter window overlapped one, and the statistic went
+    undefined on 20 of 20 paths. The lump is now netted by AMOUNT
+    (`terminal_distributions`, recorded by the cohort model itself) and the
+    window is kept — same protection, no lost windows, and a forced secondary
+    that drives NAV to zero without paying a distribution is no longer
+    mistaken for a wind-up.
+
+    Netted, every window reads 0.20, so the rate is flat and the answer is
+    1.0 whichever quarter is deepest — the lump contributes nothing.
     """
     n = 12
     dists = [0.05] * n
     dists[6] = 10.0  # the wind-up lump
+    terminal = [0.0] * n
+    terminal[6] = 9.95  # ... of which this was the fund winding up
     depths = [0.01] * n
     depths[6] = 0.90  # deepest drawdown lands on the wind-up
-    depths[5] = 0.50  # deepest of what survives the exclusion
     rows = [
-        _pq(quarter=i, private_nav=1.0, distributions=d, drawdown_depth=dd)
-        for i, (d, dd) in enumerate(zip(dists, depths, strict=True))
+        _pq(
+            quarter=i,
+            private_nav=1.0,
+            distributions=d,
+            terminal_distributions=t,
+            drawdown_depth=dd,
+        )
+        for i, (d, t, dd) in enumerate(zip(dists, terminal, depths, strict=True))
     ]
-    navs: list[dict[str, float]] = [{"c0": 10.0}] * 6 + [{"c0": 0.0}] * 6
-    out = path_stats(rows, _play_result_with_navs(navs))
+    out = path_stats(rows, _play_result())
     assert np.isclose(out["linkage_bite"], 1.0, atol=1e-9)
     assert out["linkage_bite"] < 2.0, "the 50.75 the lump would have produced is gone"
 
-    # and the lump is only excluded because it was DETECTED: hand the same
-    # tape a PlayResult in which nothing winds up, and it comes straight back.
-    steady: list[dict[str, float]] = [{"c0": 10.0}] * n
-    unguarded = path_stats(rows, _play_result_with_navs(steady))
+    # every window survives: the whole decade is measurable, which is the
+    # property the exclusion rule lost under an annual ladder
+    assert len(_trailing_distribution_rates(rows)) == n - _BITE_WINDOW + 1
+
+    # and the netting is only protective because the amount was RECORDED:
+    # the same tape with nothing declared terminal reports the 50.75 again.
+    unguarded_rows = [
+        _pq(quarter=i, private_nav=1.0, distributions=d, drawdown_depth=dd)
+        for i, (d, dd) in enumerate(zip(dists, depths, strict=True))
+    ]
+    unguarded = path_stats(unguarded_rows, _play_result())
     assert np.isclose(unguarded["linkage_bite"], 50.75, atol=1e-9)
+
+
+def test_terminal_distributions_are_recorded_by_the_cohort_at_lapse():
+    """The source of truth the netting above depends on.
+
+    HISTORY: this knowledge used to live in
+    ``_terminal_liquidation_quarters``, which INFERRED a wind-up from a
+    cohort's NAV falling to zero. That inference could not tell a wind-up
+    from a forced secondary (both zero the NAV; only one pays a
+    distribution), and it was retired with the exclusion rule at ER-12. The
+    cohort model now says so itself.
+    """
+    doc = json.loads((ROOT / "fixtures" / "state" / "closed-end-cohort.example.json").read_text())
+    life = doc["lifecycle"]["contractual_life_years"]
+    cohort = ClosedEndCohort.new_commitment(
+        doc, committed=100.0, vintage_year=2019, cohort_id="lapse-check"
+    )
+    terminal_steps = 0
+    for _ in range(round(life * 4) + 4):
+        step = cohort.step(0.02)
+        if step.is_terminal:
+            terminal_steps += 1
+            assert step.distribution_total > 0.0 or cohort.nav_true == 0.0
+        else:
+            assert cohort.age_years <= life
+    assert terminal_steps > 0, "a fund past its contractual life never declared itself terminal"
 
 
 def test_path_stats_linkage_bite_averages_a_spike_rather_than_propagating_it():

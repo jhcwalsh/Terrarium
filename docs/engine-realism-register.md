@@ -843,11 +843,25 @@ a different index"). With one lapse a year and a four-quarter window, EVERY
 window overlaps one, on every path. The metric assumed wind-ups are rare; a
 realistic ladder makes them annual. This was NOT patched here: redefining a
 measurement inside the same change that moves the thing measured destroys the
-ability to attribute either. **Follow-up, unscheduled:** redefine the rate net
-of terminal lumps (they are individually knowable from `vintage_nav` and
-`expired_undrawn`) instead of by window exclusion, and re-band it. Until then
-the console's linkage diagnostic is `linkage_shortfall` alone, which still
-computes and now reads 0.027 — below its floor, recorded, not tuned.
+ability to attribute either.
+
+> **Follow-up DONE, 2026-08-14 (`linkage-02-bite-net-of-lumps`), as its own
+> change so the attribution stayed clean.** The lump is now netted by AMOUNT
+> and the window kept: `CohortStep.is_terminal` records the wind-up at source,
+> `PlayQuarter.terminal_distributions` carries the amount, and
+> `_trailing_distribution_rates` subtracts it. The index-based exclusion and
+> its inference helper `_terminal_liquidation_quarters` are retired — the
+> recorded amount is strictly more precise, because a forced secondary also
+> drives a cohort's NAV to zero but pays no distribution, and the inference
+> could not tell them apart. **Measured: 0.778 median on 20 of 20 paths,
+> unflagged.** The band was NOT re-declared and did not need to be: its own
+> drafting note records the four presets reading 0.74–0.85, and 0.778 lands
+> inside that range — the statistic came back to where the band was drafted
+> for, which is the evidence that the redefinition is the same measurement
+> rather than a new one wearing its name.
+
+`linkage_shortfall` remains flagged at 0.027 — below its floor, recorded, not
+tuned.
 
 **What the fix invalidated.** Both play-alpha stamps bumped, so no leaderboard
 row can mix the two institutions. `tests/test_play_linkage.py`'s golden moved

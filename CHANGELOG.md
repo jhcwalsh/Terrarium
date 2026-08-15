@@ -12,6 +12,28 @@ layer, Step 4's artifacts and actors, Step 5's decision evaluation, and the
 SU single-user product slice. Newest first. Step 2's entries live in their own
 `[Unreleased]` section below, as they were written.*
 
+### Fixed
+
+- **`linkage_bite` computes again: the terminal lump is netted by amount, not
+  by index (ER-12 follow-up), 2026-08-14.** The console's only linkage
+  diagnostic dropped any trailing four-quarter window overlapping a cohort
+  wind-up — affordable when wind-ups happened once a decade, fatal once the
+  staggered ladder retired a rung every year: every window overlapped one and
+  the statistic went undefined on 20 of 20 paths. It is now netted by amount:
+  `CohortStep.is_terminal` records the wind-up at source,
+  `PlayQuarter.terminal_distributions` carries it, and
+  `_trailing_distribution_rates` subtracts it while keeping the window. The
+  index-based exclusion and its inference helper
+  `_terminal_liquidation_quarters` are retired — the recorded amount is
+  strictly more precise, since a forced secondary also zeroes a cohort's NAV
+  but pays no distribution, and the inference could not tell them apart.
+  **Measured: 0.778 median across 20 of 20 paths, unflagged, and the band was
+  NOT re-declared** — its own drafting note records the four presets at
+  0.74–0.85, so the statistic returned to where the band was drafted for,
+  which is the evidence that this is the same measurement rather than a new
+  one under an old name. Done as its own change, after ER-12 rather than
+  inside it, so the attribution stayed clean.
+
 ### Changed
 
 - **The opening private book is a staggered ladder of vintages (ER-12),
