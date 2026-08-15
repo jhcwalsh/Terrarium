@@ -252,4 +252,38 @@ describe("CioDashboard", () => {
       expect(host!.querySelectorAll(".vintage-rung").length).toBe(0);
     });
   });
+
+  describe("cio-03: RatioChart robustness", () => {
+    it("breaks the ratio line at nulls instead of plotting them at the floor", () => {
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      const rows = v.privateCashflows.series.aggregate;
+      rows[2].coverage = null;
+      render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+      const paths = [...host!.querySelectorAll("path")].map((p) => p.getAttribute("d") ?? "");
+      expect(paths.join(" ")).not.toContain("NaN");
+      // a gap means the path restarts: more than one "M" command in some path
+      expect(paths.some((d) => (d.match(/M/g) ?? []).length > 1)).toBe(true);
+    });
+
+    it("renders no ratio chart at all when a series is entirely null", () => {
+      const v: CioView = JSON.parse(JSON.stringify(view));
+      for (const rows of Object.values(v.privateCashflows.series)) {
+        for (const r of rows) { r.coverage = null; r.callRateUnfunded = null; r.callRateNav = null; }
+      }
+      const warn = vi.spyOn(console, "error").mockImplementation(() => {});
+      render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
+      const paths = [...host!.querySelectorAll("path")].map((p) => p.getAttribute("d") ?? "");
+      expect(paths.join(" ")).not.toContain("NaN");
+      // Scoped to "Received NaN" specifically, not "console.error was never
+      // called": this environment (happy-dom, no IS_REACT_ACT_ENVIRONMENT)
+      // unconditionally logs a "not configured to support act(...)" warning
+      // on every render, in every test in this file, regardless of this
+      // defect — asserting zero calls would false-fail on correct code.
+      const nanWarnings = warn.mock.calls.filter((args) =>
+        args.some((a) => typeof a === "string" && a.includes("NaN")),
+      );
+      expect(nanWarnings).toEqual([]);
+      warn.mockRestore();
+    });
+  });
 });

@@ -847,9 +847,27 @@ function RatioChart({
 }) {
   const W = 440, H = 180, L = 44, R = 14, T = 26, B = 26;
   const bw = (W - L - R) / rows.length;
-  const y = (v: number | null) => T + (1 - (Number(v) - domain[0]) / (domain[1] - domain[0])) * (H - T - B);
+  // null (or otherwise non-finite) ratios are a real state — "denominator
+  // was zero" — not zero itself. y() returns null for them so callers can
+  // skip the point rather than coercing it through Number(null) -> 0 and
+  // drawing a fabricated observation on the domain floor.
+  const y = (v: number | null): number | null =>
+    isNum(v) ? T + (1 - (v - domain[0]) / (domain[1] - domain[0])) * (H - T - B) : null;
   const cut = L + bw * histCount;
   const every = Math.ceil(rows.length / 5);
+  // If every line in every series is null across every row, there is no
+  // ratio data to plot at all: guard the panel with the empty state rather
+  // than rendering axes over a blank chart (or, before this fix, an
+  // Infinity/-Infinity domain feeding NaN into every coordinate).
+  const anyFinite = series.some((s) => rows.some((r) => isNum(s.get(r))));
+  if (!anyFinite) {
+    return (
+      <div style={{ flex: "1 1 340px", minWidth: 300 }}>
+        <div style={{ font: `10px ${F.body}`, letterSpacing: "0.12em", color: C.faint, textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
+        <Empty what="ratio data" />
+      </div>
+    );
+  }
   return (
     <div style={{ flex: "1 1 340px", minWidth: 300 }}>
       <div style={{ font: `10px ${F.body}`, letterSpacing: "0.12em", color: C.faint, textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
@@ -857,20 +875,38 @@ function RatioChart({
         {histCount < rows.length && <rect x={cut} y={T} width={W - R - cut} height={H - T - B} fill={C.ice} opacity={0.03} />}
         {[domain[0], (domain[0] + domain[1]) / 2, domain[1]].map((v) => (
           <g key={v}>
-            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke={C.ruleSoft} />
-            <text x={L - 7} y={y(v) + 3.5} textAnchor="end" fill={C.faint} style={{ font: `10px ${F.mono}` }}>{v.toFixed(2)}</text>
+            {/* domain bounds are always finite by construction (guarded at
+                the call site), so y(v) is never null here */}
+            <line x1={L} x2={W - R} y1={y(v)!} y2={y(v)!} stroke={C.ruleSoft} />
+            <text x={L - 7} y={y(v)! + 3.5} textAnchor="end" fill={C.faint} style={{ font: `10px ${F.mono}` }}>{v.toFixed(2)}</text>
           </g>
         ))}
-        {series.map((s) => (
-          <g key={s.label}>
-            <path d={rows.map((r, i) => `${i ? "L" : "M"}${(L + bw * (i + 0.5)).toFixed(1)},${y(s.get(r)).toFixed(1)}`).join(" ")} fill="none" stroke={s.c} strokeWidth={1.9} />
-            <circle cx={L + bw * (histCount - 0.5)} cy={y(s.get(rows[histCount - 1]))} r={2.6} fill={s.c} />
-          </g>
-        ))}
+        {series.map((s) => {
+          // Walk the row values and emit a moveto after every gap (a null
+          // point) rather than coercing it into the line, so the line
+          // breaks exactly where the data does — never a fabricated
+          // observation on the domain floor.
+          const segments: string[] = [];
+          let pendingMove = true;
+          for (let i = 0; i < rows.length; i++) {
+            const py = y(s.get(rows[i]));
+            if (py === null) { pendingMove = true; continue; }
+            const px = L + bw * (i + 0.5);
+            segments.push(`${pendingMove ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`);
+            pendingMove = false;
+          }
+          const markerY = y(s.get(rows[histCount - 1]));
+          return (
+            <g key={s.label}>
+              <path d={segments.join(" ")} fill="none" stroke={s.c} strokeWidth={1.9} />
+              {markerY !== null && <circle cx={L + bw * (histCount - 0.5)} cy={markerY} r={2.6} fill={s.c} />}
+            </g>
+          );
+        })}
         {isNum(anchor) && anchor > domain[0] && anchor < domain[1] && (
           <g>
-            <line x1={L} x2={W - R} y1={y(anchor)} y2={y(anchor)} stroke={C.warn} strokeDasharray="4 3" opacity={0.6} />
-            <text x={W - R} y={y(anchor) - 5} textAnchor="end" fill={C.warn} style={{ font: `10px ${F.body}` }}>{num(anchor)} anchor</text>
+            <line x1={L} x2={W - R} y1={y(anchor)!} y2={y(anchor)!} stroke={C.warn} strokeDasharray="4 3" opacity={0.6} />
+            <text x={W - R} y={y(anchor)! - 5} textAnchor="end" fill={C.warn} style={{ font: `10px ${F.body}` }}>{num(anchor)} anchor</text>
           </g>
         )}
         {rows.map((r, i) => (i % every === 0 ? (
@@ -963,10 +999,16 @@ function PrivateTab() {
   const anchor = liquidity && liquidity.coverageAnchor;
   const danger = liquidity && liquidity.coverageDanger;
 
+  // Empty domains (Math.min/max of []) would otherwise yield Infinity/-Infinity
+  // and feed NaN coordinates into RatioChart; RatioChart itself now renders its
+  // empty state when a series is entirely null, but these domains still need
+  // to stay finite so they never become the source of a stray NaN.
   const covVals = rows.map((r) => r.coverage).filter(isNum);
-  const covDom: [number, number] = [Math.max(0, Math.min(...covVals) - 0.1), Math.max(...covVals) + 0.1];
+  const covDom: [number, number] = covVals.length
+    ? [Math.max(0, Math.min(...covVals) - 0.1), Math.max(...covVals) + 0.1]
+    : [0, 1];
   const rateVals = rows.flatMap((r) => [r.callRateUnfunded, r.callRateNav]).filter(isNum);
-  const rateDom: [number, number] = [0, Math.max(...rateVals) * 1.25];
+  const rateDom: [number, number] = rateVals.length ? [0, Math.max(...rateVals) * 1.25] : [0, 1];
 
   return (
     <Fragment>
