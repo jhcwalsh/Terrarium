@@ -97,6 +97,25 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The inherited decade (cio-04), 2026-08-14.** The CIO dashboard's plan
+  chart now opens ten years before the world does, and the 3Y/5Y/10Y columns
+  hold real numbers from the first quarter of play - DN-8's O-1 option A.
+  A validated calm world (`prehistory.json`) runs through the same engine
+  under a declared seed offset (999983, prime, never colliding with the
+  ensemble stride); the institution is replayed over it hold-course and the path
+  scaled to terminate on the opening book, so the join is continuous and **no
+  scored number moves**: `PLAY_ALPHA_VERSION` and `TOY_ENGINE_VERSION` unchanged,
+  the golden digest untouched, every leaderboard row still comparable. Market
+  paths prepend in lockstep with the plan history (the validator couples
+  their lengths) and index to 100 at world start, not at the inherited
+  decade's start. The 3Y/5Y long columns fill for all classes; private
+  classes' 10Y stays null because a per-class inherited tape is not exported
+  (3Y/5Y windows fit inside the revealed months). Generated worlds opt out.
+  The renderer needed no change - it has supported `worldStartIndex` since
+  it was vendored. Prepended dates and index baseline state in display labels
+  (`preRunLabel` "INHERITED DECADE", `worldStartLabel` "WORLD BEGINS") with
+  the full explanation in `performance.footnote`.
+
 - **The CIO view builder (cio-01), 2026-08-14.** `ah/cioview.py` builds
   DN-8's `CioView` server-side — the pure-renderer contract's engine half —
   from the same truncated replay `_mark_to_market` uses, plus a frozen-tape

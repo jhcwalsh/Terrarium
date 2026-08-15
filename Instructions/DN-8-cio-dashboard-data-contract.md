@@ -204,7 +204,7 @@ The dashboard is the in-session play surface (the cockpit).
 
 | Item | Resolution |
 |---|---|
-| ⚑ O-1 | **Option A**, built as its own WP (cio-04). Dashboard ships first with `worldStartIndex: 0` and nulled long columns (B behaviour as a transitional state). |
+| ⚑ O-1 | **DELIVERED 2026-08-14 (cio-04), display-only.** A validated calm decade (`src/ah/presets/prehistory.json`) is run through the same engine under a declared seed offset, the institution is replayed over it hold-course, and the path is **scaled to terminate exactly on the opening book** - so the chart is continuous and the game's month 0 is untouched. `worldStartIndex` and the long return columns are live for toy worlds; generated worlds opt out (a toy past spliced onto a generated world would be two engines in one chart). **Not built, deliberately:** an opening book that is the *output* of the pre-decade. That changes every scored run and restarts leaderboards - a release event and the owner's call, not a rendering decision. |
 | ⚑ O-2 | `planesAvailable: ["reported","true"]`. Generic-portfolio tier; true plane labelled "engine true state". |
 | ⛔ O-3 | **Observables only.** `markets.conditions` is never emitted to a player build. |
 | ⚑ O-4 | Static class→tier mapping, footnoted. Behavioural re-tiering deferred. |
