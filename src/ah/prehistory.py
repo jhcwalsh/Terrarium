@@ -19,6 +19,14 @@ given somewhere to have come from. Quarterly returns are computed off the
 UNSCALED replay — a level-only rescale cannot change a ratio — so the shape a
 player sees is the shape the toy engine actually drew, never a stretched or
 compressed one.
+
+Return convention: payout is added back to each quarter's closing level
+before the ratio is taken — time-weighted, exactly ``ah.cioview``'s own
+``_quarterly_returns`` convention (``performance.footnote``: "Payout added
+back; time-weighted"). The replay is run under the default policy spend like
+any other hold-course quarter, so leaving the add-back out would silently
+switch conventions mid-window the moment a prehistory quarter enters a long
+return column next to world quarters computed the other way.
 """
 
 from __future__ import annotations
@@ -62,7 +70,6 @@ class PreHistory:
     #: Per liquid asset, monthly returns in PERCENT (the toy tape's own
     #: units) — not levels, and never scaled: market shape is not a NAV.
     market_paths: dict[str, tuple[float, ...]]
-    label: str
 
 
 def _prehistory_paths(seed: int) -> EnginePaths:
@@ -83,22 +90,34 @@ def _require_finite_nonzero(name: str, value: float) -> None:
         raise ValueError(f"{name} must be a finite, nonzero NAV, got {value!r}")
 
 
-def _quarterly_returns(opening: float, closes: Sequence[float]) -> tuple[float, ...]:
-    """Decimal returns between successive quarter-end NAV levels.
+def _quarterly_returns(
+    opening: float, closes: Sequence[float], spending: Sequence[float]
+) -> tuple[float, ...]:
+    """Decimal returns between successive quarter-end NAV levels, with that
+    quarter's payout added back — time-weighted, matching
+    ``ah.cioview._quarterly_returns`` exactly (same formula, same operand
+    order): ``(close + spending_paid) / prior_level - 1``.
 
     ``opening`` is the pre-quarter-0 book (``PlayResult.opening``); each
-    subsequent level is a quarter's closing NAV. Guards a zero or non-finite
-    level rather than letting a ratio silently produce infinity or NaN.
+    subsequent level in ``closes`` is a quarter's closing NAV, and
+    ``spending[i]`` is that same quarter's ``PlayQuarter.spending_paid`` —
+    the replay is hold-course under the default policy spend, so every
+    quarter pays one out. Guards a zero or non-finite level rather than
+    letting a ratio silently produce infinity or NaN.
     """
+    if len(closes) != len(spending):
+        raise ValueError(
+            f"closes and spending must be the same length, got {len(closes)} and {len(spending)}"
+        )
     levels = (opening, *closes)
     out: list[float] = []
-    for prev, cur in pairwise(levels):
+    for i, (prev, cur) in enumerate(pairwise(levels)):
         if not math.isfinite(prev) or prev == 0.0 or not math.isfinite(cur):
             raise ValueError(
                 "prehistory replay produced a zero or non-finite NAV level "
                 f"({prev!r} -> {cur!r}); cannot form a return"
             )
-        out.append(cur / prev - 1.0)
+        out.append((cur + spending[i]) / prev - 1.0)
     return tuple(out)
 
 
@@ -142,11 +161,15 @@ def build_prehistory(
     # Quarterly returns off the UNSCALED replay: a level-only rescale cannot
     # change a ratio, so these are computed once, before scaling, and never
     # revisited (asserted scale-invariant in tests/test_prehistory.py).
+    # ``spending_paid`` is plane-agnostic (ah.play.PlayQuarter carries one
+    # figure, not a per-plane pair) and feeds both calls unchanged — same as
+    # ah.cioview._quarterly_returns, which reuses it for both planes too.
+    spending = [q.spending_paid for q in result.quarters]
     quarterly_true = _quarterly_returns(
-        result.opening["nav_true"], [q.nav_true for q in result.quarters]
+        result.opening["nav_true"], [q.nav_true for q in result.quarters], spending
     )
     quarterly_reported = _quarterly_returns(
-        result.opening["nav_reported"], [q.nav_reported for q in result.quarters]
+        result.opening["nav_reported"], [q.nav_reported for q in result.quarters], spending
     )
 
     scale_true = terminal_nav_true / true_months[-1]
@@ -165,9 +188,4 @@ def build_prehistory(
         quarterly_returns_true=quarterly_true,
         quarterly_returns_reported=quarterly_reported,
         market_paths=market_paths,
-        label=(
-            "The Inherited Decade — a simulated past, scaled to terminate "
-            "exactly at this world's opening book (display only; month 0 is "
-            "untouched)."
-        ),
     )

@@ -13,12 +13,14 @@ from typing import Any
 
 import pytest
 
+from ah.cioview import _quarterly_returns as cioview_quarterly_returns
 from ah.cioview import build_cio_view, validate_cio_view
 from ah.core.engine import run_path
 from ah.core.loader import load_worldspec
 from ah.core.numericworld import project_numeric
 from ah.core.validator import validate
-from ah.prehistory import PREHISTORY_QUARTERS, build_prehistory
+from ah.play import simulate_play
+from ah.prehistory import PREHISTORY_QUARTERS, _prehistory_paths, build_prehistory
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -114,43 +116,67 @@ def test_prehistory_returns_are_scale_invariant():
     assert a.quarterly_returns_reported == b.quarterly_returns_reported
 
 
-def _boundary_returns(months: tuple[float, ...], n_quarters: int) -> tuple[float, ...]:
-    """Ratios between successive quarter-boundary marks in an EXPORTED
-    (already scaled) monthly NAV series.
-
-    Scale-invariant by construction -- a constant multiplier applied to
-    every level cancels in any ratio of two levels -- so this can compare
-    directly against ``quarterly_returns_{true,reported}`` regardless of
-    which terminal NAVs were used to build the ``PreHistory``.
-    """
-    closes = [months[q * 3 + 2] for q in range(n_quarters)]
-    return tuple(closes[i + 1] / closes[i] - 1.0 for i in range(n_quarters - 1))
-
-
-def test_prehistory_exported_months_reproduce_quarterly_returns():
+def test_prehistory_exported_months_reproduce_the_replay_nav():
     """Pins an identity that is currently true only by accident of
     ``play.py``'s implementation: ``PlayQuarter.nav_true_months[2]`` and
     ``PlayQuarter.nav_true`` are the same ``portfolio.nav_true()`` call
     (src/ah/play.py:699 and :711) -- same for the reported pair. Nothing in
     ``simulate_play``'s contract guarantees that stays true. If a future
     change sampled the month-2 mark before the quarter's waterfall ran,
-    Task 3's chart (built from ``nav_*_months``) and its printed return
-    columns (built from ``quarterly_returns_*``) would silently disagree,
-    while ``test_prehistory_returns_are_scale_invariant`` -- which never
-    reads ``nav_*_months`` at all -- would stay green.
+    Task 3's chart (built from ``nav_*_months``) and the return convention's
+    own inputs (``q.nav_true``/``q.nav_reported``, read directly off the
+    replay by ``build_prehistory``) would silently disagree.
 
-    Quarter 0 is excluded: its return needs a pre-quarter-0 opening level,
-    which is not part of the exported months array (by design -- the array
-    starts at month 0 of the pre-history, not before it).
+    Recomputes the replay directly (white-box: ``_prehistory_paths`` is
+    private) rather than inverting the exported, ALREADY-SCALED month array
+    back into a per-quarter ratio the way this test used to: C1 folded each
+    quarter's payout into the return numerator, which is additive and does
+    not survive a level-only rescale the way a bare ratio does, so a scaled
+    boundary value can no longer stand in for the unscaled one. The return
+    convention itself is pinned separately, below.
     """
-    p = build_prehistory(771204, 100.0, 98.0)
+    seed = 771204
+    p = build_prehistory(seed, 100.0, 98.0)
+    paths = _prehistory_paths(seed)
+    result = simulate_play(paths, None)
+    scale_true = p.nav_true_months[-1] / result.quarters[-1].nav_true
+    scale_reported = p.nav_reported_months[-1] / result.quarters[-1].nav_reported
+    for q_idx, q in enumerate(result.quarters):
+        month_idx = q_idx * 3 + 2
+        assert abs(p.nav_true_months[month_idx] - q.nav_true * scale_true) < 1e-6
+        assert abs(p.nav_reported_months[month_idx] - q.nav_reported * scale_reported) < 1e-6
+
+
+def test_prehistory_returns_use_the_payout_added_back_convention():
+    """C1 (Critical, whole-branch review): the two halves of every long
+    return window must use the SAME return convention.
+    ``ah.cioview._quarterly_returns`` adds a quarter's ``spending_paid`` back
+    to its closing level before taking the ratio (``performance.footnote``:
+    "Payout added back; time-weighted") -- the inherited decade is replayed
+    hold-course under the same default policy spend as any other quarter, so
+    leaving the add-back out of ``prehistory._quarterly_returns`` silently
+    switched conventions mid-window the instant an inherited quarter sat
+    beside a world quarter in one annualised figure. Reviewer-measured
+    impact before this fix: the fixture's 10Y Total plan read a sign-flipped
+    -0.9729% (reported plane) instead of the correct +1.2267%, at stagflation
+    seed 771204 -- this test's own case.
+
+    Computed a known case BOTH ways: once via ``build_prehistory`` (the
+    shipped path) and once via ``ah.cioview._quarterly_returns`` fed the
+    identical, unscaled replay directly -- the two must agree exactly, since
+    they are meant to be the same formula, not merely close.
+    """
+    seed = 771204
+    p = build_prehistory(seed, 100.0, 98.0)
+    paths = _prehistory_paths(seed)
+    result = simulate_play(paths, None)
     n = PREHISTORY_QUARTERS
-    boundary_true = _boundary_returns(p.nav_true_months, n)
-    boundary_reported = _boundary_returns(p.nav_reported_months, n)
-    for got, want in zip(boundary_true, p.quarterly_returns_true[1:], strict=True):
-        assert abs(got - want) < 1e-12
-    for got, want in zip(boundary_reported, p.quarterly_returns_reported[1:], strict=True):
-        assert abs(got - want) < 1e-12
+    assert list(p.quarterly_returns_true) == cioview_quarterly_returns(result, "true", n)
+    assert list(p.quarterly_returns_reported) == cioview_quarterly_returns(result, "reported", n)
+    # Every quarter pays a spend under the default policy, so the add-back
+    # is not a no-op here -- if it ever became one, the assertions above
+    # would stop proving the convention actually matters.
+    assert all(q.spending_paid > 0 for q in result.quarters)
 
 
 def test_prehistory_rejects_degenerate_terminal_values():
@@ -228,3 +254,6 @@ def test_prehistory_off_reproduces_the_old_shape():
     v = _view(prehistory=False, revealed=60)
     assert v["plan"]["history"]["worldStartIndex"] == 0
     assert len(v["plan"]["history"]["values"]) == 60
+    # Minor 1 (whole-branch review): no test called validate_cio_view with
+    # prehistory=False, so the off-path lost its validator coverage.
+    assert validate_cio_view(v) == []

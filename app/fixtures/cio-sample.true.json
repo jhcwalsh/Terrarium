@@ -1246,7 +1246,7 @@
    -4.8989,
    -7.476,
    -5.6768,
-   -1.9228
+   0.2912
   ],
   "benchmarkLabel": "Policy twin (hold course)",
   "footnote": "Payout added back; time-weighted. Twin holds the t0 plan. 3Y/5Y/10Y include the inherited decade (simulated, scaled to the opening book - not this world's own history); 1Y crosses that seam whenever fewer than four world quarters have been played; Excess is near zero in every long column by construction, because the twin shares the identical inherited prefix, not because the plan tracked the benchmark for a decade; private classes show an em dash in the long columns because a per-class inherited tape is not exported - not because the inherited decade has no private history (it ran the full book, privates included, which is why the true and reported series differ at all).",
@@ -1264,7 +1264,7 @@
    -4.8989,
    -7.476,
    -5.6768,
-   -1.9228
+   0.2912
   ]
  },
  "plan": {
@@ -1455,7 +1455,7 @@
    "worldStartIndex": 120
   },
   "netOfFlows": -23.8436,
-  "preRunLabel": "INHERITED DECADE",
+  "preRunLabel": "INHERITED DECADE (SIMULATED)",
   "totalValue": 58.012,
   "windowLabel": "Since inception",
   "worldStartLabel": "WORLD BEGINS"

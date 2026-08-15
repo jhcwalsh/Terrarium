@@ -233,7 +233,13 @@ def build_cio_view(
         # the copy has to fit the existing slot rather than the slot
         # growing to fit the copy). The full sentence lives in
         # performance.footnote instead.
-        plan["preRunLabel"] = "INHERITED DECADE"
+        # I1 (whole-branch review): "simulated" previously appeared only in
+        # performance.footnote, under a different panel; nothing on the
+        # chart itself said the hatched band was simulated. preRunLabel is
+        # centred inside the hatched band (not left-anchored like
+        # worldStartLabel), so it has room: ~190px at ~6.8px/char inside a
+        # band 758px wide at revealed=12 and 416px at revealed=120.
+        plan["preRunLabel"] = "INHERITED DECADE (SIMULATED)"
         plan["worldStartLabel"] = "WORLD BEGINS"
 
     view: dict[str, Any] = {
@@ -558,10 +564,15 @@ def _markets(
                 }
             )
         out["correlations"] = corrs
-        out["correlationNote"] = (
-            "current: trailing 12m; baseline: full revealed window; both computed "
-            "on this world's own months only, excluding the inherited decade."
-        )
+        if pre is not None:
+            # Minor 2 (whole-branch review): this rewrite was previously
+            # unconditional, so an opted-out generated world (pre is None)
+            # was told its correlations excluded an inherited decade it
+            # never had. Guarded like every other new string in this WP.
+            out["correlationNote"] = (
+                "current: trailing 12m; baseline: full revealed window; both computed "
+                "on this world's own months only, excluding the inherited decade."
+            )
     return out
 
 
