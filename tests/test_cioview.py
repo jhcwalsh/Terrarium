@@ -340,3 +340,21 @@ def test_golden_views_validate_on_every_preset():
             for revealed in (12, 60, 120):
                 errors = validate_cio_view(_view(plane, revealed, preset=preset))
                 assert errors == [], (preset, plane, revealed, errors)
+
+
+def test_committed_cio_fixtures_match_the_builder():
+    """The app's renderer tests consume these fixtures; drift is a contract
+    break. Regenerate with scripts/gen_cio_fixture.py when the builder
+    legitimately changes."""
+    import sys
+
+    sys.path.insert(0, str(ROOT / "scripts"))
+    try:
+        from gen_cio_fixture import build  # type: ignore
+    finally:
+        sys.path.pop(0)
+    for plane in ("reported", "true"):
+        committed = (ROOT / "app" / "fixtures" / f"cio-sample.{plane}.json").read_text(
+            encoding="utf-8"
+        )
+        assert committed == build(plane), f"{plane} fixture is stale - regenerate"
