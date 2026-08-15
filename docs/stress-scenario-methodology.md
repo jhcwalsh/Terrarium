@@ -87,11 +87,18 @@ autocorrelated, and we don't model that autocorrelation: we inherit it. A
 month-by-month severity filter would produce a bag of bad months in a shuffled
 order, which is noise with a severe average, not a crisis.
 
-Two consequences follow. Blocks in stress segments run long, because every join
-is a discontinuity. And joins are restricted to months whose *levels* are close
-to where we are — nine of our fourteen factors are levels rather than returns, so
-a careless splice teleports the credit spread from 300bp to 1400bp in a single
-month.
+Two consequences follow. Joins are restricted to months whose *levels* are
+close to where we are — nine of our fourteen factors are levels rather than
+returns, so a careless splice teleports the credit spread from 300bp to 1400bp
+in a single month. And block length is a **declared trade, measured before it
+was chosen** (the 2026-08-15 coherence study): stress segments now run
+6-month mean blocks — the sealed benchmark's own setting — which means a
+stressed decade's persistence is partly *constructed* (the re-entry rule
+chaining severe entries) rather than wholly *inherited* (one long block
+carrying a real episode's own aftermath). The measured coherence cost of
+that choice is near zero — autocorrelation within 0.011 of the panel's own,
+level jumps capped by the join tolerance at every block length tested — and
+the trade is disclosed here rather than buried in a parameter.
 
 **3. Commit the rule before you measure the consequence.**
 The scenario — severity rule plus the historical precedent cited for it — is
