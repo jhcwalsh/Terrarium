@@ -16,13 +16,11 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Book } from "./components/Book";
-import CioDashboard from "./components/CioDashboard";
+import CioDashboard, { type ExtraTab } from "./components/CioDashboard";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import { Leaderboard } from "./components/Leaderboard";
-import { PrivateMarkets } from "./components/PrivateMarkets";
 import Provenance from "./components/Provenance";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
@@ -61,6 +59,70 @@ const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 // here a second time — it is the same "reported" | "true" domain the plane
 // switch has always driven, and the CIO dashboard now shares the switch.
 
+/** percentile name -> cumulative growth series, per asset — bundle.bands' shape. */
+export type BundleBands = Record<string, Record<string, number[]>>;
+
+/**
+ * The peer-cone tab the cockpit injects into the dashboard. Host-owned
+ * content: the cone comes from the world bundle, not from CioView, which
+ * is why it rides as an injected tab and never moves into the dashboard
+ * (DN-8 §1 - the dashboard renders one CioView and nothing else).
+ *
+ * `seriesFor` is the accessor Play already holds — `column`, built off
+ * `bundle.revealed.tape`, called per asset key so private assets resolve
+ * through the reported/true plane switch (`${key}_reported` vs `key`)
+ * before this factory ever sees them.
+ *
+ * Deliberately omits book mode's eyebrow and non-stacked `.fan-key`
+ * description paragraph — those stay put in `Play`'s book-mode section
+ * so this tab doesn't double them. Only the `.chart-grid` (the eight
+ * charts plus the stacked legend) is shared.
+ */
+export function peerTabs(
+  bands: BundleBands | null,
+  seriesFor: (assetKey: string) => number[],
+  revealedMonths: number,
+  plane: Plane = "reported",
+  nPaths = 0,
+): ExtraTab[] {
+  if (!bands) return [];
+  return [
+    {
+      key: "peers",
+      label: "Peers",
+      render: () => (
+        <div className="chart-grid">
+          {ASSET_LABELS.filter(([key]) => bands[key]).map(([key, name]) => {
+            const isPrivate = PRIVATE_ASSETS.has(key);
+            const source = isPrivate && plane === "reported" ? `${key}_reported` : key;
+            return (
+              <FanChart
+                key={key}
+                label={name}
+                className={isPrivate ? "private" : undefined}
+                bands={bands[key]}
+                revealed={cumulativeGrowth(seriesFor(source))}
+                revealedMonths={revealedMonths}
+              />
+            );
+          })}
+          <p className="fan-key stacked">
+            <span className="key-swatch key-revealed" /> this world, as
+            revealed
+            <br />
+            <span className="key-swatch key-inner" /> middle half of{" "}
+            {nPaths} sibling runs
+            <br />
+            <span className="key-swatch key-outer" /> 5–95% of siblings
+            <br />
+            <span className="key-swatch key-median" /> median sibling
+          </p>
+        </div>
+      ),
+    },
+  ];
+}
+
 /**
  * When the CIO view must refetch: the pointer moved, the plane changed, or a
  * decision landed. `decisionCount` is `Object.keys(session.decisions).length`
@@ -77,6 +139,25 @@ export function cioFetchKey(
   decisionCount: number,
 ): string {
   return `${sid}:${revealedMonths}:${plane}:${decisionCount}`;
+}
+
+/** The vitrine's class list. CIO mode is a distinct layout mode, not a
+ * swapped panel: the dashboard pane scrolls inside itself so the header,
+ * ticker, rail and decision panel stay put (styles.css one-screen rule). */
+export function cockpitClass(viewMode: "book" | "cio", plane: Plane): string {
+  return `vitrine plane-${plane}${viewMode === "cio" ? " cockpit" : ""}`;
+}
+
+/** The stat rail's "Your book" label, naming the FIXED scoring basis the
+ * figure below it is computed on (`session.basis`, `serve.py`'s
+ * `use_reported`) — never the dashboard's live plane, which can disagree
+ * with it the instant a player flips the plane switch (I-4; DN-8 §4 lists
+ * `plan.totalValue` as plane-sensitive). Extracted as a pure seam, like
+ * `cioFetchKey`/`cockpitClass` above, so the label — and specifically that
+ * it reads the real `session.basis` rather than a hardcoded string — is
+ * pinned by a test without mounting the session-backed component. */
+export function bookLabel(basis: string): string {
+  return `Your book · ${basis} basis`;
 }
 
 interface PlayProps {
@@ -263,6 +344,10 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const order = bundle.revealed.series_order;
   const column = (name: string) =>
     bundle.revealed.tape.map((row) => row[order.indexOf(name)]);
+  // cio-03 task 4: the eight peer-cone fan charts live in exactly one place
+  // now — this factory call, rendered as book mode's chart section AND as
+  // the cockpit's injected Peers tab.
+  const peerTab = peerTabs(bundle.bands, column, revealed, plane, bundle.meta.n_paths);
 
   if (outcome) {
     return (
@@ -319,7 +404,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
   const transportLocked = busy || atWindow !== null || revealed >= months;
 
   return (
-    <main className={`vitrine plane-${plane}`}>
+    <main className={cockpitClass(viewMode, plane)}>
       <header className="topbar">
         <div>
           <div className="brand">Terrarium</div>
@@ -400,7 +485,20 @@ export function Play({ bundle, config, onExit }: PlayProps) {
 
       <div className="rail">
         <div className="stat">
-          <div className="k">Your book</div>
+          {/* session.value is computed server-side on the session's FIXED
+              scoring basis (serve.py: use_reported = doc["basis"] ==
+              "reported"), while the CIO dashboard's plan.totalValue is
+              plane-sensitive (cioview.py::_quarterly_returns keys on
+              nav_reported/nav_true; DN-8 s4 lists plan.totalValue as
+              plane-sensitive). Deleting Book.tsx did not close the basis
+              mismatch the way the plan claimed — it moved to this rail: the
+              two value figures sit inches apart the moment a player flips
+              the plane away from the session basis. Book.tsx used to carry
+              this exact label (f35e64d) for the same reason; restored here
+              so the rail's headline is never silently read as the same
+              number as the dashboard's plan total (I-4). `bookLabel` is
+              pinned in Play.cio.test.tsx. */}
+          <div className="k">{bookLabel(session.basis)}</div>
           <div className={`v ${aheadOfTwin === null ? "" : aheadOfTwin >= 0 ? "pos" : "neg"}`}>
             {session.value == null ? "100.0" : session.value.toFixed(1)}
           </div>
@@ -451,13 +549,20 @@ export function Play({ bundle, config, onExit }: PlayProps) {
       <div className="vgrid">
         <div className="left">
           {viewMode === "cio" ? (
-            cioError ? (
-              <div className="empty">{cioError}</div>
-            ) : cioView ? (
-              <CioDashboard view={cioView} onPlaneChange={setPlane} />
-            ) : (
-              <div className="empty">Loading CIO view...</div>
-            )
+            <div className="cockpit-pane">
+              {cioError ? (
+                <div className="empty">{cioError}</div>
+              ) : cioView ? (
+                <CioDashboard
+                  view={cioView}
+                  onPlaneChange={setPlane}
+                  chrome="embedded"
+                  extraTabs={peerTab}
+                />
+              ) : (
+                <div className="empty">Loading the CIO view...</div>
+              )}
+            </div>
           ) : (
           <section>
             <div className="eyebrow">
@@ -480,62 +585,13 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               {" · "}
               hatched is sealed
             </p>
-            <div className="chart-grid">
-              {ASSET_LABELS.filter(([key]) => bundle.bands[key]).map(([key, name]) => {
-                const isPrivate = PRIVATE_ASSETS.has(key);
-                const source =
-                  isPrivate && plane === "reported" ? `${key}_reported` : key;
-                return (
-                  <FanChart
-                    key={key}
-                    label={name}
-                    className={isPrivate ? "private" : undefined}
-                    bands={bundle.bands[key]}
-                    revealed={cumulativeGrowth(column(source))}
-                    revealedMonths={revealed}
-                  />
-                );
-              })}
-              {bundle.twin_ledger ? (
-                <div className="ninth">
-                  <div className="eyebrow">
-                    <span>Private markets</span>
-                    <span>quarterly pacing</span>
-                  </div>
-                  <PrivateMarkets
-                    ledger={bundle.twin_ledger}
-                    session={session}
-                    revealedMonths={revealed}
-                  />
-                </div>
-              ) : (
-                <p className="fan-key stacked">
-                  <span className="key-swatch key-revealed" /> this world, as
-                  revealed
-                  <br />
-                  <span className="key-swatch key-inner" /> middle half of{" "}
-                  {bundle.meta.n_paths} sibling runs
-                  <br />
-                  <span className="key-swatch key-outer" /> 5–95% of siblings
-                  <br />
-                  <span className="key-swatch key-median" /> median sibling
-                </p>
-              )}
-            </div>
+            {peerTab[0]?.render()}
           </section>
           )}
         </div>
 
         <div className={`right${atWindow !== null ? " deciding" : ""}`}>
-          <section>
-            <div className="eyebrow">
-              <span>The book</span>
-              <span>cash, coverage, policy band</span>
-            </div>
-            <Book session={session} />
-          </section>
-
-          <section>
+          <section className="wire-panel">
             <div className="eyebrow">
               <span>The wire</span>
               <span>{dateNow}</span>

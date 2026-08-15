@@ -223,6 +223,26 @@ export interface PrivateQuarter {
   callRateUnfunded: Nullable<Ratio>; // was Ratio — null when opening unfunded is 0
   callRateNav: Nullable<Ratio>;      // was Ratio — null when opening NAV is 0
   coverage: Nullable<Ratio>;         // was Ratio — null when closing NAV is 0
+  /**
+   * Undrawn commitment CANCELLED this quarter at the end of a cohort's
+   * contractual life (ER-6's terminal lapse). Positive magnitude, 0.0 in
+   * most quarters. It leaves the unfunded balance without ever being
+   * called — never treat it as a call.
+   */
+  expiredUndrawn: Money;
+}
+
+/**
+ * The programme's cohort NAV stack at the as-of quarter, oldest vintage
+ * first (cio-03b — the successor to the retired PrivateMarkets.ladderSummary).
+ * True NAV only: a per-cohort REPORTED (appraisal-smoothed) mark is not
+ * tracked anywhere in the engine, so it is not carried here — see
+ * PrivateCashflows.footnote before assuming one exists.
+ */
+export interface VintageRung {
+  id: string;
+  label: string;
+  navTrue: Money;
 }
 
 export interface PrivateCashflows {
@@ -235,6 +255,8 @@ export interface PrivateCashflows {
    * same length and share the same quarter labels in the same order.
    */
   series: Record<string, PrivateQuarter[]>;
+  /** Optional so a payload built before cio-03b still type-checks. */
+  vintages?: VintageRung[];
   footnote?: string;
 }
 
@@ -380,6 +402,9 @@ export function validateCioView(v: CioView): string[] {
       agg.forEach((r, i) => {
         const s = pcf.classes.reduce((acc, c) => acc + (pcf.series[c.id]?.[i]?.calls ?? 0), 0);
         if (!near(s, r.calls, Math.max(0.5, r.calls * 0.001))) e.push(`aggregate calls at ${r.label} ≠ sum of classes`);
+        const sExp = pcf.classes.reduce((acc, c) => acc + (pcf.series[c.id]?.[i]?.expiredUndrawn ?? 0), 0);
+        const rExp = r.expiredUndrawn ?? 0;
+        if (!near(sExp, rExp, Math.max(0.5, rExp * 0.001))) e.push(`aggregate expiredUndrawn at ${r.label} ≠ sum of classes`);
       });
     }
   }

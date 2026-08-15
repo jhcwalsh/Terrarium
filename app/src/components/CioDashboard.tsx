@@ -18,6 +18,7 @@
  * ================================================================== */
 
 import { useState, useMemo, useContext, createContext, Fragment } from "react";
+import type { ReactNode } from "react";
 import type {
   CioView,
   Plane,
@@ -28,6 +29,7 @@ import type {
   AssetClass,
   PrivateQuarter,
   MarketSeries,
+  VintageRung,
 } from "../lib/cioView";
 
 /* ---------------------------------------------------------------- *
@@ -845,9 +847,27 @@ function RatioChart({
 }) {
   const W = 440, H = 180, L = 44, R = 14, T = 26, B = 26;
   const bw = (W - L - R) / rows.length;
-  const y = (v: number | null) => T + (1 - (Number(v) - domain[0]) / (domain[1] - domain[0])) * (H - T - B);
+  // null (or otherwise non-finite) ratios are a real state — "denominator
+  // was zero" — not zero itself. y() returns null for them so callers can
+  // skip the point rather than coercing it through Number(null) -> 0 and
+  // drawing a fabricated observation on the domain floor.
+  const y = (v: number | null): number | null =>
+    isNum(v) ? T + (1 - (v - domain[0]) / (domain[1] - domain[0])) * (H - T - B) : null;
   const cut = L + bw * histCount;
   const every = Math.ceil(rows.length / 5);
+  // If every line in every series is null across every row, there is no
+  // ratio data to plot at all: guard the panel with the empty state rather
+  // than rendering axes over a blank chart (or, before this fix, an
+  // Infinity/-Infinity domain feeding NaN into every coordinate).
+  const anyFinite = series.some((s) => rows.some((r) => isNum(s.get(r))));
+  if (!anyFinite) {
+    return (
+      <div style={{ flex: "1 1 340px", minWidth: 300 }}>
+        <div style={{ font: `10px ${F.body}`, letterSpacing: "0.12em", color: C.faint, textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
+        <Empty what="ratio data" />
+      </div>
+    );
+  }
   return (
     <div style={{ flex: "1 1 340px", minWidth: 300 }}>
       <div style={{ font: `10px ${F.body}`, letterSpacing: "0.12em", color: C.faint, textTransform: "uppercase", marginBottom: 4 }}>{title}</div>
@@ -855,20 +875,38 @@ function RatioChart({
         {histCount < rows.length && <rect x={cut} y={T} width={W - R - cut} height={H - T - B} fill={C.ice} opacity={0.03} />}
         {[domain[0], (domain[0] + domain[1]) / 2, domain[1]].map((v) => (
           <g key={v}>
-            <line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke={C.ruleSoft} />
-            <text x={L - 7} y={y(v) + 3.5} textAnchor="end" fill={C.faint} style={{ font: `10px ${F.mono}` }}>{v.toFixed(2)}</text>
+            {/* domain bounds are always finite by construction (guarded at
+                the call site), so y(v) is never null here */}
+            <line x1={L} x2={W - R} y1={y(v)!} y2={y(v)!} stroke={C.ruleSoft} />
+            <text x={L - 7} y={y(v)! + 3.5} textAnchor="end" fill={C.faint} style={{ font: `10px ${F.mono}` }}>{v.toFixed(2)}</text>
           </g>
         ))}
-        {series.map((s) => (
-          <g key={s.label}>
-            <path d={rows.map((r, i) => `${i ? "L" : "M"}${(L + bw * (i + 0.5)).toFixed(1)},${y(s.get(r)).toFixed(1)}`).join(" ")} fill="none" stroke={s.c} strokeWidth={1.9} />
-            <circle cx={L + bw * (histCount - 0.5)} cy={y(s.get(rows[histCount - 1]))} r={2.6} fill={s.c} />
-          </g>
-        ))}
+        {series.map((s) => {
+          // Walk the row values and emit a moveto after every gap (a null
+          // point) rather than coercing it into the line, so the line
+          // breaks exactly where the data does — never a fabricated
+          // observation on the domain floor.
+          const segments: string[] = [];
+          let pendingMove = true;
+          for (let i = 0; i < rows.length; i++) {
+            const py = y(s.get(rows[i]));
+            if (py === null) { pendingMove = true; continue; }
+            const px = L + bw * (i + 0.5);
+            segments.push(`${pendingMove ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`);
+            pendingMove = false;
+          }
+          const markerY = y(s.get(rows[histCount - 1]));
+          return (
+            <g key={s.label}>
+              <path d={segments.join(" ")} fill="none" stroke={s.c} strokeWidth={1.9} />
+              {markerY !== null && <circle cx={L + bw * (histCount - 0.5)} cy={markerY} r={2.6} fill={s.c} />}
+            </g>
+          );
+        })}
         {isNum(anchor) && anchor > domain[0] && anchor < domain[1] && (
           <g>
-            <line x1={L} x2={W - R} y1={y(anchor)} y2={y(anchor)} stroke={C.warn} strokeDasharray="4 3" opacity={0.6} />
-            <text x={W - R} y={y(anchor) - 5} textAnchor="end" fill={C.warn} style={{ font: `10px ${F.body}` }}>{num(anchor)} anchor</text>
+            <line x1={L} x2={W - R} y1={y(anchor)!} y2={y(anchor)!} stroke={C.warn} strokeDasharray="4 3" opacity={0.6} />
+            <text x={W - R} y={y(anchor)! - 5} textAnchor="end" fill={C.warn} style={{ font: `10px ${F.body}` }}>{num(anchor)} anchor</text>
           </g>
         )}
         {rows.map((r, i) => (i % every === 0 ? (
@@ -876,6 +914,74 @@ function RatioChart({
         ) : null))}
       </svg>
       <div style={{ marginTop: 2 }}><Legend items={series.map((s) => ({ label: s.label, c: s.c }))} /></div>
+    </div>
+  );
+}
+
+/** ER-6's terminal lapse (undrawn commitment cancelled, never called): a
+ *  real value in the alert colour, a zero as a muted (never shouting)
+ *  "$0m". DN-8 s3's `NA` ("—") means UNAVAILABLE — an unreached forecast
+ *  quarter, a field the engine never tracked — and a known, tracked zero
+ *  must not borrow that glyph: in a table where "—" already marks an
+ *  unreached forecast column, a class that genuinely never lapsed would
+ *  become indistinguishable from one where lapse isn't tracked at all
+ *  (M-1). Missing (`null`/`undefined`) still renders `NA`; only a known
+ *  zero moved off it. `lapse-value` className is a stable test hook
+ *  (CioDashboard.test.tsx's zero-lapse assertion targets it, since the
+ *  surrounding table has plenty of legitimate "$0m" cells in unrelated
+ *  columns). */
+function lapseCell(v: number | null | undefined, u: string) {
+  if (!isNum(v)) return <span className="lapse-value" style={{ color: C.faint }}>{NA}</span>;
+  if (v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{money(0, u)}</span>;
+  return <span className="lapse-value" style={{ color: C.warn }}>{money(v, u)}</span>;
+}
+
+/** The programme's cohort NAV stack at the as-of quarter, oldest vintage
+ *  first — the successor to the retired PrivateMarkets.ladderSummary
+ *  (cio-03b). Context, not a headline: kept small and unlabelled per bar,
+ *  with the id/NAV in a title and a class-level legend below. */
+function VintageLadder({
+  vintages,
+  classes,
+  unit,
+}: {
+  vintages: VintageRung[];
+  classes: { id: string; label: string }[];
+  unit: string;
+}) {
+  const total = vintages.reduce((s, v) => s + v.navTrue, 0);
+  const colourOf = (assetId: string) => {
+    const i = classes.findIndex((c) => c.id === assetId);
+    return FALLBACK[(i < 0 ? 0 : i) % FALLBACK.length];
+  };
+  return (
+    <div>
+      <div
+        style={{
+          display: "flex",
+          height: 14,
+          width: "100%",
+          borderRadius: 2,
+          overflow: "hidden",
+          border: `1px solid ${C.rule}`,
+        }}
+      >
+        {vintages.map((v) => {
+          const asset = v.id.split("-")[0];
+          const w = total > 0 ? Math.max(0.4, (v.navTrue / total) * 100) : 100 / vintages.length;
+          return (
+            <div
+              key={v.id}
+              className="vintage-rung"
+              title={`${v.label}: ${money(v.navTrue, unit)}`}
+              style={{ width: `${w}%`, background: colourOf(asset), opacity: 0.78 }}
+            />
+          );
+        })}
+      </div>
+      <div style={{ marginTop: 6 }}>
+        <Legend items={classes.map((c, i) => ({ label: c.label, c: FALLBACK[i % FALLBACK.length] }))} />
+      </div>
     </div>
   );
 }
@@ -893,13 +999,30 @@ function PrivateTab() {
   const ltm = rows.slice(Math.max(0, H - 4), H);
   const fwd = rows.slice(H, H + 4);
   const cur = rows[H - 1];
+  // ER-6's terminal lapse: undrawn commitment cancelled at the end of a
+  // cohort's life. Real but rare — an LTM window mostly reads zero, so this
+  // sums the FULL realised history, not just the trailing four quarters.
+  const lapsedToDate = rows.slice(0, H).reduce((s, r) => s + (r.expiredUndrawn || 0), 0);
   const anchor = liquidity && liquidity.coverageAnchor;
   const danger = liquidity && liquidity.coverageDanger;
 
+  // Two ways a domain can stop being a domain, both of which RatioChart's
+  // y() turns into NaN (division by a zero span): an empty input array
+  // (Math.min/max of [] -> Infinity/-Infinity), and a *nonempty* one that's
+  // uniformly a single finite value (e.g. every present call rate reading
+  // exactly 0 - real and reachable per cioview.py's callRateNav = calls /
+  // navOpen) collapsing hi === lo. Both are guarded here so the domains
+  // handed to RatioChart are always finite AND have a nonzero span.
+  const finiteSpan = (lo: number, hi: number): [number, number] =>
+    hi > lo ? [lo, hi] : [lo, lo + 1];
   const covVals = rows.map((r) => r.coverage).filter(isNum);
-  const covDom: [number, number] = [Math.max(0, Math.min(...covVals) - 0.1), Math.max(...covVals) + 0.1];
+  const covDom: [number, number] = covVals.length
+    ? finiteSpan(Math.max(0, Math.min(...covVals) - 0.1), Math.max(...covVals) + 0.1)
+    : [0, 1];
   const rateVals = rows.flatMap((r) => [r.callRateUnfunded, r.callRateNav]).filter(isNum);
-  const rateDom: [number, number] = [0, Math.max(...rateVals) * 1.25];
+  const rateDom: [number, number] = rateVals.length
+    ? finiteSpan(0, Math.max(...rateVals) * 1.25)
+    : [0, 1];
 
   return (
     <Fragment>
@@ -922,6 +1045,18 @@ function PrivateTab() {
         <Tile label="Calls ÷ NAV" value={pct(isNum(cur.callRateNav) ? cur.callRateNav * 100 : null)} sub="quarterly" />
         <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
           sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
+        {/* F2's closure required both halves: the release in the quarter it
+            happens AND the running total afterwards. `lapsedToDate` gives the
+            second; without the first, a monotonically-rising cumulative never
+            says which quarter moved — and post-ER-12 the lapse is ~0.47-0.49
+            a year spread across many quarters, not one large event, so that
+            distinction is the whole point (I-2). `cur` is the as-of quarter's
+            row, already bound above. */}
+        <Tile label="Lapsed to date" value={lapsedToDate > 0 ? money(lapsedToDate, u) : NA}
+          tone={lapsedToDate > 0 ? C.warn : undefined}
+          sub={isNum(cur.expiredUndrawn) && cur.expiredUndrawn > 0
+            ? `${money(cur.expiredUndrawn, u)} this quarter · ER-6`
+            : "ER-6: undrawn commitment released, never called"} />
       </div>
 
       <Panel title="Capital calls, distributions and net"
@@ -947,7 +1082,7 @@ function PrivateTab() {
           <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 780 }}>
             <thead>
               <tr>
-                {["Asset class", "NAV", "Unfunded", "Unf ÷ NAV", "Calls LTM", "Dists LTM", "Net LTM", "Call rate", "Net next 4q"].map((h, i) => (
+                {["Asset class", "NAV", "Unfunded", "Unf ÷ NAV", "Calls LTM", "Dists LTM", "Net LTM", "Call rate", "Lapsed to date", "Net next 4q"].map((h, i) => (
                   <th key={h} style={{ font: `10px ${F.body}`, letterSpacing: "0.1em", color: C.faint, textTransform: "uppercase", padding: "0 8px 7px", textAlign: i ? "right" : "left" }}>{h}</th>
                 ))}
               </tr>
@@ -957,6 +1092,7 @@ function PrivateTab() {
                 const rs = pcf.series[cl.id]; if (!rs) return null;
                 const h = rs.slice(Math.max(0, H - 4), H), fw = rs.slice(H, H + 4), c = rs[H - 1];
                 const s = (a: PrivateQuarter[], k: "calls" | "distributions" | "net") => a.reduce((x, r) => x + (r[k] || 0), 0);
+                const lapsed = rs.slice(0, H).reduce((x, r) => x + (r.expiredUndrawn || 0), 0);
                 const agg = cl.id === "aggregate";
                 const td: React.CSSProperties = { font: `13px ${F.mono}`, color: C.ice, padding: "6px 8px", textAlign: "right" };
                 return (
@@ -969,6 +1105,7 @@ function PrivateTab() {
                     <td style={td}>{money(s(h, "distributions"), u)}</td>
                     <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{money(s(h, "net"), u)}</td>
                     <td style={{ ...td, color: C.mist }}>{pct(isNum(c.callRateUnfunded) ? c.callRateUnfunded * 100 : null)}</td>
+                    <td style={td}>{lapseCell(lapsed, u)}</td>
                     <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? money(s(fw, "net"), u) : NA}</td>
                   </tr>
                 );
@@ -978,6 +1115,12 @@ function PrivateTab() {
         </div>
         {pcf.footnote && <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 8 }}>{pcf.footnote}</div>}
       </Panel>
+
+      {pcf.vintages && pcf.vintages.length > 0 && (
+        <Panel title="Vintage ladder" note="as-of quarter · true NAV · oldest first" style={{ marginTop: 10 }}>
+          <VintageLadder vintages={pcf.vintages} classes={pcf.classes} unit={u} />
+        </Panel>
+      )}
     </Fragment>
   );
 }
@@ -1137,23 +1280,41 @@ const TABS: [TabKey, string][] = [
   ["private", "Private cashflows"], ["markets", "Markets"],
 ];
 
+export interface ExtraTab {
+  key: string;
+  label: string;
+  /** Host-owned content. Called only while its tab is selected. */
+  render: () => ReactNode;
+}
+
 export default function CioDashboard({
   view,
   onPlaneChange,
   initialTab = "plan",
+  chrome = "full",
+  extraTabs = [],
 }: {
   view: CioView;
   onPlaneChange: (p: Plane) => void;
   initialTab?: TabKey;
+  /** "embedded": the host owns the plane control and the footer (cockpit). */
+  chrome?: "full" | "embedded";
+  extraTabs?: ExtraTab[];
 }) {
-  const [tab, setTab] = useState<TabKey>(initialTab);
+  const [tab, setTab] = useState<string>(initialTab);
   const { meta, plan } = view;
   const planes = meta.planesAvailable ?? ["reported"];
+  const allTabs = [...TABS, ...extraTabs.map((t) => [t.key, t.label] as const)];
 
   return (
     <ViewCtx.Provider value={view}>
-      <div style={{ padding: "18px 20px 40px", color: C.ice, font: `14px ${F.body}` }}>
-        <div style={{ maxWidth: 1220, margin: "0 auto" }}>
+      {/* full chrome's outer padding and the inner 1220px document width are
+          both inline styles, which no stylesheet selector (short of
+          !important) can override for an embedded host — see cio-03 task 2
+          report. Embedded (the cockpit) computes its own values here instead
+          of fighting the inline style from outside. */}
+      <div className={`ciodash${chrome === "embedded" ? " ciodash-embedded" : ""}`} style={{ padding: chrome === "embedded" ? "12px 16px 20px" : "18px 20px 40px", color: C.ice, font: `14px ${F.body}` }}>
+        <div style={{ maxWidth: chrome === "embedded" ? undefined : 1220, margin: "0 auto" }}>
           <header style={{ display: "flex", alignItems: "flex-end", gap: 20, flexWrap: "wrap", paddingBottom: 12 }}>
             <div>
               <div style={{ font: `10px ${F.body}`, letterSpacing: "0.22em", color: C.faint }}>TERRARIUM · CIO DASHBOARD</div>
@@ -1165,8 +1326,8 @@ export default function CioDashboard({
             </div>
             <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14, paddingBottom: 2 }}>
               {meta.regime && <span style={{ font: `12px ${F.body}`, color: C.warn, letterSpacing: "0.1em" }}>REGIME · {meta.regime.toUpperCase()}</span>}
-              {planes.length > 1 && (
-                <div style={{ display: "flex", border: `1px solid ${C.rule}`, borderRadius: 2, overflow: "hidden" }}>
+              {chrome !== "embedded" && planes.length > 1 && (
+                <div className="ciodash-planes" style={{ display: "flex", border: `1px solid ${C.rule}`, borderRadius: 2, overflow: "hidden" }}>
                   {planes.map((k) => (
                     <button key={k} onClick={() => onPlaneChange(k)} style={{
                       padding: "6px 14px", cursor: "pointer", border: "none", font: `13px ${F.body}`,
@@ -1179,7 +1340,7 @@ export default function CioDashboard({
           </header>
 
           <nav style={{ display: "flex", gap: 26, borderBottom: `1px solid ${C.rule}`, marginBottom: 12 }}>
-            {TABS.map(([k, l]) => (
+            {allTabs.map(([k, l]) => (
               <button key={k} onClick={() => setTab(k)} style={{
                 background: "none", border: "none", cursor: "pointer", padding: "0 0 9px",
                 font: `${tab === k ? 600 : 400} 15px ${F.body}`, color: tab === k ? C.ice : C.faint,
@@ -1217,11 +1378,15 @@ export default function CioDashboard({
           {tab === "private" && <PrivateTab />}
           {tab === "markets" && <MarketsTab />}
 
-          <footer style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.ruleSoft}`, font: `11px ${F.body}`, color: C.faint, display: "flex", gap: 18, flexWrap: "wrap" }}>
-            <span style={{ letterSpacing: "0.14em" }}>{meta.watermark || "SIMULATED WORLD — NOT A FORECAST"}</span>
-            <span>{meta.disclaimer}</span>
-            <span style={{ marginLeft: "auto", font: `11px ${F.mono}` }}>run {meta.runId} · replayable from RunRecord</span>
-          </footer>
+          {extraTabs.map((t) => (tab === t.key ? <Fragment key={t.key}>{t.render()}</Fragment> : null))}
+
+          {chrome !== "embedded" && (
+            <footer className="ciodash-footer" style={{ marginTop: 18, paddingTop: 12, borderTop: `1px solid ${C.ruleSoft}`, font: `11px ${F.body}`, color: C.faint, display: "flex", gap: 18, flexWrap: "wrap" }}>
+              <span style={{ letterSpacing: "0.14em" }}>{meta.watermark || "SIMULATED WORLD — NOT A FORECAST"}</span>
+              <span>{meta.disclaimer}</span>
+              <span style={{ marginLeft: "auto", font: `11px ${F.mono}` }}>run {meta.runId} · replayable from RunRecord</span>
+            </footer>
+          )}
         </div>
       </div>
     </ViewCtx.Provider>

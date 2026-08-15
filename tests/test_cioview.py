@@ -31,6 +31,13 @@ def test_per_asset_private_flows_sum_to_totals():
         assert set(q.private_calls) == set(PRIVATE_ASSETS)
 
 
+def test_per_asset_expired_sums_to_the_quarter_total():
+    result = simulate_play(_paths(), None)
+    for q in result.quarters:
+        assert abs(sum(q.private_expired.values()) - q.expired_undrawn) < 1e-9
+        assert set(q.private_expired) == set(PRIVATE_ASSETS)
+
+
 def test_per_asset_values_close_against_the_book():
     result = simulate_play(_paths(), None)
     for q in result.quarters:
@@ -72,6 +79,7 @@ def _pq(label: str, forecast: bool) -> dict[str, Any]:
         "callRateUnfunded": 0.0667,
         "callRateNav": 0.0333,
         "coverage": 0.459,
+        "expiredUndrawn": 0.0,
     }
 
 
@@ -161,6 +169,12 @@ def test_validator_catches_forecast_flag_mismatch():
     assert any("forecast flag" in e for e in validate_cio_view(v))
 
 
+def test_validator_catches_expired_undrawn_aggregate_mismatch():
+    v = _minimal_view()
+    v["privateCashflows"]["series"]["aggregate"][0]["expiredUndrawn"] = 9.0
+    assert any("expiredUndrawn" in e for e in validate_cio_view(v))
+
+
 def test_validator_catches_net_identity_break():
     v = _minimal_view()
     v["liquidity"]["forecast12m"]["net"] = 5.0
@@ -245,9 +259,75 @@ def test_aggregate_private_series_is_the_sum_of_classes():
     pcf = v["privateCashflows"]
     ids = [c["id"] for c in pcf["classes"]]
     for i, agg in enumerate(pcf["series"]["aggregate"]):
-        for field_name in ("calls", "distributions", "navClose", "unfundedClose"):
+        for field_name in ("calls", "distributions", "navClose", "unfundedClose", "expiredUndrawn"):
             s = sum(pcf["series"][cid][i][field_name] for cid in ids)
             assert abs(s - agg[field_name]) < 0.51, (i, field_name)
+
+
+def test_expired_undrawn_is_a_positive_magnitude_present_on_every_row():
+    v = _view()
+    pcf = v["privateCashflows"]
+    for rows in pcf["series"].values():
+        for r in rows:
+            assert r["expiredUndrawn"] >= 0.0
+
+
+def test_vintage_ladder_is_nonempty_and_ordered_oldest_first():
+    """The ladder renders oldest vintage first.
+
+    I-3: a prior version of this test defined a local ``chrono_key`` that was
+    a verbatim reimplementation of ``_vintage_sort_key`` and then asserted
+    ``keys == sorted(keys)`` — "sorted by f is sorted by f", true by
+    construction regardless of whether the s/v sign convention inside
+    ``_vintage_sort_key`` is right or backwards, since the same (possibly
+    inverted) convention would appear on both sides of the comparison and
+    the test could never catch it.
+
+    This version asserts literal, meaning-derived orderings instead, read
+    off what the ids mean rather than off the function under test: ``pe-s3``
+    (a seeded rung three years older than ``pe-s0``) must precede
+    ``pe-s0``, and ``pe-s0`` (the newest seeded rung) must precede
+    ``pe-v1`` (the first commitment made during play — necessarily newer
+    than every seeded rung).
+
+    Confirmed to bite (manual check, not committed as a test): with
+    ``_vintage_sort_key``'s sign flipped (``key = n if tag[0] == "s" else
+    -n``) monkeypatched in, both assertions below fail. And reproducing the
+    original vulnerability exactly — the OLD test's hardcoded ``chrono_key``
+    ALSO rewritten with the same flipped convention, simulating the sign
+    having been backwards in both places from day one — the old
+    ``keys == sorted(keys)`` form still PASSES (vacuously; both sides share
+    the same wrong convention), while the two assertions below both
+    correctly fail, because they derive from the cohorts' actual
+    ``vintage_year`` construction in ``play.py`` (``_seed_ladder``,
+    ``_commit_new_vintage``), not from ``_vintage_sort_key``'s own formula.
+    """
+    v = _view()
+    vintages = v["privateCashflows"]["vintages"]
+    assert vintages
+    ids = [x["id"] for x in vintages]
+    assert "pe-s3" in ids and "pe-s0" in ids and "pe-v1" in ids
+    # pe-s3 is three years older than pe-s0 (both seeded rungs; s-K: larger
+    # K is older) -- must render before it.
+    assert ids.index("pe-s3") < ids.index("pe-s0")
+    # pe-s0 is the newest seeded rung; pe-v1 is the first vintage committed
+    # during play, strictly newer than any seeded rung -- must render after it.
+    assert ids.index("pe-s0") < ids.index("pe-v1")
+    for x in vintages:
+        assert x["navTrue"] >= 0.0
+        assert x["label"]
+        # honesty: reported NAV per cohort is not tracked by the engine, so
+        # it must not appear as a fabricated figure.
+        assert "navReported" not in x
+
+
+def test_vintage_ladder_ids_are_the_as_of_quarters_cohorts():
+    v = _view()
+    result = simulate_play(_paths(), {})
+    n_q = v["meta"]["asOfMonth"] // 3 + 1
+    expected = set(result.quarters[n_q - 1].vintage_nav)
+    got = {x["id"] for x in v["privateCashflows"]["vintages"]}
+    assert got == expected
 
 
 def test_forecast12m_net_identity_and_signs():
@@ -350,7 +430,7 @@ def test_committed_cio_fixtures_match_the_builder():
 
     sys.path.insert(0, str(ROOT / "scripts"))
     try:
-        from gen_cio_fixture import build  # type: ignore
+        from gen_cio_fixture import _decided_map, build  # type: ignore
     finally:
         sys.path.pop(0)
     for plane in ("reported", "true"):
@@ -358,3 +438,26 @@ def test_committed_cio_fixtures_match_the_builder():
             encoding="utf-8"
         )
         assert committed == build(plane), f"{plane} fixture is stale - regenerate"
+    committed_decided = (ROOT / "app" / "fixtures" / "cio-sample.decided.json").read_text(
+        encoding="utf-8"
+    )
+    assert committed_decided == build("reported", _decided_map()), (
+        "decided fixture is stale - regenerate"
+    )
+
+
+def test_decided_fixture_actually_diverges_from_the_twin():
+    """The Excess row is the product's argument as a number; a fixture where
+    it is identically zero pins nothing."""
+    import json
+
+    doc = json.loads(
+        (ROOT / "app" / "fixtures" / "cio-sample.decided.json").read_text(encoding="utf-8")
+    )
+    total = doc["performance"]["total"]
+    bench = doc["performance"]["benchmark"]
+    diffs = [
+        abs(t - b) for t, b in zip(total, bench, strict=True) if t is not None and b is not None
+    ]
+    assert diffs, "no comparable periods in the decided fixture"
+    assert max(diffs) > 0.05, f"decided fixture does not diverge from the twin: {diffs}"

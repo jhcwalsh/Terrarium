@@ -27,6 +27,67 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Fixed
 
+- **cio-03 whole-branch review fix wave, 2026-08-15.** Four Important
+  findings and one Minor from the final pre-merge review.
+  - **I-4** — the plan's claim that deleting `Book` "closes the basis
+    mismatch outright" was wrong: the mismatch moved to the stat rail.
+    `session.value` is fixed to the session's scoring basis (`serve.py:
+    use_reported = doc["basis"] == "reported"`); the CIO dashboard's
+    `plan.totalValue` is plane-sensitive (DN-8 §4). Restored the basis
+    label ("Your book · {session.basis} basis") on `Play.tsx`'s rail tile
+    — the annotation `Book.tsx` carried for exactly this reason before its
+    retirement.
+  - **I-1** — DN-8 §8 called its permitted-arithmetic list "exhaustive"
+    while omitting two computations task 3b already shipped:
+    `lapsedToDate` and the vintage ladder's `navTrue`/`Σ navTrue` share.
+    Added both to the list; the LTM/next-4q entry generalised to any
+    contiguous window.
+  - **I-2** — task 3b restored only the running-total half of audit F2's
+    closure ("the release in the quarter it happens **and** the running
+    total afterwards"). Post-ER-12 the lapse is ~0.47-0.49/year spread
+    across many quarters rather than one event, so a cumulative alone
+    can't say which quarter moved. The "Lapsed to date" tile's `sub` now
+    shows the current-quarter figure when non-zero
+    (`CioDashboard.tsx:1041`), pinned by a new test.
+  - **I-3** — `test_vintage_ladder_is_nonempty_and_ordered_oldest_first`
+    asserted `keys == sorted(keys)` against a local `chrono_key` that was a
+    verbatim copy of `_vintage_sort_key` — true by construction even if the
+    s/v sign convention were backwards in both places at once (demonstrated
+    manually: flipping the sign in both the implementation and an
+    identically-flipped copy of the old test's `chrono_key` still passes
+    vacuously). Replaced with literal orderings derived from `play.py`'s
+    cohort construction (`pe-s3` before `pe-s0` before `pe-v1`), which does
+    catch the flip. The TS companion test renamed to describe what it
+    actually checks — bar count, not order.
+  - **M-1** — `lapseCell` rendered the missing-data em dash (DN-8 §3) for a
+    known zero lapse, making a class that genuinely never lapsed
+    indistinguishable from one where lapse isn't tracked. Now renders a
+    muted `$0m`; missing (`null`/`undefined`) still renders the dash.
+  No version constant bumped; no client-side value/alpha computation added.
+
+- **ER-6's lapse and the vintage ladder are reachable again (cio-03b),
+  2026-08-15.** Task 3's cutover retired `PrivateMarkets.tsx` and, with it,
+  the only two client surfaces reading `expired_undrawn` and `vintage_nav` —
+  silently reversing audit F2 ("ER-6's lapse is visible on every surface")
+  even though the server still computed and shipped both. Added task, filed
+  from the Task 3 review. `PlayQuarter.private_expired: dict[str, float]`
+  is a pure per-asset read of `expired_undrawn`, mirroring `private_calls`/
+  `private_distributions` exactly (`tests/test_cioview.py::
+  test_per_asset_expired_sums_to_the_quarter_total`; the golden digest and
+  `test_play_linkage.py` pass byte-for-byte untouched — nothing scored
+  moved). `_private_cashflows` gained `expiredUndrawn` per quarter (aggregate
+  equals the sum of the class rows by construction, checked by
+  `validate_cio_view`/`validateCioView`) and `vintages`: the as-of quarter's
+  cohort NAV stack, oldest first — ordered by parsing each cohort id's
+  seed/commitment offset (`_vintage_sort_key`), never by inventing a
+  calendar year. **`navReported` per cohort is not tracked anywhere in the
+  engine and is deliberately NOT emitted** — the footnote says so instead of
+  fabricating a plausible number, which is the whole reason this task exists.
+  `CioDashboard.tsx`'s Private tab renders both: a "Lapsed to date" tile and
+  table column (zero as a muted dash, a real lapse in the alert colour) and
+  a small horizontal "Vintage ladder" panel — both degrade cleanly when a
+  payload omits them. `PrivateMarkets.tsx` stays retired.
+
 - **`linkage_bite` computes again: the terminal lump is netted by amount, not
   by index (ER-12 follow-up), 2026-08-14.** The console's only linkage
   diagnostic dropped any trailing four-quarter window overlapping a cohort
@@ -48,6 +109,22 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   inside it, so the attribution stayed clean.
 
 ### Changed
+
+- **The CIO dashboard is the play surface (cio-03), 2026-08-14.** The cockpit
+  cutover: the dashboard renders in its own scrolling pane so the header,
+  ticker, rail, wire and decision panel never move (the one-screen rule
+  restored, which cio-02's scaffold had broken); the host owns the plane
+  control and the footer (`chrome="embedded"`), ending the duplicate controls;
+  the peer cone rides as a host-injected `Peers` tab, which keeps the
+  dashboard a pure renderer of one `CioView`. `Book` and `PrivateMarkets`
+  retire - their content is the allocation bands, liquidity coverage and the
+  Private cashflows tab, where the ER-6 lapse and vintage ladder audit (F2)
+  are restored via `expiredUndrawn` per quarter and `vintages` per cohort.
+  Ratio lines now break at nulls instead of plotting them on the floor, and
+  refuse to draw an empty domain. A decisions-bearing golden fixture pins the
+  excess row. DN-8 §8's "exhaustive" arithmetic list amended to match the
+  ratified renderer, with the two hardcoded tone thresholds recorded as a
+  known exception.
 
 - **The opening private book is a staggered ladder of vintages (ER-12),
   2026-08-14.** `_build_portfolio` opened the institution by cloning the
