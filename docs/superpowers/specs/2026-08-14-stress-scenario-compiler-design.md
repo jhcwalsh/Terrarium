@@ -1,7 +1,10 @@
 # Stress-Scenario Compiler — Design
 
-*2026-08-14 · Owner-directed. A generator whose job is prescribed severity, not
-prediction. Sits beside `bootstrap-v1`, which is sealed, judged, and untouched.*
+*2026-08-14 · **v0.2** · Owner-directed. A generator whose job is prescribed
+severity, not prediction. Sits beside `bootstrap-v1`, which is sealed, judged, and
+untouched. v0.2 applies amendments A1–A7 after the Phase 0 attribution test
+(`docs/superpowers/specs/2026-08-14-stress-phase0-attribution.md`); changelog in
+§12, reserved decisions in §11.*
 
 ---
 
@@ -11,13 +14,43 @@ A **stress-scenario compiler**. It takes a declared scenario — a regime shape 
 a severity draw rule per segment — and produces a deterministic ensemble of decades
 in which every month is a real historical month and cross-asset co-movement is real.
 
-**It claims:** severe, coherent, composed entirely of precedented months, disclosed.
+**It claims:** severe · coherent · **real months, invented sequence, precedented
+severity rule** · disclosed.
 
-**It never claims:** probable, typical, representative, or a forecast. It therefore
-does not enter the sealed realism battery and does not take a G-gate. Judging a
-deliberately severe scenario against "is this the typical distribution of futures"
-would be answering the wrong question — the scenario is *atypical by construction*,
-which is the point.
+That middle claim is stated precisely on purpose. Every emitted month is a real
+panel row, bit-exact — but the *sequence* is assembled, and a decade spliced from
+1974, 2008 and 2020 material is a novel joint configuration across fourteen
+factors. Precedent for the parts is not precedent for the whole; what carries the
+whole is the **declared severity rule and its cited precedent** (§7), plus a
+**measured plausibility statistic** (§6.2) reported with every world. The
+implication cuts both ways and licenses the product: plausibility is a property of
+the joint configuration, not of literal precedent, so an assembled configuration
+that never occurred can be *more* plausible than one that did (Kritzman, Czasonis
+& Turkington, MIT Sloan WP 6246-21).
+
+**It never claims:** probable, typical, representative, or a forecast.
+
+### What is exempt, and what never is
+
+Two tiers, and the distinction gates the whole design:
+
+- **Coherence — always gating, no exemption.** Hard constraints a broken world
+  fails regardless of intent: schema validity and the validator's blocking rules
+  (V10/V11/V12), non-negative prices and levels, sign conditions, no money pump,
+  bit-exact real rows (§6.1.1), whole-row blocks (§6.1.2), determinism (§6.1.3),
+  and **level continuity at joins** (§6.1.4 — the join discipline of §4.3(c),
+  promoted here from sampler implementation detail to a stated gating tier). A
+  stress world that violates these is not severe; it is broken.
+- **Fidelity — exempt, by construction and by design.** The sealed realism
+  battery's distributional-typicality judgments answer the wrong question of a
+  deliberately atypical scenario. The exemption is named by test id so it is
+  auditable rather than rhetorical: `excess_kurtosis`, `skewness`,
+  `hill_tail_index`, `acf_r_lag1`, `acf_abs_lag1`, `max_drawdown_median`,
+  `corr_distance` (`src/ah/battery/thresholds.yaml`) are **not gates** for stress
+  worlds, and no G-gate is taken. Note the two ACF ids' *content* is not escaped:
+  §6.1.4 re-imposes autocorrelation-vs-panel as a gating coherence check inside
+  the compiler's own acceptance — what is exempt is the battery's typicality
+  band, not the obligation to be coherent.
 
 Its peer group is supervisory stress testing (CCAR/EBA severely-adverse scenarios),
 where the scenario is prescribed, published and argued about on grounds of coherence
@@ -42,6 +75,17 @@ A 20% drawdown does not exhaust a liquid leg. That is the whole reason
 `forced_secondaries` reads **0 of 20 seeds** on the shipped worlds — not a tuning
 miss but a structural consequence of drawing the *average of a regime label*.
 
+**The attribution has been tested, not assumed.** Three portfolio-side defects
+were live in the same period, each independently capable of producing 0/20 in any
+world; the Phase 0 test
+(`2026-08-14-stress-phase0-attribution.md`) disposed of all three — linkage was
+live in every committed measurement, the haircut is consumed only inside the
+forced-sale branch (arms bit-identical on 100/100 world-seeds at the Nadauld
+crisis bound), and the cloned opening book pushed severity *up*, not down.
+Under the fully corrected mechanics every shipped world reads 0/20 — including
+deflation_bust, whose 6/20 revival died with toy-v0.6. **Market severity was and
+remains the binding constraint, and the gap is wider than v0.1 stated.**
+
 **The label is the problem.** "Crisis" is a classification, not a severity measure:
 the CRI stratum contains October 2008 and also months that merely satisfied the rule.
 
@@ -57,7 +101,8 @@ Ranking by severity rather than by label both reaches the declared depth **and
 enlarges** the pool of real material (82–163 months against 38).
 
 Ceiling, stated: worst rolling 12 months in the panel is **−42.6%**; 1929–32 is
-outside the sealed draw span. Extending the span is out of scope here (§9).
+outside the sealed draw span. Widening the pool is out of scope here — but see §9
+for the remedy ordering, which v0.2 changes.
 
 ---
 
@@ -89,6 +134,32 @@ The severity rule is declared in terms that are meaningful without reference to 
 portfolio result ("crisis quarters draw from the worst decile of months"). Drawdown
 depth is **emergent**. The institution's response is **measured**. §7 is the
 mechanism that proves nobody worked backwards.
+
+### What rule 1 forbids, and what it does not: reverse stress testing
+
+Rule 1 bans *tuning a world until the book breaks and calling the breakage a
+finding*. It does **not** ban the distinct, legitimate operation the supervisory
+literature calls **reverse stress testing**: searching a **pre-declared** rule
+space for the least-implausible world that breaks a given portfolio, then
+*reporting that world's plausibility* (the severity ∩ plausibility ∩ narrative
+framing of Budnik et al., ECB WP 2941). The difference is what is fixed and what
+is free: circular calibration frees the rule to chase an outcome; reverse search
+fixes the rule space first and reports where in it the breakage lives.
+
+The carve-out ships with three conditions, all mandatory:
+
+1. **The rule space is declared and committed before the search** — the grid of
+   admissible functionals, percentiles and block lengths, in one commit, per §7.
+2. **The search reports the found world's plausibility** (§6.2's Mahalanobis
+   statistic and its precedent distance) — never a tuned severity presented as
+   declared.
+3. **The found world is disclosed as search-derived** in its RunRecord provenance
+   field (§5), so it can never masquerade as a hand-declared scenario.
+
+Paired with DN-7, reverse search is how the library *guarantees* coverage of the
+decision-relevant tail rather than leaving it to the luck of hand-authored
+scenarios. Whether it ships in the institutional tier at M6 or later is a
+reserved decision (§11, ⚑ D-SC-3).
 
 ---
 
@@ -136,7 +207,9 @@ practitioner can argue with**, rather than a hidden consequence of ranking code.
 ### 4.3 Coherence — the part that makes this history rather than a shuffle
 
 **History is autocorrelated. A bag of the worst months, shuffled, is not a stress
-scenario — it is noise with a severe mean.** Three rules keep the output coherent.
+scenario — it is noise with a severe mean.** Four rules keep the output coherent;
+the first three govern where a block may start and how it runs, the fourth governs
+how long a stressed *state* persists.
 
 **(a) Severity applies to block ENTRY ONLY.** The percentile restricts which rows may
 *start* a block. Once started, the block runs forward through real history
@@ -169,6 +242,26 @@ discipline picks *which of those* can be reached from here. Where the two cannot
 be satisfied, the join discipline wins and the block continues rather than re-seeding
 — severity is a preference over entries, never a licence to teleport.
 
+**(d) Persistence — the rule the entry rule cannot supply.** Severity-at-entry with
+long blocks produces **episodes**. The institutional tail is a sustained **decade**:
+twelve severe months inside 120 otherwise-normal ones is a bad year inside an
+acceptable decade, and it will not exhaust a liquidity programme however deep the
+twelve months run. Rules (a)–(c) constrain where a block may start; a fourth rule
+must constrain how long a stressed state persists — and it obeys rule 1 like
+everything else: **declare the persistence rule, never the resulting depth.**
+
+Three candidate forms, each with its precedent. **Parameterisation is a reserved
+owner decision (§11, ⚑ D-SC-1) — proposed here, not taken:**
+
+| form | declares | precedent | tension to note |
+|---|---|---|---|
+| **P1 — segment-scoped re-entry** | every block starting inside a stress segment re-enters under that segment's entry percentile, for the segment's whole declared span (persistence = the declared shape, enforced at every join) | US 1973–75: 21 months of sustained decline, multiple failed rallies | weakest form — persistence capped by however long the author declared the segment |
+| **P2 — declared stress coverage** | the scenario declares stress segments occupying a stated fraction of the decade (e.g. 24 of 40 quarters), precedented as a *shape* | Japan 1990–2003; US 1966–1982 in real terms — decades where the stressed state WAS the decade | pushes the authoring burden up front; mechanically it is just §4.1 used honestly |
+| **P3 — decade-statistic constraint** | a declared bound on a rolling decade-level statistic (e.g. cumulative real drawdown over rolling 60 months must remain beyond a stated level for a stated duration), with resampling until satisfied | UK 1973–75 real terms; Japan post-1990 (real equity below entry level for >150 months) | **closest to the rule-1 line** — a bound on a path statistic is a declared *constraint*, not a targeted *outcome*, but the distinction must be policed: the bound must be precedent-derived and committed before any portfolio measurement, and never adjusted against ladder readings |
+
+P1 and P2 compose (P2 declares the span, P1 enforces re-entry inside it) and are
+jointly the recommended starting point; P3 is the strongest and the most dangerous.
+
 ---
 
 ## 5. Contracts and placement
@@ -190,8 +283,9 @@ be satisfied, the join discipline wins and the block continues rather than re-se
   existing ones.
 - **RunRecord stamps**: scenario id and version, the functional, per-segment entry
   percentiles and mean block lengths, the join tolerance, the resulting pool sizes,
-  and the realised depth — so a run is auditable and replayable without the scenario
-  file.
+  the realised depth, **the plausibility statistic (§6.2)**, and a **provenance
+  field** distinguishing `declared` from `search-derived` (§3's reverse-search
+  carve-out) — so a run is auditable and replayable without the scenario file.
 - **No sealed file is touched.** Verify against all three locks before implementing
   (`pre-registration.lock`, `-g3`, `-g5`) — this has cost the project twice.
 
@@ -199,11 +293,11 @@ be satisfied, the join discipline wins and the block continues rather than re-se
 
 ## 6. Acceptance
 
-### 6.1 Properties — these carry the central claim
+### 6.1 Properties — these carry the central claim, and they are the gating tier (§1)
 
 1. **Every emitted month is a real panel row**, bit-exact on the whole fourteen-factor
    vector. Not approximately, not statistically. This is the test that backs
-   "composed entirely of precedented months".
+   "real months".
 2. **Blocks are whole contiguous rows** — one shared index across factors, so
    co-movement is real. Tested exactly, using a source whose columns are injective in
    the row index (the technique `tests/test_bootstrap.py` already uses), not
@@ -221,6 +315,13 @@ be satisfied, the join discipline wins and the block continues rather than re-se
   peak-to-trough, duration, credit-spread peak — printed alongside the historical
   episodes it is comparable to. Plausibility is argued here, after the fact, in the
   open.
+- **Measured plausibility.** Because "real months" cannot carry the plausibility of
+  an invented sequence (§1), every stress world reports the **Mahalanobis distance
+  of its joint factor configuration against the historical panel** — on the world
+  card and in the RunRecord. **Reported, never gating**: a large distance is
+  disclosure, not failure, and the statistic exists precisely so the novelty of the
+  assembled sequence is measured rather than waved at (Kritzman, Czasonis &
+  Turkington, MIT Sloan WP 6246-21).
 - **The adequacy ladder.** Coverage breaches, forced secondaries, ruinous seeds —
   the reference shape being 20/20 coverage breached, 4–8/20 forced secondary, 1+
   ruinous. **Measured once, after the rule is fixed.**
@@ -245,6 +346,10 @@ entry at the worst decile: 2007-09 ran −50% over 17 months, 1973-74 ran −48%
 21"*, so a reader can dispute the severity on historical grounds rather than
 inspecting sampler code.
 
+For search-derived worlds (§3), the same mechanism covers the **rule space**: the
+grid is committed before the search runs, and the found world's provenance field
+names the search.
+
 ---
 
 ## 8. Disclosure
@@ -255,22 +360,49 @@ Every surface that shows a stress world states what it is:
   and severe, not predicted or probability-weighted; that severity is a declared
   sampling rule; and that depth is an emergent consequence reported after the fact.
 - **Credibility console** — the scenario's declared rule, its precedent citations,
-  the emergent-depth report, and the coherence measurements.
+  the emergent-depth report, the coherence measurements, and the plausibility
+  statistic.
 - **The app's provenance surface** — the world is labelled a declared stress scenario
-  rather than left to imply a forecast.
+  rather than left to imply a forecast; a search-derived world says so.
+- **Severity is estimated; incidence is curated — and the two never merge.** How
+  *deep* a scenario runs is a fitted, banded property. How *often* the library
+  serves a stressed world is a curation choice (DN-7 action spread, pedagogical
+  value) with no probabilistic content. If the library over-serves stressed worlds
+  without saying so, the product has attached an implied probability to a scenario
+  and broken "not a forecast" by accident. The serving ratio goes in the RunRecord;
+  the disclosure goes on the world card. Register row TR-7 (`docs/tail-register.md`)
+  carries the test.
 
 ---
 
-## 9. Out of scope
+## 9. Out of scope, and the remedy ordering for the severity ceiling
 
-- **Extending the draw span** to 1929–1953 for depression-class material. A
-  data-layer project with its own splice/proxy and amendment consequences; worth its
-  own spec if severity beyond the panel's −42.6% worst 12 months is ever wanted.
+Two disclosed limits in this design share one cause: the −42.6% ceiling and the
+thin-material-at-the-extreme problem are both consequences of drawing from **one
+country's record**. One country's history is too short to characterise a disaster
+tail — the pooled-disaster literature exists precisely because of this (Barro &
+Ursúa; Barro & Jin).
+
+**v0.2 orders the remedies.** The first-choice remedy is the **international
+record** — Japan post-1990, the UK 1973–75 in real terms, Germany, and the wider
+advanced-economy panel: real months, real precedent, and it attacks thin material
+by *widening the eligible pool* rather than cutting a thinner slice from the same
+one. The 1929–32 extension is second choice: it deepens one country's tail without
+widening the pool, and carries its own splice/proxy burden.
+
+⚖ **Both are licence-blocked pending Counsel, and neither is scoped here.** The
+JST non-commercial correction of 2026-08-14 (`requirements.yaml`) is unresolved
+and sits upstream of any international-panel work. No international data enters
+the repo before Counsel clears it (§11, ⚖ D-SC-4).
+
+Out of scope in full:
+
+- **Extending the draw span or pool** — either direction above. Worth its own spec
+  when severity beyond the panel's −42.6% worst 12 months is wanted.
 - **Any change to `bootstrap-v1`,** the toy engine, or any sealed artifact.
-- **Cross-country panels** (JST) — separately scoped, and non-commercially licensed.
-- **A generative model with mechanism.** This compiler deliberately has no reaction
-  function and no causal structure; it does not attempt to be one and must not be
-  described as one.
+- **A generative model with mechanism** — see §11's two-compiler split. This
+  compiler deliberately has no reaction function and no causal structure; it does
+  not attempt to be one and must not be described as one.
 
 ---
 
@@ -284,3 +416,53 @@ Every surface that shows a stress world states what it is:
 3. **Whether recovery segments should be unrestricted or floored.** An unrestricted
    recovery draw can produce a recovery milder than the stagflation that preceded it,
    which may be realistic and may read as broken.
+
+---
+
+## 11. The two compilers, and the decisions reserved to the owner
+
+### Terrarium has two compilers. Only one exists.
+
+The "no mechanism" limit has a consequence v0.1 left unstated: this compiler
+cannot serve a premise like *"a supply shock drives a stagflationary decade"*,
+because it has no causal structure to attach a premise to. And the narration
+layer has **nothing to narrate from**: a spliced decade has no causal story, so
+DN-9's Committee and House Economist would be explaining events for which no
+explanation exists in the engine.
+
+| | **Stress compiler** | **Premise compiler** |
+|---|---|---|
+| Declares | Severity rule | Named shock + attribution |
+| Mechanism | None | Structural |
+| Narration | Consequences only, no causality | Full causal narration |
+| Tier | Institutional / liquidity | Practitioner / decision |
+| Status | This document | **Not built** |
+
+**Hard rule, binding on the narration layer and not merely a caveat: nothing
+built on the stress compiler may narrate causality it does not contain.** A wire
+running over a stress world reports what happened — prices, spreads, the
+institution's ledger — and never why. This is an enforced constraint on any
+narration work package that consumes stress worlds, to be carried into that WP's
+acceptance tests, not a limits-section sentence.
+
+### Reserved decisions — propose, never take
+
+| key | ⚑/⚖ | decision | proposal on the table |
+|---|---|---|---|
+| **D-SC-1** | ⚑ | Persistence-rule parameterisation (§4.3(d)) | P1+P2 composed as the start; P3 held back until the rule-1 policing is designed |
+| **D-SC-2** | ⚑ | Premise compiler: scoped now or deferred | Not scoped here, deliberately. The split table above is the placeholder |
+| **D-SC-3** | ⚑ | Reverse stress testing (§3) in the institutional tier at M6, or later | Conditions are specified; timing is open |
+| **D-SC-4** | ⚖ | International-panel licensing (§9) | Counsel first; the JST non-commercial correction (2026-08-14) is unresolved and upstream |
+| **D-SC-5** | ⚑ | ER-8 re-amendment: the deflation_bust 6/20 register reading is stale at HEAD (Phase 0 §5) | Register edit is the owner's; the evidence is committed |
+
+Keys are proposals for the governance decision register; final numbering is
+assigned at ratification there, not here.
+
+---
+
+## 12. Changelog
+
+| version | date | change |
+|---|---|---|
+| v0.1 | 2026-08-14 | Initial design (commit `fa5dbe7`) |
+| v0.2 | 2026-08-14 | Phase 0 attribution test run and cited in §2 (result: the motivating claim stands; the severity gap is wider than v0.1 stated). Amendments: **A1** applied — coherence/fidelity split into gating vs exempt tiers, exemption named by battery test id (§1, §6.1). **A2** applied — claim restated as *real months, invented sequence, precedented severity rule*; Mahalanobis plausibility statistic added, reported never gating (§1, §6.2, §5, §8). **A3** applied as proposal — persistence rule §4.3(d) with three candidate forms; parameterisation reserved ⚑ D-SC-1. **A4** applied — international pool named first-choice remedy ahead of 1929–32, Barro & Ursúa / Barro & Jin cited; licence-blocked ⚖ D-SC-4. **A5** applied — two-compiler split stated with the hard narration rule (§11); premise-compiler scoping reserved ⚑ D-SC-2. **A6** applied — reverse-stress-testing carve-out on rule 1 with three mandatory conditions, ECB WP 2941 cited (§3); ship timing reserved ⚑ D-SC-3. **A7** applied — `docs/tail-register.md` created and seeded; severity/incidence separation stated (§8, register TR-7) |
