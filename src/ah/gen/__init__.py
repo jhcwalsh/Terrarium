@@ -14,3 +14,7 @@ The import is cheap — the catalog is read lazily, on first ``bootstrap_v1_fact
 """
 
 from ah.gen import bootstrap as bootstrap
+
+# imported for its side effect — re-registers `bootstrap-stratified` as the
+# x_stress dispatcher; must import after bootstrap so this registration wins
+from ah.gen import stress as stress

@@ -14,7 +14,8 @@ import numpy as np
 
 from ah.core.numericworld import NumericWorld
 from ah.core.worldspec import StressSegment, StressSpec
-from ah.gen.base import AbsentLayer, Ensemble, EnsembleMeta, RegimeRecord
+from ah.gen import registry
+from ah.gen.base import AbsentLayer, Ensemble, EnsembleMeta, Generator, RegimeRecord
 from ah.gen.bootstrap import REGIME_LABELS, BootstrapSource
 
 
@@ -286,3 +287,33 @@ class StressBootstrap:
                     else int(candidates[rng.integers(0, candidates.size)])
                 )
         return index
+
+
+def stress_or_legacy_factory() -> Generator:
+    """The `bootstrap-stratified` id serves two masters (spec v0.2 erratum).
+
+    Sealed 1.0.x worlds carry the id as a deprecated alias for bootstrap-v1 and
+    declare no x_stress; they must keep resolving to the legacy factory
+    bit-identically. A stress world declares extensions.x_stress and routes to
+    the compiler. Dispatch happens at sample() time on the world itself.
+    """
+    return _StressOrLegacyDispatch()
+
+
+class _StressOrLegacyDispatch:
+    generator_id = "bootstrap-stratified"
+
+    def fit(self, data: Any) -> None:  # parity with the Generator protocol
+        raise StressError("the dispatcher is not fitted; it resolves per world")
+
+    def sample(self, world: NumericWorld, n_paths: int, seed: int) -> Ensemble:
+        from ah.gen.bootstrap import bootstrap_v1_factory, campaign_source
+
+        if world.stress is None:
+            return bootstrap_v1_factory().sample(world, n_paths, seed)
+        gen = StressBootstrap()
+        gen.fit(campaign_source())
+        return gen.sample(world, n_paths, seed)
+
+
+registry.register("bootstrap-stratified", stress_or_legacy_factory)

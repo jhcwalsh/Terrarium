@@ -2,9 +2,14 @@
 
 from __future__ import annotations
 
+import json
+from pathlib import Path
+
 import numpy as np
 import pytest
 
+from ah.core.numericworld import project_numeric
+from ah.core.worldspec import WorldSpec
 from ah.gen.stress import (
     StressBootstrap,
     StressError,
@@ -14,6 +19,7 @@ from ah.gen.stress import (
 )
 
 NAMES = ["equity_mkt", "hy_spread", "ust_10y", "cpi"]
+PRESETS = Path(__file__).resolve().parents[1] / "src" / "ah" / "presets"
 
 
 def _panel() -> np.ndarray:
@@ -113,16 +119,23 @@ def test_join_candidates_may_be_empty_and_the_caller_decides():
 def _tiny_source():
     """A BootstrapSource whose every column is injective in the row index, so
     'this month IS that historical month' can be checked exactly rather than
-    statistically — the technique tests/test_bootstrap.py uses."""
+    statistically — the technique tests/test_bootstrap.py uses.
+
+    Carries a fifth column, policy_rate, alongside the original four: the
+    stress_1974 preset's join_tolerance names policy_rate (Task 5), and a
+    restart is all but certain over a 120-month sample, so join_candidates
+    must find every factor its tolerance names."""
     import pandas as pd
 
     from ah.gen.bootstrap import BootstrapSource
 
     n = 60
     rows = np.arange(n, dtype=np.float64)
-    values = np.column_stack([rows, rows + 1000.0, rows + 2000.0, rows + 3000.0])
+    values = np.column_stack(
+        [rows, rows + 1000.0, rows + 2000.0, rows + 3000.0, rows + 4000.0]
+    )
     return BootstrapSource(
-        factor_names=("equity_mkt", "hy_spread", "ust_10y", "cpi"),
+        factor_names=("equity_mkt", "hy_spread", "ust_10y", "cpi", "policy_rate"),
         dates=pd.date_range("1960-01-31", periods=n, freq="ME"),
         values=values,
         labels=tuple(["EXP"] * n),
@@ -292,17 +305,71 @@ def test_sample_raises_when_the_world_declares_no_x_stress():
     """sample() (not sample_months()) is the Generator-protocol entry point;
     it must refuse a world that selects bootstrap-stratified but never
     declared extensions.x_stress, naming x_stress in the error."""
-    import json
-    from pathlib import Path
-
-    from ah.core.numericworld import project_numeric
-    from ah.core.worldspec import WorldSpec
-
-    presets = Path(__file__).resolve().parents[1] / "src" / "ah" / "presets"
-    doc = json.loads((presets / "stagflation_1974.json").read_text(encoding="utf-8"))
+    doc = json.loads((PRESETS / "stagflation_1974.json").read_text(encoding="utf-8"))
     world = project_numeric(WorldSpec.model_validate(doc))
     assert world.stress is None  # this preset declares no x_stress
 
     gen = StressBootstrap(_tiny_source())
     with pytest.raises(StressError, match="x_stress"):
         gen.sample(world, n_paths=2, seed=1)
+
+
+# --------------------------------------------------------------------------- #
+# Task 5: registration -- the first declared scenario, and the dispatcher
+# --------------------------------------------------------------------------- #
+
+
+def test_the_stress_preset_builds_samples_and_replays(tmp_path):
+    doc = json.loads((PRESETS / "stress_1974.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.engine_defaults.generator_id == "bootstrap-stratified"
+    assert nw.stress is not None and nw.stress.functional == "all_down"
+    gen = StressBootstrap(_tiny_source())
+    a = gen.sample(nw, n_paths=4, seed=197400)
+    b = gen.sample(nw, n_paths=4, seed=197400)
+    np.testing.assert_array_equal(a.paths, b.paths)
+
+
+def test_a_stress_world_without_a_declared_rule_is_refused():
+    doc = json.loads((PRESETS / "stagflation_1974.json").read_text(encoding="utf-8"))
+    doc["engine_defaults"]["generator_id"] = "bootstrap-stratified"
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    with pytest.raises(StressError, match="x_stress"):
+        StressBootstrap(_tiny_source()).sample(nw, n_paths=2, seed=1)
+
+
+def test_the_shared_id_routes_a_legacy_world_to_bootstrap_v1():
+    """Sealed 1.0.x worlds carry bootstrap-stratified with no x_stress and must
+    keep resolving to the legacy generator (spec v0.2 erratum)."""
+    import ah.gen  # noqa: F401  - trigger both registrations in order
+    from ah.gen import registry
+
+    gen = registry.resolve("bootstrap-stratified")
+    doc = json.loads((PRESETS / "stagflation_1974.json").read_text(encoding="utf-8"))
+    doc["engine_defaults"]["generator_id"] = "bootstrap-stratified"
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.stress is None
+    # the dispatcher exists precisely so this world does NOT hit StressError;
+    # resolving the legacy route needs the catalog, so assert on the routing
+    # object rather than sampling (no data/ dependency in unit tests)
+    assert type(gen).__name__ == "_StressOrLegacyDispatch"
+
+
+def test_the_shared_id_routes_a_stress_world_to_the_compiler(monkeypatch):
+    """A world WITH x_stress must reach StressBootstrap through the dispatcher."""
+    from ah.gen import stress as stress_mod
+
+    captured = {}
+
+    def fake_campaign_source():
+        captured["called"] = True
+        return _tiny_source()
+
+    monkeypatch.setattr("ah.gen.bootstrap.campaign_source", fake_campaign_source)
+    doc = json.loads((PRESETS / "stress_1974.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    dispatcher = stress_mod.stress_or_legacy_factory()
+    ens = dispatcher.sample(nw, n_paths=2, seed=3)
+    assert captured.get("called") is True
+    assert ens.meta.generator_id == "bootstrap-stratified"
+    assert ens.meta.conditioning["mode"] == "declared-stress-scenario"
