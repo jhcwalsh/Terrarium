@@ -140,6 +140,85 @@ class TestDecisionInvariants:
             ss.complete_session(conn, sid)
 
 
+class TestRationale:
+    """narr-02 (DN-9 N-af): the optional per-window rationale, mapped onto
+    the session store's window_log row (not the ``decisions`` dict, which
+    ``simulate_play`` consumes verbatim and must never carry it)."""
+
+    def _at_first_window(self, conn, sid):
+        first = decision_months(120)[0]
+        ss.advance_reveal(conn, sid, first + 1)
+        return first
+
+    def test_new_session_stamps_schema_version(self, session):
+        _conn, doc = session
+        assert doc["rationale_schema_version"] == "1.0"
+
+    def test_no_rationale_key_when_not_supplied(self, session):
+        """Acceptance 2: a window decided with no rationale must not gain a
+        ``rationale`` key at all -- not even ``null`` -- so a session with
+        rationale absent everywhere differs from the pre-change format by
+        exactly the top-level schema-version stamp."""
+        conn, doc = session
+        sid = doc["session_id"]
+        first = self._at_first_window(conn, sid)
+        after = ss.record_decision(conn, sid, month=first, action="hold")
+        (row,) = after["window_log"]
+        assert "rationale" not in row
+
+    def test_rationale_round_trips_unicode_and_newlines(self, session):
+        conn, doc = session
+        sid = doc["session_id"]
+        first = self._at_first_window(conn, sid)
+        text = "café — reasoning line one\nline two: 日本語のテキスト\ttabbed"
+        after = ss.record_decision(
+            conn,
+            sid,
+            month=first,
+            action="derisk",
+            rationale={"free_text": text, "tags": ["valuation", "pacing"]},
+        )
+        (row,) = after["window_log"]
+        assert row["rationale"]["free_text"] == text
+        assert row["rationale"]["tags"] == ["valuation", "pacing"]
+        assert row["rationale"]["recorded_at"]
+        # and it survives a fresh read from the store, not just the return value
+        reread = ss.get_session(conn, sid)
+        assert reread["window_log"][0]["rationale"]["free_text"] == text
+
+    def test_rationale_supplied_but_empty_is_still_recorded(self, session):
+        """An explicitly-submitted empty rationale ({}) is distinct from no
+        rationale at all: the player opened the box and said nothing, vs.
+        never being asked. Both fields land null, but the key is present and
+        timestamped."""
+        conn, doc = session
+        sid = doc["session_id"]
+        first = self._at_first_window(conn, sid)
+        after = ss.record_decision(conn, sid, month=first, action="hold", rationale={})
+        (row,) = after["window_log"]
+        assert "rationale" in row
+        assert row["rationale"]["free_text"] is None
+        assert row["rationale"]["tags"] is None
+        assert row["rationale"]["recorded_at"]
+
+    def test_decisions_dict_never_carries_rationale(self, session):
+        """The dict simulate_play consumes must stay exactly the action/
+        commitments shape -- rationale lives only in window_log."""
+        conn, doc = session
+        sid = doc["session_id"]
+        first = self._at_first_window(conn, sid)
+        after = ss.record_decision(
+            conn,
+            sid,
+            month=first,
+            action="hold",
+            commitments=None,
+            rationale={"free_text": "should not reach decisions", "tags": ["other"]},
+        )
+        assert after["decisions"][str(first)] == "hold"
+        assert "rationale" not in str(after["decisions"])
+
+
 def test_full_play_completes(stored_run):
     db, rid = stored_run
     conn = connect(db)

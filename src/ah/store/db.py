@@ -103,6 +103,13 @@ _RUN_RECORD_STAMPS = (
     ("twin_definition", "TEXT"),
 )
 
+# narr-02 (DN-9 N-af): the rationale field's version stamp lives on the
+# session row itself (the task's "RunRecord" maps to the session store in
+# this architecture -- see the WP's task note). Same additive-column
+# pattern: absent (NULL) on rows written before this change, "1.0" on every
+# new one. Inert -- no logic reads it.
+_SESSION_STAMPS = (("rationale_schema_version", "TEXT"),)
+
 
 def connect(path: str | Path = ":memory:", *, check_same_thread: bool = True) -> sqlite3.Connection:
     """Open (and migrate) a database connection with WAL + foreign keys enabled.
@@ -128,4 +135,8 @@ def migrate(conn: sqlite3.Connection) -> None:
     for column, sqltype in _RUN_RECORD_STAMPS:
         if column not in existing:
             conn.execute(f"ALTER TABLE run_records ADD COLUMN {column} {sqltype}")
+    existing_sessions = {row["name"] for row in conn.execute("PRAGMA table_info(sessions)")}
+    for column, sqltype in _SESSION_STAMPS:
+        if column not in existing_sessions:
+            conn.execute(f"ALTER TABLE sessions ADD COLUMN {column} {sqltype}")
     conn.commit()

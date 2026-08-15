@@ -14,6 +14,36 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The rationale field lands on decision windows (narr-02, DN-9 N-af).**
+  `POST /sessions/{sid}/decisions` accepts an optional `rationale: {free_text?,
+  tags?}` alongside the existing action/commitments body — `free_text` is a
+  0..600-char string stored verbatim (unicode and newlines round-trip
+  exactly), never parsed, never scored; `tags` is at most 3 entries from a
+  **closed, frozen enum** (`valuation | liquidity | policy_outlook |
+  peer_positioning | risk_reduction | risk_addition |
+  rebalancing_discipline | pacing | governance | other`), extensible only by
+  a version bump, never in place. Both fields are optional at every level —
+  a window with no rationale supplied gets no `rationale` key on its
+  window_log row at all, so an all-null session is byte-identical to the
+  pre-change format except one new session-level stamp,
+  `rationale_schema_version: "1.0"` (additive column, same migration
+  pattern as `run_records`' `decision_schema_version`; inert, no logic
+  reads it). A bad tag or an over-length `free_text` is rejected with an
+  explicit 422, never coerced, truncated, or dropped. The task's
+  "RunRecord"/"DecisionWindow" maps onto the live session store
+  (`src/ah/store/sessions.py`'s `window_log`, not the `decisions` dict that
+  `ah.play.simulate_play` consumes — rationale never reaches it, and a
+  session decided with rationale on every window replays bit-identical
+  final_value/alpha/series to the same actions decided with none). A new
+  test (`TestRationale.test_rationale_never_leaks_to_outcome_leaderboard_or_bundle`)
+  plants a marker in `free_text` and asserts it is absent from the
+  leaderboard, another session's own outcome, and the world bundle — the
+  only surface that may ever carry a player's own rationale is that
+  player's own `GET /sessions/{sid}` (and, by extension, their own
+  outcome, left unwired in this WP — see the report for the deferred UI/
+  outcome-consumer scoping note). `src/ah/serve.py`, `src/ah/store/
+  sessions.py`, `src/ah/store/db.py`.
+
 - **The Lost Decade ships (owner ruling, 2026-08-15).** World `...703`
   ("The Lost Decade (declared stress)") is live for players, verified
   end-to-end with zero code changes needed: listed by `/worlds` with its

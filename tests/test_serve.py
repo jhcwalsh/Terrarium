@@ -10,6 +10,8 @@ the no-NETWORK rule stands untouched.
 
 from __future__ import annotations
 
+from typing import ClassVar
+
 import pytest
 from fastapi.testclient import TestClient
 from typer.testing import CliRunner
@@ -644,6 +646,248 @@ class TestOutcome:
         client.get(f"/sessions/{sid}/outcome")
         after = connect(db).execute("SELECT COUNT(*) c FROM leaderboard").fetchone()["c"]
         assert after == before
+
+
+class TestRationale:
+    """narr-02 (DN-9 N-af): the rationale field on decision windows, at the
+    HTTP door. Task-mapped onto the session store (see the module docstring
+    in ``ah.store.sessions``); scope is server-side only for this WP -- no
+    Board, no UI, no scoring."""
+
+    # The exact key set GET /sessions/{sid} served for a completed session
+    # BEFORE this change (captured against the unmodified code, then frozen
+    # here) -- acceptance 2's "byte-identical except the version stamp" made
+    # concrete, without needing two code versions in one test run.
+    _PRE_NARR02_SESSION_KEYS: ClassVar[set[str]] = {
+        "basis",
+        "calls_paid",
+        "cash",
+        "coverage_reported",
+        "coverage_true",
+        "created_at",
+        "decision_windows",
+        "decisions",
+        "distributions_received",
+        "expired_undrawn",
+        "expired_undrawn_to_date",
+        "forced_sale_total",
+        "forced_sales",
+        "months",
+        "next_plan_basis",
+        "next_plan_commitments",
+        "participant",
+        "private_weight_reported",
+        "private_weight_true",
+        "ranked",
+        "revealed_months",
+        "run_id",
+        "session_id",
+        "spending_basis",
+        "spending_paid",
+        "spending_rate_annual",
+        "status",
+        "trailing_distributions",
+        "twin_value",
+        "updated_at",
+        "value",
+        "vintage_nav",
+        "window_log",
+        "world_id",
+    }
+    _PRE_NARR02_WINDOW_LOG_KEYS: ClassVar[set[str]] = {
+        "action",
+        "basis",
+        "client",
+        "commitments",
+        "month",
+        "ranked",
+        "server_received_at",
+    }
+
+    def test_session_without_rationale_serializes_like_before(self, service):
+        client, _db, rid = service
+        sid = _play_through(client, rid, {})
+        doc = client.get(f"/sessions/{sid}").json()
+        assert set(doc) == self._PRE_NARR02_SESSION_KEYS | {"rationale_schema_version"}
+        assert doc["rationale_schema_version"] == "1.0"
+        for row in doc["window_log"]:
+            assert set(row) == self._PRE_NARR02_WINDOW_LOG_KEYS  # no "rationale" key at all
+
+    def test_rationale_round_trips_through_http_incl_unicode_and_newlines(self, service):
+        client, _db, rid = service
+        text = "café — the case for de-risking\nsecond line: 日本語のテキスト\ttabbed"
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(client.get(f"/sessions/{sid}").json()["months"])[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={
+                "month": first,
+                "action": "derisk",
+                "rationale": {"free_text": text, "tags": ["valuation", "pacing"]},
+            },
+        )
+        assert r.status_code == 200, r.text
+        doc = client.get(f"/sessions/{sid}").json()
+        row = doc["window_log"][0]
+        assert row["rationale"]["free_text"] == text
+        assert row["rationale"]["tags"] == ["valuation", "pacing"]
+        assert row["rationale"]["recorded_at"]
+
+    def test_rationale_null_by_default(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(client.get(f"/sessions/{sid}").json()["months"])[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        r = client.post(f"/sessions/{sid}/decisions", json={"month": first, "action": "hold"})
+        assert r.status_code == 200
+        row = client.get(f"/sessions/{sid}").json()["window_log"][0]
+        assert "rationale" not in row
+
+    def test_unknown_tag_rejected_with_explicit_422(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(client.get(f"/sessions/{sid}").json()["months"])[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": first, "action": "hold", "rationale": {"tags": ["vibes"]}},
+        )
+        assert r.status_code == 422
+        detail = str(r.json()["detail"])
+        assert "tags" in detail
+        # not silently coerced or dropped: the window must remain undecided
+        after = client.get(f"/sessions/{sid}").json()
+        assert after["window_log"] == []
+
+    def test_too_many_tags_rejected_with_422(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(client.get(f"/sessions/{sid}").json()["months"])[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={
+                "month": first,
+                "action": "hold",
+                "rationale": {"tags": ["valuation", "liquidity", "pacing", "governance"]},
+            },
+        )
+        assert r.status_code == 422
+
+    def test_free_text_over_600_chars_rejected_with_422(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(client.get(f"/sessions/{sid}").json()["months"])[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": first, "action": "hold", "rationale": {"free_text": "x" * 601}},
+        )
+        assert r.status_code == 422
+        # not silently truncated: the window must remain undecided
+        after = client.get(f"/sessions/{sid}").json()
+        assert after["window_log"] == []
+
+    def test_free_text_at_600_chars_accepted(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        first = decision_months(client.get(f"/sessions/{sid}").json()["months"])[0]
+        client.post(f"/sessions/{sid}/advance", json={"to_month": first + 1})
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": first, "action": "hold", "rationale": {"free_text": "x" * 600}},
+        )
+        assert r.status_code == 200, r.text
+
+    def test_rationale_never_leaks_to_outcome_leaderboard_or_bundle(self, service, monkeypatch):
+        """The finding the task asks for, verified rather than reviewed: a
+        distinctive marker planted in free_text must not surface on ANY
+        shared payload -- the outcome endpoint (checked for a DIFFERENT
+        session than the one that wrote it, since a player's own outcome MAY
+        carry their own rationale), the leaderboard, or the world bundle."""
+        import gzip
+
+        client, db, rid = service
+        marker = "SECRET-RATIONALE-MARKER-should-never-leak-9f3a"
+
+        # session A: writes the marker, ranked (so it also reaches the board)
+        sid_a = client.post(
+            "/sessions", json={"run_id": rid, "ranked": True, "participant": "leak-writer"}
+        ).json()["session_id"]
+        months = client.get(f"/sessions/{sid_a}").json()["months"]
+        windows = decision_months(months)
+        for i, m in enumerate(windows):
+            client.post(f"/sessions/{sid_a}/advance", json={"to_month": m + 1})
+            body = {"month": m, "action": "hold"}
+            if i == 0:
+                body["rationale"] = {"free_text": marker, "tags": ["valuation"]}
+            r = client.post(f"/sessions/{sid_a}/decisions", json=body)
+            assert r.status_code == 200, r.text
+        client.post(f"/sessions/{sid_a}/advance", json={"to_month": months})
+        client.post(f"/sessions/{sid_a}/complete")
+
+        outcome_a = client.get(f"/sessions/{sid_a}/outcome")
+        assert outcome_a.status_code == 200
+        assert marker not in outcome_a.text  # own outcome payload: not exposed by this WP
+
+        conn = connect(db)
+        rec = get_run_record(conn, rid)
+        assert rec is not None
+        board = client.get(
+            f"/leaderboard/{rec['world_id']}",
+            params={
+                "seed": rec["seed"],
+                "alpha_version": outcome_a.json()["decision_alpha_version"],
+            },
+        )
+        assert marker not in board.text
+
+        # session B (a different "player"): its own outcome must not see A's rationale
+        sid_b = _play_through(client, rid, {})
+        outcome_b = client.get(f"/sessions/{sid_b}/outcome")
+        assert marker not in outcome_b.text
+
+        bundle = client.get(f"/runs/{rid}/bundle")
+        assert bundle.status_code == 200
+        assert marker.encode() not in bundle.content
+        assert marker not in gzip.decompress(bundle.content).decode("utf-8", errors="ignore")
+
+    def test_decision_replay_bit_identical_with_and_without_rationale(self, service):
+        """rationale must never reach ``simulate_play``: a session decided
+        WITH rationale on every window must produce a bit-identical outcome
+        to the same action sequence decided with none."""
+        client, _db, rid = service
+        actions = {}
+        months = client.get(
+            f"/sessions/{client.post('/sessions', json={'run_id': rid}).json()['session_id']}"
+        ).json()["months"]
+        windows = decision_months(months)
+        for i, m in enumerate(windows):
+            actions[m] = "derisk" if i == 0 else "hold"
+
+        def play(with_rationale: bool) -> dict:
+            sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+            for i, m in enumerate(windows):
+                client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1})
+                body = {"month": m, "action": actions[m]}
+                if with_rationale:
+                    body["rationale"] = {
+                        "free_text": f"reasoning for window {i}",
+                        "tags": ["valuation", "pacing"],
+                    }
+                r = client.post(f"/sessions/{sid}/decisions", json=body)
+                assert r.status_code == 200, r.text
+            client.post(f"/sessions/{sid}/advance", json={"to_month": months})
+            client.post(f"/sessions/{sid}/complete")
+            return client.get(f"/sessions/{sid}/outcome").json()
+
+        without = play(False)
+        with_r = play(True)
+        assert with_r["final_value"] == without["final_value"]
+        assert with_r["alpha"] == without["alpha"]
+        assert with_r["series"] == without["series"]
+        assert with_r["window_contributions"] == without["window_contributions"]
 
 
 def test_cio_view_endpoint(service):
