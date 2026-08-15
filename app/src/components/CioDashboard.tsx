@@ -643,6 +643,30 @@ function PerfTable() {
  *  LIQUIDITY TAB
  * ---------------------------------------------------------------- */
 
+function CoverageBar({ current, worst, breach }: { current: number; worst: number | null; breach: number }) {
+  // cov-01: unfunded / liquid against the 1.0 breach line (decision_metrics.py's
+  // binding ratio; see the E1 measurement doc cited on liquidity.unfundedToLiquid).
+  const max = Math.max(current, worst ?? 0, breach) * 1.15 || 1;
+  const pc = (v: number) => `${(Math.max(0, Math.min(v, max)) / max) * 100}%`;
+  const overBreach = current >= breach;
+  return (
+    <div>
+      <div style={{ position: "relative", height: 16, background: C.well, border: `1px solid ${C.ruleSoft}` }}>
+        <div style={{ position: "absolute", top: 3, bottom: 3, left: 0, width: pc(current), background: overBreach ? "rgba(217,112,90,0.62)" : "rgba(79,195,161,0.5)" }} />
+        {isNum(worst) && (
+          <div style={{ position: "absolute", top: -2, bottom: -2, left: pc(worst), width: 1, background: C.mist, opacity: 0.9 }} title={`worst so far: ${worst.toFixed(2)}`} />
+        )}
+        <div style={{ position: "absolute", top: -3, bottom: -3, left: pc(breach), width: 1, background: C.warn }} />
+      </div>
+      <div style={{ position: "relative", height: 14, marginTop: 3 }}>
+        <span style={{ position: "absolute", left: 0, font: `10px ${F.mono}`, color: C.faint }}>0.0</span>
+        <span style={{ position: "absolute", left: pc(breach), transform: "translateX(-50%)", font: `10px ${F.mono}`, color: C.warn }}>1.0 = breach</span>
+        <span style={{ position: "absolute", right: 0, font: `10px ${F.mono}`, color: C.faint }}>{max.toFixed(1)}</span>
+      </div>
+    </div>
+  );
+}
+
 function LiquidityTab() {
   const { liquidity, plan, meta } = useView();
   const u = meta.unitSuffix;
@@ -729,6 +753,27 @@ function LiquidityTab() {
         ))}
         {liquidity.tierFootnote && <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 10 }}>{liquidity.tierFootnote}</div>}
       </Panel>
+
+      {isNum(liquidity.unfundedToLiquid) && (
+        <Panel title="Coverage unfunded / liquid" style={{ marginTop: 10 }}>
+          <div style={{ display: "flex", gap: 8, marginBottom: 12, flexWrap: "wrap" }}>
+            <Tile label="Coverage now" value={num(liquidity.unfundedToLiquid)} sub="unfunded / liquid"
+              tone={liquidity.unfundedToLiquid >= (liquidity.breachLine ?? 1.0) ? C.warn : undefined} />
+            {isNum(liquidity.worstUnfundedToLiquid) && (
+              <Tile label="Worst so far" value={num(liquidity.worstUnfundedToLiquid)} sub="running max, closed quarters"
+                tone={liquidity.worstUnfundedToLiquid >= (liquidity.breachLine ?? 1.0) ? C.warn : undefined} />
+            )}
+          </div>
+          <CoverageBar
+            current={liquidity.unfundedToLiquid}
+            worst={isNum(liquidity.worstUnfundedToLiquid) ? liquidity.worstUnfundedToLiquid : null}
+            breach={isNum(liquidity.breachLine) ? liquidity.breachLine : 1.0}
+          />
+          <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 10, lineHeight: 1.5 }}>
+            The line that moves with your commitments; 1.0 means unfunded commitments exceed liquid assets.
+          </div>
+        </Panel>
+      )}
 
       {hasForecast && (
         <Panel title="Anticipated cashflows" note={`next twelve months · ${meta.unitLabel}`} style={{ marginTop: 10 }}>

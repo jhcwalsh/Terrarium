@@ -344,6 +344,46 @@ def test_vintage_ladder_ids_are_the_as_of_quarters_cohorts():
     assert got == expected
 
 
+def test_liquidity_carries_the_coverage_line():
+    """cov-01: unfundedToLiquid/breachLine/worstUnfundedToLiquid are served
+    alongside the existing unfundedToNav/coverageAnchor, unchanged."""
+    v = _view()
+    liq = v["liquidity"]
+    assert abs(liq["unfundedToNav"] - 0.224) < 0.01
+    assert liq["coverageAnchor"] == 0.5
+    assert liq["breachLine"] == 1.0
+    assert liq["unfundedToLiquid"] is not None and liq["unfundedToLiquid"] >= 0.0
+    assert liq["worstUnfundedToLiquid"] is not None and liq["worstUnfundedToLiquid"] >= 0.0
+    # the running max over closed quarters is at least the as-of ratio
+    assert liq["worstUnfundedToLiquid"] >= liq["unfundedToLiquid"] - 1e-9
+
+
+def test_worst_unfunded_to_liquid_is_the_running_max_over_closed_quarters():
+    v15 = _view(revealed=15, prehistory=False)  # 5 closed quarters
+    v60 = _view(revealed=60, prehistory=False)  # 20 closed quarters
+    # more history can only raise (or hold) the running maximum
+    assert (
+        v60["liquidity"]["worstUnfundedToLiquid"]
+        >= v15["liquidity"]["worstUnfundedToLiquid"] - 1e-9
+    )
+
+
+def test_validator_catches_negative_coverage_fields():
+    v = _minimal_view()
+    v["liquidity"]["unfundedToLiquid"] = -0.1
+    assert any("unfundedToLiquid" in e for e in validate_cio_view(v))
+    v = _minimal_view()
+    v["liquidity"]["worstUnfundedToLiquid"] = -0.1
+    assert any("worstUnfundedToLiquid" in e for e in validate_cio_view(v))
+
+
+def test_validator_catches_breach_line_not_one():
+    v = _minimal_view()
+    v["liquidity"]["breachLine"] = 0.9
+    errors = validate_cio_view(v)
+    assert any("breachLine" in e for e in errors)
+
+
 def test_forecast12m_net_identity_and_signs():
     v = _view()
     f = v["liquidity"]["forecast12m"]

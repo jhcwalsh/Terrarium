@@ -26,6 +26,14 @@ PLANES: tuple[str, str] = ("reported", "true")
 LINKAGE_VERSION = "public-0.1"
 WATCH_FRACTION = 0.75  # DN-8 section 3: amber inside the last quarter of the band
 COVERAGE_ANCHOR = 0.5  # WP3.10 section 5 steady-state anchor
+# decision_metrics.py's liquidity_shortfall_probability docstring: "Coverage
+# here is unfunded/liquid (P-B's binding ratio): breaching 1.0 means
+# unfunded commitments exceed everything sellable." The E1 measurement
+# (docs/superpowers/specs/2026-08-15-e1-overcommitment-measurement.md) found
+# worst coverage monotone in the player's allocation (0.10 -> 1.57 across the
+# policy range) while forced secondaries stayed unreachable -- this ratio,
+# not unfundedToNav, is the owner-designated teaching surface (cov-01).
+COVERAGE_BREACH_LINE = 1.0
 UNIT_LABEL, UNIT_SUFFIX, CURRENCY = "$m", "m", "USD"  # 1 point = $1m, declared
 WATERMARK = "TERRARIUM - SIMULATED WORLD"
 DISCLAIMER = (
@@ -393,6 +401,27 @@ def _liquidity(
     dist = sum(q.distributions_received for q in fwd)
     calls = sum(q.calls_paid for q in fwd)
     payout = sum(q.spending_paid for q in fwd)
+
+    # unfundedToLiquid: the same liquid base as tiers t1+t2 (cash plus every
+    # non-private sleeve), not the t1/t2 SUBSET filtered to `targets` above --
+    # last.liquid_values already only carries non-private ids (play.py's
+    # _liquid_snapshot), so summing it whole is the full liquid base.
+    liquid_base = last.cash + sum(last.liquid_values.values())
+    unfunded_to_liquid = round(last.unfunded_total / liquid_base, 4) if liquid_base > 0 else None
+
+    # worstUnfundedToLiquid: the E1 ladder's statistic, live -- the running
+    # maximum of unfunded/liquid over every CLOSED quarter so far, not just
+    # the as-of quarter.
+    worst: float | None = None
+    for q in active.quarters[:n_q]:
+        base = q.cash + sum(q.liquid_values.values())
+        if base <= 0:
+            continue
+        ratio = q.unfunded_total / base
+        if worst is None or ratio > worst:
+            worst = ratio
+    worst_unfunded_to_liquid = round(worst, 4) if worst is not None else None
+
     return {
         "tiers": [
             {
@@ -430,6 +459,9 @@ def _liquidity(
         "payoutLabel": "spending",
         "unfundedToNav": round(last.unfunded_total / total, 4) if total > 0 else None,
         "coverageAnchor": COVERAGE_ANCHOR,
+        "unfundedToLiquid": unfunded_to_liquid,
+        "breachLine": COVERAGE_BREACH_LINE,
+        "worstUnfundedToLiquid": worst_unfunded_to_liquid,
         "tierFootnote": "Static class-to-tier mapping (DN-8 O-4); behavioural re-tiering deferred.",
         "flowFootnote": (
             "Roll-forward at the current market state; the model has no income "
@@ -706,6 +738,13 @@ def validate_cio_view(v: dict[str, Any]) -> list[str]:
         net = f["distributions"] + f["income"] - f["calls"] - f["payout"]
         if not near(net, f["net"], 1.0):
             e.append(f"liquidity.forecast12m.net is {f['net']}, components imply {net:.1f}")
+    for key in ("unfundedToLiquid", "worstUnfundedToLiquid"):
+        val = liq.get(key)
+        if isinstance(val, (int, float)) and val < 0:
+            e.append(f"liquidity.{key} must be a non-negative ratio")
+    breach = liq.get("breachLine")
+    if breach is not None and breach != COVERAGE_BREACH_LINE:
+        e.append(f"liquidity.breachLine is {breach}, expected exactly {COVERAGE_BREACH_LINE}")
 
     pcf = v.get("privateCashflows")
     if pcf:
