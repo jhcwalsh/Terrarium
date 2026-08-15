@@ -188,7 +188,13 @@ def test_validator_catches_plane_not_available():
     assert any("planesAvailable" in e for e in validate_cio_view(v))
 
 
-def _view(plane: str = "reported", revealed: int = 60, fq: int = 4, preset: str = "stagflation"):
+def _view(
+    plane: str = "reported",
+    revealed: int = 60,
+    fq: int = 4,
+    preset: str = "stagflation",
+    prehistory: bool = True,
+):
     return build_cio_view(
         _paths(preset),
         {},
@@ -201,6 +207,7 @@ def _view(plane: str = "reported", revealed: int = 60, fq: int = 4, preset: str 
         plane=plane,
         revealed_months=revealed,
         forecast_quarters=fq,
+        prehistory=prehistory,
     )
 
 
@@ -210,7 +217,10 @@ def test_view_validates_clean_on_both_planes():
 
 
 def test_plan_history_is_monthly_and_truncated_at_the_pointer():
-    v = _view(revealed=60)
+    """cio-04 made pre-history the default (``prehistory=True``); this test
+    now pins the ``prehistory=False`` opt-out — the shape it always pinned,
+    just no longer the default."""
+    v = _view(revealed=60, prehistory=False)
     assert len(v["plan"]["history"]["values"]) == 60  # 20 closed quarters * 3
     assert v["plan"]["history"]["worldStartIndex"] == 0
     assert v["meta"]["asOfLabel"] == "Y5 Q4"
@@ -226,7 +236,11 @@ def test_planes_disagree_where_smoothing_bites():
 
 
 def test_unreached_windows_are_null_not_zero():
-    v = _view(revealed=15)  # 5 closed quarters: 3Y/5Y/10Y unreachable
+    """cio-04 made pre-history the default (``prehistory=True``), which
+    supplies 40 quarters of its own and would make 3Y/5Y/10Y reachable here
+    regardless of the world's own revealed window; this test now pins the
+    ``prehistory=False`` opt-out so "unreached" still means what it says."""
+    v = _view(revealed=15, prehistory=False)  # 5 closed quarters: 3Y/5Y/10Y unreachable
     idx = {p: i for i, p in enumerate(v["performance"]["periods"])}
     for p in ("3Y", "5Y", "10Y"):
         assert v["performance"]["total"][idx[p]] is None

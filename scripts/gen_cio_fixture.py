@@ -13,6 +13,11 @@ one number that argues the product's case is pinned by nothing. A third
 fixture, ``cio-sample.decided.json``, plays a small deterministic decision
 map at real decision months (``ah.core.institution.decision_months``) so
 total genuinely diverges from the twin.
+
+cio-04: stagflation is a ``toy-v0`` world, so the fixtures now carry the
+inherited decade (``prehistory=True``, passed explicitly here to mirror the
+endpoint's explicit flag in ``ah/serve.py`` rather than relying on the
+builder's default) — the fixtures are substantially larger as a result.
 """
 
 from __future__ import annotations
@@ -50,6 +55,7 @@ def build(plane: str, decisions: dict[int, str] | None = None) -> str:
         plane=plane,
         revealed_months=REVEALED_MONTHS,
         forecast_quarters=FORECAST_QUARTERS,
+        prehistory=True,
     )
     return json.dumps(view, sort_keys=True, indent=1) + "\n"
 
