@@ -32,9 +32,7 @@ def _z(column: np.ndarray) -> np.ndarray:
     return (column - float(column.mean())) / sd
 
 
-def severity_score(
-    values: np.ndarray, factor_names: Sequence[str], functional: str
-) -> np.ndarray:
+def severity_score(values: np.ndarray, factor_names: Sequence[str], functional: str) -> np.ndarray:
     """One severity score per row; LOWER IS MORE SEVERE.
 
     Components are z-scored so a spread in percentage points cannot dominate a
@@ -81,8 +79,15 @@ def eligible_rows(scores: np.ndarray, percentile: float) -> np.ndarray:
 #: Of the sealed 14-factor panel, these nine are LEVELS rather than increments.
 #: Splicing a level at a block join teleports it; splicing a return does not.
 LEVEL_FACTORS: tuple[str, ...] = (
-    "equity_vol", "ig_spread", "hy_spread", "policy_rate",
-    "ust_2y", "ust_10y", "cpi", "hqm_curve", "funding_spread",
+    "equity_vol",
+    "ig_spread",
+    "hy_spread",
+    "policy_rate",
+    "ust_2y",
+    "ust_10y",
+    "cpi",
+    "hqm_curve",
+    "funding_spread",
 )
 
 
@@ -179,8 +184,7 @@ class StressBootstrap:
         # stamps the whole spec, not just whatever the sampled months happen
         # to touch, so a segment past the sampled horizon still gets a size.
         per_segment_pool: dict[int, np.ndarray] = {
-            seg.from_quarter: eligible_rows(scores, seg.entry_percentile)
-            for seg in stress.segments
+            seg.from_quarter: eligible_rows(scores, seg.entry_percentile) for seg in stress.segments
         }
         # month -> (pool, restart probability) from the segment covering it
         pools: list[np.ndarray] = []
@@ -195,17 +199,18 @@ class StressBootstrap:
         paths = source.values[index]
 
         label_codes = {label: i for i, label in enumerate(REGIME_LABELS)}
-        source_codes = np.array(
-            [label_codes[label] for label in source.labels], dtype=np.int64
-        )
+        source_codes = np.array([label_codes[label] for label in source.labels], dtype=np.int64)
 
         conditioning = {
             "mode": "declared-stress-scenario",
             "functional": stress.functional,
             "segments": [
-                {"from_quarter": s.from_quarter, "to_quarter": s.to_quarter,
-                 "entry_percentile": s.entry_percentile,
-                 "mean_block_months": s.mean_block_months}
+                {
+                    "from_quarter": s.from_quarter,
+                    "to_quarter": s.to_quarter,
+                    "entry_percentile": s.entry_percentile,
+                    "mean_block_months": s.mean_block_months,
+                }
                 for s in stress.segments
             ],
             "pool_sizes": [int(per_segment_pool[s.from_quarter].size) for s in stress.segments],
@@ -227,15 +232,25 @@ class StressBootstrap:
         if world is not None:
             conditioning["world_id"] = world.world_id
         meta = EnsembleMeta(
-            generator_id=self.generator_id, vintage_id=source.vintage_id, seed=int(seed),
-            n_paths=n_paths, months=months, conditioning=conditioning,
+            generator_id=self.generator_id,
+            vintage_id=source.vintage_id,
+            seed=int(seed),
+            n_paths=n_paths,
+            months=months,
+            conditioning=conditioning,
             active_blocks=tuple(source.active_blocks),
         )
         return Ensemble(
-            paths=paths, factor_names=list(source.factor_names), meta=meta, row_indices=index,
-            regimes=RegimeRecord(labels=source_codes[index], legend=REGIME_LABELS,
-                                 mode="realized-declared-stress",
-                                 ruleset_version=source.ruleset_version),
+            paths=paths,
+            factor_names=list(source.factor_names),
+            meta=meta,
+            row_indices=index,
+            regimes=RegimeRecord(
+                labels=source_codes[index],
+                legend=REGIME_LABELS,
+                mode="realized-declared-stress",
+                ruleset_version=source.ruleset_version,
+            ),
             slow_states=AbsentLayer(reason="a resampler has no slow-state layer"),
         )
 
@@ -277,13 +292,17 @@ class StressBootstrap:
                 # as a "reachable join" that goes nowhere. A join must land
                 # somewhere other than where the block already is.
                 candidates = join_candidates(
-                    source.values, source.factor_names, previous, tolerance,
+                    source.values,
+                    source.factor_names,
+                    previous,
+                    tolerance,
                     pool[pool != previous],
                 )
                 # Severity is a preference over entries, never a licence to
                 # teleport: with nothing reachable the block simply continues.
                 index[p, m] = (
-                    advanced if candidates.size == 0
+                    advanced
+                    if candidates.size == 0
                     else int(candidates[rng.integers(0, candidates.size)])
                 )
         return index

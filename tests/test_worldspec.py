@@ -225,10 +225,18 @@ def test_stress_spec_projects_onto_numericworld() -> None:
         "x_stress": {
             "functional": "all_down",
             "segments": [
-                {"from_quarter": 0, "to_quarter": 19, "entry_percentile": 35,
-                 "mean_block_months": 18},
-                {"from_quarter": 20, "to_quarter": 39, "entry_percentile": 100,
-                 "mean_block_months": 12},
+                {
+                    "from_quarter": 0,
+                    "to_quarter": 19,
+                    "entry_percentile": 35,
+                    "mean_block_months": 18,
+                },
+                {
+                    "from_quarter": 20,
+                    "to_quarter": 39,
+                    "entry_percentile": 100,
+                    "mean_block_months": 12,
+                },
             ],
             "join_tolerance": {"hy_spread": 1.5},
             "precedent": ["2007-09 ran -50% over 17 months"],
@@ -252,24 +260,45 @@ def test_stress_segments_must_tile_the_horizon_exactly() -> None:
     """A gap would leave months with no declared severity; an overlap would make
     the draw rule ambiguous. Both are author errors and must fail loudly."""
     base = {"functional": "all_down", "join_tolerance": {}, "precedent": ["x"]}
-    gap = {**base, "segments": [
-        {"from_quarter": 0, "to_quarter": 10, "entry_percentile": 35, "mean_block_months": 18},
-        {"from_quarter": 12, "to_quarter": 39, "entry_percentile": 100, "mean_block_months": 12},
-    ]}
+    gap = {
+        **base,
+        "segments": [
+            {"from_quarter": 0, "to_quarter": 10, "entry_percentile": 35, "mean_block_months": 18},
+            {
+                "from_quarter": 12,
+                "to_quarter": 39,
+                "entry_percentile": 100,
+                "mean_block_months": 12,
+            },
+        ],
+    }
     with pytest.raises(ValidationError, match="tile"):
         StressSpec.model_validate(gap)
 
-    overlap = {**base, "segments": [
-        {"from_quarter": 0, "to_quarter": 20, "entry_percentile": 35, "mean_block_months": 18},
-        {"from_quarter": 20, "to_quarter": 39, "entry_percentile": 100, "mean_block_months": 12},
-    ]}
+    overlap = {
+        **base,
+        "segments": [
+            {"from_quarter": 0, "to_quarter": 20, "entry_percentile": 35, "mean_block_months": 18},
+            {
+                "from_quarter": 20,
+                "to_quarter": 39,
+                "entry_percentile": 100,
+                "mean_block_months": 12,
+            },
+        ],
+    }
     with pytest.raises(ValidationError, match="tile"):
         StressSpec.model_validate(overlap)
 
 
 def test_unknown_severity_functional_is_refused() -> None:
-    spec = {"functional": "vibes", "join_tolerance": {}, "precedent": ["x"],
-            "segments": [{"from_quarter": 0, "to_quarter": 39,
-                          "entry_percentile": 10, "mean_block_months": 18}]}
+    spec = {
+        "functional": "vibes",
+        "join_tolerance": {},
+        "precedent": ["x"],
+        "segments": [
+            {"from_quarter": 0, "to_quarter": 39, "entry_percentile": 10, "mean_block_months": 18}
+        ],
+    }
     with pytest.raises(ValidationError):
         StressSpec.model_validate(spec)
