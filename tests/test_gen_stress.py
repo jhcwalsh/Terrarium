@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import importlib.util
 import json
 from pathlib import Path
 
@@ -19,18 +20,37 @@ from ah.gen.stress import (
 )
 
 NAMES = ["equity_mkt", "hy_spread", "ust_10y", "cpi"]
-PRESETS = Path(__file__).resolve().parents[1] / "src" / "ah" / "presets"
+ROOT = Path(__file__).resolve().parents[1]
+PRESETS = ROOT / "src" / "ah" / "presets"
+
+
+def _load_script(name: str):
+    """Load a scripts/ module by path (the test_prereg.py pattern -- resolvable
+    without putting scripts/ on pyright's import path)."""
+    spec = importlib.util.spec_from_file_location(f"_{name}", ROOT / "scripts" / f"{name}.py")
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+_stress_report = _load_script("stress_report")
+depth_report = _stress_report.depth_report
+coherence_report = _stress_report.coherence_report
+plausibility_report = _stress_report.plausibility_report
 
 
 def _panel() -> np.ndarray:
     """Four hand-built months. Row 0 calm; row 1 equity crash WITH a bond rally
     (2008-shaped); row 2 everything down together (2022-shaped); row 3 mild."""
-    return np.array([
-        [+0.01, 3.0, 4.0, 100.0],   # calm
-        [-0.15, 9.0, 2.0, 100.0],   # equity -15%, spreads wide, yields FALL (rally)
-        [-0.08, 7.0, 6.0, 100.0],   # equity -8%, spreads wide, yields RISE (no bid)
-        [-0.01, 3.5, 4.1, 100.0],   # mild
-    ])
+    return np.array(
+        [
+            [+0.01, 3.0, 4.0, 100.0],  # calm
+            [-0.15, 9.0, 2.0, 100.0],  # equity -15%, spreads wide, yields FALL (rally)
+            [-0.08, 7.0, 6.0, 100.0],  # equity -8%, spreads wide, yields RISE (no bid)
+            [-0.01, 3.5, 4.1, 100.0],  # mild
+        ]
+    )
 
 
 def test_equity_functional_ranks_the_deepest_equity_month_worst():
@@ -60,7 +80,7 @@ def test_severity_is_deterministic():
 
 def test_eligible_rows_are_the_worst_share_and_100_is_unrestricted():
     scores = np.array([5.0, 1.0, 3.0, 4.0, 2.0])
-    assert eligible_rows(scores, 40.0).tolist() == [1, 4]     # worst two of five
+    assert eligible_rows(scores, 40.0).tolist() == [1, 4]  # worst two of five
     assert eligible_rows(scores, 100.0).tolist() == [0, 1, 2, 3, 4]
 
 
@@ -81,8 +101,8 @@ def test_join_candidates_exclude_a_spread_teleport():
     values, names = _panel(), NAMES
     pool = np.array([0, 1, 2, 3], dtype=np.int64)
     got = join_candidates(values, names, current_row=0, tolerance={"hy_spread": 1.5}, pool=pool)
-    assert 1 not in got.tolist()   # 9.0 vs 3.0 is a 6.0 jump
-    assert 3 in got.tolist()       # 3.5 vs 3.0 is within tolerance
+    assert 1 not in got.tolist()  # 9.0 vs 3.0 is a 6.0 jump
+    assert 3 in got.tolist()  # 3.5 vs 3.0 is within tolerance
 
 
 def test_join_candidates_apply_every_named_factor():
@@ -131,9 +151,7 @@ def _tiny_source():
 
     n = 60
     rows = np.arange(n, dtype=np.float64)
-    values = np.column_stack(
-        [rows, rows + 1000.0, rows + 2000.0, rows + 3000.0, rows + 4000.0]
-    )
+    values = np.column_stack([rows, rows + 1000.0, rows + 2000.0, rows + 3000.0, rows + 4000.0])
     return BootstrapSource(
         factor_names=("equity_mkt", "hy_spread", "ust_10y", "cpi", "policy_rate"),
         dates=pd.date_range("1960-01-31", periods=n, freq="ME"),
@@ -150,9 +168,14 @@ def _spec(entry_percentile=100.0, mean_block_months=6, tolerance=None):
 
     return StressSpec(
         functional="all_down",
-        segments=[StressSegment(from_quarter=0, to_quarter=39,
-                                entry_percentile=entry_percentile,
-                                mean_block_months=mean_block_months)],
+        segments=[
+            StressSegment(
+                from_quarter=0,
+                to_quarter=39,
+                entry_percentile=entry_percentile,
+                mean_block_months=mean_block_months,
+            )
+        ],
         join_tolerance=tolerance or {},
         precedent=["test"],
     )
@@ -200,8 +223,9 @@ def test_restarts_land_in_the_severity_pool():
     spec = _spec(entry_percentile=20.0)
     ens = gen.sample_months(120, 8, seed=3, stress=spec)
     assert ens.row_indices is not None
-    pool = set(eligible_rows(
-        severity_score(source.values, source.factor_names, "all_down"), 20.0).tolist())
+    pool = set(
+        eligible_rows(severity_score(source.values, source.factor_names, "all_down"), 20.0).tolist()
+    )
     idx = ens.row_indices
     n = source.n_rows
     for p in range(idx.shape[0]):
@@ -216,8 +240,9 @@ def test_a_block_continues_rather_than_teleporting_when_no_join_is_reachable():
     must keep advancing through real history rather than jumping."""
     source = _tiny_source()
     gen = StressBootstrap(source)
-    ens = gen.sample_months(60, 4, seed=5,
-                            stress=_spec(entry_percentile=20.0, tolerance={"hy_spread": 0.0}))
+    ens = gen.sample_months(
+        60, 4, seed=5, stress=_spec(entry_percentile=20.0, tolerance={"hy_spread": 0.0})
+    )
     assert ens.row_indices is not None
     idx = ens.row_indices
     n = source.n_rows
@@ -234,7 +259,7 @@ def test_the_ensemble_stamps_the_scenario_for_audit():
     assert c["segments"][0]["entry_percentile"] == 15.0
     assert c["pool_sizes"][0] > 0
     assert c["factor_conditions_honoured"] is False
-    assert c["provenance"] == "declared"   # spec v0.2 S5: never search-derived here
+    assert c["provenance"] == "declared"  # spec v0.2 S5: never search-derived here
 
 
 def test_a_quarter_outside_every_segment_raises_a_named_stress_error():
@@ -247,13 +272,18 @@ def test_a_quarter_outside_every_segment_raises_a_named_stress_error():
 
     short_spec = StressSpec(
         functional="all_down",
-        segments=[StressSegment(from_quarter=0, to_quarter=19,
-                                entry_percentile=100.0, mean_block_months=6)],
+        segments=[
+            StressSegment(
+                from_quarter=0, to_quarter=19, entry_percentile=100.0, mean_block_months=6
+            )
+        ],
         join_tolerance={},
         precedent=["test"],
     )
     gen = StressBootstrap(_tiny_source())
-    with pytest.raises(StressError, match="quarter 20 is covered by no stress segment; segments end at quarter 19"):
+    with pytest.raises(
+        StressError, match="quarter 20 is covered by no stress segment; segments end at quarter 19"
+    ):
         gen.sample_months(120, 2, seed=1, stress=short_spec)
 
 
@@ -284,10 +314,12 @@ def test_pool_sizes_are_stamped_for_every_declared_segment_even_unvisited_ones()
     two_segment_spec = StressSpec(
         functional="all_down",
         segments=[
-            StressSegment(from_quarter=0, to_quarter=19,
-                          entry_percentile=100.0, mean_block_months=6),
-            StressSegment(from_quarter=20, to_quarter=39,
-                          entry_percentile=50.0, mean_block_months=6),
+            StressSegment(
+                from_quarter=0, to_quarter=19, entry_percentile=100.0, mean_block_months=6
+            ),
+            StressSegment(
+                from_quarter=20, to_quarter=39, entry_percentile=50.0, mean_block_months=6
+            ),
         ],
         join_tolerance={},
         precedent=["test"],
@@ -373,3 +405,42 @@ def test_the_shared_id_routes_a_stress_world_to_the_compiler(monkeypatch):
     assert captured.get("called") is True
     assert ens.meta.generator_id == "bootstrap-stratified"
     assert ens.meta.conditioning["mode"] == "declared-stress-scenario"
+
+
+# --------------------------------------------------------------------------- #
+# Task 6: the reports -- emergent depth, coherence, plausibility
+# --------------------------------------------------------------------------- #
+
+
+def test_depth_report_reads_the_ensemble_it_is_given():
+    gen = StressBootstrap(_tiny_source())
+    ens = gen.sample_months(120, 8, seed=2, stress=_spec())
+    d = depth_report(ens)
+    assert set(d) >= {"median_peak_to_trough", "median_drawdown_months", "hy_spread_peak"}
+    assert d["median_peak_to_trough"] <= 0.0
+
+
+def test_coherence_report_compares_autocorrelation_against_the_panel():
+    """A shuffle of the same months would score far below the panel; a block
+    resample should land near it. This is the test that catches (a)/(b) of the
+    design note breaking."""
+    source = _tiny_source()
+    gen = StressBootstrap(source)
+    ens = gen.sample_months(120, 8, seed=2, stress=_spec(mean_block_months=24))
+    c = coherence_report(ens, source)
+    assert c["join_count"] >= 0
+    assert abs(c["ac1_generated"] - c["ac1_panel"]) < 0.35
+
+
+def test_plausibility_report_measures_sequence_novelty_and_never_gates():
+    """Spec v0.2 A2: real months, invented sequence -- the Mahalanobis statistic
+    measures the novelty of the assembled sequence in rolling-12m space. The
+    assertions here check the statistic COMPUTES and is self-consistent; no
+    assertion bounds its value, because it is reported, never gating."""
+    source = _tiny_source()
+    gen = StressBootstrap(source)
+    ens = gen.sample_months(120, 8, seed=2, stress=_spec())
+    p = plausibility_report(ens, source)
+    assert set(p) >= {"mahalanobis_median", "mahalanobis_max", "panel_mahalanobis_p95"}
+    assert 0.0 <= p["mahalanobis_median"] <= p["mahalanobis_max"]
+    assert p["panel_mahalanobis_p95"] > 0.0
