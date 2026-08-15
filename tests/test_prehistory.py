@@ -10,9 +10,12 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from ah.core.loader import load_worldspec
 from ah.core.numericworld import project_numeric
 from ah.core.validator import validate
+from ah.prehistory import PREHISTORY_QUARTERS, build_prehistory
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -52,3 +55,53 @@ def test_prehistory_preset_is_a_decade_and_is_calm():
     assert not doc.get("factor_conditions", {}).get("crisis_windows"), (
         "the inherited decade carries no crisis"
     )
+
+
+def test_prehistory_is_deterministic_and_terminates_at_the_opening_book():
+    a = build_prehistory(771204, 100.0, 98.0)
+    b = build_prehistory(771204, 100.0, 98.0)
+    assert a == b
+    assert a.months == PREHISTORY_QUARTERS * 3
+    assert abs(a.nav_true_months[-1] - 100.0) < 1e-9
+    assert abs(a.nav_reported_months[-1] - 98.0) < 1e-9
+    assert len(a.quarterly_returns_true) == PREHISTORY_QUARTERS
+
+
+def test_prehistory_differs_by_seed():
+    a = build_prehistory(771204, 100.0, 98.0)
+    b = build_prehistory(19740101, 100.0, 98.0)
+    assert a.nav_true_months != b.nav_true_months
+
+
+def test_prehistory_market_paths_are_monthly_and_complete():
+    p = build_prehistory(771204, 100.0, 98.0)
+    assert p.market_paths, "no market series"
+    for series in p.market_paths.values():
+        assert len(series) == p.months
+
+
+def test_prehistory_returns_are_not_degenerate():
+    """The validator flags an exact zero in a return column as a possible
+    unreached period; a flat pre-history would manufacture those."""
+    p = build_prehistory(771204, 100.0, 98.0)
+    assert len({round(r, 6) for r in p.quarterly_returns_true}) > 20
+    assert all(r != 0.0 for r in p.quarterly_returns_true)
+
+
+def test_prehistory_returns_are_scale_invariant():
+    """Scaling is level-only: quarterly returns come off the UNSCALED replay,
+    so they must be identical regardless of the terminal NAVs used to pin the
+    endpoint (a hard constraint of this WP's safety argument)."""
+    a = build_prehistory(771204, 100.0, 98.0)
+    b = build_prehistory(771204, 250.0, 40.0)
+    assert a.quarterly_returns_true == b.quarterly_returns_true
+    assert a.quarterly_returns_reported == b.quarterly_returns_reported
+
+
+def test_prehistory_rejects_degenerate_terminal_values():
+    with pytest.raises(ValueError):
+        build_prehistory(771204, 0.0, 98.0)
+    with pytest.raises(ValueError):
+        build_prehistory(771204, 100.0, float("nan"))
+    with pytest.raises(ValueError):
+        build_prehistory(771204, float("inf"), 98.0)
