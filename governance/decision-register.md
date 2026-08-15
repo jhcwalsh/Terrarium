@@ -209,3 +209,39 @@ J-curve crossover is set by the in-play commitment programme, not by the shape
 of the opening book. Two neighbouring statistics DID move and are recorded in
 ER-12, not here: `peak_unfunded_ratio` cleared its band (1.288 -> 0.716) and
 `linkage_bite` became uncomputable under annual wind-ups.
+
+---
+
+## D-SC series — the stress-scenario compiler's reserved decisions (2026-08-15)
+
+Raised by the stress-compiler design v0.2 (`docs/superpowers/specs/2026-08-14-stress-scenario-compiler-design.md` S11) and the Phase 0 attribution note. Owner rulings, 2026-08-15:
+
+**D-SC-1 — persistence-rule parameterisation: DECIDED, P1+P2 composed.**
+The owner adopted the recommended form: P1 (severe re-entry — every block
+starting inside a stress segment enters under that segment's percentile,
+which IS the shipped sampler's behaviour, pinned by
+`test_restarts_land_in_the_severity_pool`) composed with P2 (declared
+stress coverage — the scenario declares stress occupying most of the
+decade, precedented on Japan 1990-2003 and US 1966-1982 in real terms).
+P3 (decade-statistic constraint) is HELD BACK until its rule-1 policing is
+designed. Consequence: a deeper scenario is authored as a new declared
+shape with its precedent, pre-registered by commit order, measured once —
+the stress-02 work package. Basis: the stress-01 adequacy ladder read 0/20
+with depth -29.9% vs cited -48/-50% precedent, recorded untuned as the
+spec's reading 1 (rule milder than precedent; the S4.3(d) persistence gap).
+
+**D-SC-4 + JST scope — PARKED, 2026-08-15.** The international-panel
+licensing question and the upstream JST non-commercial scoping are
+deliberately deferred; no Counsel engagement now, no international data
+enters the repo. Revisit when depth beyond the US panel's -42.6% worst
+twelve months is actually wanted. (D-SC-2 premise compiler and D-SC-3
+reverse-search timing remain open, unscheduled.)
+
+**Narration ⚖ items N-m / N-u / N-d — BUILD NOW, COUNSEL AT PRODUCT.**
+The three counsel-dependent narration positions (real public institutions
+named, real individuals never; verdict tags on two axes with no portfolio
+axis; dot-plots calibrated to real projection error) proceed on their
+recommended forms. Counsel review is scheduled for when a narration
+product exists to review, not before. The recommendations are unchanged
+from the register A3 triage; this entry converts them from blocked to
+building.
