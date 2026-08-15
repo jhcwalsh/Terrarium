@@ -13,8 +13,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import CioDashboard from "./CioDashboard";
 import type { CioView } from "../lib/cioView";
 import reported from "../../fixtures/cio-sample.reported.json";
+import decided from "../../fixtures/cio-sample.decided.json";
 
 const view = reported as unknown as CioView;
+const decidedView = decided as unknown as CioView;
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
@@ -284,6 +286,27 @@ describe("CioDashboard", () => {
       );
       expect(nanWarnings).toEqual([]);
       warn.mockRestore();
+    });
+  });
+
+  describe("cio-03: a decisions-bearing fixture", () => {
+    it("shows a non-zero Excess value against a fixture built from a session that made decisions", () => {
+      // cio-sample.decided.json (scripts/gen_cio_fixture.py) plays derisk /
+      // leanin at real decision months instead of the degenerate {} (all
+      // hold) map the other two fixtures use, so performance.total should
+      // genuinely differ from performance.benchmark (the twin) somewhere.
+      render(<CioDashboard view={decidedView} onPlaneChange={() => {}} />);
+      const row = [...host!.querySelectorAll("tr")].find(
+        (tr) => tr.querySelector("td")?.textContent?.trim() === "Excess",
+      );
+      if (!row) throw new Error('no "Excess" row found');
+      const cells = [...row.querySelectorAll("td")]
+        .slice(1)
+        .map((td) => td.textContent?.trim() ?? "");
+      // "" (an empty spacer <td/>) and "—" (sgn()'s NA marker for an
+      // unreached/incomparable period) are both non-signals, not evidence
+      // of divergence — only a printed +/- figure other than "+0.0" counts.
+      expect(cells.some((c) => c !== "" && c !== "—" && c !== "+0.0")).toBe(true);
     });
   });
 });

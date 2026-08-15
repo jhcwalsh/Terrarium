@@ -405,7 +405,7 @@ def test_committed_cio_fixtures_match_the_builder():
 
     sys.path.insert(0, str(ROOT / "scripts"))
     try:
-        from gen_cio_fixture import build  # type: ignore
+        from gen_cio_fixture import _decided_map, build  # type: ignore
     finally:
         sys.path.pop(0)
     for plane in ("reported", "true"):
@@ -413,3 +413,26 @@ def test_committed_cio_fixtures_match_the_builder():
             encoding="utf-8"
         )
         assert committed == build(plane), f"{plane} fixture is stale - regenerate"
+    committed_decided = (ROOT / "app" / "fixtures" / "cio-sample.decided.json").read_text(
+        encoding="utf-8"
+    )
+    assert committed_decided == build("reported", _decided_map()), (
+        "decided fixture is stale - regenerate"
+    )
+
+
+def test_decided_fixture_actually_diverges_from_the_twin():
+    """The Excess row is the product's argument as a number; a fixture where
+    it is identically zero pins nothing."""
+    import json
+
+    doc = json.loads(
+        (ROOT / "app" / "fixtures" / "cio-sample.decided.json").read_text(encoding="utf-8")
+    )
+    total = doc["performance"]["total"]
+    bench = doc["performance"]["benchmark"]
+    diffs = [
+        abs(t - b) for t, b in zip(total, bench, strict=True) if t is not None and b is not None
+    ]
+    assert diffs, "no comparable periods in the decided fixture"
+    assert max(diffs) > 0.05, f"decided fixture does not diverge from the twin: {diffs}"
