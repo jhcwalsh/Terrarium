@@ -110,9 +110,9 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   their lengths) and index to 100 at world start, not at the inherited
   decade's start. Private classes show an em dash in a long column wherever
   that window needs more than the world's own revealed months to fill — a
-  per-class inherited tape is not exported for them, so 3Y/5Y only fill once
-  the revealed window alone spans the window (60+ revealed months) and 10Y
-  never does. Generated worlds opt out.
+  per-class inherited tape is not exported for them, so 3Y fills at 36+
+  revealed months, 5Y at 60+, and 10Y only at full reveal (120 revealed
+  months, the toy world's own horizon). Generated worlds opt out.
   The renderer needed no change - it has supported `worldStartIndex` since
   it was vendored. Prepended dates and index baseline state in display labels
   (`preRunLabel` "INHERITED DECADE (SIMULATED)", `worldStartLabel` "WORLD

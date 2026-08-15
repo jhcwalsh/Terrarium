@@ -15,10 +15,21 @@ produces a SHAPE (a stochastic path from the toy engine, run through the same
 institution the game plays), and every level in that shape is multiplied by
 ``terminal_nav / path[-1]`` so it lands EXACTLY on the NAV the game's month 0
 already opens at. Nothing about the opening book changes; the chart is simply
-given somewhere to have come from. Quarterly returns are computed off the
-UNSCALED replay — a level-only rescale cannot change a ratio — so the shape a
-player sees is the shape the toy engine actually drew, never a stretched or
+given somewhere to have come from. The exported NAV levels (``nav_true_months``/
+``nav_reported_months``) are pure scaled levels with nothing else added to
+them, so a constant rescale still cannot change the SHAPE the player sees —
+the chart is the shape the toy engine actually drew, never a stretched or
 compressed one.
+
+Quarterly returns are a separate exported quantity and are computed off the
+UNSCALED replay, before the terminal scale factor is ever applied — full
+stop. That is NOT the same "a rescale cannot change a ratio" argument that
+protects the chart's shape: the return formula adds a quarter's payout into
+the numerator (see below), and a scale factor no longer cancels out of a
+ratio once one side carries an additive term the other side doesn't share.
+The returns are safe only because they are computed once, before scaling
+touches anything, and never revisited — not because they would tolerate a
+rescale if one were applied after the fact.
 
 Return convention: payout is added back to each quarter's closing level
 before the ratio is taken — time-weighted, exactly ``ah.cioview``'s own
@@ -158,9 +169,13 @@ def build_prehistory(
             "prehistory replay ended at a zero or non-finite reported NAV; cannot scale"
         )
 
-    # Quarterly returns off the UNSCALED replay: a level-only rescale cannot
-    # change a ratio, so these are computed once, before scaling, and never
-    # revisited (asserted scale-invariant in tests/test_prehistory.py).
+    # Quarterly returns off the UNSCALED replay, computed once here, before
+    # the terminal scale factor below is applied to anything, and never
+    # revisited (asserted scale-invariant in tests/test_prehistory.py). Safe
+    # because scaling never touches them, not because a rescale "cannot
+    # change a ratio" — the payout add-back puts an additive term in the
+    # numerator, so that argument no longer holds if this were ever
+    # recomputed from already-scaled levels instead.
     # ``spending_paid`` is plane-agnostic (ah.play.PlayQuarter carries one
     # figure, not a per-plane pair) and feeds both calls unchanged — same as
     # ah.cioview._quarterly_returns, which reuses it for both planes too.

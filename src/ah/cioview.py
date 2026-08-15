@@ -548,7 +548,7 @@ def _markets(
     if hist_months >= 24:
         # This world's own revealed months only — the inherited decade is
         # never mixed into a correlation the player would read as this
-        # world's (see correlationNote below).
+        # world's (correlationNote states the window either way, below).
         eq = paths.returns["equity"][:hist_months]
         corrs = []
         for a in liquid:
@@ -564,15 +564,21 @@ def _markets(
                 }
             )
         out["correlations"] = corrs
+        # Minor 2 (whole-branch review), then re-reviewed: on main this note
+        # was unconditionally the base sentence below — correct and
+        # prehistory-neutral. The original finding was about the
+        # inherited-decade clause this WP appended, not about the note's
+        # existence; guarding the whole assignment on `pre is not None`
+        # over-corrected and left opted-out worlds with NO correlationNote,
+        # so the renderer fell back to its own generic copy and the window
+        # definition was lost. Restored as an if/else: base sentence always,
+        # clause appended only when there is an inherited decade to exclude.
+        note = "current: trailing 12m; baseline: full revealed window"
         if pre is not None:
-            # Minor 2 (whole-branch review): this rewrite was previously
-            # unconditional, so an opted-out generated world (pre is None)
-            # was told its correlations excluded an inherited decade it
-            # never had. Guarded like every other new string in this WP.
-            out["correlationNote"] = (
-                "current: trailing 12m; baseline: full revealed window; both computed "
-                "on this world's own months only, excluding the inherited decade."
+            note += (
+                "; both computed on this world's own months only, excluding the inherited decade."
             )
+        out["correlationNote"] = note
     return out
 
 
