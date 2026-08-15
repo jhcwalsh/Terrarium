@@ -363,6 +363,11 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             plane=plane,
             revealed_months=revealed,
             forecast_quarters=forecast_quarters,
+            # cio-04: the inherited decade is always built by running the toy
+            # engine internally, regardless of which engine produced `paths` —
+            # splicing it onto a generated (non-toy-v0) world would stitch two
+            # engines into one chart, so generated worlds opt out here.
+            prehistory=(ws.engine_defaults.generator_id == "toy-v0"),
         )
 
     @app.post("/sessions/{sid}/advance")

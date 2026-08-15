@@ -194,7 +194,10 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   AMENDED: the ER-6 close-out revived forced secondaries on deflation_bust 6/20
   seeds; other worlds still 0/20) and ER-9 (t(6) tails print single months larger
   than whole historical bear markets; moot for GENERATED worlds — bounded by real
-  months) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
+  months) and ER-13 (the CIO dashboard's inherited decade is a simulated
+  past scaled to the opening book's NAV, not a reconstruction of the history
+  that actually produced it — opening weights sit exactly at target, with no
+  drift) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
   10 + expiry-at-lapse ledger; play alphas now `port-v2-cashflow`/`-gen`; the E1
   commitment lever is unblocked). **ER-10 CLOSED 2026-08-13** (`_reported_marks`
   filtered only the quarter-end month's true return through the appraisal

@@ -203,6 +203,42 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   measurements for argument, never gates. No sealed file touched;
   `bootstrap-v1` unmodified.
 
+- **The inherited decade (cio-04), 2026-08-14.** The CIO dashboard's plan
+  chart now opens ten years before the world does, and the 3Y/5Y/10Y columns
+  hold real numbers from the first quarter of play - DN-8's O-1 option A.
+  A validated calm world (`prehistory.json`) runs through the same engine
+  under a declared seed offset (999983, prime, never colliding with the
+  ensemble stride); the institution is replayed over it hold-course and the path
+  scaled to terminate on the opening book, so the join is continuous and **no
+  scored number moves**: `PLAY_ALPHA_VERSION` and `TOY_ENGINE_VERSION` unchanged,
+  the golden digest untouched, every leaderboard row still comparable. Market
+  paths prepend in lockstep with the plan history (the validator couples
+  their lengths) and index to 100 at world start, not at the inherited
+  decade's start. Private classes show an em dash in a long column wherever
+  that window needs more than the world's own revealed months to fill — a
+  per-class inherited tape is not exported for them, so 3Y fills at 36+
+  revealed months, 5Y at 60+, and 10Y only at full reveal (120 revealed
+  months, the toy world's own horizon). Generated worlds opt out.
+  The renderer needed no change - it has supported `worldStartIndex` since
+  it was vendored. Prepended dates and index baseline state in display labels
+  (`preRunLabel` "INHERITED DECADE (SIMULATED)", `worldStartLabel` "WORLD
+  BEGINS") with the full explanation in `performance.footnote`.
+
+  **Whole-branch review fix wave, 2026-08-15.** The two halves of every long
+  return window were on different conventions: world quarters added the
+  quarter's payout back before taking the ratio (time-weighted, as
+  `performance.footnote` already declared); inherited quarters used a bare
+  ratio against a replay that pays the same default policy spend as any
+  other quarter. `prehistory._quarterly_returns` now takes each quarter's
+  `spending_paid` and applies the identical add-back on both planes
+  (Critical). The fixture's 10Y Total plan moved from a sign-flipped
+  `-0.9729%` to the correct `+1.2267%` (reported plane, stagflation seed
+  771204). Also: the hatched band's own label now says "(SIMULATED)", not
+  just the footnote (Important); `markets.correlationNote` no longer rewrites
+  itself on an opted-out world (Minor); `PreHistory.label` — read nowhere,
+  the visible copy lives in `cioview.py` literals — deleted rather than fed
+  through, keeping presentation copy out of the replay/data layer.
+
 - **The CIO view builder (cio-01), 2026-08-14.** `ah/cioview.py` builds
   DN-8's `CioView` server-side — the pure-renderer contract's engine half —
   from the same truncated replay `_mark_to_market` uses, plus a frozen-tape

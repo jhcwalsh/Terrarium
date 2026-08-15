@@ -12,7 +12,7 @@ the TS validator runs dev-side only.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import replace
 from typing import Any
 
@@ -20,6 +20,7 @@ import numpy as np
 
 from ah.core.engine import EnginePaths
 from ah.play import PRIVATE_ASSETS, START_CASH, START_TARGETS, PlayResult, simulate_play
+from ah.prehistory import PreHistory, build_prehistory
 
 PLANES: tuple[str, str] = ("reported", "true")
 LINKAGE_VERSION = "public-0.1"
@@ -142,7 +143,17 @@ def build_cio_view(
     plane: str,
     revealed_months: int,
     forecast_quarters: int = 4,
+    prehistory: bool = True,
 ) -> dict[str, Any]:
+    """``prehistory`` prepends the inherited decade (cio-04) ahead of world
+    month 0 — the plan chart, the long return windows and the market-path
+    charts all gain a pre-run segment that terminates exactly on this
+    world's own opening book. It is a display decision, not an engine one:
+    ``build_prehistory`` always runs the toy engine internally regardless of
+    which engine produced ``paths``, so a caller splicing it onto a
+    generated (non-toy-v0) world would be stitching two engines into one
+    chart. This function does not sniff ``paths`` for that — the caller
+    decides and passes the flag (``ah/serve.py``)."""
     if plane not in PLANES:
         raise ValueError(f"plane must be one of {PLANES}, got {plane!r}")
     n_q = revealed_months // 3
@@ -160,8 +171,76 @@ def build_cio_view(
     nav_attr = "nav_reported_months" if plane == "reported" else "nav_true_months"
     history = [round(m, 4) for q in active.quarters[:n_q] for m in getattr(q, nav_attr)]
     total = last.nav_reported if plane == "reported" else last.nav_true
+    # world month 0's own opening book — untouched by prehistory (cio-04's
+    # seam is stitched on NAV only); growthPct/netOfFlows read off this, not
+    # off history[0], so they stay world-relative regardless of prehistory.
     opening_nav = active.opening["nav_reported" if plane == "reported" else "nav_true"]
     spend_total = sum(q.spending_paid for q in active.quarters[:n_q])
+
+    pre: PreHistory | None = None
+    if prehistory:
+        pre = build_prehistory(
+            seed,
+            active.opening["nav_true"],
+            active.opening["nav_reported"],
+            start_targets=start_targets,
+        )
+    pre_nav_months = (
+        (pre.nav_reported_months if plane == "reported" else pre.nav_true_months)
+        if pre is not None
+        else ()
+    )
+    world_start_index = len(pre_nav_months)
+    history_values = [round(m, 4) for m in pre_nav_months] + history
+    pre_q_rets = (
+        list(pre.quarterly_returns_reported if plane == "reported" else pre.quarterly_returns_true)
+        if pre is not None
+        else []
+    )
+    performance_footnote = "Payout added back; time-weighted. Twin holds the t0 plan."
+    if pre is not None:
+        performance_footnote += (
+            " 3Y/5Y/10Y include the inherited decade (simulated, scaled to the "
+            "opening book - not this world's own history); 1Y crosses that "
+            "seam whenever fewer than four world quarters have been played; "
+            "Excess is near zero in every long column by construction, "
+            "because the twin shares the identical inherited prefix, not "
+            "because the plan tracked the benchmark for a decade; private "
+            "classes show an em dash in the long columns because a per-class "
+            "inherited tape is not exported - not because the inherited "
+            "decade has no private history (it ran the full book, privates "
+            "included, which is why the true and reported series differ at "
+            "all)."
+        )
+
+    plan: dict[str, Any] = {
+        "totalValue": round(total, 4),
+        "growthPct": (round((total / opening_nav - 1.0) * 100.0, 4) if opening_nav > 0 else None),
+        "netOfFlows": (round(total - opening_nav + spend_total, 4) if opening_nav > 0 else None),
+        # growthPct/netOfFlows above are since-inception (world month 0) only
+        # — windowLabel describes THEM, not the chart's hatched band, so it
+        # stays "Since inception" regardless of prehistory (review finding,
+        # Critical 1: the brief's original instruction to change this was
+        # wrong — a decade label beside a one-year figure is the defect).
+        "windowLabel": "Since inception",
+        "history": {"values": history_values, "worldStartIndex": world_start_index},
+    }
+    if pre is not None:
+        # Tag-length, not sentence-length: these render as un-wrapping SVG
+        # <text> in a fixed-width band on the plan chart (app/src/components/
+        # CioDashboard.tsx renders the renderer's own hatch/boundary
+        # annotations unchanged — DN-8's "dashboard unchanged" promise, so
+        # the copy has to fit the existing slot rather than the slot
+        # growing to fit the copy). The full sentence lives in
+        # performance.footnote instead.
+        # I1 (whole-branch review): "simulated" previously appeared only in
+        # performance.footnote, under a different panel; nothing on the
+        # chart itself said the hatched band was simulated. preRunLabel is
+        # centred inside the hatched band (not left-anchored like
+        # worldStartLabel), so it has room: ~190px at ~6.8px/char inside a
+        # band 758px wide at revealed=12 and 416px at revealed=120.
+        plan["preRunLabel"] = "INHERITED DECADE (SIMULATED)"
+        plan["worldStartLabel"] = "WORLD BEGINS"
 
     view: dict[str, Any] = {
         "meta": {
@@ -181,17 +260,7 @@ def build_cio_view(
             "watermark": WATERMARK,
             "disclaimer": DISCLAIMER,
         },
-        "plan": {
-            "totalValue": round(total, 4),
-            "growthPct": (
-                round((total / opening_nav - 1.0) * 100.0, 4) if opening_nav > 0 else None
-            ),
-            "netOfFlows": (
-                round(total - opening_nav + spend_total, 4) if opening_nav > 0 else None
-            ),
-            "windowLabel": "Since inception",
-            "history": {"values": history, "worldStartIndex": 0},
-        },
+        "plan": plan,
         "allocation": _allocation(
             active,
             targets,
@@ -201,19 +270,23 @@ def build_cio_view(
             # "liquid marks are true"); on the reported plane, private marks
             # come from the reported tape, listed marks from the true tape.
             {**frozen.returns, **frozen.reported} if plane == "reported" else frozen.returns,
+            pre.market_paths if pre is not None else None,
         ),
         "performance": {
             "periods": list(PERIODS),
             "annualisedFromIndex": ANNUALISED_FROM,
-            "total": _period_row(q_rets, n_q - 1),
-            "benchmark": _period_row(twin_rets, n_q - 1),
+            # last_q stays world-relative (YTD is a world-year concept) even
+            # though the q_rets fed in are prepended with the inherited
+            # decade's quarters.
+            "total": _period_row(pre_q_rets + q_rets, n_q - 1),
+            "benchmark": _period_row(pre_q_rets + twin_rets, n_q - 1),
             "benchmarkLabel": "Policy twin (hold course)",
-            "footnote": "Payout added back; time-weighted. Twin holds the t0 plan.",
+            "footnote": performance_footnote,
         },
         "liquidity": _liquidity(active, targets, plane, n_q, forecast_quarters),
         "privateCashflows": _private_cashflows(active, n_q, forecast_quarters, plane),
     }
-    markets = _markets(paths, hist_months, plane)
+    markets = _markets(paths, hist_months, plane, pre)
     if markets is not None:
         view["markets"] = markets
     return view
@@ -225,6 +298,7 @@ def _allocation(
     plane: str,
     n_q: int,
     tape: Mapping[str, np.ndarray],
+    pre_market_paths: Mapping[str, Sequence[float]] | None = None,
 ) -> dict[str, Any]:
     last = active.quarters[n_q - 1]
     total = last.nav_reported if plane == "reported" else last.nav_true
@@ -252,7 +326,7 @@ def _allocation(
                 "bandPct": BAND_PCT[cid],
                 "currentPct": (round(value_of(cid) / total * 100.0, 4) if total > 0 else None),
                 "value": round(value_of(cid), 4),
-                "returns": _class_returns(tape, cid, n_q),
+                "returns": _class_returns(tape, cid, n_q, pre_market_paths),
                 **({"isPrivate": True} if cid in PRIVATE_ASSETS else {}),
             }
         )
@@ -271,12 +345,31 @@ def _allocation(
     }
 
 
-def _class_returns(tape: Mapping[str, np.ndarray], cid: str, n_q: int) -> list[float | None]:
-    """Per-class period returns from the sleeve tape (cash has none -> nulls)."""
+def _class_returns(
+    tape: Mapping[str, np.ndarray],
+    cid: str,
+    n_q: int,
+    pre_market_paths: Mapping[str, Sequence[float]] | None = None,
+) -> list[float | None]:
+    """Per-class period returns from the sleeve tape (cash has none -> nulls).
+
+    ``pre_market_paths`` is the inherited decade's per-LIQUID-asset monthly
+    tape (``PreHistory.market_paths`` — cio-04 does not export a per-asset
+    tape for the private sleeves, so their 3Y/5Y/10Y columns stay governed
+    by the world's own revealed window, same as before this WP)."""
     if cid not in tape:  # cash has no tape
         return [None] * len(PERIODS)
     monthly = tape[cid][: n_q * 3]
     q_rets = [float(np.prod(1.0 + monthly[i * 3 : i * 3 + 3] / 100.0)) - 1.0 for i in range(n_q)]
+    pre_series = (pre_market_paths or {}).get(cid)
+    if pre_series:
+        pre_monthly = np.asarray(pre_series, dtype=float)
+        n_pre_q = len(pre_monthly) // 3
+        pre_q_rets = [
+            float(np.prod(1.0 + pre_monthly[i * 3 : i * 3 + 3] / 100.0)) - 1.0
+            for i in range(n_pre_q)
+        ]
+        q_rets = pre_q_rets + q_rets
     return _period_row(q_rets, n_q - 1)
 
 
@@ -455,10 +548,19 @@ _MARKET_COLOURS = {
 }
 
 
-def _markets(paths: EnginePaths, hist_months: int, plane: str) -> dict[str, Any] | None:
+def _markets(
+    paths: EnginePaths, hist_months: int, plane: str, pre: PreHistory | None = None
+) -> dict[str, Any] | None:
     if hist_months < 2:
         return None
     liquid = [a for a in paths.asset_order if a not in PRIVATE_ASSETS]
+    footnote = (
+        "Indexed to 100 at world start, not the inherited decade's start; the "
+        "leading segment is the simulated pre-history (cio-04), rescaled to "
+        "land on the opening book."
+        if pre is not None
+        else "Indexed to 100 at world start; revealed tape only."
+    )
     out: dict[str, Any] = {
         "tiles": [
             {"label": "Policy rate", "value": f"{float(paths.rate[hist_months - 1]):.2f}%"},
@@ -466,11 +568,23 @@ def _markets(paths: EnginePaths, hist_months: int, plane: str) -> dict[str, Any]
             {"label": "Inflation", "value": f"{float(paths.inflation[hist_months - 1]):.1f}%"},
         ],
         "returns": [],
-        "returnsFootnote": "Indexed to 100 at world start; revealed tape only.",
+        "returnsFootnote": footnote,
     }
     for a in liquid:
-        monthly = paths.returns[a][:hist_months]
-        path = 100.0 * np.cumprod(1.0 + monthly / 100.0)
+        world_monthly = paths.returns[a][:hist_months]
+        if pre is not None:
+            # Index to 100 at the world-start boundary: cumprod the whole
+            # combined tape from an arbitrary base, then rescale so the
+            # level right at the boundary (the last pre-history month,
+            # index pre.months - 1) lands on 100. World-segment values then
+            # fall out identical to the no-prehistory formula below (a
+            # constant rescale cancels inside every ratio).
+            pre_monthly = np.asarray(pre.market_paths[a], dtype=float)
+            combined = np.concatenate([pre_monthly, world_monthly])
+            raw = np.cumprod(1.0 + combined / 100.0)
+            path = raw * (100.0 / raw[pre.months - 1])
+        else:
+            path = 100.0 * np.cumprod(1.0 + world_monthly / 100.0)
         out["returns"].append(
             {
                 "id": a,
@@ -480,6 +594,9 @@ def _markets(paths: EnginePaths, hist_months: int, plane: str) -> dict[str, Any]
             }
         )
     if hist_months >= 24:
+        # This world's own revealed months only — the inherited decade is
+        # never mixed into a correlation the player would read as this
+        # world's (correlationNote states the window either way, below).
         eq = paths.returns["equity"][:hist_months]
         corrs = []
         for a in liquid:
@@ -495,7 +612,21 @@ def _markets(paths: EnginePaths, hist_months: int, plane: str) -> dict[str, Any]
                 }
             )
         out["correlations"] = corrs
-        out["correlationNote"] = "current: trailing 12m; baseline: full revealed window"
+        # Minor 2 (whole-branch review), then re-reviewed: on main this note
+        # was unconditionally the base sentence below — correct and
+        # prehistory-neutral. The original finding was about the
+        # inherited-decade clause this WP appended, not about the note's
+        # existence; guarding the whole assignment on `pre is not None`
+        # over-corrected and left opted-out worlds with NO correlationNote,
+        # so the renderer fell back to its own generic copy and the window
+        # definition was lost. Restored as an if/else: base sentence always,
+        # clause appended only when there is an inherited decade to exclude.
+        note = "current: trailing 12m; baseline: full revealed window"
+        if pre is not None:
+            note += (
+                "; both computed on this world's own months only, excluding the inherited decade."
+            )
+        out["correlationNote"] = note
     return out
 
 
