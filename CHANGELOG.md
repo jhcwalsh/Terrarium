@@ -174,6 +174,22 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **Six-month stress blocks: the dial works, the verdict flips (stress-03),
+  2026-08-15.** The owner declared mean_block_months 6 for stress segments
+  (the sealed benchmark's own mean) on the generator-only coherence study
+  alone - depth never consulted. World fence ...702 -> ...703; percentiles
+  and shape unchanged, the pinning test still holds. Measured once after
+  the declaration: depth -37.5% median over 18 months (was -30.1%), HY
+  peak 8.0, median final 154 vs 202, 2/20 seeds end below start; coherence
+  exactly as the study predicted (ac1 0.0544, max join jump 1.494 vs 1.5).
+  Ladder: STILL 0/20 breaches and 0/20 forced secondaries, worst coverage
+  0.540 vs the 1.0 line. VERDICT RECORDED: after three declared scenarios
+  the two-readings clause selects reading 2 - the hold-course book (~70%
+  liquid) is genuinely robust; the forced secondary is the OVER-COMMITTED
+  book's event, i.e. the E1 lever's story, not the default book's. Whether
+  to re-anchor the reference ladder shape (20/20 breached, 4-8/20 forced)
+  to a stressed book is an open owner question, recorded not adjusted.
+
 - **The Lost Decade and the persistence ruling's limit (stress-02),
   2026-08-15.** `stress_1990` (world `...702`) implements D-SC-1 (P1+P2):
   a 21-month worst-decile crisis (the 1973-74 span), a worst-third squeeze

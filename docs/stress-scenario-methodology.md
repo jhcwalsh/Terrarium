@@ -87,11 +87,18 @@ autocorrelated, and we don't model that autocorrelation: we inherit it. A
 month-by-month severity filter would produce a bag of bad months in a shuffled
 order, which is noise with a severe average, not a crisis.
 
-Two consequences follow. Blocks in stress segments run long, because every join
-is a discontinuity. And joins are restricted to months whose *levels* are close
-to where we are — nine of our fourteen factors are levels rather than returns, so
-a careless splice teleports the credit spread from 300bp to 1400bp in a single
-month.
+Two consequences follow. Joins are restricted to months whose *levels* are
+close to where we are — nine of our fourteen factors are levels rather than
+returns, so a careless splice teleports the credit spread from 300bp to 1400bp
+in a single month. And block length is a **declared trade, measured before it
+was chosen** (the 2026-08-15 coherence study): stress segments now run
+6-month mean blocks — the sealed benchmark's own setting — which means a
+stressed decade's persistence is partly *constructed* (the re-entry rule
+chaining severe entries) rather than wholly *inherited* (one long block
+carrying a real episode's own aftermath). The measured coherence cost of
+that choice is near zero — autocorrelation within 0.011 of the panel's own,
+level jumps capped by the join tolerance at every block length tested — and
+the trade is disclosed here rather than buried in a parameter.
 
 **3. Commit the rule before you measure the consequence.**
 The scenario — severity rule plus the historical precedent cited for it — is
@@ -192,6 +199,31 @@ only then measure the institution once. That study, and any change to the
 declared block length, is the next owner decision — it is not taken here,
 because taking it after reading this ladder would be the circularity rule 1
 forbids.
+
+## The third measurement (2026-08-15): the dial works, and the verdict flips
+
+With the declared 6-month blocks (world `…703`), the Lost Decade finally
+moves: median peak-to-trough **−37.5%** over 18 months, HY spread peak 8.0,
+median final value 154 on 100 (down from 202), two seeds in twenty ending
+below their start — while coherence held exactly as the study predicted
+(autocorrelation 0.0544 vs the panel's 0.0611, largest join jump 1.494
+against the 1.5 tolerance).
+
+And the adequacy ladder still reads **0/20 coverage breaches, 0/20 forced
+secondaries** — worst coverage 0.540 against a breach line of 1.0.
+
+After three declared scenarios, each pushing the market side further on
+precedent, the two-honest-readings clause now selects the second reading:
+**the hold-course institution is genuinely robust.** Roughly seventy percent
+of the default book is liquid; a −37% decade leaves years of sellable assets
+between the institution and its private commitments. The forced secondary is
+not the default book's event — it is the *over-committed* book's event, which
+is precisely the story the commitment lever (E1) exists to let a player write
+for themselves. The reference shape this note once carried (20/20 breached,
+4–8/20 forced) was drafted as if the default book could be broken by markets
+alone; the evidence says it describes an over-allocated book instead. Whether
+to re-anchor that reference shape to a stressed book is an open owner
+question, recorded here rather than quietly adjusted.
 
 ## Limits, stated
 
