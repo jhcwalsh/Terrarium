@@ -8,7 +8,7 @@
 
 **Tech Stack:** Python 3.12, numpy, pydantic, pytest. No new dependencies.
 
-**Spec:** `docs/superpowers/specs/2026-08-14-stress-scenario-compiler-design.md` — read §4 (mechanism) and §6 (acceptance) before Task 2.
+**Spec:** `docs/superpowers/specs/2026-08-14-stress-scenario-compiler-design.md` — read §4 (mechanism) and §6 (acceptance) before Task 2. **Reconciled to spec v0.2 (2026-08-14):** the conditioning stamp gains a `provenance` field (§5, `declared` vs `search-derived`) and Task 6 gains the Mahalanobis plausibility report (§6.2, reported never gating). Spec v0.2's persistence rule §4.3(d) is deliberately NOT built here — its parameterisation is reserved (⚑ D-SC-1) and building any form ahead of that decision would take a reserved decision.
 
 ## Global Constraints
 
@@ -562,6 +562,7 @@ def test_the_ensemble_stamps_the_scenario_for_audit():
     assert c["segments"][0]["entry_percentile"] == 15.0
     assert c["pool_sizes"][0] > 0
     assert c["factor_conditions_honoured"] is False
+    assert c["provenance"] == "declared"   # spec v0.2 S5: never search-derived here
 ```
 
 - [ ] **Step 2: Watch them fail.** Run: `uv run pytest tests/test_gen_stress.py -q`
@@ -649,6 +650,9 @@ class StressBootstrap:
             # This generator honours no factor_conditions either: severity is
             # declared through x_stress, not through an inflation average.
             "factor_conditions_honoured": False,
+            # Spec v0.2 (S5): a hand-declared scenario. A reverse-search world
+            # (D-SC-3, not built) would stamp "search-derived" here instead.
+            "provenance": "declared",
         }
         meta = EnsembleMeta(
             generator_id=self.generator_id, vintage_id=source.vintage_id, seed=int(seed),
@@ -784,9 +788,20 @@ record shows the rule was not chosen by looking at the answer."
 - Test: `tests/test_gen_stress.py`
 
 **Interfaces:**
-- Produces: `depth_report(ensemble) -> dict` with `median_peak_to_trough`, `median_drawdown_months`, `hy_spread_peak`; `coherence_report(ensemble, source) -> dict` with `ac1_generated`, `ac1_panel`, `join_count`, `max_level_jump`.
+- Produces: `depth_report(ensemble) -> dict` with `median_peak_to_trough`, `median_drawdown_months`, `hy_spread_peak`; `coherence_report(ensemble, source) -> dict` with `ac1_generated`, `ac1_panel`, `join_count`, `max_level_jump`; `plausibility_report(ensemble, source) -> dict` with `mahalanobis_median`, `mahalanobis_max`, `panel_mahalanobis_p95`.
 
 These are measurements printed for argument, not thresholds that gate. §6.2.
+
+**The plausibility statistic (spec v0.2, A2):** every emitted month is a real
+row, so month-level distance is trivially zero — the novelty lives in the
+*sequence*. Measure it on rolling 12-month mean vectors: compute the panel's own
+rolling 12-month mean vectors as the reference set (their mean and covariance,
+with a small diagonal ridge, e.g. `1e-9`, for invertibility), then the
+Mahalanobis distance of each generated path's rolling 12-month mean vectors
+against that reference. Report the generated ensemble's median and max, beside
+the panel's own 95th percentile of the same statistic so the reader has a
+yardstick. **Reported, never gating** — a large distance is disclosure, not
+failure.
 
 - [ ] **Step 1: Write the failing tests:**
 
@@ -809,9 +824,23 @@ def test_coherence_report_compares_autocorrelation_against_the_panel():
     c = coherence_report(ens, source)
     assert c["join_count"] >= 0
     assert abs(c["ac1_generated"] - c["ac1_panel"]) < 0.35
+
+
+def test_plausibility_report_measures_sequence_novelty_and_never_gates():
+    """Spec v0.2 A2: real months, invented sequence — the Mahalanobis statistic
+    measures the novelty of the assembled sequence in rolling-12m space. The
+    assertions here check the statistic COMPUTES and is self-consistent; no
+    assertion bounds its value, because it is reported, never gating."""
+    source = _tiny_source()
+    gen = StressBootstrap(source)
+    ens = gen.sample_months(120, 8, seed=2, stress=_spec())
+    p = plausibility_report(ens, source)
+    assert set(p) >= {"mahalanobis_median", "mahalanobis_max", "panel_mahalanobis_p95"}
+    assert 0.0 <= p["mahalanobis_median"] <= p["mahalanobis_max"]
+    assert p["panel_mahalanobis_p95"] > 0.0
 ```
 
-- [ ] **Step 2: Watch fail. Step 3: Implement** — lag-1 autocorrelation of `equity_mkt` pooled across paths for `ac1_generated`, the same statistic on `source.values` for `ac1_panel`, `join_count` from `row_indices` steps not equal to 1, `max_level_jump` the largest `hy_spread` change at a join.
+- [ ] **Step 2: Watch fail. Step 3: Implement** — lag-1 autocorrelation of `equity_mkt` pooled across paths for `ac1_generated`, the same statistic on `source.values` for `ac1_panel`, `join_count` from `row_indices` steps not equal to 1, `max_level_jump` the largest `hy_spread` change at a join; `plausibility_report` per the interface note above (rolling 12-month mean vectors, panel reference mean/covariance with a `1e-9` diagonal ridge, `numpy.linalg` only — no new dependency).
 
 - [ ] **Step 4: Green. Step 5: Commit.**
 
@@ -829,7 +858,7 @@ git commit -m "feat(stress-01): emergent-depth and coherence reports (measuremen
 **This task MUST land in a later commit than Task 5. That ordering is the whole honesty mechanism.**
 
 - [ ] **Step 1: Build and run the world.** `uv run ah world build --preset stress_1974`, then `uv run ah run --paths 1000`, then `uv run ah replay` (must print MATCH).
-- [ ] **Step 2: Report emergent depth** via `scripts/stress_report.py` — median peak-to-trough, duration, spread peak — and write them beside the precedent claims from the preset. State whether the produced depth is consistent with the episodes cited.
+- [ ] **Step 2: Report emergent depth and plausibility** via `scripts/stress_report.py` — median peak-to-trough, duration, spread peak, and the Mahalanobis plausibility numbers beside the panel's own p95 — written beside the precedent claims from the preset. State whether the produced depth is consistent with the episodes cited.
 - [ ] **Step 3: Console walk.** `uv run ah credibility --preset stress_1974 --out stress.html`. Record every flagged statistic and its value.
 - [ ] **Step 4: Measure the adequacy ladder, once.** Coverage breaches, forced secondaries, ruinous seeds across 20 seeds. Reference shape: 20/20 coverage breached, 4–8/20 forced secondary, 1+ ruinous.
 - [ ] **Step 5: Record the result — and DO NOT TUNE.**
