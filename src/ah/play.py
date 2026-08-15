@@ -266,6 +266,19 @@ class PlayQuarter:
     #: Deliberate: the stack shows the programme's own NAV, and the
     #: forced-sale block shows what liquidity did to it afterward.
     vintage_nav: dict[str, float] = field(default_factory=dict)
+    #: cio-01: per-asset state the CIO view renders. Pure reads of the same
+    #: book — recording them must not change a single quarterly numeric.
+    liquid_values: dict[str, float] = field(default_factory=dict)
+    private_true: dict[str, float] = field(default_factory=dict)
+    private_reported: dict[str, float] = field(default_factory=dict)
+    private_calls: dict[str, float] = field(default_factory=dict)
+    private_distributions: dict[str, float] = field(default_factory=dict)
+    private_unfunded: dict[str, float] = field(default_factory=dict)
+    #: Three monthly NAV marks for the quarter. Months 0 and 1 mark the
+    #: opening sleeves to the tape's monthly returns with flows pending;
+    #: month 2 IS the post-waterfall quarter close, exactly.
+    nav_true_months: tuple[float, ...] = ()
+    nav_reported_months: tuple[float, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -287,6 +300,7 @@ class PlayResult:
     forced_secondaries: int = 0
     forced_secondary_nav: float = 0.0
     sale_log: list[dict[str, Any]] = field(default_factory=list)
+    opening: dict[str, Any] = field(default_factory=dict)
 
     @property
     def months(self) -> int:
@@ -458,6 +472,28 @@ def simulate_play(
     base_doc = _doc("closed-end-cohort.example.json")
     ladders: dict[str, list[ClosedEndCohort]] = {a: [cohorts[a]] for a in PRIVATE_ASSETS}
 
+    def _liquid_snapshot() -> dict[str, float]:
+        return {a: float(portfolio.liquid[a].value) for a in liquid}
+
+    def _private_snapshot(reported: bool) -> dict[str, float]:
+        return {
+            a: float(sum((c.nav_reported if reported else c.nav_true) for c in ladders[a]))
+            for a in PRIVATE_ASSETS
+        }
+
+    def _unfunded_snapshot() -> dict[str, float]:
+        return {a: float(sum(c.unfunded for c in ladders[a])) for a in PRIVATE_ASSETS}
+
+    opening = {
+        "nav_true": float(portfolio.nav_true()),
+        "nav_reported": float(portfolio.nav_reported()),
+        "cash": float(portfolio.cash),
+        "liquid_values": _liquid_snapshot(),
+        "private_true": _private_snapshot(False),
+        "private_reported": _private_snapshot(True),
+        "private_unfunded": _unfunded_snapshot(),
+    }
+
     q_returns = {a: _quarterly(paths.returns[a], n_quarters) for a in paths.returns}
     q_reported = {a: _quarterly(paths.reported[a], n_quarters) for a in paths.reported}
     depth = _drawdown_depth(q_returns["equity"])
@@ -488,6 +524,9 @@ def simulate_play(
                 elif name == "secondary":
                     _secondary_sale(portfolio, {"pe_ladder": ladders["pe"]}, policy)
 
+        liq_open = _liquid_snapshot()
+        cash_open = float(portfolio.cash)
+
         for asset in liquid:
             portfolio.liquid[asset].apply_return(float(q_returns[asset][q]))
 
@@ -517,6 +556,9 @@ def simulate_play(
                 _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4, amount)
                 committed_this_quarter += amount
 
+        priv_true_open = _private_snapshot(False)
+        priv_rep_open = _private_snapshot(True)
+
         calls = 0.0
         distributions = 0.0
         expired = 0.0
@@ -525,6 +567,8 @@ def simulate_play(
         fc = tier1_f_call(dd) if linkage else 1.0
         fd = tier1_f_dist(dd, sr) if linkage else 1.0
         vintage_nav: dict[str, float] = {}
+        calls_by: dict[str, float] = {a: 0.0 for a in PRIVATE_ASSETS}
+        dists_by: dict[str, float] = {a: 0.0 for a in PRIVATE_ASSETS}
         for asset in PRIVATE_ASSETS:
             for cohort in ladders[asset]:
                 step = cohort.step(
@@ -535,6 +579,8 @@ def simulate_play(
                 calls += step.call
                 distributions += step.distribution_total
                 expired += step.expired_undrawn
+                calls_by[asset] += step.call
+                dists_by[asset] += step.distribution_total
                 # the reported mark follows the tape the player is shown
                 grown = cohort.nav_reported * (1.0 + float(q_reported[asset][q]))
                 cohort.report(max(0.0, grown + step.call - step.distribution_total))
@@ -544,6 +590,36 @@ def simulate_play(
         if report.forced_sale_total > 0.0:
             forced_quarters += 1
             forced_total += report.forced_sale_total
+
+        def _mark(
+            month_in_q: int,
+            reported: bool,
+            *,
+            _q: int = q,
+            _liq_open: dict[str, float] = liq_open,
+            _cash_open: float = cash_open,
+            _priv_true_open: dict[str, float] = priv_true_open,
+            _priv_rep_open: dict[str, float] = priv_rep_open,
+        ) -> float:
+            liq = sum(
+                _liq_open[a]
+                * float(np.prod(1.0 + paths.returns[a][_q * 3 : _q * 3 + month_in_q + 1] / 100.0))
+                for a in liquid
+            )
+            tape = paths.reported if reported else paths.returns
+            opens = _priv_rep_open if reported else _priv_true_open
+            priv = sum(
+                opens[a] * float(np.prod(1.0 + tape[a][_q * 3 : _q * 3 + month_in_q + 1] / 100.0))
+                for a in PRIVATE_ASSETS
+            )
+            return liq + priv + _cash_open
+
+        nav_true_months = (_mark(0, False), _mark(1, False), float(portfolio.nav_true()))
+        nav_reported_months = (
+            _mark(0, True),
+            _mark(1, True),
+            float(portfolio.nav_reported()),
+        )
 
         out.append(
             PlayQuarter(
@@ -568,6 +644,14 @@ def simulate_play(
                 f_call=fc,
                 new_commitments=committed_this_quarter,
                 vintage_nav=vintage_nav,
+                liquid_values=_liquid_snapshot(),
+                private_true=_private_snapshot(False),
+                private_reported=_private_snapshot(True),
+                private_calls=calls_by,
+                private_distributions=dists_by,
+                private_unfunded=_unfunded_snapshot(),
+                nav_true_months=nav_true_months,
+                nav_reported_months=nav_reported_months,
             )
         )
 
@@ -581,6 +665,7 @@ def simulate_play(
         forced_secondaries=len(secondaries),
         forced_secondary_nav=sum(float(e["nav_sold"]) for e in secondaries),
         sale_log=list(portfolio.forced_sales),
+        opening=opening,
     )
 
 
