@@ -1,0 +1,68 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 630" width="1200" height="630" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1200" height="630" fill="#fdfcf8"/>
+  <rect x="0" y="0" width="1200" height="630" fill="none" stroke="#ded6c7" stroke-width="2"/>
+
+  <!-- masthead -->
+  <text x="600" y="74" font-size="38" fill="#14181d" text-anchor="middle" letter-spacing="7">THE WIRE</text>
+  <line x1="60" y1="90" x2="1140" y2="90" stroke="#14181d" stroke-width="2.5"/>
+  <line x1="60" y1="94" x2="1140" y2="94" stroke="#14181d" stroke-width="0.8"/>
+  <text x="60" y="116" font-size="12" fill="#5c6570" font-style="italic">December, Year 10</text>
+  <text x="1140" y="116" font-size="12" fill="#5c6570" text-anchor="end" letter-spacing="3">THE DECADE IN REVIEW</text>
+
+  <line x1="60" y1="128" x2="1140" y2="128" stroke="#14181d" stroke-width="0.8"/>
+
+  <!-- headline -->
+  <text x="60" y="212" font-size="72" fill="#14181d">Sold at the bottom</text>
+  <text x="60" y="250" font-size="17" fill="#2b3238" font-weight="bold">A decade that punished conviction twice: once for having it, once for losing it.</text>
+
+  <!-- divider -->
+  <line x1="60" y1="278" x2="720" y2="278" stroke="#ded6c7"/>
+
+  <!-- body left -->
+  <g font-size="13.5" fill="#2b3238">
+    <text x="60" y="308">Six defining months, one forced sale, and a</text>
+    <text x="60" y="328">distribution drought that outlasted the equity</text>
+    <text x="60" y="348">recovery by nineteen months.</text>
+    <text x="60" y="380">The Committee deleted its commitment to a return</text>
+    <text x="60" y="400">to target in month 47. Credit broke five months later.</text>
+    <text x="60" y="420">The cash account ran out in month 63.</text>
+  </g>
+
+  <!-- sparkline: player vs twin -->
+  <g>
+    <text x="60" y="462" font-size="10" fill="#5c6570" letter-spacing="2.5">YOU vs THE TWIN</text>
+    <polyline points="60,530 118,516 176,502 234,494 292,506 350,538 408,556 466,548 524,536 582,524 640,512 698,504"
+              fill="none" stroke="#8f2e26" stroke-width="2.4"/>
+    <polyline points="60,530 118,518 176,504 234,492 292,498 350,522 408,532 466,516 524,498 582,482 640,470 698,462"
+              fill="none" stroke="#5c6570" stroke-width="1.6" stroke-dasharray="5 4"/>
+    <circle cx="408" cy="556" r="4" fill="#8f2e26"/>
+    <text x="418" y="574" font-size="11" fill="#8f2e26">forced sale · m63</text>
+    <text x="706" y="508" font-size="11" fill="#8f2e26">you</text>
+    <text x="706" y="466" font-size="11" fill="#5c6570">twin</text>
+  </g>
+
+  <!-- right rule -->
+  <line x1="762" y1="150" x2="762" y2="560" stroke="#14181d" stroke-width="0.8"/>
+
+  <!-- score block -->
+  <text x="800" y="196" font-size="12" fill="#5c6570" letter-spacing="3.5">DECISION ALPHA</text>
+  <text x="800" y="288" font-size="96" fill="#8f2e26">−2.8</text>
+  <text x="800" y="316" font-size="14" fill="#2b3238" font-style="italic">against the twin that did nothing</text>
+
+  <line x1="800" y1="344" x2="1140" y2="344" stroke="#ded6c7"/>
+
+  <g font-size="15" fill="#2b3238">
+    <text x="800" y="378">Final value</text><text x="1140" y="378" text-anchor="end" fill="#14181d">141.2</text>
+    <text x="800" y="410">Max drawdown</text><text x="1140" y="410" text-anchor="end" fill="#14181d">−27.4%</text>
+    <text x="800" y="442">Forced sales</text><text x="1140" y="442" text-anchor="end" fill="#8f2e26">1</text>
+  </g>
+
+  <line x1="800" y1="470" x2="1140" y2="470" stroke="#ded6c7"/>
+  <text x="800" y="500" font-size="14" fill="#14181d">SECOND WIND · challenge #1</text>
+  <text x="800" y="524" font-size="12.5" fill="#5c6570" font-family="ui-monospace, Menlo, monospace">run sw-4417-a91c · replayable</text>
+
+  <!-- footer furniture -->
+  <line x1="60" y1="588" x2="1140" y2="588" stroke="#14181d" stroke-width="0.8"/>
+  <text x="60" y="610" font-size="11" fill="#5c6570">SIMULATED WORLD · no firm or person in this decade is real · not investment advice · not a forecast</text>
+  <text x="1140" y="610" font-size="11" fill="#5c6570" text-anchor="end">1200 × 630 · same renderer as the outcome card</text>
+</svg>

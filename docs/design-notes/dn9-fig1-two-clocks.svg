@@ -1,0 +1,73 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 500" width="920" height="500" font-family="Georgia, 'Times New Roman', serif">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+      <path d="M0,0 L10,5 L0,10 z" fill="#2f3a45"/>
+    </marker>
+    <pattern id="hatch" width="6" height="6" patternTransform="rotate(45)" patternUnits="userSpaceOnUse">
+      <line x1="0" y1="0" x2="0" y2="6" stroke="#b9c3cc" stroke-width="2"/>
+    </pattern>
+  </defs>
+
+  <rect width="920" height="500" fill="#fbfaf7"/>
+
+  <!-- title -->
+  <text x="48" y="46" font-size="19" fill="#1c2530">The two clocks</text>
+  <text x="48" y="70" font-size="13.5" fill="#5d6a76" font-style="italic">Foreknowledge reaches the player through one channel only, and that channel is constrained.</text>
+
+  <!-- ============ AUTHORING CLOCK ============ -->
+  <text x="48" y="118" font-size="13" fill="#1c2530" letter-spacing="1.6">AUTHORING CLOCK</text>
+  <text x="252" y="118" font-size="12.5" fill="#8a5a2b" font-style="italic">omniscient · world build time</text>
+
+  <rect x="48" y="132" width="600" height="34" fill="#2f3a45"/>
+  <text x="60" y="154" font-size="12" fill="#fbfaf7" letter-spacing="0.6">the entire realised path — months 1 to 120, frozen and hashed</text>
+  <text x="656" y="154" font-size="12" fill="#5d6a76">m120</text>
+
+  <!-- arrow down to bible -->
+  <line x1="348" y1="170" x2="348" y2="196" stroke="#2f3a45" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+  <!-- bible box -->
+  <rect x="180" y="200" width="336" height="66" fill="#f2ece1" stroke="#8a5a2b" stroke-width="1.2"/>
+  <text x="348" y="222" font-size="13" fill="#1c2530" text-anchor="middle">THE BIBLE</text>
+  <text x="348" y="240" font-size="11.5" fill="#3d4854" text-anchor="middle">cast continuity · thread allocation · pacing</text>
+  <text x="348" y="257" font-size="11.5" fill="#8a5a2b" text-anchor="middle" font-style="italic">constrained by plant-rate parity (§2.4)</text>
+
+  <!-- side annotation on what is barred -->
+  <line x1="516" y1="233" x2="580" y2="233" stroke="#a03c32" stroke-width="1.2" stroke-dasharray="4 3"/>
+  <text x="588" y="222" font-size="11.5" fill="#a03c32">no path content passes</text>
+  <text x="588" y="238" font-size="11.5" fill="#a03c32">through this box —</text>
+  <text x="588" y="254" font-size="11.5" fill="#a03c32">casting only</text>
+
+  <line x1="348" y1="266" x2="348" y2="300" stroke="#2f3a45" stroke-width="1.4" marker-end="url(#arrow)"/>
+
+  <!-- divider -->
+  <line x1="48" y1="292" x2="872" y2="292" stroke="#d9d2c6" stroke-width="1"/>
+
+  <!-- ============ REVEAL CLOCK ============ -->
+  <text x="48" y="330" font-size="13" fill="#1c2530" letter-spacing="1.6">REVEAL CLOCK</text>
+  <text x="200" y="330" font-size="12.5" fill="#8a5a2b" font-style="italic">myopic · play time</text>
+
+  <!-- revealed portion -->
+  <rect x="48" y="344" width="300" height="34" fill="#2f3a45"/>
+  <text x="60" y="366" font-size="12" fill="#fbfaf7">path[1..t] — what the player has lived</text>
+  <!-- unrevealed portion -->
+  <rect x="348" y="344" width="300" height="34" fill="url(#hatch)" stroke="#b9c3cc" stroke-width="1"/>
+  <text x="498" y="366" font-size="12" fill="#7b8792" text-anchor="middle">unreadable by the renderer</text>
+
+  <!-- now marker -->
+  <line x1="348" y1="332" x2="348" y2="392" stroke="#a03c32" stroke-width="1.6"/>
+  <text x="348" y="406" font-size="12" fill="#a03c32" text-anchor="middle">now (month t)</text>
+
+  <!-- artifact output -->
+  <rect x="48" y="428" width="600" height="40" fill="#ffffff" stroke="#2f3a45" stroke-width="1.2"/>
+  <text x="62" y="446" font-size="12.5" fill="#1c2530">this month's paper</text>
+  <text x="62" y="462" font-size="12" fill="#3d4854" font-family="ui-monospace, 'SFMono-Regular', Menlo, monospace">A_t = f( path[1..t], bible, template_pack, seed )</text>
+
+  <!-- enforcement note -->
+  <line x1="648" y1="361" x2="700" y2="361" stroke="#2f3a45" stroke-width="1.2"/>
+  <text x="708" y="350" font-size="11.5" fill="#3d4854">scope enforced at the</text>
+  <text x="708" y="366" font-size="11.5" fill="#3d4854">query layer, not in the</text>
+  <text x="708" y="382" font-size="11.5" fill="#3d4854">prompt (D-15 §3.2)</text>
+
+  <text x="708" y="446" font-size="11.5" fill="#3d4854">gated by N-1 to N-4</text>
+  <text x="708" y="462" font-size="11.5" fill="#3d4854">before ship (§8)</text>
+</svg>

@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 700 880" width="700" height="880" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="700" height="880" fill="#f6f2e9"/>
+  <rect x="28" y="28" width="644" height="824" fill="#fdfcf8" stroke="#ded6c7"/>
+
+  <!-- masthead -->
+  <text x="350" y="86" font-size="40" fill="#14181d" text-anchor="middle" letter-spacing="7">THE WIRE</text>
+  <line x1="56" y1="100" x2="644" y2="100" stroke="#14181d" stroke-width="2.5"/>
+  <line x1="56" y1="104" x2="644" y2="104" stroke="#14181d" stroke-width="0.8"/>
+
+  <!-- special edition band -->
+  <rect x="56" y="112" width="588" height="24" fill="#14181d"/>
+  <text x="350" y="129" font-size="12" fill="#fdfcf8" text-anchor="middle" letter-spacing="4.5">SPECIAL EDITION</text>
+  <text x="56" y="154" font-size="11.5" fill="#5c6570" font-style="italic">April, Year 5</text>
+  <text x="644" y="154" font-size="11.5" fill="#5c6570" text-anchor="end" font-style="italic">Second Wind · challenge #1</text>
+
+  <!-- market strip PROMOTED above the lead -->
+  <line x1="56" y1="164" x2="644" y2="164" stroke="#14181d" stroke-width="0.8"/>
+  <rect x="56" y="164" width="588" height="42" fill="#f0ebe0"/>
+  <text x="66" y="181" font-size="10" fill="#5c6570" letter-spacing="2.5">MARKETS</text>
+  <text x="66" y="197" font-size="12.5" fill="#14181d">Equities −24% from peak</text>
+  <text x="243" y="197" font-size="12.5" fill="#8f2e26">HY OAS 812bp (+187 / 9 sessions)</text>
+  <text x="470" y="197" font-size="12.5" fill="#14181d">2s10s −68bp</text>
+  <text x="580" y="197" font-size="12.5" fill="#8f2e26">Vol: extreme</text>
+  <line x1="56" y1="206" x2="644" y2="206" stroke="#14181d" stroke-width="0.8"/>
+
+  <!-- single lead, tight leading -->
+  <text x="56" y="256" font-size="40" fill="#14181d">Calder Bridge halts</text>
+  <text x="56" y="298" font-size="40" fill="#14181d">redemptions</text>
+
+  <text x="56" y="330" font-size="14" fill="#14181d" font-weight="bold">The income fund stopped paying out on Tuesday, and by</text>
+  <text x="56" y="349" font-size="14" fill="#14181d" font-weight="bold">Thursday three others had suspended.</text>
+
+  <!-- dense three-column body -->
+  <g font-size="11.5" fill="#2b3238">
+    <text x="56" y="378">Calder Bridge told investors</text>
+    <text x="56" y="394">the queue would be met "in an</text>
+    <text x="56" y="410">orderly fashion over coming</text>
+    <text x="56" y="426">quarters," language that four</text>
+    <text x="56" y="442">separate allocators described</text>
+    <text x="56" y="458">to this paper in identical</text>
+    <text x="56" y="474">terms.</text>
+    <text x="56" y="498">The lender closed its third</text>
+    <text x="56" y="514">income vehicle above target</text>
+    <text x="56" y="530">four years ago, in eleven</text>
+    <text x="56" y="546">weeks.</text>
+
+    <text x="256" y="378">High yield has widened 187</text>
+    <text x="256" y="394">basis points in nine sessions,</text>
+    <text x="256" y="410">the fastest move in the series</text>
+    <text x="256" y="426">since it began. Equities are</text>
+    <text x="256" y="442">24% below the peak set</text>
+    <text x="256" y="458">fourteen months ago.</text>
+    <text x="256" y="482">Two consultants who raised</text>
+    <text x="256" y="498">questions about underwriting</text>
+    <text x="256" y="514">standards in the segment</text>
+    <text x="256" y="530">declined to repeat them on</text>
+    <text x="256" y="546">the record.</text>
+
+    <text x="456" y="378">The suspensions arrive five</text>
+    <text x="456" y="394">months after the Committee</text>
+    <text x="456" y="410">deleted its commitment to a</text>
+    <text x="456" y="426">return to target, and three</text>
+    <text x="456" y="442">meetings into the tightening</text>
+    <text x="456" y="458">that followed.</text>
+    <text x="456" y="482">A fourth vehicle is expected</text>
+    <text x="456" y="498">to gate before the quarter</text>
+    <text x="456" y="514">closes, according to two</text>
+    <text x="456" y="530">people briefed on the</text>
+    <text x="456" y="546">discussions.</text>
+  </g>
+
+  <line x1="246" y1="368" x2="246" y2="556" stroke="#ded6c7"/>
+  <line x1="446" y1="368" x2="446" y2="556" stroke="#ded6c7"/>
+  <line x1="56" y1="576" x2="644" y2="576" stroke="#14181d" stroke-width="0.8"/>
+
+  <!-- your desk -->
+  <rect x="56" y="590" width="588" height="122" fill="#f0ebe0" stroke="#14181d" stroke-width="1.1"/>
+  <text x="70" y="612" font-size="10.5" fill="#14181d" letter-spacing="3">YOUR DESK</text>
+  <text x="70" y="638" font-size="13.5" fill="#14181d">Portfolio <tspan fill="#8f2e26">−11.2%</tspan> on the month.</text>
+  <text x="70" y="660" font-size="13.5" fill="#2b3238">Private sleeves marked at February values.</text>
+  <text x="70" y="682" font-size="13.5" fill="#2b3238">Cash <tspan fill="#8f2e26">1.4%</tspan> of assets and falling. Calls of 0.8% due in June.</text>
+  <text x="632" y="702" font-size="10" fill="#5c6570" text-anchor="end" font-style="italic">descriptive only — the paper reports, it does not advise</text>
+
+  <!-- annotation rail -->
+  <g font-size="10.5" fill="#8a5a2b">
+    <text x="56" y="742" font-style="italic">Rendered from four event records. Nothing on this page was written at play time.</text>
+    <text x="56" y="762">E08 credit spread breach · sev 3 → the lead</text>
+    <text x="56" y="778">E16 gating · sev 3 → the lead's second clause</text>
+    <text x="56" y="794">E10 drawdown milestone −20% → paragraph two</text>
+    <text x="56" y="810">layout_state: dislocated → band, single lead, market strip promoted, no image</text>
+  </g>
+  <text x="56" y="836" font-size="9.5" fill="#5c6570">SIMULATED WORLD · no firm or person is real · not investment advice</text>
+</svg>

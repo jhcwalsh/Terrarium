@@ -1,0 +1,138 @@
+# voices.yaml — narration parameters
+#
+# CONTRACT
+#   Every tunable value in the narration layer lives here. Nothing tunable is
+#   hardcoded, defaulted in Python, or inferred.
+#
+#   `UNRESOLVED` is a sentinel, not a placeholder. Loading a key whose value is
+#   UNRESOLVED raises `UnresolvedParameter`, appends to UNRESOLVED.md, and fails
+#   the run with the full list. DO NOT substitute a plausible value.
+#
+#   Keys marked [A3-B] correspond one-to-one with bucket B of documentation
+#   register Amendment A3. The register and this file are the same list; drift
+#   between them is a defect.
+#
+# version is stamped into every run manifest.
+version: "0.1"
+
+# ---------------------------------------------------------------- severity
+# The function DN-9 used ~40 times and never defined. Drives slot contests,
+# layout state, headline size and whether SPECIAL fires.
+# A first draft exists in spikes/wire_proto.py — UNRATIFIED, calibrated against
+# a toy path, never run against a real one. Do not import it.
+severity:
+  # |z| banding. Calibrate so a MEDIAN decade yields target_sev3 events.
+  cuts: UNRESOLVED            # [A3-B] candidates: [1.0,2.0,3.0] | [1.25,2.25,3.25]
+  target_sev3_band: UNRESOLVED # [A3-B] candidates: [4,10] | [6,14]
+  # per-class scale divides |z|; >1 damps, <1 amplifies
+  class_scale: UNRESOLVED     # [A3-B] map of class -> float
+  hard_overrides:             # classes where the event IS the severity
+    E16: 3                    # gating
+    E18: 3                    # forced sale
+
+# ------------------------------------------------------------- event classes
+# One entry per DN-9 §3.2 class in scope. `kind` is structural, not tunable:
+#   point — fires on the period it occurs
+#   state — fires on ONSET or MILESTONE CROSSING only, episodes grouped
+# A state class firing every period it holds is a defect, not a parameter.
+events:
+  E01: {kind: point, threshold: UNRESOLVED}   # policy decision
+  E02: {kind: point, threshold: UNRESOLVED}   # inflation print
+  E03: {kind: point, threshold: UNRESOLVED}   # labour print (derived)
+  E04: {kind: point, threshold: UNRESOLVED}   # growth print (derived)
+  E05: {kind: point, threshold: UNRESOLVED}   # equity move
+  E06: {kind: point, threshold: UNRESOLVED}   # rate move
+  E07: {kind: state, threshold: UNRESOLVED}   # curve inversion / re-steepening
+  E08: {kind: point, threshold: UNRESOLVED}   # credit spread breach
+  E09: {kind: state, threshold: UNRESOLVED}   # volatility regime
+  E10: {kind: state, milestones: UNRESOLVED}  # drawdown — crossings, not levels
+  E11: {kind: point, threshold: UNRESOLVED}   # recovery milestone
+  E12: {kind: point, threshold: UNRESOLVED}   # private mark update
+  E15: {kind: state, threshold: UNRESOLVED}   # distribution drought
+  E16: {kind: state, threshold: UNRESOLVED}   # gating / redemption queue
+  E17: {kind: point, threshold: UNRESOLVED}   # secondary pricing
+  E18: {kind: state, threshold: UNRESOLVED}   # forced sale
+  E19: {kind: point, threshold: UNRESOLVED}   # fund formation
+  E21: {kind: point, threshold: null}         # year end — calendar, no threshold
+# E13 absent by decision: the paper never reports the true plane [A3-A · N-c]
+# E14, E20, E22 out of scope for the workbench (book layer / peer survey / close)
+
+# ------------------------------------------------------------------- slate
+slate:
+  slots: [POLICY, DATA, MARKETS, CAPITAL]
+  contest_rule: UNRESOLVED        # [A3-B · N-o] severity then latest? then what
+  tie_break: UNRESOLVED           # [A3-B · N-o] must be documented, never dict order
+  min_slots: UNRESOLVED           # [A3-B · N-o] three-vs-four threshold
+  special_edition_severity: 3
+  capital_absent_message: "CAPITAL omitted — portfolio layer not wired to this world"
+
+# ------------------------------------------------------------------- voices
+voices:
+  fomc:
+    backend: template             # llm backend raises NotImplementedError
+    meetings_per_year: 8
+    anchor:
+      # narration anchor is SMOOTHED; the raw DN-1 II.2 residual reaches +1.47
+      # on a cut and is unusable as a surprise measure (DN-9 App C.6)
+      rho: UNRESOLVED             # [A3-B · N-p] fit once, freeze, stamp
+      quantise_bp: UNRESOLVED     # [A3-B] candidates: 25 | 12.5
+    dissent:
+      committee_size: UNRESOLVED  # [A3-B] candidates: 8 | 12
+      prior_spread: UNRESOLVED    # [A3-B] hawk-dove distribution width
+    mandate_boundary:             # [A3-C · N-aa] hard constraint, not prompt guidance
+      may_speak_to: [inflation, expectations, labour_market, financial_conditions_re_mandate]
+      may_not_speak_to: [asset_valuations, private_market_functioning, fiscal_policy, named_institutions]
+
+  columnists:
+    backend: template
+    count: UNRESOLVED             # [A3-B] golden set fixes four; confirm
+    consensus_lag_months: UNRESOLVED  # [A3-B] how far behind the print they turn
+    dispersion: UNRESOLVED        # [A3-B · N-e] collapse/widen model
+    hit_rate_target: UNRESOLVED   # [A3-B · N-i] candidates: [0.45,0.60]
+    outlier_backend: llm          # Ferrers only — ~8 items/decade (golden set)
+
+  economist:
+    backend: template             # llm deferred; strain logging is the point now
+    name: "Calloway"              # golden set
+    strain_logging: true
+    stickiness_meetings: UNRESOLVED   # [A3-B · N-t] median thesis life, cand. [4,6]
+    risk_book_size: UNRESOLVED        # [A3-B] live concerns at any time, cand. [3,5]
+    risk_materialisation_rate: UNRESOLVED  # [A3-B · N-z] cand. [0.15,0.25]
+    filtered_state: UNRESOLVED    # [A3-B · N-s ⚖] estimator spec — Quant
+
+# ------------------------------------------------------- derived observables
+# DN-9 §3.4. Deterministic functions of revealed state, parameters fixed at
+# world build, each stamped in the manifest. A derived observable taking any
+# input from unrevealed state is a second generator and fails N-1.
+derived_observables:              # [A3-B · N-b2]
+  unemployment: {source: g, transform: okun, params: UNRESOLVED}
+  payrolls_change: {source: g, transform: okun, params: UNRESOLVED}
+  headline_cpi: {source: inflation_factor, transform: identity, params: UNRESOLVED}
+
+# ------------------------------------------------------------------- style
+style:
+  # DN-9 §8 N-4. This list IS settled — it is the omniscience-bleed linter.
+  banned_constructions:
+    - "what would become"
+    - "what would later become"
+    - "the first sign of"
+    - "little did"
+    - "presaged"
+    - "in hindsight"
+    - "the beginning of the end"
+    - "as it turned out"
+    - "would later prove"
+    - "was always going to"
+  # [A3-B · N-b] vocabulary must NOT map one-to-one onto the L2 label.
+  # A ban does not work — a paper that never prints "recession" during REC
+  # leaks by omission. Cross-firing rates required instead.
+  vocabulary_cross_firing: UNRESOLVED
+  regime_labels: [EXP, SLOW, REC, CRI, STAG, REF]
+
+# -------------------------------------------------------------- diagnostics
+diagnostics:
+  repetition_ngram_n: UNRESOLVED  # [A3-B] n for the repetition panel
+  # These two are diagnostics on the GENERATOR, not on narration (DN-9 C.6, D.6).
+  # Report them; do not gate on them here. Sealing is A3 bucket E.
+  policy_reversal_window_months: 6
+  strain_report_top_n: 10

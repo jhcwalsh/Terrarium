@@ -245,3 +245,30 @@ recommended forms. Counsel review is scheduled for when a narration
 product exists to review, not before. The recommendations are unchanged
 from the register A3 triage; this entry converts them from blocked to
 building.
+
+---
+
+## Narration bucket-A ratifications (2026-08-15, owner)
+
+The six open decisions from `docs/documentation-register-A3-narration.md`
+S2, ratified on their recommended positions in one batch:
+
+| # | Decision | Ratified position |
+|---|---|---|
+| N-c | Does the paper ever report the true plane? | **No, in every arm.** The paper sees what a publication sees. Guards DN-6 arm-A integrity |
+| N-h | Front page replaces the outcome card | **Yes.** Same renderer, same cache key |
+| N-n | Quarterly slate as the turn unit, monthly tape retained | **Yes.** Refines A2 decision 3 |
+| N-ac | Board power | **Soft, with early termination** (formalises the S7 instruction) |
+| N-ai | Tier-2 narration paid; Tier-1 compilation free | **Yes** |
+| N-r | Rationale agent as a fourth LLM role, own boundary note and gate | **Yes, M5** |
+
+(The three counsel-dependent items N-m / N-u / N-d were already ruled
+build-now-Counsel-at-product on 2026-08-15, recorded above.)
+
+**Workbench input-contract ruling (2026-08-15, owner):** the narration
+workbench's required `l1_state` series stays REQUIRED as the task
+specifies. Resolution of the conflict with shipped bootstrap worlds (which
+carry no L1 layer): **a hier-flow-v1 world is stood up first** — the
+G2-promoted generator, whose ensembles carry the slow-state layer — and
+the workbench's first world is that one. Demoting l1_state to optional
+was considered and declined.

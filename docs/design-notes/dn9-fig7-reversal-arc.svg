@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 600" width="1000" height="600" font-family="Georgia, 'Times New Roman', serif">
+  <rect width="1000" height="600" fill="#fbfaf7"/>
+  <text x="44" y="42" font-size="19" fill="#14181d">How a view breaks</text>
+  <text x="44" y="64" font-size="13" fill="#5c6570" font-style="italic">The House Economist, myopic at every step. Confidence decays as contradiction accumulates; capitulation is abrupt.</text>
+
+  <!-- axis -->
+  <line x1="120" y1="120" x2="120" y2="360" stroke="#ded6c7"/>
+  <line x1="120" y1="360" x2="936" y2="360" stroke="#ded6c7"/>
+  <text x="108" y="126" font-size="10" fill="#5c6570" text-anchor="end">1.0</text>
+  <text x="108" y="364" font-size="10" fill="#5c6570" text-anchor="end">0</text>
+  <text x="56" y="244" font-size="10.5" fill="#5c6570">confidence</text>
+
+  <!-- capitulation floor -->
+  <line x1="120" y1="288" x2="936" y2="288" stroke="#8f2e26" stroke-width="0.9" stroke-dasharray="5 4"/>
+  <text x="936" y="283" font-size="10" fill="#8f2e26" text-anchor="end">capitulation floor 0.30</text>
+
+  <!-- state bands -->
+  <rect x="150" y="104" width="180" height="12" fill="#2f5d50" opacity="0.75"/>
+  <text x="240" y="114" font-size="9" fill="#fff" text-anchor="middle" letter-spacing="2">HOLD THE LINE</text>
+  <rect x="330" y="104" width="180" height="12" fill="#5c6570" opacity="0.75"/>
+  <text x="420" y="114" font-size="9" fill="#fff" text-anchor="middle" letter-spacing="2">DEFEND</text>
+  <rect x="510" y="104" width="180" height="12" fill="#8a5a2b" opacity="0.8"/>
+  <text x="600" y="114" font-size="9" fill="#fff" text-anchor="middle" letter-spacing="2">QUALIFY</text>
+  <rect x="690" y="104" width="180" height="12" fill="#8f2e26"/>
+  <text x="780" y="114" font-size="9" fill="#fff" text-anchor="middle" letter-spacing="2">CAPITULATE</text>
+
+  <!-- confidence line -->
+  <polyline points="180,163 300,175 420,229 540,285 660,318 780,266 900,240"
+            fill="none" stroke="#14181d" stroke-width="2.4"/>
+  <g fill="#14181d">
+    <circle cx="180" cy="163" r="5"/><circle cx="300" cy="175" r="5"/>
+    <circle cx="420" cy="229" r="5"/><circle cx="540" cy="285" r="5"/>
+    <circle cx="660" cy="318" r="6" fill="#8f2e26"/>
+    <circle cx="780" cy="266" r="5"/><circle cx="900" cy="240" r="5"/>
+  </g>
+  <g font-size="10" fill="#2b3238" text-anchor="middle">
+    <text x="180" y="152">0.82</text><text x="300" y="164">0.78</text><text x="420" y="218">0.71</text>
+    <text x="540" y="274">0.48</text><text x="660" y="338">0.26</text><text x="780" y="255">0.61</text><text x="900" y="229">0.68</text>
+  </g>
+
+  <!-- meeting labels -->
+  <g font-size="10.5" fill="#14181d" text-anchor="middle">
+    <text x="180" y="382">m47</text><text x="300" y="382">m48</text><text x="420" y="382">m50</text>
+    <text x="540" y="382">m52</text><text x="660" y="382">m55</text><text x="780" y="382">m58</text><text x="900" y="382">m67</text>
+  </g>
+  <g font-size="9.5" fill="#5c6570" text-anchor="middle">
+    <text x="180" y="396">+25bp</text><text x="300" y="396">hold</text><text x="420" y="396">hold</text>
+    <text x="540" y="396">hold</text><text x="660" y="396">−25bp</text><text x="780" y="396">−25bp</text><text x="900" y="396">hold</text>
+  </g>
+
+  <!-- contradictions -->
+  <g font-size="9.5" fill="#8f2e26" text-anchor="middle">
+    <text x="420" y="418">u_rate +0.3</text><text x="420" y="431">cpi −0.3σ</text>
+    <text x="540" y="418">HY +187bp</text><text x="540" y="431">gating</text>
+  </g>
+  <line x1="420" y1="404" x2="420" y2="410" stroke="#8f2e26"/>
+  <line x1="540" y1="404" x2="540" y2="410" stroke="#8f2e26"/>
+  <text x="120" y="424" font-size="9.5" fill="#8f2e26">contradicted by</text>
+
+  <!-- quotes rail -->
+  <line x1="44" y1="452" x2="956" y2="452" stroke="#14181d" stroke-width="0.7"/>
+  <g font-size="11.5">
+    <text x="44" y="476" fill="#5c6570">m47</text>
+    <text x="96" y="476" fill="#2b3238" font-style="italic">"They will not commit to a path back to target because they no longer believe they control the timing."</text>
+    <text x="44" y="500" fill="#5c6570">m50</text>
+    <text x="96" y="500" fill="#2b3238" font-style="italic">"One month is not a trend."</text>
+    <text x="330" y="500" fill="#8f8378" font-size="10">— the sentence that ages worst</text>
+    <text x="44" y="524" fill="#5c6570">m52</text>
+    <text x="96" y="524" fill="#2b3238" font-style="italic">"The Committee has acquired a second objective, and it did not choose to."</text>
+    <text x="44" y="548" fill="#8f2e26">m55</text>
+    <text x="96" y="548" fill="#8f2e26" font-style="italic">"This column had it wrong. Credit broke instead, which was not the risk being watched."</text>
+    <text x="44" y="576" fill="#14181d">m67</text>
+    <text x="96" y="576" fill="#14181d" font-style="italic">"r̂* revised 1.4% → 0.7%. Policy at 5.00% was the tightest stance in three decades, and nobody thought so."</text>
+  </g>
+</svg>
