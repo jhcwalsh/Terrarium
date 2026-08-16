@@ -850,3 +850,193 @@ def test_judge_b6_three_way_outcome(report):
     r_inc = report.judge_b6(build(months, list(range(eligible)), []), sealed)
     assert r_inc["verdict"] == "INCONCLUSIVE (construct mismatch)"
     assert r_inc["pass"] is False
+
+
+# --------------------------------------------------------------------------- #
+# spine-02 (Task 11): v2 judges, and the freeze test protecting the round-one
+# record (B2/B3/B4 judges above are untouched by this task).
+# --------------------------------------------------------------------------- #
+
+
+def test_v1_judges_are_frozen(report):
+    """B1/B2/B4/B5/B6 above are the round-one record; v2 lives beside them,
+    never inside them. Hashes captured 2026-08-16 from the file as it stood
+    immediately before Task 11 added the v2 judges -- any future edit to a
+    v1 judge's body (even a no-op refactor) changes its source text and
+    trips this test."""
+    import hashlib
+    import inspect
+
+    expected = {
+        "judge_b1": "5bc4bbffbf31f98755aba6789a0ead051f9c0ccb5285617d8fd9ab393753cd9a",
+        "judge_b2": "bbd1287effb7a6435b5981a39d72cea584685af207429e0de6178fe40dfe7f6b",
+        "judge_b4": "9935e5ab09fdbe1ca30df7f5cbae25e0a808d500138387cb030897924b7072fa",
+        "judge_b5": "c88d0644144d672f67d0361400952a1f1602c72b23b367cde248354e97b8293b",
+        "judge_b6": "cb091ca0b1411ab3b056bdaa47b3956d93999f8f167c8c0ed7b19b5f6abc0f0e",
+    }
+    for name, want in expected.items():
+        fn = getattr(report, name)
+        got = hashlib.sha256(inspect.getsource(fn).encode("utf-8")).hexdigest()
+        assert got == want, f"{name}'s source changed -- v1 judges must stay byte-identical"
+
+
+def test_judge_b1_v2_responds_at_the_contemporaneous_lag(report):
+    from ah.gen.spine import SpinePaths
+
+    months = 40
+    t = np.arange(months)
+    gap_true = 2.0 * np.sin(2 * np.pi * t / 20)  # the transitory surprise, pi_actual - pi_star
+    pi_star = np.zeros(months)
+    pi_actual = pi_star + gap_true
+    sealed = {"min_sign_fraction": 0.9}
+
+    # a responder: dpol[i] == gap_true[i - 1] for i >= 1 -- the anchor moves
+    # ONE month after the surprise, inside v2's 0..2 window (v1's 3..12
+    # window would have missed this lag entirely).
+    lag = 1
+    g = gap_true[:-1]
+    dpol = np.zeros(months - 1)
+    dpol[lag:] = g[: len(g) - lag]
+    policy = np.concatenate([[0.0], np.cumsum(dpol)])
+
+    states = np.zeros((1, months, 5))
+    states[0, :, 0] = pi_star
+    labels = np.zeros((1, months), dtype=np.int64)
+    cycle = np.zeros((1, months))
+
+    sp = SpinePaths(
+        states=states,
+        labels=labels,
+        cycle=cycle,
+        policy=policy.reshape(1, months),
+        mu_pi=np.zeros(1),
+        pi_actual=pi_actual.reshape(1, months),
+        attempts=1,
+        seed=1,
+    )
+    result = report.judge_b1_v2(sp, sealed)
+    assert result["pass"] is True
+    assert result["value"] == 1.0
+    assert result["decades"][0]["lag"] == lag
+    assert result["decades"][0]["corr"] == pytest.approx(1.0)
+
+    # a non-responder: a constant policy anchor -> zero-variance dpol at
+    # every lag -> corr guarded to 0.0 at all three lags -> fails.
+    sp_flat = SpinePaths(
+        states=states,
+        labels=labels,
+        cycle=cycle,
+        policy=np.zeros((1, months)),
+        mu_pi=np.zeros(1),
+        pi_actual=pi_actual.reshape(1, months),
+        attempts=1,
+        seed=1,
+    )
+    result_flat = report.judge_b1_v2(sp_flat, sealed)
+    assert result_flat["pass"] is False
+    assert result_flat["value"] == 0.0
+
+
+def test_judge_b5_v2_interval_arithmetic(report):
+    # hand-computed: expected = 100*.01 + 50*.07 + 300*0 + 200*.004 = 5.3;
+    # var = 100*.01*.99 + 50*.07*.93 + 0 + 200*.004*.996 = .99+3.255+0+.7968
+    # = 5.0418 -> sd ~= 2.2454; band = 1.959963984540054*sd + 0.5 ~= 4.901.
+    sealed = {"panel_rates": [0.01, 0.07, 0.0, 0.004]}
+    months = [100, 50, 300, 200]
+
+    def cond(onsets: list[int]) -> dict:
+        return {"corrections": {"per_quadrant_onsets": onsets, "per_quadrant_months": months}}
+
+    # observed 5: |5 - 5.3| = 0.3 <= ~4.901 -> inside the band -> pass.
+    r_pass = report.judge_b5_v2(cond([2, 2, 0, 1]), sealed)
+    assert r_pass["expected"] == pytest.approx(5.3)
+    assert r_pass["sd"] == pytest.approx(2.2454, abs=1e-3)
+    assert r_pass["margin"] == pytest.approx(4.9013, abs=1e-3)
+    assert r_pass["observed"] == 5
+    assert r_pass["aggregate_pass"] is True
+    assert r_pass["pass"] is True
+
+    # observed 12: |12 - 5.3| = 6.7 > ~4.901 -> outside the band -> fail.
+    r_fail = report.judge_b5_v2(cond([5, 5, 0, 2]), sealed)
+    assert r_fail["observed"] == 12
+    assert r_fail["aggregate_pass"] is False
+    assert r_fail["pass"] is False
+
+    # the sealed zero-rate quadrant (index 2) firing even once is a wiring
+    # violation and fails b5_v2 outright, regardless of the aggregate.
+    r_wiring = report.judge_b5_v2(cond([1, 1, 1, 1]), sealed)  # observed 4, well inside the band
+    assert r_wiring["aggregate_pass"] is True
+    assert r_wiring["zero_rate_ok"] is False
+    assert r_wiring["pass"] is False
+
+
+def test_judge_b6_v2_quantile_matched_base_rate(report):
+    from ah.gen.spine import CONTRACTION_CODES, SpinePaths
+
+    rec_code = next(iter(CONTRACTION_CODES))
+    exp_code = max(CONTRACTION_CODES) + 1000
+
+    eligible_end = 100
+    k = 12
+    months = eligible_end + k
+    positions = [0, 15, 30, 45, 60]  # spaced > k apart -> disjoint k-month onset windows
+
+    def build(spike: bool, onset_idx: list[int]) -> "SpinePaths":
+        g = np.zeros(eligible_end)
+        if spike:
+            g[positions] = 100.0
+        g = np.concatenate([g, np.zeros(k)])
+        labels = np.full(months, exp_code, dtype=np.int64)
+        for i in onset_idx:
+            labels[i] = rec_code
+        states = np.zeros((1, months, 5))  # pi_star = r_star = 0 -> g == policy
+        return SpinePaths(
+            states=states,
+            labels=labels.reshape(1, months),
+            cycle=np.zeros((1, months)),
+            policy=g.reshape(1, months),
+            mu_pi=np.zeros(1),
+            pi_actual=states[:, :, 0].copy(),
+            attempts=1,
+            seed=1,
+        )
+
+    sealed = {
+        "k_months": k,
+        "panel_base_rate": 0.05,  # 5/100 -> exactly the 5 spikes above the 95th percentile
+        "panel_conditional_onset_rate": 0.4,
+        "panel_unconditional_onset_rate": 0.05,
+        "rel_tolerance": 0.5,
+    }
+
+    # PASS: 2 of the 5 tight (spike) months are followed by an onset within
+    # k -> value 2/5 == the sealed 0.4 exactly; base rate matches by
+    # construction (quantile-matched to panel_base_rate).
+    r_pass = report.judge_b6_v2(build(True, [16, 46]), sealed)
+    assert r_pass["tight_months"] == 5
+    assert r_pass["spine_base_rate"] == pytest.approx(0.05)
+    assert r_pass["value"] == pytest.approx(0.4)
+    assert r_pass["verdict"] == "PASS"
+    assert r_pass["pass"] is True
+
+    # FAIL: same 5 tight months, zero followed by any onset -> value 0.0
+    # (both magnitude and sign miss), but the base rates still match (both
+    # 0.05) -- a real construct match, so a genuine FAIL, not INCONCLUSIVE.
+    r_fail = report.judge_b6_v2(build(True, []), sealed)
+    assert r_fail["value"] == 0.0
+    assert r_fail["base_rate_ratio"] == pytest.approx(1.0)
+    assert r_fail["verdict"] == "FAIL"
+    assert r_fail["pass"] is False
+
+    # INCONCLUSIVE: a degenerate, tie-saturated g (no spikes at all) collapses
+    # every quantile threshold to the tie value itself, so nothing is ever
+    # strictly greater than it -- tight_months == 0, spine base rate 0.0 vs
+    # the sealed 0.05 -> base_rate_ratio == inf -> reclassified INCONCLUSIVE.
+    # This path should be unreachable on a real spine (the quantile match
+    # holds there by construction); it stays exercised here so the three-way
+    # structure is proven, not just asserted in prose.
+    r_inc = report.judge_b6_v2(build(False, []), sealed)
+    assert r_inc["tight_months"] == 0
+    assert r_inc["base_rate_ratio"] == float("inf")
+    assert r_inc["verdict"] == "INCONCLUSIVE (construct mismatch)"
+    assert r_inc["pass"] is False
