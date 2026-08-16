@@ -392,7 +392,7 @@ def test_forced_reentry_at_panel_edge():
 
 
 def test_dispatcher_routes_spine_worlds(spine_world):
-    from ah.gen import registry, stress  # spine import triggers registration hook
+    from ah.gen import registry, spine, stress  # spine import triggers registration hook
 
     gen = registry.resolve_for_world(spine_world)
     ens = gen.sample(spine_world, 1, 5150)
