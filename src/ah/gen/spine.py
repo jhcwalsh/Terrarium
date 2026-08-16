@@ -1,7 +1,7 @@
 """The spine-conditioned compiler (pilot), Layer S + H + F.
 
 Spec: docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md.
-Layer S here; Layers H and F arrive in the same module (Tasks 3-4).
+Layers S, H and F all live in this module.
 
 Seed hygiene: three consumers, three disjoint streams per decade/path --
 climate (offset 0), regimes (offset 104729), hazard (offset 224737); the
@@ -13,17 +13,30 @@ so acceptance filtering never re-uses an attempt's randomness.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from typing import Any
 
 import numpy as np
 
-from ah.core.worldspec import SpinePremise
+from ah.core.numericworld import NumericWorld
+from ah.core.worldspec import SpinePremise, SpineSpec, StressSpec
 from ah.data.derive import REGIME_LABELS
+from ah.gen.base import Ensemble, EnsembleMeta, RegimeRecord, SlowStateRecord
+from ah.gen.bootstrap import BootstrapSource
+from ah.gen.climate.model import STATE_NAMES
 from ah.gen.climate.simulate import (
     ClimateArtifact,
     policy_anchor,
     simulate_decades,
 )
 from ah.gen.regimes.semimarkov import RegimesArtifact, simulate_regimes
+from ah.gen.stress import (
+    StressError,
+    _segment_for,
+    eligible_rows,
+    join_candidates,
+    severity_score,
+)
+from ah.gen.systems import _pinned_layers
 
 SEED_STRIDE = 7919
 LAYER_OFFSETS = {"climate": 0, "regimes": 104729, "hazard": 224737}
@@ -216,3 +229,329 @@ def fit_hazard(source) -> HazardTable:
     return HazardTable(
         rates=rates, era_threshold_pp=era_thr, cell_months=months, fallback_rate=fallback
     )
+
+
+# --------------------------------------------------------------------------- #
+# Layer F -- SpineBootstrap: quadrant-conditioned pools, hazard corrections,
+# era-safe joins. PATTERN copied from StressBootstrap._draw (ah/gen/stress.py),
+# not subclassed: the two samplers stay independently readable.
+# --------------------------------------------------------------------------- #
+
+BASE_DWELL_QUARTERS = 2
+STRATUM_FLOOR_PCT = 5.0
+
+
+def percentile_for(base: float, shift: int) -> float:
+    """The stratified entry percentile ``shift`` strata deeper than ``base``.
+
+    Halves per stratum, floored at ``STRATUM_FLOOR_PCT`` so a correction can
+    never demand an empty pool purely from repeated halving.
+    """
+    return max(STRATUM_FLOOR_PCT, base * 0.5**shift)
+
+
+def _severity_row_for(spine: SpineSpec, infl: bool, credit: bool):
+    """The state-severity row for the firing month's conditions (spec 3.4):
+    both flags -> "both", exactly one -> "either", neither -> "baseline"."""
+    condition = "both" if infl and credit else "either" if infl or credit else "baseline"
+    for row in spine.severity_table:
+        if row.condition == condition:
+            return row
+    raise StressError(
+        f"severity_table has no row for condition '{condition}'"
+    )  # unreachable: SpineSpec validates coverage
+
+
+def _build_pools(
+    pools: dict[tuple[int, int, float], np.ndarray],
+    scores: np.ndarray,
+    cells: np.ndarray,
+    from_quarter: int,
+    quadrant: int,
+    pct: float,
+) -> np.ndarray:
+    """The pool for (segment, quadrant, percentile), built on first demand and
+    cached. Membership = eligible_rows(scores, pct) INTERSECT the panel rows
+    whose own quadrant matches (NaN-yoy rows are never cell members -- see
+    panel_quadrant). An empty pool is refusal, never substitution."""
+    key = (int(from_quarter), int(quadrant), round(float(pct), 6))
+    pool = pools.get(key)
+    if pool is not None:
+        return pool
+    elig = eligible_rows(scores, pct)
+    pool = elig[cells[elig] == quadrant]
+    if pool.size == 0:
+        raise SpineRefusal(
+            f"empty pool at segment {from_quarter}, quadrant {QUADRANTS[quadrant]}, percentile {pct}"
+        )
+    pools[key] = pool
+    return pool
+
+
+def _pool_occupancy_stamp(pools: dict[tuple[int, int, float], np.ndarray]) -> dict[str, int]:
+    """``{"<from_quarter>/<quadrant>": size}`` for every pool actually built,
+    disambiguated with a ``#n`` suffix when a segment/quadrant pair was built
+    at more than one percentile (an unshifted pool plus one or more shifted-
+    by-correction pools)."""
+    seen: dict[tuple[int, int], int] = {}
+    stamp: dict[str, int] = {}
+    for from_quarter, quadrant, _pct in sorted(pools):
+        n = seen.get((from_quarter, quadrant), 0) + 1
+        seen[(from_quarter, quadrant)] = n
+        label = (
+            f"{from_quarter}/{QUADRANTS[quadrant]}"
+            if n == 1
+            else f"{from_quarter}/{QUADRANTS[quadrant]}#{n}"
+        )
+        stamp[label] = int(pools[(from_quarter, quadrant, _pct)].size)
+    return stamp
+
+
+class SpineBootstrap:
+    """The spine-conditioned compiler. Implements ah.gen.base.Generator."""
+
+    generator_id = "bootstrap-stratified"
+
+    def __init__(self, source: BootstrapSource | None = None) -> None:
+        self._source = source
+        self._climate, self._regimes = _pinned_layers()
+
+    @property
+    def source(self) -> BootstrapSource:
+        if self._source is None:
+            raise StressError(
+                "bootstrap-stratified (spine) is not fitted; call fit(campaign_source())"
+            )
+        return self._source
+
+    def fit(self, data: Any) -> None:
+        if not isinstance(data, BootstrapSource):
+            raise StressError(
+                f"fit expects a BootstrapSource (see ah.gen.bootstrap.campaign_source); "
+                f"got {type(data).__name__}"
+            )
+        self._source = data
+
+    def sample(self, world: NumericWorld, n_paths: int, seed: int) -> Ensemble:
+        if world.stress is None:
+            raise StressError(
+                f"world '{world.world_id}' selects bootstrap-stratified but declares no "
+                "extensions.x_stress; a spine-conditioned world must declare both x_stress and x_spine"
+            )
+        if world.spine is None:
+            raise StressError(
+                f"world '{world.world_id}' declares extensions.x_stress but no extensions.x_spine; "
+                "a spine-conditioned world must declare both"
+            )
+        months = int(world.horizon.quarters) * 3
+        return self.sample_months(
+            months, n_paths, seed, world=world, stress=world.stress, spine=world.spine
+        )
+
+    def sample_months(
+        self,
+        months: int,
+        n_paths: int,
+        seed: int,
+        *,
+        world: NumericWorld | None = None,
+        stress: StressSpec | None = None,
+        spine: SpineSpec | None = None,
+    ) -> Ensemble:
+        source = self.source
+        if stress is None or spine is None:
+            raise StressError(
+                "spine-conditioned sampling requires both a StressSpec and a SpineSpec"
+            )
+        months, n_paths = int(months), int(n_paths)
+        if months < 1 or n_paths < 1:
+            raise StressError(f"months and n_paths must be >= 1; got {months}, {n_paths}")
+
+        sp = sample_spine(
+            self._climate, self._regimes, spine.premise, n_decades=n_paths, seed=seed, months=months
+        )
+        hazard = fit_hazard(source)
+        scores = severity_score(source.values, source.factor_names, stress.functional)
+        yoy = panel_yoy(source)
+        cells = panel_quadrant(source, yoy, hazard.era_threshold_pp)
+        # -1 where yoy is NaN: a previous row with an undefined era bucket can
+        # never era-match a join candidate, so a join can never land on (or
+        # leave from) a row the panel cannot date an inflation era for.
+        era_bucket = np.where(np.isnan(yoy), -1, (yoy > hazard.era_threshold_pp).astype(np.int64))
+
+        pools: dict[tuple[int, int, float], np.ndarray] = {}
+        index, corrections = self._draw(
+            source,
+            sp,
+            hazard,
+            scores,
+            cells,
+            yoy,
+            era_bucket,
+            months,
+            n_paths,
+            seed,
+            stress,
+            spine,
+            pools,
+        )
+        paths = source.values[index]
+
+        label_codes = {label: i for i, label in enumerate(REGIME_LABELS)}
+        source_codes = np.array([label_codes[label] for label in source.labels], dtype=np.int64)
+
+        conditioning: dict[str, Any] = {
+            "mode": "spine-conditioned-stress",
+            "functional": stress.functional,
+            "premise": spine.premise.model_dump(),
+            "severity_table": [row.model_dump() for row in spine.severity_table],
+            "quadrant_legend": list(QUADRANTS),
+            "hazard": {
+                "rates": [float(x) for x in hazard.rates],
+                "cell_months": [int(x) for x in hazard.cell_months],
+                "era_threshold_pp": float(hazard.era_threshold_pp),
+                "fallback_rate": float(hazard.fallback_rate),
+            },
+            "corrections": corrections,
+            "spine_attempts": int(sp.attempts),
+            "pool_occupancy": _pool_occupancy_stamp(pools),
+            "join_tolerance": dict(stress.join_tolerance),
+            "join_yoy_max_pp": float(spine.join_yoy_max_pp),
+            "precedent": list(stress.precedent) + list(spine.precedent),
+            "ruleset_version": source.ruleset_version,
+            "block_draw_span": {
+                "start": str(source.dates[0].date()),
+                "end": str(source.dates[-1].date()),
+                "months": source.n_rows,
+            },
+            "provenance": "declared",
+        }
+        if world is not None:
+            conditioning["world_id"] = world.world_id
+
+        meta = EnsembleMeta(
+            generator_id=self.generator_id,
+            vintage_id=source.vintage_id,
+            seed=int(seed),
+            n_paths=n_paths,
+            months=months,
+            conditioning=conditioning,
+            active_blocks=tuple(source.active_blocks),
+        )
+        return Ensemble(
+            paths=paths,
+            factor_names=list(source.factor_names),
+            meta=meta,
+            row_indices=index,
+            regimes=RegimeRecord(
+                labels=source_codes[index],
+                legend=REGIME_LABELS,
+                mode="realized-spine-conditioned",
+                ruleset_version=source.ruleset_version,
+            ),
+            slow_states=SlowStateRecord(states=sp.states, names=STATE_NAMES, layer="simulated"),
+        )
+
+    def _draw(
+        self,
+        source: BootstrapSource,
+        sp: SpinePaths,
+        hazard: HazardTable,
+        scores: np.ndarray,
+        cells: np.ndarray,
+        yoy: np.ndarray,
+        era_bucket: np.ndarray,
+        months: int,
+        n_paths: int,
+        seed: int,
+        stress: StressSpec,
+        spine: SpineSpec,
+        pools: dict[tuple[int, int, float], np.ndarray],
+    ) -> tuple[np.ndarray, dict[str, list[int]]]:
+        n = source.n_rows
+        index = np.empty((n_paths, months), dtype=np.int64)
+        per_path_onsets = [0] * n_paths
+        per_quadrant_onsets = [0, 0, 0, 0]
+        per_quadrant_months = [0, 0, 0, 0]
+
+        for p in range(n_paths):
+            # Two DIFFERENT generators: the hazard stream and the block stream
+            # must never share state, so a premise's firing pattern (which
+            # consumes rng_h at a variable rate -- skipped entirely while
+            # already inside a correction) cannot perturb the block tape.
+            rng = np.random.Generator(np.random.PCG64(int(seed)).jumped(p))
+            rng_h = np.random.Generator(
+                np.random.PCG64(int(seed) + LAYER_OFFSETS["hazard"]).jumped(p)
+            )
+            in_correction = False
+            dwell_left = 0
+            shift = 0
+
+            for m in range(months):
+                seg = _segment_for(stress, m // 3)
+                q = spine_quadrant(sp.states[p, m], int(sp.labels[p, m]), mu_pi=float(sp.mu_pi[p]))
+
+                # The hazard is checked ONLY when not already in a correction.
+                if not in_correction and rng_h.random() < float(hazard.rates[q]):
+                    infl = float(sp.states[p, m, 0]) - float(sp.mu_pi[p]) > BACKDROP_MARGIN_PP
+                    credit = float(sp.states[p, m, 4]) > 0.0
+                    row = _severity_row_for(spine, infl, credit)
+                    in_correction = True
+                    dwell_left = (BASE_DWELL_QUARTERS + row.dwell_shift_quarters) * 3
+                    shift = row.stratum_shift
+                    per_path_onsets[p] += 1
+                    per_quadrant_onsets[q] += 1
+                    per_quadrant_months[q] += dwell_left
+
+                pct = (
+                    percentile_for(seg.entry_percentile, shift)
+                    if in_correction
+                    else seg.entry_percentile
+                )
+                pool = _build_pools(pools, scores, cells, seg.from_quarter, q, pct)
+
+                if in_correction:
+                    dwell_left -= 1
+                    if dwell_left <= 0:
+                        in_correction = False
+                        shift = 0
+
+                if m == 0:
+                    index[p, 0] = int(pool[rng.integers(0, pool.size)])
+                    continue
+
+                previous = int(index[p, m - 1])
+                advanced = (previous + 1) % n
+                if rng.random() >= 1.0 / float(seg.mean_block_months):
+                    index[p, m] = advanced
+                    continue
+
+                # Exclude the current row itself (as stress does), then apply
+                # the two spine-only join filters: the era bucket must match
+                # (no CPI-YoY-era teleport) and the YoY level itself must sit
+                # within the declared join bound. Severity is a preference
+                # over entries, never a licence to teleport: with nothing
+                # reachable the block simply continues.
+                candidates = join_candidates(
+                    source.values,
+                    source.factor_names,
+                    previous,
+                    stress.join_tolerance,
+                    pool[pool != previous],
+                )
+                if candidates.size:
+                    ok = (era_bucket[candidates] == era_bucket[previous]) & (
+                        np.abs(yoy[candidates] - yoy[previous]) <= spine.join_yoy_max_pp
+                    )
+                    candidates = candidates[ok]
+                index[p, m] = (
+                    advanced
+                    if candidates.size == 0
+                    else int(candidates[rng.integers(0, candidates.size)])
+                )
+        corrections = {
+            "per_path_onsets": per_path_onsets,
+            "per_quadrant_onsets": per_quadrant_onsets,
+            "per_quadrant_months": per_quadrant_months,
+        }
+        return index, corrections

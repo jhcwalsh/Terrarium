@@ -177,3 +177,81 @@ def test_spine_quadrant_encoding():
     assert spine_quadrant(states, 0, mu_pi=2.0) == 3  # expanding + hot = expansion
     assert spine_quadrant(states, 0, mu_pi=4.0) == 2  # expanding + cool = recovery
     assert spine_quadrant(states, rec, mu_pi=4.0) == 0  # contracting + cool = recession
+
+
+@pytest.fixture(scope="module")
+def spine_world():
+    import json
+    from pathlib import Path
+
+    from ah.core.numericworld import project_numeric
+    from ah.core.worldspec import WorldSpec
+
+    doc = json.loads(Path("src/ah/presets/stress_1990.json").read_text(encoding="utf-8"))
+    doc["extensions"]["x_spine"] = _spec()
+    return project_numeric(WorldSpec.model_validate(doc))
+
+
+def test_spine_bootstrap_sample_contract(spine_world):
+    from ah.gen.bootstrap import campaign_source
+    from ah.gen.spine import SpineBootstrap
+
+    gen = SpineBootstrap()
+    gen.fit(campaign_source())
+    ens = gen.sample(spine_world, 3, 90210)
+    assert ens.paths.shape[0] == 3 and ens.row_indices is not None
+    cond = ens.meta.conditioning
+    assert cond["mode"] == "spine-conditioned-stress"
+    assert len(cond["hazard"]["rates"]) == 4
+    assert cond["quadrant_legend"] == ["recession", "stagflation", "recovery", "expansion"]
+    assert ens.slow_states is not None and not hasattr(ens.slow_states, "reason")
+
+
+def test_every_month_is_verbatim_history(spine_world):
+    import numpy as np
+
+    from ah.gen.bootstrap import campaign_source
+    from ah.gen.spine import SpineBootstrap
+
+    src = campaign_source()
+    gen = SpineBootstrap()
+    gen.fit(src)
+    ens = gen.sample(spine_world, 2, 90210)
+    assert np.array_equal(ens.paths, np.asarray(src.values)[ens.row_indices])  # R1
+
+
+def test_no_era_teleports_at_joins(spine_world):
+    import numpy as np
+
+    from ah.gen.bootstrap import campaign_source
+    from ah.gen.spine import SpineBootstrap, panel_yoy
+
+    src = campaign_source()
+    gen = SpineBootstrap()
+    gen.fit(src)
+    ens = gen.sample(spine_world, 3, 90210)
+    yoy = panel_yoy(src)
+    bound = spine_world.spine.join_yoy_max_pp
+    rows = np.asarray(ens.row_indices)
+    for p in range(rows.shape[0]):
+        for m in range(1, rows.shape[1]):
+            if rows[p, m] != rows[p, m - 1] + 1:  # a join
+                assert abs(yoy[rows[p, m]] - yoy[rows[p, m - 1]]) <= bound
+
+
+def test_hazard_and_block_streams_are_independent(spine_world):
+    """Path 0's tape must not change when the hazard stream is consumed more
+    (a different premise-month firing pattern) -- proven by construction:
+    the two Generators are seeded from different offsets. Assert the offsets
+    differ and that a re-sample is bit-identical (stream discipline holds)."""
+    import numpy as np
+
+    from ah.gen.bootstrap import campaign_source
+    from ah.gen.spine import LAYER_OFFSETS, SpineBootstrap
+
+    assert LAYER_OFFSETS["hazard"] != 0
+    gen = SpineBootstrap()
+    gen.fit(campaign_source())
+    a = gen.sample(spine_world, 2, 4242)
+    b = gen.sample(spine_world, 2, 4242)
+    assert np.array_equal(a.row_indices, b.row_indices)
