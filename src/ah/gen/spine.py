@@ -3,13 +3,29 @@
 Spec: docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md.
 Layers S, H and F all live in this module.
 
-Seed hygiene: four consumers, four disjoint streams per decade/path --
-climate (offset 0), regimes (offset 104729), hazard (offset 224737), blocks
-(offset 350377). The block stream is NOT the bare seed StressBootstrap uses:
-climate sits at offset 0, so a bare-seed block stream would be bit-identical
-to spine attempt 0's climate stream (AMENDED after the Task-4 review, F3).
-An attempt counter, not the accepted-decade index, advances the S streams,
-so acceptance filtering never re-uses an attempt's randomness.
+Seed hygiene: five consumers, five disjoint streams per decade/path/attempt --
+climate (offset 0), regimes (offset 104729), inflnoise (offset 458879),
+hazard (offset 224737), blocks (offset 350377). The block stream is NOT the
+bare seed StressBootstrap uses: climate sits at offset 0, so a bare-seed
+block stream would be bit-identical to spine attempt 0's climate stream
+(AMENDED after the Task-4 review, F3). An attempt counter, not the
+accepted-decade index, advances the climate/regimes/inflnoise streams, so
+acceptance filtering never re-uses an attempt's randomness.
+
+spine-02 (Task 10, round-two wiring fix): the three attempt streams
+(climate, regimes, inflnoise) advance by ``ATTEMPT_STRIDE``, not
+``SEED_STRIDE``. Round one reused ``SEED_STRIDE`` (7919) for both the
+attempt counter here AND the platform's per-path ensemble stride
+(``base_seed + 7919*k``, CLAUDE.md) -- so whenever one `sample_spine` call's
+attempt k landed on a seed exactly ``7919*k`` away from another call's base
+seed, their climate/regimes/inflnoise streams from that attempt onward were
+bit-identical (final-review F3). Confirmed empirically pre-fix: seed 199002
+(accepted at attempt 18) and seed 199002+7919=206921 (accepted at attempt
+17) produced IDENTICAL first-decade states. ``ATTEMPT_STRIDE`` is a large
+prime coprime to 7919, so no attempt index in the budget can recreate that
+alignment. ``SEED_STRIDE`` itself is unchanged and still used by the
+hazard/blocks per-PATH streams in ``SpineBootstrap._draw`` (a different
+axis: path index, not attempt index).
 """
 
 from __future__ import annotations
@@ -41,7 +57,18 @@ from ah.gen.stress import (
 from ah.gen.systems import _pinned_layers
 
 SEED_STRIDE = 7919
-LAYER_OFFSETS = {"climate": 0, "regimes": 104729, "hazard": 224737, "blocks": 350377}
+#: spine-02 (Task 10): the attempt-loop stride, decoupled from SEED_STRIDE so
+#: an attempt index can never realign a sample_spine call's climate/regimes/
+#: inflnoise streams with another call's base seed (see module docstring).
+#: Prime, coprime to 7919.
+ATTEMPT_STRIDE = 104395301
+LAYER_OFFSETS = {
+    "climate": 0,
+    "regimes": 104729,
+    "hazard": 224737,
+    "blocks": 350377,
+    "inflnoise": 458879,
+}
 CONTRACTION_CODES = frozenset({REGIME_LABELS.index("REC"), REGIME_LABELS.index("CRI")})
 BACKDROP_MARGIN_PP = 0.5
 ARRIVAL_LATE_SLACK_MONTHS = 6
@@ -58,8 +85,9 @@ class SpinePaths:
     states: np.ndarray  # (n, months, 5) STATE_NAMES order
     labels: np.ndarray  # (n, months) int codes into REGIME_LABELS
     cycle: np.ndarray  # (n, months)
-    policy: np.ndarray  # (n, months) Taylor anchor, noise-free
+    policy: np.ndarray  # (n, months) Taylor anchor, driven by pi_actual (spine-02)
     mu_pi: np.ndarray  # (n,) each decade's own posterior-draw mu_pi
+    pi_actual: np.ndarray  # (n, months) pi_star + fitted-noise eps; feeds policy + B6
     attempts: int
     seed: int
 
@@ -111,28 +139,45 @@ def sample_spine(
     kept_c: list[np.ndarray] = []
     kept_p: list[np.ndarray] = []
     kept_mu: list[float] = []
+    kept_pi: list[np.ndarray] = []
     tally: dict[str, int] = {}
     attempt = 0
     while len(kept_s) < n_decades and attempt < budget:
-        l1_seed = seed + LAYER_OFFSETS["climate"] + SEED_STRIDE * attempt
-        l2_seed = seed + LAYER_OFFSETS["regimes"] + SEED_STRIDE * attempt
+        # spine-02 (Task 10): ATTEMPT_STRIDE, not SEED_STRIDE -- see module
+        # docstring for the collision SEED_STRIDE caused against the
+        # platform's per-path ensemble stride.
+        l1_seed = seed + LAYER_OFFSETS["climate"] + ATTEMPT_STRIDE * attempt
+        l2_seed = seed + LAYER_OFFSETS["regimes"] + ATTEMPT_STRIDE * attempt
         sim1 = simulate_decades(climate, 1, seed=l1_seed, months=months)
         reg = simulate_regimes(regimes_artifact, sim1.states, seed=l2_seed)
         # two-pass: same seed -> same theta/s0/innovations; only the credit
         # norm's cycle forcing changes (assemble.py's documented pattern).
         sim2 = simulate_decades(climate, 1, seed=l1_seed, months=months, cycle=reg.cycle)
-        pol = policy_anchor(sim2, cycle=reg.cycle)
         mu_pi = float(sim2.params["mu_pi"][0])
+        # premise acceptance unchanged (round-one sealed behavior): the
+        # backdrop clause reads pi_star, never pi_actual/eps.
         reason = _reject_reason(premise, sim2.states[0], reg.labels[0], mu_pi)
-        attempt += 1
         if reason is None:
+            # eps is drawn on the attempt's own inflnoise stream, only when
+            # the attempt is accepted; acceptance never reads it (the
+            # premise reads pi_star, not pi_actual), so skipping the draw on
+            # a rejected attempt cannot bias anything -- deterministic-safe
+            # and cheaper than drawing on every attempt.
+            infl_seed = seed + LAYER_OFFSETS["inflnoise"] + ATTEMPT_STRIDE * attempt
+            s_m_pi = float(sim2.params["s_m_pi"][0])  # fitted CPI observation noise
+            rng_eps = np.random.Generator(np.random.PCG64(infl_seed))
+            eps = rng_eps.normal(0.0, s_m_pi, size=months)
+            pi_actual_row = sim2.states[:, :, 0] + eps.reshape(1, -1)  # (1, months)
+            pol = policy_anchor(sim2, cycle=reg.cycle, pi_actual=pi_actual_row)
             kept_s.append(sim2.states[0])
             kept_l.append(reg.labels[0])
             kept_c.append(reg.cycle[0])
             kept_p.append(pol[0])
             kept_mu.append(mu_pi)
+            kept_pi.append(pi_actual_row[0])
         else:
             tally[reason] = tally.get(reason, 0) + 1
+        attempt += 1
     if len(kept_s) < n_decades:
         raise SpineRefusal(
             f"premise unfillable at budget {budget}: accepted {len(kept_s)}/{n_decades}; "
@@ -144,6 +189,7 @@ def sample_spine(
         cycle=np.stack(kept_c),
         policy=np.stack(kept_p),
         mu_pi=np.asarray(kept_mu, dtype=np.float64),
+        pi_actual=np.stack(kept_pi),
         attempts=attempt,
         seed=int(seed),
     )

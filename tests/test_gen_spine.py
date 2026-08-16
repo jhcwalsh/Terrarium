@@ -95,7 +95,56 @@ def test_sample_spine_shapes_and_determinism(layers):
     a = sample_spine(climate, regimes, _premise(), n_decades=2, seed=41, months=120)
     b = sample_spine(climate, regimes, _premise(), n_decades=2, seed=41, months=120)
     assert a.states.shape == (2, 120, 5) and a.policy.shape == (2, 120)
+    assert a.pi_actual.shape == (2, 120)
     assert np.array_equal(a.states, b.states) and np.array_equal(a.labels, b.labels)
+    # (b) determinism unchanged: pi_actual (the new field, drawn on its own
+    # per-attempt inflnoise stream) is bit-identical across two calls too.
+    assert np.array_equal(a.pi_actual, b.pi_actual)
+    assert np.array_equal(a.policy, b.policy)
+
+
+def test_pi_actual_feeds_the_policy_anchor(layers):
+    """(a) spine-02 Task 10: pi_actual = pi_star + eps differs from pi_star,
+    and the policy anchor responds to it. Isolate the response from the
+    slow-moving r_star/pi_star trend by looking at dpol := policy - (pi_star
+    + r_star), the anchor's deviation from the flat "no cycle, no inflation
+    gap" baseline -- by the Taylor-anchor algebra (policy_anchor's
+    phi_pi*(pi_actual - pi_star) + phi_c*cycle terms) dpol = phi_pi*eps +
+    phi_c*cycle exactly. A strong CONTEMPORANEOUS correlation between dpol
+    and eps (month t against month t, not diffed/lagged) on this decade is
+    therefore direct evidence pi_actual is wired into the anchor and not
+    silently defaulting to pi_star (which would zero eps's contribution and
+    the correlation with it)."""
+    from ah.gen.spine import sample_spine
+
+    climate, regimes = layers
+    sp = sample_spine(climate, regimes, _premise(), n_decades=1, seed=2026, months=120)
+    pi_star = sp.states[0, :, 0]
+    r_star = sp.states[0, :, 1]
+    eps = sp.pi_actual[0] - pi_star
+    assert not np.allclose(eps, 0.0)  # pi_actual != pi_star
+
+    dpol = sp.policy[0] - (pi_star + r_star)
+    corr = float(np.corrcoef(dpol, eps)[0, 1])
+    assert corr > 0.3, f"contemporaneous corr(dpol, eps) = {corr}"
+
+
+def test_attempt_stride_decouples_from_platform_stride(layers):
+    """(c) stride bite: seeds 199002 and 199002+7919 previously collided.
+    Under SEED_STRIDE-based attempt streams (round one), sample_spine(seed=
+    199002, n_decades=1) accepted its lone decade at attempt index 18, and
+    sample_spine(seed=199002+7919, n_decades=1) accepted at attempt index 17
+    -- both compute the SAME l1_seed (199002 + 7919*18 == 206921 + 7919*17),
+    so their first-decade states were bit-identical (empirically confirmed
+    pre-fix, final-review F3). With ATTEMPT_STRIDE decoupled from the
+    platform's 7919 per-path stride, no attempt index in the budget can
+    realign the two, so the states must now differ."""
+    from ah.gen.spine import sample_spine
+
+    climate, regimes = layers
+    a = sample_spine(climate, regimes, _premise(), n_decades=1, seed=199002, months=120)
+    b = sample_spine(climate, regimes, _premise(), n_decades=1, seed=199002 + 7919, months=120)
+    assert not np.array_equal(a.states, b.states)
 
 
 def test_accepted_spines_satisfy_the_premise(layers):
@@ -261,10 +310,12 @@ def test_hazard_and_block_streams_are_independent(spine_world):
     from ah.gen.bootstrap import campaign_source
     from ah.gen.spine import LAYER_OFFSETS, SpineBootstrap
 
-    # four consumers, four disjoint streams (FIX3: blocks is no longer the
+    # five consumers, five disjoint streams (FIX3: blocks is no longer the
     # bare seed -- that collided with spine attempt 0's climate stream,
-    # since climate sits at offset 0).
-    assert len(set(LAYER_OFFSETS.values())) == len(LAYER_OFFSETS) == 4
+    # since climate sits at offset 0. spine-02 Task 10 adds inflnoise, the
+    # per-attempt stream that draws pi_actual's fitted CPI observation
+    # noise).
+    assert len(set(LAYER_OFFSETS.values())) == len(LAYER_OFFSETS) == 5
     assert LAYER_OFFSETS["hazard"] != 0
     assert LAYER_OFFSETS["blocks"] not in (0, LAYER_OFFSETS["hazard"])
     gen = SpineBootstrap()
@@ -357,6 +408,7 @@ def test_forced_reentry_at_panel_edge():
         cycle=np.zeros((1, months)),
         policy=np.zeros((1, months)),
         mu_pi=np.zeros(1),
+        pi_actual=np.zeros((1, months)),  # unread by this draw path; same shape as states[:,:,0]
         attempts=1,
         seed=123,
     )
@@ -486,9 +538,23 @@ def test_spine_pilot_world_loads_with_both_extensions():
     assert nw.spine.premise.backdrop == "inflation_above_trend"
 
 
+#: The commit run_gate.py/check_gate.py stamped for round one's G-pilot seal
+#: measurement. Round one's seal binds the files AS THEY WERE at the sealed
+#: measurement (this commit); spine-02 (Task 10 onward) edits the tree freely
+#: under its own seal, to be minted at Task 12. Re-hashing the WORKING TREE
+#: against round-one's recorded hashes would therefore fail for every file
+#: this round touches -- correctly, but uninformatively, since round one's
+#: seal was never a claim about the spine-02 tree. Hash the round-one BLOB
+#: instead, via `git show <sha>:<path>`, so this test verifies what it always
+#: meant to verify (round one's seal is an honest record of round one) without
+#: being coupled to files this round is authorized to change.
+ROUND_ONE_SEAL_COMMIT = "233b70d"
+
+
 def test_prereg_seal_exists_and_hashes_match():
     import hashlib
     import json
+    import subprocess
     from pathlib import Path
 
     sealed = json.loads(
@@ -499,9 +565,15 @@ def test_prereg_seal_exists_and_hashes_match():
     for rel, want in sealed["hashes"].items():
         if want == "unbuilt":
             continue
-        got = hashlib.sha256(Path(rel).read_bytes()).hexdigest()
+        blob = subprocess.run(
+            ["git", "show", f"{ROUND_ONE_SEAL_COMMIT}:{rel}"],
+            capture_output=True,
+            check=True,
+        ).stdout
+        got = hashlib.sha256(blob).hexdigest()
         assert got == want, (
-            f"sealed hash mismatch for {rel}: re-run the seal script and record the amendment"
+            f"sealed hash mismatch for {rel} at {ROUND_ONE_SEAL_COMMIT}: "
+            "round one's own recorded blob no longer matches its recorded hash"
         )
 
 
@@ -614,6 +686,7 @@ def test_judge_b1_detects_policy_chasing_inflation(report):
         cycle=cycle,
         policy=policy.reshape(1, months),
         mu_pi=np.array([mu_pi]),
+        pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
         attempts=1,
         seed=1,
     )
@@ -627,6 +700,7 @@ def test_judge_b1_detects_policy_chasing_inflation(report):
         cycle=cycle,
         policy=np.zeros((1, months)),  # constant policy -> zero-variance dpol
         mu_pi=np.array([mu_pi]),
+        pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
         attempts=1,
         seed=1,
     )
@@ -663,6 +737,7 @@ def test_judge_b4_fails_short_spells(report):
         cycle=np.zeros((1, months)),
         policy=np.zeros((1, months)),
         mu_pi=np.zeros(1),
+        pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
         attempts=1,
         seed=1,
     )
@@ -732,6 +807,7 @@ def test_judge_b6_three_way_outcome(report):
             cycle=np.zeros((1, months)),
             policy=policy.reshape(1, months),
             mu_pi=np.zeros(1),
+            pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
             attempts=1,
             seed=1,
         )
