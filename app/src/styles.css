@@ -1423,12 +1423,114 @@ button.commit {
 }
 
 .book-liquid {
-  flex-wrap: wrap;
-  flex-direction: row;
+  flex-direction: column;
 }
 
-.book-liquid .setup-row {
-  min-width: 140px;
+/* -- su-app-07: values, policy targets and reporting bands side by side ---- */
+.policy-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 1fr) 88px 88px minmax(64px, 78px) minmax(52px, 66px)
+    76px 76px;
+  gap: 6px 10px;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.policy-head,
+.policy-row {
+  display: contents;
+}
+
+.policy-head > span {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.policy-head > span:first-child {
+  text-align: left;
+}
+
+.policy-name {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+}
+
+.policy-wt,
+.policy-drift {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.policy-wt {
+  color: var(--dim);
+}
+
+/* drift only earns colour when there IS drift — a book sitting on its policy
+   should look quiet. */
+.policy-drift {
+  color: var(--clay);
+}
+
+.policy-drift.flat {
+  color: var(--dim);
+  opacity: 0.65;
+}
+
+/* the grid owns the column widths; the shared 88px input rule would overflow
+   the two narrower band columns. */
+.policy-grid input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.policy-band::placeholder {
+  color: var(--dim);
+  opacity: 0.55;
+}
+
+.policy-residual {
+  grid-column: 3 / -1;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* the same three readouts for a private sleeve, which has one target and one
+   band for the whole ladder rather than a row per rung. */
+.policy-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+}
+
+.policy-strip .pcell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.policy-strip .pk {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.policy-strip .pband-inputs {
+  display: flex;
+  gap: 6px;
 }
 
 .book-liquid input,

@@ -7,7 +7,7 @@
  * refusing an illegal move is the mechanic, not a UI convention.
  */
 
-import type { CioView, Plane } from "./cioView";
+import type { AlertLevel, CioView, Plane } from "./cioView";
 
 export interface Session {
   session_id: string;
@@ -74,6 +74,11 @@ export interface Session {
    * distribution series — visible at the moment of decision */
   vintage_nav?: Record<string, number> | null;
   trailing_distributions?: number[] | null;
+  /** su-app-07: per-sleeve band status at the last CLOSED quarter, SERVER-
+   * judged. Null before the first closed quarter, and on any session whose
+   * book declares no ranges. Read `planeForBasis(basis)` to pick the plane —
+   * the two vocabularies differ. */
+  band_report?: BandReport | null;
   forced_sales?: {
     period: number;
     amount: number;
@@ -208,6 +213,72 @@ export interface Book {
   liquid: Record<string, number>;
   private: Record<string, Rung[]>;
   cash: number;
+  /** su-app-07: the institution's POLICY targets in points, naming the FULL
+   * sleeve set — every liquid sleeve AND `pe`/`pc`/`re`. Distinct from the
+   * opening VALUES above: an institution can target 35 equity while holding
+   * 41. `null`/absent is the `opening-book-0.1` shape and means "no targets
+   * entered", which the server resolves to the book's own opening weights
+   * (`OpeningBook.effective_targets`). The derived default now carries
+   * targets equal to its values, so an untouched pre-fill must post them
+   * VERBATIM — inventing them client-side changes the digest and strips
+   * ranked eligibility. */
+  targets?: Record<string, number> | null;
+  /** su-app-07: reporting bands in points, `{sleeve: [lo, hi]}`, on any
+   * subset of the sleeves. They REPORT and do not rebalance: nothing the
+   * engine produces changes because a band was declared. `null` means no
+   * bands — and it must be `null`, never `{}`, or the posted document
+   * digests differently from the served default. */
+  ranges?: Record<string, [number, number]> | null;
+}
+
+/** su-app-07: one sleeve's band status on one plane, as the server judged it. */
+export interface BandPlane {
+  /** the sleeve's weight of that plane's NAV, in points out of 100 */
+  weight: number;
+  /** AUTHORITATIVE (DN-3 W5). The server computes this on UNROUNDED weights
+   * while serving them rounded to 4dp, so a client re-deriving it can
+   * legitimately disagree within ~5e-5 of a band edge. Render it; never
+   * recompute it. */
+  alert: AlertLevel;
+}
+
+/** su-app-07: one sleeve of the band report — its policy target, its declared
+ * band, and its status on each plane. Sleeves with no declared range are
+ * ABSENT from the list rather than present with nulls. */
+export interface BandSleeve {
+  sleeve: string;
+  target: number;
+  lo: number;
+  hi: number;
+  true: BandPlane;
+  reported: BandPlane;
+}
+
+/** su-app-07: per-sleeve band status at the last CLOSED quarter. `null` on the
+ * session document when there is no book, no ranges on it, or no closed
+ * quarter yet. */
+export interface BandReport {
+  watch_fraction: number;
+  sleeves: BandSleeve[];
+}
+
+/**
+ * The band-report plane a session's own basis names.
+ *
+ * The two vocabularies DO NOT MATCH and must not be equated: a session's
+ * `basis` is `"reported" | "actual"`, while the band report's planes (and
+ * `Plane` throughout the CIO surface) are `"reported" | "true"`. `actual`
+ * means `true`. Naively indexing `bandReport.sleeves[i][session.basis]` would
+ * read `undefined` for an actual-plane session — or, worse, silently fall
+ * back to the reported plane and show the player a breach from a plane they
+ * are not on, which reads exactly like a working feature reporting the wrong
+ * sleeve.
+ *
+ * This is the ONE place the mapping lives. Every consumer of `band_report`
+ * goes through it rather than re-deriving it.
+ */
+export function planeForBasis(basis: Session["basis"]): Plane {
+  return basis === "actual" ? "true" : "reported";
 }
 
 /** su-app-06: the commitment plan contract (`commitment-plan-0.1`). Each
