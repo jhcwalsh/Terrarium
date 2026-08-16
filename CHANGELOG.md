@@ -14,6 +14,38 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **`NEXT-STEPS.md` refreshed to the live line, and the merged-branch backlog
+  swept.** The file still announced "the main line now: the CIO dashboard" —
+  but that line had LANDED (`cio-01`…`cio-04`, the inherited decade included)
+  and been superseded by the **spine-conditioned stress compiler** (spec
+  `28df5e2`, 9-task plan `d3b0184`, R3 four-quadrant-clock ruling `81552eb`),
+  in flight on `spine-01-pilot`. A living doc that points the next session at
+  finished work is worse than no doc, and `NEXT-STEPS.md` is the first thing a
+  fresh session reads to orient.
+
+  It now records where the pilot actually is (commits land Tasks 1–4; Task 5,
+  dispatcher routing and bit-identity guards, is next) with an explicit warning
+  **not to trust the plan's checkboxes** — they are not ticked as work lands,
+  so the file reads 0/39 done and is not a progress signal. The two constraints
+  that are cheap to trip and impossible to undo are called out: Task 6's sealed
+  thresholds must be committed BEFORE any pilot ensemble is drawn
+  (commit-order-as-pre-registration), and bit-identity must hold for sealed
+  1.0.x and 703 worlds after every task. ER-14 joins the standing owner
+  questions with the note that, if scheduled, it should be **batched with F5** —
+  both are seal-adjacent and one reseal is far cheaper than two. The 2026-08-14
+  audit section is compressed rather than deleted, since the ER-11/ER-12 detail
+  now lives in `CLAUDE.md`'s register summary and in the register itself.
+
+  Swept alongside it: 15 local branches merged into `main` deleted (`c1c2-01`,
+  `cov-01`, `docs-01`, `er10-01`, `housekeeping-02`, `narr-01`…`04`,
+  `pm-remap-01`, `sib-01`, `stress-01`…`03`, and the ER-14 branch). Verified
+  first that local `main` == `origin/main`, so "merged into main" also meant
+  "on the remote". Two left deliberately and recorded in the housekeeping
+  section: `origin/wp2-10-ablation` is merged but deleting a REMOTE branch is
+  outward-facing, and the main checkout still sits on
+  `housekeeping-03-merge-hook` — moving it would change the owner's working
+  tree. The stale `../Terrarium-probe` line is marked gone.
+
 - **`docs/current/private-markets-and-inflation.md` — how the private market
   asset classes are modeled, and the measured fact that inflation does not
   reach them.** A technical note, no code changed. It maps the three layers
