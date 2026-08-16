@@ -170,8 +170,21 @@ sealing from panel measurements — the formulas are fixed now:
 - **B5 — Hazard realism.** Per-bucket correction onset frequency within ±50%
   *(cand.)* relative of the panel's; median corrections per decade within the
   panel's decade range.
+- **B6 — Transmission (owner-added 2026-08-15).** Tightening must raise downturn
+  odds: across spine draws, P(entering a contraction regime within k quarters |
+  policy gap above its sealed threshold) matches the panel's historical
+  conditional frequency within a sealed tolerance *(cand.; k and the gap
+  threshold sealed at pre-registration from the panel)*. Rationale: L1 carries
+  **no direct policy → growth equation by design** (trend/cycle separation —
+  policy moves the cycle, not the productivity era); transmission runs entirely
+  through L2's state-dependent hazards, and `regimes/semimarkov.py:45` records
+  that the slow states' hazard influence is *attenuated at generation time* (a
+  v1 limitation). B6 is the bar that catches that attenuation. **If B6 fails,
+  the named repair is the L2 generation-time hazard link — not a growth
+  equation in L1**, which would smear cycle into trend, weaken identification,
+  and force a refit.
 
-**Verdict rule:** all five PASS → the architecture earns a campaign-4-scale decision
+**Verdict rule:** all six PASS → the architecture earns a campaign-4-scale decision
 (owner's call, with this spec as its basis). Any FAIL → the failing layer is named,
 the result is committed, and the approach is parked with its evidence — same
 discipline as every gate before it.
