@@ -36,7 +36,9 @@ import {
   getOutcome,
   SessionApiError,
   type Action,
+  type Book,
   type Outcome,
+  type Plan,
   type Session,
 } from "./lib/session";
 
@@ -163,10 +165,16 @@ export function bookLabel(basis: string): string {
 interface PlayProps {
   bundle: WorldBundle;
   config?: PlayConfig;
+  /** su-app-06: the analyst's entered opening book/plan, from BookEntry's
+   * onReady. Undefined (bundle picked without going through book entry)
+   * falls through to the server's own default — createSession's body just
+   * omits the keys, same as before this WP. */
+  book?: Book;
+  plan?: Plan;
   onExit: () => void;
 }
 
-export function Play({ bundle, config, onExit }: PlayProps) {
+export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   const basis = config?.basis ?? "reported";
   const [session, setSession] = useState<Session | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -186,10 +194,12 @@ export function Play({ bundle, config, onExit }: PlayProps) {
       basis,
       ranked: config?.ranked ?? false,
       participant: config?.participant,
+      book,
+      plan,
     })
       .then(setSession)
       .catch((e) => setError(String(e)));
-  }, [bundle.meta.run_id, basis, config?.ranked, config?.participant]);
+  }, [bundle.meta.run_id, basis, config?.ranked, config?.participant, book, plan]);
 
   // cio-02: fetch the CIO view only while that mode is on screen, and only
   // when the pointer, the plane, or the decided-window count actually moved

@@ -15,13 +15,15 @@ import { useCallback, useEffect, useState } from "react";
 import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
 import { cacheGet, cacheList, cachePut } from "./lib/idb";
 import { fetchWorlds, WorldPicker, type WorldsDoc } from "./lib/worlds";
+import type { Book, Plan } from "./lib/session";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
 import Provenance from "./components/Provenance";
+import { BookEntry } from "./BookEntry";
 import { ASSET_LABELS, Play } from "./Play";
 import { RankedSetup, type PlayConfig } from "./RankedSetup";
 
-type Mode = "browse" | "setup" | "play";
+type Mode = "browse" | "book" | "setup" | "play";
 
 export default function App() {
   const [loaded, setLoaded] = useState<LoadedBundle | null>(null);
@@ -31,6 +33,12 @@ export default function App() {
   const [mode, setMode] = useState<Mode>("browse");
   const [playConfig, setPlayConfig] = useState<PlayConfig | undefined>();
   const [worldsDoc, setWorldsDoc] = useState<WorldsDoc | null>(null);
+  // su-app-06: the analyst's entered book/plan, set by BookEntry.onReady;
+  // bookIsDefault gates ranked eligibility in RankedSetup and is carried
+  // through to createSession via Play.
+  const [book, setBook] = useState<Book | undefined>();
+  const [plan, setPlan] = useState<Plan | undefined>();
+  const [bookIsDefault, setBookIsDefault] = useState(true);
 
   useEffect(() => {
     cacheList().then(setCached).catch(() => setCached([]));
@@ -112,9 +120,24 @@ export default function App() {
     );
   }
 
+  if (mode === "book") {
+    return (
+      <BookEntry
+        runId={loaded.bundle.meta.run_id}
+        onReady={(b, p, isDefault) => {
+          setBook(b);
+          setPlan(p);
+          setBookIsDefault(isDefault);
+          setMode("setup");
+        }}
+        onCancel={() => setMode("browse")}
+      />
+    );
+  }
   if (mode === "setup") {
     return (
       <RankedSetup
+        bookIsDefault={bookIsDefault}
         onStart={(config) => {
           setPlayConfig(config);
           setMode("play");
@@ -125,7 +148,13 @@ export default function App() {
   }
   if (mode === "play") {
     return (
-      <Play bundle={loaded.bundle} config={playConfig} onExit={() => setMode("browse")} />
+      <Play
+        bundle={loaded.bundle}
+        config={playConfig}
+        book={book}
+        plan={plan}
+        onExit={() => setMode("browse")}
+      />
     );
   }
 
@@ -167,7 +196,7 @@ export default function App() {
         <button onClick={() => setRevealed(Math.min(months, revealed + 12))}>
           +1 year
         </button>
-        <button onClick={() => setMode("setup")}>play this world</button>
+        <button onClick={() => setMode("book")}>play this world</button>
         <button onClick={() => setLoaded(null)}>close</button>
       </section>
 

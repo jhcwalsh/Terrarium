@@ -23,15 +23,20 @@ export interface PlayConfig {
 export function RankedSetup({
   onStart,
   onCancel,
+  bookIsDefault = true,
 }: {
   onStart: (config: PlayConfig) => void;
   onCancel: () => void;
+  /** su-app-06: ranked requires the served default book AND plan, untouched.
+   * Defaults true so callers that predate the book-entry screen (and every
+   * existing test here) see the prior behaviour unchanged. */
+  bookIsDefault?: boolean;
 }) {
   const [ranked, setRanked] = useState(false);
   const [participant, setParticipant] = useState("");
   const [basis, setBasis] = useState<"reported" | "actual">("reported");
 
-  const ready = !ranked || participant.trim().length > 0;
+  const ready = !ranked || (bookIsDefault && participant.trim().length > 0);
 
   return (
     <main className="shell">
@@ -49,10 +54,23 @@ export function RankedSetup({
           </span>
         </label>
         <label className="setup-row">
-          <input type="radio" name="arm" checked={ranked} onChange={() => setRanked(true)} />
+          <input
+            type="radio"
+            name="arm"
+            checked={ranked}
+            disabled={!bookIsDefault}
+            onChange={() => bookIsDefault && setRanked(true)}
+          />
           <span>
             <strong>Ranked</strong> — your score joins the board for this exact
             world, seed, and scoring version. First play stands.
+            {!bookIsDefault && (
+              <em className="ranked-locked">
+                {" "}
+                Locked — you edited the opening book, so this session is
+                practice only.
+              </em>
+            )}
           </span>
         </label>
         {ranked && (

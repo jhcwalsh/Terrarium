@@ -142,11 +142,62 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** su-app-06: a ten-rung private-sleeve cohort, as served/entered. Shape
+ * only — `identity`/`commitment`/`value` carry whatever the server put
+ * there; this client edits seven named fields and passes the rest through
+ * untouched (`recallable_balance`, `cumulative_recycled` included). */
+export interface Rung {
+  identity: { vintage_year: number; [k: string]: unknown };
+  commitment: {
+    committed: number;
+    paid_in: number;
+    unfunded: number;
+    recallable_balance: number;
+    cumulative_recycled: number;
+  };
+  value: { nav_true: number; nav_reported: number; cumulative_distributions: number };
+  [k: string]: unknown;
+}
+
+/** su-app-06: the opening book contract (`opening-book-0.1`). `liquid`'s
+ * key set is engine-dependent — never hardcode it, read `liquid_sleeves`
+ * off `DefaultBookResponse` instead. */
+export interface Book {
+  state_version: string;
+  liquid: Record<string, number>;
+  private: Record<string, Rung[]>;
+  cash: number;
+}
+
+/** su-app-06: the commitment plan contract (`commitment-plan-0.1`). Each
+ * `points[sleeve]` array has one entry per decision window (nine, not ten
+ * years) — driven by the served array's length, never a constant. */
+export interface Plan {
+  state_version: string;
+  points: Record<string, number[]>;
+}
+
+export interface DefaultBookResponse {
+  book: Book;
+  plan: Plan;
+  liquid_sleeves: string[];
+  book_digest: string;
+  plan_digest: string;
+}
+
+/** su-app-06: the entry screen's pre-fill — today's derived book and the
+ * flat fixed-rule plan, for this world's own sleeve set. */
+export function getDefaultBook(runId: string): Promise<DefaultBookResponse> {
+  return request(`/book/default?run_id=${encodeURIComponent(runId)}`);
+}
+
 export function createSession(body: {
   run_id: string;
   basis?: "reported" | "actual";
   ranked?: boolean;
   participant?: string;
+  book?: Book;
+  plan?: Plan;
 }): Promise<Session> {
   return request("/sessions", { method: "POST", body: JSON.stringify(body) });
 }
