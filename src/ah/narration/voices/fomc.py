@@ -97,7 +97,20 @@ class FomcVoice:
         )
 
     def _dissents(self, event: Event) -> list[dict[str, Any]]:
-        anchor = float(event.trigger_values["anchor_implied"])
+        """Members whose own reading is far enough from the realised move to vote against.
+
+        Measured against the SMOOTHED anchor rather than the raw one: the
+        smoothed anchor is the narration anchor (DN-9 §C.6) and is the quantity
+        epsilon is defined against, so the committee disagrees about the same
+        object the page calls the surprise.
+
+        Note what this does NOT do: cap the number of dissents. When the anchor
+        sits far from the realised path the whole committee votes against, which
+        is mechanically correct per §4.1 and absurd on the page — and that is a
+        finding about rho and the anchor coefficients, not a reason to add a cap
+        the note does not have.
+        """
+        anchor = float(event.trigger_values["smoothed_anchor"])
         realised = float(event.trigger_values["target"])
         out: list[dict[str, Any]] = []
         for member in self.members:

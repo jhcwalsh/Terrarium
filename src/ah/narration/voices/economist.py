@@ -216,12 +216,15 @@ class EconomistVoice:
                 f"the risk bank holds {len(pool)} entries; voices.economist.risk_book_size asks "
                 f"for {self.params.risk_book_size}"
             )
+        # Drawn WITHOUT replacement: a risk book that names the same concern
+        # twice in one month is not a risk book. Ordering the whole pool by a
+        # per-month hash and taking the head keeps the draw deterministic and
+        # keeps the book turning over between meetings.
+        ordered = sorted(
+            pool, key=lambda entry: stable_unit(context["world_id"], event.month, entry["id"])
+        )
         book: list[dict[str, Any]] = []
-        for slot in range(self.params.risk_book_size):
-            index = int(
-                stable_unit(context["world_id"], event.month, "risk", slot) * len(pool)
-            ) % len(pool)
-            entry = pool[index]
+        for entry in ordered[: self.params.risk_book_size]:
             book.append(
                 {
                     "id": str(entry["id"]),
