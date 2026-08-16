@@ -385,7 +385,7 @@ comes back wrapped in a ValidationError that makes a useless 422."
 
 **Interfaces:**
 - Consumes: Task 1's `OpeningBook`, `CommitmentPlan`, `validate_book`, `validate_plan`.
-- Produces: `ah.play.default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningBook`; `ah.play.default_commitment_plan(targets: Mapping[str, float] | None = None, years: int = 10) -> CommitmentPlan`.
+- Produces: `ah.play.default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningBook`; `ah.play.default_commitment_plan(targets: Mapping[str, float] | None = None, windows: int = 9) -> CommitmentPlan`.
 
 **Why these live in `play.py` and not `book.py`:** `_seed_ladder` and `START_TARGETS` are in `play.py`, and `ah.play` already imports `ah.port`. Putting the builders in `book.py` would invert that and create a cycle.
 
@@ -534,7 +534,7 @@ def default_commitment_plan(
     one without a contract change.
     """
     base = plan_commitments(0.0, targets, pacing_rule="fixed")
-    return CommitmentPlan(points={a: [base[a]] * years for a in PRIVATE_ASSETS})
+    return CommitmentPlan(points={a: [base[a]] * windows for a in PRIVATE_ASSETS})
 ```
 
 Add the import near the other `ah.port` imports at the top of `play.py`:
