@@ -221,6 +221,18 @@ def test_every_month_is_verbatim_history(spine_world):
 
 
 def test_no_era_teleports_at_joins(spine_world):
+    """Ordinary joins stay within the YoY bound.
+
+    Caveat (owner ruling): the UNFILTERED forced-re-entry path (panel-edge
+    re-entry with no other pool member to filter to -- see
+    test_forced_reentry_at_panel_edge) may legitimately exceed this bound;
+    the Task-7 measurement recorded 5.70pp and 9.59pp cases under that
+    mechanism. This test passes today because seed 90210 with 3 paths
+    produces no unfiltered re-entry, which is deterministic given the fixed
+    seed and campaign source. If it ever fails at a join flagged as an
+    unfiltered re-entry, that is the disclosed mechanism above firing, not
+    a regression.
+    """
     import numpy as np
 
     from ah.gen.bootstrap import campaign_source
@@ -259,6 +271,8 @@ def test_hazard_and_block_streams_are_independent(spine_world):
     gen.fit(campaign_source())
     a = gen.sample(spine_world, 2, 4242)
     b = gen.sample(spine_world, 2, 4242)
+    assert a.row_indices is not None
+    assert b.row_indices is not None
     assert np.array_equal(a.row_indices, b.row_indices)
 
 
@@ -316,8 +330,10 @@ def test_correction_dwell_and_refire():
 
 def test_forced_reentry_at_panel_edge():
     from types import SimpleNamespace
+    from typing import cast
 
     from ah.core.worldspec import StressSpec
+    from ah.gen.bootstrap import BootstrapSource
     from ah.gen.spine import HazardTable, SpineBootstrap, SpinePaths, _DrawInputs
 
     n = 4
@@ -364,7 +380,9 @@ def test_forced_reentry_at_panel_edge():
     gen = SpineBootstrap()
     index, corrections = gen._draw(
         _DrawInputs(
-            source=source,
+            # synthetic stub: carries exactly the fields the draw path reads
+            # (n_rows, values, factor_names) -- not a real BootstrapSource.
+            source=cast(BootstrapSource, source),
             sp=sp,
             hazard=hazard,
             scores=scores,
@@ -429,7 +447,10 @@ def test_dispatcher_still_routes_stress_and_legacy_bit_identically():
     via_dispatch = registry.resolve_for_world(nw).sample(nw, 2, 199001)
     direct = StressBootstrap()
     direct.fit(campaign_source())
-    assert np.array_equal(via_dispatch.row_indices, direct.sample(nw, 2, 199001).row_indices)
+    direct_ens = direct.sample(nw, 2, 199001)
+    assert via_dispatch.row_indices is not None
+    assert direct_ens.row_indices is not None
+    assert np.array_equal(via_dispatch.row_indices, direct_ens.row_indices)
 
 
 def test_judging_entry_points_leave_the_spine_hook_unregistered():
