@@ -219,6 +219,18 @@ class TestJudgingImportClosure:
             "delete them so the list states only live boundary decisions"
         )
 
+    def test_spine_stack_stays_out_of_the_judging_closure(self):
+        """The x_spine dispatcher reaches the spine compiler ONLY through a
+        registration hook (ah.gen.stress.register_spine_factory), populated
+        when ah.gen.spine is explicitly imported -- the blocks/flow pattern.
+        Owner ruling 2026-08-16 (spine-01 Task 5): the hook stands, and this
+        test pins the boundary it creates: the spine stack must never become
+        statically reachable from the judging entry points. If this fails,
+        someone added a static import -- either classify the whole stack in
+        EXCLUDED_FROM_SEAL with disputable reasons, or restore the hook."""
+        reachable = {p.relative_to(ROOT).as_posix() for p in judging_closure().values()}
+        assert "src/ah/gen/spine.py" not in reachable
+
     def test_excluded_init_files_carry_no_logic(self):
         """The 'package plumbing' reason is checked, not assumed."""
         for rel, reason in EXCLUDED_FROM_SEAL.items():

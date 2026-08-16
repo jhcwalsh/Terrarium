@@ -392,7 +392,7 @@ def test_forced_reentry_at_panel_edge():
 
 
 def test_dispatcher_routes_spine_worlds(spine_world):
-    from ah.gen import registry, spine, stress  # spine import triggers registration hook
+    from ah.gen import registry, stress  # spine import triggers registration hook
 
     gen = registry.resolve_for_world(spine_world)
     ens = gen.sample(spine_world, 1, 5150)
@@ -428,6 +428,23 @@ def test_dispatcher_still_routes_stress_and_legacy_bit_identically():
     via_dispatch = registry.resolve_for_world(nw).sample(nw, 2, 199001)
     direct = StressBootstrap()
     direct.fit(campaign_source())
-    assert np.array_equal(
-        via_dispatch.row_indices, direct.sample(nw, 2, 199001).row_indices
+    assert np.array_equal(via_dispatch.row_indices, direct.sample(nw, 2, 199001).row_indices)
+
+
+def test_judging_entry_points_leave_the_spine_hook_unregistered():
+    """Fail-closed runtime proof (owner ruling 2026-08-16): a process that
+    imports only the judging entry points must find no spine factory -- a
+    judging path that tried to sample a spine world would refuse loudly
+    (StressError) rather than silently executing unsealed spine code."""
+    import subprocess
+    import sys
+
+    code = (
+        "import ah.eval.g2\n"
+        "import ah.battery.report\n"
+        "from ah.gen import stress\n"
+        "import sys\n"
+        "sys.exit(0 if stress._SPINE_FACTORY is None else 1)\n"
     )
+    proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300)
+    assert proc.returncode == 0, proc.stderr
