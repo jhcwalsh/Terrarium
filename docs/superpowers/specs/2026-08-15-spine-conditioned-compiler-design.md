@@ -39,6 +39,21 @@ month scale and incoherent at story scale.
   credit gap, vulnerability, policy tightness versus neutral, and inflation above
   trend. Calibration target is historical correction frequency conditional on state —
   **never portfolio outcomes** (rule 1 of the stress methodology, carried forward).
+- **R3 — The four-quadrant clock (owner, 2026-08-15).** The working regime
+  vocabulary is the investment clock, DERIVED monthly from the spine's own dials
+  (growth axis x inflation axis): **recession** (contracting, inflation cool),
+  **recovery** (expanding, cool), **expansion** (expanding, hot),
+  **stagflation** (contracting, hot). The fitted six-label L2 machinery remains
+  the hidden engine; SLOW/REF/CRI never surface downstream of the spine. Crisis
+  is NOT a regime — it is the hazard overlay (R2), able to fire in any quadrant.
+  **No second transition matrix is imposed over the quadrants**: their
+  transition probabilities and dwell times EMERGE from L1/L2 dynamics and are
+  *judged* (B4), never authored — imposing an explicit quadrant Markov chain
+  would double-govern the storyline with two weather engines. The underlying
+  engine is semi-Markov (state-dependent sojourns), which is deliberately
+  stronger than plain Markov: real regimes have duration memory, and a
+  memoryless chain exits expansions on a coin-flip schedule history refutes.
+  Refitting L2 natively on the quadrants is reserved (D-SP-5).
 - **Carried forward from the stress spec:** commit-order-as-pre-registration; reserved
   decisions proposed-never-taken; `schemas/` untouched (no new `generator_id` — see
   §7); depth never consulted when choosing block length.
@@ -73,14 +88,18 @@ spine undercalls persistence, the pilot fails and says so.
 
 ### 3.2 Layer H — the correction hazard
 
-Monthly hazard `h_m = logistic(a + b · x_m)` where `x_m` is the spine's state vector:
-`(credit_gap_m, v_m, policy_stance_m − r_star_m, pi_m − pi_star_m)`, each standardized
-against the L1 posterior's own scale.
+Monthly hazard `h_m = rate[quadrant_m]` — the correction-onset probability of the
+spine's current quadrant (R3), calibrated empirically.
 
-- **Calibration:** coefficients are fit so that correction frequency *per coarse state
-  bucket* matches the campaign panel's historical frequency of correction onsets in
-  those buckets (correction onset = the panel's existing CRI regime entries). Fitting
-  data is the panel only. Portfolio outcomes never enter the objective (rule 1).
+- **Calibration:** the per-quadrant rate is the campaign panel's historical frequency
+  of correction onsets in that quadrant (correction onset = the panel's CRI regime
+  entries — the six-label ruleset's one downstream job). Over a single categorical
+  covariate the saturated fit IS the frequency table, so there is nothing to tune.
+  Fitting data is the panel only. Portfolio outcomes never enter the objective
+  (rule 1). **When the risk runs hot:** wherever history put it — the sealed table
+  will say which quadrants carry the load (expected: the hot-inflation quadrants),
+  and B5 checks the generated decades reproduce it. The hazard runs every month in
+  every quadrant; no month is safe, some months are much less safe.
 - **Firing:** when the monthly draw (from the path's own PCG64 stream, platform seed
   discipline) fires, the compiler enters a **crisis segment**: stratum shifts to the
   crisis pool, with depth percentile and dwell drawn from the **state-severity table**
@@ -96,12 +115,14 @@ against the L1 posterior's own scale.
 
 The `StressBootstrap` machinery is reused with two changes:
 
-1. **Chunk selection conditions on the spine.** Each 6-month chunk must come from
-   source months whose macro state matches the spine's current bucket. Buckets are
-   deliberately coarse to protect pool depth (§6): inflation era
-   {high-or-rising, low-or-stable}, growth {expansion, contraction}, policy
-   {tightening, easing-or-floor}. Eight cells, crossed with the severity stratum the
-   hazard/premise currently demands.
+1. **Chunk selection conditions on the spine's quadrant (R3).** Each 6-month chunk
+   must come from source months whose own quadrant (panel-side proxies: growth from
+   the row's regime label, inflation era from source-space trailing YoY) matches the
+   spine's current quadrant. Four cells, crossed with the severity stratum the
+   hazard/premise currently demands. This is also where the owner's
+   returns/volatility/correlation point lands for free: months cast from real
+   stagflation carry stagflation's true joint behaviour — including the
+   equity–bond correlation flip — because they ARE stagflation months.
 2. **The join discipline gains the inflation era.** Adjacent chunks must agree on
    inflation-era bucket, and the source-space CPI YoY jump across a join is bounded
    (threshold sealed at pre-registration from the panel's own adjacent-month
@@ -162,12 +183,15 @@ sealing from panel measurements — the formulas are fixed now:
   worlds: coverage remains monotone in private allocation; the 55% arm breaches at
   least as often as under the stress compiler (≥1/20); hold-course depth lands inside
   each premise's declared band.
-- **B4 — Persistence.** Spine regime sojourn distributions inside the battery's
-  sealed bands (existing where defined; otherwise sealed from panel at
-  pre-registration). **This is the bar the G2 record says to fear** — if the spine
-  inherits hier-flow's undercalling, the pilot fails here, and the result is recorded,
-  not massaged.
-- **B5 — Hazard realism.** Per-bucket correction onset frequency within ±50%
+- **B4 — Persistence and the clock's order (amended per R3).** Judged on the
+  QUADRANTS: (a) per-quadrant dwell-time medians inside sealed bands from the
+  panel's own quadrant dwells; (b) the clock must turn the right way — the
+  fraction of quadrant transitions that follow recovery → expansion →
+  stagflation → recession → recovery must match the panel's fraction within a
+  sealed tolerance. **This is the bar the G2 record says to fear** — if the
+  spine inherits hier-flow's undercalling, the pilot fails here, and the result
+  is recorded, not massaged.
+- **B5 — Hazard realism.** Per-QUADRANT correction onset frequency within ±50%
   *(cand.)* relative of the panel's; median corrections per decade within the
   panel's decade range.
 - **B6 — Transmission (owner-added 2026-08-15).** Tightening must raise downturn
@@ -194,11 +218,13 @@ discipline as every gate before it.
 - **Spine gentleness (B4's target).** Partly mitigated by premises constraining the
   spine; if constrained spines *still* undercall persistence, that is a finding about
   L2 worth having at pilot price.
-- **Pool sparsity.** Eight state cells × severity strata over an 813-row panel will
-  leave thin cells (the stress compiler's strata already thin it — the block-length
-  study's 35th-percentile pool was 284 rows). Mitigations: coarse buckets (already chosen), measured cell
-  occupancy published in the pilot report, and refusal (not silent substitution) when
-  a premise demands an empty cell. A refusal is information: history never did this.
+- **Pool sparsity.** Four quadrants × severity strata over an 813-row panel will
+  still leave thin cells (the stress compiler's strata already thin it — the
+  block-length study's 35th-percentile pool was 284 rows), though R3's move from
+  eight cells to four materially deepens every pool. Mitigations: measured cell
+  occupancy published in the pilot report, and refusal (not silent substitution)
+  when a premise demands an empty cell. A refusal is information: history never
+  did this.
 - **L1 state identifiability.** `v` and `credit_gap` are posterior estimates, not
   observables; the hazard inherits their noise. The pilot report must show hazard
   sensitivity to posterior draw (fire the hazard under 5 posterior samples; the
@@ -234,6 +260,10 @@ discipline as every gate before it.
   backdrop × recovery shape proposed; anything richer waits on D-SC-2 proper).
 - ⚑ **D-SP-4:** what a PASS buys — pilot success does not itself authorize a
   campaign; it authorizes the owner's decision about one.
+- ⚑ **D-SP-5:** refitting L2 natively on the four-quadrant labeling (retiring
+  the six-label ruleset underneath) — a campaign-scale spend, earned only by a
+  passing pilot. Until taken, the quadrants remain a derived layer and the
+  six-label engine remains the fitted machinery.
 
 ## 9. Non-goals
 

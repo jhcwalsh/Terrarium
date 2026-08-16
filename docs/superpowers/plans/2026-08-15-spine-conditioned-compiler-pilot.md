@@ -4,13 +4,13 @@
 
 **Goal:** Build and measure the spine-conditioned stress compiler pilot: L1/L2 slow-state spines steer which real 6-month chunks the stress stitcher draws, with a state-dependent correction hazard and a state-severity table — then judge it against six pre-sealed bars (B1–B6).
 
-**Architecture:** Three layers per the spec (`docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md`): Layer S samples premise-accepted L1/L2 spines (reusing `simulate_decades`/`simulate_regimes`/`policy_anchor`, the same one-pass/two-pass composition `joinery/assemble.py:476-516` uses); Layer H is an 8-cell empirical correction hazard calibrated to panel CRI-onset frequencies; Layer F extends `StressBootstrap` so entry pools are conditioned on the spine's state cell and joins must agree on inflation era. Routing rides the existing `bootstrap-stratified` dispatcher via a new `extensions.x_spine` block.
+**Architecture:** Three layers per the spec (`docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md`): Layer S samples premise-accepted L1/L2 spines (reusing `simulate_decades`/`simulate_regimes`/`policy_anchor`, the same one-pass/two-pass composition `joinery/assemble.py:476-516` uses); Layer H is a per-quadrant empirical correction hazard calibrated to panel CRI-onset frequencies (R3: the four-quadrant investment clock, derived from the spine's dials); Layer F extends `StressBootstrap` so entry pools are conditioned on the spine's quadrant and joins must agree on inflation era. Routing rides the existing `bootstrap-stratified` dispatcher via a new `extensions.x_spine` block.
 
 **Tech Stack:** Python 3.12, numpy, pydantic (existing worldspec pattern), the pinned L1/L2 artifacts (`ah.gen.systems._pinned_layers`), pytest. **No new dependencies. No training.**
 
 ## Global Constraints
 
-- **Owner rulings (binding):** R1 — selection only, a drawn month's values are NEVER modified or scaled; R2 — correction timing comes from a state-dependent hazard, never a schedule; severity is never tuned to portfolio outcomes (rule 1); no policy→growth equation is added to L1.
+- **Owner rulings (binding):** R1 — selection only, a drawn month's values are NEVER modified or scaled; R2 — correction timing comes from a state-dependent hazard, never a schedule; R3 — the working regime vocabulary is the FOUR-QUADRANT investment clock (recession / recovery / expansion / stagflation), DERIVED from the spine's dials; the six-label L2 engine stays hidden; crisis is the hazard overlay, not a regime; NO explicit quadrant transition matrix is imposed (quadrant dynamics emerge and are judged at B4); severity is never tuned to portfolio outcomes (rule 1); no policy→growth equation is added to L1.
 - **`schemas/` is read-only.** `generator_id` gains no values — spine worlds declare `engine_defaults.generator_id: "bootstrap-stratified"` and route by extension block.
 - **Sealed files:** `pre-registration.lock`, `pre-registration-g3.lock`, `pre-registration-g5.lock` — verified 2026-08-15 to cover none of the files this plan touches (only fixture worldspecs match). If any task finds itself editing a path listed in ANY of the three locks, STOP and report BLOCKED.
 - **Determinism:** all randomness from `numpy.random.Generator(PCG64(seed))`; layer seed offsets `{"climate": 0, "regimes": 104729, "hazard": 224737}`; decade/path stride 7919; per-path streams via `.jumped(p)`. No `random`, no time-based defaults.
@@ -430,7 +430,7 @@ git commit -m "feat(spine-01): Layer S - premise-accepted L1/L2 spine sampler wi
 
 ---
 
-### Task 3: Layer H — state cells and the empirical correction hazard
+### Task 3: The quadrant layer and the empirical correction hazard (R3)
 
 **Files:**
 - Modify: `src/ah/gen/spine.py` (append)
@@ -438,46 +438,47 @@ git commit -m "feat(spine-01): Layer S - premise-accepted L1/L2 spine sampler wi
 
 **Interfaces:**
 - Consumes: `BootstrapSource` (`ah.gen.bootstrap.campaign_source`) — fields `values`, `factor_names`, `labels`, `n_rows`; `SpinePaths` from Task 2.
-- Produces: `panel_yoy(source) -> np.ndarray` (len n_rows, NaN where <12 months of contiguous panel history), `panel_cell(source, yoy, era_thr) -> np.ndarray` (int8 in [-1, 7]; -1 where yoy is NaN), `spine_cell(states_m, label_m, mu_pi, policy_m) -> int` (0..7), `HazardTable` (dataclass: `rates (8,)`, `era_threshold_pp: float`, `cell_months (8,)`, `fallback_rate: float`), `fit_hazard(source) -> HazardTable`. Cell encoding — bit 0: inflation era high; bit 1: growth contraction; bit 2: policy tight. `MIN_CELL_MONTHS = 24`.
+- Produces: `QUADRANTS = ("recession", "stagflation", "recovery", "expansion")` — index = `(expanding << 1) | hot`, i.e. 0 = contracting+cool (recession), 1 = contracting+hot (stagflation), 2 = expanding+cool (recovery), 3 = expanding+hot (expansion); `CLOCKWISE = {(2, 3), (3, 1), (1, 0), (0, 2)}` (recovery→expansion→stagflation→recession→recovery); `panel_yoy(source) -> np.ndarray` (len n_rows, NaN where <12 months of panel history); `panel_quadrant(source, yoy, era_thr) -> np.ndarray` (int8 in [-1, 3]; -1 where yoy is NaN; expanding = label not in {REC, CRI}, hot = yoy > era_thr); `spine_quadrant(states_m, label_m, mu_pi) -> int` (expanding = label not in CONTRACTION_CODES, hot = pi_star - mu_pi > BACKDROP_MARGIN_PP); `HazardTable` (dataclass: `rates (4,)`, `era_threshold_pp: float`, `cell_months (4,)`, `fallback_rate: float`); `fit_hazard(source) -> HazardTable`. `MIN_CELL_MONTHS = 24`. Crisis is NOT a quadrant — CRI panel months keep their growth/inflation classification and additionally supply the onset events the hazard is calibrated on.
 
 - [ ] **Step 1: Write the failing tests** (append)
 
 ```python
-def test_panel_cells_and_hazard_calibration():
+def test_panel_quadrants_and_hazard_calibration():
     import numpy as np
 
     from ah.gen.bootstrap import campaign_source
-    from ah.gen.spine import MIN_CELL_MONTHS, fit_hazard, panel_cell, panel_yoy
+    from ah.gen.spine import MIN_CELL_MONTHS, fit_hazard, panel_quadrant, panel_yoy
 
     src = campaign_source()
     yoy = panel_yoy(src)
     assert yoy.shape == (src.n_rows,)
     assert np.isnan(yoy[:12]).all()  # no 12-month lookback at the panel's start
     table = fit_hazard(src)
-    assert table.rates.shape == (8,)
+    assert table.rates.shape == (4,)
     assert np.all((table.rates >= 0.0) & (table.rates <= 1.0))
-    # cells with enough months carry their own rate; starved cells the fallback
-    for c in range(8):
+    # quadrants with enough months carry their own rate; starved ones the fallback
+    for c in range(4):
         if table.cell_months[c] < MIN_CELL_MONTHS:
             assert table.rates[c] == table.fallback_rate
-    # the loaded-dice property the design promises: conditional on enough data,
-    # the all-preconditions cell (era high + contraction + tight) must not be
-    # QUIETER than the no-preconditions cell.
-    if table.cell_months[7] >= MIN_CELL_MONTHS and table.cell_months[0] >= MIN_CELL_MONTHS:
-        assert table.rates[7] >= table.rates[0]
+    # the loaded-dice property: with both cells populated, stagflation (1) must
+    # not be QUIETER than recovery (2) -- corrections cluster with hot
+    # inflation, not benign recoveries.
+    if table.cell_months[1] >= MIN_CELL_MONTHS and table.cell_months[2] >= MIN_CELL_MONTHS:
+        assert table.rates[1] >= table.rates[2]
 
 
-def test_spine_cell_encoding():
+def test_spine_quadrant_encoding():
     import numpy as np
 
-    from ah.gen.spine import CONTRACTION_CODES, spine_cell
+    from ah.gen.spine import CONTRACTION_CODES, spine_quadrant
 
     states = np.array([3.5, 1.0, 1.5, 0.0, 1.2])  # pi*, r*, g, v, L
     rec = next(iter(CONTRACTION_CODES))
-    # pi gap = 3.5 - 2.0 > 0.5 -> era bit; contraction bit; policy 6.0 > r*+pi* -> tight
-    assert spine_cell(states, rec, mu_pi=2.0, policy_m=6.0) == 0b111
-    assert spine_cell(states, 0, mu_pi=2.0, policy_m=6.0) == 0b101  # EXP: no growth bit
-    assert spine_cell(states, 0, mu_pi=4.0, policy_m=0.0) == 0b000
+    # pi gap = 3.5 - 2.0 > 0.5 -> hot; contracting -> stagflation (1)
+    assert spine_quadrant(states, rec, mu_pi=2.0) == 1
+    assert spine_quadrant(states, 0, mu_pi=2.0) == 3  # expanding + hot = expansion
+    assert spine_quadrant(states, 0, mu_pi=4.0) == 2  # expanding + cool = recovery
+    assert spine_quadrant(states, rec, mu_pi=4.0) == 0  # contracting + cool = recession
 ```
 
 - [ ] **Step 2: Run and watch them fail**
@@ -489,6 +490,11 @@ Expected: FAIL — names not defined.
 
 ```python
 MIN_CELL_MONTHS = 24
+
+#: R3: the investment clock. Index = (expanding << 1) | hot.
+QUADRANTS = ("recession", "stagflation", "recovery", "expansion")
+#: recovery -> expansion -> stagflation -> recession -> recovery
+CLOCKWISE = frozenset({(2, 3), (3, 1), (1, 0), (0, 2)})
 
 
 def panel_yoy(source) -> np.ndarray:
@@ -503,57 +509,53 @@ def panel_yoy(source) -> np.ndarray:
     return out
 
 
-def panel_cell(source, yoy: np.ndarray, era_threshold_pp: float) -> np.ndarray:
-    """Cell code per panel row; -1 where yoy is NaN. Panel-space proxies
-    (spec 3.2 disclosure): era from trailing YoY vs threshold, growth from the
-    row's own regime label, policy tightness from curve inversion."""
-    names = list(source.factor_names)
-    y10 = np.asarray(source.values)[:, names.index("ust_10y")]
-    y2 = np.asarray(source.values)[:, names.index("ust_2y")]
-    contraction = np.isin(
-        np.asarray(source.labels), ["REC", "CRI"]
-    )
+def panel_quadrant(source, yoy: np.ndarray, era_threshold_pp: float) -> np.ndarray:
+    """Quadrant per panel row; -1 where yoy is NaN. Panel-space proxies (spec
+    3.3 disclosure): expanding = the row's regime label outside {REC, CRI};
+    hot = trailing YoY above the era threshold. CRI rows keep their quadrant --
+    crisis is the overlay, not a quadrant (R3)."""
+    contracting = np.isin(np.asarray(source.labels), ["REC", "CRI"])
     cells = np.full(source.n_rows, -1, dtype=np.int8)
     ok = ~np.isnan(yoy)
-    era = (yoy > era_threshold_pp).astype(np.int8)
-    tight = (y10 - y2 < 0.0).astype(np.int8)
-    cells[ok] = era[ok] | (contraction[ok].astype(np.int8) << 1) | (tight[ok] << 2)
+    hot = (yoy > era_threshold_pp).astype(np.int8)
+    expanding = (~contracting).astype(np.int8)
+    cells[ok] = (expanding[ok] << 1) | hot[ok]
     return cells
 
 
-def spine_cell(states_m: np.ndarray, label_m: int, *, mu_pi: float, policy_m: float) -> int:
-    """Spine-space cell for one month. states_m is one row in STATE_NAMES order."""
-    era = int(states_m[0] - mu_pi > BACKDROP_MARGIN_PP)
-    contraction = int(int(label_m) in CONTRACTION_CODES)
-    tight = int(policy_m - (states_m[1] + states_m[0]) > 0.0)
-    return era | (contraction << 1) | (tight << 2)
+def spine_quadrant(states_m: np.ndarray, label_m: int, *, mu_pi: float) -> int:
+    """Spine-space quadrant for one month. states_m is one row in STATE_NAMES
+    order; expanding = the six-label engine's month is outside REC/CRI."""
+    hot = int(states_m[0] - mu_pi > BACKDROP_MARGIN_PP)
+    expanding = int(int(label_m) not in CONTRACTION_CODES)
+    return (expanding << 1) | hot
 
 
 @dataclass(frozen=True)
 class HazardTable:
-    rates: np.ndarray  # (8,) monthly correction-onset probability per cell
+    rates: np.ndarray  # (4,) monthly correction-onset probability per quadrant
     era_threshold_pp: float
-    cell_months: np.ndarray  # (8,) panel months per cell
+    cell_months: np.ndarray  # (4,) panel months per quadrant
     fallback_rate: float
 
 
 def fit_hazard(source) -> HazardTable:
-    """Empirical CRI-onset frequency per panel cell (spec 3.2). Saturated over
-    3 binary covariates, so 'fit' IS the per-cell frequency table -- portfolio
-    outcomes never enter (rule 1). Starved cells (< MIN_CELL_MONTHS) take the
-    marginal onset rate."""
+    """Empirical CRI-onset frequency per panel quadrant (spec 3.2, R3). Over
+    one categorical covariate the saturated fit IS the frequency table --
+    portfolio outcomes never enter (rule 1). Starved quadrants
+    (< MIN_CELL_MONTHS) take the marginal onset rate."""
     yoy = panel_yoy(source)
     era_thr = float(np.nanmedian(yoy) + BACKDROP_MARGIN_PP)
-    cells = panel_cell(source, yoy, era_thr)
+    cells = panel_quadrant(source, yoy, era_thr)
     labels = np.asarray(source.labels)
     is_cri = labels == "CRI"
     onset = is_cri & ~np.roll(is_cri, 1)
     onset[0] = is_cri[0]
     ok = cells >= 0
     fallback = float(onset[ok].sum() / max(int(ok.sum()), 1))
-    rates = np.full(8, fallback)
-    months = np.zeros(8, dtype=np.int64)
-    for c in range(8):
+    rates = np.full(4, fallback)
+    months = np.zeros(4, dtype=np.int64)
+    for c in range(4):
         mask = cells == c
         months[c] = int(mask.sum())
         if months[c] >= MIN_CELL_MONTHS:
@@ -566,13 +568,13 @@ def fit_hazard(source) -> HazardTable:
 - [ ] **Step 4: Run to green**
 
 Run: `uv run pytest tests/test_gen_spine.py -q`
-Expected: PASS. If `rates[7] >= rates[0]` fails with both cells populated, STOP — that is a real finding about the panel (the preconditions do not load the dice) and goes to the human partner before proceeding; do not weaken the assertion.
+Expected: PASS. If `rates[1] >= rates[2]` (stagflation vs recovery) fails with both quadrants populated, STOP — that is a real finding about the panel (hot inflation does not load the dice) and goes to the human partner before proceeding; do not weaken the assertion.
 
 - [ ] **Step 5: Commit**
 
 ```bash
 git add src/ah/gen/spine.py tests/test_gen_spine.py
-git commit -m "feat(spine-01): Layer H - 8-cell empirical correction hazard from panel CRI onsets"
+git commit -m "feat(spine-01): the quadrant clock (R3) + per-quadrant correction hazard from panel CRI onsets"
 ```
 
 ---
@@ -590,11 +592,11 @@ git commit -m "feat(spine-01): Layer H - 8-cell empirical correction hazard from
 Behaviour to implement, exactly:
 
 1. Spines: `sample_spine(climate, regimes, world.spine.premise, n_decades=n_paths, seed=seed, months=months)` — pinned layers loaded once in `__init__` via `ah.gen.systems._pinned_layers()`.
-2. Hazard: `fit_hazard(source)` once per `sample`. Per path p, stream `np.random.Generator(np.random.PCG64(seed + LAYER_OFFSETS["hazard"]).jumped(p))`. Walking months: if not in a correction and `rng_h.random() < rates[spine_cell(...)]` → a correction starts: dwell = `(BASE_DWELL_QUARTERS + dwell_shift) * 3` months, stratum shift per the severity row selected by the FIRING month's conditions (`infl = pi_gap > BACKDROP_MARGIN_PP`, `credit = credit_gap > 0`; both→"both", one→"either", none→"baseline").
-3. Pools: for each (segment, era, growth) — era/growth from the SPINE month — the entry pool is `eligible_rows(scores, pct) ∩ {rows: panel era bucket == spine era bucket AND panel contraction == spine contraction}` where `pct` is the segment's declared percentile outside corrections and `percentile_for(declared, stratum_shift)` inside one. Panel rows with NaN yoy are never pool members. **An empty pool raises** `SpineRefusal` naming `(segment.from_quarter, era, growth, pct)` — refusal, never substitution.
+2. Hazard: `fit_hazard(source)` once per `sample`. Per path p, stream `np.random.Generator(np.random.PCG64(seed + LAYER_OFFSETS["hazard"]).jumped(p))`. Walking months: if not in a correction and `rng_h.random() < rates[spine_quadrant(...)]` → a correction starts: dwell = `(BASE_DWELL_QUARTERS + dwell_shift) * 3` months, stratum shift per the severity row selected by the FIRING month's conditions (`infl = pi_gap > BACKDROP_MARGIN_PP`, `credit = credit_gap > 0`; both→"both", one→"either", none→"baseline").
+3. Pools: for each (segment, quadrant) — the quadrant from the SPINE month — the entry pool is `eligible_rows(scores, pct) ∩ {rows: panel_quadrant(row) == spine quadrant}` where `pct` is the segment's declared percentile outside corrections and `percentile_for(declared, stratum_shift)` inside one. Panel rows with NaN yoy are never pool members. **An empty pool raises** `SpineRefusal` naming `(segment.from_quarter, QUADRANTS[q], pct)` — refusal, never substitution.
 4. Joins: after `join_candidates` (the level-factor tolerance from `world.stress.join_tolerance`), apply two more filters: candidate's panel era bucket equals the previous row's, and `abs(yoy[cand] - yoy[prev]) <= world.spine.join_yoy_max_pp`. NaN-yoy rows were already excluded. Empty after filtering → the block continues (`advanced`), same as stress.
 5. The block-restart trigger stream stays `PCG64(seed).jumped(p)` — the hazard stream and the block stream must be DIFFERENT generators (a test asserts drawing from one does not perturb the other).
-6. Ensemble: `row_indices` carried; `regimes` = realized source labels (as stress does) with `mode="realized-spine-conditioned"`; **slow_states = the spine's five states** via the hier-flow record class; conditioning dict extends the stress stamp with `mode="spine-conditioned-stress"`, the premise dump, the severity table, `hazard: {rates, cell_months, era_threshold_pp, fallback_rate}` (as lists/floats), `corrections: {per_path_onsets: list[int], per_cell_onsets: [8 ints], per_cell_months: [8 ints]}` (aggregated over paths, ints only), `spine_attempts`, and `pool_occupancy: {"<seg>/<era>/<growth>": int}` for every pool actually built.
+6. Ensemble: `row_indices` carried; `regimes` = realized source labels (as stress does) with `mode="realized-spine-conditioned"`; **slow_states = the spine's five states** via the hier-flow record class; conditioning dict extends the stress stamp with `mode="spine-conditioned-stress"`, the premise dump, the severity table, `quadrant_legend: list(QUADRANTS)`, `hazard: {rates, cell_months, era_threshold_pp, fallback_rate}` (as lists/floats), `corrections: {per_path_onsets: list[int], per_quadrant_onsets: [4 ints], per_quadrant_months: [4 ints]}` (aggregated over paths, ints only), `spine_attempts`, and `pool_occupancy: {"<seg>/<quadrant>": int}` for every pool actually built.
 
 - [ ] **Step 1: Write the failing tests** (append; build one small spine world dict helper `_spine_world()` returning a `NumericWorld` from the 703 preset doc plus `x_spine` from Task 1's `_spec()`, `n_paths=3`, `seed=90210`)
 
@@ -622,7 +624,8 @@ def test_spine_bootstrap_sample_contract(spine_world):
     assert ens.paths.shape[0] == 3 and ens.row_indices is not None
     cond = ens.meta.conditioning
     assert cond["mode"] == "spine-conditioned-stress"
-    assert len(cond["hazard"]["rates"]) == 8
+    assert len(cond["hazard"]["rates"]) == 4
+    assert cond["quadrant_legend"] == ["recession", "stagflation", "recovery", "expansion"]
     assert ens.slow_states is not None and not hasattr(ens.slow_states, "reason")
 
 
@@ -807,8 +810,8 @@ Sealed content (formulas fixed by the spec; this script freezes the numbers):
 - `b1`: `{min_sign_fraction: 0.90, lag_months: [3, 12]}`
 - `b2`: `{join_yoy_max_pp: 2.5, p95_ratio_max: 1.25, panel_p95_adjacent_yoy_pp: <computed: 95th pct of |yoy[t]-yoy[t-1]| over contiguous panel months>}`
 - `b3`: `{grid_private_pct: [15, 35, 40, 55], min_breach_seeds_at_55: 1, n_seeds: 20, coverage_must_be_monotone: true}`
-- `b4`: `{sojourn_median_ratio_band: [0.6, 1.4], regimes: ["EXP","SLOW","REC","CRI","STAG","REF"], panel_medians: <computed from panel label spells>}`
-- `b5`: `{rel_tolerance: 0.5, panel_rates: <the fit_hazard table>, min_cell_months: 24}`
+- `b4`: `{dwell_median_ratio_band: [0.6, 1.4], quadrants: ["recession","stagflation","recovery","expansion"], panel_dwell_medians: <computed from panel_quadrant spells>, clockwise_fraction_tolerance: 0.15, panel_clockwise_fraction: <computed: of all panel quadrant CHANGES, the fraction in CLOCKWISE>}`
+- `b5`: `{rel_tolerance: 0.5, panel_rates: <the fit_hazard table, 4 quadrants>, min_cell_months: 24}`
 - `b6`: `{k_months: 12, policy_gap_threshold_pp: <computed: panel 75th pct of (policy_rate - ust_10y)... NO — spine-side gap needs r*+pi*; freeze the SPINE-side threshold as 0.0 (tight = anchor exceeded) and the PANEL-side conditional via curve inversion>, panel_conditional_onset_rate: <computed: P(CRI onset within 12 months | curve inverted)>, panel_unconditional_onset_rate: <computed>, rel_tolerance: 0.5}`
 - `hashes`: sha256 of `src/ah/gen/spine.py`, `scripts/spine_pilot_report.py` if present else `"unbuilt"`, this script itself, and `src/ah/presets/spine_pilot.json`.
 
@@ -841,8 +844,8 @@ Judging formulas (fixed here, thresholds from the sealed JSON):
 
 - **B1:** per decade, `dpol = np.diff(policy)`, `gap = (pi_star - mu_pi)[:-1]`; correlate `dpol[lag:]` with `gap[:-lag]` for lag in sealed `lag_months` range; decade passes if the max-|corr| lag has corr > 0. Fraction of decades passing >= `min_sign_fraction`.
 - **B2:** joins from `row_indices` discontinuities; max |yoy jump| across all joins <= `join_yoy_max_pp` AND p95 of adjacent |Δyoy| (path-space, source-space yoy) <= `p95_ratio_max * panel_p95_adjacent_yoy_pp`.
-- **B4:** spell lengths per regime from spine labels (reuse `ah.gen.regimes.semimarkov.spells_from_labels`); per-regime median ratio to sealed `panel_medians` inside the band; regimes the spine never visits with panel median > 0 count as FAIL rows (absence is an answer).
-- **B5:** from the ensemble conditioning stamp: per-cell realized onset rate = `per_cell_onsets / per_cell_months` vs sealed `panel_rates`, relative error <= `rel_tolerance` for every cell with sealed `cell_months >= min_cell_months`.
+- **B4:** per decade, the QUADRANT sequence `[spine_quadrant(states[m], labels[m], mu_pi) for m]`; (a) dwell spells per quadrant (reuse `ah.gen.regimes.semimarkov.spells_from_labels` — it takes any int-coded array); per-quadrant median ratio to sealed `panel_dwell_medians` inside the band; quadrants the spine never visits with panel median > 0 count as FAIL rows (absence is an answer); (b) of all quadrant CHANGES across decades, the fraction in `CLOCKWISE` within `clockwise_fraction_tolerance` (absolute) of `panel_clockwise_fraction` — the clock must turn the way history's does.
+- **B5:** from the ensemble conditioning stamp: per-quadrant realized onset rate = `per_quadrant_onsets / per_quadrant_months` vs sealed `panel_rates`, relative error <= `rel_tolerance` for every quadrant with sealed `cell_months >= min_cell_months`.
 - **B6:** spine-side: months with `policy - (r_star + pi_star) > 0` (the sealed spine threshold 0.0); of those, fraction followed by a contraction onset within `k_months`; compare to sealed `panel_conditional_onset_rate` within `rel_tolerance` — AND the conditional must exceed the sealed unconditional (the sign of transmission, not just its size).
 - **Occupancy:** print `pool_occupancy` and every starved hazard cell — no silent caps.
 - **Sensitivity:** re-run the world at 5 seeds `{199002 + 7919*j}`; every bar judged per seed; the report table shows per-seed verdicts and the ALL-seed conjunction. (This stands in for posterior-pin sensitivity at pilot price: each seed draws fresh posterior indices per decade by construction of `simulate_decades`.)
@@ -882,6 +885,6 @@ The run itself: `uv run python scripts/spine_pilot_report.py` (n_paths=20 per se
 ## Self-review notes (writing-plans checklist, run 2026-08-15)
 
 - Spec coverage: S→Task 2, H→Task 3, F→Task 4, dispatcher/contract→Tasks 1+5, seal §5→Task 6, B1/B2/B4/B5/B6→Task 7, B3→Task 8, refusal/occupancy §6→Tasks 2,4,7. Premise vocabulary kept to D-SP-3's minimum.
-- Known deliberate narrowings (record, do not silently widen): pool conditioning uses era×growth (4 cells), hazard uses all 8 — spec §3.3 named eight for conditioning; occupancy measurement in Task 7 is the check that decides if this narrowing was right. `arrives_quarter` ge=1 (not ge=0) because the backdrop clause needs a pre-arrival window.
-- Type consistency: `SpinePaths`, `HazardTable`, `SpineBootstrap`, `LAYER_OFFSETS`, `panel_yoy`, `spine_cell` names match across Tasks 2–7. `world.spine` / `world.stress` both required by `SpineBootstrap.sample`.
+- R3 amendment (owner, 2026-08-15): the earlier 8-cell bucketing was replaced by the four-quadrant clock for BOTH pool conditioning and the hazard; the policy-tightness dimension survives only in B6's judging. Crisis is the overlay, never a quadrant. No explicit quadrant transition matrix is imposed — B4 judges the emergent one. `arrives_quarter` ge=1 (not ge=0) because the backdrop clause needs a pre-arrival window.
+- Type consistency: `SpinePaths`, `HazardTable`, `SpineBootstrap`, `LAYER_OFFSETS`, `panel_yoy`, `spine_quadrant`, `QUADRANTS`, `CLOCKWISE` names match across Tasks 2–7. `world.spine` / `world.stress` both required by `SpineBootstrap.sample`.
 - The one interface the implementer must verify in-tree (named, not guessed): the slow-state record class carried by hier ensembles — follow `ah/gen/blocks/flow.py`'s import (Task 4).
