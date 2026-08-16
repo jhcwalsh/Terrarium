@@ -52,6 +52,33 @@ def _replanned(default_plan: dict, sleeve: str, value: float) -> dict:
 #: before placing a real band relative to them (su-app-07 task 3).
 _WIDE: tuple[float, float] = (0.0, 100.0)
 
+#: TIGHT, OFF-CENTRE bands — one per sleeve of the toy world, each at most two
+#: points wide and each placed AWAY from that sleeve's own `START_TARGETS`
+#: value (33/12/5/5/8/20/8/7). This is the book the inertness test plays.
+#:
+#: `_WIDE` will not do there, and the first version of that test was wrong to
+#: use it. The most plausible way a range could leak into the engine is as a
+#: rebalance or clamp bound, and `[0, 100]` is a no-op clamp on every
+#: reachable weight — the test would have stayed green straight through
+#: exactly the defect it exists to catch. Every band below EXCLUDES its
+#: sleeve's own policy target, so a bound derived from one would have to move
+#: that sleeve on the very first rebalance, in the first quarter.
+#:
+#: A target outside its own declared range is legal — `validate_book` returns
+#: a warning string rather than raising (su-app-07's deliberate choice) —
+#: which is what makes this book postable at all. The test asserts the 201
+#: rather than assuming it.
+_TIGHT: dict[str, tuple[float, float]] = {
+    "equity": (30.0, 32.0),
+    "bonds": (13.0, 15.0),
+    "hy": (2.0, 3.0),
+    "commodities": (6.0, 7.0),
+    "reits": (9.0, 10.0),
+    "pe": (5.0, 7.0),
+    "pc": (10.0, 11.0),
+    "re": (3.0, 4.0),
+}
+
 
 def _banded_book(default_book: dict, ranges: dict[str, tuple[float, float]]) -> dict:
     """The served default book with reporting bands declared and NOTHING else
@@ -807,7 +834,24 @@ class TestBandReport:
         target = default["book"]["targets"]["equity"]
         assert w != pytest.approx(target)
         room = abs(w - target) / 0.9  # the weight sits 0.9 of the way out
-        lo, hi = (target - room, target + 5.0) if w < target else (target - 5.0, target + room)
+        # `validate_book` refuses lo < 0, so an unclamped near edge would turn
+        # a drift this test does not control into a 422 at the door instead of
+        # a clean failure on the level it is actually about. Clamped — but the
+        # clamp is NOT silent: flooring the near edge would enlarge `room` and
+        # quietly turn the expected `watch` into an `ok`, so the pre-clamp
+        # value is asserted non-negative and this test fails on its own
+        # subject if a future tape ever pushes it under.
+        if w < target:
+            assert target - room >= 0.0, (
+                f"equity drifted far enough ({w:g} vs target {target:g}) that the "
+                "watch edge falls below zero; this test needs room beneath the "
+                "target, not a clamp that would silently relabel watch as ok"
+            )
+        lo, hi = (
+            (max(0.0, target - room), target + 5.0)
+            if w < target
+            else (max(0.0, target - 5.0), target + room)
+        )
         assert lo <= w <= hi
 
         doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
@@ -816,9 +860,9 @@ class TestBandReport:
 
         # the same weight, twice the room: 0.45 of the way out is `ok`.
         wide = (
-            (target - 2.0 * room, target + 5.0)
+            (max(0.0, target - 2.0 * room), target + 5.0)
             if w < target
-            else (target - 5.0, target + 2.0 * room)
+            else (max(0.0, target - 5.0), target + 2.0 * room)
         )
         relaxed = _banded_session(client, rid, default, {"equity": wide})
         assert _entry(relaxed, "equity")["true"]["weight"] == pytest.approx(w)
@@ -867,10 +911,27 @@ class TestBandReport:
         """THE load-bearing test of this task. The same book, the same plan
         and the same decisions, played twice — differing only in whether the
         book declares reporting ranges. If a range can reach ``simulate_play``
-        at all, the two decades separate here."""
+        at all, the two decades separate here.
+
+        The bands are ``_TIGHT``: two points wide and deliberately placed off
+        the sleeve's own policy target. A wide band would not do — a leak that
+        surfaced as a rebalance or clamp bound would be a no-op under
+        ``[0, 100]`` and this test would have certified the defect. Under
+        ``_TIGHT`` every sleeve's target sits OUTSIDE its band, so any bound
+        derived from a range has to move a weight in quarter 1."""
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
-        banded = _banded_book(default["book"], {s: _WIDE for s in _all_sleeves(default)})
+        assert set(_TIGHT) == set(_all_sleeves(default)), (
+            "_TIGHT must cover every sleeve of this world, or the uncovered "
+            "ones are not testing anything"
+        )
+        for sleeve, (lo, hi) in _TIGHT.items():
+            target = default["book"]["targets"][sleeve]
+            assert not lo <= target <= hi, (
+                f"{sleeve}'s band [{lo}, {hi}] contains its target {target} — a "
+                "leaked bound would be satisfied already and the test would not bite"
+            )
+        banded = _banded_book(default["book"], _TIGHT)
         assert banded["ranges"], "the banded book really does declare ranges"
 
         plain_sid = _play_through(

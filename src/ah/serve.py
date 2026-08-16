@@ -198,6 +198,14 @@ def _band_report(
     ``tests/test_cioview.py::test_per_asset_values_close_against_the_book``),
     so there is no residual to name.
 
+    **``alert`` is AUTHORITATIVE and must not be recomputed client-side**
+    (DN-3 W5: the server is the authority for value and scoring, and a band
+    status is a judgement about value). It is computed on the UNROUNDED
+    weight and target while the numbers served beside it are rounded to 4
+    decimals, so a client re-running the rule on the served numbers can
+    legitimately disagree within ~5e-5 of an edge. Render the ``alert`` this
+    endpoint gives you; never derive it.
+
     ``None`` when there is no book, no ranges on it, or no closed quarter —
     the caller supplies the last of those by only calling here once a
     quarter has closed.

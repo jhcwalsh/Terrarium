@@ -200,9 +200,20 @@ def build_cio_view(
         # The world's key ORDER is kept and the book's NUMBERS taken, because
         # `_allocation` derives its display order from this dict; a sleeve
         # only the book names is appended rather than dropped.
+        #
+        # The lookup is `effective[k]`, NOT `effective.get(k, v)`. A per-key
+        # fallback to the world default would be a SECOND, divergent answer to
+        # "the book omits a sleeve": `simulate_play` (play.py) replaces
+        # `targets` wholesale, so the engine would pace on nothing there while
+        # this surface displayed the world's number — the exact latent
+        # display-vs-applied drift Ruling G exists to kill. `validate_book`
+        # forces `set(book.targets) == full_sleeves` and both branches of
+        # `effective_targets()` cover that set, so the key is always present;
+        # if that ever stops being true this raises loudly instead of
+        # printing a policy nobody is running.
         effective = opening_book.effective_targets()
         targets = {
-            **{k: float(effective.get(k, v)) for k, v in targets.items()},
+            **{k: float(effective[k]) for k in targets},
             **{k: float(v) for k, v in effective.items() if k not in targets},
         }
         cash_target = float(opening_book.cash)
