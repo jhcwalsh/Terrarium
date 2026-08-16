@@ -540,3 +540,216 @@ def test_prereg_thresholds_are_pinned_by_literals():
     assert sealed["b6"]["rel_tolerance"] == 0.5
 
     assert sealed["sensitivity_seeds"] == [199002, 1199005, 2199008, 3199011, 4199014]
+
+
+# --------------------------------------------------------------------------- #
+# Task 7: the pilot report's pure judge functions (imported from the script,
+# not duplicated here -- see scripts/spine_pilot_report.py's import-safety
+# guard: importing it draws no data, samples no ensemble, writes no file).
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture(scope="module")
+def report():
+    """Loads scripts/spine_pilot_report.py by file path (the
+    ``test_the_reference_run_script_agrees_with_the_sealed_parameters``
+    pattern from tests/test_prereg.py) rather than ``sys.path.insert`` +
+    ``import``, which pyright's static resolver cannot see and flags as a
+    missing import."""
+    import importlib.util
+    from pathlib import Path
+
+    path = Path(__file__).resolve().parents[1] / "scripts" / "spine_pilot_report.py"
+    spec = importlib.util.spec_from_file_location("_spine_pilot_report", path)
+    assert spec is not None and spec.loader is not None
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    return module
+
+
+def test_judge_b1_detects_policy_chasing_inflation(report):
+    from ah.gen.spine import SpinePaths
+
+    months = 40
+    t = np.arange(months)
+    mu_pi = 2.0
+    gap_true = 2.0 * np.sin(2 * np.pi * t / 20)
+    pi_star = mu_pi + gap_true
+
+    # dpol[i] (policy change from month i to i+1) tracks gap_true 6 months
+    # earlier: dpol[i] = gap_true[i - 6] for i >= 6, else 0.
+    dpol = np.array([gap_true[i - 6] if i >= 6 else 0.0 for i in range(months - 1)])
+    policy = np.concatenate([[0.0], np.cumsum(dpol)])
+
+    states = np.zeros((1, months, 5))
+    states[0, :, 0] = pi_star
+    labels = np.zeros((1, months), dtype=np.int64)
+    cycle = np.zeros((1, months))
+    sealed = {"lag_months": [3, 12], "min_sign_fraction": 0.9}
+
+    sp = SpinePaths(
+        states=states,
+        labels=labels,
+        cycle=cycle,
+        policy=policy.reshape(1, months),
+        mu_pi=np.array([mu_pi]),
+        attempts=1,
+        seed=1,
+    )
+    result = report.judge_b1(sp, sealed)
+    assert result["pass"] is True
+    assert result["value"] == 1.0
+
+    sp_flat = SpinePaths(
+        states=states,
+        labels=labels,
+        cycle=cycle,
+        policy=np.zeros((1, months)),  # constant policy -> zero-variance dpol
+        mu_pi=np.array([mu_pi]),
+        attempts=1,
+        seed=1,
+    )
+    result_flat = report.judge_b1(sp_flat, sealed)
+    assert result_flat["pass"] is False
+    assert result_flat["value"] == 0.0
+
+
+def test_judge_b4_fails_short_spells(report):
+    from ah.gen.spine import CONTRACTION_CODES, SpinePaths
+
+    rec_code = next(iter(CONTRACTION_CODES))
+    exp_code = max(CONTRACTION_CODES) + 1000  # certainly not in CONTRACTION_CODES
+
+    months = 40  # 5 full 8-month cycles -> five 2-month spells per quadrant
+    labels = np.zeros(months, dtype=np.int64)
+    pi = np.zeros(months)
+    for i in range(months):
+        phase = (i // 2) % 4
+        if phase == 0:  # recession: contracting, cool
+            labels[i], pi[i] = rec_code, 0.0
+        elif phase == 1:  # stagflation: contracting, hot
+            labels[i], pi[i] = rec_code, 1.0
+        elif phase == 2:  # recovery: expanding, cool
+            labels[i], pi[i] = exp_code, 0.0
+        else:  # expansion: expanding, hot
+            labels[i], pi[i] = exp_code, 1.0
+
+    states = np.zeros((1, months, 5))
+    states[0, :, 0] = pi
+    sp = SpinePaths(
+        states=states,
+        labels=labels.reshape(1, months),
+        cycle=np.zeros((1, months)),
+        policy=np.zeros((1, months)),
+        mu_pi=np.zeros(1),
+        attempts=1,
+        seed=1,
+    )
+    sealed = {
+        "panel_dwell_medians": [5.0, 4.0, 9.0, 6.0],
+        "dwell_median_ratio_band": [0.6, 1.4],
+        "quadrants": ["recession", "stagflation", "recovery", "expansion"],
+        "clockwise_fraction_tolerance": 0.15,
+        "panel_clockwise_fraction": 0.6029411764705882,
+    }
+    result = report.judge_b4(sp, sealed)
+    assert result["pass"] is False
+    for row in result["dwell"]:
+        assert row["median"] == 2.0
+        assert row["ratio"] < 0.6
+        assert row["pass"] is False
+
+
+def test_judge_b5_zero_rate_convention(report):
+    sealed = {
+        "panel_rates": [0.010752688172043012, 0.07017543859649122, 0.0, 0.004273504273504274],
+        "panel_cell_months": [93, 57, 378, 234],
+        "min_cell_months": 24,
+        "rel_tolerance": 0.5,
+    }
+    # quadrant 2's sealed rate is exactly 0; one realized onset there must fail.
+    cond_fail = {
+        "corrections": {
+            "per_quadrant_onsets": [1, 4, 1, 1],
+            "per_quadrant_months": [93, 57, 378, 234],
+        }
+    }
+    result_fail = report.judge_b5(cond_fail, sealed)
+    assert result_fail["pass"] is False
+    assert result_fail["table"][2]["pass"] is False
+
+    # zero realized onsets in quadrant 2 satisfies the zero-rate convention;
+    # the other three quadrants match their sealed rates closely.
+    cond_pass = {
+        "corrections": {
+            "per_quadrant_onsets": [1, 4, 0, 1],
+            "per_quadrant_months": [93, 57, 378, 234],
+        }
+    }
+    result_pass = report.judge_b5(cond_pass, sealed)
+    assert result_pass["pass"] is True
+    assert result_pass["table"][2]["pass"] is True
+
+
+def test_judge_b6_three_way_outcome(report):
+    from ah.gen.spine import CONTRACTION_CODES, SpinePaths
+
+    rec_code = next(iter(CONTRACTION_CODES))
+    exp_code = max(CONTRACTION_CODES) + 1000
+
+    def build(months: int, tight_idx: list[int], onset_idx: list[int]) -> "SpinePaths":
+        policy = np.full(months, -1.0)
+        for i in tight_idx:
+            policy[i] = 1.0
+        labels = np.full(months, exp_code, dtype=np.int64)
+        for i in onset_idx:
+            labels[i] = rec_code
+        states = np.zeros((1, months, 5))  # pi_star = r_star = 0 -> gap == policy
+        return SpinePaths(
+            states=states,
+            labels=labels.reshape(1, months),
+            cycle=np.zeros((1, months)),
+            policy=policy.reshape(1, months),
+            mu_pi=np.zeros(1),
+            attempts=1,
+            seed=1,
+        )
+
+    sealed = {
+        "k_months": 12,
+        "spine_policy_gap_threshold_pp": 0.0,
+        "panel_conditional_onset_rate": 0.2214765100671141,
+        "panel_unconditional_onset_rate": 0.07731305449936629,
+        "rel_tolerance": 0.5,
+        "base_rate_disclosure": (
+            "panel conditioning (curve inversion) covers 149/813 months; the "
+            "spine-side conditioning fraction is unpinned; the Task-7 report MUST "
+            "print both base rates, and a B6 FAIL with base rates differing by more "
+            "than 2x is recorded as INCONCLUSIVE (construct mismatch), not a "
+            "compiler defect"
+        ),
+    }
+
+    months = 40
+    tight_idx = [0, 6, 12, 18, 24]  # all < months - k_months(12) == 28
+
+    # PASS: exactly one of five tight months is followed by an onset -> 0.2,
+    # within 50% relative of the sealed 0.2215 and above the 0.0773 unconditional.
+    r_pass = report.judge_b6(build(months, tight_idx, [3]), sealed)
+    assert r_pass["verdict"] == "PASS"
+    assert r_pass["pass"] is True
+
+    # FAIL: same tight pattern, zero onsets ever -> value 0.0 (both magnitude
+    # and sign miss), but the spine's own base rate (5/28) sits close to the
+    # panel's (149/813) -- a real construct match, so a genuine FAIL.
+    r_fail = report.judge_b6(build(months, tight_idx, []), sealed)
+    assert r_fail["verdict"] == "FAIL"
+    assert r_fail["pass"] is False
+
+    # INCONCLUSIVE: every eligible month is "tight" -> spine base rate 1.0,
+    # more than 2x the panel's ~0.183 -- a would-be FAIL reclassified because
+    # the two constructs aren't comparable at this base rate.
+    eligible = months - sealed["k_months"]
+    r_inc = report.judge_b6(build(months, list(range(eligible)), []), sealed)
+    assert r_inc["verdict"] == "INCONCLUSIVE (construct mismatch)"
+    assert r_inc["pass"] is False

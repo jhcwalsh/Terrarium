@@ -72,7 +72,7 @@
     "spine_policy_gap_threshold_pp": 0.0
   },
   "hashes": {
-    "scripts/spine_pilot_report.py": "unbuilt",
+    "scripts/spine_pilot_report.py": "d75e831733afd1ad7222dbfa5cf664f79b400077166b1530d6a5e2aef4f0453f",
     "scripts/spine_pilot_seal.py": "86bee8a5ca13824c71143216943a637391ce8168e27df4c6ffeb8b4cb791e8d1",
     "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
     "src/ah/gen/climate/model.py": "0012c817947acdba68c4f2c33ce4f497f2ab6212d734155c59b10282d2077fb7",
@@ -82,7 +82,7 @@
     "src/ah/gen/stress.py": "685559d6fa5c3a4c6bc3f7ceb4f22eb1966eca7e8dc7ad7ec08e590ef1c49726",
     "src/ah/presets/spine_pilot.json": "773be668b14496a02cc67c55c4327a87df1c05e274159ccc2a1917916783a196"
   },
-  "sealed_at_utc": "2026-08-16T10:03:38-07:00 (as of HEAD commit b97450a74f5e0ed884977a07091408029d8d3b40)",
+  "sealed_at_utc": "2026-08-16T10:18:12-07:00 (as of HEAD commit c9bd03621424becf24dcb603ac7ef725ff9a53ab)",
   "sensitivity_seeds": [
     199002,
     1199005,
