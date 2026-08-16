@@ -212,7 +212,11 @@ from my real book."
 ## 7. Guardrails and ER-14
 
 **Refused** (422 / disabled commit): negative anything; `sum(liquid) +
-sum(private) + cash ≠ 100`; `paid_in + unfunded ≠ committed`; a sleeve
+sum(private) + cash ≠ 100`; a rung breaking the recycling identity
+`paid_in + unfunded = committed + cumulative_recycled` (verified to 4e-16
+across all thirty seeded rungs — note it is *not* the simpler
+`paid_in + unfunded = committed`, which recycling can legitimately break, and
+`_check()` enforces only `paid_in <= committed`); a sleeve
 outside the world's set; a
 plan year outside `[0, COMMIT_CAP_MULTIPLE × target × _ANNUAL_COMMITMENT_RATE]`
 (the existing declared lever bound, reused via `validate_commitments`).
