@@ -86,6 +86,34 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The private-markets/inflation note joins the hub allowlist, with a
+  committed PDF mirror.** `ah.hub.DOCS` gains `private-markets-inflation` →
+  `docs/current/private-markets-and-inflation.md`, so ER-14's supporting
+  evidence is reachable at `/doc/<slug>` and `/pdf/<slug>` like every other
+  governing document instead of only by reading the repo. The slug is appended
+  to `build_doc_pdf.py`'s `DEFAULT_SLUGS`, so the PDF is **regenerable by the
+  repo's own script** rather than a one-off artifact — which is the whole point
+  of doing this through the allowlist instead of converting the file by hand.
+  `docs/current/private-markets-and-inflation.pdf` (290,223 bytes, 9 pages) is
+  committed alongside the other mirrors.
+
+  Verified positively rather than by absence of failure: `/doc/` returns 200
+  with ER-14 present in the rendered HTML and the hub back-link intact, `/pdf/`
+  returns 200 `application/pdf` at the committed byte size, and the slug is
+  listed on the hub index. `tests/test_hub.py` already iterates `DOCS` and
+  tolerates a missing file or PDF with a 404, so the entry needed no test
+  change — but both of its `served >=` floors now count one higher.
+
+  **This is the first `docs/current/` document in the allowlist.** The register
+  notes the hub serves from a hard-coded list, which is precisely why the
+  superseded August documents were banner-marked in place rather than moved;
+  adding a `docs/current/` entry does not disturb that — it takes the same
+  route every other served document takes.
+
+  Fixed in passing, same file and same concern: the `realism-register` entry
+  advertised "ER-1 through ER-8". The register has carried entries through
+  **ER-14** since yesterday, so the hub was under-describing its own contents.
+
 - **`NEXT-STEPS.md` refreshed to the live line, and the merged-branch backlog
   swept.** The file still announced "the main line now: the CIO dashboard" —
   but that line had LANDED (`cio-01`…`cio-04`, the inherited decade included)

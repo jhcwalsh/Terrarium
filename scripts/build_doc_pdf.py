@@ -40,6 +40,7 @@ DEFAULT_SLUGS = [
     "g1-evidence",
     "g4-evidence",
     "research-evidence",
+    "private-markets-inflation",
 ]
 
 _CHROME_CANDIDATES = [
