@@ -7,7 +7,14 @@
  */
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { advance, createSession, decide, getCioView, SessionApiError } from "./session";
+import {
+  advance,
+  createSession,
+  decide,
+  getCioView,
+  renderDetail,
+  SessionApiError,
+} from "./session";
 
 function mockFetch(status: number, body: unknown) {
   const fn = vi.fn(async () => ({
@@ -49,6 +56,46 @@ describe("session client", () => {
     expect(err).toBeInstanceOf(SessionApiError);
     expect(err.status).toBe(409);
     expect(err.message).toBe("windows are decided in order");
+  });
+});
+
+describe("renderDetail (su-app-06 I3)", () => {
+  /**
+   * FastAPI answers with `detail` as a STRING for our own HTTPExceptions and
+   * as a LIST of `{loc, msg, type}` objects for pydantic-level failures.
+   * `String(...)` on the second gives "[object Object]", so roughly half of
+   * the refusals the book entry screen can provoke rendered as nothing the
+   * analyst could act on.
+   */
+  it("passes a string detail through unchanged", () => {
+    expect(renderDetail("book totals 103, must total 100", "422")).toBe(
+      "book totals 103, must total 100",
+    );
+  });
+
+  it("renders a pydantic-shaped list readably, never as [object Object]", () => {
+    const detail = [
+      { loc: ["body", "book", "private", "pe", 0, "commitment", "paid_in"], msg: "not a number" },
+      { loc: ["body", "book", "cash"], msg: "Input should be a valid number" },
+    ];
+    const out = renderDetail(detail, "422");
+    expect(out).not.toContain("[object Object]");
+    expect(out).toContain("not a number");
+    expect(out).toContain("body.book.private.pe.0.commitment.paid_in");
+    expect(out).toContain("Input should be a valid number");
+  });
+
+  it("falls back rather than inventing text when there is no detail", () => {
+    expect(renderDetail(undefined, "Unprocessable Entity")).toBe("Unprocessable Entity");
+    expect(renderDetail([], "Unprocessable Entity")).toBe("Unprocessable Entity");
+  });
+
+  it("the error thrown by request() carries the rendered list", async () => {
+    // the seam is only worth having if request() actually routes through it
+    mockFetch(422, { detail: [{ loc: ["body", "cash"], msg: "Input should be >= 0" }] });
+    const err = await createSession({ run_id: "r1" }).catch((e) => e);
+    expect(err).toBeInstanceOf(SessionApiError);
+    expect(err.message).toBe("body.cash: Input should be >= 0");
   });
 });
 

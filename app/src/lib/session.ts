@@ -132,6 +132,40 @@ export class SessionApiError extends Error {
   }
 }
 
+/**
+ * FastAPI's `detail` has two shapes and only one of them is a string.
+ *
+ * Our own `HTTPException(422, detail="book totals 103, must total 100")`
+ * gives a string. A pydantic-level failure — a rung field that will not
+ * parse, an unknown key under `extra="forbid"` — gives a LIST of
+ * `{loc, msg, type}` objects, which `String(...)` renders as
+ * `[object Object]`. That is what the book entry screen showed for roughly
+ * half of the refusals it can provoke, which is the same as showing nothing.
+ *
+ * Exported as a pure seam so the rendering is pinned without a live server.
+ */
+export function renderDetail(detail: unknown, fallback: string): string {
+  if (typeof detail === "string" && detail !== "") return detail;
+  if (Array.isArray(detail)) {
+    const lines = detail
+      .map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object") {
+          const item = entry as { loc?: unknown; msg?: unknown };
+          const where = Array.isArray(item.loc) ? item.loc.join(".") : "";
+          const msg = typeof item.msg === "string" ? item.msg : JSON.stringify(entry);
+          return where ? `${where}: ${msg}` : msg;
+        }
+        return String(entry);
+      })
+      .filter((line) => line !== "");
+    if (lines.length) return lines.join("; ");
+  } else if (detail && typeof detail === "object") {
+    return JSON.stringify(detail);
+  }
+  return fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { "content-type": "application/json" },
@@ -140,7 +174,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
     try {
-      detail = (await res.json()).detail ?? detail;
+      detail = renderDetail((await res.json()).detail, detail);
     } catch {
       /* non-JSON error body; statusText stands */
     }

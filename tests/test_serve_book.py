@@ -163,6 +163,30 @@ class TestCreateSessionWithABook:
         assert r.status_code == 422
         assert "declared bound" in r.json()["detail"]
 
+    def test_a_duplicate_cohort_id_is_422_at_the_door_not_a_500_later(self, service):
+        """I4: ``Portfolio.add`` raises on a repeated key, so this book was
+        accepted with a 201 and then 500'd on every read of the session."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = default["book"]
+        book["private"]["pe"][1]["identity"]["cohort_id"] = book["private"]["pe"][0]["identity"][
+            "cohort_id"
+        ]
+        r = client.post("/sessions", json={"run_id": rid, "book": book})
+        assert r.status_code == 422
+        assert "repeats cohort_id" in r.json()["detail"]
+
+    def test_a_reserved_vintage_cohort_id_is_422_at_the_door(self, service):
+        """I4's slower half: `{sleeve}-v{year}` is what the pacing plan mints
+        during play, so the collision did not fire until mid-decade."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = default["book"]
+        book["private"]["pe"][0]["identity"]["cohort_id"] = "pe-v3"
+        r = client.post("/sessions", json={"run_id": rid, "book": book})
+        assert r.status_code == 422
+        assert "reserved cohort_id" in r.json()["detail"]
+
     def test_a_session_with_a_stored_book_replays_it(self, service):
         """The book is the book of record: reading the session back and
         marking to market must use the stored book, not the default."""

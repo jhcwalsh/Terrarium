@@ -26,11 +26,19 @@ from ah.port.book import (
 TOY_LIQUID = ("equity", "bonds", "hy", "commodities", "reits")
 
 
-def _rung(committed: float, paid_in: float, nav: float) -> dict:
-    """A minimal closed_end document that the state contract accepts."""
+def _rung(committed: float, paid_in: float, nav: float, cohort_id: str = "rung") -> dict:
+    """A minimal closed_end document that the state contract accepts.
+
+    ``cohort_id`` is explicit because it is a PORTFOLIO KEY. The committed
+    fixture ships exactly one id ("pm_buyout-2019"), so before su-app-06's I4
+    fix this helper built a book whose three rungs all shared it — accepted at
+    the door, then a 500 out of ``Portfolio.add`` on every read. Callers give
+    each rung its own.
+    """
     from ah.play import _doc  # the committed fixture is the shape of truth
 
     doc = copy.deepcopy(_doc("closed-end-cohort.example.json"))
+    doc["identity"] = {**doc["identity"], "cohort_id": cohort_id}
     doc["commitment"] = {
         "committed": committed,
         "paid_in": paid_in,
@@ -51,9 +59,9 @@ def _book(**overrides) -> OpeningBook:
     fields = {
         "liquid": {"equity": 33.0, "bonds": 12.0, "hy": 5.0, "commodities": 5.0, "reits": 8.0},
         "private": {
-            "pe": [_rung(40.0, 20.0, 20.0)],
-            "pc": [_rung(16.0, 8.0, 8.0)],
-            "re": [_rung(14.0, 7.0, 7.0)],
+            "pe": [_rung(40.0, 20.0, 20.0, "pe-0")],
+            "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+            "re": [_rung(14.0, 7.0, 7.0, "re-0")],
         },
         "cash": 2.0,
     }
@@ -84,15 +92,15 @@ class TestOpeningBook:
             validate_book(book, liquid_sleeves=gen_liquid)
 
     def test_a_rung_breaking_the_recycling_identity_is_refused(self):
-        bad = _rung(40.0, 20.0, 20.0)
+        bad = _rung(40.0, 20.0, 20.0, "pe-0")
         bad["commitment"]["unfunded"] = 25.0  # 20 + 25 != 40 + 0
         with pytest.raises(BookError, match="recycling identity"):
             validate_book(
                 _book(
                     private={
                         "pe": [bad],
-                        "pc": [_rung(16.0, 8.0, 8.0)],
-                        "re": [_rung(14.0, 7.0, 7.0)],
+                        "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -102,7 +110,11 @@ class TestOpeningBook:
         with pytest.raises(BookError, match="no rungs"):
             validate_book(
                 _book(
-                    private={"pe": [], "pc": [_rung(16.0, 8.0, 8.0)], "re": [_rung(14.0, 7.0, 7.0)]}
+                    private={
+                        "pe": [],
+                        "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                    }
                 ),
                 liquid_sleeves=TOY_LIQUID,
             )
@@ -111,15 +123,15 @@ class TestOpeningBook:
         # A malformed rung must surface as BookError naming the sleeve and index,
         # not as the state contract's own exception type: the HTTP layer catches
         # BookError to build a 422, so a leaked SleeveStateSchemaError becomes a 500.
-        bad = _rung(40.0, 20.0, 20.0)
+        bad = _rung(40.0, 20.0, 20.0, "pe-0")
         bad["vehicle_type"] = "open_ended"
         with pytest.raises(BookError, match="pe rung 0"):
             validate_book(
                 _book(
                     private={
                         "pe": [bad],
-                        "pc": [_rung(16.0, 8.0, 8.0)],
-                        "re": [_rung(14.0, 7.0, 7.0)],
+                        "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -147,11 +159,73 @@ class TestOpeningBook:
         b = _book(
             private={
                 "pe": [_rung(40.0, 20.5, 20.0)],
-                "pc": [_rung(16.0, 8.0, 8.0)],
-                "re": [_rung(14.0, 7.0, 7.0)],
+                "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                "re": [_rung(14.0, 7.0, 7.0, "re-0")],
             }
         )
         assert a.digest() != b.digest()
+
+
+class TestCohortIdsAreThePortfoliosKeys:
+    """I4 — a rung's ``cohort_id`` becomes a ``Portfolio`` key at
+    ``_build_portfolio``, and ``Portfolio.add`` raises ``PortfolioError`` on a
+    repeat. Both of these books were accepted with a 201 and then 500'd on
+    every read; the vintage collision did not even fire until mid-decade, when
+    the pacing plan reached the year whose id the analyst had taken."""
+
+    def test_two_rungs_sharing_an_id_are_refused(self):
+        with pytest.raises(BookError, match="repeats cohort_id"):
+            validate_book(
+                _book(
+                    private={
+                        "pe": [_rung(20.0, 10.0, 10.0, "same"), _rung(20.0, 10.0, 10.0, "same")],
+                        "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                    }
+                ),
+                liquid_sleeves=TOY_LIQUID,
+            )
+
+    def test_the_clash_is_caught_ACROSS_sleeves_not_just_within_one(self):
+        """``Portfolio``'s cohort registry is flat — one dict for the whole
+        book — so a pe rung and a re rung sharing an id collide exactly as
+        two pe rungs would. A per-sleeve check would miss this."""
+        with pytest.raises(BookError, match="repeats cohort_id"):
+            validate_book(
+                _book(
+                    private={
+                        "pe": [_rung(40.0, 20.0, 20.0, "shared")],
+                        "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                        "re": [_rung(14.0, 7.0, 7.0, "shared")],
+                    }
+                ),
+                liquid_sleeves=TOY_LIQUID,
+            )
+
+    def test_an_id_reserved_for_a_future_vintage_is_refused(self):
+        # ah.play commits `f"{asset}-v{year}"` once a year during play
+        with pytest.raises(BookError, match="reserved cohort_id"):
+            validate_book(
+                _book(
+                    private={
+                        "pe": [_rung(40.0, 20.0, 20.0, "pe-v3")],
+                        "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
+                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                    }
+                ),
+                liquid_sleeves=TOY_LIQUID,
+            )
+
+    def test_the_derived_books_own_ids_are_not_in_the_reserved_namespace(self):
+        """The rule must not refuse the default book the screen opens with —
+        ``_seed_ladder`` names its rungs ``{asset}-s{k}``. A regex that caught
+        `-s` too would break every session ever created."""
+        from ah.play import default_opening_book
+
+        book = default_opening_book()
+        validate_book(book, liquid_sleeves=TOY_LIQUID)
+        ids = [r["identity"]["cohort_id"] for rungs in book.private.values() for r in rungs]
+        assert len(ids) == len(set(ids))
 
 
 class TestCommitmentPlan:

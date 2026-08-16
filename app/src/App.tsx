@@ -124,6 +124,11 @@ export default function App() {
     return (
       <BookEntry
         runId={loaded.bundle.meta.run_id}
+        // su-app-06 (I3): re-entering book mode after a refused POST /sessions
+        // restores what was typed. `book`/`plan` are already retained here for
+        // createSession, so a refusal now costs a screen, not 210 fields.
+        initialBook={book}
+        initialPlan={plan}
         onReady={(b, p, isDefault) => {
           setBook(b);
           setPlan(p);

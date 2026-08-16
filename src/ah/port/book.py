@@ -15,6 +15,7 @@ it — and because a rule that raises inside pydantic comes back wrapped in a
 from __future__ import annotations
 
 import hashlib
+import re
 from typing import Any, Literal
 
 from pydantic import BaseModel, ConfigDict, field_validator
@@ -35,6 +36,16 @@ BOOK_TOLERANCE = 1e-6
 RUNG_TOLERANCE = 1e-9
 
 PRIVATE_SLEEVES: tuple[str, ...] = ("pe", "pc", "re")
+
+#: Cohort ids the ENGINE mints for itself during play. ``ah.play`` commits one
+#: new vintage per private sleeve per year as ``f"{asset}-v{year}"``, and
+#: ``Portfolio.add`` raises on a duplicate key — so an entered rung carrying
+#: one of these ids validates at the door, plays for as many years as it takes
+#: the pacing plan to reach that vintage, and then 500s mid-decade. The
+#: namespace is refused wholesale rather than horizon by horizon: the check
+#: has no business knowing how long the world runs, and the derived book's own
+#: rungs are ``f"{asset}-s{k}"``, which never collides.
+_RESERVED_COHORT_ID = re.compile(r"^(?:" + "|".join(PRIVATE_SLEEVES) + r")-v\d+$")
 
 
 class BookError(ValueError):
@@ -143,6 +154,9 @@ def validate_book(book: OpeningBook, liquid_sleeves: tuple[str, ...]) -> None:
     if set(book.private) != set(PRIVATE_SLEEVES):
         raise BookError(f"book must name exactly {sorted(PRIVATE_SLEEVES)} private sleeves")
 
+    # cohort ids are the PORTFOLIO's keys, and the portfolio is flat: a book
+    # is checked across all three sleeves at once, not sleeve by sleeve.
+    seen: dict[str, str] = {}
     for sleeve, rungs in book.private.items():
         if not rungs:
             raise BookError(f"private sleeve '{sleeve}' has no rungs")
@@ -153,6 +167,22 @@ def validate_book(book: OpeningBook, liquid_sleeves: tuple[str, ...]) -> None:
                 raise BookError(
                     f"{sleeve} rung {index} is not a valid closed-end cohort document: {exc}"
                 ) from exc
+            # `Portfolio.add` raises PortfolioError on a repeated key, which
+            # is a 500 on every read of a session the door already accepted.
+            # Both of these are the boundary's job (su-app-06 I4).
+            cohort_id = str(doc["identity"]["cohort_id"])
+            if cohort_id in seen:
+                raise BookError(
+                    f"{sleeve} rung {index} repeats cohort_id '{cohort_id}', already used by "
+                    f"{seen[cohort_id]}: every rung in the book needs its own id"
+                )
+            seen[cohort_id] = f"{sleeve} rung {index}"
+            if _RESERVED_COHORT_ID.match(cohort_id):
+                raise BookError(
+                    f"{sleeve} rung {index} uses the reserved cohort_id '{cohort_id}': "
+                    "'<sleeve>-v<year>' names the vintages the pacing plan commits "
+                    "during play, and would collide with one of them mid-decade"
+                )
             commitment = doc["commitment"]
             lhs = float(commitment["paid_in"]) + float(commitment["unfunded"])
             rhs = float(commitment["committed"]) + float(commitment["cumulative_recycled"])

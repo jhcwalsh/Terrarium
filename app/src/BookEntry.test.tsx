@@ -221,6 +221,71 @@ describe("BookEntry", () => {
     expect(onReady.mock.calls[0][2]).toBe(true);
   });
 
+  it("reopens on what was typed, not on the server default", async () => {
+    /**
+     * su-app-06 (I3). `POST /sessions` happens two screens later, so a 422
+     * there dropped the analyst back here with the screen re-seeded from
+     * `GET /book/default` — up to 210 entered fields gone. `initialBook`
+     * carries the retained entry back in. The DEFAULT is still fetched (it is
+     * what `isDefault` and the per-sleeve resets compare against), so this
+     * cannot be satisfied by skipping the fetch.
+     */
+    stubFetch();
+    const typed = JSON.parse(JSON.stringify(DEFAULT_RESPONSE.book));
+    typed.liquid.equity = 36;
+    typed.liquid.bonds = 17;
+    await render(
+      <BookEntry
+        runId="r1"
+        initialBook={typed}
+        initialPlan={DEFAULT_RESPONSE.plan}
+        onReady={vi.fn()}
+        onCancel={vi.fn()}
+      />,
+    );
+    expect(byLabel<HTMLInputElement>("equity").value).toBe("36");
+    expect(byLabel<HTMLInputElement>("bonds").value).toBe("17");
+    // and it is still measured against the SERVER's default, not against
+    // itself: a retained edit is still an edit.
+    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    // the per-sleeve reset still restores the server's ladder
+    act(() => findButton(/reset pe/i).click());
+    expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("20");
+  });
+
+  it("blocks the commit on a negative field even when the total still reaches 100", async () => {
+    // spec section 7's "negative anything". Netting -1 against +1 keeps the
+    // total at 100, so this cannot pass by way of the total check.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("hy"), "-1");
+    setValue(byLabel<HTMLInputElement>("bonds"), "18");
+    expect(byTestId("book-total").textContent).toContain("100");
+    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(byTestId("shape-faults").textContent).toMatch(/negative/i);
+  });
+
+  it("blocks the commit when a rung breaks the recycling identity", async () => {
+    // paid_in + unfunded = committed + cumulative_recycled (NOT the simpler
+    // = committed, which recycling can legitimately break). nav_true is
+    // untouched, so the total stays at 100 and only this rule is under test.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rung 0 unfunded"), "3");
+    expect(byTestId("book-total").textContent).toContain("100");
+    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(byTestId("shape-faults").textContent).toMatch(/paid_in \+ unfunded/);
+  });
+
+  it("the default book satisfies every shape rule the screen enforces", async () => {
+    // the other half of the two tests above: a gate that blocked everything
+    // would pass them both and ship a screen nobody can leave.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
+    expect(findButton(/continue/i).disabled).toBe(false);
+  });
+
   it("hands back isDefault=false once the book has been edited", async () => {
     // The untouched case alone could pass a component that always returns
     // true; this is the other half of that same claim.

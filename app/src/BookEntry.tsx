@@ -80,12 +80,56 @@ function allFieldsFinite(book: Book, plan: Plan): boolean {
   return liquidOk && cashOk && rungsOk && planOk;
 }
 
+/** spec section 7's first refusal: "negative anything". A SHAPE check — it
+ * compares numbers the analyst typed against zero and computes no value, no
+ * NAV and no coverage (DN-3 W5 leaves all of those on the server). */
+function allFieldsNonNegative(book: Book, plan: Plan): boolean {
+  const ok = (n: number) => n >= 0;
+  return (
+    Object.values(book.liquid).every(ok) &&
+    ok(book.cash) &&
+    Object.values(book.private)
+      .flat()
+      .every((r) => RUNG_FIELDS.every((f) => ok(rungField(r, f)))) &&
+    Object.values(plan.points).every((arr) => arr.every(ok))
+  );
+}
+
+/** `validate_book`'s ``RUNG_TOLERANCE`` — the SERVER's own tolerance, so a
+ * book this screen offers cannot be one the server then refuses on the
+ * identity, and one it blocks cannot be one the server would have taken. */
+const RUNG_TOLERANCE = 1e-9;
+
+/** spec section 7: `paid_in + unfunded = committed + cumulative_recycled`.
+ * Deliberately NOT the simpler `paid_in + unfunded = committed`, which
+ * recycling legitimately breaks — the same note `ah/port/book.py` carries. */
+function recyclingIdentityHolds(book: Book): boolean {
+  return Object.values(book.private)
+    .flat()
+    .every((r) => {
+      const lhs = r.commitment.paid_in + r.commitment.unfunded;
+      const rhs = r.commitment.committed + r.commitment.cumulative_recycled;
+      return Math.abs(lhs - rhs) <= RUNG_TOLERANCE;
+    });
+}
+
 export function BookEntry({
   runId,
+  initialBook,
+  initialPlan,
   onReady,
   onCancel,
 }: {
   runId: string;
+  /** su-app-06 (I3): what the analyst entered last time this screen was
+   * open. `POST /sessions` happens two screens later, so a 422 there used to
+   * throw away up to 210 typed fields — the screen re-seeded from the server
+   * default on the way back in. Seeding from these instead makes a refusal
+   * recoverable. Undefined on the first visit. The server's own default is
+   * still fetched regardless: it is what `isDefault` and the per-sleeve
+   * resets compare against, and it must stay the server's number. */
+  initialBook?: Book;
+  initialPlan?: Plan;
   onReady: (book: Book, plan: Plan, isDefault: boolean) => void;
   onCancel: () => void;
 }) {
@@ -100,16 +144,16 @@ export function BookEntry({
       .then((r) => {
         if (cancelled) return;
         setResp(r);
-        setBook(deepClone(r.book));
-        setPlan(deepClone(r.plan));
+        setBook(deepClone(initialBook ?? r.book));
+        setPlan(deepClone(initialPlan ?? r.plan));
       })
       .catch((e) => {
-        if (!cancelled) setError(String(e));
+        if (!cancelled) setError(e instanceof Error ? e.message : String(e));
       });
     return () => {
       cancelled = true;
     };
-  }, [runId]);
+  }, [runId, initialBook, initialPlan]);
 
   const isDefault = useMemo(() => {
     if (!resp || !book || !plan) return true;
@@ -121,12 +165,21 @@ export function BookEntry({
 
   const total = book ? bookTotal(book) : NaN;
   const totalRounded = Number.isFinite(total) ? Math.round(total * 100) / 100 : NaN;
-  const ready =
-    !!book &&
-    !!plan &&
-    allFieldsFinite(book, plan) &&
-    Number.isFinite(total) &&
-    Math.abs(total - 100) <= 0.01;
+  // Each refusal the SERVER can raise on shape gets its own named check, so
+  // the panel can say which one is blocking rather than only that something
+  // is (spec section 6's validity panel).
+  const shapeFaults: string[] = [];
+  if (book && plan) {
+    if (!allFieldsFinite(book, plan)) shapeFaults.push("a field is blank or not a number");
+    if (!allFieldsNonNegative(book, plan)) shapeFaults.push("a field is negative");
+    if (!recyclingIdentityHolds(book)) {
+      shapeFaults.push("a rung breaks paid_in + unfunded = committed + recycled");
+    }
+    if (!Number.isFinite(total) || Math.abs(total - 100) > 0.01) {
+      shapeFaults.push("the book does not total 100");
+    }
+  }
+  const ready = !!book && !!plan && shapeFaults.length === 0;
 
   if (error) {
     return (
@@ -307,6 +360,12 @@ export function BookEntry({
           </span>
         </div>
       </div>
+
+      {shapeFaults.length > 0 && (
+        <p className="book-note error" data-testid="shape-faults">
+          {shapeFaults.join("; ")}
+        </p>
+      )}
 
       <p className="book-note" data-testid="ranked-note">
         {isDefault

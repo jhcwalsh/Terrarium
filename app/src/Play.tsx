@@ -198,7 +198,11 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
       plan,
     })
       .then(setSession)
-      .catch((e) => setError(String(e)));
+      // su-app-06 (I3): the server's own refusal text, not "Error: ...".
+      // A refused book is the one failure here a player can act on, and
+      // `SessionApiError.message` now renders a pydantic-shaped detail
+      // readably (lib/session.ts renderDetail).
+      .catch((e) => setError(e instanceof SessionApiError ? e.message : String(e)));
   }, [bundle.meta.run_id, basis, config?.ranked, config?.participant, book, plan]);
 
   // cio-02: fetch the CIO view only while that mode is on screen, and only
@@ -343,6 +347,9 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
         <p className="error">{error}</p>
         <p>
           Play mode needs the session service (`uv run uvicorn ah.serve:app`).
+          If the server refused the book, go back and re-open &quot;play this
+          world&quot; — the entry screen reopens on what you typed, not on the
+          server default.
           <button onClick={onExit}>back to browse</button>
         </p>
       </main>

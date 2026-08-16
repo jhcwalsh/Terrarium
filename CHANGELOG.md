@@ -61,6 +61,67 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   session. The leaderboard was never at risk — custom books are practice-only
   from creation — but a player would have seen the wrong institution.
 
+  **The final fix wave (whole-branch review, 2026-08-16).** Seven fixes, all
+  gaps in the plan rather than defects in any task's implementation — the
+  *book* half worked and the *plan* half was half-built:
+
+  - **The stored `CommitmentPlan` never reached the engine.** `serve.py` read
+    it, set the lever's pre-fill from it, and stopped there. The app sends no
+    `commitments` while the lever is untouched, so `simulate_play` fell
+    through to the policy pacing rule: the window showed the analyst's 5.00
+    and the simulator committed ~3.18. It was *more* silent than before this
+    WP, because task 6 also nulls `next_plan_basis` for exactly these
+    sessions, suppressing the paragraph that used to explain re-pacing.
+    `POST /sessions/{sid}/decisions` now fills the sleeves the client omitted
+    from `plan.points[window]` before recording the decision — server-side,
+    because the server is the authority (DN-3 W5) and a client-side fill
+    would leave any scripted client on the old behaviour. Guarded by a test
+    on the resulting **decade**, not on the pre-fill: asserting on the
+    pre-fill is what let this through, since the pre-fill was always right.
+  - **The pre-fill indexed the wrong window at the only pointer a player can
+    stand at.** `(quarter + 1) // 4` is the window ordinal only when the
+    reveal pointer sits on the window's own month, but `record_decision`
+    refuses a window until `revealed_months >= month + 1` and the app opens
+    the lever on exactly that state — so at window 0 the pointer is month 12
+    and the formula returned 1. The player was shown next year's plan number
+    beside a commit of this year's. The ordinal now comes from
+    `decision_months`, at the pre-fill and at the fill alike.
+  - **Two caps governed the same quantity.** A plan entry was capped against
+    the *entered book's* per-sleeve NAV and the decision door against
+    `START_TARGETS`, so an analyst holding 30 points of pe could legally
+    store 10.8 for a window and be 422'd the moment it was committed — a
+    number the server had filled in itself. `OpeningBook.target_nav()` is now
+    the single basis for all three enforcement points (`validate_plan`, the
+    door, and `simulate_play`'s own check). The bound is re-based, never
+    removed; sessions with no entered book are untouched.
+  - **`plan_pace` was served and never rendered.** The pacing flex went from
+    silently *applied* to silently *invisible*. The decision window now shows
+    it beside each sleeve's plan figure, labelled as the pacing rule's view,
+    with an explanation that replaces the suppressed F4 caveat.
+  - **The endgame flinch cost measured deviation from the model's plan.**
+    Spec §2 says the lever shows deviation from *your* plan.
+    `post_game_annotations` takes a `commitment_plan` and, when given one,
+    both prices the cut against that plan's entry and restores the
+    counterfactual to it. `None` keeps the pacing-rule baseline verbatim.
+  - **A 422 discarded the whole entry, and half of them rendered as
+    `[object Object]`.** FastAPI's `detail` is a list for pydantic-level
+    failures; `renderDetail` now renders it readably. `BookEntry` re-seeds
+    from the retained entry rather than refetching the server default, so a
+    refusal costs a screen instead of 210 typed fields, and the screen's
+    `ready` gate now carries the sign and recycling-identity shape checks
+    §6 asked for.
+  - **A duplicate or reserved `cohort_id` passed validation and then 500'd.**
+    Cohort ids are `Portfolio` keys and `Portfolio.add` raises on a repeat.
+    `validate_book` now refuses both a repeated id (checked across all three
+    sleeves — the registry is flat) and the `{sleeve}-v{year}` namespace the
+    pacing plan mints during play, whose collision did not even fire until
+    mid-decade. Both are 422s naming the rule.
+
+  **Scope fence, unchanged and re-tested:** a session with `opening_book=None`
+  and no stored plan is byte-identical to before this WP — it keeps
+  `plan_commitments` and its non-null `next_plan_basis` caveat, and its
+  decisions are still recorded as the bare action string.
+
   **ER-14 opened:** `_seed_ladder`'s single staggered shape is what the
   pacing model, the call/distribution linkage and the ER-6/ER-12 close-outs
   were fitted and checked against; an entered book can sit arbitrarily far
