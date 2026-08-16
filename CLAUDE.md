@@ -66,8 +66,11 @@ uv run ruff check . --fix          # lint
 uv run ruff format .               # format
 uv run pyright                     # types (basic mode)
 
-# the CI gate, verbatim (~26 minutes — run it in the background, read the log):
-uv run pytest --cov=ah.core --cov-report=term-missing --cov-fail-under=90
+# the CI gate (~38 minutes — run it in the background, read the log).
+# run_gate.py stamps the log with the sha it tested BEFORE pytest starts, and
+# refuses to start if tracked files are modified. Do not invoke pytest directly
+# for a gate: an unbound log cannot authorise a merge.
+uv run python scripts/run_gate.py gate-<wp>.log
 uv run python -m ah.battery.report # validation battery on the stagflation preset
 ```
 
@@ -187,6 +190,10 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   merging into main requires `uv run python scripts/check_gate.py <gate-log>` on the
   branch first (validates the log, stamps `.gate-ok` for that exact commit; the
   pre-commit hook refuses otherwise). On a fresh clone, re-run the `git config` line.
+  **Run the gate with `scripts/run_gate.py`, never bare pytest** — it binds the log
+  to the sha it tested, so a branch that moves mid-run (the owner merging onto your
+  branch is routine) is caught instead of certified. `check_gate.py` refuses an
+  unbound log, a log whose sha is not HEAD, and a log recorded on a dirty tree.
 - Never weaken a test to make it pass; never skip/xfail without a linked TODO. If a test you
   wrote to catch a defect starts failing because the defect is fixed, **invert it** and keep
   the history in the docstring — do not delete it.
