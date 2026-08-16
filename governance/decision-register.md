@@ -272,3 +272,46 @@ carry no L1 layer): **a hier-flow-v1 world is stood up first** — the
 G2-promoted generator, whose ensembles carry the slow-state layer — and
 the workbench's first world is that one. Demoting l1_state to optional
 was considered and declined.
+
+---
+
+## SM-RULING-A — external-series validation of an authored coefficient (2026-08-15, owner)
+
+Raised by `AM-2026-08-15-001` §3.3 (`docs/superpowers/specs/2026-08-15-inflation-passthrough-credit-loss-design.md`). Owner ruling, 2026-08-15, **precedent-setting**:
+
+**SM-RULING-A — RATIFIED.** External-series comparison of a pre-committed
+authored coefficient against published prints is **validation evidence, not
+holdout access**, under four conditions and no wider:
+
+1. **External series only** — never a catalog factor read. The compared series
+   must sit outside the sealed splits entirely (NPI, in the raising context).
+2. **The compared value is committed and hashed before the check runs.** A
+   coefficient that could still move is not being validated, it is being fitted.
+3. **One execution, result recorded verbatim** in the report — including a
+   result that embarrasses the coefficient.
+4. **Never a calibration input.** A failed check is disclosed and the
+   coefficient is revisited only through a further dated amendment whose stated
+   trigger is the disclosed failure. Re-running until it passes is the failure
+   mode this condition exists to forbid.
+
+Rationale recorded: the inflation channel is too material to the product to
+ship unchecked, and the alternative — shipping an authored pass-through
+coefficient with no external comparison at all — is worse than a bounded,
+pre-committed one-shot check.
+
+**Scope note.** This ruling is precedent for future authored parameters under
+the same four conditions and **no wider**. It is not a general re-opening of
+the holdout discipline; the Step-2 holdout was spent at WP5.6 and nothing here
+restores it. Condition (1) is what keeps the two questions separate.
+
+**Still ⚑ (unratified until a named owner release event):**
+
+| ⚑ | Item | Upgrade path |
+|---|---|---|
+| C1 adoption | inflation pass-through term — `pm_infra` 0.6, `pm_re_value_add` 0.3, both `chosen` | NPI NOI-growth fit via NCREIF query-tool export (membership; data register P1) → relabel `measured-external` by amendment |
+| C2 adoption | credit loss term — θ per the declared CDLI match rule, `chosen` | Albourne derived-measures interface (loss dispersion) |
+| `re_core` / `infra_core` forms | declared but unparameterized (Tier B, evergreen) | parked until those sleeves are parameterized; links to the Albourne coefficient request §2a |
+
+Adoption of C1 or C2 is a named owner release event (`ah/port/mapping.py`
+`ARTIFACT_PATH` bump + `world_id` block move for touched presets) — the
+Campaign R1 rule — not a side effect of a report existing.
