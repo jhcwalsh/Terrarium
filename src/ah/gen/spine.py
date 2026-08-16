@@ -23,9 +23,11 @@ bit-identical (final-review F3). Confirmed empirically pre-fix: seed 199002
 (accepted at attempt 18) and seed 199002+7919=206921 (accepted at attempt
 17) produced IDENTICAL first-decade states. ``ATTEMPT_STRIDE`` is a large
 prime coprime to 7919, so no attempt index in the budget can recreate that
-alignment. ``SEED_STRIDE`` itself is unchanged and still used by the
-hazard/blocks per-PATH streams in ``SpineBootstrap._draw`` (a different
-axis: path index, not attempt index).
+alignment. The hazard/blocks per-PATH streams in ``SpineBootstrap._draw``
+never used ``SEED_STRIDE`` at all -- they are opened as
+``PCG64(seed + offset).jumped(p)``, one fixed jump per path index ``p``, not
+a stride-multiplied seed -- so that axis was never exposed to this bug and
+needed no change here.
 """
 
 from __future__ import annotations
@@ -56,11 +58,11 @@ from ah.gen.stress import (
 )
 from ah.gen.systems import _pinned_layers
 
-SEED_STRIDE = 7919
-#: spine-02 (Task 10): the attempt-loop stride, decoupled from SEED_STRIDE so
-#: an attempt index can never realign a sample_spine call's climate/regimes/
-#: inflnoise streams with another call's base seed (see module docstring).
-#: Prime, coprime to 7919.
+#: spine-02 (Task 10): the attempt-loop stride, decoupled from the platform's
+#: SEED_STRIDE (7919, see ah.gen.bootstrap.SEED_STRIDE et al.) so an attempt
+#: index can never realign a sample_spine call's climate/regimes/inflnoise
+#: streams with another call's base seed (see module docstring). Prime,
+#: coprime to 7919.
 ATTEMPT_STRIDE = 104395301
 LAYER_OFFSETS = {
     "climate": 0,
