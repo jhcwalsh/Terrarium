@@ -449,3 +449,36 @@ def test_judging_entry_points_leave_the_spine_hook_unregistered():
     )
     proc = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, timeout=300)
     assert proc.returncode == 0, proc.stderr
+
+
+def test_spine_pilot_world_loads_with_both_extensions():
+    import json
+    from pathlib import Path
+
+    from ah.core.numericworld import project_numeric
+    from ah.core.worldspec import WorldSpec
+
+    doc = json.loads(Path("src/ah/presets/spine_pilot.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.world_id.endswith("802")
+    assert nw.spine is not None and nw.stress is not None
+    assert nw.spine.premise.backdrop == "inflation_above_trend"
+
+
+def test_prereg_seal_exists_and_hashes_match():
+    import hashlib
+    import json
+    from pathlib import Path
+
+    sealed = json.loads(
+        Path("docs/superpowers/specs/spine-pilot-prereg.json").read_text(encoding="utf-8")
+    )
+    for key in ("b1", "b2", "b3", "b4", "b5", "b6"):
+        assert key in sealed, f"sealed bars missing {key}"
+    for rel, want in sealed["hashes"].items():
+        if want == "unbuilt":
+            continue
+        got = hashlib.sha256(Path(rel).read_bytes()).hexdigest()
+        assert got == want, (
+            f"sealed hash mismatch for {rel}: re-run the seal script and record the amendment"
+        )

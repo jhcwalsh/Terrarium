@@ -1,0 +1,85 @@
+{
+  "b1": {
+    "lag_months": [
+      3,
+      12
+    ],
+    "min_sign_fraction": 0.9
+  },
+  "b2": {
+    "join_yoy_max_pp": 2.5,
+    "p95_ratio_max": 1.25,
+    "panel_p95_adjacent_yoy_pp": 0.7433911963542538
+  },
+  "b3": {
+    "coverage_must_be_monotone": true,
+    "grid_private_pct": [
+      15,
+      35,
+      40,
+      55
+    ],
+    "min_breach_seeds_at_55": 1,
+    "n_seeds": 20
+  },
+  "b4": {
+    "clockwise_fraction_tolerance": 0.15,
+    "dwell_median_ratio_band": [
+      0.6,
+      1.4
+    ],
+    "panel_clockwise_fraction": 0.6029411764705882,
+    "panel_dwell_medians": [
+      5.0,
+      4.0,
+      9.0,
+      6.0
+    ],
+    "quadrants": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ]
+  },
+  "b5": {
+    "era_threshold_pp": 3.351323828920571,
+    "fallback_rate": 0.007874015748031496,
+    "min_cell_months": 24,
+    "panel_cell_months": [
+      93,
+      57,
+      378,
+      234
+    ],
+    "panel_rates": [
+      0.010752688172043012,
+      0.07017543859649122,
+      0.0,
+      0.004273504273504274
+    ],
+    "rel_tolerance": 0.5
+  },
+  "b6": {
+    "k_months": 12,
+    "panel_conditional_onset_rate": 0.2214765100671141,
+    "panel_unconditional_onset_rate": 0.07731305449936629,
+    "rel_tolerance": 0.5,
+    "spine_policy_gap_threshold_pp": 0.0
+  },
+  "hashes": {
+    "scripts/spine_pilot_report.py": "unbuilt",
+    "scripts/spine_pilot_seal.py": "902e4ac4ae0447c33eb1db878c91aa7b26cb6cffb0e988e87453b1ad3efa91f3",
+    "src/ah/gen/spine.py": "5f9a4f1243b9502ce2da6ebf41de57d55940b91c67cb5aeabceeb77f6fadf626",
+    "src/ah/presets/spine_pilot.json": "f39b42eeda93e5d3540c1e4a0b31d0ebef139e6c26c62a67d5d788aac4cf1229"
+  },
+  "sealed_at_utc": "2026-08-16T09:55:06-07:00 (as of HEAD commit 87b85103f967221fcb552a3e69db6510fbb784a0)",
+  "sensitivity_seeds": [
+    199002,
+    1199005,
+    2199008,
+    3199011,
+    4199014
+  ],
+  "severity_table_disclosure": "the either/both inflation condition equals the quadrant hot bit; discrimination in practice is on credit_gap (owner ruling 2026-08-16: keep for pilot, revisit at D-SP-1)"
+}

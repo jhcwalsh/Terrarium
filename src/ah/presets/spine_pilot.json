@@ -1,0 +1,146 @@
+{
+  "engine_defaults": {
+    "base_seed": 199002,
+    "generator_id": "bootstrap-stratified",
+    "n_paths": 1000
+  },
+  "extensions": {
+    "x_campaign_vintage_id": "2026-08-10.1",
+    "x_spine": {
+      "join_yoy_max_pp": 2.5,
+      "precedent": [
+        "Spine: L1/L2 pinned posteriors (campaign-3 pins, AM-2026-08-10-001); premise realized by rejection, refusal on unfillable.",
+        "Flesh: verbatim panel months, 6-month mean blocks, entry severity per x_stress; joins bounded on 9 level factors + inflation era (<=2.5pp YoY); panel edge = forced re-entry, never wrap (owner ruling 2026-08-16).",
+        "Corrections: hazard = panel CRI-onset frequency per 4 investment-clock quadrants, conditioned on the month BEFORE onset; timing random by construction (R2/R3).",
+        "The severity table's values are pre-registration candidates pending D-SP-1; its inflation condition duplicates the quadrant hot bit (disclosed; owner ruling 2026-08-16: keep for pilot, revisit at D-SP-1)."
+      ],
+      "premise": {
+        "arrives_quarter": 8,
+        "backdrop": "inflation_above_trend",
+        "recovery": "slow",
+        "shock": "supply"
+      },
+      "severity_table": [
+        {"condition": "baseline", "dwell_shift_quarters": 0, "stratum_shift": 0},
+        {"condition": "either", "dwell_shift_quarters": 1, "stratum_shift": 1},
+        {"condition": "both", "dwell_shift_quarters": 2, "stratum_shift": 2}
+      ]
+    },
+    "x_stress": {
+      "functional": "all_down",
+      "join_tolerance": {
+        "hy_spread": 1.5,
+        "policy_rate": 1.0
+      },
+      "precedent": [
+        "crisis of 21 months at the worst decile: 1973-09 to 1974-12 ran -48% over exactly this span; 2007-10 to 2009-03 ran -50% over 17",
+        "no recovery segment: Japan 1990-2003 - within any ten-year window from the 1990 peak, no recovery arrived",
+        "the squeeze at the worst third: US 1966-1982 spent sixteen real-terms years below its 1966 level; the windows 1966-76 and 1972-82 both end underwater",
+        "all_down: 2022 ran equities and bonds down together, with no flight-to-quality bid",
+        "persistence: P1 re-entry + P2 declared coverage (40 of 40 quarters restricted) - D-SC-1 owner ruling 2026-08-15; percentiles unchanged from stress_1974 so the only new severity is the declared SHAPE",
+        "block length 6 months: the sealed benchmark bootstrap-v1 own mean (MEAN_BLOCK_MONTHS=6), adopted for stress segments per the owner ruling of 2026-08-15 after the generator-only coherence study (docs/superpowers/specs/2026-08-15-block-length-coherence-study.md) - depth was not consulted in the study or the choice"
+      ],
+      "segments": [
+        {
+          "entry_percentile": 35,
+          "from_quarter": 0,
+          "mean_block_months": 6,
+          "to_quarter": 7
+        },
+        {
+          "entry_percentile": 10,
+          "from_quarter": 8,
+          "mean_block_months": 6,
+          "to_quarter": 14
+        },
+        {
+          "entry_percentile": 35,
+          "from_quarter": 15,
+          "mean_block_months": 6,
+          "to_quarter": 39
+        }
+      ]
+    }
+  },
+  "factor_conditions": {
+    "correlation": {
+      "equity_bond_regime": "inflation_conditional"
+    },
+    "equity": {
+      "drift_annual_pct": 3.0,
+      "vol_annual_pct": 20.0
+    },
+    "inflation": {
+      "average_pct": 6.5,
+      "peak_pct": 9.5,
+      "peak_quarter": 6
+    },
+    "policy_rate": {
+      "end_pct": 8.0,
+      "start_pct": 6.0
+    }
+  },
+  "horizon": {
+    "quarters": 40,
+    "start": "1990-Q1"
+  },
+  "narrative": {
+    "dispatches": [
+      {
+        "date": "1990",
+        "headline": "Nineteen Ninety - the top nobody called"
+      },
+      {
+        "date": "1992",
+        "headline": "Nineteen Ninety - twenty-one months down and no bid"
+      },
+      {
+        "date": "1999",
+        "headline": "Nineteen Ninety - the decade that never came back"
+      }
+    ],
+    "language": "en",
+    "lesson": "Every month in this decade is a real month from 1953-2020; only the sequence is new. What a bad YEAR cannot teach - the slow grind of a decade that never lets you back to even - this shape exists to teach.",
+    "summary": "A DECLARED STRESS SCENARIO compiled by bootstrap-stratified: real 1953-2020 months, entered at severity-tilted percentiles per the declared x_stress rule - a 21-month worst-decile crisis and a worst-third squeeze covering every other quarter, with NO declared recovery. Precedent cited inline: 1973-74, 2007-09, 2022, US 1966-1982 in real terms, Japan 1990-2003. The persistence shape is the D-SC-1 ruling (P1 re-entry + P2 declared coverage). Severe and internally coherent by construction; not a probability-weighted forecast. This is the spine-conditioned compiler pilot world (world 802): a supply-shock premise realized by rejection sampling over pinned L1/L2 posteriors, then stitched from verbatim panel months under quadrant-conditioned hazard corrections - it is a pilot for pre-registered evaluation, not a ranked world.",
+    "tagline": "A declared stress scenario, not a forecast.",
+    "title": "The Hard Landing"
+  },
+  "provenance": {
+    "author": "sso:preset",
+    "created_at": "2026-08-11T00:00:00Z",
+    "source": {
+      "kind": "preset"
+    }
+  },
+  "regimes": {
+    "mode": "sequence",
+    "sequence": [
+      {
+        "from_quarter": 0,
+        "regime": "stagflation",
+        "to_quarter": 7
+      },
+      {
+        "from_quarter": 8,
+        "regime": "crisis",
+        "to_quarter": 14
+      },
+      {
+        "from_quarter": 15,
+        "regime": "stagflation",
+        "to_quarter": 39
+      }
+    ]
+  },
+  "spec_version": "1.2.0",
+  "status": "draft",
+  "structural": {
+    "parameter_vintage": "custom",
+    "private_equity": {
+      "entry_multiple_drift_annual_pct": -2.0,
+      "illiquidity_premium_annual_pct": 2.0,
+      "leverage_turns": 5.5
+    }
+  },
+  "world_id": "00000000-0000-4000-9000-000000000802"
+}
