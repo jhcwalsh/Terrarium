@@ -1040,3 +1040,136 @@ def test_judge_b6_v2_quantile_matched_base_rate(report):
     assert r_inc["base_rate_ratio"] == float("inf")
     assert r_inc["verdict"] == "INCONCLUSIVE (construct mismatch)"
     assert r_inc["pass"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Task 12: THE SPINE-02 SEAL -- the re-run's pre-registration. After this
+# commit, only measurement is allowed (COMMIT-ORDER: before any Task-13
+# ensemble is drawn). docs/superpowers/specs/spine02-prereg.json carries
+# b2/b3/b4 verbatim from round one (unchanged by the Task-11 judge respec)
+# and locks the new b1_v2/b5_v2/b6_v2 bars the v2 judges above read.
+# --------------------------------------------------------------------------- #
+
+SPINE02_SEAL_PATH = "docs/superpowers/specs/spine02-prereg.json"
+
+#: The exact ten paths scripts/spine02_seal.py hashes (nine tracked files
+#: plus itself). Kept here, independent of the seal script's own dict, so a
+#: seal-script edit that silently drops a path from the hash set is still
+#: caught by test_spine02_seal_hashes_match iterating this list.
+SPINE02_HASHED_FILES = [
+    "src/ah/gen/spine.py",
+    "src/ah/gen/stress.py",
+    "src/ah/gen/bootstrap.py",
+    "src/ah/gen/regimes/semimarkov.py",
+    "src/ah/gen/climate/model.py",
+    "src/ah/gen/climate/simulate.py",
+    "scripts/spine_pilot_report.py",
+    "scripts/spine_pilot_b3.py",
+    "src/ah/presets/spine_pilot.json",
+    "scripts/spine02_seal.py",
+]
+
+
+def test_spine02_seal_carries_round_one_bars_verbatim():
+    """b2/b3/b4 are unchanged by the Task-11 judge respec (only B1/B5/B6 were
+    respecified), so the spine02 seal must carry them byte-for-byte from the
+    round-one seal -- not recompute or hand-retype them. Compared via
+    ``json.dumps(..., sort_keys=True)`` rather than raw ``==`` so the check
+    is about VALUE equality, not incidental key-order equality (both files
+    are in fact sort_keys-serialized already, but the comparison shouldn't
+    depend on that)."""
+    import json
+    from pathlib import Path
+
+    round_one = json.loads(
+        Path("docs/superpowers/specs/spine-pilot-prereg.json").read_text(encoding="utf-8")
+    )
+    spine02 = json.loads(Path(SPINE02_SEAL_PATH).read_text(encoding="utf-8"))
+
+    for key in ("b2", "b3", "b4"):
+        assert key in spine02, f"spine02 seal missing {key}"
+        assert json.dumps(spine02[key], sort_keys=True) == json.dumps(
+            round_one[key], sort_keys=True
+        ), f"spine02 seal's {key} block is not byte-identical to round one's"
+
+
+def test_spine02_seal_hashes_match():
+    """Same pattern as round one's test_prereg_seal_exists_and_hashes_match,
+    but against the CURRENT working tree, not a historical git blob: this
+    seal binds THIS round's tree (spine-02 has been editing it freely since
+    Task 10; this seal is the point where that editing stops), so the sealed
+    hashes must match the files as they sit on disk right now, not as they
+    stood at some earlier commit."""
+    import hashlib
+    import json
+    from pathlib import Path
+
+    sealed = json.loads(Path(SPINE02_SEAL_PATH).read_text(encoding="utf-8"))
+    for key in ("b2", "b3", "b4", "b1_v2", "b5_v2", "b6_v2"):
+        assert key in sealed, f"spine02 seal missing {key}"
+
+    assert set(sealed["hashes"]) == set(SPINE02_HASHED_FILES)
+    for rel in SPINE02_HASHED_FILES:
+        want = sealed["hashes"][rel]
+        got = hashlib.sha256(Path(rel).read_bytes()).hexdigest()
+        assert got == want, (
+            f"spine02 seal hash mismatch for {rel}: the working tree no longer "
+            "matches the sealed hash -- either the file changed since Task 12's "
+            "seal (a real pre-registration violation) or the seal needs re-cutting"
+        )
+
+
+def test_spine02_thresholds_are_pinned_by_literals():
+    """Every sealed b1_v2/b5_v2/b6_v2 value, asserted as a literal (same
+    rationale as round one's test_prereg_thresholds_are_pinned_by_literals:
+    the hash test alone only catches a BYTE change, not a seal-script bug
+    that recomputes a DIFFERENT number into the SAME schema). b2/b3/b4 are
+    covered by test_spine02_seal_carries_round_one_bars_verbatim above, not
+    repeated here.
+
+    ``panel_base_rate`` gets both a literal (the value actually observed in
+    the committed JSON) and an exact-equality check against ``149 / 813``,
+    per the Task-12 brief -- so this test also pins the ARITHMETIC, not just
+    whatever float happened to land in the file.
+    """
+    import json
+    from pathlib import Path
+
+    sealed = json.loads(Path(SPINE02_SEAL_PATH).read_text(encoding="utf-8"))
+
+    assert sealed["b1_v2"]["min_sign_fraction"] == 0.90
+    assert sealed["b1_v2"]["lag_months"] == [0, 2]
+
+    assert sealed["b5_v2"]["panel_rates"] == [
+        0.010752688172043012,
+        0.07017543859649122,
+        0.0,
+        0.004273504273504274,
+    ]
+    assert sealed["b5_v2"]["method"] == "aggregate-binomial-normal-approx-cc"
+    assert sealed["b5_v2"]["alpha"] == 0.05
+    assert sealed["b5_v2"]["z"] == 1.959963984540054
+    assert sealed["b5_v2"]["per_quadrant"] == "disclosure-only"
+    assert sealed["b5_v2"]["zero_rate_convention"] == (
+        "a panel rate of exactly 0 passes iff the realized rate is exactly 0; "
+        "note the recovery cell is tautological (the sampler cannot fire at rate "
+        "0), so a PASS there is a plumbing assertion, not evidence about the model"
+    )
+
+    assert sealed["b6_v2"]["k_months"] == 12
+    assert sealed["b6_v2"]["panel_base_rate"] == 0.18327183271832717
+    assert abs(sealed["b6_v2"]["panel_base_rate"] - 149 / 813) == 0.0
+    assert sealed["b6_v2"]["rel_tolerance"] == 0.5
+    assert sealed["b6_v2"]["panel_conditional_onset_rate"] == 0.2214765100671141
+    assert sealed["b6_v2"]["panel_unconditional_onset_rate"] == 0.07731305449936629
+    assert sealed["b6_v2"]["conditioning"] == (
+        "per-decade quantile-matched to the panel inversion base rate"
+    )
+
+    assert sealed["sensitivity_seeds"] == [199002, 1199005, 2199008, 3199011, 4199014]
+
+    assert sealed["round_one_record"] == {
+        "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
+        "sealed_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+        "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md",
+    }

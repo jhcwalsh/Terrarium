@@ -1,0 +1,92 @@
+{
+  "b1_v2": {
+    "lag_months": [
+      0,
+      2
+    ],
+    "min_sign_fraction": 0.9
+  },
+  "b2": {
+    "join_yoy_max_pp": 2.5,
+    "p95_ratio_max": 1.25,
+    "panel_p95_adjacent_yoy_pp": 0.7433911963542538
+  },
+  "b3": {
+    "coverage_must_be_monotone": true,
+    "grid_private_pct": [
+      15,
+      35,
+      40,
+      55
+    ],
+    "min_breach_seeds_at_55": 1,
+    "n_seeds": 20
+  },
+  "b4": {
+    "clockwise_fraction_tolerance": 0.15,
+    "dwell_median_ratio_band": [
+      0.6,
+      1.4
+    ],
+    "panel_clockwise_fraction": 0.6029411764705882,
+    "panel_dwell_medians": [
+      5.0,
+      4.0,
+      9.0,
+      6.0
+    ],
+    "power_disclosure": "stagflation's dwell median rests on 12 spells and the clockwise anchor on 68 transitions (SE ~0.059); tolerances are near the anchors' own sampling noise - a marginal B4 result must be read accordingly; tolerances must NOT be widened after measurement",
+    "quadrants": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ]
+  },
+  "b5_v2": {
+    "alpha": 0.05,
+    "method": "aggregate-binomial-normal-approx-cc",
+    "panel_rates": [
+      0.010752688172043012,
+      0.07017543859649122,
+      0.0,
+      0.004273504273504274
+    ],
+    "per_quadrant": "disclosure-only",
+    "z": 1.959963984540054,
+    "zero_rate_convention": "a panel rate of exactly 0 passes iff the realized rate is exactly 0; note the recovery cell is tautological (the sampler cannot fire at rate 0), so a PASS there is a plumbing assertion, not evidence about the model"
+  },
+  "b6_v2": {
+    "conditioning": "per-decade quantile-matched to the panel inversion base rate",
+    "k_months": 12,
+    "panel_base_rate": 0.18327183271832717,
+    "panel_conditional_onset_rate": 0.2214765100671141,
+    "panel_unconditional_onset_rate": 0.07731305449936629,
+    "rel_tolerance": 0.5
+  },
+  "hashes": {
+    "scripts/spine02_seal.py": "d48136722326829795dde0430787142ff3fc14fdc3cd8b1841c985ceaea9fc48",
+    "scripts/spine_pilot_b3.py": "4ead157e2ea88e5505fd228f6636056361d9e5cde91ee2474797fbff46507e97",
+    "scripts/spine_pilot_report.py": "a78411fe2c3a288c6ac773964ee7133b5a9fb6ce15d77b54f143b48d3ae4d8a8",
+    "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
+    "src/ah/gen/climate/model.py": "0012c817947acdba68c4f2c33ce4f497f2ab6212d734155c59b10282d2077fb7",
+    "src/ah/gen/climate/simulate.py": "3bc091260aa5811dcae00f7bfc53772b49202483702ae344d901bf6380be9edb",
+    "src/ah/gen/regimes/semimarkov.py": "75abc6e3c765d010d497896e013559db4b9bf5a2865d43f02355463ec5bbea1e",
+    "src/ah/gen/spine.py": "5e51946c3ab421f0c71cc57b5d4de03d02b79c404a94c5704438772c4ea1a111",
+    "src/ah/gen/stress.py": "685559d6fa5c3a4c6bc3f7ceb4f22eb1966eca7e8dc7ad7ec08e590ef1c49726",
+    "src/ah/presets/spine_pilot.json": "773be668b14496a02cc67c55c4327a87df1c05e274159ccc2a1917916783a196"
+  },
+  "round_one_record": {
+    "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
+    "sealed_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+    "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md"
+  },
+  "sealed_at_utc": "2026-08-16T12:34:12-07:00 (as of HEAD commit b3eeefac63401a44e430b2b7b5a750f906a1761a)",
+  "sensitivity_seeds": [
+    199002,
+    1199005,
+    2199008,
+    3199011,
+    4199014
+  ]
+}
