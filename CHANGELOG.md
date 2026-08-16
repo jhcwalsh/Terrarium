@@ -14,6 +14,62 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **su-app-06 — opening book entry, the last WP of the product surface's
+  allocation-entry slice.** An analyst can now enter a real institution's
+  opening book — liquid sleeve weights, cash, and a ladder of private-market
+  vintages — and play a decade from it, instead of only ever starting from
+  the derived default. `OpeningBook` / `CommitmentPlan`
+  (`src/ah/port/book.py`) are the contract: rungs are serialized
+  `ClosedEndCohort` documents, so the Step-3 state contract validates them,
+  and semantic rules (the legal sleeve set, etc.) are free functions rather
+  than pydantic validators, so a violation returns a usable 422 instead of a
+  `ValidationError` wrapped past readability. `GET /book/default` serves the
+  world's own pre-fill, built by the engine's own code; `POST /sessions`
+  validates a submitted book/plan and **demotes the session to practice**
+  whenever either digest differs from the served default — nothing that
+  reaches the leaderboard is ever scored from an entered book. The override
+  threads through the numeric engine (`simulate_play(..., opening_book=...)`),
+  session persistence, and every replay and dashboard surface, including the
+  plan-driven commitment lever and the app's new entry screen
+  (`app/src/BookEntry.tsx`).
+
+  **What the equivalence test proves, stated precisely.** The suite's
+  headline test (`tests/test_book_override.py::TestEquivalence::
+  test_the_default_book_reproduces_the_derived_decade_exactly`) feeds the
+  served default book back in as an entered book and asserts an identical
+  decade, quarter for quarter. Read plainly that sounds like proof the entry
+  path and the derived path agree on what a *correct* book is. It proves
+  less: `default_opening_book` builds its rungs from the same `_seed_ladder`
+  the derived branch already calls, so the test is a **serialization-fidelity
+  proof** — that `to_document` → JSON → `from_document` round-trips
+  losslessly through the HTTP boundary and back into the cohort model — not a
+  proof that the seeded ladder shape is the *right* one to enter. The design
+  choice stands (an independently hand-written ladder fixture would exercise
+  its own arithmetic rather than the plumbing under test), but the two
+  claims are different and only the narrower one is established. See ER-14.
+
+  **A defect found and fixed during the work, not shipped:**
+  `/sessions/{sid}/outcome` and `/sessions/{sid}/cio` originally replayed
+  every session from the *derived* default book rather than the one actually
+  stored, so a custom-book session was scored and displayed as someone
+  else's institution while `GET /sessions/{sid}` (already correct) showed
+  the real value — no error, the two surfaces just quietly disagreed. Fixed by
+  threading `opening_book` through `window_contributions_play`,
+  `post_game_annotations` and `build_cio_view`, and covered by a
+  cross-surface consistency test asserting `GET /sessions/{sid}`'s value
+  agrees with `/outcome`'s `final_value` at decade end for a custom-book
+  session. The leaderboard was never at risk — custom books are practice-only
+  from creation — but a player would have seen the wrong institution.
+
+  **ER-14 opened:** `_seed_ladder`'s single staggered shape is what the
+  pacing model, the call/distribution linkage and the ER-6/ER-12 close-outs
+  were fitted and checked against; an entered book can sit arbitrarily far
+  outside that shape, or open with an un-converged appraisal filter the
+  seeded ladder can never produce. Mitigated by the practice-only demotion
+  rule, not fixed — re-fitting across a family of ladder shapes is an
+  owner-decided release event, not a cleanup
+  (`docs/engine-realism-register.md`).
+
 - **The gate log is now bound to the commit it tested (housekeeping-02).**
   `scripts/check_gate.py` verified *stamp → merged commit* and never
   *log → commit*: it minted `.gate-ok` from `git rev-parse HEAD` at stamp time,

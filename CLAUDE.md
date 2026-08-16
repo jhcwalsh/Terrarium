@@ -212,7 +212,10 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   months) and ER-13 (the CIO dashboard's inherited decade is a simulated
   past scaled to the opening book's NAV, not a reconstruction of the history
   that actually produced it — opening weights sit exactly at target, with no
-  drift) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
+  drift) and ER-14 (an entered opening book can sit arbitrarily far outside
+  the staggered shape the pacing model and linkage were fitted on, or open
+  with an un-converged appraisal filter; mitigated by practice-only
+  demotion, not fixed) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
   10 + expiry-at-lapse ledger; play alphas now `port-v2-cashflow`/`-gen`; the E1
   commitment lever is unblocked). **ER-10 CLOSED 2026-08-13** (`_reported_marks`
   filtered only the quarter-end month's true return through the appraisal
