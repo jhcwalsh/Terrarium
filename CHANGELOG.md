@@ -14,6 +14,32 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **The gate log is now bound to the commit it tested (housekeeping-02).**
+  `scripts/check_gate.py` verified *stamp → merged commit* and never
+  *log → commit*: it minted `.gate-ok` from `git rev-parse HEAD` at stamp time,
+  with nothing tying that sha to what the log had actually run. **The incident
+  that exposed it, 2026-08-15:** a gate ran green against `f498f0f`, another
+  branch was merged into the working branch while it ran, and HEAD became
+  `8d68b7a`. Stamping would have certified `8d68b7a` on a log that never saw
+  it — and the pre-commit hook, correctly comparing the stamp to `MERGE_HEAD`,
+  would have agreed. A 96-line production preset and 15 lines of
+  never-executed tests would have reached main under a green banner. It was
+  caught by comparing HEAD by hand, which is exactly the vigilance a
+  mechanical guard exists to retire. New `scripts/run_gate.py` records
+  `GATE-COMMIT` **before** pytest starts (so a HEAD that moves mid-run leaves
+  the log naming the commit it really tested) plus `GATE-DIRTY`, refuses to
+  start when tracked files are modified, and hardcodes the gate arguments so a
+  quietly weakened gate cannot still print `EXIT: 0`. `check_gate.py` now
+  refuses an unbound log, a log whose sha is not HEAD, and a log recorded on a
+  dirty tree, and stamps `.gate-ok` **from the log** rather than from ambient
+  state. Untracked files are excluded from the dirty check
+  (`--untracked-files=no`) — scratch files are not part of the tested state and
+  must never block a merge. Every gate log written before this change is
+  unbound and therefore refused, deliberately: a log that cannot prove what it
+  tested cannot authorise a merge. Six new tests, the moved-HEAD case
+  break-and-revert proved, and the three cases replayed end-to-end against the
+  real scripts.
+
 - **The narration workbench (narr-04, TASK-wp4.2), 2026-08-15.** DN-9's
   narration layer, built as a workbench rather than a feature: generate the
   narratives for a world, read all forty slates, change the voices, re-run.
