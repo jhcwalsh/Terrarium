@@ -26,6 +26,7 @@ from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
 from ah.play import (
     PRIVATE_ASSETS,
+    START_CASH,
     plan_commitments,
     simulate_play,
     window_contributions_play,
@@ -79,6 +80,14 @@ def post_game_annotations(
     )
     contrib_by_month = dict(zip(attribution.months, attribution.contributions, strict=True))
     quarters = active.quarters
+    # su-app-07: when the session carries a book, the pacing-rule baseline
+    # below has to be the SAME policy basis `simulate_play` just paced off —
+    # the book's own targets and its own cash — or the flinch cost is priced
+    # against a plan the engine never ran.
+    plan_targets: Mapping[str, float] | None = start_targets
+    plan_cash = START_CASH
+    if opening_book is not None:
+        plan_targets, plan_cash = opening_book.effective_targets(), opening_book.cash
 
     notes: list[dict[str, Any]] = []
     for month, action in sorted(decisions.items()):
@@ -101,7 +110,9 @@ def post_game_annotations(
                 if commitment_plan is not None
                 and window is not None
                 and all(window < len(commitment_plan.points[a]) for a in PRIVATE_ASSETS)
-                else plan_commitments(quarters[qw].private_weight_reported, start_targets)
+                else plan_commitments(
+                    quarters[qw].private_weight_reported, plan_targets, cash=plan_cash
+                )
             )
             committed = sum(float(commit_pts.get(a, plan[a])) for a in PRIVATE_ASSETS)
             planned = sum(plan.values())

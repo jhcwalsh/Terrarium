@@ -660,7 +660,11 @@ class TestRationale:
     # concrete, without needing two code versions in one test run.
     # su-app-06: now includes opening_book and commitment_plan (both null for old sessions).
     # task 6: now also includes plan_pace (null for a session with no stored plan).
+    # su-app-07 task 3: now also includes band_report (null unless the session's
+    # book declares ranges AND a quarter has closed). The constant is EXTENDED,
+    # never the `==` loosened: this test's job is to notice a new key.
     _PRE_NARR02_SESSION_KEYS: ClassVar[set[str]] = {
+        "band_report",
         "basis",
         "calls_paid",
         "cash",

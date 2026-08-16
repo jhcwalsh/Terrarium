@@ -157,15 +157,25 @@ def _action_name(action: str | Mapping[str, Any]) -> str:
     return action if isinstance(action, str) else str(action.get("action"))
 
 
-def _policy_private_weight(targets: Mapping[str, float]) -> float:
-    """DN-5 §2.1: the policy private weight is the t0 plan's own share."""
-    return sum(targets[a] for a in PRIVATE_ASSETS) / (sum(targets.values()) + START_CASH)
+def _policy_private_weight(targets: Mapping[str, float], cash: float = START_CASH) -> float:
+    """DN-5 §2.1: the policy private weight is the t0 plan's own share.
+
+    ``cash`` is the institution's own cash allocation, not a constant
+    (su-app-07 Ruling C). ``targets`` sum to ``100 - cash`` once they are a
+    book's own numbers, so hard-coding ``START_CASH`` here would skew the
+    denominator — and therefore the pacing multiplier — for any book that
+    holds cash other than 2.0 points.
+    """
+    return sum(targets[a] for a in PRIVATE_ASSETS) / (sum(targets.values()) + cash)
 
 
 def _pacing_multiplier(
-    w_reported: float, targets: Mapping[str, float], band: tuple[float, float]
+    w_reported: float,
+    targets: Mapping[str, float],
+    band: tuple[float, float],
+    cash: float = START_CASH,
 ) -> float:
-    gap = _policy_private_weight(targets) - w_reported
+    gap = _policy_private_weight(targets, cash) - w_reported
     return min(band[1], max(band[0], 1.0 + PACING_SENSITIVITY * gap))
 
 
@@ -175,14 +185,21 @@ def plan_commitments(
     *,
     pacing_rule: str = "policy",
     pacing_band: tuple[float, float] = PACING_BAND,
+    cash: float = START_CASH,
 ) -> dict[str, float]:
     """The plan's next per-sleeve commitment points at the given reported
-    weight — the server-computed pre-fill for the app's lever (sp-02)."""
+    weight — the server-computed pre-fill for the app's lever (sp-02).
+
+    ``cash`` (su-app-07) is the policy cash allocation the ``targets`` sit
+    beside; pass a book's own ``cash`` whenever ``targets`` came from that
+    book, or the pre-fill and the engine's own multiplier disagree about the
+    same number.
+    """
     t = dict(targets) if targets is not None else dict(START_TARGETS)
     m = (
         1.0
         if pacing_rule == "fixed"
-        else _pacing_multiplier(private_weight_reported, t, pacing_band)
+        else _pacing_multiplier(private_weight_reported, t, pacing_band, cash)
     )
     return {a: t[a] * _ANNUAL_COMMITMENT_RATE * m for a in PRIVATE_ASSETS}
 
@@ -203,6 +220,13 @@ def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningB
             a: [c.to_document() for c in _seed_ladder(base, a, float(t[a]))] for a in PRIVATE_ASSETS
         },
         cash=START_CASH,
+        # su-app-07 Ruling D: the entry screen pre-fills its target inputs
+        # from this default and posts them back untouched by default. If the
+        # served default carried `targets=None`, an untouched pre-fill would
+        # digest differently from what was served, and `serve.py` would
+        # demote it to practice-only. `ranges` stays unset — no default bands
+        # are declared yet.
+        targets=dict(t),
     )
 
 
@@ -602,6 +626,14 @@ def simulate_play(
     entered one — liquid values, cash and every private rung. ``None`` is the
     derived path and is bit-identical to the behaviour before this parameter
     existed.
+
+    su-app-07: a book also carries the institution's POLICY targets, which
+    are a different number from the values it opens at. When one is given it
+    OVERRIDES ``start_targets`` for both the pacing plan and the commitment
+    cap — the book is the institution, and a world default cannot describe
+    an institution the analyst entered. A book with no entered targets paces
+    against its own opening values, which for the derived default book are
+    ``START_TARGETS`` exactly.
     """
     if pacing_rule not in ("policy", "fixed"):
         raise ValueError(f"pacing_rule must be 'policy' or 'fixed', got {pacing_rule!r}")
@@ -612,15 +644,26 @@ def simulate_play(
     # (generated worlds drop reits per OD-3); targets default to the toy book
     liquid = tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
-    # su-app-06 (I1): the lever's declared bound is measured against the
-    # ENTERED book's own per-sleeve NAV when there is one — the same basis
-    # `validate_plan` and the service's decision door use, so the three
-    # cannot disagree about the same quantity. `opening_book=None` reads
-    # `targets` exactly as it always did. The PACING rule below is untouched
-    # and still paces off `targets`: this is the bound, not the plan.
-    _validate_commit_decisions(
-        decisions, targets if opening_book is None else opening_book.target_nav()
-    )
+    cash_policy = START_CASH
+    # su-app-07: a book carries its own POLICY targets, which are a different
+    # number from the values it opens at. They are resolved HERE rather than
+    # in `ah.serve`, because `start_targets` and `opening_book` are
+    # independent parameters threaded separately through `ah.cioview`,
+    # `ah.annotations` and `window_contributions_play` — resolving at the
+    # service would leave those surfaces pacing off the world default while
+    # holding a book. `effective_targets()` is the single definition of the
+    # fallback (entered targets, else the book's own opening values), so this
+    # is a re-point, not a second rule.
+    if opening_book is not None:
+        targets = opening_book.effective_targets()
+        cash_policy = opening_book.cash
+    # su-app-06 (I1), re-based by su-app-07: the lever's declared bound is
+    # measured against the POLICY targets — the same basis `validate_plan`
+    # and the service's decision door use, so the three cannot disagree about
+    # the same quantity, and the same basis the pacing rule below reads. One
+    # number, one meaning. `opening_book=None` reads `targets` exactly as it
+    # always did.
+    _validate_commit_decisions(decisions, targets)
     portfolio, cohorts = _build_portfolio(policy, targets, liquid, opening_book)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
@@ -694,7 +737,7 @@ def simulate_play(
         if q > 0 and q % _COMMITMENT_QUARTERS == 0:
             if pacing_rule == "policy":
                 multiplier = _pacing_multiplier(
-                    portfolio.private_weight_reported(), targets, pacing_band
+                    portfolio.private_weight_reported(), targets, pacing_band, cash_policy
                 )
             else:
                 multiplier = 1.0

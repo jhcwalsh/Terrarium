@@ -6,11 +6,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from ah.cioview import _frozen_paths, build_cio_view, validate_cio_view
 from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
-from ah.play import PRIVATE_ASSETS, simulate_play
+from ah.play import (
+    PRIVATE_ASSETS,
+    START_CASH,
+    START_TARGETS,
+    default_opening_book,
+    simulate_play,
+)
+from ah.port.book import OpeningBook
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -194,6 +203,7 @@ def _view(
     fq: int = 4,
     preset: str = "stagflation",
     prehistory: bool = True,
+    book: OpeningBook | None = None,
 ):
     return build_cio_view(
         _paths(preset),
@@ -208,7 +218,69 @@ def _view(
         revealed_months=revealed,
         forecast_quarters=fq,
         prehistory=prehistory,
+        opening_book=book,
     )
+
+
+def test_target_pct_follows_the_entered_books_policy_targets():
+    """su-app-07 Ruling G. Since task 2 the engine paces and caps off the
+    book's ``effective_targets()``. A dashboard whose ``targetPct`` still read
+    the world default would state a policy the institution is not running —
+    su-app-06's worst defect class (displayed one thing, applied another),
+    reappearing on the CIO surface.
+
+    Values are left exactly as the derived book has them; only the AIM moves,
+    so nothing but the target basis can explain a change here."""
+    book = default_opening_book(START_TARGETS)
+    tilted = book.model_copy(deep=True)
+    tilted.targets = {**START_TARGETS, "equity": 23.0, "pe": 30.0}
+    assert tilted.liquid == book.liquid and tilted.private == book.private
+
+    default_classes = {c["id"]: c for c in _view()["allocation"]["classes"]}
+    assert default_classes["pe"]["targetPct"] == pytest.approx(20.0)
+    assert default_classes["equity"]["targetPct"] == pytest.approx(33.0)
+
+    v = _view(book=tilted)
+    classes = {c["id"]: c for c in v["allocation"]["classes"]}
+    assert classes["pe"]["targetPct"] == pytest.approx(30.0)
+    assert classes["equity"]["targetPct"] == pytest.approx(23.0)
+    assert validate_cio_view(v) == []
+
+
+def test_the_target_cash_addend_follows_the_entered_books_cash():
+    """The denominator is ``sum(targets) + cash`` (Ruling C), so the cash
+    addend has to travel with the targets: a book holding 5 points of cash
+    normalised against ``START_CASH``'s 2.0 would print percentages that sum
+    past 100."""
+    book = default_opening_book(START_TARGETS)
+    heavy = book.model_copy(deep=True)
+    heavy.liquid = {**book.liquid, "equity": book.liquid["equity"] - 3.0}
+    heavy.cash = book.cash + 3.0
+    heavy.targets = {**START_TARGETS, "equity": START_TARGETS["equity"] - 3.0}
+
+    v = _view(book=heavy)
+    classes = {c["id"]: c for c in v["allocation"]["classes"]}
+    assert classes["cash"]["targetPct"] == pytest.approx(5.0)
+    assert sum(c["targetPct"] for c in v["allocation"]["classes"]) == pytest.approx(100.0)
+    assert validate_cio_view(v) == []
+
+
+def test_a_book_with_no_entered_targets_still_targets_its_own_values():
+    """``effective_targets()``'s fallback reaches the dashboard too: a 0.1-era
+    book (``targets=None``) aims at the allocation it opened holding, which is
+    exactly what ``simulate_play`` paces against for it."""
+    book = default_opening_book(START_TARGETS)
+    untargeted = book.model_copy(deep=True)
+    untargeted.targets = None
+    untargeted.liquid = {
+        **book.liquid,
+        "equity": book.liquid["equity"] - 4.0,
+        "bonds": book.liquid["bonds"] + 4.0,
+    }
+
+    classes = {c["id"]: c for c in _view(book=untargeted)["allocation"]["classes"]}
+    assert classes["equity"]["targetPct"] == pytest.approx(29.0)
+    assert classes["bonds"]["targetPct"] == pytest.approx(16.0)
 
 
 def test_view_validates_clean_on_both_planes():
@@ -457,7 +529,10 @@ def test_allocation_guards_zero_total_instead_of_raising():
     active = PlayResult(
         quarters=[zeroed], final_value=0.0, forced_sale_quarters=0, total_forced_sales=0.0
     )
-    alloc = _allocation(active, {"equity": 0.0}, "true", 1, {})
+    # su-app-07 Ruling G added `cash_target` between `targets` and `plane`:
+    # the policy cash the targets are normalised against. START_CASH here
+    # keeps this test on exactly the basis it always ran on.
+    alloc = _allocation(active, {"equity": 0.0}, START_CASH, "true", 1, {})
     equity = next(c for c in alloc["classes"] if c["id"] == "equity")
     assert equity["currentPct"] is None
 

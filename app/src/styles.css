@@ -421,6 +421,94 @@ button.t {
   color: var(--jade);
 }
 
+/* policy bands (su-app-07 task 4b) --------------------------------------
+   A strip of one small cell per banded sleeve, directly under the stat
+   rail. The panel is a `.vitrine > section`, so its padding and bottom
+   rule come from the layout-band rule further down; only the cells are
+   styled here. Colour comes from the served AlertLevel and nothing else —
+   the app never judges a band (DN-3 W5). */
+.band-panel .eyebrow {
+  margin-bottom: 8px;
+}
+
+.band-cells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.band-cell {
+  flex: 1 1 190px;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-left: 3px solid var(--dim);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.band-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.band-name {
+  font-size: 14px;
+  color: var(--ice);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.band-badge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.band-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.band-weight {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 19px;
+}
+
+.band-range {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.band-cell.alert-watch {
+  border-left-color: var(--brass);
+}
+
+.band-cell.alert-watch .band-badge,
+.band-cell.alert-watch .band-weight {
+  color: var(--brass);
+}
+
+.band-cell.alert-breach {
+  border-left-color: var(--clay);
+  background: #2a1a18;
+}
+
+.band-cell.alert-breach .band-badge,
+.band-cell.alert-breach .band-weight {
+  color: var(--clay);
+}
+
 /* main grid: asset classes left, the wire (and the decision) right */
 .vgrid {
   flex: 1;
@@ -1435,12 +1523,114 @@ button.commit {
 }
 
 .book-liquid {
-  flex-wrap: wrap;
-  flex-direction: row;
+  flex-direction: column;
 }
 
-.book-liquid .setup-row {
-  min-width: 140px;
+/* -- su-app-07: values, policy targets and reporting bands side by side ---- */
+.policy-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 1fr) 88px 88px minmax(64px, 78px) minmax(52px, 66px)
+    76px 76px;
+  gap: 6px 10px;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.policy-head,
+.policy-row {
+  display: contents;
+}
+
+.policy-head > span {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.policy-head > span:first-child {
+  text-align: left;
+}
+
+.policy-name {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+}
+
+.policy-wt,
+.policy-drift {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.policy-wt {
+  color: var(--dim);
+}
+
+/* drift only earns colour when there IS drift — a book sitting on its policy
+   should look quiet. */
+.policy-drift {
+  color: var(--clay);
+}
+
+.policy-drift.flat {
+  color: var(--dim);
+  opacity: 0.65;
+}
+
+/* the grid owns the column widths; the shared 88px input rule would overflow
+   the two narrower band columns. */
+.policy-grid input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.policy-band::placeholder {
+  color: var(--dim);
+  opacity: 0.55;
+}
+
+.policy-residual {
+  grid-column: 3 / -1;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* the same three readouts for a private sleeve, which has one target and one
+   band for the whole ladder rather than a row per rung. */
+.policy-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 14px;
+  margin: 0 0 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--hair);
+  border-radius: 8px;
+}
+
+.policy-strip .pcell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.policy-strip .pk {
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.policy-strip .pband-inputs {
+  display: flex;
+  gap: 6px;
 }
 
 .book-liquid input,
