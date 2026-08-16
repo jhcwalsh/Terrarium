@@ -2,6 +2,8 @@
 
 Sealed thresholds: `docs/superpowers/specs/spine02-prereg.json` (commit `d8d506c`). World: `src/ah/presets/spine_pilot.json` (`00000000-0000-4000-9000-000000000802`, "The Hard Landing"). Sensitivity seeds: [199002, 1199005, 2199008, 3199011, 4199014]. `n_paths=20` per seed. B1/B5/B6 are the v2 (Task-11-respecified) bars; B2/B4 are round one's bars, judged by the SAME frozen code (`test_v1_judges_are_frozen`).
 
+**Post-measurement note (2026-08-16):** the verdict-integrity review found the sealed B1 v2 and B6 v2 verdicts below to be computationally CERTIFIED but MISLEADING as characterized in this document's original framing. The sealed verdict VALUES (PASS/FAIL, as tabulated) are unchanged and are not reopened by the review. What changed is the *reading* the owner should attach to those values -- see "Post-measurement characterization corrections (verdict-integrity review, 2026-08-16)" below, which supersedes the framing in "What changed and why" and in any summary read of the table immediately below.
+
 ## Verdict summary (round two)
 
 | seed | B1 v2 | B2 | B4 | B5 v2 | B6 v2 |
@@ -212,6 +214,63 @@ Two wiring fixes separate this round's numbers from round one's, both landed und
 1. **The attempt stride was decoupled from the platform's per-path stride.** Round one's `sample_spine` advanced its climate/regimes/inflnoise attempt streams by `SEED_STRIDE` (7919) -- the SAME constant the platform uses for its own per-path ensemble seeding (`base_seed + 7919*k`, CLAUDE.md). Whenever one call's accepted attempt index landed exactly `7919*k` away from another call's base seed, the two calls' climate/regimes/inflnoise draws collided and produced BIT-IDENTICAL spines from that attempt onward (final-review finding F3). This silently collapsed the macro-storyline diversity behind an entire seed ladder to a handful of distinct spines -- round one's own B3 section measured 2/20 on the `199002 + 7919*k` ladder. `ATTEMPT_STRIDE` (a large prime, coprime to 7919) replaces `SEED_STRIDE` for the attempt loop, so no attempt index in the budget can realign two calls' streams. Re-measured above: the same ladder now reads **20/20**.
 2. **`pi_actual` (fitted CPI observation noise) now feeds the policy anchor.** Round one's Taylor anchor responded only to `pi_star`, the slow-moving trend component -- the transitory inflation surprise a real policy reaction function actually chases structurally never reached it. B1 v1 therefore tested the anchor's response to `pi_star - mu_pi` at a 3..12-month lag and failed on every seed (0.10-0.15 of decades passing against a 0.90 bar). spine-02 wires `pi_actual = pi_star + eps` into `policy_anchor`, so the anchor CAN respond same-month; B1 v2 tests the response to `pi_actual - pi_star` at the model's own 0..2-month contemporaneous lag -- the window the round-one construct structurally excluded. B6 v2's quantile-matched tightness threshold (Task 11) is a separate, independently-motivated respec (matching the panel's own curve-inversion base rate per decade rather than a fixed `policy_gap > 0` cut) and does not depend on either wiring fix above.
 
+## Post-measurement characterization corrections (verdict-integrity review, 2026-08-16)
+
+Round two's computation was CERTIFIED exact by the verdict-integrity review: every number tabulated above is reproducible from the sealed judges and the tree they were run against. The review's finding is narrower and different in kind -- two of the five sealed characterizations above (B1 v2, B6 v2) describe what their verdicts *mean* in a way the review found misleading. **No verdict value above changes.** What follows is the corrected characterization, attributed to the review, superseding the reading given in "What changed and why" and in the summary tables above for B1 v2 and B6 v2. B5 v2 and B3 are also addressed below for completeness, at the review's finding.
+
+### B1 v2 -- verdict stands (FAIL), but it is UNINFORMATIVE about the model
+
+The sealed B1 v2 verdict is FAIL on all five seeds and ALL. That value is correct and unchanged. But the review found the B1 v2 judge, as specified, carries **zero information about the model's reaction function** -- the FAIL is a property of the judge's construct, not of the model:
+
+- The judge correlates *differenced* policy against the *undifferenced* surprise level. The covariance this construct measures is `cov = -phi * sigma^2` -- negative in the response strength `phi`, not positive -- so a model with a *stronger* correctly-signed reaction function scores *worse* on this judge, not better.
+- The reaction term's share of variance in the judge's statistic is 0.001 -- three orders of magnitude below anything a 0.90 pass bar could resolve.
+- A parameter sweep confirms the pass fraction **decreases monotonically in `phi`**: a model with NO reaction function at all (`phi = 0`) scores the *best* achievable value on this judge, ~0.47 -- itself well short of the 0.90 bar. The 0.90 bar is unreachable by any model measured through this anchor, including a perfect one.
+- Task-10's own test (independent of B1 v2) measured the construct the review considers correct -- the residualized policy *level* against the surprise, not the differenced series -- and found the reaction function is live and correctly signed: recovered `phi_pi` in `[0.417, 0.852]`, positive on all 20 decades.
+
+**Logged for a B1 v3 judge:** (1) the construct defect -- correlate `d(policy)` with `d(eps)` (both differenced), or use the residualized-level statistic Task-10 already validates, not differenced-policy-vs-level; (2) a Task-10/Task-11 inconsistency -- Task-10 built and verified a *contemporaneous* (same-month) response, but B1 v2 as specified rewards a *next-month* response, which is not the window the model was built to satisfy.
+
+**Reading for the owner:** B1 v2's FAIL is not evidence the model lacks a reaction function -- Task-10 shows it has one, live and correctly signed. B1 v2 as specified cannot distinguish a working reaction function from none at all. Treat B1 v2 as uninformative pending a v3 judge; do not read its FAIL as a defect finding.
+
+### B6 v2 -- verdict stands (FAIL), but the comparison mixed outcome events
+
+The sealed B6 v2 verdict is FAIL on all five seeds and ALL. That value is correct and unchanged. The review found the comparison underneath it mixes two different definitions of "onset":
+
+- The sealed panel anchor (`panel_conditional_onset_rate` / `panel_unconditional_onset_rate` in `spine02-prereg.json`) counts **CRI-only** onsets.
+- The judge, as run against the spine, counts **REC+CRI** onsets.
+- Under EITHER definition applied self-consistently on both sides, the magnitude check PASSES: relative error 0.173 comparing REC+CRI to REC+CRI, and 0.334 comparing CRI-only to CRI-only -- both inside the sealed `rel_tolerance` of 0.5. The FAIL comes entirely from comparing one side's REC+CRI rate to the other side's CRI-only rate.
+- The sign condition as written is vacuous: it compares the spine's conditional rate against the panel's *unconditional* rate, which is not the comparison a transmission check needs -- it will pass whenever the spine has any onsets at all, regardless of whether tightness is doing any conditioning work.
+
+**The defensible finding, once the outcome-event definitions are matched:** transmission is present but weak. Conditioning on a tight month lifts the 12-month onset odds by **1.14x** in the spine, versus **2.37x** in the panel, on matched outcome codes. The spine's policy-to-onset channel exists and points the right direction, but it is materially weaker than the historical panel's.
+
+**Logged for a B6 v3 judge:** the outcome-event match defect -- pin both sides of the comparison to the same onset-code definition (CRI-only, matching the sealed anchor, or REC+CRI consistently on both sides) before computing rel_error, and replace the vacuous sign check with a comparison against the panel's *conditional* rate.
+
+**Reading for the owner:** B6 v2's FAIL is an artifact of comparing mismatched outcome definitions, not evidence transmission is absent. The self-consistent reading -- weak but present transmission (1.14x vs panel's 2.37x) -- is the actionable finding.
+
+### B5 v2 -- verdict stands (FAIL, one seed), reads as a weak coherent signal, not noise
+
+Sealed B5 v2 fails on seed 2199008 alone (z=2.49); by the AND-across-seeds conjunction rule, one seed's FAIL fails the ALL row too. Both values are unchanged. The review's finding concerns how to read them:
+
+- Seed 2199008's individual FAIL (z=2.49) is, on its own, compatible with noise: the probability of at least 1 of 5 independent seeds failing at this threshold under the null is ~0.19 -- not a rare event by itself.
+- BUT pooling all five seeds shows they are **collectively over-expected**: pooled excess +16.9%, z=2.41, p=0.016. This is an upper-bound reading -- the aggregate-binomial-normal-approximation variance model used for B5 v2 ignores onset clustering, so the true p-value is at least this large, not smaller.
+- Read together, this is **a weak but coherent over-firing signal** across seeds, not an isolated noisy seed. The single-seed FAIL should not be dismissed as noise-compatible in isolation; it is one instance of a signal that shows up pooled as well.
+
+**Reading for the owner:** B5 v2's FAIL is not a false alarm from one unlucky seed. Treat it as a weak, cross-seed-corroborated over-firing signal worth carrying forward, even though no single seed's deviation would individually clear significance.
+
+### B3 -- verdict unaffected; the depth check's margin is recorded
+
+B3 PASSes on both sealed bars: (a) coverage monotone across the grid, and (b) breach seeds at the 55-point arm (2/20 >= 1). This verdict is unaffected by the review. Per round one's own split, the supplementary (c) hold-course depth check remains explicitly outside the sealed b3 bars (constructed post-seal, disclosed, not judged). Its value, -0.3809, clears the declared band edge (-0.3750) by only 0.59 percentage points -- inside the band, but marginally so. This margin is recorded here for the owner's attention; it does not change the PASS verdict on the sealed bars, which do not include the depth check.
+
+### Summary: what the owner can act on
+
+After these corrections, the verdicts the owner can act on directly are:
+
+- **B2 FAIL and B4 FAIL** -- frozen v1 judges, unchanged code both rounds, no characterization issue found: true model residue.
+- **B3 PASS** -- sealed bars (a) monotone and (b) breach 2/20; severity now binds with real spine diversity (post stride-fix), not the round-one 2/20-spine collision.
+- **B6's defensible reading is "weak transmission"** -- 1.14x in the spine vs 2.37x in the panel on matched outcome codes, not the sealed FAIL's face-value "no transmission."
+- **B5's weak, cross-seed over-firing signal** -- pooled +16.9%, z=2.41, p=0.016, not a single noisy seed.
+- **B1 v2 is uninformative pending a v3 judge** -- its FAIL says nothing about whether the model has a working reaction function; Task-10 already shows it does.
+
+Stated plainly: the owner should not read this round's raw PASS/FAIL table at face value for B1 v2 or B6 v2. B2 and B4 are the clean apples-to-apples FAILs. B3 is a clean PASS. B5 and B6 carry real, weak, directional findings once read correctly -- not the blunt FAIL the table shows in isolation.
 
 ## B3 -- the over-commitment grid under spine worlds, re-run (Task 13)
 
