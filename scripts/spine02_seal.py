@@ -25,9 +25,11 @@ Writes docs/superpowers/specs/spine02-prereg.json:
   coverage, disclosed in round-one's ``b6.base_rate_disclosure``) rather than
   hand-typed.
 - ``sensitivity_seeds``: carried verbatim from the round-one seal.
-- ``round_one_record``: pointers back to the round-one seal file, its sealed
-  commit, and its verdicts document, so this JSON is self-locating without
-  forcing a reader back through git log.
+- ``round_one_record``: pointers back to the round-one seal file, its two
+  distinct commits (the pre-registration commit and the measured-state
+  commit -- see ``ROUND_ONE_PREREG_COMMIT``/``ROUND_ONE_MEASURED_STATE_COMMIT``
+  below for why they differ), and its verdicts document, so this JSON is
+  self-locating without forcing a reader back through git log.
 - ``hashes``: over the CURRENT working tree. Unlike round-one's seal (which
   bound files as they stood AT its own sealed commit -- spine-02 has been
   editing this tree freely since Task 10, under its own authority, up to this
@@ -54,9 +56,16 @@ _REPO_ROOT = Path(__file__).resolve().parents[1]
 ROUND_ONE_PATH = _REPO_ROOT / "docs" / "superpowers" / "specs" / "spine-pilot-prereg.json"
 OUT_PATH = _REPO_ROOT / "docs" / "superpowers" / "specs" / "spine02-prereg.json"
 
-#: Round-one's own sealed commit (docs/superpowers/specs/spine-pilot-prereg.json,
-#: sealed_at_utc's "as of HEAD commit" note) and its verdicts document.
-ROUND_ONE_SEALED_COMMIT = "233b70d30157e2e06e80e447f410c03afc5d1f68"
+#: Round one has TWO commits that matter, and they are not the same thing:
+#: the pre-registration itself (the seal commit b97450a, completed by the
+#: amendment commit c9bd036 -- see spine-pilot-prereg.json's own
+#: sealed_at_utc "as of HEAD commit" note) versus the tree state the
+#: round-one GATE actually certified and later measured against (233b70d,
+#: spine-01's post-measurement gated tip). Sealing only one of the two under
+#: a single generic "sealed_commit" key erases that distinction; both are
+#: recorded here under names that say which is which.
+ROUND_ONE_PREREG_COMMIT = "c9bd03621424becf24dcb603ac7ef725ff9a53ab"
+ROUND_ONE_MEASURED_STATE_COMMIT = "233b70d30157e2e06e80e447f410c03afc5d1f68"
 ROUND_ONE_VERDICTS_PATH = "docs/superpowers/specs/2026-08-15-spine-pilot-results.md"
 
 
@@ -124,7 +133,8 @@ def main() -> None:
         "sensitivity_seeds": round_one["sensitivity_seeds"],
         "round_one_record": {
             "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
-            "sealed_commit": ROUND_ONE_SEALED_COMMIT,
+            "prereg_commit": ROUND_ONE_PREREG_COMMIT,
+            "measured_state_commit": ROUND_ONE_MEASURED_STATE_COMMIT,
             "verdicts": ROUND_ONE_VERDICTS_PATH,
         },
         "hashes": {rel: _sha256(p) for rel, p in hashed_paths.items()},

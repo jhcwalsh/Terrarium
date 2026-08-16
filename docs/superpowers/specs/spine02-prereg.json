@@ -65,7 +65,7 @@
     "rel_tolerance": 0.5
   },
   "hashes": {
-    "scripts/spine02_seal.py": "d48136722326829795dde0430787142ff3fc14fdc3cd8b1841c985ceaea9fc48",
+    "scripts/spine02_seal.py": "14b5ce414598edad50e5e94e9d2dd6156b4700dd8971b76d230f4b0c8ab82cbe",
     "scripts/spine_pilot_b3.py": "4ead157e2ea88e5505fd228f6636056361d9e5cde91ee2474797fbff46507e97",
     "scripts/spine_pilot_report.py": "a78411fe2c3a288c6ac773964ee7133b5a9fb6ce15d77b54f143b48d3ae4d8a8",
     "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
@@ -77,11 +77,12 @@
     "src/ah/presets/spine_pilot.json": "773be668b14496a02cc67c55c4327a87df1c05e274159ccc2a1917916783a196"
   },
   "round_one_record": {
+    "measured_state_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+    "prereg_commit": "c9bd03621424becf24dcb603ac7ef725ff9a53ab",
     "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
-    "sealed_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
     "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md"
   },
-  "sealed_at_utc": "2026-08-16T12:34:12-07:00 (as of HEAD commit b3eeefac63401a44e430b2b7b5a750f906a1761a)",
+  "sealed_at_utc": "2026-08-16T12:46:04-07:00 (as of HEAD commit fef995ff8ebcc8eea76c6b6c08aa991a18bda967)",
   "sensitivity_seeds": [
     199002,
     1199005,

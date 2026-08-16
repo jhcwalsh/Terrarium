@@ -1170,6 +1170,7 @@ def test_spine02_thresholds_are_pinned_by_literals():
 
     assert sealed["round_one_record"] == {
         "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
-        "sealed_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+        "prereg_commit": "c9bd03621424becf24dcb603ac7ef725ff9a53ab",
+        "measured_state_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
         "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md",
     }
