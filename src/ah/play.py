@@ -612,7 +612,15 @@ def simulate_play(
     # (generated worlds drop reits per OD-3); targets default to the toy book
     liquid = tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
-    _validate_commit_decisions(decisions, targets)
+    # su-app-06 (I1): the lever's declared bound is measured against the
+    # ENTERED book's own per-sleeve NAV when there is one — the same basis
+    # `validate_plan` and the service's decision door use, so the three
+    # cannot disagree about the same quantity. `opening_book=None` reads
+    # `targets` exactly as it always did. The PACING rule below is untouched
+    # and still paces off `targets`: this is the bound, not the plan.
+    _validate_commit_decisions(
+        decisions, targets if opening_book is None else opening_book.target_nav()
+    )
     portfolio, cohorts = _build_portfolio(policy, targets, liquid, opening_book)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")

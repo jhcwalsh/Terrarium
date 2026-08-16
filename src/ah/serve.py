@@ -121,13 +121,38 @@ def _world_book(
     return default_opening_book(targets), plan, liquid
 
 
-def _plan_targets(book: OpeningBook) -> dict[str, float]:
-    """The per-sleeve target NAV a plan's cap is measured against — for an
-    entered book that is the sleeve's own opening NAV, not START_TARGETS."""
-    return {
-        sleeve: sum(float(r["value"]["nav_true"]) for r in rungs)
-        for sleeve, rungs in book.private.items()
-    }
+def _window_ordinal(months: int, month: int) -> int | None:
+    """The plan index a DECISION MONTH names, or None if it names no window.
+
+    ``CommitmentPlan`` carries one entry per decision window (spec section 3):
+    index ``k`` is the k-th window and drives the engine's vintage year
+    ``k + 1``. ``decision_months`` is the one definition of that ordering, so
+    the index is read off it rather than re-derived from arithmetic.
+    """
+    windows = decision_months(months)
+    return windows.index(month) if month in windows else None
+
+
+def _plan_window(doc: dict[str, Any], entries: int) -> int:
+    """The plan index the lever is PRE-FILLING for: the next undecided window.
+
+    Deliberately not derived from the reveal pointer's quarter. The old
+    ``(quarter + 1) // 4`` was only correct when the pointer sat exactly on
+    the window's own month; ``record_decision`` refuses a window until
+    ``revealed_months >= month + 1`` and ``Play.tsx`` opens the lever on
+    exactly that state, so at window 0 the real pointer is month 12, the last
+    closed quarter is 3, and the formula returned 1 — next year's number,
+    beside a commit of this year's. The window ordinal is a property of the
+    window, so it is taken from the window (same source as ``decide()``'s fill
+    below, which uses the decision's own month).
+
+    Clamped to the stored plan's length for a non-decade horizon, and for the
+    fully-decided session that has no next window.
+    """
+    windows = decision_months(doc["months"])
+    undecided = [m for m in windows if str(m) not in doc["decisions"]]
+    index = windows.index(undecided[0]) if undecided else len(windows) - 1
+    return max(0, min(index, entries - 1))
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -297,7 +322,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             plan = body.plan or default_plan_
             try:
                 validate_book(book, liquid_sleeves=liquid)
-                validate_plan(plan, _plan_targets(book))
+                validate_plan(plan, book.target_nav())
             except BookError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             # CommitmentPlan._shape only checks the three sleeves AGREE in
@@ -465,15 +490,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         stored_plan = doc.get("commitment_plan")
         if stored_plan:
             plan = CommitmentPlan.model_validate_json(stored_plan)
-            # Plan index = the DECISION WINDOW ordinal, not a calendar year.
-            # Windows sit at quarters 2, 6, 10, ... (months 11, 23, 35, ...),
-            # each driving the commitment at the next multiple of 4. At those
-            # quarters `(q + 1) // 4` IS the window ordinal — verified: q=2 -> 0,
-            # q=6 -> 1, q=34 -> 8. The clamp guards a non-decade horizon.
-            year = min((here.quarter + 1) // 4, len(next(iter(plan.points.values()))) - 1)
+            window = _plan_window(doc, len(next(iter(plan.points.values()))))
             doc["plan_pace"] = doc["next_plan_commitments"]
             doc["next_plan_commitments"] = {
-                sleeve: round(points[year], 4) for sleeve, points in plan.points.items()
+                sleeve: round(points[window], 4) for sleeve, points in plan.points.items()
             }
             doc["next_plan_basis"] = None  # nothing is being approximated
         # sp-05 (E1's last gaps): the ladder by age and the trailing
@@ -553,7 +573,31 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     @app.post("/sessions/{sid}/decisions")
     def decide(sid: str, body: Decide, conn: sqlite3.Connection = Depends(db)):
         doc = _get(conn, sid)
-        if body.commitments is not None:
+        commitments = body.commitments
+        # su-app-06 section 4.3, and the fix for it: on a PLAN-CARRYING
+        # session an untouched lever commits the plan's number for this
+        # window, exactly. The client sends only the sleeves the player
+        # edited (audit F4), so the sleeves it omits are filled here — on the
+        # authority (DN-3 W5), not in the browser, or a scripted client would
+        # keep the old silent behaviour. Without this the stored plan reached
+        # the display and stopped: `simulate_play` fell through to the policy
+        # pacing rule and committed a number the window never showed.
+        #
+        # The window is identified by the DECISION'S OWN MONTH, not by a
+        # quarter pointer: `body.month` names the window exactly and the
+        # pointer does not (see `_plan_window`). A month that names no window
+        # is left alone — `record_decision` is the one place that refuses it.
+        stored_plan = doc.get("commitment_plan")
+        if stored_plan:
+            plan = CommitmentPlan.model_validate_json(stored_plan)
+            window = _window_ordinal(doc["months"], body.month)
+            if window is not None:
+                filled = dict(commitments or {})
+                for sleeve, points in plan.points.items():
+                    if sleeve not in filled and window < len(points):
+                        filled[sleeve] = float(points[window])
+                commitments = filled
+        if commitments is not None:
             # sp-02: the lever's bounds are checked HERE, against the world's
             # own targets — a bad commit is a 422 at the door, never a 500
             # inside the simulator.
@@ -567,8 +611,19 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 from ah.port.adapter import GEN_START_TARGETS
 
                 targets = GEN_START_TARGETS
+            # su-app-06 (I1): `validate_plan` caps a plan entry against the
+            # ENTERED book's own per-sleeve NAV (`OpeningBook.target_nav`), so
+            # an analyst holding 30 points of pe may legally store 10.8 for a
+            # window. Capping the same quantity here against START_TARGETS
+            # would have the server refuse a number it filled in itself. The
+            # book is the institution, so on a book-carrying session the cap
+            # is measured against the book — the bound is re-based, never
+            # removed, and sessions with no book are untouched.
+            entered = _stored_opening_book(doc)
+            if entered is not None:
+                targets = entered.target_nav()
             try:
-                validate_commitments(body.commitments, targets)
+                validate_commitments(commitments, targets)
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
         # narr-02: pass the already-validated rationale through as a plain
@@ -588,7 +643,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                     month=body.month,
                     action=body.action,
                     client_log=body.client_log,
-                    commitments=body.commitments,
+                    commitments=commitments,
                     rationale=rationale,
                 ),
             )

@@ -103,6 +103,23 @@ class OpeningBook(BaseModel):
         """The sleeve's rungs as runtime cohorts, re-validated on the way in."""
         return [ClosedEndCohort.from_document(doc) for doc in self.private[sleeve]]
 
+    def target_nav(self) -> dict[str, float]:
+        """Per-sleeve opening private NAV.
+
+        This is the basis a commitment cap is measured against once an
+        analyst has entered a book (su-app-06 I1): the book IS the
+        institution, so ``2 x target x _ANNUAL_COMMITMENT_RATE`` has to be
+        measured against the sleeve the analyst actually holds, not against
+        ``START_TARGETS``. All three enforcement points — ``validate_plan``
+        at kickoff, the decision door in ``ah.serve``, and
+        ``simulate_play``'s own check — read the cap from here, so a plan
+        legal at kickoff cannot be refused at the window it is committed in.
+        """
+        return {
+            sleeve: sum(float(rung["value"]["nav_true"]) for rung in rungs)
+            for sleeve, rungs in self.private.items()
+        }
+
     def private_nav(self) -> float:
         return sum(
             float(rung["value"]["nav_true"]) for rungs in self.private.values() for rung in rungs
