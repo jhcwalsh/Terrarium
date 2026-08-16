@@ -18,6 +18,7 @@ from ah.core.worldspec import (
     FactorConditions,
     Horizon,
     Regimes,
+    SpineSpec,
     StressSpec,
     Structural,
     WorldSpec,
@@ -40,6 +41,7 @@ class NumericWorld:
     structural: Structural
     engine_defaults: EngineDefaults
     stress: StressSpec | None = None
+    spine: SpineSpec | None = None
 
 
 def _stress_of(world: WorldSpec) -> StressSpec | None:
@@ -54,6 +56,13 @@ def _stress_of(world: WorldSpec) -> StressSpec | None:
     return None if raw is None else StressSpec.model_validate(raw)
 
 
+def _spine_of(world: WorldSpec) -> SpineSpec | None:
+    """Only `x_spine` is projected — same narrowness argument as `_stress_of`."""
+    ext = world.extensions or {}
+    raw = ext.get("x_spine")
+    return None if raw is None else SpineSpec.model_validate(raw)
+
+
 def project_numeric(world: WorldSpec) -> NumericWorld:
     """Project a validated WorldSpec down to its engine-visible fields."""
     return NumericWorld(
@@ -65,4 +74,5 @@ def project_numeric(world: WorldSpec) -> NumericWorld:
         structural=world.structural,
         engine_defaults=world.engine_defaults,
         stress=_stress_of(world),
+        spine=_spine_of(world),
     )

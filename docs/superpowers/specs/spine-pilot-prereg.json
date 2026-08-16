@@ -1,0 +1,94 @@
+{
+  "b1": {
+    "lag_months": [
+      3,
+      12
+    ],
+    "min_sign_fraction": 0.9
+  },
+  "b2": {
+    "join_yoy_max_pp": 2.5,
+    "p95_ratio_max": 1.25,
+    "panel_p95_adjacent_yoy_pp": 0.7433911963542538
+  },
+  "b3": {
+    "coverage_must_be_monotone": true,
+    "grid_private_pct": [
+      15,
+      35,
+      40,
+      55
+    ],
+    "min_breach_seeds_at_55": 1,
+    "n_seeds": 20
+  },
+  "b4": {
+    "clockwise_fraction_tolerance": 0.15,
+    "dwell_median_ratio_band": [
+      0.6,
+      1.4
+    ],
+    "panel_clockwise_fraction": 0.6029411764705882,
+    "panel_dwell_medians": [
+      5.0,
+      4.0,
+      9.0,
+      6.0
+    ],
+    "power_disclosure": "stagflation's dwell median rests on 12 spells and the clockwise anchor on 68 transitions (SE ~0.059); tolerances are near the anchors' own sampling noise - a marginal B4 result must be read accordingly; tolerances must NOT be widened after measurement",
+    "quadrants": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ]
+  },
+  "b5": {
+    "era_threshold_pp": 3.351323828920571,
+    "fallback_rate": 0.007874015748031496,
+    "min_cell_months": 24,
+    "numerator_disclosure": "the table rests on 6 panel CRI onsets (1970-01, 1970-04, 1974-03, 2001-06, 2008-09, 2020-03); 1970 is one episode counted as two onsets and expansion's rate rests on the 1970-01 orphan blip; B5 tests the wiring, not the hazard model",
+    "panel_cell_months": [
+      93,
+      57,
+      378,
+      234
+    ],
+    "panel_rates": [
+      0.010752688172043012,
+      0.07017543859649122,
+      0.0,
+      0.004273504273504274
+    ],
+    "rel_tolerance": 0.5,
+    "zero_rate_convention": "a panel rate of exactly 0 passes iff the realized rate is exactly 0; note the recovery cell is tautological (the sampler cannot fire at rate 0), so a PASS there is a plumbing assertion, not evidence about the model"
+  },
+  "b6": {
+    "base_rate_disclosure": "panel conditioning (curve inversion) covers 149/813 months; the spine-side conditioning fraction is unpinned; the Task-7 report MUST print both base rates, and a B6 FAIL with base rates differing by more than 2x is recorded as INCONCLUSIVE (construct mismatch), not a compiler defect",
+    "k_months": 12,
+    "panel_conditional_onset_rate": 0.2214765100671141,
+    "panel_unconditional_onset_rate": 0.07731305449936629,
+    "rel_tolerance": 0.5,
+    "spine_policy_gap_threshold_pp": 0.0
+  },
+  "hashes": {
+    "scripts/spine_pilot_report.py": "d75e831733afd1ad7222dbfa5cf664f79b400077166b1530d6a5e2aef4f0453f",
+    "scripts/spine_pilot_seal.py": "86bee8a5ca13824c71143216943a637391ce8168e27df4c6ffeb8b4cb791e8d1",
+    "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
+    "src/ah/gen/climate/model.py": "0012c817947acdba68c4f2c33ce4f497f2ab6212d734155c59b10282d2077fb7",
+    "src/ah/gen/climate/simulate.py": "3bc091260aa5811dcae00f7bfc53772b49202483702ae344d901bf6380be9edb",
+    "src/ah/gen/regimes/semimarkov.py": "75abc6e3c765d010d497896e013559db4b9bf5a2865d43f02355463ec5bbea1e",
+    "src/ah/gen/spine.py": "5f9a4f1243b9502ce2da6ebf41de57d55940b91c67cb5aeabceeb77f6fadf626",
+    "src/ah/gen/stress.py": "685559d6fa5c3a4c6bc3f7ceb4f22eb1966eca7e8dc7ad7ec08e590ef1c49726",
+    "src/ah/presets/spine_pilot.json": "773be668b14496a02cc67c55c4327a87df1c05e274159ccc2a1917916783a196"
+  },
+  "sealed_at_utc": "2026-08-16T10:18:12-07:00 (as of HEAD commit c9bd03621424becf24dcb603ac7ef725ff9a53ab)",
+  "sensitivity_seeds": [
+    199002,
+    1199005,
+    2199008,
+    3199011,
+    4199014
+  ],
+  "severity_table_disclosure": "the either/both inflation condition equals the quadrant hot bit; discrimination in practice is on credit_gap (owner ruling 2026-08-16: keep for pilot, revisit at D-SP-1)"
+}

@@ -4,6 +4,78 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## spine-01 (2026-08-16)
+
+**The spine-conditioned compiler pilot (PD-2 track).** A second-generation
+stress compiler layered on top of the L1/L2 bootstrap: an `x_spine` contract
+(worldspec + `NumericWorld`) and `ah/gen/spine.py` implementing three layers —
+**S** (premise-accepted L1/L2 spines, with named refusal when no spine
+satisfies the premise), **H** (a per-quadrant correction hazard fit from panel
+CRI onsets, conditioned on the *pre-onset* month rather than the onset month
+itself), and **F** (`SpineBootstrap`: quadrant-conditioned draw pools,
+severity-table selection shifts, era-safe joins, and forced re-entry at the
+panel edge rather than a wraparound). Registration-hook dispatch keeps the
+spine stack out of the judging closure — two boundary tests pin it fail-closed
+(closure exclusion; a subprocess that imports only the judging entry points
+finds no spine factory and refuses loudly rather than sampling unsealed spine
+code). World `802` ("The Hard Landing") is the pilot world. Sealed
+pre-registration at `b97450a`, a pre-measurement amendment at `c9bd036`
+(threshold literals locked, B5 zero-rate convention, B6 base-rate disclosure,
+B4 power disclosure, truthful join precedent, widened seal coverage), and the
+measurements committed verbatim at `b3df5a5` (B1–B6) and `80bdc1f` (B3, the
+over-commitment grid).
+
+**Verdicts as measured**, with certified characterizations:
+
+- **B1 FAIL = CONSTRUCT.** `policy_anchor` is fed `pi_actual = pi_star`, so the
+  gap term is identically 0 and policy tracks the mean-reverting trend 1:1 —
+  the bar is unwinnable as wired. Named repair: feed `pi_actual`, or
+  respecify the bar against a level rather than a gap.
+- **B2 FAIL = SPLIT.** Every join-max violation is one of the 3
+  owner-authorized *unfiltered* forced re-entries; ordinary joins are 0
+  violations out of ~734 — the era filter is airtight. The p95 sub-check is
+  the real coherence finding, failing on 3 seeds, including one with zero
+  re-entries at all.
+- **B3:** (a) coverage monotone in allocation — PASS. (b) breach seeds at the
+  top arm — 0/20 vs sealed `>= 1` — the one clean sealed severity FAIL. (c)
+  hold-course depth −0.3497 vs the post-seal constructed band
+  `[-0.426, -0.375]` — supplementary, disclosed, not a sealed bar.
+- **B4 FAIL = REAL.** Recovery dwell measures 0.28–0.50 against the 0.6
+  floor — the G2 regime-persistence fear, fired again under the spine
+  compiler.
+- **B5 FAIL = NOISE.** The sampler fires at exactly the sealed rate;
+  `P(all 5 seeds pass) ~ 0.008` — the bar is evidentially empty as designed.
+- **B6 INCONCLUSIVE (construct mismatch, per the sealed rule).** Spine base
+  rate 0.66–0.93 vs the panel's 0.183 — the tightness construct has zero
+  inflation content (the same anchor wiring as B1).
+- **FINDING:** world 802 (spine-conditioned) reads milder than world 703
+  (stress compiler, no spine) at every arm of the over-commitment grid —
+  median worst coverage 0.081/0.242/0.301/0.578 vs 0.103/0.309/0.382/0.719.
+- **FINDING (final review, F3):** the B3 ladder carried roughly 2 distinct
+  spines across its 20 seeds, not 20 — the ladder's seed stride collides with
+  the spine sampler's own attempt-retry stride, making consecutive seeds
+  sliding windows on one attempt tape. Disclosed in the results doc; repair
+  deferred to the D-SP decision round, since `spine.py` is under the
+  measurement seal.
+
+**Deviations, with reasons:**
+
+- B6's spine-side threshold is frozen at 0.0 for this pilot.
+- The severity-table inflation condition equals the quadrant hot bit
+  (owner-ruled keep-for-pilot; revisit at D-SP-1).
+- `DEPTH_BAND` (the B3 (c) depth band) was constructed post-seal from
+  on-record numbers — disclosed, not a sealed bar.
+- Forced re-entry at the panel edge replaces the stress compiler's wrap
+  (owner ruling).
+- The block stream offset (350377) departs from the stress compiler's bare
+  seed — a stream-collision fix.
+
+**Recorded, not fixed (seal-frozen):** two comment nits in `spine.py` (a
+conflated `at_risk` comment; an amendment-date off-by-one); duplicated
+era-filter logic between the join path and the re-entry path; a single-row
+pool at `8/recovery@5`. Open owner follow-up: whether world 703's "9 level
+factors" precedent line overstates its join tolerances, same as B2 above.
+
 ## [Unreleased] — Steps 1, 3, 4, 5 and the SU product track
 
 *Section title corrected 2026-08-04: this section opened as the Step 1 data

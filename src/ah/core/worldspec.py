@@ -184,6 +184,48 @@ class StressSpec(_Base):
 
 
 # --------------------------------------------------------------------------- #
+# spine scenarios
+# --------------------------------------------------------------------------- #
+
+
+class SpinePremise(_Base):
+    """The declared storyline a spine must realize (spec section 3.1; D-SP-3)."""
+
+    shock: Literal["supply", "financial"]
+    arrives_quarter: int = Field(ge=1, le=39)  # ge=1: the backdrop needs a window
+    backdrop: Literal["inflation_above_trend", "benign"]
+    recovery: Literal["slow", "normal"]
+
+
+class SpineSeverityRow(_Base):
+    """One row of the state-severity table (spec section 3.4; D-SP-1)."""
+
+    condition: Literal["baseline", "either", "both"]
+    stratum_shift: int = Field(ge=0, le=2)
+    dwell_shift_quarters: int = Field(ge=0, le=2)
+
+
+class SpineSpec(_Base):
+    """A spine-conditioned scenario. Declared ALONGSIDE x_stress: the stress
+    block still carries the baseline segments/functional/join_tolerance; this
+    block adds the premise, the state-severity table and the era join bound."""
+
+    premise: SpinePremise
+    severity_table: list[SpineSeverityRow] = Field(min_length=3, max_length=3)
+    join_yoy_max_pp: float = Field(gt=0.0, le=10.0)
+    precedent: list[str] = Field(min_length=1)
+
+    @model_validator(mode="after")
+    def _table_covers_conditions(self) -> SpineSpec:
+        got = sorted(r.condition for r in self.severity_table)
+        if got != ["baseline", "both", "either"]:
+            raise ValueError(
+                f"severity_table must contain each of baseline, either, both exactly once; got {got}"
+            )
+        return self
+
+
+# --------------------------------------------------------------------------- #
 # horizon / regimes
 # --------------------------------------------------------------------------- #
 
