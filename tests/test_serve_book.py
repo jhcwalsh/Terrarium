@@ -151,3 +151,33 @@ class TestCreateSessionWithABook:
         derived = client.get(f"/sessions/{plain}").json()
 
         assert custom["value"] != derived["value"]
+        # the SAME stored book must go to both simulate_play calls — active
+        # and twin — or alpha stops isolating decisions. `value` alone
+        # cannot see the twin call at all; assert on `twin_value` directly.
+        assert custom["twin_value"] != derived["twin_value"]
+
+    def test_the_served_default_plan_round_trips_without_a_422(self, service):
+        """`_world_book`'s plan and `create_session`'s entry-count check must
+        agree on how many windows this world has — the server's own default
+        must never 422 when it is POSTed straight back."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        r = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": default["book"], "plan": default["plan"]},
+        )
+        assert r.status_code == 201, r.text
+
+    def test_a_plan_with_the_wrong_entry_count_is_422_naming_the_rule(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        plan = default["plan"]
+        for sleeve in plan["points"]:
+            plan["points"][sleeve] = plan["points"][sleeve][:-1]  # drop one window
+        r = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": default["book"], "plan": plan},
+        )
+        assert r.status_code == 422
+        assert "expected" in r.json()["detail"]
+        assert "decision window" in r.json()["detail"]

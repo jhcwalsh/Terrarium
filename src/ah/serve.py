@@ -111,7 +111,14 @@ def _world_book(
 
         targets = dict(GEN_START_TARGETS)
     liquid = tuple(a for a in targets if a not in PRIVATE_ASSETS)
-    return default_opening_book(targets), default_commitment_plan(targets), liquid
+    # the plan carries ONE ENTRY PER DECISION WINDOW, not a fixed ten years —
+    # default_commitment_plan's own docstring names this exact call for a
+    # non-decade horizon. Getting it wrong here means the server's own
+    # default 422s when POSTed straight back (all nine shipped presets are
+    # 40 quarters, so this was previously invisible).
+    months = ws.horizon.quarters * 3
+    plan = default_commitment_plan(targets, windows=len(decision_months(months)))
+    return default_opening_book(targets), plan, liquid
 
 
 def _plan_targets(book: OpeningBook) -> dict[str, float]:
@@ -293,6 +300,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 validate_plan(plan, _plan_targets(book))
             except BookError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
+            # CommitmentPlan._shape only checks the three sleeves AGREE in
+            # length, not what that length should be against THIS world's
+            # horizon — task 6 indexes into this stored plan by window
+            # ordinal, so a wrong count must be refused here, at the boundary.
+            expected = len(decision_months(months))
+            for sleeve, years in plan.points.items():
+                if len(years) != expected:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"plan {sleeve} has {len(years)} entries, expected {expected} "
+                            "(one per decision window)"
+                        ),
+                    )
             # section 2: a custom book is PRACTICE ONLY. Enforced here, on the
             # authority, not in the app.
             if book.digest() != default_book_.digest() or plan.digest() != default_plan_.digest():
