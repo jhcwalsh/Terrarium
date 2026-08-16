@@ -154,6 +154,26 @@ def test_the_hook_exists_and_guards_main_merges():
 # three days of a grep-based test reporting green.
 
 
+def test_the_hooks_are_committed_executable():
+    """Git records the exec bit in the index, and a hook without it is
+    SILENTLY skipped on Linux and macOS - the same guard-never-fires bug in a
+    fresh clone. Windows ignores the bit and runs hooks anyway, which is why
+    this could not be caught by using the repo here. Both hooks were committed
+    100644 until housekeeping-03 noticed.
+    """
+    out = subprocess.run(
+        ["git", "ls-files", "-s", "githooks/"],
+        cwd=_ROOT,
+        capture_output=True,
+        text=True,
+        check=True,
+    ).stdout
+    modes = {line.split("\t")[1]: line.split()[0] for line in out.splitlines() if line.strip()}
+    assert modes, "no hooks are tracked at all"
+    for path, mode in modes.items():
+        assert mode == "100755", f"{path} is committed {mode}; a non-executable hook never runs"
+
+
 def _scratch_repo(tmp_path: Path) -> Path:
     """A throwaway repo wired to THIS repository's real githooks directory."""
     repo = tmp_path / "repo"
