@@ -31,7 +31,11 @@ from ah.narration.constants import (
     BPS_PER_PP,
     EQUITY_INDEX_BASE,
     L1_STATE_NAMES,
+    MONTHS_PER_QUARTER,
+    MONTHS_PER_YEAR,
     OPTIONAL_SERIES,
+    PERCENT,
+    THOUSANDS_PER_MILLION,
 )
 from ah.narration.errors import MissingSeriesError, NarrationError
 
@@ -85,12 +89,12 @@ def _yoy(level: np.ndarray, window: int, warmup_policy: str) -> tuple[np.ndarray
     decision, not an implementation detail.
     """
     out = np.full(level.shape, np.nan, dtype=np.float64)
-    out[window:] = (level[window:] / level[:-window] - 1.0) * 100.0
+    out[window:] = (level[window:] / level[:-window] - 1.0) * PERCENT
     if warmup_policy == "nan_suppress":
         return out, window
     if warmup_policy == "annualise_available":
         months = np.arange(1, window + 1, dtype=np.float64)
-        out[:window] = ((level[:window] / level[0]) ** (12.0 / months) - 1.0) * 100.0
+        out[:window] = ((level[:window] / level[0]) ** (MONTHS_PER_YEAR / months) - 1.0) * PERCENT
         out[0] = out[1] if window > 1 else 0.0
         return out, 0
     if warmup_policy == "require_extra_history":
@@ -190,17 +194,17 @@ def build_world_series(
     )
     payroll_params = params["payrolls_change"]
     delta_u = np.diff(unemployment, prepend=unemployment[0])
-    payrolls = (
-        float(payroll_params["trend_thousands"])
-        - delta_u * float(payroll_params["labour_force_millions"]) * 10.0
-    )
+    payrolls = float(payroll_params["trend_thousands"]) - delta_u * float(
+        payroll_params["labour_force_millions"]
+    ) * (THOUSANDS_PER_MILLION / PERCENT)
 
     growth_transform = str(params["growth_print"]["transform"])
     if growth_transform == "identity":
         growth_print = growth.copy()
     elif growth_transform == "annualised_qoq":
         growth_print = np.full_like(growth, np.nan)
-        growth_print[3:] = growth[3:] - growth[:-3]
+        lag = MONTHS_PER_QUARTER
+        growth_print[lag:] = growth[lag:] - growth[:-lag]
     else:
         raise NarrationError(
             f"derived_observables.growth_print: unknown transform '{growth_transform}'"

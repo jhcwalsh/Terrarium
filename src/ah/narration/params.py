@@ -671,13 +671,15 @@ PARAMETERS: tuple[Param, ...] = (
         needed_for="the estimator producing s^_t from revealed observables (DN-9 §D.1)",
         depends_on="every number the economist quotes about pi*, r* — and the r* revision, "
         "which §D.9 calls the best artifact in the appendix",
-        candidates=("kalman_on_revealed", "ewma_on_revealed", "true_plus_noise"),
+        candidates=("ewma_on_revealed", "kalman_on_revealed", "true_plus_noise"),
         trade_off=(
             "DN-9 explicitly recommends a filter over 'true value plus noise', because the "
             "noise version gets the error magnitude right and its SERIAL STRUCTURE wrong — "
             "and the serial structure is what produces slow realistic revisions instead of "
-            "jitter. EWMA is the cheap filter and has the right serial structure with the "
-            "wrong uncertainty. This is a Quant spec, flagged for Counsel-free review."
+            "jitter. EWMA is the cheap filter: right serial structure, no uncertainty "
+            "estimate, and one more open constant (its span). A Kalman filter gives the "
+            "uncertainty and needs a state-space specification that is Quant's to write. "
+            "The workbench implements EWMA only; the other two raise rather than approximate."
         ),
         register="A3-B, N-s",
     ),

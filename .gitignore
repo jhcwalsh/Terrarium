@@ -221,3 +221,9 @@ app/public/*.bundle.bin
 
 # Claude Code worktrees — a worktree must never be committed as a gitlink
 .claude/worktrees/
+
+# narration workbench run outputs (narr-04): slates.html, diagnostics.html,
+# events.jsonl and manifest.json for a built world. Regenerable bit-for-bit
+# from `python -m ah.narration build` against a pinned world + voices config,
+# and large (a decade of copy). The DIAGNOSTICS NUMBERS are what get reported.
+/runs/

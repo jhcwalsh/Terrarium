@@ -26,6 +26,42 @@ BPS_PER_PP = 100.0
 #: any positive base gives byte-identical events.
 EQUITY_INDEX_BASE = 100.0
 
+#: Unit conversion for the payrolls transform: one percentage point of a labour
+#: force measured in millions is that many *ten-thousands* of jobs.
+THOUSANDS_PER_MILLION = 1000.0
+
+#: Rounding for display-only figures (a confidence, a prior, a dispersion). No
+#: decision reads these; they are what the page prints.
+DISPLAY_PRECISION = 3
+
+#: How much of a SHA-256 to show a human, and how much of one to turn into a
+#: uniform draw. Both are hash mechanics, not choices about the world.
+HASH_DISPLAY_CHARS = 12
+HASH_DRAW_HEX_DIGITS = 12
+HEX_BASE = 16
+
+#: Rows in each ranked diagnostics table. Presentation: the full distributions
+#: are always in the panel payload and in ``manifest.json``.
+DIAGNOSTIC_TOP_ROWS = 10
+
+#: The dateline is the in-world month and is the primary time cue in the whole
+#: product (DN-9 §5.1). Month 1 is January of Year 1 — the world is a decade,
+#: not a dated period, so no real calendar is implied.
+MONTH_NAMES = (
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+)
+
 #: Rounding applied to floats before they enter ``events.jsonl`` or a manifest.
 #: A serialisation precision, not a tolerance: it exists so a record written on
 #: one machine is byte-identical to the same record written on another, and no

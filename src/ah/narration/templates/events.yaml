@@ -1,0 +1,284 @@
+# THE WIRE — Tier-1 event bank
+#
+# STATUS: PLACEHOLDER — not the editorial golden set.
+#
+# `docs/editorial/voices-golden-set-v0.md` fixes the register of the Committee,
+# the four columnists and the House Economist, and those three banks
+# (fomc.yaml, columnists.yaml, economist.yaml) carry `traced_to` on every entry
+# that comes from it. THIS file is the per-class headline/standfirst bank, which
+# the golden set does not cover: it fixes voices, not the paper's own reporting
+# copy. Everything here is therefore placeholder written to the register the
+# golden set establishes (flat, attributed, no adjective that carries judgement)
+# and must be replaced by editorial before anything ships.
+#
+# DN-9 §3.3 targets twelve variants per severity band. These banks are far
+# thinner than that, deliberately: the repetition panel in diagnostics.html is
+# the instrument that says how thin, and a bank sized by guess would hide it.
+#
+# Structure:  <class> -> "<severity>" -> [ {id, headline, body, vocab?} ]
+# A missing (class, severity) emits [[NO TEMPLATE: class=EXX sev=N]] rather
+# than prose. That marker is a measurement.
+STATUS: "PLACEHOLDER — not the editorial golden set"
+
+E01:
+  "0":
+    - id: e01-s0-a
+      headline: "Committee {verb} at {target_pct}%"
+      body: "No change, and the rule monitor puts the anchor at {smoothed_pct}%. The residual is {epsilon_bp}bp."
+    - id: e01-s0-b
+      headline: "Committee leaves the target range at {target_pct}%"
+      body: "The decision was in line with what the reaction function implied. Two members told this paper the discussion lasted under an hour."
+  "1":
+    - id: e01-s1-a
+      headline: "Committee {verb} to {target_pct}%"
+      body: "A move of {move_bp} basis points against a rule that implied {smoothed_pct}%. The residual is {epsilon_bp}bp."
+    - id: e01-s1-b
+      headline: "Committee {verb} to {target_pct}%, and changes two words"
+      body: "The statement's alterations were confined to the description of activity. The anchor implied {smoothed_pct}%."
+    - id: e01-s1-c
+      headline: "Policy set at {target_pct}% as the rule and the room agree"
+      body: "The decomposition puts the neutral rate and the inflation gap at {anchor_pct}% before smoothing. Judgement accounted for {epsilon_bp}bp."
+  "2":
+    - id: e01-s2-a
+      headline: "Committee {verb} to {target_pct}%, further than the rule asked"
+      body: "The smoothed anchor implied {smoothed_pct}%. The extra {epsilon_bp}bp is judgement, not arithmetic."
+    - id: e01-s2-b
+      headline: "Committee {verb} to {target_pct}% and hardens the language"
+      body: "A move of {move_bp} basis points, with the residual at {epsilon_bp}bp against an anchor of {smoothed_pct}%."
+  "3":
+    - id: e01-s3-a
+      headline: "Committee {verb} to {target_pct}%, and drops the sentence everyone was watching"
+      body: "{move_bp} basis points that almost nobody expected, and a deletion that mattered more. The rule implied {smoothed_pct}%; the residual is {epsilon_bp}bp."
+    - id: e01-s3-b
+      headline: "Committee goes to {target_pct}% against a rule that implied {smoothed_pct}%"
+      body: "The largest departure from the reaction function in this cycle. The extra {epsilon_bp}bp is where the judgement is written down."
+
+E02:
+  "0":
+    - id: e02-s0-a
+      headline: "Inflation at {actual_fmt}%, in line"
+      body: "Consensus looked for {consensus_fmt}%. The reading was {surprise_sd_fmt} standard deviations from the panel's median."
+    - id: e02-s0-b
+      headline: "Prices steady at {actual_fmt}%"
+      body: "A panel of {n_forecasters} forecasters had {consensus_fmt}%. Nothing in the composition changed the argument."
+  "1":
+    - id: e02-s1-a
+      headline: "Inflation {direction} consensus at {actual_fmt}%"
+      body: "The median of {n_forecasters} forecasts put the reading at {consensus_fmt}%. Services led; goods did the rest."
+    - id: e02-s1-b
+      headline: "Inflation prints {actual_fmt}%, a tenth {direction} expectations"
+      body: "{surprise_sd_fmt} standard deviations against a consensus of {consensus_fmt}%."
+    - id: e02-s1-c
+      headline: "Consumer prices at {actual_fmt}%"
+      body: "Forecasters had {consensus_fmt}%. The composition was unremarkable, which is itself the story after a year of it not being."
+  "2":
+    - id: e02-s2-a
+      headline: "Inflation {direction} at {actual_fmt}%, and the panel was on the wrong side"
+      body: "{surprise_sd_fmt} standard deviations against {consensus_fmt}%. Of {n_forecasters} forecasters, few were positioned for it."
+    - id: e02-s2-b
+      headline: "Prices come in at {actual_fmt}% against {consensus_fmt}% expected"
+      body: "The largest miss in several quarters. Services led; goods stopped helping."
+  "3":
+    - id: e02-s3-a
+      headline: "Inflation rises to {actual_fmt}%, and nobody had it"
+      body: "The reading came in {surprise_sd_fmt} standard deviations from a consensus of {consensus_fmt}% that {n_forecasters} forecasters had built. Services led; goods, which had done the disinflationary work, stopped helping."
+      traced_to: "DN-9 §A.2 (the print that ended the argument)"
+
+E03:
+  "0":
+    - id: e03-s0-a
+      headline: "Unemployment holds at {actual_fmt}%"
+      body: "Consensus was {consensus_fmt}%. Derived from the trend-growth state by a fixed Okun map registered at world build."
+    - id: e03-s0-b
+      headline: "Labour market steady, unemployment {actual_fmt}%"
+      body: "A panel of {n_forecasters} looked for {consensus_fmt}%. A derived observable, per the register."
+  "1":
+    - id: e03-s1-a
+      headline: "Unemployment at {actual_fmt}%, {direction} consensus"
+      body: "{surprise_sd_fmt} standard deviations against {consensus_fmt}%. Derived observable; see the register."
+    - id: e03-s1-b
+      headline: "Payrolls hold up, awkwardly"
+      body: "Unemployment came in at {actual_fmt}% against a consensus of {consensus_fmt}% — the labour market has refused to soften on schedule."
+      traced_to: "DN-9 §C.2"
+    - id: e03-s1-c
+      headline: "Jobless rate {actual_fmt}%"
+      body: "Forecasters had {consensus_fmt}%. The reading gave the Committee no reason to change course."
+  "2":
+    - id: e03-s2-a
+      headline: "Unemployment reaches {actual_fmt}%, {direction} what the panel expected"
+      body: "{surprise_sd_fmt} standard deviations from {consensus_fmt}%. Forecasters have now missed in the same direction repeatedly, a run one economist described as a model problem rather than a data problem."
+    - id: e03-s2-b
+      headline: "Labour market turns: unemployment {actual_fmt}%"
+      body: "Against a consensus of {consensus_fmt}%. The map from trend growth to this figure is registered and disclosed."
+  "3":
+    - id: e03-s3-a
+      headline: "Unemployment at {actual_fmt}%, the largest miss in the series"
+      body: "{surprise_sd_fmt} standard deviations against {consensus_fmt}%, from a panel of {n_forecasters}."
+
+E04:
+  "0":
+    - id: e04-s0-a
+      headline: "Growth at {actual_fmt}%, as expected"
+      body: "Consensus {consensus_fmt}%. A quarterly derived observable."
+  "1":
+    - id: e04-s1-a
+      headline: "Growth prints {actual_fmt}% against {consensus_fmt}% expected"
+      body: "{surprise_sd_fmt} standard deviations. The quarterly figure is derived from the trend-growth state."
+    - id: e04-s1-b
+      headline: "Activity {direction} forecast at {actual_fmt}%"
+      body: "The panel had {consensus_fmt}%. Composition was broad rather than concentrated."
+  "2":
+    - id: e04-s2-a
+      headline: "Growth at {actual_fmt}%, well {direction} consensus"
+      body: "{surprise_sd_fmt} standard deviations against {consensus_fmt}%."
+  "3":
+    - id: e04-s3-a
+      headline: "Growth collapses to {actual_fmt}%"
+      body: "Against a consensus of {consensus_fmt}%, {surprise_sd_fmt} standard deviations."
+      vocab: recession
+
+E05:
+  "0":
+    - id: e05-s0-a
+      headline: "Equities {verb} {abs_r_pct}%"
+      body: "A move of {r_pct}% on the month, inside the recent range."
+  "1":
+    - id: e05-s1-a
+      headline: "Equities {verb} {abs_r_pct}%"
+      body: "The move was concentrated in the sessions following the print."
+    - id: e05-s1-b
+      headline: "Listed markets {verb} {abs_r_pct}% on the month"
+      body: "Trailing volatility had been running at {sigma_hat:.3f} in monthly terms."
+    - id: e05-s1-c
+      headline: "Equities close the month {r_pct}%"
+      body: "Breadth was unremarkable; the index did the work."
+  "2":
+    - id: e05-s2-a
+      headline: "Equities {verb} {abs_r_pct}%, the largest move in months"
+      body: "Against a trailing monthly volatility of {sigma_hat:.3f}."
+    - id: e05-s2-b
+      headline: "A {abs_r_pct}% month for equities"
+      body: "Two sessions accounted for most of it."
+  "3":
+    - id: e05-s3-a
+      headline: "Equities {verb} {abs_r_pct}% in a month"
+      body: "A move of that size against a trailing volatility of {sigma_hat:.3f} has few precedents in this series."
+
+E06:
+  "1":
+    - id: e06-s1-a
+      headline: "Ten-year yields {delta_bp_fmt}bp to {level_fmt}%"
+      body: "The move was in the long end; the front end barely responded."
+    - id: e06-s1-b
+      headline: "Long rates move {delta_bp_fmt}bp"
+      body: "Ten-year yields ended the month at {level_fmt}%."
+  "2":
+    - id: e06-s2-a
+      headline: "Ten-year yields {delta_bp_fmt}bp, to {level_fmt}%"
+      body: "The largest monthly move in the long end this cycle."
+  "3":
+    - id: e06-s3-a
+      headline: "A {delta_bp_fmt}bp month at the long end"
+      body: "Ten-year yields at {level_fmt}%. Liquidity was described by two desks as thin."
+
+E07:
+  "1":
+    - id: e07-s1-a
+      headline: "The curve turns: 2s10s at {spread_fmt}bp"
+      body: "From {prior_fmt}bp. The move is a {direction}."
+  "2":
+    - id: e07-s2-a
+      headline: "2s10s {direction} at {spread_fmt}bp"
+      body: "The spread was {prior_fmt}bp the month before. The front end is doing most of it."
+    - id: e07-s2-b
+      headline: "Curve records a {direction}"
+      body: "2s10s at {spread_fmt}bp against {prior_fmt}bp. The long end has barely moved, which is the whole story."
+      traced_to: "DN-9 §C.3 (register only — figures are this world's)"
+  "3":
+    - id: e07-s3-a
+      headline: "Deepest {direction} of the cycle at {spread_fmt}bp"
+      body: "From {prior_fmt}bp. Two-year yields have done all of it."
+
+E08:
+  "1":
+    - id: e08-s1-a
+      headline: "High yield {direction} to {oas_fmt}bp"
+      body: "A move of {delta_bp_fmt} basis points on the month, orderly by recent standards."
+    - id: e08-s1-b
+      headline: "Credit spreads {direction}, HY OAS {oas_fmt}bp"
+      body: "{delta_bp_fmt} basis points. New issue continued to clear."
+  "2":
+    - id: e08-s2-a
+      headline: "High yield spreads pass {oas_fmt}bp"
+      body: "{delta_bp_fmt} basis points on the month. Two desks reported bids thinning in the lower tiers."
+    - id: e08-s2-b
+      headline: "Credit {direction} sharply to {oas_fmt}bp"
+      body: "A tier crossing, and the fastest move in the series for some time."
+  "3":
+    - id: e08-s3-a
+      headline: "High yield widens past {oas_fmt}bp"
+      body: "{delta_bp_fmt} basis points. The primary market has not printed a deal in the lower tiers this month."
+
+E09:
+  "1":
+    - id: e09-s1-a
+      headline: "Volatility regime turns {state}"
+      body: "Implied volatility at {vol_fmt}, having held the previous state for {persistence_m} months."
+    - id: e09-s1-b
+      headline: "Market volatility moves to {state}"
+      body: "At {vol_fmt}, from a run of {persistence_m} months in the prior state."
+  "2":
+    - id: e09-s2-a
+      headline: "Volatility {state}, at {vol_fmt}"
+      body: "The transition ends a run of {persistence_m} months."
+  "3":
+    - id: e09-s3-a
+      headline: "Volatility {state}"
+      body: "At {vol_fmt}. Hedging demand was described as indiscriminate."
+
+E10:
+  "1":
+    - id: e10-s1-a
+      headline: "Equities pass {milestone_pct}% below the peak"
+      body: "The index is {dd_pct}% from its high."
+  "2":
+    - id: e10-s2-a
+      headline: "Equities pass {milestone_pct}% below the peak"
+      body: "{dd_pct}% from the high. Three of the last four sessions accounted for a third of it."
+    - id: e10-s2-b
+      headline: "Drawdown reaches {milestone_pct}%"
+      body: "The index is {dd_pct}% below its peak."
+  "3":
+    - id: e10-s3-a
+      headline: "Equities {dd_pct}% below the peak"
+      body: "The {milestone_pct}% level has been crossed. Two strategists described positioning as capitulatory; a third disagreed."
+      vocab: crisis
+    - id: e10-s3-b
+      headline: "Drawdown passes {milestone_pct}%"
+      body: "The index stands {dd_pct}% below its high, and the pace of the decline has not slowed."
+
+E11:
+  "1":
+    - id: e11-s1-a
+      headline: "Equities set a new high"
+      body: "Recovering a drawdown of {prior_dd_pct}%; the index is {off_low_pct}% off the low."
+  "2":
+    - id: e11-s2-a
+      headline: "Equities recover a {prior_dd_pct}% drawdown"
+      body: "The index is {off_low_pct}% off the low and back at a record."
+    - id: e11-s2-b
+      headline: "New high, {off_low_pct}% off the low"
+      body: "The drawdown reached {prior_dd_pct}% at its worst."
+  "3":
+    - id: e11-s3-a
+      headline: "Record high after a {prior_dd_pct}% drawdown"
+      body: "The recovery from the low runs to {off_low_pct}%, faster than any of the previous declines of this size."
+
+E21:
+  "1":
+    - id: e21-s1-a
+      headline: "The year in review"
+      body: "Equities ended year {year} {equity_year_fmt}%."
+    - id: e21-s1-b
+      headline: "Year {year} closes"
+      body: "A {equity_year_fmt}% year for listed equity. The retrospective runs on the inside pages."

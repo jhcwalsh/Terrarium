@@ -1,0 +1,79 @@
+# THE WIRE — Ruth Calloway, House Economist
+#
+# STATUS: PLACEHOLDER — not the editorial golden set.
+#
+# The golden set is explicit that this voice is `[L]`: "stateful, revises,
+# admits error. Not templatable and should not be attempted." So what follows
+# is NOT an attempt at Calloway's prose. It is the SCAFFOLDING around the parts
+# of the voice that are structured data — the narrative state, the reversal
+# cycle and the risk book — because the golden set is equally explicit that
+# "the *ledger* is structured data; only the prose around it needs Tier-2".
+#
+# The reason this voice is in scope at all in the workbench is STRAIN (DN-9
+# §D.6): when the policy residual is large and the data supports nothing like
+# it, the agent must rationalise a decision the world does not justify, and the
+# strain is a REALISM DIAGNOSTIC ON THE GENERATOR, not on the narration. The
+# strain score is logged per meeting whether or not a word of prose is written.
+STATUS: "PLACEHOLDER — not the editorial golden set (Calloway is [L])"
+
+# Keyed by the reversal-cycle state (DN-9 §D.4).
+rationale:
+  HOLD_THE_LINE:
+    - id: cal-hold-a
+      text: "The decision is what the thesis implied. Inflation is {pi_fmt}% against a trend estimate of {pi_star_fmt}%, and the rule and the room agree."
+    - id: cal-hold-b
+      text: "Nothing this month asks the thesis a question it cannot answer. The anchor implied {smoothed_pct}% and the Committee delivered {target_pct}%."
+  DEFEND:
+    - id: cal-def-a
+      text: "One month is not a trend, and the Committee has been burned twice by declaring victory early."
+      traced_to: "DN-9 §D.9 — the sentence that ages worst"
+    - id: cal-def-b
+      text: "The data cut against the read here, and I am not yet persuaded. {contradiction_count} observations now sit awkwardly with the thesis; that is fewer than it takes to abandon one."
+  QUALIFY:
+    - id: cal-qual-a
+      text: "Something has changed, and it is not the inflation data. The Committee has acquired a second objective, and it did not choose to."
+      traced_to: "DN-9 §D.9"
+    - id: cal-qual-b
+      text: "The thesis survives in narrower form. {contradiction_count} contradictions is enough to change what I think the primary risk is without changing what I think is happening."
+  CAPITULATE:
+    - id: cal-cap-a
+      text: "This column had it wrong. The read here was {prior_thesis}, and the last {age_meetings} meetings have not supported it. I am abandoning it rather than narrowing it again."
+      traced_to: "DN-9 §D.9 — the volunteered prior error"
+    - id: cal-cap-b
+      text: "I was wrong, and I want to say so plainly rather than let the view drift. {contradiction_count} observations against a thesis is not a rough patch."
+
+# The risk book. Three to five live concerns; most must not happen (§D.14).
+risks:
+  - id: risk-private-credit
+    text: "funding conditions in private credit, where growth was underwritten at a cost of capital that no longer exists"
+    traced_to: "golden set §3"
+  - id: risk-dollar-funding
+    text: "dollar funding into year-end, which is the boring risk that occasionally is not boring"
+    traced_to: "golden set §3"
+  - id: risk-fiscal
+    text: "the fiscal path, where the arithmetic has been ignored for long enough to be interesting"
+    traced_to: "golden set §3"
+  - id: risk-duration
+    text: "the duration held at the long end by buyers who do not have to mark it"
+  - id: risk-labour
+    text: "a labour market that has refused to soften on the schedule every model gave it"
+  - id: risk-sovereign
+    text: "a sovereign repricing, which nobody is positioned for because nobody has needed to be"
+  - id: risk-liquidity
+    text: "market depth, which has been thinning for two years without anyone having to notice"
+
+thesis:
+  inflation:
+    - id: thesis-inf
+      text: "inflation is persistent and the labour market is not cooperating"
+      traced_to: "golden set §3"
+  growth:
+    - id: thesis-gro
+      text: "the slowdown is further along than the prints admit"
+  financial_stability:
+    - id: thesis-fin
+      text: "policy is easing into a credit shock, not a labour shock"
+      traced_to: "DN-9 §D.9"
+  funding:
+    - id: thesis-fun
+      text: "the binding constraint is funding, not demand"

@@ -1,0 +1,135 @@
+# THE WIRE — the Committee
+#
+# STATUS: MIXED — the register and the clause shapes are the editorial golden
+# set (`docs/editorial/voices-golden-set-v0.md` §1 and §4, both `[T]`); the
+# variants beyond those two worked statements are PLACEHOLDER.
+#
+# Two findings from the golden set are built into the shape of this file and
+# are easy to lose if it is edited casually:
+#
+#   1. THE COMMITTEE NEEDS NO LLM. Its register is achieved by REMOVING words,
+#      not adding them. Every draft of a Committee string should be checked for
+#      a word that expresses feeling and have it taken out. It says "slowed",
+#      not "slowing sharply"; "moved higher", not "jumped".
+#   2. THE MANDATE BOUNDARY IS A HARD CONSTRAINT (DN-9 §D.13, N-aa), not prompt
+#      guidance. The Committee may speak to inflation, expectations, the labour
+#      market, and financial conditions AS THEY BEAR ON THE MANDATE. It may not
+#      speak to asset valuations as such, private-market functioning, fiscal
+#      policy, or any named institution. `may_not_speak_to` in voices.yaml is
+#      enforced against every rendered statement -- that constraint is the
+#      mechanism that produces mandate lag, and a Committee that drifts outside
+#      its remit loses the lesson.
+STATUS: "MIXED — golden-set register, placeholder variants"
+
+# Fictional. DN-9 §A: real public institutions are named, real individuals never
+# are — the Federal Open Market Committee, yes; its members fictional (N-m).
+committee_roster:
+  - Ostrander
+  - Bell
+  - Aldridge
+  - Farrow
+  - Nkemdirim
+  - Vasari
+  - Holbeck
+  - Reyes
+  - Tamblyn
+  - Quist
+  - Marchetti
+  - Ewell
+
+statement:
+  activity:
+    expanding:
+      - id: fomc-act-exp
+        text: "Economic activity has continued to expand at a moderate pace."
+        traced_to: "golden set §1"
+    slowed:
+      - id: fomc-act-slowed
+        text: "Economic activity has continued to expand at a slowed pace."
+        traced_to: "golden set §1"
+      - id: fomc-act-slowed-b
+        text: "Economic activity has slowed."
+        traced_to: "golden set §4"
+  inflation:
+    higher:
+      - id: fomc-inf-higher
+        text: "Inflation has moved higher."
+        traced_to: "golden set §1"
+    elevated:
+      - id: fomc-inf-elevated
+        text: "Inflation remains elevated."
+    declined:
+      - id: fomc-inf-declined
+        text: "Inflation has declined."
+        traced_to: "golden set §4"
+  labour:
+    firm:
+      - id: fomc-lab-firm
+        text: "Job gains have remained solid and the unemployment rate has stayed low."
+        traced_to: "golden set §1"
+    softening:
+      - id: fomc-lab-soft
+        text: "Job gains have moderated and the unemployment rate has risen."
+  decision:
+    raises:
+      - id: fomc-dec-raise
+        text: "In support of these goals, the Committee decided to raise the target range for the federal funds rate to {target_pct} percent."
+        traced_to: "golden set §1"
+    holds:
+      - id: fomc-dec-hold
+        text: "The Committee decided to maintain the target range for the federal funds rate at {target_pct} percent."
+        traced_to: "golden set §4"
+    lowers:
+      - id: fomc-dec-cut
+        text: "In support of these goals, the Committee decided to lower the target range for the federal funds rate to {target_pct} percent."
+  balance_of_risks:
+    price_stability:
+      - id: fomc-bor-price
+        text: "The Committee judges that risks to price stability have become its principal concern."
+        traced_to: "golden set §1"
+    balanced:
+      - id: fomc-bor-balanced
+        text: "The Committee judges that risks to its goals are broadly balanced."
+    financial_conditions:
+      - id: fomc-bor-fin
+        text: "Financial conditions have tightened, and the Committee is attentive to the implications for economic activity and inflation."
+        traced_to: "golden set §4 — the one sentence the mandate permits"
+    employment:
+      - id: fomc-bor-emp
+        text: "The Committee is attentive to the risks to both sides of its dual mandate."
+  commitment:
+    retained:
+      - id: fomc-com-retained
+        text: "The Committee remains strongly committed to returning inflation to its 2 percent objective."
+        traced_to: "golden set §4 — the restoration is a bigger tell than the insertion"
+    deleted:
+      - id: fomc-com-deleted
+        text: ""
+  guidance:
+    firming:
+      - id: fomc-gui-firming
+        text: "In determining the extent of additional policy firming that may be appropriate, the Committee will take into account the cumulative tightening of monetary policy and the lags with which monetary policy affects economic activity and inflation."
+        traced_to: "golden set §1"
+    none:
+      - id: fomc-gui-none
+        text: ""
+
+dissent:
+  none:
+    - id: fomc-dis-none
+      text: "There were no votes against the action."
+      traced_to: "golden set §4"
+  one:
+    - id: fomc-dis-one
+      text: "Voting against the action was {names}."
+  many:
+    - id: fomc-dis-many
+      text: "Voting against the action were {names}."
+      traced_to: "golden set §1"
+
+rule_monitor:
+  - id: fomc-rule-a
+    text: "On a standard policy rule, this combination of trend inflation, the inflation gap and the cycle argues for {smoothed_pct}%. The Committee went to {target_pct}%. The difference is {epsilon_bp}bp."
+    traced_to: "DN-9 §C.1 (Kestrel rule monitor)"
+  - id: fomc-rule-b
+    text: "The decomposition: neutral {neutral_pct}%, inflation gap {gap_pct}pp, cycle {cycle_pct}pp — an anchor of {anchor_pct}%, {smoothed_pct}% after smoothing. Realised {target_pct}%."

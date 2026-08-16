@@ -124,7 +124,9 @@ def test_a_drawdown_episode_is_one_episode_with_running_months():
     e10 = [e for e in events if e.cls == "E10"]
     assert len({e.episode_id for e in e10}) == 1
     assert all(e.episode_id is not None for e in e10)
-    assert [e.episode_month for e in e10] == sorted(e.episode_month for e in e10)
+    months = [e.episode_month for e in e10]
+    assert all(m is not None for m in months)
+    assert months == sorted(m for m in months if m is not None)
 
 
 def test_a_new_high_closes_the_episode_and_the_next_drawdown_is_a_new_one():
