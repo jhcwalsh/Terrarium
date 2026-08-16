@@ -189,7 +189,8 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   **The guard is now mechanical**: `git config core.hooksPath githooks` is set;
   merging into main requires `uv run python scripts/check_gate.py <gate-log>` on the
   branch first (validates the log, stamps `.gate-ok` for that exact commit; the
-  pre-commit hook refuses otherwise). On a fresh clone, re-run the `git config` line.
+  `githooks/commit-msg` hook refuses otherwise -- NOT pre-commit, which `git merge`
+  never runs). On a fresh clone, re-run the `git config` line.
   **Run the gate with `scripts/run_gate.py`, never bare pytest** — it binds the log
   to the sha it tested, so a branch that moves mid-run (the owner merging onto your
   branch is routine) is caught instead of certified. `check_gate.py` refuses an
