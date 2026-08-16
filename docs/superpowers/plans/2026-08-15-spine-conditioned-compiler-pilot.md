@@ -465,6 +465,11 @@ def test_panel_quadrants_and_hazard_calibration():
     # inflation, not benign recoveries.
     if table.cell_months[1] >= MIN_CELL_MONTHS and table.cell_months[2] >= MIN_CELL_MONTHS:
         assert table.rates[1] >= table.rates[2]
+    # no structurally-silent quadrant: conditioning is on the month BEFORE the
+    # onset, so calm markets can precede a crash (1987-pattern). At least one
+    # EXPANDING quadrant (2 or 3) must carry a nonzero rate; if this fails it
+    # is a finding about the panel -- STOP and report, do not weaken.
+    assert table.rates[2] > 0.0 or table.rates[3] > 0.0
 
 
 def test_spine_quadrant_encoding():
@@ -540,26 +545,36 @@ class HazardTable:
 
 
 def fit_hazard(source) -> HazardTable:
-    """Empirical CRI-onset frequency per panel quadrant (spec 3.2, R3). Over
-    one categorical covariate the saturated fit IS the frequency table --
-    portfolio outcomes never enter (rule 1). Starved quadrants
-    (< MIN_CELL_MONTHS) take the marginal onset rate."""
+    """P(a crisis BEGINS next month | this month's quadrant) -- the discrete
+    hazard, per panel quadrant (spec 3.2, R3). Conditioning is on the month
+    BEFORE the onset: the onset month itself is labelled CRI and therefore
+    always classifies as contracting, so conditioning on it would make
+    expanding quadrants structurally silent -- corrections could never strike
+    a calm market, refuted by the 1987/2000/2007 pattern and by the spec's
+    'no month is safe'. (AMENDED 2026-08-15 during Task 3: the original
+    formula conditioned on the onset month's own quadrant.) At-risk months
+    exclude months already inside a crisis. Over one categorical covariate the
+    saturated fit IS the frequency table -- portfolio outcomes never enter
+    (rule 1). Starved quadrants (< MIN_CELL_MONTHS at-risk) take the marginal
+    rate."""
     yoy = panel_yoy(source)
     era_thr = float(np.nanmedian(yoy) + BACKDROP_MARGIN_PP)
     cells = panel_quadrant(source, yoy, era_thr)
     labels = np.asarray(source.labels)
     is_cri = labels == "CRI"
-    onset = is_cri & ~np.roll(is_cri, 1)
-    onset[0] = is_cri[0]
-    ok = cells >= 0
-    fallback = float(onset[ok].sum() / max(int(ok.sum()), 1))
+    # at-risk month t: quadrant known, not already in a crisis, has a t+1
+    at_risk = (cells >= 0) & ~is_cri
+    at_risk[-1] = False
+    event = np.zeros(source.n_rows, dtype=bool)
+    event[:-1] = is_cri[1:] & ~is_cri[:-1]  # onset happens AT t+1, credited to t
+    fallback = float(event[at_risk].sum() / max(int(at_risk.sum()), 1))
     rates = np.full(4, fallback)
     months = np.zeros(4, dtype=np.int64)
     for c in range(4):
-        mask = cells == c
+        mask = at_risk & (cells == c)
         months[c] = int(mask.sum())
         if months[c] >= MIN_CELL_MONTHS:
-            rates[c] = float(onset[mask].sum() / months[c])
+            rates[c] = float(event[mask].sum() / months[c])
     return HazardTable(
         rates=rates, era_threshold_pp=era_thr, cell_months=months, fallback_rate=fallback
     )
@@ -595,8 +610,9 @@ Behaviour to implement, exactly:
 2. Hazard: `fit_hazard(source)` once per `sample`. Per path p, stream `np.random.Generator(np.random.PCG64(seed + LAYER_OFFSETS["hazard"]).jumped(p))`. Walking months: if not in a correction and `rng_h.random() < rates[spine_quadrant(...)]` → a correction starts: dwell = `(BASE_DWELL_QUARTERS + dwell_shift) * 3` months, stratum shift per the severity row selected by the FIRING month's conditions (`infl = pi_gap > BACKDROP_MARGIN_PP`, `credit = credit_gap > 0`; both→"both", one→"either", none→"baseline").
 3. Pools: for each (segment, quadrant) — the quadrant from the SPINE month — the entry pool is `eligible_rows(scores, pct) ∩ {rows: panel_quadrant(row) == spine quadrant}` where `pct` is the segment's declared percentile outside corrections and `percentile_for(declared, stratum_shift)` inside one. Panel rows with NaN yoy are never pool members. **An empty pool raises** `SpineRefusal` naming `(segment.from_quarter, QUADRANTS[q], pct)` — refusal, never substitution.
 4. Joins: after `join_candidates` (the level-factor tolerance from `world.stress.join_tolerance`), apply two more filters: candidate's panel era bucket equals the previous row's, and `abs(yoy[cand] - yoy[prev]) <= world.spine.join_yoy_max_pp`. NaN-yoy rows were already excluded. Empty after filtering → the block continues (`advanced`), same as stress.
-5. The block-restart trigger stream stays `PCG64(seed).jumped(p)` — the hazard stream and the block stream must be DIFFERENT generators (a test asserts drawing from one does not perturb the other).
-6. Ensemble: `row_indices` carried; `regimes` = realized source labels (as stress does) with `mode="realized-spine-conditioned"`; **slow_states = the spine's five states** via the hier-flow record class; conditioning dict extends the stress stamp with `mode="spine-conditioned-stress"`, the premise dump, the severity table, `quadrant_legend: list(QUADRANTS)`, `hazard: {rates, cell_months, era_threshold_pp, fallback_rate}` (as lists/floats), `corrections: {per_path_onsets: list[int], per_quadrant_onsets: [4 ints], per_quadrant_months: [4 ints]}` (aggregated over paths, ints only), `spine_attempts`, and `pool_occupancy: {"<seg>/<quadrant>": int}` for every pool actually built.
+5. The block-restart trigger stream is `PCG64(seed + LAYER_OFFSETS["blocks"]).jumped(p)` with `LAYER_OFFSETS["blocks"] = 350377` (AMENDED after the Task-4 review, F5: the bare-seed stream is bit-identical to spine attempt 0's climate stream because the climate offset is 0 — the deliberate departure from stress's bare seed restores the "disjoint streams" guarantee). The hazard stream and the block stream must be DIFFERENT generators (a test asserts drawing from one does not perturb the other).
+7. **Panel edge (owner ruling, 2026-08-16): forced re-entry, never wrap.** When a block would advance past the panel's last row, the block ends and a fresh entry is drawn from the CURRENT month's pool — era-filtered against the previous row when any candidate matches, unfiltered when none does. The stamp counts both: `forced_reentries` and `unfiltered_reentries` (ints). The stress compiler's wrap-to-row-0 is NOT inherited (it is a silent 67-year era teleport that bypasses the join safety); B2 judges whatever jumps re-entries cause — nothing is excluded.
+6. Ensemble: `row_indices` carried; `regimes` = realized source labels (as stress does) with `mode="realized-spine-conditioned"`; **slow_states = the spine's five states** via the hier-flow record class; conditioning dict EXTENDS the stress stamp — keep `segments`, `join_tolerance`, `precedent`, `factor_conditions_honoured`, `block_draw_span` exactly as stress stamps them — adding `mode="spine-conditioned-stress"`, the premise dump, the severity table, `quadrant_legend: list(QUADRANTS)`, `hazard: {rates, cell_months, era_threshold_pp, fallback_rate}` (as lists/floats), `corrections: {per_path_onsets: list[int], per_quadrant_onsets: [4 ints], per_quadrant_months: [4 ints]}` where `per_quadrant_months[q]` counts **AT-RISK months** — months whose hazard check ran (not in a correction) while the spine sat in quadrant q — NEVER dwell months (AMENDED after the Task-4 review, F1: B5's realized rate is onsets/at-risk, mirroring `fit_hazard`'s denominator), `forced_reentries`/`unfiltered_reentries` (ints, behaviour 7), `spine_attempts`, and `pool_occupancy: {"<seg>/<quadrant>@<pct>": int}` for every pool actually built (AMENDED, F3: the percentile is part of the key so the audit surface is unambiguous).
 
 - [ ] **Step 1: Write the failing tests** (append; build one small spine world dict helper `_spine_world()` returning a `NumericWorld` from the 703 preset doc plus `x_spine` from Task 1's `_spec()`, `n_paths=3`, `seed=90210`)
 
@@ -848,7 +864,7 @@ Judging formulas (fixed here, thresholds from the sealed JSON):
 - **B5:** from the ensemble conditioning stamp: per-quadrant realized onset rate = `per_quadrant_onsets / per_quadrant_months` vs sealed `panel_rates`, relative error <= `rel_tolerance` for every quadrant with sealed `cell_months >= min_cell_months`.
 - **B6:** spine-side: months with `policy - (r_star + pi_star) > 0` (the sealed spine threshold 0.0); of those, fraction followed by a contraction onset within `k_months`; compare to sealed `panel_conditional_onset_rate` within `rel_tolerance` — AND the conditional must exceed the sealed unconditional (the sign of transmission, not just its size).
 - **Occupancy:** print `pool_occupancy` and every starved hazard cell — no silent caps.
-- **Sensitivity:** re-run the world at 5 seeds `{199002 + 7919*j}`; every bar judged per seed; the report table shows per-seed verdicts and the ALL-seed conjunction. (This stands in for posterior-pin sensitivity at pilot price: each seed draws fresh posterior indices per decade by construction of `simulate_decades`.)
+- **Sensitivity:** re-run the world at 5 seeds `{199002 + 1000003*j}` (AMENDED after the Task-4 review, F5: a stride of 7919 == SEED_STRIDE makes seed j's attempt a identical to seed 0's attempt j+a — five windows of ONE tape; 1000003 is coprime to 7919 and breaks the overlap); every bar judged per seed; the report table shows per-seed verdicts and the ALL-seed conjunction. (This stands in for posterior-pin sensitivity at pilot price: each seed draws fresh posterior indices per decade by construction of `simulate_decades`.)
 
 The run itself: `uv run python scripts/spine_pilot_report.py` (n_paths=20 per seed; ~minutes-scale, it is Euler simulation plus resampling — no training). Re-run the seal script FIRST to stamp the report hash (see Task 6's note), commit that, THEN run the report.
 
