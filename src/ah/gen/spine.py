@@ -660,3 +660,9 @@ class SpineBootstrap:
             "unfiltered_reentries": unfiltered_reentries,
         }
         return index, corrections
+
+
+# Registration hook (blocks/flow pattern: spine stays out of the judging closure)
+from ah.gen import stress as _stress  # noqa: E402
+
+_stress.register_spine_factory(SpineBootstrap)

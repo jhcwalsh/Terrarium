@@ -389,3 +389,45 @@ def test_forced_reentry_at_panel_edge():
     # excluding the previous row itself, is empty).
     assert corrections["forced_reentries"] == months - 1
     assert corrections["unfiltered_reentries"] == months - 1
+
+
+def test_dispatcher_routes_spine_worlds(spine_world):
+    from ah.gen import registry, stress  # spine import triggers registration hook
+
+    gen = registry.resolve_for_world(spine_world)
+    ens = gen.sample(spine_world, 1, 5150)
+    assert ens.meta.conditioning["mode"] == "spine-conditioned-stress"
+
+    # Test error case: spine world sampled with factory unregistered (blocks/flow
+    # pattern guards against accidental import — raises StressError mentioning
+    # 'import ah.gen.spine'). Registry pollution discipline: save/restore.
+    old_factory = stress._SPINE_FACTORY
+    try:
+        stress._SPINE_FACTORY = None
+        gen_unregistered = registry.resolve_for_world(spine_world)
+        with pytest.raises(stress.StressError, match=r"import ah\.gen\.spine"):
+            gen_unregistered.sample(spine_world, 1, 5150)
+    finally:
+        stress._SPINE_FACTORY = old_factory
+
+
+def test_dispatcher_still_routes_stress_and_legacy_bit_identically():
+    import json
+    from pathlib import Path
+
+    import numpy as np
+
+    from ah.core.numericworld import project_numeric
+    from ah.core.worldspec import WorldSpec
+    from ah.gen import registry
+    from ah.gen.bootstrap import campaign_source
+    from ah.gen.stress import StressBootstrap
+
+    doc = json.loads(Path("src/ah/presets/stress_1990.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    via_dispatch = registry.resolve_for_world(nw).sample(nw, 2, 199001)
+    direct = StressBootstrap()
+    direct.fit(campaign_source())
+    assert np.array_equal(
+        via_dispatch.row_indices, direct.sample(nw, 2, 199001).row_indices
+    )

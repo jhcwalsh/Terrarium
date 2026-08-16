@@ -7,7 +7,7 @@ all_down (equity + credit + yields, the default — closes the flight-to-quality
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Callable, Mapping, Sequence
 from typing import Any
 
 import numpy as np
@@ -308,6 +308,17 @@ class StressBootstrap:
         return index
 
 
+_SPINE_FACTORY: Callable[[], Generator] | None = None
+
+
+def register_spine_factory(factory: Callable[[], Generator]) -> None:
+    """Called by ``ah.gen.spine`` at import time (the blocks/flow pattern:
+    the spine stack must stay OUT of the judging import closure, so the
+    dispatcher can only reach it through this hook)."""
+    global _SPINE_FACTORY
+    _SPINE_FACTORY = factory
+
+
 def stress_or_legacy_factory() -> Generator:
     """The `bootstrap-stratified` id serves two masters (spec v0.2 erratum).
 
@@ -342,6 +353,16 @@ class _StressOrLegacyDispatch:
     def sample(self, world: NumericWorld, n_paths: int, seed: int) -> Ensemble:
         from ah.gen.bootstrap import bootstrap_v1_factory
 
+        if getattr(world, "spine", None) is not None:
+            if _SPINE_FACTORY is None:
+                raise StressError(
+                    f"world '{world.world_id}' declares x_spine but the spine compiler is "
+                    "not registered; 'import ah.gen.spine' first (the blocks/flow pattern: "
+                    "the spine stack stays out of the judging import closure)"
+                )
+            gen = _SPINE_FACTORY()
+            gen.fit(self.source)
+            return gen.sample(world, n_paths, seed)
         if world.stress is None:
             return bootstrap_v1_factory().sample(world, n_paths, seed)
         gen = StressBootstrap()
