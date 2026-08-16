@@ -134,7 +134,9 @@ class FomcVoice:
             return ""
         return fill(str(variant["text"]), slots, source=self.bank.source)
 
-    def _statement(self, event: Event, context: dict[str, Any], slots: dict[str, Any]) -> list[str]:
+    def _statement(
+        self, event: Event, context: dict[str, Any], slots: dict[str, Any]
+    ) -> tuple[list[str], frozenset[str]]:
         terms = event.anchor_terms
         if terms is None:
             raise NarrationError("an E01 event reached the FOMC voice without anchor terms")
@@ -171,7 +173,14 @@ class FomcVoice:
             self._clause("commitment", commitment, slots, seed),
             self._clause("guidance", guidance, slots, seed),
         ]
-        return [clause for clause in clauses if clause]
+        flags = {f"decision_{decision}", f"risks_{risks}"}
+        if commitment == "deleted":
+            flags.add("commitment_deleted")
+        if terms.epsilon > 0.0:
+            flags.add("hawkish_surprise")
+        elif terms.epsilon < 0.0:
+            flags.add("dovish_surprise")
+        return [clause for clause in clauses if clause], frozenset(flags)
 
     def _check_mandate(self, sentences: list[str]) -> None:
         text = " ".join(sentences).lower()
@@ -225,12 +234,16 @@ class FomcVoice:
             }
         )
 
+        # The statement is assembled FIRST, and the headline is then chosen from
+        # the variants its own flags admit. A headline that announces a deleted
+        # sentence must not run over a statement that retained it.
+        sentences, flags = self._statement(event, context, slots)
         headline_variant = self.events_bank.pick(
             (event.cls, str(event.severity)),
             seed_parts=(context["world_id"], event.month, event.cls),
             cross_firing=context["cross_firing"],
+            flags=flags,
         )
-        sentences = self._statement(event, context, slots)
         self._check_mandate(sentences)
         diff = self._diff(self._previous_statement, sentences)
         self._previous_statement = sentences
@@ -265,7 +278,15 @@ class FomcVoice:
                 if headline_variant
                 else no_template(event)
             ),
-            body=(*sentences, dissent_line),
+            body=(
+                *(
+                    (fill(str(headline_variant["body"]), slots, source=self.events_bank.source),)
+                    if headline_variant
+                    else ()
+                ),
+                *sentences,
+                dissent_line,
+            ),
             chips=(
                 "SURPRISE"
                 if abs(terms.epsilon) * PERCENT >= self.params.dissent_threshold * PERCENT

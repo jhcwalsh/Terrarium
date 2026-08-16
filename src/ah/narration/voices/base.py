@@ -144,8 +144,16 @@ class TemplateBank:
         *,
         seed_parts: tuple[Any, ...],
         cross_firing: dict[str, float] | None = None,
+        flags: frozenset[str] | None = None,
     ) -> dict[str, Any] | None:
         """One variant, chosen deterministically, or ``None`` if the bank is empty.
+
+        A variant may declare ``requires: <flag>``, and is then only admissible
+        when the caller passes that flag. This is what stops a headline from
+        asserting something the record contradicts — the severity-3 policy
+        headline that announces a deleted sentence is only available on meetings
+        where the sentence was actually deleted. Copy that claims a fact is
+        bound to the fact.
 
         A variant tagged with a regime-vocabulary cluster (``vocab:``) is only
         admissible at the configured cross-firing rate for that cluster, drawn
@@ -158,6 +166,14 @@ class TemplateBank:
         candidates = self.variants(*path)
         if not candidates:
             return None
+        if flags is not None:
+            candidates = [
+                variant
+                for variant in candidates
+                if variant.get("requires") is None or str(variant["requires"]) in flags
+            ]
+            if not candidates:
+                return None
         if cross_firing is not None:
             admissible = []
             for variant in candidates:

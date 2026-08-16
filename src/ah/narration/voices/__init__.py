@@ -170,13 +170,20 @@ class Newsroom:
                 }
                 voices: list[Artifact] = []
                 if event.cls == "E01":
-                    voices.append(self.fomc.render(event, context))
+                    # The FOMC set piece IS the paper's report of the meeting,
+                    # not a sidebar next to one. Rendering both would print two
+                    # headlines for one decision -- and, before the template
+                    # `requires:` binding, two headlines that could disagree
+                    # about whether a sentence had been deleted.
+                    report = self.fomc.render(event, context)
                     voices.append(self.economist.render(event, context))
+                else:
+                    report = self._report(event, context)
                 voices.append(self.columnists.render(event, context))
                 items.append(
                     RenderedItem(
                         announcement=announcement,
-                        report=self._report(event, context),
+                        report=report,
                         voices=tuple(voices),
                     )
                 )

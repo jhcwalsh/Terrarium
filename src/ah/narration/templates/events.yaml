@@ -38,20 +38,31 @@ E01:
     - id: e01-s1-c
       headline: "Policy set at {target_pct}% as the rule and the room agree"
       body: "The decomposition puts the neutral rate and the inflation gap at {anchor_pct}% before smoothing. Judgement accounted for {epsilon_bp}bp."
+  # `requires:` binds copy to the record. A headline that announces a deleted
+  # sentence is only available on a meeting whose statement deleted it; a
+  # headline that says "further than the rule asked" is only available when the
+  # residual is positive. Without this the sev-3 bank cheerfully announced a
+  # deletion over a statement that had retained the sentence.
   "2":
     - id: e01-s2-a
+      requires: hawkish_surprise
       headline: "Committee {verb} to {target_pct}%, further than the rule asked"
       body: "The smoothed anchor implied {smoothed_pct}%. The extra {epsilon_bp}bp is judgement, not arithmetic."
+    - id: e01-s2-c
+      requires: dovish_surprise
+      headline: "Committee {verb} to {target_pct}%, and stops short of what the rule asked"
+      body: "The smoothed anchor implied {smoothed_pct}%. The Committee went {epsilon_bp}bp against it, which is judgement rather than arithmetic."
     - id: e01-s2-b
-      headline: "Committee {verb} to {target_pct}% and hardens the language"
+      headline: "Committee {verb} to {target_pct}% and changes the language"
       body: "A move of {move_bp} basis points, with the residual at {epsilon_bp}bp against an anchor of {smoothed_pct}%."
   "3":
     - id: e01-s3-a
+      requires: commitment_deleted
       headline: "Committee {verb} to {target_pct}%, and drops the sentence everyone was watching"
       body: "{move_bp} basis points that almost nobody expected, and a deletion that mattered more. The rule implied {smoothed_pct}%; the residual is {epsilon_bp}bp."
     - id: e01-s3-b
       headline: "Committee goes to {target_pct}% against a rule that implied {smoothed_pct}%"
-      body: "The largest departure from the reaction function in this cycle. The extra {epsilon_bp}bp is where the judgement is written down."
+      body: "The largest departure from the reaction function in this cycle. The {epsilon_bp}bp residual is where the judgement is written down."
 
 E02:
   "0":

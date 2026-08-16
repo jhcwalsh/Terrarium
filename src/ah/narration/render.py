@@ -135,6 +135,13 @@ def render_slates(rendered: list[RenderedSlate], manifest: dict[str, Any]) -> st
             out.append(f"<h2>{_e(item.report.headline)}</h2>")
             for paragraph in item.report.body:
                 out.append(f"<p>{_e(paragraph)}</p>")
+            if item.report.extras.get("statement_diff"):
+                out.append(_diff_html(item.report.extras["statement_diff"]))
+            if item.report.extras.get("rule_monitor"):
+                out.append(
+                    "<div class='voice'><b>Why they moved — rule monitor</b><br>"
+                    f"{_e(item.report.extras['rule_monitor'])}</div>"
+                )
             for artifact in item.voices:
                 out.append(f"<div class='voice'><b>{_e(artifact.headline)}</b><br>")
                 out.append("<br>".join(_e(line) for line in artifact.body))
