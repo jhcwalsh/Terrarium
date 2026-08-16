@@ -7,53 +7,53 @@ mappings `v1.1` (`map-2026.08.2`), play alphas **`port-v4-ladder` /
 deleted). The CIO dashboard line has LANDED (`cio-01`…`cio-04`, the inherited
 decade included). Everything merged and pushed through `7d4b092`.
 
-## The main line now: the spine-conditioned compiler — pilot DONE, spine-02 authorized
+## The main line now: the spine-conditioned compiler — BOTH ROUNDS DONE, decision next
 
-**The pilot is complete and merged** (`f988952`, gate 2770 passed). All nine
-tasks ran: the `x_spine` contract, the premise-accepted spine sampler, the
-four-quadrant clock with its per-quadrant correction hazard, `SpineBootstrap`,
-the seal-safe dispatcher (registration hook, boundary pinned by two tests),
-world 802 "The Hard Landing", a pre-registration sealed before measurement and
-never touched after, and the measurement itself — committed verbatim. Both
-plan constraints held: commit-order-as-pre-registration honored, bit-identity
-of 1.0.x and stress worlds pinned green throughout.
+Two full pre-registered rounds, both merged: the pilot (`f988952`, gate 2770)
+and the owner-authorized wiring-fix re-run **spine-02** (`deac7fc`, gate 2851).
+Records: `docs/superpowers/specs/2026-08-15-spine-pilot-results.md` (round 1,
+frozen) and `docs/superpowers/specs/2026-08-16-spine02-results.md` (round 2,
+with post-measurement characterization corrections from the verdict-integrity
+review — verdict values untouched). Every number in both rounds was reproduced
+by an independent reviewer before it reached this file.
 
-**The verdicts, in plain English (full record:
-`docs/superpowers/specs/2026-08-15-spine-pilot-results.md`; certified by an
-independent review that reproduced every sealed number):**
+**Round 2, in plain English — what the wiring fixes changed:**
 
-- **Two real weaknesses.** Recoveries run ~half history's length (B4 — the
-  same persistence flaw that sank hier-flow at G2, now located to one
-  quadrant); stitched decades still jump inflation eras slightly too often at
-  the aggregate p95 level (B2), even though the per-join era filter itself was
-  airtight (0 violations in ~734 ordinary joins).
-- **One economic surprise.** Conditioning months on the storyline made decades
-  MILDER: the over-committed 55% book never breaches under world 802 (0/20)
-  where the plain stress compiler's family breached (B3). Coherence currently
-  costs severity.
-- **Two wiring faults, not model faults.** The spine's policy anchor was fed
-  trend inflation as actual inflation, so the reaction term it was tested on
-  was identically zero (B1 unwinnable as wired; B6's tightness construct had
-  no inflation content for the same reason). Named repair: one argument.
-- **One empty bar.** B5's design would fail a perfect machine ~99% of the
-  time (six historical crisis onsets is too thin a target for a ±50% band).
-- **One disclosure.** The B3 ladder's 20 seeds carried only ~2 distinct macro
-  spines (a stride collision); disclosed everywhere, repair in spine-02.
+- **Severity binds after all (B3 PASS on the sealed bars).** With the stride
+  collision fixed (20 genuinely distinct decades per ladder, verified — round
+  one secretly had 2), the over-committed 55% book breaches (2/20), coverage
+  is monotone, and hold-course depth lands in band (by 0.59pp — marginal,
+  recorded). Round one's "coherence costs severity" was mostly the 2-spine
+  artifact.
+- **The true model residue, twice-confirmed (B2 FAIL, B4 FAIL under
+  byte-frozen judges both rounds):** stitched decades jump inflation eras a
+  bit too often at the p95 level, and recoveries run ~half history's length —
+  the same persistence flaw that sank hier-flow at G2.
+- **A new economic finding: transmission is present but WEAK.** A tight-policy
+  month lifts 12-month downturn odds 1.14x in the spine vs 2.37x in history
+  (matched definitions). The sealed B6 verdict reads FAIL, but the review
+  proved it compared mismatched crisis codes; under either consistent
+  definition the magnitude check passes. B6 v3 (outcome-event match) logged.
+- **One exam question was broken and the process caught it:** B1 v2 is an
+  anti-test — its pass rate FALLS as the policy response strengthens (a
+  no-reaction model scores best; the 0.90 bar is unreachable). The wiring fix
+  itself is proven live (recovered phi_pi 0.42–0.85, positive on all 20
+  decades). The sealed FAIL carries no information; B1 v3 logged.
+- **B5 v2:** one noise-compatible failing seed, but all five seeds over-fire
+  by ~+17% pooled — a weak, coherent signal for the redesign.
+- Record hygiene: the b3 re-run briefly contaminated round one's frozen
+  results file; restored byte-exact with a recurrence guard.
 
-**Options, as put to the owner (2026-08-16):** (1) fix the wiring and re-run
-under a fresh seal — days; (2) ship the trainer on the plain stress compiler
-now (memo Path A) — nothing this week blocks it; (3) fund the deep
-persistence repair — weeks, campaign-scale, D-SP-4. They compose: 2 now, 1
-next, 3 only if 1's residue justifies it.
-
-**RULED: option 1 is authorized and spine-02 is the live line.** Scope: feed
-`pi_actual` into the policy anchor (using only the fitted observation-noise
-parameter — no new knobs), fix the attempt-stride collision, respecify B1/B6
-at the model's actual (contemporaneous) lag structure, redesign B5 to be
-decidable, reseal, re-run. B2/B3/B4 unchanged — whatever still fails after
-the wiring fixes is genuinely the model, and prices option 3. Unblocked in
-parallel regardless: the memo's Path-A honesty work (the "how this world was
-made" disclosure moving onto the play surface).
+**THE DECISION NOW OPEN (D-SP-4, the owner's):** the spine architecture hurts
+properly (B3), tells one story per decade, and refuses impossible premises.
+What it cannot yet do is make bad times last (B4), keep era texture fully
+smooth at the tails (B2), or transmit policy to the real economy at
+historical strength (the B6 finding). That is exactly the scope of the deep
+repair the spec named on day one — the L2 generation-time hazard link — now
+priced by three numbers instead of a hunch. Options: fund it
+(weeks, campaign-scale); or park the spine with its two-round record and ship
+the trainer on the plain stress compiler (memo Path A — unblocked, and the
+"how this world was made" disclosure work needs no research either way).
 
 ## Standing owner questions
 
