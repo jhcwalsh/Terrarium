@@ -46,7 +46,7 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   proof that the seeded ladder shape is the *right* one to enter. The design
   choice stands (an independently hand-written ladder fixture would exercise
   its own arithmetic rather than the plumbing under test), but the two
-  claims are different and only the narrower one is established. See ER-14.
+  claims are different and only the narrower one is established. See ER-15.
 
   **A defect found and fixed during the work, not shipped:**
   `/sessions/{sid}/outcome` and `/sessions/{sid}/cio` originally replayed
@@ -122,7 +122,7 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   `plan_commitments` and its non-null `next_plan_basis` caveat, and its
   decisions are still recorded as the bare action string.
 
-  **ER-14 opened:** `_seed_ladder`'s single staggered shape is what the
+  **ER-15 opened:** `_seed_ladder`'s single staggered shape is what the
   pacing model, the call/distribution linkage and the ER-6/ER-12 close-outs
   were fitted and checked against; an entered book can sit arbitrarily far
   outside that shape, or open with an un-converged appraisal filter the
@@ -130,6 +130,76 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   rule, not fixed — re-fitting across a family of ladder shapes is an
   owner-decided release event, not a cleanup
   (`docs/engine-realism-register.md`).
+- **`docs/current/private-markets-and-inflation.md` — how the private market
+  asset classes are modeled, and the measured fact that inflation does not
+  reach them.** A technical note, no code changed. It maps the three layers
+  that model private markets (the `toy-v0` return streams, the generated
+  path's sealed factor loadings, and `ah/port/`'s cohort cashflow model with
+  its vintage ladder and forced-secondary waterfall), then measures the
+  inflation pass-through rather than reasoning about it. Varying only
+  `factor_conditions.inflation.average_pct` on the stagflation preset from 1%
+  to 12%, over 200 paths: **private equity is bit-identical (−1.772%/yr at
+  every level)**, private credit moves +0.02pp, and real estate moves
+  **−0.12pp** — the wrong sign for the class most often held as an inflation
+  hedge. The negative signs on bonds/RE/REITs are volatility drag ordered by
+  each asset's `d_rate` coefficient, not repricing: the realized rate path is
+  almost unmoved (mean 6.342 → 6.358) and arithmetic means all *rise*. At the
+  institution level the private book appears to gain with inflation, but
+  moving the five commodity points into equity reverses it (private NAV
+  34.98 → 37.92 with commodities; 31.07 → **30.70** without) — the entire
+  response is a second-order effect of a liquid sleeve next to it, transmitted
+  through reported private weight and the pacing multiplier. The note also
+  records that `structural.infrastructure.inflation_linkage` is the only
+  asset-side inflation-linkage field in the contract and belongs to an asset
+  class the engine does not simulate, and lists six other declared-but-unread
+  private-market fields (`leverage_turns`, `income_yield_pct`,
+  `recovery_rate_pct`, `spread_over_base_bps`, both infrastructure fields,
+  and `inflation.peak_pct`, which changes no return to three decimals).
+- **`CLAUDE.md`'s engine-realism summary swept: ER-11 and ER-12 added, and a
+  stale alpha-stamp claim corrected.** The summary paragraph had never listed
+  either entry, so a reader working from `CLAUDE.md` alone would have missed
+  both. **ER-11 is the one with a live trap in it** and is now spelled out
+  there: the product's reported plane is the engine's own filter
+  (`ah/core/engine.py::_reported_marks`, three aggregates), **not** the sealed
+  per-sleeve kernel in `ah/port/smoothing.py`, which nothing player-facing has
+  ever called — they disagree materially (buyout quarterly reported ACF 0.55
+  vs 0.06), a VC mark and a mezzanine mark blur identically, and **de-smoothing
+  a shipped reported series does not recover the true series**, so SM-10's
+  inverse property does not hold on the shipped path. ER-12's summary records
+  the one-age opening book (three clones of an age-5.25 cohort lapsing in the
+  same quarter, 17% of the decade's calls expiring at once), the staggered
+  ladder that brought `peak_unfunded_ratio` into band untuned, and the
+  `linkage_bite` redefinition kept as its own change.
+
+  Corrected while in there: the ER-6 clause still said "play alphas now
+  `port-v2-cashflow`/`-gen`", which has been wrong since ER-12. The stamps are
+  `port-v4-ladder` and `port-v4-ladder-gen` — verified against
+  `src/ah/play.py:88` and `src/ah/port/adapter.py:108`, not copied from prose.
+  The clause now points at ER-12 for the current values rather than restating
+  a number that goes stale on every alpha bump.
+
+- **ER-14 filed in `docs/engine-realism-register.md` — "Inflation does not
+  reach private markets at all" (owner decision, 2026-08-16).** The note above
+  recommended it and deliberately did not file it, register entries being a
+  release event and the owner's call; the owner made the call. ER-14 is now the
+  governing statement of the finding and the note is its supporting detail —
+  both cross-reference, and `CLAUDE.md`'s register summary and
+  `docs/current/README.md` are updated. Status `open`, no fix scheduled.
+
+  The entry carries the measured tables, the volatility-drag correction, and
+  the full consequences of any fix, which are why it is filed rather than
+  fixed: **`TOY_ENGINE_VERSION`** bumps and every RunRecord digest is
+  invalidated; **both `PLAY_ALPHA_VERSION` stamps** (`port-v4-ladder` and
+  `port-v4-ladder-gen`) bump and leaderboards restart; both committed bundles
+  rebuild; the battery re-runs and its stylized facts move. It also records
+  what a *real* fix costs beyond the return process: tier 1's `f_dist`/`f_call`
+  cannot see inflation **by signature** (Delta 3, structural), so admitting it
+  means amending the sealed `mappings/cashflow-tier1-v1.0.yaml` through the
+  machine-checked log and taking a decision about the no-regime-label rule
+  itself — not a parameter change. `decision_alpha_version` inside the G5 seal
+  is explicitly untouched. The engine already simulates an inflation path that
+  nothing reads; it is the obvious carrier if this is ever taken up.
+
 - **The gate-merge guard now actually fires (housekeeping-03).** It never had.
   **`git merge` does not run `pre-commit`**, and this repository shipped only
   `githooks/pre-commit`, so from 2026-08-12 to 2026-08-15 the guard CLAUDE.md

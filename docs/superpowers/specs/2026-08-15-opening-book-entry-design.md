@@ -44,7 +44,7 @@ Resolved with the owner on 2026-08-15.
 | Ranked | **Custom book ⇒ practice only.** Ranked play requires the default book and default plan. Any edit demotes the session. Existing leaderboard rows keep their exact present meaning; no key migration. |
 | Commitment plan | **Editable at kickoff.** The lever shows deviation from *your* plan, not from the model's. |
 | Pacing flex | On a session carrying a plan, an untouched lever commits **the plan's number for that year**, exactly. The policy pacing flex no longer acts silently; it is shown beside the plan number as a comparison. Sessions without a plan keep today's behaviour unchanged. (See §4.3 — this is a behavioural change and is deliberately scoped.) |
-| Fitted-shape gap | Recorded as **ER-14** in `docs/engine-realism-register.md`, not hidden and not fixed. |
+| Fitted-shape gap | Recorded as **ER-15** in `docs/engine-realism-register.md`, not hidden and not fixed. |
 
 **Seal check:** `ah/play.py`, `ah/port/`, `ah/serve.py` and `ah/store/` are
 outside the main / G3 / G5 pre-registration locks (`hashed_files` covers
@@ -216,7 +216,7 @@ Usability rests entirely on the pre-fill and the per-sleeve resets: 3 sleeves ×
 expected interaction is "load the default, change the six numbers that differ
 from my real book."
 
-## 7. Guardrails and ER-14
+## 7. Guardrails and ER-15
 
 **Refused** (422 / disabled commit): negative anything; `sum(liquid) +
 sum(private) + cash ≠ 100`; a rung breaking the recycling identity
@@ -233,7 +233,7 @@ book can be out of band — that is precisely the case an analyst wants to run �
 and the play surface already models a band breach as a consequence rather than
 an impossibility.
 
-**ER-14** (new entry in `docs/engine-realism-register.md`, open):
+**ER-15** (new entry in `docs/engine-realism-register.md`, open):
 
 > An entered ladder can sit arbitrarily far from the staircase `_seed_ladder`
 > produces, and that staircase is the shape against which the pacing model, the
@@ -280,7 +280,7 @@ an impossibility.
 | `su-app-06b` | The numeric override in `play.py`. Tests 2, 3 (engine half), 6. |
 | `su-app-06c` | Server: `GET /book/default`, `POST /sessions` fields, store migration, ranked demotion, plan-driven pre-fill. Tests 3 (service half), 4, 5, 7. |
 | `su-app-06d` | `BookEntry.tsx` and the `App.tsx` flow. Test 8. |
-| `su-app-06e` | ER-14, `CHANGELOG.md`, `docs/current/README.md` register touch if needed. |
+| `su-app-06e` | ER-15, `CHANGELOG.md`, `docs/current/README.md` register touch if needed. |
 
 Each merges only on a green `scripts/run_gate.py` log per the standing
 convention.
@@ -298,5 +298,5 @@ convention.
   it means a book digest in the leaderboard key.
 - **Policy fields** (spending rate, haircut, band) as entered values. The book
   is the allocation and the ladder; `Policy` stays at its defaults.
-- **Re-fitting pacing or linkage** to arbitrary ladder shapes. That is ER-14's
+- **Re-fitting pacing or linkage** to arbitrary ladder shapes. That is ER-15's
   fix, an owner-level release event, not part of this WP.

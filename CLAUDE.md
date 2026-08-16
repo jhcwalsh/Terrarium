@@ -213,17 +213,38 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   months) and ER-13 (the CIO dashboard's inherited decade is a simulated
   past scaled to the opening book's NAV, not a reconstruction of the history
   that actually produced it — opening weights sit exactly at target, with no
-  drift) and ER-14 (an entered opening book can sit arbitrarily far outside
-  the staggered shape the pacing model and linkage were fitted on, or open
-  with an un-converged appraisal filter; mitigated by practice-only
-  demotion, not fixed) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
-  10 + expiry-at-lapse ledger; play alphas now `port-v2-cashflow`/`-gen`; the E1
+  drift) and **ER-14** (inflation does not reach private markets AT ALL:
+  PE is bit-identical from 1% to 12% inflation, RE moves the wrong way,
+  the tier-1 linkage cannot see inflation by signature, and the whole
+  apparent response of the private book is a second-order effect of the
+  commodity sleeve beside it — filed 2026-08-16, detail in
+  `docs/current/private-markets-and-inflation.md`) and ER-15 (an entered opening book can sit arbitrarily far outside the
+  staggered shape the pacing model and linkage were fitted on, or open with an
+  un-converged appraisal filter; mitigated by practice-only demotion, not fixed) are open.
+  **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
+  10 + expiry-at-lapse ledger; play alphas went to `port-v2-cashflow`/`-gen`
+  and have since moved twice — see ER-12; the E1
   commitment lever is unblocked). **ER-10 CLOSED 2026-08-13** (`_reported_marks`
   filtered only the quarter-end month's true return through the appraisal
   filter, silently dropping the other two months of every quarter — reported
   ran at ~1/3 of true; fixed by compounding the full quarter before filtering;
-  `toy-v0.6`). ER-5/ER-8/ER-9 remain one family for the toy engine. Each entry
-  says what a fix invalidates.
+  `toy-v0.6`). **ER-11 CLOSED BY DECISION 2026-08-14** — read this one before
+  touching any reported series: **the product's reported plane is the engine's
+  own filter** (`ah/core/engine.py::_reported_marks`, three aggregates), **not**
+  the sealed per-sleeve kernel in `ah/port/smoothing.py`, which nothing
+  player-facing has ever called. The two disagree materially (buyout quarterly
+  reported ACF 0.55 vs 0.06). Consequences to carry: a VC mark and a mezzanine
+  mark blur identically, and **de-smoothing a shipped reported series does NOT
+  recover the true series** — the SM-10 inverse property does not hold on the
+  shipped path, because that series was not made by the sealed forward kernel.
+  **ER-12 CLOSED 2026-08-14** (the opening private book was three clones of one
+  age-5.25 cohort, so all three sleeves lapsed in the SAME quarter — 17% of the
+  decade's calls expiring at once; now a staggered ladder, one rung per year of
+  contractual life, which brought `peak_unfunded_ratio` into band untuned. Play
+  alphas are now `port-v4-ladder`/`-gen`. A follow-up redefined `linkage_bite`
+  to net terminal lumps by amount, deliberately as its own change so the
+  attribution stayed clean). ER-5/ER-8/ER-9 remain one family for the toy
+  engine. Each entry says what a fix invalidates.
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 

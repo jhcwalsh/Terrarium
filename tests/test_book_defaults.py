@@ -51,7 +51,7 @@ class TestDefaultBook:
         assert default_opening_book(START_TARGETS).cash == START_CASH
 
     def test_the_seeded_ladder_opens_converged(self):
-        # ER-14: the derived book can never open with nav_reported != nav_true.
+        # ER-15: the derived book can never open with nav_reported != nav_true.
         # An ENTERED book can, and that is the state the calibration never saw.
         book = default_opening_book(START_TARGETS)
         for rungs in book.private.values():

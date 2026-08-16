@@ -446,7 +446,7 @@ class TestDefaultBook:
         assert default_opening_book(START_TARGETS).cash == START_CASH
 
     def test_the_seeded_ladder_opens_converged(self):
-        # ER-14: the derived book can never open with nav_reported != nav_true.
+        # ER-15: the derived book can never open with nav_reported != nav_true.
         # An ENTERED book can, and that is the state the calibration never saw.
         book = default_opening_book(START_TARGETS)
         for rungs in book.private.values():
@@ -1507,17 +1507,17 @@ only - every number that matters still comes from the server."
 
 ---
 
-### Task 8: ER-14, the changelog, and the gate
+### Task 8: ER-15, the changelog, and the gate
 
 **Files:**
 - Modify: `docs/engine-realism-register.md`, `CHANGELOG.md`, `CLAUDE.md` (the ER list in the working-conventions section)
 
-- [ ] **Step 1: Add ER-14 to the register**
+- [ ] **Step 1: Add ER-15 to the register**
 
 Append, following the existing entry format (each entry says what a fix invalidates):
 
 ```markdown
-### ER-14 — an entered opening book can sit outside the fitted ladder shape
+### ER-15 — an entered opening book can sit outside the fitted ladder shape
 
 **Status: OPEN** (opened 2026-08-15, su-app-06)
 
@@ -1547,7 +1547,7 @@ the leaderboard is produced from an unfitted ladder.
 
 - [ ] **Step 2: Update `CHANGELOG.md` and `CLAUDE.md`**
 
-Add a `CHANGELOG.md` entry naming the contract, the endpoint, the practice-only rule and ER-14. Add ER-14 to the open list in `CLAUDE.md`'s engine-realism-register paragraph.
+Add a `CHANGELOG.md` entry naming the contract, the endpoint, the practice-only rule and ER-15. Add ER-15 to the open list in `CLAUDE.md`'s engine-realism-register paragraph.
 
 - [ ] **Step 3: Full-tree lint and types BEFORE the long gate**
 
@@ -1569,9 +1569,9 @@ Both must be clean. Stragglers found mid-gate cost a restart of the whole ~38 mi
 
 ```bash
 git add docs/engine-realism-register.md CHANGELOG.md CLAUDE.md
-git commit -m "docs(su-app-06): ER-14, changelog
+git commit -m "docs(su-app-06): ER-15, changelog
 
-ER-14: an entered ladder can sit arbitrarily far from the shape the pacing
+ER-15: an entered ladder can sit arbitrarily far from the shape the pacing
 model and the linkage were fitted on, and can open with an un-converged
 appraisal filter. Mitigated by the practice-only rule, not fixed."
 ```
@@ -1593,7 +1593,7 @@ The gate is run by the controller rather than an implementer: four agent turns i
 
 ## Self-Review
 
-**Spec coverage:** §3 contract → Task 1; §3.1 sleeve set → Tasks 1, 2, 5, 7; §4.1 override → Task 3; §4.2 twin → Task 5; §4.3 plan/flex → Task 6; §5 server and storage → Tasks 4, 5; §6 screen → Task 7; §7 guardrails → Tasks 1, 5; §7 ER-14 → Task 8; §8 tests 1–8 → Tasks 1, 3, 5, 6, 7; §9 WPs → Tasks 1–8; §10 out of scope → untouched, and the flat-plan rationale is recorded in `default_commitment_plan`'s docstring.
+**Spec coverage:** §3 contract → Task 1; §3.1 sleeve set → Tasks 1, 2, 5, 7; §4.1 override → Task 3; §4.2 twin → Task 5; §4.3 plan/flex → Task 6; §5 server and storage → Tasks 4, 5; §6 screen → Task 7; §7 guardrails → Tasks 1, 5; §7 ER-15 → Task 8; §8 tests 1–8 → Tasks 1, 3, 5, 6, 7; §9 WPs → Tasks 1–8; §10 out of scope → untouched, and the flat-plan rationale is recorded in `default_commitment_plan`'s docstring.
 
 **Known gap, deliberate:** spec §8 test 6 asks for a service-restart replay check. `test_a_session_with_a_stored_book_replays_it` (Task 5) covers the stored-book read path through a fresh request but not a genuine process restart; the store round-trip in Task 4 covers persistence. A true restart test would need a fixture the suite does not have. If the executor finds one, add it; do not fake it.
 
