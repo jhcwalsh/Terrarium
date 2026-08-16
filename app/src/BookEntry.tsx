@@ -168,15 +168,19 @@ export function BookEntry({
   // Each refusal the SERVER can raise on shape gets its own named check, so
   // the panel can say which one is blocking rather than only that something
   // is (spec section 6's validity panel).
+  // A blank field makes every OTHER rule false as well (NaN fails each
+  // comparison), so it is reported alone rather than alongside three
+  // consequences of itself.
   const shapeFaults: string[] = [];
   if (book && plan) {
-    if (!allFieldsFinite(book, plan)) shapeFaults.push("a field is blank or not a number");
-    if (!allFieldsNonNegative(book, plan)) shapeFaults.push("a field is negative");
-    if (!recyclingIdentityHolds(book)) {
-      shapeFaults.push("a rung breaks paid_in + unfunded = committed + recycled");
-    }
-    if (!Number.isFinite(total) || Math.abs(total - 100) > 0.01) {
-      shapeFaults.push("the book does not total 100");
+    if (!allFieldsFinite(book, plan)) {
+      shapeFaults.push("a field is blank or not a number");
+    } else {
+      if (!allFieldsNonNegative(book, plan)) shapeFaults.push("a field is negative");
+      if (!recyclingIdentityHolds(book)) {
+        shapeFaults.push("a rung breaks paid_in + unfunded = committed + recycled");
+      }
+      if (Math.abs(total - 100) > 0.01) shapeFaults.push("the book does not total 100");
     }
   }
   const ready = !!book && !!plan && shapeFaults.length === 0;
