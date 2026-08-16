@@ -302,3 +302,18 @@ def test_unknown_severity_functional_is_refused() -> None:
     }
     with pytest.raises(ValidationError):
         StressSpec.model_validate(spec)
+
+
+def test_the_narration_world_is_hier_generated_and_says_so() -> None:
+    """narr-03 (owner ruling 2026-08-15): the workbench's l1_state input stays
+    REQUIRED, so its world is hier-generated rather than the contract demoted.
+    Catalog-free by design: sampling needs the gitignored campaign-2 checkpoint,
+    so this test pins the DECLARATION (generator id, fence, disclosure) and the
+    local build verification lives in the narr-03 commit body."""
+    doc = json.loads((PRESETS / "narration_1974.json").read_text(encoding="utf-8"))
+    nw = project_numeric(WorldSpec.model_validate(doc))
+    assert nw.engine_defaults.generator_id == "hier-flow-v1"
+    assert nw.world_id.endswith("801")  # its own fence: never a play/leaderboard block
+    narrative = doc["narrative"]
+    assert "hier-flow-v1" in narrative["summary"]
+    assert "workbench" in narrative["summary"]  # admin tooling, disclosed as such
