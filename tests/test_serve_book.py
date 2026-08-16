@@ -337,3 +337,36 @@ class TestPlanDrivenLever:
         assert doc["plan_pace"]["pe"] != pytest.approx(5.0), (
             "the flex must be a displayed comparison, not the applied number"
         )
+
+    def test_the_pre_fill_tracks_the_window_not_just_the_plan(self, service):
+        """A flat plan cannot tell a right window index from a wrong one:
+        every entry is 5.0, so any in-bounds index passes. Give each window a
+        distinct value and the index itself becomes the thing under test."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        plan = default["plan"]
+        n = len(plan["points"]["pe"])
+        # Values must stay under the lever's declared bound (0..2x the
+        # sleeve's plan pace, `validate_plan`), so scale the ramp off the
+        # server's OWN default pace instead of a magic constant: the max
+        # point (step * (n - 1)) stays below the default pace itself, which
+        # is in turn below the 2x cap.
+        step = default["plan"]["points"]["pe"][0] / n
+        plan["points"]["pe"] = [round(step * i, 4) for i in range(n)]  # 0.0, step, 2*step, ...
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": default["book"], "plan": plan}
+        ).json()["session_id"]
+
+        # first window: months 0..11 revealed, last closed quarter is 2 -> window 0
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["next_plan_commitments"]["pe"] == pytest.approx(0.0)
+
+        # deciding month 11 requires the pointer past it first
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # decide window 0, then reveal into window 1: quarter 6 -> window 1
+        r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
+        assert r.status_code == 200, r.text
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 23}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["next_plan_commitments"]["pe"] == pytest.approx(step)
