@@ -26,6 +26,7 @@ from typing import Any
 
 from ah.narration.build import (
     build_from_ensemble,
+    finalise_manifest,
     load_config,
     load_world_ensemble,
     write_events_jsonl,
@@ -73,8 +74,7 @@ def run_build(world: str, voices: str, out: str) -> dict[str, Any]:
         hit_rate_target=list(config.get("voices.columnists.hit_rate_target")),
         uncovered=uncovered_classes(result.events, book_available=result.world.book_available),
     )
-    manifest = dict(result.manifest)
-    manifest["diagnostics"] = panels
+    manifest = finalise_manifest(result.manifest, config, panels)
 
     out_dir = Path(out)
     out_dir.mkdir(parents=True, exist_ok=True)

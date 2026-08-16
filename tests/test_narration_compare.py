@@ -30,6 +30,8 @@ def test_compare_names_the_changed_value_and_what_it_moved(tmp_path: Path, capsy
     out = capsys.readouterr().out
     assert "CONFIG DIFFERENCES" in out
     assert "voices.hash" in out
+    # the CHANGED VALUE itself is named, not merely the hash that moved
+    assert "voices.resolved.severity.cuts" in out
     assert "DOWNSTREAM EFFECTS" in out
     # the severity cut-points move the severity-3 count, which is the number the
     # calibration panel is judged against

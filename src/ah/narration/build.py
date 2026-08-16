@@ -45,7 +45,12 @@ from ah.narration.voices import (
     filtered_r_star,
 )
 
-__all__ = ["BuildResult", "build_from_ensemble", "load_world_ensemble"]
+__all__ = [
+    "BuildResult",
+    "build_from_ensemble",
+    "finalise_manifest",
+    "load_world_ensemble",
+]
 
 _BANK_NAMES = ("events", "fomc", "columnists", "economist")
 
@@ -350,6 +355,22 @@ def build_from_ensemble(
         event_params=e_params,
         slate_params=s_params,
     )
+
+
+def finalise_manifest(
+    manifest: dict[str, Any], config: VoicesConfig, panels: dict[str, Any]
+) -> dict[str, Any]:
+    """Attach the diagnostics and EVERY RESOLVED VALUE THE BUILD ACTUALLY READ.
+
+    The resolved block is what makes ``compare`` able to name the parameter that
+    changed rather than only the hash that moved. It is the config's own record
+    of what was consumed, so a key nothing read never appears -- which is itself
+    informative when a parameter turns out to be dead.
+    """
+    out = dict(manifest)
+    out["voices"] = {**out["voices"], "resolved": dict(sorted(config.reads.items()))}
+    out["diagnostics"] = panels
+    return out
 
 
 def write_events_jsonl(events: list[Event], path: Path) -> None:

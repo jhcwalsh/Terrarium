@@ -24,6 +24,7 @@ import yaml
 from ah.gen.base import AbsentLayer, Ensemble, EnsembleMeta, RegimeRecord, SlowStateRecord
 from ah.narration.build import (
     build_from_ensemble,
+    finalise_manifest,
     load_config,
     write_events_jsonl,
     write_manifest,
@@ -125,8 +126,7 @@ def _write_run(out: Path, ensemble: Ensemble, config_path: Path) -> dict[str, An
         hit_rate_target=list(config.get("voices.columnists.hit_rate_target")),
         uncovered=uncovered_classes(result.events, book_available=result.world.book_available),
     )
-    manifest = dict(result.manifest)
-    manifest["diagnostics"] = panels
+    manifest = finalise_manifest(result.manifest, config, panels)
     out.mkdir(parents=True, exist_ok=True)
     (out / "slates.html").write_text(
         render_slates(result.rendered, manifest), encoding="utf-8", newline="\n"
@@ -171,17 +171,18 @@ def test_output_is_identical_across_PROCESSES_not_just_within_one(tmp_path: Path
     ranking on ``(-count, key)``. Inverted and kept: it now fails if the defect
     returns.
     """
+    here = str(Path(__file__).parent)
     script = (
-        "import sys; sys.path.insert(0, %r)\n"
+        f"import sys; sys.path.insert(0, {here!r})\n"
         "from test_narration_build import _ensemble, _write_run, PROBE\n"
         "from pathlib import Path\n"
         "_write_run(Path(sys.argv[1]), _ensemble(), PROBE)\n"
-    ) % str(Path(__file__).parent)
+    )
     outputs = []
     for index, seed in enumerate(("0", "1")):
         target = tmp_path / f"run{index}"
         env = {**os.environ, "PYTHONHASHSEED": seed}
-        subprocess.run(  # noqa: S603 - a fixed argv, no shell, no network
+        subprocess.run(
             [sys.executable, "-c", script, str(target)],
             check=True,
             cwd=str(REPO),
