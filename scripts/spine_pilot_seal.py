@@ -156,6 +156,11 @@ def main() -> None:
     seal_script = Path(__file__)
     preset_path = _REPO_ROOT / "src" / "ah" / "presets" / "spine_pilot.json"
     spine_module = _REPO_ROOT / "src" / "ah" / "gen" / "spine.py"
+    stress_module = _REPO_ROOT / "src" / "ah" / "gen" / "stress.py"
+    bootstrap_module = _REPO_ROOT / "src" / "ah" / "gen" / "bootstrap.py"
+    semimarkov_module = _REPO_ROOT / "src" / "ah" / "gen" / "regimes" / "semimarkov.py"
+    climate_model_module = _REPO_ROOT / "src" / "ah" / "gen" / "climate" / "model.py"
+    climate_simulate_module = _REPO_ROOT / "src" / "ah" / "gen" / "climate" / "simulate.py"
 
     sealed = {
         "sealed_at_utc": f"{committer_date} (as of HEAD commit {head_sha})",
@@ -180,6 +185,12 @@ def main() -> None:
             "panel_dwell_medians": dwell_medians,
             "clockwise_fraction_tolerance": 0.15,
             "panel_clockwise_fraction": clockwise_fraction,
+            "power_disclosure": (
+                "stagflation's dwell median rests on 12 spells and the clockwise anchor "
+                "on 68 transitions (SE ~0.059); tolerances are near the anchors' own "
+                "sampling noise - a marginal B4 result must be read accordingly; "
+                "tolerances must NOT be widened after measurement"
+            ),
         },
         "b5": {
             "rel_tolerance": 0.5,
@@ -188,6 +199,17 @@ def main() -> None:
             "era_threshold_pp": float(hazard.era_threshold_pp),
             "fallback_rate": float(hazard.fallback_rate),
             "min_cell_months": MIN_CELL_MONTHS,
+            "zero_rate_convention": (
+                "a panel rate of exactly 0 passes iff the realized rate is exactly 0; "
+                "note the recovery cell is tautological (the sampler cannot fire at rate "
+                "0), so a PASS there is a plumbing assertion, not evidence about the model"
+            ),
+            "numerator_disclosure": (
+                "the table rests on 6 panel CRI onsets (1970-01, 1970-04, 1974-03, "
+                "2001-06, 2008-09, 2020-03); 1970 is one episode counted as two onsets "
+                "and expansion's rate rests on the 1970-01 orphan blip; B5 tests the "
+                "wiring, not the hazard model"
+            ),
         },
         "b6": {
             "k_months": K_MONTHS,
@@ -195,6 +217,13 @@ def main() -> None:
             "panel_conditional_onset_rate": cond_rate,
             "panel_unconditional_onset_rate": uncond_rate,
             "rel_tolerance": 0.5,
+            "base_rate_disclosure": (
+                "panel conditioning (curve inversion) covers 149/813 months; the "
+                "spine-side conditioning fraction is unpinned; the Task-7 report MUST "
+                "print both base rates, and a B6 FAIL with base rates differing by more "
+                "than 2x is recorded as INCONCLUSIVE (construct mismatch), not a "
+                "compiler defect"
+            ),
         },
         "severity_table_disclosure": (
             "the either/both inflation condition equals the quadrant hot bit; "
@@ -204,6 +233,11 @@ def main() -> None:
         "sensitivity_seeds": [199002 + 1000003 * j for j in range(5)],
         "hashes": {
             "src/ah/gen/spine.py": _sha256(spine_module),
+            "src/ah/gen/stress.py": _sha256(stress_module),
+            "src/ah/gen/bootstrap.py": _sha256(bootstrap_module),
+            "src/ah/gen/regimes/semimarkov.py": _sha256(semimarkov_module),
+            "src/ah/gen/climate/model.py": _sha256(climate_model_module),
+            "src/ah/gen/climate/simulate.py": _sha256(climate_simulate_module),
             "scripts/spine_pilot_report.py": (
                 _sha256(report_script) if report_script.exists() else "unbuilt"
             ),

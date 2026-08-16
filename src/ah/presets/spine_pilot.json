@@ -10,7 +10,7 @@
       "join_yoy_max_pp": 2.5,
       "precedent": [
         "Spine: L1/L2 pinned posteriors (campaign-3 pins, AM-2026-08-10-001); premise realized by rejection, refusal on unfillable.",
-        "Flesh: verbatim panel months, 6-month mean blocks, entry severity per x_stress; joins bounded on 9 level factors + inflation era (<=2.5pp YoY); panel edge = forced re-entry, never wrap (owner ruling 2026-08-16).",
+        "Flesh: verbatim panel months, 6-month mean blocks, entry severity per x_stress; joins bounded on the declared level-factor tolerances (hy_spread 1.5, policy_rate 1.0) + inflation era (<=2.5pp YoY); panel edge = forced re-entry, never wrap (owner ruling 2026-08-16).",
         "Corrections: hazard = panel CRI-onset frequency per 4 investment-clock quadrants, conditioned on the month BEFORE onset; timing random by construction (R2/R3).",
         "The severity table's values are pre-registration candidates pending D-SP-1; its inflation condition duplicates the quadrant hot bit (disclosed; owner ruling 2026-08-16: keep for pilot, revisit at D-SP-1)."
       ],

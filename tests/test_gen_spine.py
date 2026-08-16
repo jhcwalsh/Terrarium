@@ -482,3 +482,61 @@ def test_prereg_seal_exists_and_hashes_match():
         assert got == want, (
             f"sealed hash mismatch for {rel}: re-run the seal script and record the amendment"
         )
+
+
+def test_prereg_thresholds_are_pinned_by_literals():
+    """Every sealed B1-B6 value, copied byte-for-byte from
+    docs/superpowers/specs/spine-pilot-prereg.json as committed at the Task-6
+    pre-registration (amended once, pre-measurement, in the same-day fix
+    round). This is the lock the seal-hash test alone does not provide: a
+    hash mismatch only fires if the JSON's BYTES change, so a seal-script bug
+    that recomputes a DIFFERENT number into the SAME schema would sail
+    through the hash check just as easily as a correct re-run would. These
+    literals catch that: a re-run of the seal script that changes any
+    panel-derived number, or a hand-edit of any threshold, fails HERE.
+
+    Every comparison is `==`, not approx: these are sealed values, not
+    measurements with tolerance of their own -- exact byte-for-byte
+    reproduction is the whole point of a pre-registration lock.
+    """
+    import json
+    from pathlib import Path
+
+    sealed = json.loads(
+        Path("docs/superpowers/specs/spine-pilot-prereg.json").read_text(encoding="utf-8")
+    )
+
+    assert sealed["b1"]["min_sign_fraction"] == 0.90
+    assert sealed["b1"]["lag_months"] == [3, 12]
+
+    assert sealed["b2"]["join_yoy_max_pp"] == 2.5
+    assert sealed["b2"]["p95_ratio_max"] == 1.25
+    assert sealed["b2"]["panel_p95_adjacent_yoy_pp"] == 0.7433911963542538
+
+    assert sealed["b3"]["grid_private_pct"] == [15, 35, 40, 55]
+    assert sealed["b3"]["min_breach_seeds_at_55"] == 1
+    assert sealed["b3"]["n_seeds"] == 20
+    assert sealed["b3"]["coverage_must_be_monotone"] is True
+
+    assert sealed["b4"]["dwell_median_ratio_band"] == [0.6, 1.4]
+    assert sealed["b4"]["panel_dwell_medians"] == [5.0, 4.0, 9.0, 6.0]
+    assert sealed["b4"]["clockwise_fraction_tolerance"] == 0.15
+    assert sealed["b4"]["panel_clockwise_fraction"] == 0.6029411764705882
+
+    assert sealed["b5"]["rel_tolerance"] == 0.5
+    assert sealed["b5"]["panel_rates"] == [
+        0.010752688172043012,  # 1/93
+        0.07017543859649122,  # 4/57
+        0.0,
+        0.004273504273504274,  # 1/234
+    ]
+    assert sealed["b5"]["panel_cell_months"] == [93, 57, 378, 234]
+    assert sealed["b5"]["min_cell_months"] == 24
+
+    assert sealed["b6"]["k_months"] == 12
+    assert sealed["b6"]["spine_policy_gap_threshold_pp"] == 0.0
+    assert sealed["b6"]["panel_conditional_onset_rate"] == 0.2214765100671141
+    assert sealed["b6"]["panel_unconditional_onset_rate"] == 0.07731305449936629
+    assert sealed["b6"]["rel_tolerance"] == 0.5
+
+    assert sealed["sensitivity_seeds"] == [199002, 1199005, 2199008, 3199011, 4199014]
