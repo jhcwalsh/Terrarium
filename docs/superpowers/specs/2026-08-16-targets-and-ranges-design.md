@@ -41,6 +41,21 @@ Resolved with the owner on 2026-08-16.
 | Default | Targets absent ⇒ targets *are* the book's own weights, so every existing session is byte-identical. Ranges absent ⇒ no per-sleeve reporting. |
 | Rebalancing to target | **Out of scope** — a release event (§7). |
 
+> **Correction (added post-implementation, 2026-08-16, Ruling B in
+> `progress.md`).** The "every existing session is byte-identical" claim
+> above is true only for the *derived default* book, whose emitted `targets`
+> equal its own values by construction. It is **false** for a legacy session
+> carrying a **custom** book: `targets=None` resolves to that book's own
+> entered values via `effective_targets()`, so its pacing now follows the
+> analyst's entered figures rather than the world default it used to fall
+> back to — a real behaviour change, not a no-op. This was weighed and ruled
+> acceptable rather than avoided: custom books have been practice-only since
+> su-app-06, so no leaderboard row depends on one, and the alternative (a
+> world-target fallback distinct from the book-target one) would have
+> reintroduced the two-different-fallbacks drift the single-resolver design
+> exists to prevent. See `CHANGELOG.md`'s su-app-07 entry for the same point
+> stated for a general reader.
+
 ## 3. The contract — additive on `OpeningBook`
 
 ```
