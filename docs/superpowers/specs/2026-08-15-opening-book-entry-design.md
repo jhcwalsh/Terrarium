@@ -69,8 +69,15 @@ Rung  (a serialized ClosedEndCohort document)
 
 CommitmentPlan
   state_version: "commitment-plan-0.1"
-  points: {pe|pc|re -> [float x 10]}   # planned commitment points, year 0..9
+  points: {pe|pc|re -> [float x 9]}    # one entry per DECISION WINDOW
 ```
+
+**Nine entries, not ten.** Corrected 2026-08-16 against the engine. A 120-month
+decade has nine decision windows (months 11, 23, … 107) and the engine fires
+exactly nine commitments — `q > 0 and q % 4 == 0` gives quarters 4, 8, … 36,
+vintage years 1…9. There is no commitment at q=0, because the opening book at
+t0 *is* the entered ladder rather than something committed. Plan index `k` is
+the k-th window and drives vintage year `k+1`; a tenth entry would be dead.
 
 **The books total 98, not 100.** Both `START_TARGETS` and `GEN_START_TARGETS`
 sum to 98.0 points; `START_CASH = 2.0` is the balance. Cash is therefore a

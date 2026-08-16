@@ -460,13 +460,22 @@ class TestDefaultBook:
 
 
 class TestDefaultPlan:
+    def test_the_default_plan_has_one_entry_per_decision_window(self):
+        # NOT one per calendar year. decision_months(120) is nine windows, and
+        # the engine fires nine commitments (q = 4, 8, ... 36; `q > 0 and
+        # q % 4 == 0`). A tenth entry would be dead.
+        from ah.core.institution import decision_months
+
+        plan = default_commitment_plan(START_TARGETS)
+        for sleeve in PRIVATE_ASSETS:
+            assert len(plan.points[sleeve]) == len(decision_months(120)) == 9
+
     def test_the_default_plan_is_flat_at_the_fixed_rule_pace(self):
         plan = default_commitment_plan(START_TARGETS)
         for sleeve in PRIVATE_ASSETS:
-            years = plan.points[sleeve]
-            assert len(years) == 10
-            assert len(set(years)) == 1  # flat: the kickoff default, section 10
-            assert years[0] == pytest.approx(START_TARGETS[sleeve] * 0.18)
+            pace = plan.points[sleeve]
+            assert len(set(pace)) == 1  # flat: the kickoff default, section 10
+            assert pace[0] == pytest.approx(START_TARGETS[sleeve] * 0.18)
 
     def test_the_default_plan_is_inside_the_declared_bound(self):
         validate_plan(default_commitment_plan(START_TARGETS), dict(START_TARGETS))
@@ -503,9 +512,17 @@ def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningB
 
 
 def default_commitment_plan(
-    targets: Mapping[str, float] | None = None, years: int = 10
+    targets: Mapping[str, float] | None = None, windows: int = 9
 ) -> CommitmentPlan:
     """The kickoff plan: the FIXED-rule pace, flat across the decade.
+
+    ONE ENTRY PER DECISION WINDOW, not per calendar year. A 120-month decade
+    has nine windows (months 11, 23, ... 107) and the engine fires exactly
+    nine commitments (quarters 4, 8, ... 36 — ``q > 0 and q % 4 == 0``, so
+    there is no commitment at q=0; the t0 book is the entered ladder, not a
+    commitment). Plan index k is the k-th window, which drives the engine's
+    vintage year k+1. Callers with a non-decade horizon pass
+    ``windows=len(decision_months(months))``.
 
     Flat because the policy flex is a function of the realized reported
     private weight, which at kickoff cannot be known without simulating the
@@ -1237,6 +1254,11 @@ In `_mark_to_market`, add `"plan_pace"` to the list of keys nulled at the top, t
         stored_plan = doc.get("commitment_plan")
         if stored_plan:
             plan = CommitmentPlan.model_validate_json(stored_plan)
+            # Plan index = the DECISION WINDOW ordinal, not a calendar year.
+            # Windows sit at quarters 2, 6, 10, ... (months 11, 23, 35, ...),
+            # each driving the commitment at the next multiple of 4. At those
+            # quarters `(q + 1) // 4` IS the window ordinal — verified: q=2 -> 0,
+            # q=6 -> 1, q=34 -> 8. The clamp guards a non-decade horizon.
             year = min((here.quarter + 1) // 4, len(next(iter(plan.points.values()))) - 1)
             doc["plan_pace"] = doc["next_plan_commitments"]
             doc["next_plan_commitments"] = {
