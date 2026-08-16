@@ -116,6 +116,77 @@ describe("DecisionWindow (E1)", () => {
     expect(note).toContain("month 11");
   });
 
+  it("shows the pacing rule's number beside the plan's, labelled and not applied", () => {
+    /**
+     * su-app-06 sections 4.3 and 6 (C2). The server has served `plan_pace`
+     * since task 6 and nothing rendered it, so the pacing flex went from
+     * silently APPLIED to silently INVISIBLE. It must appear beside each
+     * sleeve's plan figure, labelled as the pacing rule's view.
+     *
+     * Asserting the label exists is not enough — a render that put the
+     * pacing number INTO the input would also produce a label. The input's
+     * value is checked here too: what the lever will commit stays the plan.
+     */
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        planCommitments={{ pe: 5, pc: 1.2, re: 0.9 }}
+        planPace={{ pe: 3.18, pc: 1.44, re: 1.26 }}
+      />,
+    );
+    const rows = [...host!.querySelectorAll(".lever-row")];
+    expect(rows[0].querySelector(".lever-plan")!.textContent).toContain("5.00");
+    expect(rows[0].querySelector(".lever-pace")!.textContent).toMatch(/pacing rule\s+3\.18/);
+    expect(rows[1].querySelector(".lever-pace")!.textContent).toMatch(/1\.44/);
+    // the committed number is the PLAN's, not the pacing rule's
+    expect(rows[0].querySelector("input")!.value).toBe("5.00");
+  });
+
+  it("explains the plan-carrying session, where the F4 caveat is suppressed", () => {
+    /**
+     * The server sets `next_plan_basis` to null for plan-carrying sessions
+     * (nothing is approximated), which switched OFF the only paragraph the
+     * lever had. Those sessions were left with no explanation at all. The
+     * plan-carrying explanation replaces it; the F4 caveat still governs
+     * sessions without a plan (covered by the test above).
+     */
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        planCommitments={{ pe: 5, pc: 1.2, re: 0.9 }}
+        planBasis={null}
+        planPace={{ pe: 3.18, pc: 1.44, re: 1.26 }}
+      />,
+    );
+    expect(host!.querySelector(".lever-basis")).toBeNull();
+    const note = host!.querySelector(".lever-plan-note")!.textContent!;
+    expect(note).toMatch(/leave alone commits exactly what is shown/i);
+  });
+
+  it("a session with no plan gets neither the pacing column nor the plan note", () => {
+    // the Task 6 scope fence at the surface: no stored plan => no plan_pace,
+    // and the F4 caveat is the paragraph that governs.
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9 }}
+        planBasis={{ as_of_quarter: 3, as_of_month: 11, private_weight_reported: 0.31 }}
+      />,
+    );
+    expect(host!.querySelectorAll(".lever-pace").length).toBe(0);
+    expect(host!.querySelector(".lever-plan-note")).toBeNull();
+    expect(host!.querySelector(".lever-basis")).not.toBeNull();
+  });
+
   it("the four levers stay on the main page between windows, inert", () => {
     const onCommit = vi.fn();
     render(

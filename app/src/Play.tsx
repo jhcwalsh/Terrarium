@@ -624,6 +624,7 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
               busy={busy}
               planCommitments={session?.next_plan_commitments ?? null}
               planBasis={session?.next_plan_basis ?? null}
+              planPace={session?.plan_pace ?? null}
             />
           </section>
         </div>

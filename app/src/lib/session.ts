@@ -56,6 +56,13 @@ export interface Session {
     as_of_month: number;
     private_weight_reported: number;
   } | null;
+  /** su-app-06 section 4.3: on a session carrying an entered CommitmentPlan,
+   * what the POLICY pacing rule would have paced at the current reported
+   * weight. Shown beside the plan number as a comparison, never applied —
+   * `next_plan_commitments` is the plan, and an untouched lever commits it.
+   * Null for a session with no stored plan, where the pacing rule IS the
+   * pre-fill and there is nothing to compare it against. */
+  plan_pace?: Record<string, number> | null;
   /** audit F4: what the spending rate was applied to, and the rate — so
    * `spending_paid` is rederivable from this document alone. Quarter-end
    * `nav_reported` is sampled after the waterfall and does NOT reproduce it. */
