@@ -14,6 +14,37 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **`docs/current/private-markets-and-inflation.md` — how the private market
+  asset classes are modeled, and the measured fact that inflation does not
+  reach them.** A technical note, no code changed. It maps the three layers
+  that model private markets (the `toy-v0` return streams, the generated
+  path's sealed factor loadings, and `ah/port/`'s cohort cashflow model with
+  its vintage ladder and forced-secondary waterfall), then measures the
+  inflation pass-through rather than reasoning about it. Varying only
+  `factor_conditions.inflation.average_pct` on the stagflation preset from 1%
+  to 12%, over 200 paths: **private equity is bit-identical (−1.772%/yr at
+  every level)**, private credit moves +0.02pp, and real estate moves
+  **−0.12pp** — the wrong sign for the class most often held as an inflation
+  hedge. The negative signs on bonds/RE/REITs are volatility drag ordered by
+  each asset's `d_rate` coefficient, not repricing: the realized rate path is
+  almost unmoved (mean 6.342 → 6.358) and arithmetic means all *rise*. At the
+  institution level the private book appears to gain with inflation, but
+  moving the five commodity points into equity reverses it (private NAV
+  34.98 → 37.92 with commodities; 31.07 → **30.70** without) — the entire
+  response is a second-order effect of a liquid sleeve next to it, transmitted
+  through reported private weight and the pacing multiplier. The note also
+  records that `structural.infrastructure.inflation_linkage` is the only
+  asset-side inflation-linkage field in the contract and belongs to an asset
+  class the engine does not simulate, and lists six other declared-but-unread
+  private-market fields (`leverage_turns`, `income_yield_pct`,
+  `recovery_rate_pct`, `spread_over_base_bps`, both infrastructure fields,
+  and `inflation.peak_pct`, which changes no return to three decimals).
+  **This is register-shaped and the note says so: it recommends an ER-14 in
+  `docs/engine-realism-register.md` but does not file one**, because CLAUDE.md
+  makes register entries a release event and the owner's call, and a fix would
+  bump `TOY_ENGINE_VERSION`, bump the play-alpha stamp, rebuild both committed
+  bundles and re-run the battery.
+
 - **The gate-merge guard now actually fires (housekeeping-03).** It never had.
   **`git merge` does not run `pre-commit`**, and this repository shipped only
   `githooks/pre-commit`, so from 2026-08-12 to 2026-08-15 the guard CLAUDE.md

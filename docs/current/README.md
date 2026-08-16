@@ -30,6 +30,7 @@ read at once.
 | `METHOD.md` | GOVERNING | What has been built and by what method, 2026-08-15. The entry point. |
 | `stress-scenario-methodology.md` | GOVERNING | The stress method in full: the rules, the three measured scenarios, and the limits. Matches spec v0.2. |
 | `tail-register.md` | GOVERNING | Every severity-producing mechanism with its falsifier (TR-1…TR-7). Admission rule: a mechanism that cannot name its own falsifier does not enter the engine. |
+| `private-markets-and-inflation.md` | GOVERNING | How the private market asset classes are modeled across all three layers, and the measured finding that inflation does not reach any of them — PE is bit-identical from 1% to 12% inflation. Recommends an ER-14; filing it is the owner's call. |
 | `alternate-histories-audited.md` | GOVERNING | The narrative account — where the work stands and what it has taught us. Last updated 2026-08-14. |
 | `DROP-MANIFEST.md` | GOVERNING | The DN-9 narration drop: what goes where, and what is knowingly carried. Describes work not yet started. |
 | `narration-dn9.zip` | — | The DN-9 drop itself. **Untracked** (see "Untracked files" below). |
