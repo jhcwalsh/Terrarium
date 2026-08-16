@@ -25,6 +25,56 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   and the declared regime sequence honoured. The committed test pins the
   declaration (generator id, fence, disclosure), catalog-free.
 
+- **AM-2026-08-15-001 declared: two authored structural terms for the sleeve
+  mapping (c1c2-01).** Pre-declaration only — nothing is estimated, nothing is
+  adopted, and `mappings/sleeve-mappings-v1.1.yaml` stays sealed and unedited.
+  **C1**, inflation pass-through on the real-asset sleeves:
+  `b_infl · (trailing K=8q annualised CPI − c_anchor)`, `pm_infra` 0.6 and
+  `pm_re_value_add` 0.3, both labelled `chosen`. **C2**, credit loss on the
+  three credit sleeves: `θ · max(ig_spread_{t−4} − s̄, 0)` with `θ` from the
+  declared Cliffwater CDLI match rule, plus alpha re-basing
+  (`alpha_adj = alpha_v1.1 + mean(loss_q)`). Both terms are demeaned or
+  re-based **by construction**, so adoption changes each sleeve's
+  state-dependence and leaves its unconditional mean exactly where v1.1 put it
+  — a term that moved the mean would be indistinguishable from tuning toward
+  the Sharpe ceiling. Neither is measurable on the composites and neither
+  claims to be: C1's only identifying inflation episode (2021–23) sits past the
+  sealed train+validation boundary, and C2's asymmetry is a tail property with
+  two spread episodes in sample. Ships `scripts/estimate_sleeve_mappings_v1_2.py`
+  (which refits the v1.1 regression solely to recover residuals for the
+  restored `r2_train_val`, and **refuses at tol 1e-3** if the reproduction does
+  not match the sealed artifact — the R² restoration doubles as a v1.1
+  reproducibility check), `scripts/fit_inflation_passthrough.py` and
+  `scripts/fit_credit_loss_theta.py`, and commits
+  `artifacts/c1/passthrough-rent-crosscheck.json` (CPI rent pass-through,
+  1955–2020: contemporaneous coefficient indistinguishable from zero at t=0.5,
+  long-run 0.638, cumulative 47/72/88% at K=4/8/12 — **lag-shape evidence only,
+  never a source for any `b_infl` level**). **`SM-RULING-A` ratified** and
+  entered in `governance/decision-register.md`: external-series comparison of a
+  pre-committed authored coefficient against published prints is validation
+  evidence, not holdout access, under four stated conditions **and no wider** —
+  the Step-2 holdout was spent at WP5.6 and nothing here restores it.
+  **Neither script can run to completion yet**: C2 needs a Cliffwater CDLI
+  export and C1's `measured-external` upgrade needs an NCREIF NPI export, both
+  tracked as deferred. **No sealed file is edited** — `pre-registration.lock`,
+  `-g3.lock` and `-g5.lock` digests are all unchanged; the v1.2 estimator and
+  artifact join the G3 seal scope *together* at the run/adoption event, a
+  recorded deviation from AM-2026-08-12-001's planned-arrival pattern (the
+  artifact cannot exist yet, and sealing half a pair splits one seal event
+  across two commits). Five defects in the incoming drop were fixed before
+  anything was committed, including a hard break (`dn5_prior_constraints`,
+  imported as "single source", exists nowhere in the repo) and a silent
+  divergence (`_to_quarterly` reimplemented with `resample("QE")`, which
+  fabricates a 0.0% quarter on any gap where v1.1's `groupby` omits it — in the
+  one function whose entire job is to reproduce v1.1). Two of the drop's five
+  tests exercised no code from the module under test and a third was v1.1's
+  defect-reproduction test with the biting half removed; `build_row()` and
+  `check_reproduction()` were lifted out of `main()` so the alpha re-basing,
+  the C1 block, the unusable-R² path and the reproduction refusal are reachable
+  by a test at all. Ten tests replace five, and the two that matter were
+  break-and-revert proved. Adoption of either term remains a **named owner
+  release event**, not a side effect of a report existing.
+
 - **The rationale field lands on decision windows (narr-02, DN-9 N-af).**
   `POST /sessions/{sid}/decisions` accepts an optional `rationale: {free_text?,
   tags?}` alongside the existing action/commitments body — `free_text` is a

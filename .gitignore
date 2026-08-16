@@ -221,3 +221,16 @@ app/public/*.bundle.bin
 
 # Claude Code worktrees — a worktree must never be committed as a gitlink
 .claude/worktrees/
+
+# AM-2026-08-15-001 evidence: the design note quotes these numbers (the rent
+# cross-check's 0.638 long-run pass-through and 47/72/88% cumulative share at
+# K=4/8/12; theta and the GFC acceptance verdict), so they are committed on the
+# campaign-3 rule -- nothing else in the repo would hold them. Per-file
+# allowlist, deliberately: each future artifact under c1/ or c2/ needs its OWN
+# line or it is silently ignored.
+!/artifacts/c1/
+/artifacts/c1/*
+!/artifacts/c1/passthrough-rent-crosscheck.json
+!/artifacts/c2/
+/artifacts/c2/*
+!/artifacts/c2/theta-provenance.json
