@@ -26,6 +26,12 @@ BPS_PER_PP = 100.0
 #: any positive base gives byte-identical events.
 EQUITY_INDEX_BASE = 100.0
 
+#: Rounding applied to floats before they enter ``events.jsonl`` or a manifest.
+#: A serialisation precision, not a tolerance: it exists so a record written on
+#: one machine is byte-identical to the same record written on another, and no
+#: decision anywhere is sensitive to the sixth decimal place.
+RECORD_PRECISION = 6
+
 #: The severity grammar is 0..3 (DN-9 §3.1 "severity 0..3"). The *cut-points*
 #: that map a normalised trigger onto this range are a tunable and are not here.
 SEVERITY_MIN = 0

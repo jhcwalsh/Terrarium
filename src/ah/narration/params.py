@@ -394,8 +394,7 @@ PARAMETERS: tuple[Param, ...] = (
     Param(
         key="slate.capital_drop_rule",
         needed_for="slate assembly: when the CAPITAL slot is dropped for a quiet quarter",
-        depends_on="slate size; DN-9 §B.1 'dropped when nothing in the book moved beyond "
-        "routine'",
+        depends_on="slate size; DN-9 §B.1 'dropped when nothing in the book moved beyond routine'",
         candidates=(
             "drop_when_max_severity_zero",
             "drop_when_max_severity_below_one",
@@ -968,14 +967,14 @@ def render_unresolved_md() -> str:
         lines.append(f"- **Depends on it:** {param.depends_on}.")
         if param.gated_on:
             lines.append(f"- **Gated on:** {param.gated_on}.")
-        lines.append(
-            "- **Candidates:** " + " · ".join(_fmt(c) for c in param.candidates) + "."
-        )
+        lines.append("- **Candidates:** " + " · ".join(_fmt(c) for c in param.candidates) + ".")
         lines.append(f"- **Trade-off:** {param.trade_off}")
         lines.append("")
     lines.append("---")
     lines.append("")
-    lines.append("*Not investment advice. No firm, person or institution named in "
-                 "the narration layer is real.*")
+    lines.append(
+        "*Not investment advice. No firm, person or institution named in "
+        "the narration layer is real.*"
+    )
     lines.append("")
     return "\n".join(lines)
