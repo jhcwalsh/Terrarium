@@ -904,3 +904,100 @@ The run itself: `uv run python scripts/spine_pilot_report.py` (n_paths=20 per se
 - R3 amendment (owner, 2026-08-15): the earlier 8-cell bucketing was replaced by the four-quadrant clock for BOTH pool conditioning and the hazard; the policy-tightness dimension survives only in B6's judging. Crisis is the overlay, never a quadrant. No explicit quadrant transition matrix is imposed — B4 judges the emergent one. `arrives_quarter` ge=1 (not ge=0) because the backdrop clause needs a pre-arrival window.
 - Type consistency: `SpinePaths`, `HazardTable`, `SpineBootstrap`, `LAYER_OFFSETS`, `panel_yoy`, `spine_quadrant`, `QUADRANTS`, `CLOCKWISE` names match across Tasks 2–7. `world.spine` / `world.stress` both required by `SpineBootstrap.sample`.
 - The one interface the implementer must verify in-tree (named, not guessed): the slow-state record class carried by hier ensembles — follow `ah/gen/blocks/flow.py`'s import (Task 4).
+
+---
+
+# APPENDIX: spine-02 — the wiring fixes and re-run (owner-authorized 2026-08-16)
+
+Round one's certified verdicts stand. Spine-02 repairs the two WIRING faults
+(B1/B6 construct, the attempt-stride collision), redesigns the empty bar (B5),
+reseals, and re-measures. B2/B3/B4 formulas unchanged — their residue prices
+the deep repair (D-SP-4). Branch `spine-02-rerun`. The round-one seal
+(`spine-pilot-prereg.json`) is a RECORD now: never edited again.
+
+### Task 10: The wiring — pi_actual into the anchor, attempt stride fixed
+
+**Files:** Modify `src/ah/gen/spine.py`, `tests/test_gen_spine.py`.
+
+- `LAYER_OFFSETS` gains `"inflnoise": 458879`. New module constant
+  `ATTEMPT_STRIDE = 104395301` (prime, coprime to 7919).
+- `sample_spine`: attempt streams become `seed + LAYER_OFFSETS[layer] +
+  ATTEMPT_STRIDE * attempt` (SEED_STRIDE no longer multiplies attempts —
+  the round-one collision with the platform's per-path stride, final-review
+  F3). Per accepted decade, draw `eps ~ Normal(0, s_m_pi)` monthly on
+  `PCG64(seed + LAYER_OFFSETS["inflnoise"] + ATTEMPT_STRIDE * attempt)`
+  where `s_m_pi = float(sim2.params["s_m_pi"][0])` — the FITTED CPI
+  observation noise, no new parameters. `pi_actual = pi_star_path + eps`.
+  Policy becomes `policy_anchor(sim2, cycle=reg.cycle, pi_actual=pi_actual_row)`
+  (shape (1, months)). `SpinePaths` gains field `pi_actual: np.ndarray`.
+- Quadrants stay TREND-based (`spine_quadrant` unchanged — the era axis is
+  the slow dial, deliberately; `pi_actual` feeds only the anchor and B6).
+- Premise acceptance unchanged (backdrop reads pi_star, as sealed in round 1).
+- Tests: (a) `pi_actual` differs from `pi_star` and policy responds —
+  contemporaneous corr(dpol, eps) > 0.3 on a sampled decade; (b) determinism
+  unchanged (two calls array-equal); (c) stride bite: seeds 199002 and
+  199002+7919 now produce DIFFERENT first-decade states (would fail under the
+  old stride — assert not array_equal); (d) all existing tests stay green
+  (tapes change; only sealed-round-one artifacts were tape-pinned, and those
+  live in the frozen results doc, not in tests).
+
+### Task 11: Judges v2 — B1 at the model's lag structure, B6 quantile-matched, B5 decidable
+
+**Files:** Modify `scripts/spine_pilot_report.py`, `tests/test_gen_spine.py`.
+
+- `judge_b1_v2(spine, sealed)`: per decade, `gap = pi_actual - pi_star`;
+  corr(`dpol`, `gap[:-1]`... precisely: for lag in {0, 1, 2}: corr(dpol[lag:],
+  gap[: len(dpol)-lag])) — the anchor responds contemporaneously, so the
+  window is 0..2, not 3..12; decade passes iff the max-|corr| lag has positive
+  corr. Pass iff fraction >= sealed `min_sign_fraction` (0.90 unchanged).
+- `judge_b6_v2(spine, sealed)`: per decade, tightness measure
+  `g = policy - (r_star + pi_star)`; threshold = the decade's own
+  `quantile(g[eligible], 1 - 0.1833)` — QUANTILE-MATCHED to the panel's
+  inversion base rate (149/813), the round-one reviewer's stronger design;
+  the base-rate mismatch INCONCLUSIVE path is retained but should now be
+  unreachable by construction (report both base rates regardless). k=12 and
+  the conditional-vs-unconditional comparison unchanged.
+- `judge_b5_v2(conditioning, sealed)`: aggregate first — total onsets across
+  quadrants vs the two-sided 95% binomial interval of
+  `sum_q(at_risk_months_q * sealed_rate_q)`; pass iff inside. Per-quadrant
+  table becomes a REPORTED DISCLOSURE (not judged), except recovery keeps the
+  sealed zero-rate wiring assertion (realized onsets == 0). Interval via
+  exact binomial (scipy is not a dependency — implement Clopper-Pearson
+  via the beta quantile from `numpy`... numpy has no beta quantile: use the
+  normal approximation with continuity correction, DISCLOSED as such in the
+  sealed block; expected count ~6-7 makes the approximation coarse but
+  decidable and pre-registered).
+- B2/B3/B4 judges: UNTOUCHED (assert via test that their functions'
+  source is byte-identical to round one — read with `inspect.getsource`,
+  compare against a committed snapshot taken in this task).
+- Tests: toy fixtures for each v2 judge (B1 v2 passes a contemporaneous
+  responder and fails a non-responder; B6 v2 base rates match by
+  construction; B5 v2 interval arithmetic on hand-computed cases).
+
+### Task 12: The spine-02 seal
+
+**Files:** Create `scripts/spine02_seal.py`, `docs/superpowers/specs/spine02-prereg.json`; tests.
+
+- The new JSON: `b2`, `b3`, `b4` blocks copied VERBATIM from
+  `spine-pilot-prereg.json` (a test byte-compares them); `b1_v2` {lag_months
+  [0,2], min_sign_fraction 0.90}; `b5_v2` {method "aggregate-binomial-normal-
+  approx-cc", alpha 0.05, per_quadrant "disclosure-only", zero_rate_convention
+  carried}; `b6_v2` {k_months 12, conditioning "per-decade quantile-matched to
+  panel base rate 0.18327...", the panel rates carried from round 1};
+  `sensitivity_seeds` unchanged; `hashes` over the same nine files plus
+  `scripts/spine_pilot_b3.py` and itself.
+- Threshold-literals test v2 (same pattern as round one, new file's values).
+- COMMIT-ORDER: this commit lands BEFORE any Task-13 ensemble is drawn.
+
+### Task 13: Re-measure, close out
+
+- `scripts/spine_pilot_report.py` gains `--seal <path>` (default the ROUND-ONE
+  json for reproducibility; Task 13 runs with `--seal docs/superpowers/specs/
+  spine02-prereg.json` and v2 judges selected by the seal's keys).
+- Run all five sensitivity seeds; results to
+  `docs/superpowers/specs/2026-08-16-spine02-results.md`, committed VERBATIM.
+- Re-run B3 (`scripts/spine_pilot_b3.py` unchanged — the stride fix upstream
+  resolves the multiplicity; verify and report the distinct-spine count).
+- CHANGELOG entry; full-tree lint; gate; `.gate-ok`; `--no-ff` merge; push.
+- Verdict framing for the owner report: B1/B6 flips = wiring confirmed;
+  B2/B4/B3 residue = the model, priced for D-SP-4.

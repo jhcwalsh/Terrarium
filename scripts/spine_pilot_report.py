@@ -336,6 +336,196 @@ def judge_b6(spine: Any, sealed: dict[str, Any]) -> dict[str, Any]:
 
 
 # --------------------------------------------------------------------------- #
+# spine-02 (Task 11): v2 judges, respecified after the round-one review. v1
+# judges above are the round-one record and are frozen -- see
+# test_v1_judges_are_frozen -- these functions live BESIDE them, never
+# replacing them. Each v2 judge reads a `sealed` dict pre-sliced to its own
+# `<name>_v2` block, matching the round-one convention (`judge_b6(sp,
+# sealed["b6"])`); it must not assume anything about the round-one JSON's
+# shape beyond the keys it names.
+# --------------------------------------------------------------------------- #
+
+
+def judge_b1_v2(spine: Any, sealed: dict[str, Any]) -> dict[str, Any]:
+    """Reaction function, round two: the anchor responds to the TRANSITORY
+    inflation surprise (pi_actual - pi_star, spine-02's fitted CPI observation
+    noise) at the model's own contemporaneous lag (0..2 months), not the
+    round-one 3..12-month window against the trend gap (pi_star - mu_pi).
+    ``policy_anchor`` is driven by ``pi_actual`` (spine.py, Task 10), so the
+    anchor CAN respond same-month; the round-one window structurally excluded
+    that lag."""
+    n_decades = spine.policy.shape[0]
+    decades: list[dict[str, Any]] = []
+    for k in range(n_decades):
+        policy = np.asarray(spine.policy[k], dtype=np.float64)
+        pi_star = np.asarray(spine.states[k, :, 0], dtype=np.float64)
+        pi_actual = np.asarray(spine.pi_actual[k], dtype=np.float64)
+        dpol = np.diff(policy)
+        gap = (pi_actual - pi_star)[:-1]  # aligned with dpol's month-t index
+        best_lag: int | None = None
+        best_corr: float | None = None
+        for lag in range(0, 3):
+            corr = _pearson_corr(dpol[lag:], gap[: len(gap) - lag])
+            if best_corr is None or abs(corr) > abs(best_corr):
+                best_corr, best_lag = corr, lag
+        passed = best_corr is not None and best_corr > 0.0
+        decades.append({"lag": best_lag, "corr": best_corr, "pass": bool(passed)})
+    value = float(np.mean([d["pass"] for d in decades])) if decades else 0.0
+    threshold = float(sealed["min_sign_fraction"])
+    return {
+        "pass": bool(value >= threshold),
+        "value": value,
+        "threshold": threshold,
+        "n_decades": n_decades,
+        "decades": decades,
+    }
+
+
+def judge_b5_v2(conditioning: dict[str, Any], sealed: dict[str, Any]) -> dict[str, Any]:
+    """Hazard realism, round two: judged once in aggregate -- total realized
+    onsets across all four quadrants vs. the two-sided ~95% normal
+    approximation (continuity-corrected) to the panel-rate-weighted binomial
+    sum -- rather than four separately-judged per-quadrant relative-error
+    rows (round one's B5, which starved cells and a literal panel rate of 0
+    made hard to fail or pass meaningfully at n~20 paths). The per-quadrant
+    table is retained as a REPORTED DISCLOSURE, not judged row-by-row, except
+    the sealed zero-rate quadrant's wiring assertion (the sampler cannot fire
+    at rate 0, so realized onsets there must be exactly 0): that sub-check
+    still fails b5_v2 outright if violated, same as round one's tautological
+    recovery-cell check."""
+    corr = conditioning["corrections"]
+    onsets = corr["per_quadrant_onsets"]
+    months = corr["per_quadrant_months"]
+    panel_rates = sealed["panel_rates"]
+
+    expected = 0.0
+    var = 0.0
+    observed = 0
+    table: list[dict[str, Any]] = []
+    zero_rate_ok = True
+    for q in range(len(panel_rates)):
+        m, o = int(months[q]), int(onsets[q])
+        rate = float(panel_rates[q])
+        expected += m * rate
+        var += m * rate * (1.0 - rate)
+        observed += o
+        if rate == 0.0 and o != 0:
+            zero_rate_ok = False
+        table.append(
+            {
+                "quadrant": q,
+                "onsets": o,
+                "months": m,
+                "panel_rate": rate,
+                "expected": m * rate,
+            }
+        )
+    sd = float(np.sqrt(var))
+    z = 1.959963984540054  # scipy.stats.norm.ppf(0.975); not a dependency here
+    margin = z * sd + 0.5  # +0.5: continuity correction (disclosed, see design note)
+    diff = abs(observed - expected)
+    aggregate_pass = bool(diff <= margin)
+    overall = bool(aggregate_pass and zero_rate_ok)
+    return {
+        "pass": overall,
+        "observed": observed,
+        "expected": expected,
+        "sd": sd,
+        "z": z,
+        "margin": margin,
+        "diff": diff,
+        "aggregate_pass": aggregate_pass,
+        "zero_rate_ok": bool(zero_rate_ok),
+        "table": table,
+    }
+
+
+def judge_b6_v2(spine: Any, sealed: dict[str, Any]) -> dict[str, Any]:
+    """Transmission, round two: the tightness threshold is QUANTILE-MATCHED
+    per decade to the panel's own curve-inversion base rate
+    (``panel_base_rate``, 149/813 months sealed at Task 12) rather than the
+    round-one fixed policy-gap > 0 cut -- the round-one reviewer's stronger
+    design. k_months and the conditional-vs-unconditional comparison are
+    otherwise unchanged from v1. The three-way PASS/FAIL/INCONCLUSIVE outcome
+    is retained, though the base-rate-mismatch INCONCLUSIVE branch should now
+    be unreachable by construction (both base rates are computed and reported
+    regardless, as in v1)."""
+    from ah.gen.spine import CONTRACTION_CODES
+
+    k = int(sealed["k_months"])
+    panel_base_rate = float(sealed["panel_base_rate"])
+    rel_tol = float(sealed["rel_tolerance"])
+    n_decades = spine.policy.shape[0]
+
+    tight_total = 0
+    eligible_total = 0
+    followed = 0
+    for d in range(n_decades):
+        policy = np.asarray(spine.policy[d], dtype=np.float64)
+        pi_star = np.asarray(spine.states[d, :, 0], dtype=np.float64)
+        r_star = np.asarray(spine.states[d, :, 1], dtype=np.float64)
+        labels = np.asarray(spine.labels[d], dtype=np.int64)
+        months = policy.shape[0]
+        g = policy - (r_star + pi_star)
+        in_c = np.isin(labels, list(CONTRACTION_CODES))
+        onset_at = np.zeros(months, dtype=bool)
+        onset_at[0] = bool(in_c[0])
+        onset_at[1:] = in_c[1:] & ~in_c[:-1]
+
+        eligible_end = max(months - k, 0)  # excludes the last k months (full lookahead only)
+        eligible_total += eligible_end
+        if eligible_end == 0:
+            continue
+        thr = float(np.quantile(g[:eligible_end], 1.0 - panel_base_rate))
+        for t in range(eligible_end):
+            if g[t] > thr:
+                tight_total += 1
+                if bool(onset_at[t + 1 : t + 1 + k].any()):
+                    followed += 1
+
+    spine_base_rate = tight_total / eligible_total if eligible_total else 0.0
+    value = followed / tight_total if tight_total else 0.0
+
+    panel_rate = float(sealed["panel_conditional_onset_rate"])
+    panel_uncond = float(sealed["panel_unconditional_onset_rate"])
+    rel_err = abs(value - panel_rate) / panel_rate if panel_rate else float("inf")
+    magnitude_ok = rel_err <= rel_tol
+    sign_ok = value > panel_uncond
+    would_pass = magnitude_ok and sign_ok
+
+    if spine_base_rate == 0.0 and panel_base_rate == 0.0:
+        base_ratio = 1.0
+    elif spine_base_rate == 0.0 or panel_base_rate == 0.0:
+        base_ratio = float("inf")
+    else:
+        base_ratio = max(spine_base_rate / panel_base_rate, panel_base_rate / spine_base_rate)
+
+    if would_pass:
+        verdict = "PASS"
+    elif base_ratio > 2.0:
+        verdict = "INCONCLUSIVE (construct mismatch)"
+    else:
+        verdict = "FAIL"
+
+    return {
+        "pass": bool(would_pass),
+        "verdict": verdict,
+        "value": value,
+        "threshold": panel_rate,
+        "panel_unconditional_onset_rate": panel_uncond,
+        "rel_error": rel_err,
+        "magnitude_ok": bool(magnitude_ok),
+        "sign_ok": bool(sign_ok),
+        "tight_months": tight_total,
+        "eligible_months": eligible_total,
+        "followed_by_onset": followed,
+        "spine_base_rate": spine_base_rate,
+        "panel_base_rate": panel_base_rate,
+        "base_rate_ratio": base_ratio,
+    }
+
+
+# --------------------------------------------------------------------------- #
 # the measurement run itself -- only under __main__
 # --------------------------------------------------------------------------- #
 

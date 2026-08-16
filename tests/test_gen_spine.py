@@ -95,7 +95,56 @@ def test_sample_spine_shapes_and_determinism(layers):
     a = sample_spine(climate, regimes, _premise(), n_decades=2, seed=41, months=120)
     b = sample_spine(climate, regimes, _premise(), n_decades=2, seed=41, months=120)
     assert a.states.shape == (2, 120, 5) and a.policy.shape == (2, 120)
+    assert a.pi_actual.shape == (2, 120)
     assert np.array_equal(a.states, b.states) and np.array_equal(a.labels, b.labels)
+    # (b) determinism unchanged: pi_actual (the new field, drawn on its own
+    # per-attempt inflnoise stream) is bit-identical across two calls too.
+    assert np.array_equal(a.pi_actual, b.pi_actual)
+    assert np.array_equal(a.policy, b.policy)
+
+
+def test_pi_actual_feeds_the_policy_anchor(layers):
+    """(a) spine-02 Task 10: pi_actual = pi_star + eps differs from pi_star,
+    and the policy anchor responds to it. Isolate the response from the
+    slow-moving r_star/pi_star trend by looking at dpol := policy - (pi_star
+    + r_star), the anchor's deviation from the flat "no cycle, no inflation
+    gap" baseline -- by the Taylor-anchor algebra (policy_anchor's
+    phi_pi*(pi_actual - pi_star) + phi_c*cycle terms) dpol = phi_pi*eps +
+    phi_c*cycle exactly. A strong CONTEMPORANEOUS correlation between dpol
+    and eps (month t against month t, not diffed/lagged) on this decade is
+    therefore direct evidence pi_actual is wired into the anchor and not
+    silently defaulting to pi_star (which would zero eps's contribution and
+    the correlation with it)."""
+    from ah.gen.spine import sample_spine
+
+    climate, regimes = layers
+    sp = sample_spine(climate, regimes, _premise(), n_decades=1, seed=2026, months=120)
+    pi_star = sp.states[0, :, 0]
+    r_star = sp.states[0, :, 1]
+    eps = sp.pi_actual[0] - pi_star
+    assert not np.allclose(eps, 0.0)  # pi_actual != pi_star
+
+    dpol = sp.policy[0] - (pi_star + r_star)
+    corr = float(np.corrcoef(dpol, eps)[0, 1])
+    assert corr > 0.3, f"contemporaneous corr(dpol, eps) = {corr}"
+
+
+def test_attempt_stride_decouples_from_platform_stride(layers):
+    """(c) stride bite: seeds 199002 and 199002+7919 previously collided.
+    Under SEED_STRIDE-based attempt streams (round one), sample_spine(seed=
+    199002, n_decades=1) accepted its lone decade at attempt index 18, and
+    sample_spine(seed=199002+7919, n_decades=1) accepted at attempt index 17
+    -- both compute the SAME l1_seed (199002 + 7919*18 == 206921 + 7919*17),
+    so their first-decade states were bit-identical (empirically confirmed
+    pre-fix, final-review F3). With ATTEMPT_STRIDE decoupled from the
+    platform's 7919 per-path stride, no attempt index in the budget can
+    realign the two, so the states must now differ."""
+    from ah.gen.spine import sample_spine
+
+    climate, regimes = layers
+    a = sample_spine(climate, regimes, _premise(), n_decades=1, seed=199002, months=120)
+    b = sample_spine(climate, regimes, _premise(), n_decades=1, seed=199002 + 7919, months=120)
+    assert not np.array_equal(a.states, b.states)
 
 
 def test_accepted_spines_satisfy_the_premise(layers):
@@ -261,10 +310,12 @@ def test_hazard_and_block_streams_are_independent(spine_world):
     from ah.gen.bootstrap import campaign_source
     from ah.gen.spine import LAYER_OFFSETS, SpineBootstrap
 
-    # four consumers, four disjoint streams (FIX3: blocks is no longer the
+    # five consumers, five disjoint streams (FIX3: blocks is no longer the
     # bare seed -- that collided with spine attempt 0's climate stream,
-    # since climate sits at offset 0).
-    assert len(set(LAYER_OFFSETS.values())) == len(LAYER_OFFSETS) == 4
+    # since climate sits at offset 0. spine-02 Task 10 adds inflnoise, the
+    # per-attempt stream that draws pi_actual's fitted CPI observation
+    # noise).
+    assert len(set(LAYER_OFFSETS.values())) == len(LAYER_OFFSETS) == 5
     assert LAYER_OFFSETS["hazard"] != 0
     assert LAYER_OFFSETS["blocks"] not in (0, LAYER_OFFSETS["hazard"])
     gen = SpineBootstrap()
@@ -357,6 +408,7 @@ def test_forced_reentry_at_panel_edge():
         cycle=np.zeros((1, months)),
         policy=np.zeros((1, months)),
         mu_pi=np.zeros(1),
+        pi_actual=np.zeros((1, months)),  # unread by this draw path; same shape as states[:,:,0]
         attempts=1,
         seed=123,
     )
@@ -486,9 +538,23 @@ def test_spine_pilot_world_loads_with_both_extensions():
     assert nw.spine.premise.backdrop == "inflation_above_trend"
 
 
+#: The commit run_gate.py/check_gate.py stamped for round one's G-pilot seal
+#: measurement. Round one's seal binds the files AS THEY WERE at the sealed
+#: measurement (this commit); spine-02 (Task 10 onward) edits the tree freely
+#: under its own seal, to be minted at Task 12. Re-hashing the WORKING TREE
+#: against round-one's recorded hashes would therefore fail for every file
+#: this round touches -- correctly, but uninformatively, since round one's
+#: seal was never a claim about the spine-02 tree. Hash the round-one BLOB
+#: instead, via `git show <sha>:<path>`, so this test verifies what it always
+#: meant to verify (round one's seal is an honest record of round one) without
+#: being coupled to files this round is authorized to change.
+ROUND_ONE_SEAL_COMMIT = "233b70d"
+
+
 def test_prereg_seal_exists_and_hashes_match():
     import hashlib
     import json
+    import subprocess
     from pathlib import Path
 
     sealed = json.loads(
@@ -499,9 +565,15 @@ def test_prereg_seal_exists_and_hashes_match():
     for rel, want in sealed["hashes"].items():
         if want == "unbuilt":
             continue
-        got = hashlib.sha256(Path(rel).read_bytes()).hexdigest()
+        blob = subprocess.run(
+            ["git", "show", f"{ROUND_ONE_SEAL_COMMIT}:{rel}"],
+            capture_output=True,
+            check=True,
+        ).stdout
+        got = hashlib.sha256(blob).hexdigest()
         assert got == want, (
-            f"sealed hash mismatch for {rel}: re-run the seal script and record the amendment"
+            f"sealed hash mismatch for {rel} at {ROUND_ONE_SEAL_COMMIT}: "
+            "round one's own recorded blob no longer matches its recorded hash"
         )
 
 
@@ -614,6 +686,7 @@ def test_judge_b1_detects_policy_chasing_inflation(report):
         cycle=cycle,
         policy=policy.reshape(1, months),
         mu_pi=np.array([mu_pi]),
+        pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
         attempts=1,
         seed=1,
     )
@@ -627,6 +700,7 @@ def test_judge_b1_detects_policy_chasing_inflation(report):
         cycle=cycle,
         policy=np.zeros((1, months)),  # constant policy -> zero-variance dpol
         mu_pi=np.array([mu_pi]),
+        pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
         attempts=1,
         seed=1,
     )
@@ -663,6 +737,7 @@ def test_judge_b4_fails_short_spells(report):
         cycle=np.zeros((1, months)),
         policy=np.zeros((1, months)),
         mu_pi=np.zeros(1),
+        pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
         attempts=1,
         seed=1,
     )
@@ -732,6 +807,7 @@ def test_judge_b6_three_way_outcome(report):
             cycle=np.zeros((1, months)),
             policy=policy.reshape(1, months),
             mu_pi=np.zeros(1),
+            pi_actual=states[:, :, 0].copy(),  # no noise in this synthetic build
             attempts=1,
             seed=1,
         )
@@ -774,3 +850,327 @@ def test_judge_b6_three_way_outcome(report):
     r_inc = report.judge_b6(build(months, list(range(eligible)), []), sealed)
     assert r_inc["verdict"] == "INCONCLUSIVE (construct mismatch)"
     assert r_inc["pass"] is False
+
+
+# --------------------------------------------------------------------------- #
+# spine-02 (Task 11): v2 judges, and the freeze test protecting the round-one
+# record (B2/B3/B4 judges above are untouched by this task).
+# --------------------------------------------------------------------------- #
+
+
+def test_v1_judges_are_frozen(report):
+    """B1/B2/B4/B5/B6 above are the round-one record; v2 lives beside them,
+    never inside them. Hashes captured 2026-08-16 from the file as it stood
+    immediately before Task 11 added the v2 judges -- any future edit to a
+    v1 judge's body (even a no-op refactor) changes its source text and
+    trips this test."""
+    import hashlib
+    import inspect
+
+    expected = {
+        "judge_b1": "5bc4bbffbf31f98755aba6789a0ead051f9c0ccb5285617d8fd9ab393753cd9a",
+        "judge_b2": "bbd1287effb7a6435b5981a39d72cea584685af207429e0de6178fe40dfe7f6b",
+        "judge_b4": "9935e5ab09fdbe1ca30df7f5cbae25e0a808d500138387cb030897924b7072fa",
+        "judge_b5": "c88d0644144d672f67d0361400952a1f1602c72b23b367cde248354e97b8293b",
+        "judge_b6": "cb091ca0b1411ab3b056bdaa47b3956d93999f8f167c8c0ed7b19b5f6abc0f0e",
+    }
+    for name, want in expected.items():
+        fn = getattr(report, name)
+        got = hashlib.sha256(inspect.getsource(fn).encode("utf-8")).hexdigest()
+        assert got == want, f"{name}'s source changed -- v1 judges must stay byte-identical"
+
+
+def test_judge_b1_v2_responds_at_the_contemporaneous_lag(report):
+    from ah.gen.spine import SpinePaths
+
+    months = 40
+    t = np.arange(months)
+    gap_true = 2.0 * np.sin(2 * np.pi * t / 20)  # the transitory surprise, pi_actual - pi_star
+    pi_star = np.zeros(months)
+    pi_actual = pi_star + gap_true
+    sealed = {"min_sign_fraction": 0.9}
+
+    # a responder: dpol[i] == gap_true[i - 1] for i >= 1 -- the anchor moves
+    # ONE month after the surprise, inside v2's 0..2 window (v1's 3..12
+    # window would have missed this lag entirely).
+    lag = 1
+    g = gap_true[:-1]
+    dpol = np.zeros(months - 1)
+    dpol[lag:] = g[: len(g) - lag]
+    policy = np.concatenate([[0.0], np.cumsum(dpol)])
+
+    states = np.zeros((1, months, 5))
+    states[0, :, 0] = pi_star
+    labels = np.zeros((1, months), dtype=np.int64)
+    cycle = np.zeros((1, months))
+
+    sp = SpinePaths(
+        states=states,
+        labels=labels,
+        cycle=cycle,
+        policy=policy.reshape(1, months),
+        mu_pi=np.zeros(1),
+        pi_actual=pi_actual.reshape(1, months),
+        attempts=1,
+        seed=1,
+    )
+    result = report.judge_b1_v2(sp, sealed)
+    assert result["pass"] is True
+    assert result["value"] == 1.0
+    assert result["decades"][0]["lag"] == lag
+    assert result["decades"][0]["corr"] == pytest.approx(1.0)
+
+    # a non-responder: a constant policy anchor -> zero-variance dpol at
+    # every lag -> corr guarded to 0.0 at all three lags -> fails.
+    sp_flat = SpinePaths(
+        states=states,
+        labels=labels,
+        cycle=cycle,
+        policy=np.zeros((1, months)),
+        mu_pi=np.zeros(1),
+        pi_actual=pi_actual.reshape(1, months),
+        attempts=1,
+        seed=1,
+    )
+    result_flat = report.judge_b1_v2(sp_flat, sealed)
+    assert result_flat["pass"] is False
+    assert result_flat["value"] == 0.0
+
+
+def test_judge_b5_v2_interval_arithmetic(report):
+    # hand-computed: expected = 100*.01 + 50*.07 + 300*0 + 200*.004 = 5.3;
+    # var = 100*.01*.99 + 50*.07*.93 + 0 + 200*.004*.996 = .99+3.255+0+.7968
+    # = 5.0418 -> sd ~= 2.2454; band = 1.959963984540054*sd + 0.5 ~= 4.901.
+    sealed = {"panel_rates": [0.01, 0.07, 0.0, 0.004]}
+    months = [100, 50, 300, 200]
+
+    def cond(onsets: list[int]) -> dict:
+        return {"corrections": {"per_quadrant_onsets": onsets, "per_quadrant_months": months}}
+
+    # observed 5: |5 - 5.3| = 0.3 <= ~4.901 -> inside the band -> pass.
+    r_pass = report.judge_b5_v2(cond([2, 2, 0, 1]), sealed)
+    assert r_pass["expected"] == pytest.approx(5.3)
+    assert r_pass["sd"] == pytest.approx(2.2454, abs=1e-3)
+    assert r_pass["margin"] == pytest.approx(4.9013, abs=1e-3)
+    assert r_pass["observed"] == 5
+    assert r_pass["aggregate_pass"] is True
+    assert r_pass["pass"] is True
+
+    # observed 12: |12 - 5.3| = 6.7 > ~4.901 -> outside the band -> fail.
+    r_fail = report.judge_b5_v2(cond([5, 5, 0, 2]), sealed)
+    assert r_fail["observed"] == 12
+    assert r_fail["aggregate_pass"] is False
+    assert r_fail["pass"] is False
+
+    # the sealed zero-rate quadrant (index 2) firing even once is a wiring
+    # violation and fails b5_v2 outright, regardless of the aggregate.
+    r_wiring = report.judge_b5_v2(cond([1, 1, 1, 1]), sealed)  # observed 4, well inside the band
+    assert r_wiring["aggregate_pass"] is True
+    assert r_wiring["zero_rate_ok"] is False
+    assert r_wiring["pass"] is False
+
+
+def test_judge_b6_v2_quantile_matched_base_rate(report):
+    from ah.gen.spine import CONTRACTION_CODES, SpinePaths
+
+    rec_code = next(iter(CONTRACTION_CODES))
+    exp_code = max(CONTRACTION_CODES) + 1000
+
+    eligible_end = 100
+    k = 12
+    months = eligible_end + k
+    positions = [0, 15, 30, 45, 60]  # spaced > k apart -> disjoint k-month onset windows
+
+    def build(spike: bool, onset_idx: list[int]) -> "SpinePaths":
+        g = np.zeros(eligible_end)
+        if spike:
+            g[positions] = 100.0
+        g = np.concatenate([g, np.zeros(k)])
+        labels = np.full(months, exp_code, dtype=np.int64)
+        for i in onset_idx:
+            labels[i] = rec_code
+        states = np.zeros((1, months, 5))  # pi_star = r_star = 0 -> g == policy
+        return SpinePaths(
+            states=states,
+            labels=labels.reshape(1, months),
+            cycle=np.zeros((1, months)),
+            policy=g.reshape(1, months),
+            mu_pi=np.zeros(1),
+            pi_actual=states[:, :, 0].copy(),
+            attempts=1,
+            seed=1,
+        )
+
+    sealed = {
+        "k_months": k,
+        "panel_base_rate": 0.05,  # 5/100 -> exactly the 5 spikes above the 95th percentile
+        "panel_conditional_onset_rate": 0.4,
+        "panel_unconditional_onset_rate": 0.05,
+        "rel_tolerance": 0.5,
+    }
+
+    # PASS: 2 of the 5 tight (spike) months are followed by an onset within
+    # k -> value 2/5 == the sealed 0.4 exactly; base rate matches by
+    # construction (quantile-matched to panel_base_rate).
+    r_pass = report.judge_b6_v2(build(True, [16, 46]), sealed)
+    assert r_pass["tight_months"] == 5
+    assert r_pass["spine_base_rate"] == pytest.approx(0.05)
+    assert r_pass["value"] == pytest.approx(0.4)
+    assert r_pass["verdict"] == "PASS"
+    assert r_pass["pass"] is True
+
+    # FAIL: same 5 tight months, zero followed by any onset -> value 0.0
+    # (both magnitude and sign miss), but the base rates still match (both
+    # 0.05) -- a real construct match, so a genuine FAIL, not INCONCLUSIVE.
+    r_fail = report.judge_b6_v2(build(True, []), sealed)
+    assert r_fail["value"] == 0.0
+    assert r_fail["base_rate_ratio"] == pytest.approx(1.0)
+    assert r_fail["verdict"] == "FAIL"
+    assert r_fail["pass"] is False
+
+    # INCONCLUSIVE: a degenerate, tie-saturated g (no spikes at all) collapses
+    # every quantile threshold to the tie value itself, so nothing is ever
+    # strictly greater than it -- tight_months == 0, spine base rate 0.0 vs
+    # the sealed 0.05 -> base_rate_ratio == inf -> reclassified INCONCLUSIVE.
+    # This path should be unreachable on a real spine (the quantile match
+    # holds there by construction); it stays exercised here so the three-way
+    # structure is proven, not just asserted in prose.
+    r_inc = report.judge_b6_v2(build(False, []), sealed)
+    assert r_inc["tight_months"] == 0
+    assert r_inc["base_rate_ratio"] == float("inf")
+    assert r_inc["verdict"] == "INCONCLUSIVE (construct mismatch)"
+    assert r_inc["pass"] is False
+
+
+# --------------------------------------------------------------------------- #
+# Task 12: THE SPINE-02 SEAL -- the re-run's pre-registration. After this
+# commit, only measurement is allowed (COMMIT-ORDER: before any Task-13
+# ensemble is drawn). docs/superpowers/specs/spine02-prereg.json carries
+# b2/b3/b4 verbatim from round one (unchanged by the Task-11 judge respec)
+# and locks the new b1_v2/b5_v2/b6_v2 bars the v2 judges above read.
+# --------------------------------------------------------------------------- #
+
+SPINE02_SEAL_PATH = "docs/superpowers/specs/spine02-prereg.json"
+
+#: The exact ten paths scripts/spine02_seal.py hashes (nine tracked files
+#: plus itself). Kept here, independent of the seal script's own dict, so a
+#: seal-script edit that silently drops a path from the hash set is still
+#: caught by test_spine02_seal_hashes_match iterating this list.
+SPINE02_HASHED_FILES = [
+    "src/ah/gen/spine.py",
+    "src/ah/gen/stress.py",
+    "src/ah/gen/bootstrap.py",
+    "src/ah/gen/regimes/semimarkov.py",
+    "src/ah/gen/climate/model.py",
+    "src/ah/gen/climate/simulate.py",
+    "scripts/spine_pilot_report.py",
+    "scripts/spine_pilot_b3.py",
+    "src/ah/presets/spine_pilot.json",
+    "scripts/spine02_seal.py",
+]
+
+
+def test_spine02_seal_carries_round_one_bars_verbatim():
+    """b2/b3/b4 are unchanged by the Task-11 judge respec (only B1/B5/B6 were
+    respecified), so the spine02 seal must carry them byte-for-byte from the
+    round-one seal -- not recompute or hand-retype them. Compared via
+    ``json.dumps(..., sort_keys=True)`` rather than raw ``==`` so the check
+    is about VALUE equality, not incidental key-order equality (both files
+    are in fact sort_keys-serialized already, but the comparison shouldn't
+    depend on that)."""
+    import json
+    from pathlib import Path
+
+    round_one = json.loads(
+        Path("docs/superpowers/specs/spine-pilot-prereg.json").read_text(encoding="utf-8")
+    )
+    spine02 = json.loads(Path(SPINE02_SEAL_PATH).read_text(encoding="utf-8"))
+
+    for key in ("b2", "b3", "b4"):
+        assert key in spine02, f"spine02 seal missing {key}"
+        assert json.dumps(spine02[key], sort_keys=True) == json.dumps(
+            round_one[key], sort_keys=True
+        ), f"spine02 seal's {key} block is not byte-identical to round one's"
+
+
+def test_spine02_seal_hashes_match():
+    """Same pattern as round one's test_prereg_seal_exists_and_hashes_match,
+    but against the CURRENT working tree, not a historical git blob: this
+    seal binds THIS round's tree (spine-02 has been editing it freely since
+    Task 10; this seal is the point where that editing stops), so the sealed
+    hashes must match the files as they sit on disk right now, not as they
+    stood at some earlier commit."""
+    import hashlib
+    import json
+    from pathlib import Path
+
+    sealed = json.loads(Path(SPINE02_SEAL_PATH).read_text(encoding="utf-8"))
+    for key in ("b2", "b3", "b4", "b1_v2", "b5_v2", "b6_v2"):
+        assert key in sealed, f"spine02 seal missing {key}"
+
+    assert set(sealed["hashes"]) == set(SPINE02_HASHED_FILES)
+    for rel in SPINE02_HASHED_FILES:
+        want = sealed["hashes"][rel]
+        got = hashlib.sha256(Path(rel).read_bytes()).hexdigest()
+        assert got == want, (
+            f"spine02 seal hash mismatch for {rel}: the working tree no longer "
+            "matches the sealed hash -- either the file changed since Task 12's "
+            "seal (a real pre-registration violation) or the seal needs re-cutting"
+        )
+
+
+def test_spine02_thresholds_are_pinned_by_literals():
+    """Every sealed b1_v2/b5_v2/b6_v2 value, asserted as a literal (same
+    rationale as round one's test_prereg_thresholds_are_pinned_by_literals:
+    the hash test alone only catches a BYTE change, not a seal-script bug
+    that recomputes a DIFFERENT number into the SAME schema). b2/b3/b4 are
+    covered by test_spine02_seal_carries_round_one_bars_verbatim above, not
+    repeated here.
+
+    ``panel_base_rate`` gets both a literal (the value actually observed in
+    the committed JSON) and an exact-equality check against ``149 / 813``,
+    per the Task-12 brief -- so this test also pins the ARITHMETIC, not just
+    whatever float happened to land in the file.
+    """
+    import json
+    from pathlib import Path
+
+    sealed = json.loads(Path(SPINE02_SEAL_PATH).read_text(encoding="utf-8"))
+
+    assert sealed["b1_v2"]["min_sign_fraction"] == 0.90
+    assert sealed["b1_v2"]["lag_months"] == [0, 2]
+
+    assert sealed["b5_v2"]["panel_rates"] == [
+        0.010752688172043012,
+        0.07017543859649122,
+        0.0,
+        0.004273504273504274,
+    ]
+    assert sealed["b5_v2"]["method"] == "aggregate-binomial-normal-approx-cc"
+    assert sealed["b5_v2"]["alpha"] == 0.05
+    assert sealed["b5_v2"]["z"] == 1.959963984540054
+    assert sealed["b5_v2"]["per_quadrant"] == "disclosure-only"
+    assert sealed["b5_v2"]["zero_rate_convention"] == (
+        "a panel rate of exactly 0 passes iff the realized rate is exactly 0; "
+        "note the recovery cell is tautological (the sampler cannot fire at rate "
+        "0), so a PASS there is a plumbing assertion, not evidence about the model"
+    )
+
+    assert sealed["b6_v2"]["k_months"] == 12
+    assert sealed["b6_v2"]["panel_base_rate"] == 0.18327183271832717
+    assert abs(sealed["b6_v2"]["panel_base_rate"] - 149 / 813) == 0.0
+    assert sealed["b6_v2"]["rel_tolerance"] == 0.5
+    assert sealed["b6_v2"]["panel_conditional_onset_rate"] == 0.2214765100671141
+    assert sealed["b6_v2"]["panel_unconditional_onset_rate"] == 0.07731305449936629
+    assert sealed["b6_v2"]["conditioning"] == (
+        "per-decade quantile-matched to the panel inversion base rate"
+    )
+
+    assert sealed["sensitivity_seeds"] == [199002, 1199005, 2199008, 3199011, 4199014]
+
+    assert sealed["round_one_record"] == {
+        "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
+        "prereg_commit": "c9bd03621424becf24dcb603ac7ef725ff9a53ab",
+        "measured_state_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+        "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md",
+    }
