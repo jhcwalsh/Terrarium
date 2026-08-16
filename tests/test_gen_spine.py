@@ -1,6 +1,7 @@
 """Spine-conditioned compiler (pilot). Spec:
 docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md"""
 
+import numpy as np
 import pytest
 from pydantic import ValidationError
 
@@ -65,3 +66,70 @@ def test_numericworld_projects_x_spine():
     doc["extensions"]["x_spine"] = _spec()
     nw2 = project_numeric(WorldSpec.model_validate(doc))
     assert nw2.spine is not None and nw2.spine.premise.recovery == "slow"
+
+
+@pytest.fixture(scope="module")
+def layers():
+    from ah.gen.systems import _pinned_layers
+
+    return _pinned_layers()
+
+
+def _premise(**over):
+    from ah.core.worldspec import SpinePremise
+
+    doc = {
+        "shock": "supply",
+        "arrives_quarter": 8,
+        "backdrop": "inflation_above_trend",
+        "recovery": "slow",
+    }
+    doc.update(over)
+    return SpinePremise.model_validate(doc)
+
+
+def test_sample_spine_shapes_and_determinism(layers):
+    from ah.gen.spine import sample_spine
+
+    climate, regimes = layers
+    a = sample_spine(climate, regimes, _premise(), n_decades=2, seed=41, months=120)
+    b = sample_spine(climate, regimes, _premise(), n_decades=2, seed=41, months=120)
+    assert a.states.shape == (2, 120, 5) and a.policy.shape == (2, 120)
+    assert np.array_equal(a.states, b.states) and np.array_equal(a.labels, b.labels)
+
+
+def test_accepted_spines_satisfy_the_premise(layers):
+    from ah.gen.spine import (
+        BACKDROP_MARGIN_PP,
+        CONTRACTION_CODES,
+        sample_spine,
+    )
+
+    climate, regimes = layers
+    p = _premise()
+    sp = sample_spine(climate, regimes, p, n_decades=3, seed=7, months=120)
+    arrive = 3 * p.arrives_quarter
+    for k in range(3):
+        pi_pre = sp.states[k, :arrive, 0].mean()  # STATE_NAMES[0] == pi_star
+        assert pi_pre > sp.mu_pi[k] + BACKDROP_MARGIN_PP
+        in_c = np.isin(sp.labels[k], list(CONTRACTION_CODES))
+        starts = np.flatnonzero(in_c & ~np.roll(in_c, 1))
+        if in_c[0]:
+            starts = np.unique(np.concatenate([[0], starts]))
+        window = (starts >= arrive - 3) & (starts <= arrive + 6)
+        assert window.any(), f"decade {k}: no contraction onset near quarter {p.arrives_quarter}"
+        assert in_c.sum() >= 24  # recovery == slow
+
+
+def test_unfillable_premise_refuses_with_a_named_reason(layers):
+    from ah.gen.spine import SpineRefusal, sample_spine
+
+    climate, regimes = layers
+    # a backdrop essentially impossible under the fitted posterior: benign
+    # inflation AND an immediate crash AND a slow decade is rare enough at a
+    # tiny attempt budget to refuse deterministically.
+    p = _premise(backdrop="benign", arrives_quarter=1)
+    with pytest.raises(SpineRefusal, match="premise unfillable"):
+        sample_spine(
+            climate, regimes, p, n_decades=50, seed=11, months=120, max_attempts_per_decade=1
+        )
