@@ -23,13 +23,17 @@ silently drift from it. The sampling call shapes (``SpineBootstrap`` +
 that module's own ``_run_seed``.
 
 Also re-runs B3 (``scripts/spine_pilot_b3.py``, UNCHANGED, invoked as a
-subprocess) -- it reads world 802 and the sealed b3 thresholds itself and
-appends its own section to round one's results file
+subprocess) -- as a side effect of running, it reads world 802 and the
+sealed b3 thresholds and appends its own section to round one's results file
 (``docs/superpowers/specs/2026-08-15-spine-pilot-results.md``, its own
-hardcoded ``RESULTS_PATH``); this script copies that newly-appended section
-verbatim into round two's own results doc, alongside a distinct-spine count
-this script computes independently for the b3 seed ladder
-(``199002 + 7919*k``, k=0..19).
+hardcoded ``RESULTS_PATH``). Round one's record is frozen and must not carry
+that mutation: this script snapshots that file's bytes before invoking the
+subprocess and restores them immediately after, so the round-one record is
+byte-identical before and after this script runs. The section the subprocess
+appended is captured only from the before/after diff -- never left in
+place -- and copied verbatim into round two's own results doc, alongside a
+distinct-spine count this script computes independently for the b3 seed
+ladder (``199002 + 7919*k``, k=0..19).
 
 Import-safe: importing this module draws no data, samples no ensemble, and
 writes no file. All of that happens only under ``if __name__ == "__main__"``.
@@ -124,23 +128,6 @@ def _distinct_state_hashes(states: np.ndarray) -> set[str]:
         hashlib.sha256(np.ascontiguousarray(states[k]).tobytes()).hexdigest()
         for k in range(states.shape[0])
     }
-
-
-def _conjoin_bool(values: list[bool]) -> bool:
-    return bool(all(values))
-
-
-def _conjoin_b6(verdicts: list[str]) -> str:
-    """Wiring, not judging -- the same three-way conjunction convention as
-    round one's report script: any real FAIL dominates; else any
-    INCONCLUSIVE dominates; else PASS."""
-    if all(v == "PASS" for v in verdicts):
-        return "PASS"
-    if any(v == "FAIL" for v in verdicts):
-        return "FAIL"
-    if any(v.startswith("INCONCLUSIVE") for v in verdicts):
-        return "INCONCLUSIVE (construct mismatch)"
-    return "FAIL"  # unreachable: verdicts are only ever these three strings
 
 
 def _fmt_bool(p: bool) -> str:
@@ -631,30 +618,39 @@ def _write_report(
 
 def _run_b3_and_append(b3_ladder: dict[str, Any]) -> None:
     """Re-runs scripts/spine_pilot_b3.py UNCHANGED (it is sealed -- this
-    script never edits it, only invokes it). It reads world 802 and the
-    sealed b3 thresholds itself and appends its own section to round one's
-    results file (its own hardcoded RESULTS_PATH); the section it appends is
-    captured here (before/after diff on that file) and copied VERBATIM into
-    this round's own results doc, alongside the distinct-spine count computed
-    independently above."""
-    before = ROUND_ONE_RESULTS_PATH.read_text(encoding="utf-8")
-    proc = subprocess.run(
-        [sys.executable, str(B3_SCRIPT_PATH)],
-        cwd=str(_REPO_ROOT),
-        capture_output=True,
-        text=True,
-    )
-    print(proc.stdout)
-    if proc.returncode != 0:
-        raise RuntimeError(f"scripts/spine_pilot_b3.py exited {proc.returncode}:\n{proc.stderr}")
-    after = ROUND_ONE_RESULTS_PATH.read_text(encoding="utf-8")
-    before_stripped = before.rstrip("\n")
-    if not after.startswith(before_stripped):
-        raise RuntimeError(
-            "scripts/spine_pilot_b3.py's append did not extend round one's results file as "
-            "expected -- cannot isolate the newly-appended B3 section"
+    script never edits it, only invokes it). scripts/spine_pilot_b3.py reads
+    world 802 and the sealed b3 thresholds itself and appends its own section
+    to round one's results file (its own hardcoded RESULTS_PATH) as a side
+    effect of running -- round one's record must not carry that mutation, so
+    this function snapshots that file's bytes before invoking the subprocess
+    and restores them immediately after, regardless of what the subprocess
+    wrote. The appended section is captured only from the before/after diff
+    (never left in place) and copied VERBATIM into this round's own results
+    doc, alongside the distinct-spine count computed independently above."""
+    before = ROUND_ONE_RESULTS_PATH.read_bytes()
+    try:
+        proc = subprocess.run(
+            [sys.executable, str(B3_SCRIPT_PATH)],
+            cwd=str(_REPO_ROOT),
+            capture_output=True,
+            text=True,
         )
-    appended_section = after[len(before_stripped) :]
+        print(proc.stdout)
+        if proc.returncode != 0:
+            raise RuntimeError(
+                f"scripts/spine_pilot_b3.py exited {proc.returncode}:\n{proc.stderr}"
+            )
+        after = ROUND_ONE_RESULTS_PATH.read_text(encoding="utf-8")
+        before_text = before.decode("utf-8")
+        before_stripped = before_text.rstrip("\n")
+        if not after.startswith(before_stripped):
+            raise RuntimeError(
+                "scripts/spine_pilot_b3.py's append did not extend round one's results file as "
+                "expected -- cannot isolate the newly-appended B3 section"
+            )
+        appended_section = after[len(before_stripped) :]
+    finally:
+        ROUND_ONE_RESULTS_PATH.write_bytes(before)
 
     header = (
         "\n## B3 -- the over-commitment grid under spine worlds, re-run (Task 13)\n\n"
@@ -688,11 +684,11 @@ def main() -> None:
         _print_seed(row)
         rows.append(row)
 
-    all_b1 = _conjoin_bool([row["b1"]["pass"] for row in rows])
-    all_b2 = _conjoin_bool([row["b2"]["pass"] for row in rows])
-    all_b4 = _conjoin_bool([row["b4"]["pass"] for row in rows])
-    all_b5 = _conjoin_bool([row["b5"]["pass"] for row in rows])
-    all_b6 = _conjoin_b6([row["b6"]["verdict"] for row in rows])
+    all_b1 = report._conjoin_bool([row["b1"]["pass"] for row in rows])
+    all_b2 = report._conjoin_bool([row["b2"]["pass"] for row in rows])
+    all_b4 = report._conjoin_bool([row["b4"]["pass"] for row in rows])
+    all_b5 = report._conjoin_bool([row["b5"]["pass"] for row in rows])
+    all_b6 = report._conjoin_b6([row["b6"]["verdict"] for row in rows])
 
     _print_summary(rows, all_b1, all_b2, all_b4, all_b5, all_b6)
 
