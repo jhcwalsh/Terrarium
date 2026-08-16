@@ -7,41 +7,64 @@ mappings `v1.1` (`map-2026.08.2`), play alphas **`port-v4-ladder` /
 deleted). The CIO dashboard line has LANDED (`cio-01`…`cio-04`, the inherited
 decade included). Everything merged and pushed through `7d4b092`.
 
-## The main line now: the spine-conditioned stress compiler
+## The main line now: the spine-conditioned compiler — pilot DONE, spine-02 authorized
 
-The design and the plan are both in the repo and both authoritative:
-`docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md` and
-`docs/superpowers/plans/2026-08-15-spine-conditioned-compiler-pilot.md`
-(9 tasks, TDD, **pre-registration before measurement**). L1/L2 slow-state
-spines steer which real 6-month chunks the stress stitcher draws, with a
-state-dependent correction hazard and a state-severity table, judged against
-six pre-sealed bars (B1–B6). Work happens on `spine-01-pilot` in its own
-worktree (`../Terrarium-narr`), not on main.
+**The pilot is complete and merged** (`f988952`, gate 2770 passed). All nine
+tasks ran: the `x_spine` contract, the premise-accepted spine sampler, the
+four-quadrant clock with its per-quadrant correction hazard, `SpineBootstrap`,
+the seal-safe dispatcher (registration hook, boundary pinned by two tests),
+world 802 "The Hard Landing", a pre-registration sealed before measurement and
+never touched after, and the measurement itself — committed verbatim. Both
+plan constraints held: commit-order-as-pre-registration honored, bit-identity
+of 1.0.x and stress worlds pinned green throughout.
 
-**Where it actually is (2026-08-16):** commits land Tasks 1–4 — the `x_spine`
-contract, Layer S (premise-accepted spine sampler with named refusal), the
-quadrant clock and per-quadrant correction hazard, and Layer F
-(`SpineBootstrap`: quadrant-conditioned pools, era-safe joins) — plus a Task-4
-review round. **Task 5 (dispatcher routing and bit-identity guards) is next.**
-Read the commit trail, not the plan's checkboxes: the checkboxes are not being
-ticked as work lands, so the file reads 0/39 done and is not a progress signal.
+**The verdicts, in plain English (full record:
+`docs/superpowers/specs/2026-08-15-spine-pilot-results.md`; certified by an
+independent review that reproduced every sealed number):**
 
-Two constraints from the plan that are easy to trip over and expensive to undo:
+- **Two real weaknesses.** Recoveries run ~half history's length (B4 — the
+  same persistence flaw that sank hier-flow at G2, now located to one
+  quadrant); stitched decades still jump inflation eras slightly too often at
+  the aggregate p95 level (B2), even though the per-join era filter itself was
+  airtight (0 violations in ~734 ordinary joins).
+- **One economic surprise.** Conditioning months on the storyline made decades
+  MILDER: the over-committed 55% book never breaches under world 802 (0/20)
+  where the plain stress compiler's family breached (B3). Coherence currently
+  costs severity.
+- **Two wiring faults, not model faults.** The spine's policy anchor was fed
+  trend inflation as actual inflation, so the reaction term it was tested on
+  was identically zero (B1 unwinnable as wired; B6's tightness construct had
+  no inflation content for the same reason). Named repair: one argument.
+- **One empty bar.** B5's design would fail a perfect machine ~99% of the
+  time (six historical crisis onsets is too thin a target for a ±50% band).
+- **One disclosure.** The B3 ladder's 20 seeds carried only ~2 distinct macro
+  spines (a stride collision); disclosed everywhere, repair in spine-02.
 
-1. **Commit-order-as-pre-registration.** Task 6's sealed thresholds must be
-   committed BEFORE Task 7 or 8 draws any pilot ensemble. Measuring first and
-   sealing after destroys the pilot's standing, and no amount of care afterward
-   recovers it.
-2. **Bit-identity.** Sealed 1.0.x bootstrap worlds AND stress worlds (703) must
-   produce byte-identical ensembles after every task; Task 5 pins this with
-   digests.
+**Options, as put to the owner (2026-08-16):** (1) fix the wiring and re-run
+under a fresh seal — days; (2) ship the trainer on the plain stress compiler
+now (memo Path A) — nothing this week blocks it; (3) fund the deep
+persistence repair — weeks, campaign-scale, D-SP-4. They compose: 2 now, 1
+next, 3 only if 1's residue justifies it.
 
-The binding owner rulings (R1 selection-only, R2 hazard-not-schedule, R3 the
-four-quadrant clock with no imposed transition matrix) are stated in the plan's
-Global Constraints. R3's amendment is on main at `81552eb`.
+**RULED: option 1 is authorized and spine-02 is the live line.** Scope: feed
+`pi_actual` into the policy anchor (using only the fitted observation-noise
+parameter — no new knobs), fix the attempt-stride collision, respecify B1/B6
+at the model's actual (contemporaneous) lag structure, redesign B5 to be
+decidable, reseal, re-run. B2/B3/B4 unchanged — whatever still fails after
+the wiring fixes is genuinely the model, and prices option 3. Unblocked in
+parallel regardless: the memo's Path-A honesty work (the "how this world was
+made" disclosure moving onto the play surface).
 
 ## Standing owner questions
 
+- **D-SP series (spine pilot, all proposed-never-taken):** D-SP-1 the
+  severity table's sealed values (kept-for-pilot; its inflation condition
+  duplicates the quadrant hot bit — revisit here); D-SP-2 the hazard's state
+  vector; D-SP-3 the premise vocabulary; D-SP-4 what a future PASS buys
+  (option 3's gate); D-SP-5 refitting L2 natively on the four quadrants.
+  Plus one small carry: world 703's precedent line says "9 level factors" but
+  its declared join tolerances cover 2 — 802's was corrected; amending a
+  shipped world's disclosure is the owner's call.
 - **ER-14 — inflation does not reach private markets** (filed 2026-08-16,
   `docs/engine-realism-register.md`; detail in
   `docs/current/private-markets-and-inflation.md`). Status `open`, no fix
