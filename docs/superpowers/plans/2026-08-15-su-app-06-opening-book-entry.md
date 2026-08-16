@@ -1556,25 +1556,38 @@ uv run ruff check . --fix && uv run ruff format . && uv run pyright
 ```
 Both must be clean. Stragglers found mid-gate cost a restart of the whole ~38 minutes.
 
-- [ ] **Step 4: Run the gate**
+- [ ] **Step 4: Commit the docs FIRST — before the gate, not after**
+
+> **CORRECTION, 2026-08-16.** The original ordering (gate, then commit the log
+> alongside the docs) cannot work here, for two independently fatal reasons:
+> `.gitignore:214` ignores `/gate*.log` at the repo root, so the log is not
+> addable; and `scripts/check_gate.py` refuses any log whose recorded sha is
+> not HEAD. Committing anything after the gate ran moves HEAD and invalidates
+> the log against the very commit it certifies — the exact 2026-08-15 incident
+> that `check_gate.py`'s own docstring records. So: commit the docs, THEN run
+> the gate on that final commit, and leave the log uncommitted.
 
 ```bash
-uv run python scripts/run_gate.py gate-su-app-06.log
-```
-Run it in the background and read the log as data. Check the `EXIT:` line and the pass count before claiming anything — never chain a merge onto a `tail`.
-
-- [ ] **Step 5: Commit and stop**
-
-```bash
-git add docs/engine-realism-register.md CHANGELOG.md CLAUDE.md gate-su-app-06.log
-git commit -m "docs(su-app-06): ER-14, changelog, gate log
+git add docs/engine-realism-register.md CHANGELOG.md CLAUDE.md
+git commit -m "docs(su-app-06): ER-14, changelog
 
 ER-14: an entered ladder can sit arbitrarily far from the shape the pacing
 model and the linkage were fitted on, and can open with an un-converged
 appraisal filter. Mitigated by the practice-only rule, not fixed."
 ```
 
-**Do not merge.** Re-verify HEAD, run `uv run python scripts/check_gate.py gate-su-app-06.log` on the branch, and hand back to the owner — the owner commits onto branches mid-gate, and `.gate-ok` binds exactly one commit.
+- [ ] **Step 5: Run the gate on that final commit — controller, not implementer**
+
+```bash
+uv run python scripts/run_gate.py gate-su-app-06.log     # ~38 min, foreground
+uv run python scripts/check_gate.py gate-su-app-06.log   # validates + stamps .gate-ok
+```
+
+Read the log as data: the `EXIT:` line and the pass count, never a `tail` chained to anything. `run_gate.py` refuses to start on a dirty tree and stamps the sha it tested before pytest begins, so the tree must be clean and must stay clean for the whole run — no implementer may be active.
+
+The gate is run by the controller rather than an implementer: four agent turns in this work package were killed while waiting on long runs, and a 38-minute gate is the worst case for that failure mode.
+
+**Do not merge.** Re-verify HEAD and hand back to the owner — the owner commits onto branches mid-gate, and `.gate-ok` binds exactly one commit.
 
 ---
 
