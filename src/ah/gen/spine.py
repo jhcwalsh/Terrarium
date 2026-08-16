@@ -185,26 +185,34 @@ class HazardTable:
 
 
 def fit_hazard(source) -> HazardTable:
-    """Empirical CRI-onset frequency per panel quadrant (spec 3.2, R3). Over
-    one categorical covariate the saturated fit IS the frequency table --
-    portfolio outcomes never enter (rule 1). Starved quadrants
-    (< MIN_CELL_MONTHS) take the marginal onset rate."""
+    """P(a crisis BEGINS next month | this month's quadrant) -- the discrete hazard
+    rate per panel quadrant (spec 3.2, R3). Over one categorical covariate the
+    saturated fit IS the frequency table -- portfolio outcomes never enter (rule 1).
+    Starved quadrants (< MIN_CELL_MONTHS) take the marginal onset rate.
+
+    Conditioning is on the month BEFORE the onset (the onset month itself is labelled
+    CRI and always classifies as contracting; conditioning on it would silence expanding
+    quadrants structurally). AMENDED 2026-08-15 during Task 3: the original formula
+    conditioned on the onset month's own quadrant."""
     yoy = panel_yoy(source)
     era_thr = float(np.nanmedian(yoy) + BACKDROP_MARGIN_PP)
     cells = panel_quadrant(source, yoy, era_thr)
     labels = np.asarray(source.labels)
     is_cri = labels == "CRI"
-    onset = is_cri & ~np.roll(is_cri, 1)
-    onset[0] = is_cri[0]
-    ok = cells >= 0
-    fallback = float(onset[ok].sum() / max(int(ok.sum()), 1))
+    # At-risk months: valid quadrant, not already in a crisis
+    at_risk = (cells >= 0) & ~is_cri
+    at_risk[-1] = False  # a month already inside a crisis cannot 'onset'; the last month has no t+1
+    # Events credited to the month BEFORE the onset
+    event = np.zeros(source.n_rows, dtype=bool)
+    event[:-1] = is_cri[1:] & ~is_cri[:-1]
+    fallback = float(event[at_risk].sum() / max(int(at_risk.sum()), 1))
     rates = np.full(4, fallback)
     months = np.zeros(4, dtype=np.int64)
     for c in range(4):
-        mask = cells == c
+        mask = at_risk & (cells == c)
         months[c] = int(mask.sum())
         if months[c] >= MIN_CELL_MONTHS:
-            rates[c] = float(onset[mask].sum() / months[c])
+            rates[c] = float(event[mask].sum() / months[c])
     return HazardTable(
         rates=rates, era_threshold_pp=era_thr, cell_months=months, fallback_rate=fallback
     )

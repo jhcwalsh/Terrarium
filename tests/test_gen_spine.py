@@ -158,6 +158,11 @@ def test_panel_quadrants_and_hazard_calibration():
     # inflation, not benign recoveries.
     if table.cell_months[1] >= MIN_CELL_MONTHS and table.cell_months[2] >= MIN_CELL_MONTHS:
         assert table.rates[1] >= table.rates[2]
+    # no structurally-silent quadrant: conditioning is on the month BEFORE the
+    # onset, so calm markets can precede a crash (1987-pattern). At least one
+    # EXPANDING quadrant (2 or 3) must carry a nonzero rate; if this fails it
+    # is a finding about the panel -- STOP and report, do not weaken.
+    assert table.rates[2] > 0.0 or table.rates[3] > 0.0
 
 
 def test_spine_quadrant_encoding():
