@@ -10,6 +10,7 @@ EQUIVALENCE   - the DEFAULT book fed back in as an entered book must produce
 
 from __future__ import annotations
 
+import dataclasses
 import json
 from pathlib import Path
 from typing import Any
@@ -22,6 +23,7 @@ from ah.core.worldspec import WorldSpec
 from ah.play import (
     PRIVATE_ASSETS,
     START_TARGETS,
+    PlayResult,
     default_opening_book,
     simulate_play,
 )
@@ -42,31 +44,11 @@ def stagflation():
     return _paths()
 
 
-def _quarters_equal(a, b) -> bool:
-    return [
-        (
-            q.quarter,
-            q.nav_true,
-            q.nav_reported,
-            q.cash,
-            q.calls_paid,
-            q.distributions_received,
-            q.unfunded_total,
-            q.forced_sale_total,
-        )
-        for q in a.quarters
-    ] == [
-        (
-            q.quarter,
-            q.nav_true,
-            q.nav_reported,
-            q.cash,
-            q.calls_paid,
-            q.distributions_received,
-            q.unfunded_total,
-            q.forced_sale_total,
-        )
-        for q in b.quarters
+def _quarters_equal(a: PlayResult, b: PlayResult) -> bool:
+    """Every field of every quarter, exactly. Comparing a subset would let a
+    bad reconstruction pass while the aggregates happened to match."""
+    return [dataclasses.astuple(q) for q in a.quarters] == [
+        dataclasses.astuple(q) for q in b.quarters
     ]
 
 
@@ -76,7 +58,10 @@ class TestEquivalence:
         derived = simulate_play(stagflation, None)
         entered = simulate_play(stagflation, None, opening_book=default_opening_book(START_TARGETS))
         assert _quarters_equal(derived, entered)
-        assert derived.final_value == pytest.approx(entered.final_value, rel=0, abs=0)
+        assert derived.final_value == entered.final_value
+        assert derived.forced_secondaries == entered.forced_secondaries
+        assert derived.total_forced_sales == entered.total_forced_sales
+        assert derived.forced_sale_quarters == entered.forced_sale_quarters
 
     def test_equivalence_holds_with_decisions_too(self, stagflation):
         decisions = {11: "derisk", 23: "leanin", 35: "secondary"}
@@ -117,6 +102,24 @@ class TestAnEnteredBookActuallyChangesThings:
         result = simulate_play(stagflation, None, opening_book=moved)
         derived = simulate_play(stagflation, None)
         assert result.quarters[0].cash != derived.quarters[0].cash
+
+    def test_a_changed_rung_gives_a_different_decade(self, stagflation):
+        """The private ladder is the substantive half of an entered book. Without
+        this, deleting `rungs = book.cohorts(asset)` and always deriving the
+        ladder leaves every other test in this file green.
+
+        Only the rung's NAV moves; cash and liquid stay exactly as the default
+        book has them, so any divergence can only have come from the private
+        ladder being consulted, not from the (separately-guarded) cash path.
+        """
+        book = default_opening_book(START_TARGETS)
+        moved = book.model_copy(deep=True)
+        rung = moved.private["pe"][0]["value"]
+        rung["nav_true"] *= 0.5
+        rung["nav_reported"] = rung["nav_true"]
+        entered = simulate_play(stagflation, None, opening_book=moved)
+        derived = simulate_play(stagflation, None)
+        assert not _quarters_equal(derived, entered)
 
 
 class TestDeletability:
