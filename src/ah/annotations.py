@@ -23,13 +23,14 @@ from collections.abc import Mapping
 from typing import Any
 
 from ah.core.engine import EnginePaths
+from ah.core.institution import decision_months
 from ah.play import (
     PRIVATE_ASSETS,
     plan_commitments,
     simulate_play,
     window_contributions_play,
 )
-from ah.port.book import OpeningBook
+from ah.port.book import CommitmentPlan, OpeningBook
 
 __all__ = ["post_game_annotations"]
 
@@ -45,14 +46,23 @@ def post_game_annotations(
     use_reported: bool = True,
     start_targets: Mapping[str, float] | None = None,
     opening_book: OpeningBook | None = None,
+    commitment_plan: CommitmentPlan | None = None,
 ) -> list[dict[str, Any]]:
     """The E4 annotations for one played decade, deterministic.
 
     ``opening_book`` (su-app-06) rides along on every replay here — the
     active run, the attribution, and the flinch-cost restoration — so the
     annotations describe the book the player actually held.
+
+    ``commitment_plan`` (su-app-06, spec section 2: "the lever shows deviation
+    from *your* plan, not from the model's") is the analyst's own kickoff
+    schedule. When it is given, the flinch cost measures a cut against the
+    plan's entry for that window and restores the counterfactual to that same
+    entry. ``None`` keeps the model's pacing rule as the baseline, which is
+    what every session without a stored plan has always been measured against.
     """
     decisions = dict(decisions or {})
+    windows = decision_months(paths.months)
     active = simulate_play(
         paths,
         decisions,
@@ -80,13 +90,33 @@ def post_game_annotations(
 
         # -- the flinch cost -------------------------------------------------
         if commit_pts is not None:
-            plan = plan_commitments(quarters[qw].private_weight_reported, start_targets)
+            # su-app-06: the baseline a cut is measured against is the
+            # player's OWN plan entry for this window when the session
+            # carries one — indexed by the window's ordinal in
+            # `decision_months`, the same definition `ah.serve` fills the
+            # lever from. Without a plan it stays the model's pacing rule.
+            window = windows.index(month) if month in windows else None
+            plan = (
+                {a: float(commitment_plan.points[a][window]) for a in PRIVATE_ASSETS}
+                if commitment_plan is not None
+                and window is not None
+                and all(window < len(commitment_plan.points[a]) for a in PRIVATE_ASSETS)
+                else plan_commitments(quarters[qw].private_weight_reported, start_targets)
+            )
             committed = sum(float(commit_pts.get(a, plan[a])) for a in PRIVATE_ASSETS)
             planned = sum(plan.values())
             cut = planned - committed
             if cut > 1e-9:
                 counter: dict[int, str | Mapping[str, Any]] = dict(decisions)
-                counter[month] = name if name != "commit" else "hold"
+                # "restored to the plan" has to mean the plan that was cut.
+                # Dropping the commitments map instead would restore the
+                # model's pacing rule, which on a plan-carrying session is a
+                # third number neither the player nor the note ever names.
+                counter[month] = (
+                    {"action": name, "commitments": dict(plan)}
+                    if commitment_plan is not None
+                    else (name if name != "commit" else "hold")
+                )
                 restored = simulate_play(
                     paths,
                     counter,

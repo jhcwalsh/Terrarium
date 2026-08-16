@@ -22,6 +22,7 @@ from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import PRIVATE_ASSETS
+from ah.port.book import CommitmentPlan
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -67,6 +68,66 @@ class TestFlinchCost:
         plan = plan_commitments(q3.private_weight_reported)
         notes = post_game_annotations(p, {11: {"action": "hold", "commitments": plan}})
         assert not [n for n in notes if n["type"] == "flinch"]
+
+
+class TestFlinchIsMeasuredAgainstTheEnteredPlan:
+    """I2 — spec section 2: "The lever shows deviation from *your* plan, not
+    from the model's." ``post_game_annotations`` priced every cut against
+    ``plan_commitments`` (the policy pacing rule) regardless of what the
+    analyst actually planned, so an analyst who planned 1.0 and committed 1.0
+    was told they had cut from ~6.3."""
+
+    @staticmethod
+    def _plan(value: float, windows: int = 9) -> CommitmentPlan:
+        return CommitmentPlan(points={a: [value] * windows for a in PRIVATE_ASSETS})
+
+    def test_committing_the_plans_own_number_is_not_a_flinch(self):
+        """The analyst planned a low pace deliberately and held to it
+        exactly. Against the model's pacing rule that reads as a large cut;
+        against their own plan it is no cut at all."""
+        p = _paths()
+        plan = self._plan(1.0)
+        held = {11: {"action": "hold", "commitments": {a: 1.0 for a in PRIVATE_ASSETS}}}
+
+        against_model = post_game_annotations(p, held)
+        assert [n for n in against_model if n["type"] == "flinch"], (
+            "precondition: the model's pacing rule does read this as a cut"
+        )
+
+        against_own = post_game_annotations(p, held, commitment_plan=plan)
+        assert not [n for n in against_own if n["type"] == "flinch"]
+
+    def test_a_cut_below_the_entered_plan_is_still_priced_against_that_plan(self):
+        """The bound must be re-based, not removed: cutting below your own
+        plan is still a flinch, and the note quotes YOUR planned total."""
+        p = _paths()
+        plan = self._plan(1.0)
+        notes = post_game_annotations(p, _cut(11), commitment_plan=plan)
+        flinch = [n for n in notes if n["type"] == "flinch"]
+        assert len(flinch) == 1
+        assert flinch[0]["distribution_shortfall"] > 0.0
+        # 3 sleeves x 1.0 planned, cut to 0.0 — the entered plan's own total
+        assert "from 3.0 to 0.0 points" in flinch[0]["text"]
+
+    def test_the_counterfactual_restores_the_plan_not_the_pacing_rule(self):
+        """The shortfall is priced by re-running with the window "restored to
+        the plan". With an entered plan that must mean the plan's own number:
+        restoring the MODEL's pace instead prices a commitment the analyst
+        never planned, so the two shortfalls must differ."""
+        p = _paths()
+        # both stay under the declared bound the engine itself enforces
+        # (2x target x rate; re's is the tightest at 2.52 on START_TARGETS)
+        low = post_game_annotations(p, _cut(11), commitment_plan=self._plan(0.5))
+        high = post_game_annotations(p, _cut(11), commitment_plan=self._plan(2.0))
+        low_note = next(n for n in low if n["type"] == "flinch")
+        high_note = next(n for n in high if n["type"] == "flinch")
+        assert high_note["distribution_shortfall"] > low_note["distribution_shortfall"]
+
+    def test_no_plan_is_byte_identical_to_before(self):
+        p = _paths()
+        assert post_game_annotations(p, _cut(11), commitment_plan=None) == post_game_annotations(
+            p, _cut(11)
+        )
 
 
 class TestArithmeticWarning:

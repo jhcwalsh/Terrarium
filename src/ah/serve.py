@@ -729,8 +729,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         # outcome — computed here (the server owns tone and number alike).
         from ah.annotations import post_game_annotations
 
+        # su-app-06 (I2): the flinch cost measures a cut against the player's
+        # OWN stored plan when the session carries one (spec section 2), not
+        # against the model's pacing rule. None for every session without a
+        # plan, which keeps that path exactly as it was.
+        stored_plan = doc.get("commitment_plan")
         annotations = post_game_annotations(
-            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
+            paths,
+            decisions,
+            use_reported=use_reported,
+            start_targets=targets,
+            opening_book=book,
+            commitment_plan=(
+                CommitmentPlan.model_validate_json(stored_plan) if stored_plan else None
+            ),
         )
 
         alpha = active.final_value - twin.final_value
