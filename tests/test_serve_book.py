@@ -17,6 +17,7 @@ import pytest
 
 from ah.cioview import WATCH_FRACTION
 from ah.core.institution import decision_months
+from ah.serve import _alert_level
 
 # reuse this module's established app/client fixtures — see tests/test_serve.py.
 # Import ONLY the fixture names (plus the plain `_play_through` helper), never
@@ -947,3 +948,115 @@ class TestBandReport:
         assert with_bands["series"] == plain["series"]
         assert with_bands["window_contributions"] == plain["window_contributions"]
         assert with_bands == plain
+
+    def test_a_book_whose_targets_all_sit_outside_their_bands_still_reports(self, service):
+        """The ``_TIGHT`` shape end to end. Every target here is outside its
+        own band — legal (``validate_book`` warns, it does not refuse) and,
+        until the final review, the shape no test ever asserted an ALERT
+        under, which is how the ``_alert_level`` inversion survived.
+
+        The invariant asserted is the one that needs no knowledge of where
+        the weight landed: a weight inside its band is never ``breach``, and
+        a weight outside it always is. The proportional watch/ok split under
+        this shape is pinned exactly in ``TestAlertLevel`` — through HTTP the
+        served weight is rounded to 4dp while the alert is computed on the
+        unrounded one, so an edge-exact assertion here would not be
+        reproducible."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = _banded_session(client, rid, default, _TIGHT)
+        sleeves = doc["band_report"]["sleeves"]
+        assert len(sleeves) == len(_TIGHT)
+        for s in sleeves:
+            for plane in ("true", "reported"):
+                alert = s[plane]["alert"]
+                assert alert in ("ok", "watch", "breach")
+                inside = s["lo"] <= s[plane]["weight"] <= s["hi"]
+                assert (alert == "breach") is not inside, (
+                    f"{s['sleeve']} {plane}: weight {s[plane]['weight']} vs "
+                    f"band [{s['lo']}, {s['hi']}] disagrees with alert {alert!r}"
+                )
+
+
+class TestAlertLevel:
+    """``_alert_level`` directly (su-app-07 task 3, final-review fix).
+
+    Unit-level on purpose. The served weight is rounded to 4 decimals while
+    the alert is computed on the unrounded one, so an assertion about a
+    weight sitting EXACTLY on an edge cannot be driven reliably through HTTP
+    — and the edges are precisely where this function was wrong.
+    """
+
+    _LO, _HI = 10.0, 20.0
+
+    def test_a_target_inside_its_band_is_unchanged_by_the_two_edge_form(self):
+        """The ordinary case must not move: for a target strictly inside,
+        "within (1 - WATCH_FRACTION) of the way to the edge" is algebraically
+        the old ``dist >= WATCH_FRACTION * room``."""
+        lo, hi, target = self._LO, self._HI, 15.0
+        assert _alert_level(15.0, target, lo, hi) == "ok"
+        assert _alert_level(18.0, target, lo, hi) == "ok"  # 0.60 of the way out
+        assert _alert_level(18.75, target, lo, hi) == "watch"  # exactly 0.75
+        assert _alert_level(19.5, target, lo, hi) == "watch"
+        assert _alert_level(11.25, target, lo, hi) == "watch"  # the mirror
+        assert _alert_level(12.0, target, lo, hi) == "ok"
+        assert _alert_level(20.1, target, lo, hi) == "breach"
+        assert _alert_level(9.9, target, lo, hi) == "breach"
+
+    def test_a_target_above_its_own_band_measures_the_edge_being_approached(self):
+        """The defect, pinned. At ``lo=10, hi=20, target=30`` the single-edge
+        form measured every in-band weight's room to ``lo``, so a mid-band
+        15.0 reported ``watch`` and a 20.0 one step from breaching ``hi``
+        reported ``ok``. Both are now the other way round."""
+        lo, hi, target = self._LO, self._HI, 30.0
+        assert _alert_level(15.0, target, lo, hi) == "ok", "mid-band is not an alert"
+        assert _alert_level(19.0, target, lo, hi) == "ok"
+        assert _alert_level(20.0, target, lo, hi) == "watch", "sitting on the edge it will breach"
+        assert _alert_level(20.1, target, lo, hi) == "breach"
+        # the LOWER zone still fires: the old `room > 0.0` guard suppressed
+        # the entire watch zone for this shape, because room was hi - target
+        # for a clamped target... which is where the whole thing went wrong.
+        assert _alert_level(10.0, target, lo, hi) == "watch"
+        assert _alert_level(12.5, target, lo, hi) == "watch"  # exactly 0.25 in
+        assert _alert_level(13.0, target, lo, hi) == "ok"
+
+    def test_a_target_below_its_own_band_is_the_mirror_image(self):
+        lo, hi, target = self._LO, self._HI, 2.0
+        assert _alert_level(15.0, target, lo, hi) == "ok"
+        assert _alert_level(11.0, target, lo, hi) == "ok"
+        assert _alert_level(10.0, target, lo, hi) == "watch", "sitting on the edge it will breach"
+        assert _alert_level(9.9, target, lo, hi) == "breach"
+        # and the upper zone is the live one here
+        assert _alert_level(20.0, target, lo, hi) == "watch"
+        assert _alert_level(17.5, target, lo, hi) == "watch"  # exactly 0.25 in
+        assert _alert_level(17.0, target, lo, hi) == "ok"
+
+    def test_a_weight_on_either_edge_is_watch_not_ok(self):
+        """As close to breaching as an in-band weight can be. True for a
+        target inside its band, on an edge, and outside it — the answer must
+        not depend on where the target sits."""
+        lo, hi = self._LO, self._HI
+        for target in (10.0, 12.0, 15.0, 20.0, 30.0, 2.0):
+            assert _alert_level(lo, target, lo, hi) == "watch", target
+            assert _alert_level(hi, target, lo, hi) == "watch", target
+
+    def test_a_target_exactly_on_an_edge_collapses_only_that_edges_zone(self):
+        """``t == hi`` leaves zero room above, so only a weight exactly on
+        ``hi`` is amber from that side; the lower zone is untouched. The old
+        ``room > 0.0`` guard suppressed BOTH."""
+        lo, hi = self._LO, self._HI
+        assert _alert_level(hi, hi, lo, hi) == "watch"
+        assert _alert_level(19.99, hi, lo, hi) == "ok", "no room above means no proportional zone"
+        assert _alert_level(12.5, hi, lo, hi) == "watch", "the lower zone still works"
+        assert _alert_level(lo, lo, lo, hi) == "watch"
+        assert _alert_level(10.01, lo, lo, hi) == "ok"
+        assert _alert_level(17.5, lo, lo, hi) == "watch"
+
+    def test_breach_is_decided_before_the_target_is_consulted_at_all(self):
+        """Breach detection was correct before this fix and is untouched: it
+        is a pure in/out test on the band, whatever the target does."""
+        lo, hi = self._LO, self._HI
+        for target in (-5.0, 0.0, 15.0, 30.0, 100.0):
+            assert _alert_level(9.999, target, lo, hi) == "breach", target
+            assert _alert_level(20.001, target, lo, hi) == "breach", target
+            assert _alert_level(15.0, target, lo, hi) != "breach", target

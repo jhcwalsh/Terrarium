@@ -82,15 +82,28 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
     (`app/src/lib/cioView.ts:137`) is untouched: it is a symmetric half-width
     from a hard-coded table, and an entered `[lo, hi]` is asymmetric, so
     mapping one onto the other would either lose the asymmetry or draw a band
-    that disagrees with the alert beside it. The consequence, now sharper
-    than "mapping deferred": **on a book-carrying session, one sleeve can show
-    two different alert answers on two screens** — the `/cio` dashboard flags
-    against a world band re-centred on the book's target, while the play
-    surface's `band_report` reports against the analyst's own entered
+    that disagrees with the alert beside it. The consequence, sharper again
+    than "two screens" (final review): `BandPanel` mounts above the view-mode
+    branch in `app/src/Play.tsx:635`, so it renders in BOTH modes — which
+    means **on a book-carrying session in CIO mode a player sees two
+    disagreeing alert flags for the same sleeve at the same time, on one
+    screen**. `CioDashboard`'s flag is computed against a hard-coded symmetric
+    `BAND_PCT` half-width re-centred on the book's target; the `BandPanel`
+    strip directly above it reports against the analyst's own entered
     `[lo, hi]`. Both are correct about their own source and neither is wrong,
     but they are not the same statement, and nothing reconciles them. The
     session document's `band_report` is the authoritative statement of an
     entered range; the dashboard's band is not.
+  - **`build_prehistory` is the last target-basis holdout**, and it is
+    deliberate. Ruling G re-pointed the CIO plan chart's `targetPct` and its
+    cash addend at the book's `effective_targets()`/`cash`, but
+    `src/ah/cioview.py`'s `build_prehistory` call still receives the WORLD
+    default — so on a book-carrying session the ER-13 inherited decade is
+    simulated against the world's policy while everything from world month 0
+    onward runs the book's. Re-basing it moves the inherited decade's numbers
+    for every book-carrying session, which is a release event and the owner's
+    call, not an incidental cleanup. Marked as a known holdout at the call
+    site.
   - **`DecisionWindow.tsx` still claims that *hold* rebalances to target.**
     It does not — `_rebalance` is called only by *derisk* and *leanin*
     (`src/ah/play.py:675,677`). The copy was wrong before this WP and is

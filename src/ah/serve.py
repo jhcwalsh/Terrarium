@@ -158,20 +158,58 @@ def _alert_level(weight: float, target: float, lo: float, hi: float) -> str:
     (``app/src/components/CioDashboard.tsx``'s ``alertLevel``) to an
     ASYMMETRIC band. That rule assumes the band is a symmetric half-width
     around the target and compares ``|current - target|`` to it; an entered
-    range is ``[lo, hi]`` and need not be centred on the target at all, so
-    the "room" the weight has before it leaves the band is measured on the
-    EDGE IT IS MOVING TOWARD. The meaning is unchanged: amber inside the last
-    ``WATCH_FRACTION`` of the way out.
+    range is ``[lo, hi]`` and need not be centred on the target at all. The
+    meaning is unchanged: amber once the weight has used up ``WATCH_FRACTION``
+    of the room its target leaves it on the edge it is approaching.
 
     ``WATCH_FRACTION`` is imported from ``ah.cioview`` (DN-8 section 3) rather
     than redeclared — a second copy of a display threshold is exactly the
     drift this work package exists to remove.
+
+    **The target may sit OUTSIDE its own band.** Spec section 3 supports an
+    institution holding a policy it is currently out of compliance with, and
+    ``validate_book`` returns a warning string rather than refusing. The
+    first version of this function picked ONE edge with
+    ``room = (hi - target) if weight >= target else (target - lo)``, which
+    inverts under that shape: with ``target > hi`` every in-band weight takes
+    the ``else`` branch, so the room was measured to ``lo`` no matter which
+    edge the weight was actually approaching. Probed at ``lo=10, hi=20,
+    target=30`` it reported a mid-band 15.0 as ``watch`` and a 20.0 sitting
+    exactly on the edge it was about to breach as ``ok`` — backwards on both.
+
+    So: clamp the target into its own band, then test BOTH edges and take the
+    more severe (both branches yield ``watch``, so the first hit returns).
+    Written as the REMAINING margin — "within ``1 - WATCH_FRACTION`` of the
+    way from ``t`` to this edge" — which is algebraically identical to
+    ``dist >= WATCH_FRACTION * room`` for a target strictly inside its band,
+    so nothing about the ordinary case moves.
+
+    Degenerate cases, decided rather than fallen into:
+
+    * ``t == hi`` (the target is at or above the ceiling): that edge's room
+      is zero, so its watch zone collapses to the edge itself and only a
+      weight exactly on ``hi`` is amber from that side. The LOWER zone is
+      unaffected and still fires normally — where the old ``room > 0.0``
+      guard suppressed the whole watch zone for this shape. Nothing divides
+      by the room, so the collapse needs no special case.
+    * ``t == lo``: the mirror image.
+    * ``lo == t == hi`` is unreachable (``validate_book`` enforces
+      ``lo < hi``); it would still be well defined here — a weight can only
+      be that one value, and it reports ``watch``.
+    * A weight exactly ON an edge is ``watch``, never ``ok``: it is as close
+      to breaching as an in-band weight can get. This is also what the old
+      single-edge form already returned for a target strictly inside, so the
+      edge case is preserved rather than newly invented.
+
+    Breach detection is untouched — it was correct in every probed case.
     """
     if weight < lo or weight > hi:
         return "breach"
-    room = (hi - target) if weight >= target else (target - lo)
-    dist = abs(weight - target)
-    if room > 0.0 and dist >= WATCH_FRACTION * room:
+    t = min(max(target, lo), hi)
+    margin = 1.0 - WATCH_FRACTION
+    if (hi - weight) <= margin * (hi - t):
+        return "watch"
+    if (weight - lo) <= margin * (t - lo):
         return "watch"
     return "ok"
 

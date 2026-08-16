@@ -205,9 +205,10 @@ export interface Rung {
   [k: string]: unknown;
 }
 
-/** su-app-06: the opening book contract (`opening-book-0.1`). `liquid`'s
- * key set is engine-dependent — never hardcode it, read `liquid_sleeves`
- * off `DefaultBookResponse` instead. */
+/** su-app-06: the opening book contract, at `opening-book-0.2` since
+ * su-app-07 added `targets` and `ranges` (a 0.1 document still validates and
+ * still means what it meant). `liquid`'s key set is engine-dependent — never
+ * hardcode it, read `liquid_sleeves` off `DefaultBookResponse` instead. */
 export interface Book {
   state_version: string;
   liquid: Record<string, number>;

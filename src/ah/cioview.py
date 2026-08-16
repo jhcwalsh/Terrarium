@@ -232,6 +232,17 @@ def build_cio_view(
 
     pre: PreHistory | None = None
     if prehistory:
+        # KNOWN HOLDOUT (su-app-07 Ruling G, final review). `start_targets`
+        # here is the WORLD default, deliberately — NOT the book's
+        # `effective_targets()` that `targets`/`cash_target` above now
+        # resolve to. So on a book-carrying session the inherited decade is
+        # still simulated against the world's policy while everything from
+        # world month 0 onward runs the book's. It is the last target-basis
+        # holdout on this surface, and it is left alone on purpose: re-basing
+        # it changes the ER-13 inherited decade's numbers for every
+        # book-carrying session, which is a release event and the owner's
+        # call, not an incidental cleanup. Recorded in `CHANGELOG.md`'s
+        # su-app-07 deferral list.
         pre = build_prehistory(
             seed,
             active.opening["nav_true"],
