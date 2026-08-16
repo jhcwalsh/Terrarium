@@ -4,6 +4,107 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## spine-02 (2026-08-16)
+
+**The measurement re-run (round two).** Two wiring fixes landed under spine-02's own
+authority (Task 10, commit `75e8b07`) before this round's numbers were drawn: (1)
+`pi_actual` (fitted CPI observation noise, via the fitted `s_m_pi` on the inflnoise
+stream) now feeds `policy_anchor` — round one wired `pi_actual = pi_star`, so the gap
+term was identically 0 and the anchor could never respond to a surprise; (2)
+`ATTEMPT_STRIDE` (a large prime, `104395301`) replaces `SEED_STRIDE` (7919) for the
+spine sampler's own attempt-retry loop, decoupling it from the platform's per-path
+ensemble stride — round one's B3 seed ladder (`199002 + 7919*k`) collided the two
+strides and collapsed 20 seeds onto ~2 distinct macro spines (final-review finding
+F3); re-verified this round at **20/20** distinct spines, both within-call (always
+20/20) and cross-call (the B3 ladder itself, the exact axis that was broken).
+
+**v2 judges + frozen-v1 tripwire** (commit `b3eeefa`): B1 respecified to the model's
+own contemporaneous 0–2-month lag; B6 quantile-matched per-decade to the panel's
+curve-inversion base rate rather than a fixed `policy_gap > 0` cut; B5 made
+aggregate-decidable (one normal-approximation test across all four quadrants rather
+than four separately-judged rows prone to a lucky/unlucky single cell). B2 and B4 are
+carried forward unchanged and pinned by `test_v1_judges_are_frozen`, a source-hash
+test that fails loudly if either judge's code drifts from round one's.
+
+**The spine02 seal**: `fef995f` (b2/b3/b4 carried verbatim and tested; v2 bars locked
+by literals; current tree hashed; bite proven) plus a pre-measurement amendment
+`d8d506c` (round-one-record disambiguated: `prereg_commit c9bd036`,
+`measured_state_commit 233b70d`, so the seal names exactly which round-one commits it
+is comparing against).
+
+**Re-run verdicts, with corrected characterizations** (the raw PASS/FAIL table is
+`docs/superpowers/specs/2026-08-16-spine02-results.md`; the corrected reading is
+that file's own "Post-measurement characterization corrections" section, added after
+a verdict-integrity review found two of the five sealed characterizations misleading
+even though every number was CERTIFIED exact — no verdict VALUE changed, only what
+it should be read to mean):
+
+- **B2 FAIL and B4 FAIL** — frozen v1 judges, byte-identical code both rounds, no
+  characterization issue: true model residue.
+- **B3 PASS** — sealed bars (a) coverage monotone and (b) breach seeds at the 55-point
+  arm (2/20 ≥ 1); severity now binds with real spine diversity post stride-fix,
+  rather than round one's 2-distinct-spine collision. The supplementary (c)
+  hold-course depth check (`-0.3809` vs the declared `[-0.4260, -0.3750]` band) clears
+  the band edge by only 0.59pp — marginal, recorded, not a sealed bar.
+- **B6 v2 FAIL stands as sealed but is a construct artifact, not evidence of no
+  transmission.** The judge compares the spine's onset rate (counted REC+CRI) against
+  the sealed panel anchor (counted CRI-only) — under either definition applied
+  self-consistently on both sides the magnitude check PASSES (rel err 0.173 on
+  REC+CRI, 0.334 on CRI-only), and the sign check as written is vacuous (compares
+  against the panel's *unconditional* rate). The defensible finding once the
+  definitions are matched: transmission is present but weak — conditioning on a tight
+  month lifts 12-month onset odds 1.14x in the spine vs 2.37x in the panel on matched
+  outcome codes.
+- **B5 v2 FAIL (one seed, 2199008, z=2.49) is not an isolated noisy seed.** In
+  isolation it's noise-compatible (`P(≥1 of 5 fails) ≈ 0.19`), but pooling all five
+  seeds shows a collective over-expectation (+16.9%, z=2.41, p=0.016 — an upper bound,
+  since the aggregate-binomial-normal-approximation ignores onset clustering): a weak
+  but coherent over-firing signal, not a fluke.
+- **B1 v2 FAIL is uninformative about the model, pending a v3 judge.** The judge
+  correlates differenced policy against the *undifferenced* surprise level — its
+  covariance is `-phi*sigma^2` (negative in the response strength), the reaction
+  term's variance share is 0.001, and a parameter sweep shows the pass fraction
+  *decreases* monotonically in `phi` (a model with NO reaction function scores the
+  best achievable value, ~0.47; the 0.90 bar is unreachable by any model through this
+  anchor). Task-10's own test measured the construct the review considers correct
+  (residualized level vs surprise) and found the response live and correctly signed:
+  `phi_pi` in `[0.417, 0.852]`, positive on all 20 decades.
+
+**Record-hygiene incident and fix.** Task 13's re-run invoked
+`scripts/spine_pilot_b3.py` (sealed, unmodified) as a subprocess to re-run B3; that
+script's own hardcoded output path is round one's dated results file, so running it a
+second time silently appended a fresh B3 section onto
+`docs/superpowers/specs/2026-08-15-spine-pilot-results.md` — mutating what was meant
+to be a frozen record (`be3ca18`, the B3 sealed/supplementary-split commit). Close-out
+restored that file byte-identical to `be3ca18` and moved the appended section — it
+already lived, verbatim, in the round-two results doc — to be the *only* place it
+lives. `scripts/spine02_report.py::_run_b3_and_append` now snapshots the file's bytes
+before invoking the subprocess and restores them after, unconditionally (a `finally`
+block), so a future re-run of the sealed b3 script can no longer leave that mutation
+behind. Also deleted a needless re-implementation while there: the script carried its
+own copies of `_conjoin_bool`/`_conjoin_b6` (the verdict-conjunction wiring); it now
+calls the sealed module's own versions, loaded the same way its judges already are.
+
+**D-SP-round log entries** (not fixed here — logged for the decision round to price):
+
+- **B1 v3**: fix the judge construct — correlate `d(policy)` with `d(eps)` (both
+  differenced), or use the residualized-level statistic Task-10 already validates —
+  and resolve the Task-10/Task-11 inconsistency (Task-10 built and verified a
+  *contemporaneous* response; B1 v2 as specified rewards a *next-month* response).
+- **B6 v3**: fix the outcome-event match — pin both sides of the comparison to the
+  same onset-code definition (CRI-only, matching the sealed panel anchor) before
+  computing `rel_error`, and replace the vacuous unconditional-rate sign check with a
+  comparison against the panel's *conditional* rate.
+- **B5**: adopt a clustering-aware variance model — the aggregate-binomial-normal
+  approximation used for B5 v2 ignores onset clustering, so its p-values (0.19
+  single-seed, 0.016 pooled) are upper bounds on significance, not exact.
+- **B4/B2 repair pricing**: unlike B1/B5/B6, these are not judge-construct issues —
+  both are judged by v1 code frozen and byte-identical across both rounds, and both
+  still FAIL. A real fix has to reach into the sealed generator itself (regime
+  persistence in `spine.py` for B4's recovery-dwell floor; the era-join p95 sub-check
+  for B2), not just a judge respec — a materially deeper and more expensive class of
+  change than B1/B5/B6's construct fixes, and priced as such for the D-SP round.
+
 ## spine-01 (2026-08-16)
 
 **The spine-conditioned compiler pilot (PD-2 track).** A second-generation
