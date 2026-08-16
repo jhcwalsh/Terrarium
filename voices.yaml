@@ -26,6 +26,10 @@ severity:
   target_sev3_band: UNRESOLVED # [A3-B] candidates: [4,10] | [6,14]
   # per-class scale divides |z|; >1 damps, <1 amplifies
   class_scale: UNRESOLVED     # [A3-B] map of class -> float
+  # ADDED narr-04: every z-score and sigma-hat in the layer is computed over a
+  # trailing window, and the window length is a tunable the skeleton did not
+  # carry. It also sets how long a world runs before anything can fire.
+  z_window_months: UNRESOLVED # [A3-B] candidates: 24 | 36 | 60
   hard_overrides:             # classes where the event IS the severity
     E16: 3                    # gating
     E18: 3                    # forced sale
@@ -63,6 +67,9 @@ slate:
   contest_rule: UNRESOLVED        # [A3-B · N-o] severity then latest? then what
   tie_break: UNRESOLVED           # [A3-B · N-o] must be documented, never dict order
   min_slots: UNRESOLVED           # [A3-B · N-o] three-vs-four threshold
+  # ADDED narr-04: DN-9 §B.1 drops CAPITAL "when nothing in the book moved
+  # beyond routine" and never defines routine.
+  capital_drop_rule: UNRESOLVED   # [A3-B · N-o] drop_when_max_severity_zero | ...
   special_edition_severity: 3
   capital_absent_message: "CAPITAL omitted — portfolio layer not wired to this world"
 
@@ -76,9 +83,23 @@ voices:
       # on a cut and is unusable as a surprise measure (DN-9 App C.6)
       rho: UNRESOLVED             # [A3-B · N-p] fit once, freeze, stamp
       quantise_bp: UNRESOLVED     # [A3-B] candidates: 25 | 12.5
+      # ADDED narr-04: the DN-1 II.2 anchor's own coefficients. The generator
+      # does not emit them - the anchor is narration's reconstruction - so they
+      # must be stated and stamped, and a wrong value shows up as strain.
+      phi_pi: UNRESOLVED          # [A3-B · N-p] candidates: 0.55 | 0.5 | 1.5
+      phi_c: UNRESOLVED           # [A3-B · N-p] candidates: 0.80 | 0.5 | 1.0
+      # ADDED narr-04: DN-1 II.2 says c_t is "inherited from L2", but the L2
+      # layer this world emits is a label sequence, not a scalar.
+      cycle_source: UNRESOLVED    # [A3-B · N-p] g_minus_trailing_mean | credit_gap | v
+    # ADDED narr-04: meetings_per_year is set above; WHICH months is not, and it
+    # decides whether every quarter contests two meetings or some contest one.
+    meeting_months: UNRESOLVED    # [A3-B] 8 month numbers in 1..12
     dissent:
       committee_size: UNRESOLVED  # [A3-B] candidates: 8 | 12
       prior_spread: UNRESOLVED    # [A3-B] hawk-dove distribution width
+      # ADDED narr-04: spread alone does not give a dissent rate; the distance
+      # from the realised move at which a member votes against does.
+      threshold: UNRESOLVED       # [A3-B] pp; candidates: 0.25 | 0.125 | 0.375
     mandate_boundary:             # [A3-C · N-aa] hard constraint, not prompt guidance
       may_speak_to: [inflation, expectations, labour_market, financial_conditions_re_mandate]
       may_not_speak_to: [asset_valuations, private_market_functioning, fiscal_policy, named_institutions]
@@ -99,6 +120,33 @@ voices:
     risk_book_size: UNRESOLVED        # [A3-B] live concerns at any time, cand. [3,5]
     risk_materialisation_rate: UNRESOLVED  # [A3-B · N-z] cand. [0.15,0.25]
     filtered_state: UNRESOLVED    # [A3-B · N-s ⚖] estimator spec — Quant
+    # ADDED narr-04: stickiness is not one number. The reversal cycle needs the
+    # confidence a thesis opens at, what each contradiction costs, and the floor
+    # at which it capitulates; only the three together give a thesis life.
+    confidence_start: UNRESOLVED  # [A3-B · N-t] cand. 0.80 | 0.65 | 0.50
+    confidence_decay_per_contradiction: UNRESOLVED  # [A3-B · N-t]
+    capitulation_floor: UNRESOLVED    # [A3-B · N-t] cand. 0.35 | 0.25 | 0.50
+    # ADDED narr-04: DN-9 D.6 gives strain four arguments and no weights. This
+    # metric is proposed for the SEALED battery (N-v), so the weights must be
+    # chosen before anyone sees a distribution.
+    strain_weights: UNRESOLVED    # [A3-B · N-v] map over the four terms
+
+# ------------------------------------------------------------------ consensus
+# ADDED narr-04. DN-9 §4.2 specifies the street forecast as "persistence-
+# weighted with a calibrated bias and dispersion" and calibrates none of the
+# three. Every surprise on the page is expressed against these.
+consensus:
+  persistence_weight: UNRESOLVED  # [A3-B · N-e] cand. 0.5 | 0.7 | 1.0
+  bias: UNRESOLVED                # [A3-B · N-e] pp; cand. 0.0 | -0.05 | 0.05
+  dispersion: UNRESOLVED          # [A3-B · N-e] pp; cand. 0.4 | 0.25 | 0.6
+  n_forecasters: UNRESOLVED       # [A3-B] copy furniture; cand. 41 | 30 | 60
+
+# -------------------------------------------------------------------- adapter
+# ADDED narr-04. A 12-month year-on-year transform has no value for the first
+# 12 months of a 120-month world, and what the adapter does there changes
+# whether the first year has inflation prints at all.
+adapter:
+  cpi_yoy_warmup: UNRESOLVED      # nan_suppress | annualise_available | require_extra_history
 
 # ------------------------------------------------------- derived observables
 # DN-9 §3.4. Deterministic functions of revealed state, parameters fixed at
@@ -107,7 +155,17 @@ voices:
 derived_observables:              # [A3-B · N-b2]
   unemployment: {source: g, transform: okun, params: UNRESOLVED}
   payrolls_change: {source: g, transform: okun, params: UNRESOLVED}
-  headline_cpi: {source: inflation_factor, transform: identity, params: UNRESOLVED}
+  # CORRECTED narr-04 (a fact, not a decision): the skeleton read
+  # {source: inflation_factor, transform: identity}. The generator emits `cpi`
+  # as a LEVEL index, so the identity of the level is not a headline CPI rate;
+  # the transform that produces one is a 12-month yoy. The register must be
+  # truthful about the transform it stamps. The window itself stays UNRESOLVED.
+  headline_cpi: {source: cpi, transform: yoy, params: UNRESOLVED}
+  # ADDED narr-04: E04 (growth print) has no other input, and adding it is a
+  # FOURTH register entry — which §3.4 permits only with the same disclosure.
+  # Dropping E04 instead is a live option: g is already the state the other two
+  # are derived from, so printing it adds no information.
+  growth_print: {source: g, transform: identity, params: UNRESOLVED}
 
 # ------------------------------------------------------------------- style
 style:
@@ -128,6 +186,10 @@ style:
   # leaks by omission. Cross-firing rates required instead.
   vocabulary_cross_firing: UNRESOLVED
   regime_labels: [EXP, SLOW, REC, CRI, STAG, REF]
+  # ADDED narr-04: DN-9 §5.2 fixes FOUR layout states against SIX regimes and
+  # says the mapping is deliberately non-injective — but not which regimes
+  # share a layout. Every assignment is a claim about which two look alike.
+  layout_states: UNRESOLVED       # [A3-B · N-b] map of regime -> layout state
 
 # -------------------------------------------------------------- diagnostics
 diagnostics:
