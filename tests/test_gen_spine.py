@@ -249,9 +249,143 @@ def test_hazard_and_block_streams_are_independent(spine_world):
     from ah.gen.bootstrap import campaign_source
     from ah.gen.spine import LAYER_OFFSETS, SpineBootstrap
 
+    # four consumers, four disjoint streams (FIX3: blocks is no longer the
+    # bare seed -- that collided with spine attempt 0's climate stream,
+    # since climate sits at offset 0).
+    assert len(set(LAYER_OFFSETS.values())) == len(LAYER_OFFSETS) == 4
     assert LAYER_OFFSETS["hazard"] != 0
+    assert LAYER_OFFSETS["blocks"] not in (0, LAYER_OFFSETS["hazard"])
     gen = SpineBootstrap()
     gen.fit(campaign_source())
     a = gen.sample(spine_world, 2, 4242)
     b = gen.sample(spine_world, 2, 4242)
     assert np.array_equal(a.row_indices, b.row_indices)
+
+
+def test_refusal_on_empty_pool():
+    from ah.gen.spine import QUADRANTS, SpineRefusal, _build_pools
+
+    scores = np.array([1.0, 2.0, 3.0])
+    cells = np.array([0, 0, 0], dtype=np.int8)  # every row is quadrant 0
+    with pytest.raises(SpineRefusal) as excinfo:
+        _build_pools({}, scores, cells, from_quarter=5, quadrant=1, pct=50.0)
+    msg = str(excinfo.value)
+    assert "5" in msg
+    assert QUADRANTS[1] in msg  # "stagflation"
+    assert "50" in msg
+
+
+def test_percentile_for_floor_and_halving():
+    from ah.gen.spine import percentile_for
+
+    assert percentile_for(35, 0) == 35
+    assert percentile_for(35, 1) == 17.5
+    assert percentile_for(35, 2) == 8.75
+    assert percentile_for(8, 2) == 5.0  # floored: 8 * 0.25 = 2.0 < STRATUM_FLOOR_PCT
+
+
+def test_correction_dwell_and_refire():
+    from ah.gen.spine import _correction_expire, _correction_onset
+
+    spine = SpineSpec.model_validate(_spec())  # both: shift 2, dwell_shift_quarters 2
+    expected_dwell = (2 + 2) * 3  # BASE_DWELL_QUARTERS(2) + dwell_shift_quarters(2), *3
+
+    in_correction, dwell_left, shift = False, 0, 0
+    flags: list[bool] = []
+    for m in range(expected_dwell + 3):
+        fires = m == 0  # fire once, at month 0; never again on its own
+        in_correction, dwell_left, shift = _correction_onset(
+            spine, in_correction, dwell_left, shift, fires=fires, infl=True, credit=True
+        )
+        flags.append(in_correction)  # state a pct lookup would see THIS month
+        in_correction, dwell_left, shift = _correction_expire(in_correction, dwell_left, shift)
+
+    # dwell covers exactly (2+shift)*3 = 12 months, INCLUDING the firing month
+    assert flags[:expected_dwell] == [True] * expected_dwell
+    assert flags[expected_dwell] is False  # expired exactly on schedule
+    assert shift == 0  # baseline pool (unshifted percentile) is back after expiry
+
+    # a second firing is possible afterwards, from the now-expired state
+    in_correction, dwell_left, shift = _correction_onset(
+        spine, in_correction, dwell_left, shift, fires=True, infl=True, credit=True
+    )
+    assert in_correction is True
+    assert dwell_left == expected_dwell
+    assert shift == 2
+
+
+def test_forced_reentry_at_panel_edge():
+    from types import SimpleNamespace
+
+    from ah.core.worldspec import StressSpec
+    from ah.gen.spine import HazardTable, SpineBootstrap, SpinePaths, _DrawInputs
+
+    n = 4
+    months = 5  # m // 3 -> quarters 0,0,0,1,1
+    pool = np.array([n - 1], dtype=np.int64)  # only the panel's LAST row
+    pools = {(0, 0, 50.0): pool}
+    source = SimpleNamespace(n_rows=n, values=np.zeros((n, 1)), factor_names=["x"])
+    hazard = HazardTable(
+        rates=np.zeros(4),
+        era_threshold_pp=0.0,
+        cell_months=np.zeros(4, dtype=np.int64),
+        fallback_rate=0.0,
+    )
+    scores = np.zeros(n)
+    cells = np.zeros(n, dtype=np.int8)
+    yoy = np.zeros(n)
+    era_bucket = np.zeros(n, dtype=np.int64)
+    sp = SpinePaths(
+        states=np.zeros((1, months, 5)),
+        labels=np.full((1, months), 2, dtype=np.int64),  # REC -> contracting -> quadrant 0
+        cycle=np.zeros((1, months)),
+        policy=np.zeros((1, months)),
+        mu_pi=np.zeros(1),
+        attempts=1,
+        seed=123,
+    )
+    stress = StressSpec.model_validate(
+        {
+            "functional": "equity",
+            "segments": [
+                {
+                    "from_quarter": 0,
+                    "to_quarter": 1,
+                    "entry_percentile": 50.0,
+                    "mean_block_months": 6,
+                }
+            ],
+            "join_tolerance": {},
+            "precedent": ["x"],
+        }
+    )
+    spine = SpineSpec.model_validate(_spec())
+
+    gen = SpineBootstrap()
+    index, corrections = gen._draw(
+        _DrawInputs(
+            source=source,
+            sp=sp,
+            hazard=hazard,
+            scores=scores,
+            cells=cells,
+            yoy=yoy,
+            era_bucket=era_bucket,
+            months=months,
+            n_paths=1,
+            seed=999,
+            stress=stress,
+            spine=spine,
+            pools=pools,
+        )
+    )
+    # the pool contains ONLY row n-1: if the old (previous + 1) % n wrap were
+    # still live, row 0 would appear the month after every visit to row n-1.
+    # It never can here, because 0 is not even in the pool.
+    assert 0 not in index
+    assert np.all(index == n - 1)
+    # every month after the first lands on row n-1 again -> forced re-entry
+    # every time, and always unfiltered (the pool's only OTHER member,
+    # excluding the previous row itself, is empty).
+    assert corrections["forced_reentries"] == months - 1
+    assert corrections["unfiltered_reentries"] == months - 1

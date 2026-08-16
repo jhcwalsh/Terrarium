@@ -3,9 +3,11 @@
 Spec: docs/superpowers/specs/2026-08-15-spine-conditioned-compiler-design.md.
 Layers S, H and F all live in this module.
 
-Seed hygiene: three consumers, three disjoint streams per decade/path --
-climate (offset 0), regimes (offset 104729), hazard (offset 224737); the
-block-draw stream stays PCG64(seed).jumped(p) exactly as StressBootstrap.
+Seed hygiene: four consumers, four disjoint streams per decade/path --
+climate (offset 0), regimes (offset 104729), hazard (offset 224737), blocks
+(offset 350377). The block stream is NOT the bare seed StressBootstrap uses:
+climate sits at offset 0, so a bare-seed block stream would be bit-identical
+to spine attempt 0's climate stream (AMENDED after the Task-4 review, F3).
 An attempt counter, not the accepted-decade index, advances the S streams,
 so acceptance filtering never re-uses an attempt's randomness.
 """
@@ -39,7 +41,7 @@ from ah.gen.stress import (
 from ah.gen.systems import _pinned_layers
 
 SEED_STRIDE = 7919
-LAYER_OFFSETS = {"climate": 0, "regimes": 104729, "hazard": 224737}
+LAYER_OFFSETS = {"climate": 0, "regimes": 104729, "hazard": 224737, "blocks": 350377}
 CONTRACTION_CODES = frozenset({REGIME_LABELS.index("REC"), REGIME_LABELS.index("CRI")})
 BACKDROP_MARGIN_PP = 0.5
 ARRIVAL_LATE_SLACK_MONTHS = 6
@@ -289,22 +291,73 @@ def _build_pools(
 
 
 def _pool_occupancy_stamp(pools: dict[tuple[int, int, float], np.ndarray]) -> dict[str, int]:
-    """``{"<from_quarter>/<quadrant>": size}`` for every pool actually built,
-    disambiguated with a ``#n`` suffix when a segment/quadrant pair was built
-    at more than one percentile (an unshifted pool plus one or more shifted-
-    by-correction pools)."""
-    seen: dict[tuple[int, int], int] = {}
+    """``{"<from_quarter>/<quadrant>@<pct>": size}`` for every pool actually
+    built. The percentile is part of the key (g-style, e.g. ``35`` or
+    ``17.5``) so a segment/quadrant pair opened at more than one percentile
+    by a firing correction is unambiguous -- never disambiguated by an
+    incidental build-order suffix (AMENDED after the Task-4 review, F4a)."""
     stamp: dict[str, int] = {}
-    for from_quarter, quadrant, _pct in sorted(pools):
-        n = seen.get((from_quarter, quadrant), 0) + 1
-        seen[(from_quarter, quadrant)] = n
-        label = (
-            f"{from_quarter}/{QUADRANTS[quadrant]}"
-            if n == 1
-            else f"{from_quarter}/{QUADRANTS[quadrant]}#{n}"
-        )
-        stamp[label] = int(pools[(from_quarter, quadrant, _pct)].size)
+    for from_quarter, quadrant, pct in sorted(pools):
+        label = f"{from_quarter}/{QUADRANTS[quadrant]}@{pct:g}"
+        stamp[label] = int(pools[(from_quarter, quadrant, pct)].size)
     return stamp
+
+
+def _correction_onset(
+    spine: SpineSpec,
+    in_correction: bool,
+    dwell_left: int,
+    shift: int,
+    *,
+    fires: bool,
+    infl: bool,
+    credit: bool,
+) -> tuple[bool, int, int]:
+    """One correction's START (spec 3.4): if not already in a correction and
+    the hazard fired this month, the dwell (including the firing month) and
+    stratum shift come from the firing month's severity row; otherwise the
+    state is unchanged. Pure and RNG-free -- ``fires``/``infl``/``credit`` are
+    already-decided outcomes, so this is drivable directly by
+    ``test_correction_dwell_and_refire`` without touching any RNG stream."""
+    if not in_correction and fires:
+        row = _severity_row_for(spine, infl, credit)
+        return True, (BASE_DWELL_QUARTERS + row.dwell_shift_quarters) * 3, row.stratum_shift
+    return in_correction, dwell_left, shift
+
+
+def _correction_expire(in_correction: bool, dwell_left: int, shift: int) -> tuple[bool, int, int]:
+    """One correction's EXPIRY: consume a dwell month, clearing the
+    correction (and its shift) once the dwell reaches zero. Called AFTER the
+    month's pool has been built, so the firing month and every dwell month up
+    to and including expiry still see the shifted pool -- only the month
+    AFTER expiry sees the baseline pool again."""
+    if not in_correction:
+        return in_correction, dwell_left, shift
+    dwell_left -= 1
+    if dwell_left <= 0:
+        return False, dwell_left, 0
+    return True, dwell_left, shift
+
+
+@dataclass(frozen=True)
+class _DrawInputs:
+    """Bundles ``SpineBootstrap._draw``'s per-sample inputs (FIX7, Task-4
+    review: 13 bare positional parameters were error-prone to call and to
+    test directly)."""
+
+    source: BootstrapSource
+    sp: SpinePaths
+    hazard: HazardTable
+    scores: np.ndarray
+    cells: np.ndarray
+    yoy: np.ndarray
+    era_bucket: np.ndarray
+    months: int
+    n_paths: int
+    seed: int
+    stress: StressSpec
+    spine: SpineSpec
+    pools: dict[tuple[int, int, float], np.ndarray]
 
 
 class SpineBootstrap:
@@ -381,19 +434,21 @@ class SpineBootstrap:
 
         pools: dict[tuple[int, int, float], np.ndarray] = {}
         index, corrections = self._draw(
-            source,
-            sp,
-            hazard,
-            scores,
-            cells,
-            yoy,
-            era_bucket,
-            months,
-            n_paths,
-            seed,
-            stress,
-            spine,
-            pools,
+            _DrawInputs(
+                source=source,
+                sp=sp,
+                hazard=hazard,
+                scores=scores,
+                cells=cells,
+                yoy=yoy,
+                era_bucket=era_bucket,
+                months=months,
+                n_paths=n_paths,
+                seed=seed,
+                stress=stress,
+                spine=spine,
+                pools=pools,
+            )
         )
         paths = source.values[index]
 
@@ -405,6 +460,7 @@ class SpineBootstrap:
             "functional": stress.functional,
             "premise": spine.premise.model_dump(),
             "severity_table": [row.model_dump() for row in spine.severity_table],
+            "spine_precedent": list(spine.precedent),
             "quadrant_legend": list(QUADRANTS),
             "hazard": {
                 "rates": [float(x) for x in hazard.rates],
@@ -412,18 +468,37 @@ class SpineBootstrap:
                 "era_threshold_pp": float(hazard.era_threshold_pp),
                 "fallback_rate": float(hazard.fallback_rate),
             },
-            "corrections": corrections,
+            "corrections": {
+                "per_path_onsets": corrections["per_path_onsets"],
+                "per_quadrant_onsets": corrections["per_quadrant_onsets"],
+                "per_quadrant_months": corrections["per_quadrant_months"],
+            },
+            "forced_reentries": int(corrections["forced_reentries"]),
+            "unfiltered_reentries": int(corrections["unfiltered_reentries"]),
             "spine_attempts": int(sp.attempts),
             "pool_occupancy": _pool_occupancy_stamp(pools),
+            "segments": [
+                {
+                    "from_quarter": s.from_quarter,
+                    "to_quarter": s.to_quarter,
+                    "entry_percentile": s.entry_percentile,
+                    "mean_block_months": s.mean_block_months,
+                }
+                for s in stress.segments
+            ],
             "join_tolerance": dict(stress.join_tolerance),
             "join_yoy_max_pp": float(spine.join_yoy_max_pp),
-            "precedent": list(stress.precedent) + list(spine.precedent),
+            "precedent": list(stress.precedent),
             "ruleset_version": source.ruleset_version,
             "block_draw_span": {
                 "start": str(source.dates[0].date()),
                 "end": str(source.dates[-1].date()),
                 "months": source.n_rows,
             },
+            # This generator honours no factor_conditions either: severity is
+            # declared through x_stress/x_spine, not through an inflation
+            # average (mirrors the stress stamp's own field, FIX4b).
+            "factor_conditions_honoured": False,
             "provenance": "declared",
         }
         if world is not None:
@@ -445,41 +520,36 @@ class SpineBootstrap:
             row_indices=index,
             regimes=RegimeRecord(
                 labels=source_codes[index],
-                legend=REGIME_LABELS,
+                legend=tuple(REGIME_LABELS),
                 mode="realized-spine-conditioned",
                 ruleset_version=source.ruleset_version,
             ),
             slow_states=SlowStateRecord(states=sp.states, names=STATE_NAMES, layer="simulated"),
         )
 
-    def _draw(
-        self,
-        source: BootstrapSource,
-        sp: SpinePaths,
-        hazard: HazardTable,
-        scores: np.ndarray,
-        cells: np.ndarray,
-        yoy: np.ndarray,
-        era_bucket: np.ndarray,
-        months: int,
-        n_paths: int,
-        seed: int,
-        stress: StressSpec,
-        spine: SpineSpec,
-        pools: dict[tuple[int, int, float], np.ndarray],
-    ) -> tuple[np.ndarray, dict[str, list[int]]]:
+    def _draw(self, args: _DrawInputs) -> tuple[np.ndarray, dict[str, Any]]:
+        source, sp, hazard = args.source, args.sp, args.hazard
+        scores, cells, yoy, era_bucket = args.scores, args.cells, args.yoy, args.era_bucket
+        months, n_paths, seed = args.months, args.n_paths, args.seed
+        stress, spine, pools = args.stress, args.spine, args.pools
         n = source.n_rows
         index = np.empty((n_paths, months), dtype=np.int64)
         per_path_onsets = [0] * n_paths
         per_quadrant_onsets = [0, 0, 0, 0]
         per_quadrant_months = [0, 0, 0, 0]
+        forced_reentries = 0
+        unfiltered_reentries = 0
 
         for p in range(n_paths):
             # Two DIFFERENT generators: the hazard stream and the block stream
             # must never share state, so a premise's firing pattern (which
             # consumes rng_h at a variable rate -- skipped entirely while
-            # already inside a correction) cannot perturb the block tape.
-            rng = np.random.Generator(np.random.PCG64(int(seed)).jumped(p))
+            # already inside a correction) cannot perturb the block tape. The
+            # block stream is offset (FIX3): the bare seed would be
+            # bit-identical to spine attempt 0's climate stream (offset 0).
+            rng = np.random.Generator(
+                np.random.PCG64(int(seed) + LAYER_OFFSETS["blocks"]).jumped(p)
+            )
             rng_h = np.random.Generator(
                 np.random.PCG64(int(seed) + LAYER_OFFSETS["hazard"]).jumped(p)
             )
@@ -491,17 +561,26 @@ class SpineBootstrap:
                 seg = _segment_for(stress, m // 3)
                 q = spine_quadrant(sp.states[p, m], int(sp.labels[p, m]), mu_pi=float(sp.mu_pi[p]))
 
-                # The hazard is checked ONLY when not already in a correction.
-                if not in_correction and rng_h.random() < float(hazard.rates[q]):
+                # The hazard is checked ONLY when not already in a correction --
+                # and B5's realized rate is onsets/AT-RISK months (mirroring
+                # fit_hazard's own denominator), so every such check counts,
+                # regardless of whether it goes on to fire (FIX1).
+                if not in_correction:
+                    per_quadrant_months[q] += 1
+                    fires = rng_h.random() < float(hazard.rates[q])
+                else:
+                    fires = False
+
+                infl = credit = False
+                if fires:
                     infl = float(sp.states[p, m, 0]) - float(sp.mu_pi[p]) > BACKDROP_MARGIN_PP
                     credit = float(sp.states[p, m, 4]) > 0.0
-                    row = _severity_row_for(spine, infl, credit)
-                    in_correction = True
-                    dwell_left = (BASE_DWELL_QUARTERS + row.dwell_shift_quarters) * 3
-                    shift = row.stratum_shift
                     per_path_onsets[p] += 1
                     per_quadrant_onsets[q] += 1
-                    per_quadrant_months[q] += dwell_left
+
+                in_correction, dwell_left, shift = _correction_onset(
+                    spine, in_correction, dwell_left, shift, fires=fires, infl=infl, credit=credit
+                )
 
                 pct = (
                     percentile_for(seg.entry_percentile, shift)
@@ -510,18 +589,42 @@ class SpineBootstrap:
                 )
                 pool = _build_pools(pools, scores, cells, seg.from_quarter, q, pct)
 
-                if in_correction:
-                    dwell_left -= 1
-                    if dwell_left <= 0:
-                        in_correction = False
-                        shift = 0
+                in_correction, dwell_left, shift = _correction_expire(
+                    in_correction, dwell_left, shift
+                )
 
                 if m == 0:
                     index[p, 0] = int(pool[rng.integers(0, pool.size)])
                     continue
 
                 previous = int(index[p, m - 1])
-                advanced = (previous + 1) % n
+
+                if previous + 1 >= n:
+                    # Owner ruling 2026-08-16 (FIX2): the block ENDS at the
+                    # panel's last row rather than wrapping to row 0 -- a
+                    # silent 67-year era teleport that would bypass the join
+                    # safety entirely. A fresh entry is drawn from THIS
+                    # month's pool: era-filtered against the previous row
+                    # when any candidate matches, unfiltered when none does.
+                    # Both draws come from the block stream (rng), not the
+                    # hazard stream -- it is a block event, not a correction.
+                    forced_reentries += 1
+                    pool_wo_prev = pool[pool != previous]
+                    if pool_wo_prev.size:
+                        ok = (era_bucket[pool_wo_prev] == era_bucket[previous]) & (
+                            np.abs(yoy[pool_wo_prev] - yoy[previous]) <= spine.join_yoy_max_pp
+                        )
+                        filtered = pool_wo_prev[ok]
+                    else:
+                        filtered = pool_wo_prev
+                    if filtered.size:
+                        index[p, m] = int(filtered[rng.integers(0, filtered.size)])
+                    else:
+                        unfiltered_reentries += 1
+                        index[p, m] = int(pool[rng.integers(0, pool.size)])
+                    continue
+
+                advanced = previous + 1
                 if rng.random() >= 1.0 / float(seg.mean_block_months):
                     index[p, m] = advanced
                     continue
@@ -549,9 +652,11 @@ class SpineBootstrap:
                     if candidates.size == 0
                     else int(candidates[rng.integers(0, candidates.size)])
                 )
-        corrections = {
+        corrections: dict[str, Any] = {
             "per_path_onsets": per_path_onsets,
             "per_quadrant_onsets": per_quadrant_onsets,
             "per_quadrant_months": per_quadrant_months,
+            "forced_reentries": forced_reentries,
+            "unfiltered_reentries": unfiltered_reentries,
         }
         return index, corrections
