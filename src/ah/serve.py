@@ -44,11 +44,16 @@ from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import (
     PLAY_ALPHA_VERSION,
+    PRIVATE_ASSETS,
+    START_TARGETS,
+    default_commitment_plan,
+    default_opening_book,
     plan_commitments,
     simulate_play,
     validate_commitments,
     window_contributions_play,
 )
+from ah.port.book import BookError, CommitmentPlan, OpeningBook, validate_book, validate_plan
 from ah.store import sessions as session_store
 from ah.store.db import connect
 from ah.store.runrecords import get_run_record
@@ -89,6 +94,67 @@ def _build_bundle_bytes(conn: sqlite3.Connection, run_id: str) -> bytes:
         return target.read_bytes()
 
 
+def _world_book(
+    conn: sqlite3.Connection, run_id: str
+) -> tuple[OpeningBook, CommitmentPlan, tuple[str, ...]]:
+    """The derived default for the world behind ``run_id``, and its sleeve set."""
+    rec = get_run_record(conn, run_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail=f"no run_record {run_id}")
+    world = get_world(conn, rec["world_id"])
+    if world is None:  # pragma: no cover - FK'd at creation
+        raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
+    ws = WorldSpec.model_validate(world)
+    targets = dict(START_TARGETS)
+    if ws.engine_defaults.generator_id != "toy-v0":
+        from ah.port.adapter import GEN_START_TARGETS
+
+        targets = dict(GEN_START_TARGETS)
+    liquid = tuple(a for a in targets if a not in PRIVATE_ASSETS)
+    # the plan carries ONE ENTRY PER DECISION WINDOW, not a fixed ten years —
+    # default_commitment_plan's own docstring names this exact call for a
+    # non-decade horizon. Getting it wrong here means the server's own
+    # default 422s when POSTed straight back (all nine shipped presets are
+    # 40 quarters, so this was previously invisible).
+    months = ws.horizon.quarters * 3
+    plan = default_commitment_plan(targets, windows=len(decision_months(months)))
+    return default_opening_book(targets), plan, liquid
+
+
+def _window_ordinal(months: int, month: int) -> int | None:
+    """The plan index a DECISION MONTH names, or None if it names no window.
+
+    ``CommitmentPlan`` carries one entry per decision window (spec section 3):
+    index ``k`` is the k-th window and drives the engine's vintage year
+    ``k + 1``. ``decision_months`` is the one definition of that ordering, so
+    the index is read off it rather than re-derived from arithmetic.
+    """
+    windows = decision_months(months)
+    return windows.index(month) if month in windows else None
+
+
+def _plan_window(doc: dict[str, Any], entries: int) -> int:
+    """The plan index the lever is PRE-FILLING for: the next undecided window.
+
+    Deliberately not derived from the reveal pointer's quarter. The old
+    ``(quarter + 1) // 4`` was only correct when the pointer sat exactly on
+    the window's own month; ``record_decision`` refuses a window until
+    ``revealed_months >= month + 1`` and ``Play.tsx`` opens the lever on
+    exactly that state, so at window 0 the real pointer is month 12, the last
+    closed quarter is 3, and the formula returned 1 — next year's number,
+    beside a commit of this year's. The window ordinal is a property of the
+    window, so it is taken from the window (same source as ``decide()``'s fill
+    below, which uses the decision's own month).
+
+    Clamped to the stored plan's length for a non-decade horizon, and for the
+    fully-decided session that has no next window.
+    """
+    windows = decision_months(doc["months"])
+    undecided = [m for m in windows if str(m) not in doc["decisions"]]
+    index = windows.index(undecided[0]) if undecided else len(windows) - 1
+    return max(0, min(index, entries - 1))
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 
@@ -98,6 +164,10 @@ class CreateSession(BaseModel):
     basis: str = "reported"
     ranked: bool = False
     participant: str | None = None
+    # su-app-06: an entered book and kickoff plan. Absent = the derived
+    # default, which is every session that existed before this.
+    book: OpeningBook | None = None
+    plan: CommitmentPlan | None = None
 
 
 class Advance(BaseModel):
@@ -209,6 +279,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             )
         return {"worlds": worlds}
 
+    @app.get("/book/default")
+    def default_book(run_id: str, conn: sqlite3.Connection = Depends(db)):
+        """su-app-06: the pre-fill the entry screen opens with — today's
+        derived book and the flat fixed-rule plan, for THIS world's sleeve
+        set. Built by the engine's own code, never a second implementation."""
+        book, plan, liquid = _world_book(conn, run_id)
+        return {
+            "book": book.model_dump(),
+            "plan": plan.model_dump(),
+            "liquid_sleeves": list(liquid),
+            "book_digest": book.digest(),
+            "plan_digest": plan.digest(),
+        }
+
     @app.get("/runs/{run_id}/bundle")
     def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):
         """sib-01: served bytes are byte-identical to ``ah bundle`` — same
@@ -229,17 +313,60 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         if world is None:
             raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
         months = WorldSpec.model_validate(world).horizon.quarters * 3
+
+        default_book_, default_plan_, liquid = _world_book(conn, body.run_id)
+        ranked = body.ranked
+        book_json = plan_json = None
+        if body.book is not None or body.plan is not None:
+            book = body.book or default_book_
+            plan = body.plan or default_plan_
+            try:
+                validate_book(book, liquid_sleeves=liquid)
+                validate_plan(plan, book.target_nav())
+            except BookError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            # CommitmentPlan._shape only checks the three sleeves AGREE in
+            # length, not what that length should be against THIS world's
+            # horizon — task 6 indexes into this stored plan by window
+            # ordinal, so a wrong count must be refused here, at the boundary.
+            expected = len(decision_months(months))
+            for sleeve, years in plan.points.items():
+                if len(years) != expected:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"plan {sleeve} has {len(years)} entries, expected {expected} "
+                            "(one per decision window)"
+                        ),
+                    )
+            # section 2: a custom book is PRACTICE ONLY. Enforced here, on the
+            # authority, not in the app.
+            if book.digest() != default_book_.digest() or plan.digest() != default_plan_.digest():
+                ranked = False
+            book_json = book.model_dump_json()
+            plan_json = plan.model_dump_json()
+
         try:
             return session_store.create_session(
                 conn,
                 run_id=body.run_id,
                 months=months,
                 basis=body.basis,
-                ranked=body.ranked,
+                ranked=ranked,
                 participant=body.participant,
+                opening_book=book_json,
+                commitment_plan=plan_json,
             )
         except session_store.SessionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+    def _stored_opening_book(doc: dict[str, Any]) -> OpeningBook | None:
+        """The session's entered book, or ``None`` for the derived default —
+        su-app-06's single deserialization point, shared by every replay
+        surface (`_mark_to_market`, `/outcome`, `/cio`) so a session's book
+        is decoded the same way everywhere it is read back."""
+        stored = doc.get("opening_book")
+        return OpeningBook.model_validate_json(stored) if stored else None
 
     def _mark_to_market(conn: sqlite3.Connection, doc: dict[str, Any]) -> dict[str, Any]:
         """Attach the book's value AS AT the reveal pointer, and the twin's.
@@ -270,6 +397,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "spending_rate_annual",
             "private_weight_reported",
             "next_plan_basis",
+            "plan_pace",
         ):
             doc[key] = None
         doc["forced_sales"] = []
@@ -298,8 +426,16 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, _alpha = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
-        twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
+        # su-app-06: the SAME stored book (or None for the derived default)
+        # goes to both the active session and the twin — alpha must still
+        # isolate decisions, not differences in opening state.
+        book = _stored_opening_book(doc)
+        active = simulate_play(
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
+        twin = simulate_play(
+            paths, None, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
         # only quarters that have CLOSED inside the revealed window
         q = min(revealed // 3, len(active.quarters)) - 1
         here, twin_here = active.quarters[q], twin.quarters[q]
@@ -346,6 +482,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "as_of_month": here.month,
             "private_weight_reported": here.private_weight_reported,
         }
+        # su-app-06 section 4.3: with a stored plan the pre-fill is the
+        # player's OWN number for this year - exact, so the audit-F4
+        # staleness caveat does not apply - and the pacing rule's view rides
+        # alongside as a comparison rather than acting as a silent default.
+        # A session with no plan keeps today's behaviour verbatim.
+        stored_plan = doc.get("commitment_plan")
+        if stored_plan:
+            plan = CommitmentPlan.model_validate_json(stored_plan)
+            window = _plan_window(doc, len(next(iter(plan.points.values()))))
+            doc["plan_pace"] = doc["next_plan_commitments"]
+            doc["next_plan_commitments"] = {
+                sleeve: round(points[window], 4) for sleeve, points in plan.points.items()
+            }
+            doc["next_plan_basis"] = None  # nothing is being approximated
         # sp-05 (E1's last gaps): the ladder by age and the trailing
         # distribution series, visible at the moment of decision.
         doc["vintage_nav"] = {k: round(float(v), 4) for k, v in here.vintage_nav.items()}
@@ -388,6 +538,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
         decisions = {int(m): a for m, a in doc["decisions"].items()}
         resolved = rec.get("resolved_engine") or {}
+        # su-app-06: this is a LIVE surface, not just an endgame one — a
+        # player on a custom book must see a dashboard for that book at
+        # every reveal, matching the header's own value (task 5b).
+        book = _stored_opening_book(doc)
         return build_cio_view(
             paths,
             decisions,
@@ -405,6 +559,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             # splicing it onto a generated (non-toy-v0) world would stitch two
             # engines into one chart, so generated worlds opt out here.
             prehistory=(ws.engine_defaults.generator_id == "toy-v0"),
+            opening_book=book,
         )
 
     @app.post("/sessions/{sid}/advance")
@@ -418,7 +573,31 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     @app.post("/sessions/{sid}/decisions")
     def decide(sid: str, body: Decide, conn: sqlite3.Connection = Depends(db)):
         doc = _get(conn, sid)
-        if body.commitments is not None:
+        commitments = body.commitments
+        # su-app-06 section 4.3, and the fix for it: on a PLAN-CARRYING
+        # session an untouched lever commits the plan's number for this
+        # window, exactly. The client sends only the sleeves the player
+        # edited (audit F4), so the sleeves it omits are filled here — on the
+        # authority (DN-3 W5), not in the browser, or a scripted client would
+        # keep the old silent behaviour. Without this the stored plan reached
+        # the display and stopped: `simulate_play` fell through to the policy
+        # pacing rule and committed a number the window never showed.
+        #
+        # The window is identified by the DECISION'S OWN MONTH, not by a
+        # quarter pointer: `body.month` names the window exactly and the
+        # pointer does not (see `_plan_window`). A month that names no window
+        # is left alone — `record_decision` is the one place that refuses it.
+        stored_plan = doc.get("commitment_plan")
+        if stored_plan:
+            plan = CommitmentPlan.model_validate_json(stored_plan)
+            window = _window_ordinal(doc["months"], body.month)
+            if window is not None:
+                filled = dict(commitments or {})
+                for sleeve, points in plan.points.items():
+                    if sleeve not in filled and window < len(points):
+                        filled[sleeve] = float(points[window])
+                commitments = filled
+        if commitments is not None:
             # sp-02: the lever's bounds are checked HERE, against the world's
             # own targets — a bad commit is a 422 at the door, never a 500
             # inside the simulator.
@@ -432,8 +611,19 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 from ah.port.adapter import GEN_START_TARGETS
 
                 targets = GEN_START_TARGETS
+            # su-app-06 (I1): `validate_plan` caps a plan entry against the
+            # ENTERED book's own per-sleeve NAV (`OpeningBook.target_nav`), so
+            # an analyst holding 30 points of pe may legally store 10.8 for a
+            # window. Capping the same quantity here against START_TARGETS
+            # would have the server refuse a number it filled in itself. The
+            # book is the institution, so on a book-carrying session the cap
+            # is measured against the book — the bound is re-based, never
+            # removed, and sessions with no book are untouched.
+            entered = _stored_opening_book(doc)
+            if entered is not None:
+                targets = entered.target_nav()
             try:
-                validate_commitments(body.commitments, targets)
+                validate_commitments(commitments, targets)
             except ValueError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
         # narr-02: pass the already-validated rationale through as a plain
@@ -453,7 +643,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                     month=body.month,
                     action=body.action,
                     client_log=body.client_log,
-                    commitments=body.commitments,
+                    commitments=commitments,
                     rationale=rationale,
                 ),
             )
@@ -509,24 +699,50 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
-        twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
+        # su-app-06: the SAME stored book (or None for the derived default)
+        # goes to every replay below — active, twin, drift twin, the
+        # per-window attribution and the annotations — so the endgame
+        # verdict describes the book the player actually held (task 5b).
+        book = _stored_opening_book(doc)
+        active = simulate_play(
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
+        twin = simulate_play(
+            paths, None, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
         # sp-01: the DRIFT twin (DN-5's fixed nominal schedule) — E7's slot
         # receives its data at last; the difference between these two series
         # across a decade is the vintage-timing argument, drawn not argued.
         drift = simulate_play(
-            paths, None, use_reported=use_reported, start_targets=targets, pacing_rule="fixed"
+            paths,
+            None,
+            use_reported=use_reported,
+            start_targets=targets,
+            pacing_rule="fixed",
+            opening_book=book,
         )
         attribution = window_contributions_play(
-            paths, decisions, use_reported=use_reported, start_targets=targets
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
         )
 
         # sp-03 (E4): the flinch cost and the arithmetic warning ride the
         # outcome — computed here (the server owns tone and number alike).
         from ah.annotations import post_game_annotations
 
+        # su-app-06 (I2): the flinch cost measures a cut against the player's
+        # OWN stored plan when the session carries one (spec section 2), not
+        # against the model's pacing rule. None for every session without a
+        # plan, which keeps that path exactly as it was.
+        stored_plan = doc.get("commitment_plan")
         annotations = post_game_annotations(
-            paths, decisions, use_reported=use_reported, start_targets=targets
+            paths,
+            decisions,
+            use_reported=use_reported,
+            start_targets=targets,
+            opening_book=book,
+            commitment_plan=(
+                CommitmentPlan.model_validate_json(stored_plan) if stored_plan else None
+            ),
         )
 
         alpha = active.final_value - twin.final_value

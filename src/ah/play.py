@@ -53,6 +53,7 @@ import numpy as np
 
 from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
+from ah.port.book import CommitmentPlan, OpeningBook
 from ah.port.cashflow_tier1 import f_call as tier1_f_call
 from ah.port.cashflow_tier1 import f_dist as tier1_f_dist
 from ah.port.cohort import ClosedEndCohort
@@ -64,10 +65,13 @@ __all__ = [
     "LIQUID_ASSETS",
     "PLAY_ALPHA_VERSION",
     "PRIVATE_ASSETS",
+    "START_CASH",
     "START_TARGETS",
     "PlayAttribution",
     "PlayQuarter",
     "PlayResult",
+    "default_commitment_plan",
+    "default_opening_book",
     "play_alpha",
     "simulate_play",
     "window_contributions_play",
@@ -181,6 +185,51 @@ def plan_commitments(
         else _pacing_multiplier(private_weight_reported, t, pacing_band)
     )
     return {a: t[a] * _ANNUAL_COMMITMENT_RATE * m for a in PRIVATE_ASSETS}
+
+
+def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningBook:
+    """Today's DERIVED book, as an OpeningBook document (su-app-06).
+
+    This is what the entry screen opens pre-filled with, and it is built by
+    the same ``_seed_ladder`` the engine uses — never a second implementation,
+    or the round-trip equivalence test would be comparing two copies of the
+    same mistake.
+    """
+    t = dict(targets) if targets is not None else dict(START_TARGETS)
+    base = _doc("closed-end-cohort.example.json")
+    return OpeningBook(
+        liquid={a: float(t[a]) for a in t if a not in PRIVATE_ASSETS},
+        private={
+            a: [c.to_document() for c in _seed_ladder(base, a, float(t[a]))] for a in PRIVATE_ASSETS
+        },
+        cash=START_CASH,
+    )
+
+
+def default_commitment_plan(
+    targets: Mapping[str, float] | None = None, windows: int = 9
+) -> CommitmentPlan:
+    """The kickoff plan: the FIXED-rule pace, flat across the decade.
+
+    ONE ENTRY PER DECISION WINDOW, not per calendar year. A 120-month decade
+    has nine windows (months 11, 23, ... 107) and the engine fires exactly
+    nine commitments (quarters 4, 8, ... 36 — ``q > 0 and q % 4 == 0``, so
+    there is no commitment at q=0; the t0 book is the entered ladder, not a
+    commitment). Plan index k is the k-th window, which drives the engine's
+    vintage year k+1. Callers with a non-decade horizon pass
+    ``windows=len(decision_months(months))``.
+
+    Flat because the policy flex is a function of the realized reported
+    private weight, which at kickoff cannot be known without simulating the
+    tape — and simulating it here would leak it. ``serve.py`` already uses
+    ``pacing_rule="fixed"`` for exactly this pre-quarter-0 case.
+
+    A non-flat schedule derived from the current portfolio is wanted and is
+    explicitly later work; ``CommitmentPlan``'s per-year shape already carries
+    one without a contract change.
+    """
+    base = plan_commitments(0.0, targets, pacing_rule="fixed")
+    return CommitmentPlan(points={a: [base[a]] * windows for a in PRIVATE_ASSETS})
 
 
 def validate_commitments(
@@ -442,6 +491,7 @@ def _build_portfolio(
     policy: Policy,
     targets: Mapping[str, float],
     liquid: tuple[str, ...],
+    book: OpeningBook | None = None,
 ) -> tuple[Portfolio, dict[str, list[ClosedEndCohort]]]:
     """An ongoing institution at its target weights, with a cash buffer.
 
@@ -449,19 +499,26 @@ def _build_portfolio(
     :func:`_seed_ladder`), not one mid-life cohort: the institution opens at
     the same allocation it always did, but its vintages mature one a year
     instead of all at once.
+
+    su-app-06: when ``book`` is given, the liquid values, the cash and every
+    private rung come from it instead of being derived. ``book=None`` is the
+    derived path, unchanged — that is the whole feature's off switch.
     """
-    portfolio = Portfolio(cash=START_CASH)
+    portfolio = Portfolio(cash=START_CASH if book is None else book.cash)
     base = _doc("closed-end-cohort.example.json")
     liquid_doc = _doc("liquid-sleeve.example.json")
 
     for asset in liquid:
         sleeve = LiquidSleeve.from_document(liquid_doc)
-        sleeve.value = targets[asset]
+        sleeve.value = float(targets[asset]) if book is None else float(book.liquid[asset])
         portfolio.add(asset, sleeve)
 
     cohorts: dict[str, list[ClosedEndCohort]] = {}
     for asset in PRIVATE_ASSETS:
-        rungs = _seed_ladder(base, asset, float(targets[asset]))
+        if book is None:
+            rungs = _seed_ladder(base, asset, float(targets[asset]))
+        else:
+            rungs = book.cohorts(asset)
         for cohort in rungs:
             portfolio.add(cohort.contract.identity.cohort_id, cohort)
         cohorts[asset] = rungs
@@ -528,6 +585,7 @@ def simulate_play(
     start_targets: Mapping[str, float] | None = None,
     pacing_rule: str = "policy",
     pacing_band: tuple[float, float] = PACING_BAND,
+    opening_book: OpeningBook | None = None,
 ) -> PlayResult:
     """Run the institution over a tape, quarter by quarter, with consequences.
 
@@ -539,6 +597,11 @@ def simulate_play(
     tier 0's benchmark, the sealed "one model, linkage on or off" identity.
     It exists for the credibility console's counterfactual and is never used
     on the scored path.
+
+    ``opening_book`` (su-app-06) replaces the DERIVED opening state with an
+    entered one — liquid values, cash and every private rung. ``None`` is the
+    derived path and is bit-identical to the behaviour before this parameter
+    existed.
     """
     if pacing_rule not in ("policy", "fixed"):
         raise ValueError(f"pacing_rule must be 'policy' or 'fixed', got {pacing_rule!r}")
@@ -549,8 +612,16 @@ def simulate_play(
     # (generated worlds drop reits per OD-3); targets default to the toy book
     liquid = tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
-    _validate_commit_decisions(decisions, targets)
-    portfolio, cohorts = _build_portfolio(policy, targets, liquid)
+    # su-app-06 (I1): the lever's declared bound is measured against the
+    # ENTERED book's own per-sleeve NAV when there is one — the same basis
+    # `validate_plan` and the service's decision door use, so the three
+    # cannot disagree about the same quantity. `opening_book=None` reads
+    # `targets` exactly as it always did. The PACING rule below is untouched
+    # and still paces off `targets`: this is the bound, not the plan.
+    _validate_commit_decisions(
+        decisions, targets if opening_book is None else opening_book.target_nav()
+    )
+    portfolio, cohorts = _build_portfolio(policy, targets, liquid, opening_book)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
     ladders: dict[str, list[ClosedEndCohort]] = {a: list(cohorts[a]) for a in PRIVATE_ASSETS}
@@ -805,16 +876,26 @@ def window_contributions_play(
     use_reported: bool = True,
     policy: Policy | None = None,
     start_targets: Mapping[str, float] | None = None,
+    opening_book: OpeningBook | None = None,
 ) -> PlayAttribution:
     """K+1 runs for K windows — exact, no sampling.
 
     Windows the participant left unmapped default to hold inside
     :func:`simulate_play` exactly as they did when the sequence was played, so
     a partial decision map still decomposes correctly.
+
+    ``opening_book`` (su-app-06) rides along on the twin AND every prefix
+    replay — the same entered book throughout, so the chain-link
+    decomposition still isolates decisions rather than mixing institutions.
     """
     months_list = decision_months(paths.months)
     twin = simulate_play(
-        paths, None, use_reported=use_reported, policy=policy, start_targets=start_targets
+        paths,
+        None,
+        use_reported=use_reported,
+        policy=policy,
+        start_targets=start_targets,
+        opening_book=opening_book,
     )
     prev_final = float(twin.final_value)
 
@@ -830,6 +911,7 @@ def window_contributions_play(
             use_reported=use_reported,
             policy=policy,
             start_targets=start_targets,
+            opening_book=opening_book,
         )
         final = float(run.final_value)
         contributions.append(final - prev_final)

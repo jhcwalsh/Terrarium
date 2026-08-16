@@ -1029,3 +1029,48 @@ property *specifically* for inflation linkage. Until this is closed, no
 inflation-conditioned result about private markets from this platform means
 anything, and that should be said out loud rather than inferred from a register
 entry.
+
+---
+
+## ER-15 — An entered opening book can sit outside the fitted ladder shape
+
+**Status:** open (standing gap; mitigated by the practice-only rule)
+**Found:** 2026-08-15, su-app-06 (opening book entry design review).
+
+**Scope note.** Like ER-3, ER-6 and ER-12 this is about the cohort/institution
+model in `ah/port/` and `ah/play.py`, not the `toy-v0` return process. No
+engine change; `TOY_ENGINE_VERSION` is untouched.
+
+`_seed_ladder` derives the opening private book as a staggered ten-rung
+staircase, warmed forward at a single fitted rate, and that shape is what the
+pacing model, the call/distribution linkage and the ER-6/ER-12 close-outs
+were checked against. su-app-06 lets an analyst enter a book directly, and an
+ENTERED ladder can be arbitrarily far from the derived shape — one enormous
+vintage, a five-year gap between rungs, a sleeve sitting entirely in its
+harvest years.
+
+It can also open in a state the derived book can never reach:
+`nav_reported != nav_true` at t0, i.e. an appraisal filter that starts
+un-converged. The seeded ladder converges by construction
+(`cohort.report(cohort.nav_true)` at the end of warm-up), so no calibration
+evidence — not ER-6's, not ER-12's — covers an opening that starts
+un-converged.
+
+Nothing downstream is wrong — the waterfall, the appraisal filter and the
+pacing linkage all run exactly as specified on whatever book they are given.
+What does not extend is the *evidence*: the sealed pacing figures (DN-5
+§2.1) and the ER-6/ER-12 measurements were fitted and checked on the one
+shape `_seed_ladder` produces, not on the space of books an analyst can now
+type in.
+
+**Mitigated, not fixed.** A custom book demotes its session to practice
+whenever the entered book's or plan's digest differs from the served
+default (`POST /sessions`, `src/ah/serve.py`), so nothing that reaches the
+leaderboard is ever scored from an unfitted ladder.
+
+**Consequences.** Re-fitting pacing and linkage across a family of ladder
+shapes would move the sealed pacing figures in DN-5 §2.1 — an amendment-log
+event and an owner decision, not a cleanup. It does not touch `schemas/`,
+`mappings/`, or any seal, and does not by itself require a
+`PLAY_ALPHA_VERSION` bump (the derived path is byte-identical; only a session
+built from a non-default book is affected, and those never score).

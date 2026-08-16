@@ -108,7 +108,15 @@ _RUN_RECORD_STAMPS = (
 # this architecture -- see the WP's task note). Same additive-column
 # pattern: absent (NULL) on rows written before this change, "1.0" on every
 # new one. Inert -- no logic reads it.
-_SESSION_STAMPS = (("rationale_schema_version", "TEXT"),)
+#
+# su-app-06: the entered opening book and kickoff commitment plan, stored as
+# canonical JSON. NULL means the derived default, which is every session
+# written before this change - so old rows replay exactly as they did.
+_SESSION_STAMPS = (
+    ("rationale_schema_version", "TEXT"),
+    ("opening_book", "TEXT"),
+    ("commitment_plan", "TEXT"),
+)
 
 
 def connect(path: str | Path = ":memory:", *, check_same_thread: bool = True) -> sqlite3.Connection:

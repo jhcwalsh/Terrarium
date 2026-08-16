@@ -36,7 +36,9 @@ import {
   getOutcome,
   SessionApiError,
   type Action,
+  type Book,
   type Outcome,
+  type Plan,
   type Session,
 } from "./lib/session";
 
@@ -163,10 +165,16 @@ export function bookLabel(basis: string): string {
 interface PlayProps {
   bundle: WorldBundle;
   config?: PlayConfig;
+  /** su-app-06: the analyst's entered opening book/plan, from BookEntry's
+   * onReady. Undefined (bundle picked without going through book entry)
+   * falls through to the server's own default — createSession's body just
+   * omits the keys, same as before this WP. */
+  book?: Book;
+  plan?: Plan;
   onExit: () => void;
 }
 
-export function Play({ bundle, config, onExit }: PlayProps) {
+export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   const basis = config?.basis ?? "reported";
   const [session, setSession] = useState<Session | null>(null);
   const [outcome, setOutcome] = useState<Outcome | null>(null);
@@ -186,10 +194,16 @@ export function Play({ bundle, config, onExit }: PlayProps) {
       basis,
       ranked: config?.ranked ?? false,
       participant: config?.participant,
+      book,
+      plan,
     })
       .then(setSession)
-      .catch((e) => setError(String(e)));
-  }, [bundle.meta.run_id, basis, config?.ranked, config?.participant]);
+      // su-app-06 (I3): the server's own refusal text, not "Error: ...".
+      // A refused book is the one failure here a player can act on, and
+      // `SessionApiError.message` now renders a pydantic-shaped detail
+      // readably (lib/session.ts renderDetail).
+      .catch((e) => setError(e instanceof SessionApiError ? e.message : String(e)));
+  }, [bundle.meta.run_id, basis, config?.ranked, config?.participant, book, plan]);
 
   // cio-02: fetch the CIO view only while that mode is on screen, and only
   // when the pointer, the plane, or the decided-window count actually moved
@@ -333,6 +347,9 @@ export function Play({ bundle, config, onExit }: PlayProps) {
         <p className="error">{error}</p>
         <p>
           Play mode needs the session service (`uv run uvicorn ah.serve:app`).
+          If the server refused the book, go back and re-open &quot;play this
+          world&quot; — the entry screen reopens on what you typed, not on the
+          server default.
           <button onClick={onExit}>back to browse</button>
         </p>
       </main>
@@ -614,6 +631,7 @@ export function Play({ bundle, config, onExit }: PlayProps) {
               busy={busy}
               planCommitments={session?.next_plan_commitments ?? null}
               planBasis={session?.next_plan_basis ?? null}
+              planPace={session?.plan_pace ?? null}
             />
           </section>
         </div>

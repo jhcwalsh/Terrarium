@@ -658,10 +658,13 @@ class TestRationale:
     # BEFORE this change (captured against the unmodified code, then frozen
     # here) -- acceptance 2's "byte-identical except the version stamp" made
     # concrete, without needing two code versions in one test run.
+    # su-app-06: now includes opening_book and commitment_plan (both null for old sessions).
+    # task 6: now also includes plan_pace (null for a session with no stored plan).
     _PRE_NARR02_SESSION_KEYS: ClassVar[set[str]] = {
         "basis",
         "calls_paid",
         "cash",
+        "commitment_plan",
         "coverage_reported",
         "coverage_true",
         "created_at",
@@ -675,7 +678,9 @@ class TestRationale:
         "months",
         "next_plan_basis",
         "next_plan_commitments",
+        "opening_book",
         "participant",
+        "plan_pace",
         "private_weight_reported",
         "private_weight_true",
         "ranked",

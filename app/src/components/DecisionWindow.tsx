@@ -79,6 +79,14 @@ interface DecisionWindowProps {
     as_of_month: number;
     private_weight_reported: number;
   } | null;
+  /** su-app-06 section 4.3: what the POLICY pacing rule would have paced at
+   * the current reported weight, on a session carrying the analyst's own
+   * kickoff plan. Shown BESIDE each plan figure as a labelled comparison and
+   * never applied — the plan is what an untouched lever commits. Its
+   * presence is what distinguishes a plan-carrying session here, and it is
+   * also what replaces the F4 staleness caveat (`planBasis`), which the
+   * server suppresses for these sessions because nothing is approximated. */
+  planPace?: Record<string, number> | null;
 }
 
 export function DecisionWindow({
@@ -90,6 +98,7 @@ export function DecisionWindow({
   busy,
   planCommitments,
   planBasis,
+  planPace,
 }: DecisionWindowProps) {
   const [selected, setSelected] = useState<Action | null>(null);
   const [commitments, setCommitments] = useState<Record<string, number> | null>(null);
@@ -182,8 +191,22 @@ export function DecisionWindow({
                 }
               />
               <span className="lever-plan">plan {planCommitments[key]?.toFixed(2)}</span>
+              {planPace?.[key] !== undefined && (
+                <span className="lever-pace">
+                  pacing rule {planPace[key].toFixed(2)}
+                </span>
+              )}
             </label>
           ))}
+          {planPace && (
+            <p className="lever-plan-note">
+              These are your own kickoff plan&apos;s numbers for this window. A
+              sleeve you leave alone commits exactly what is shown — nothing is
+              re-paced behind you. Beside each is what the pacing rule would
+              have committed at the book&apos;s current reported weight: a
+              comparison, not a default.
+            </p>
+          )}
           {planBasis && (
             <p className="lever-basis">
               Plan figures are as at month {planBasis.as_of_month} (the last quarter

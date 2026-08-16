@@ -56,6 +56,13 @@ export interface Session {
     as_of_month: number;
     private_weight_reported: number;
   } | null;
+  /** su-app-06 section 4.3: on a session carrying an entered CommitmentPlan,
+   * what the POLICY pacing rule would have paced at the current reported
+   * weight. Shown beside the plan number as a comparison, never applied —
+   * `next_plan_commitments` is the plan, and an untouched lever commits it.
+   * Null for a session with no stored plan, where the pacing rule IS the
+   * pre-fill and there is nothing to compare it against. */
+  plan_pace?: Record<string, number> | null;
   /** audit F4: what the spending rate was applied to, and the rate — so
    * `spending_paid` is rederivable from this document alone. Quarter-end
    * `nav_reported` is sampled after the waterfall and does NOT reproduce it. */
@@ -125,6 +132,40 @@ export class SessionApiError extends Error {
   }
 }
 
+/**
+ * FastAPI's `detail` has two shapes and only one of them is a string.
+ *
+ * Our own `HTTPException(422, detail="book totals 103, must total 100")`
+ * gives a string. A pydantic-level failure — a rung field that will not
+ * parse, an unknown key under `extra="forbid"` — gives a LIST of
+ * `{loc, msg, type}` objects, which `String(...)` renders as
+ * `[object Object]`. That is what the book entry screen showed for roughly
+ * half of the refusals it can provoke, which is the same as showing nothing.
+ *
+ * Exported as a pure seam so the rendering is pinned without a live server.
+ */
+export function renderDetail(detail: unknown, fallback: string): string {
+  if (typeof detail === "string" && detail !== "") return detail;
+  if (Array.isArray(detail)) {
+    const lines = detail
+      .map((entry) => {
+        if (typeof entry === "string") return entry;
+        if (entry && typeof entry === "object") {
+          const item = entry as { loc?: unknown; msg?: unknown };
+          const where = Array.isArray(item.loc) ? item.loc.join(".") : "";
+          const msg = typeof item.msg === "string" ? item.msg : JSON.stringify(entry);
+          return where ? `${where}: ${msg}` : msg;
+        }
+        return String(entry);
+      })
+      .filter((line) => line !== "");
+    if (lines.length) return lines.join("; ");
+  } else if (detail && typeof detail === "object") {
+    return JSON.stringify(detail);
+  }
+  return fallback;
+}
+
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const res = await fetch(path, {
     headers: { "content-type": "application/json" },
@@ -133,7 +174,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!res.ok) {
     let detail = res.statusText;
     try {
-      detail = (await res.json()).detail ?? detail;
+      detail = renderDetail((await res.json()).detail, detail);
     } catch {
       /* non-JSON error body; statusText stands */
     }
@@ -142,11 +183,62 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
+/** su-app-06: a ten-rung private-sleeve cohort, as served/entered. Shape
+ * only — `identity`/`commitment`/`value` carry whatever the server put
+ * there; this client edits seven named fields and passes the rest through
+ * untouched (`recallable_balance`, `cumulative_recycled` included). */
+export interface Rung {
+  identity: { vintage_year: number; [k: string]: unknown };
+  commitment: {
+    committed: number;
+    paid_in: number;
+    unfunded: number;
+    recallable_balance: number;
+    cumulative_recycled: number;
+  };
+  value: { nav_true: number; nav_reported: number; cumulative_distributions: number };
+  [k: string]: unknown;
+}
+
+/** su-app-06: the opening book contract (`opening-book-0.1`). `liquid`'s
+ * key set is engine-dependent — never hardcode it, read `liquid_sleeves`
+ * off `DefaultBookResponse` instead. */
+export interface Book {
+  state_version: string;
+  liquid: Record<string, number>;
+  private: Record<string, Rung[]>;
+  cash: number;
+}
+
+/** su-app-06: the commitment plan contract (`commitment-plan-0.1`). Each
+ * `points[sleeve]` array has one entry per decision window (nine, not ten
+ * years) — driven by the served array's length, never a constant. */
+export interface Plan {
+  state_version: string;
+  points: Record<string, number[]>;
+}
+
+export interface DefaultBookResponse {
+  book: Book;
+  plan: Plan;
+  liquid_sleeves: string[];
+  book_digest: string;
+  plan_digest: string;
+}
+
+/** su-app-06: the entry screen's pre-fill — today's derived book and the
+ * flat fixed-rule plan, for this world's own sleeve set. */
+export function getDefaultBook(runId: string): Promise<DefaultBookResponse> {
+  return request(`/book/default?run_id=${encodeURIComponent(runId)}`);
+}
+
 export function createSession(body: {
   run_id: string;
   basis?: "reported" | "actual";
   ranked?: boolean;
   participant?: string;
+  book?: Book;
+  plan?: Plan;
 }): Promise<Session> {
   return request("/sessions", { method: "POST", body: JSON.stringify(body) });
 }

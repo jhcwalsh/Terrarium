@@ -78,6 +78,8 @@ def create_session(
     basis: str = "reported",
     ranked: bool = False,
     participant: str | None = None,
+    opening_book: str | None = None,
+    commitment_plan: str | None = None,
 ) -> dict[str, Any]:
     """Open a session over a RunRecord. ``months`` comes from the verified run."""
     if basis not in ("reported", "actual"):
@@ -92,8 +94,8 @@ def create_session(
         """INSERT INTO sessions
            (session_id, run_id, world_id, months, revealed_months, basis, ranked,
             participant, decisions, window_log, status, created_at, updated_at,
-            rationale_schema_version)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?, '{}', '[]', 'active', ?, ?, ?)""",
+            rationale_schema_version, opening_book, commitment_plan)
+           VALUES (?, ?, ?, ?, 0, ?, ?, ?, '{}', '[]', 'active', ?, ?, ?, ?, ?)""",
         (
             session_id,
             run_id,
@@ -105,6 +107,8 @@ def create_session(
             now,
             now,
             RATIONALE_SCHEMA_VERSION,
+            opening_book,
+            commitment_plan,
         ),
     )
     conn.commit()

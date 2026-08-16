@@ -218,7 +218,9 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   the tier-1 linkage cannot see inflation by signature, and the whole
   apparent response of the private book is a second-order effect of the
   commodity sleeve beside it — filed 2026-08-16, detail in
-  `docs/current/private-markets-and-inflation.md`) are open.
+  `docs/current/private-markets-and-inflation.md`) and ER-15 (an entered opening book can sit arbitrarily far outside the
+  staggered shape the pacing model and linkage were fitted on, or open with an
+  un-converged appraisal filter; mitigated by practice-only demotion, not fixed) are open.
   **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
   10 + expiry-at-lapse ledger; play alphas went to `port-v2-cashflow`/`-gen`
   and have since moved twice — see ER-12; the E1

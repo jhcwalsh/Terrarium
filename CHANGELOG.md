@@ -46,6 +46,122 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   `housekeeping-03-merge-hook` — moving it would change the owner's working
   tree. The stale `../Terrarium-probe` line is marked gone.
 
+- **su-app-06 — opening book entry, the last WP of the product surface's
+  allocation-entry slice.** An analyst can now enter a real institution's
+  opening book — liquid sleeve weights, cash, and a ladder of private-market
+  vintages — and play a decade from it, instead of only ever starting from
+  the derived default. `OpeningBook` / `CommitmentPlan`
+  (`src/ah/port/book.py`) are the contract: rungs are serialized
+  `ClosedEndCohort` documents, so the Step-3 state contract validates them,
+  and semantic rules (the legal sleeve set, etc.) are free functions rather
+  than pydantic validators, so a violation returns a usable 422 instead of a
+  `ValidationError` wrapped past readability. `GET /book/default` serves the
+  world's own pre-fill, built by the engine's own code; `POST /sessions`
+  validates a submitted book/plan and **demotes the session to practice**
+  whenever either digest differs from the served default — nothing that
+  reaches the leaderboard is ever scored from an entered book. The override
+  threads through the numeric engine (`simulate_play(..., opening_book=...)`),
+  session persistence, and every replay and dashboard surface, including the
+  plan-driven commitment lever and the app's new entry screen
+  (`app/src/BookEntry.tsx`).
+
+  **What the equivalence test proves, stated precisely.** The suite's
+  headline test (`tests/test_book_override.py::TestEquivalence::
+  test_the_default_book_reproduces_the_derived_decade_exactly`) feeds the
+  served default book back in as an entered book and asserts an identical
+  decade, quarter for quarter. Read plainly that sounds like proof the entry
+  path and the derived path agree on what a *correct* book is. It proves
+  less: `default_opening_book` builds its rungs from the same `_seed_ladder`
+  the derived branch already calls, so the test is a **serialization-fidelity
+  proof** — that `to_document` → JSON → `from_document` round-trips
+  losslessly through the HTTP boundary and back into the cohort model — not a
+  proof that the seeded ladder shape is the *right* one to enter. The design
+  choice stands (an independently hand-written ladder fixture would exercise
+  its own arithmetic rather than the plumbing under test), but the two
+  claims are different and only the narrower one is established. See ER-15.
+
+  **A defect found and fixed during the work, not shipped:**
+  `/sessions/{sid}/outcome` and `/sessions/{sid}/cio` originally replayed
+  every session from the *derived* default book rather than the one actually
+  stored, so a custom-book session was scored and displayed as someone
+  else's institution while `GET /sessions/{sid}` (already correct) showed
+  the real value — no error, the two surfaces just quietly disagreed. Fixed by
+  threading `opening_book` through `window_contributions_play`,
+  `post_game_annotations` and `build_cio_view`, and covered by a
+  cross-surface consistency test asserting `GET /sessions/{sid}`'s value
+  agrees with `/outcome`'s `final_value` at decade end for a custom-book
+  session. The leaderboard was never at risk — custom books are practice-only
+  from creation — but a player would have seen the wrong institution.
+
+  **The final fix wave (whole-branch review, 2026-08-16).** Seven fixes, all
+  gaps in the plan rather than defects in any task's implementation — the
+  *book* half worked and the *plan* half was half-built:
+
+  - **The stored `CommitmentPlan` never reached the engine.** `serve.py` read
+    it, set the lever's pre-fill from it, and stopped there. The app sends no
+    `commitments` while the lever is untouched, so `simulate_play` fell
+    through to the policy pacing rule: the window showed the analyst's 5.00
+    and the simulator committed ~3.18. It was *more* silent than before this
+    WP, because task 6 also nulls `next_plan_basis` for exactly these
+    sessions, suppressing the paragraph that used to explain re-pacing.
+    `POST /sessions/{sid}/decisions` now fills the sleeves the client omitted
+    from `plan.points[window]` before recording the decision — server-side,
+    because the server is the authority (DN-3 W5) and a client-side fill
+    would leave any scripted client on the old behaviour. Guarded by a test
+    on the resulting **decade**, not on the pre-fill: asserting on the
+    pre-fill is what let this through, since the pre-fill was always right.
+  - **The pre-fill indexed the wrong window at the only pointer a player can
+    stand at.** `(quarter + 1) // 4` is the window ordinal only when the
+    reveal pointer sits on the window's own month, but `record_decision`
+    refuses a window until `revealed_months >= month + 1` and the app opens
+    the lever on exactly that state — so at window 0 the pointer is month 12
+    and the formula returned 1. The player was shown next year's plan number
+    beside a commit of this year's. The ordinal now comes from
+    `decision_months`, at the pre-fill and at the fill alike.
+  - **Two caps governed the same quantity.** A plan entry was capped against
+    the *entered book's* per-sleeve NAV and the decision door against
+    `START_TARGETS`, so an analyst holding 30 points of pe could legally
+    store 10.8 for a window and be 422'd the moment it was committed — a
+    number the server had filled in itself. `OpeningBook.target_nav()` is now
+    the single basis for all three enforcement points (`validate_plan`, the
+    door, and `simulate_play`'s own check). The bound is re-based, never
+    removed; sessions with no entered book are untouched.
+  - **`plan_pace` was served and never rendered.** The pacing flex went from
+    silently *applied* to silently *invisible*. The decision window now shows
+    it beside each sleeve's plan figure, labelled as the pacing rule's view,
+    with an explanation that replaces the suppressed F4 caveat.
+  - **The endgame flinch cost measured deviation from the model's plan.**
+    Spec §2 says the lever shows deviation from *your* plan.
+    `post_game_annotations` takes a `commitment_plan` and, when given one,
+    both prices the cut against that plan's entry and restores the
+    counterfactual to it. `None` keeps the pacing-rule baseline verbatim.
+  - **A 422 discarded the whole entry, and half of them rendered as
+    `[object Object]`.** FastAPI's `detail` is a list for pydantic-level
+    failures; `renderDetail` now renders it readably. `BookEntry` re-seeds
+    from the retained entry rather than refetching the server default, so a
+    refusal costs a screen instead of 210 typed fields, and the screen's
+    `ready` gate now carries the sign and recycling-identity shape checks
+    §6 asked for.
+  - **A duplicate or reserved `cohort_id` passed validation and then 500'd.**
+    Cohort ids are `Portfolio` keys and `Portfolio.add` raises on a repeat.
+    `validate_book` now refuses both a repeated id (checked across all three
+    sleeves — the registry is flat) and the `{sleeve}-v{year}` namespace the
+    pacing plan mints during play, whose collision did not even fire until
+    mid-decade. Both are 422s naming the rule.
+
+  **Scope fence, unchanged and re-tested:** a session with `opening_book=None`
+  and no stored plan is byte-identical to before this WP — it keeps
+  `plan_commitments` and its non-null `next_plan_basis` caveat, and its
+  decisions are still recorded as the bare action string.
+
+  **ER-15 opened:** `_seed_ladder`'s single staggered shape is what the
+  pacing model, the call/distribution linkage and the ER-6/ER-12 close-outs
+  were fitted and checked against; an entered book can sit arbitrarily far
+  outside that shape, or open with an un-converged appraisal filter the
+  seeded ladder can never produce. Mitigated by the practice-only demotion
+  rule, not fixed — re-fitting across a family of ladder shapes is an
+  owner-decided release event, not a cleanup
+  (`docs/engine-realism-register.md`).
 - **`docs/current/private-markets-and-inflation.md` — how the private market
   asset classes are modeled, and the measured fact that inflation does not
   reach them.** A technical note, no code changed. It maps the three layers

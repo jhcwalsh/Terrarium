@@ -133,6 +133,12 @@ ignore = [
 # The console guard asserts on the console's own rendered column headers,
 # which carry the same display typography.
 "tests/test_console_guard.py" = ["RUF001", "RUF002", "RUF003"]
+# `service`/`gen_service` are re-exported fixtures from tests/test_serve.py.
+# pytest finds a fixture by matching the PARAMETER NAME, so every test method
+# here must name its parameter exactly `service`/`gen_service` -- which
+# pyflakes reads as each one "redefining" the import. That redefinition is
+# the intended injection mechanism, not a bug.
+"tests/test_serve_book.py" = ["F811"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Typer's (and FastAPI's) function-call-in-default is the intended idiom,
