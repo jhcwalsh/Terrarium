@@ -598,7 +598,7 @@ PARAMETERS: tuple[Param, ...] = (
             "adopting it requires a further decision about what the other slots use. "
             "'regime_conditional' keys off the L2 label and would make dispersion a regime "
             "readout — the non-injectivity failure §3.1 warns about. 'fixed' abandons the "
-            "mechanic. Only the first two of these four are implemented; the others raise."
+            "mechanic. Implemented today: 'severity_band' and 'fixed'; 'surprise_sd_scaled' and 'regime_conditional' raise with the reason in the exception text."
         ),
         register="A3-B, N-e",
     ),
