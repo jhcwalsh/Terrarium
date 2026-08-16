@@ -7,7 +7,7 @@ mappings `v1.1` (`map-2026.08.2`), play alphas **`port-v4-ladder` /
 deleted). The CIO dashboard line has LANDED (`cio-01`…`cio-04`, the inherited
 decade included). Everything merged and pushed through `7d4b092`.
 
-## The main line now: the spine-conditioned compiler — BOTH ROUNDS DONE, decision next
+## The spine line: PARKED (D-SP-4 ruled 2026-08-16) — the record below stands; the live line is Path-A disclosure work
 
 Two full pre-registered rounds, both merged: the pilot (`f988952`, gate 2770)
 and the owner-authorized wiring-fix re-run **spine-02** (`deac7fc`, gate 2851).

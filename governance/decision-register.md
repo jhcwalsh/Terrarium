@@ -315,3 +315,13 @@ restores it. Condition (1) is what keeps the two questions separate.
 Adoption of C1 or C2 is a named owner release event (`ah/port/mapping.py`
 `ARTIFACT_PATH` bump + `world_id` block move for touched presets) — the
 Campaign R1 rule — not a side effect of a report existing.
+
+## D-SP-4 — RULED 2026-08-16: PARK
+
+Owner ruling: the spine architecture is parked with its two-round sealed
+record (spine-01 f988952, spine-02 deac7fc). The deep repair (L2
+generation-time hazard link; B4/B2/B6-weak-transmission residue) is NOT
+funded now. Re-opening requires a new owner decision and starts from the
+logged v3 judge defects (B1 anti-test, B6 outcome-event match) plus
+B5 clustering-aware variance. The product line proceeds on the plain
+stress compiler (memo Path A); the disclosure work is the live item.
