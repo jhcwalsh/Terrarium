@@ -1300,6 +1300,20 @@ default. Fenced: a session with no plan is untouched."
 
 - [ ] **Step 1: Write the failing test**
 
+> **CORRECTION, 2026-08-16.** The test code below is written against
+> `@testing-library/react` (`render`/`screen`/`fireEvent`, and the jest-dom
+> matchers `toHaveTextContent`/`toBeDisabled`). **This project has neither.**
+> `app/package.json` lists no testing-library or jest-dom dependency, and
+> `vite.config.ts` configures only `environment: "happy-dom"` with no setup file.
+> Component tests here use a hand-rolled helper — `createRoot` from
+> `react-dom/client` plus `act` from `react`, raw DOM queries against the host
+> element, and plain vitest matchers. See `app/src/RankedSetup.test.tsx` and
+> `app/src/DecisionWindow.test.tsx`.
+>
+> **The assertions below stand; the mechanism must be translated to that idiom.**
+> Adding a test library would be a new dependency, which needs a stated
+> justification under the project's dependency rule — and is not warranted here.
+
 ```tsx
 // app/src/BookEntry.test.tsx
 /**
