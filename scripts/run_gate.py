@@ -2,7 +2,7 @@
 (housekeeping-02).
 
 ``scripts/check_gate.py`` verifies a gate log and stamps ``.gate-ok``; the
-committed pre-commit hook then refuses a merge into main unless that stamp
+committed ``githooks/commit-msg`` hook then refuses a merge into main unless that stamp
 matches the commit being merged. That chain had a missing link. The hook
 compared the stamp to ``MERGE_HEAD`` (sound), but ``check_gate.py`` minted the
 stamp from ``git rev-parse HEAD`` at stamp time -- ambient state, with nothing

@@ -130,6 +130,36 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   rule, not fixed — re-fitting across a family of ladder shapes is an
   owner-decided release event, not a cleanup
   (`docs/engine-realism-register.md`).
+- **The gate-merge guard now actually fires (housekeeping-03).** It never had.
+  **`git merge` does not run `pre-commit`**, and this repository shipped only
+  `githooks/pre-commit`, so from 2026-08-12 to 2026-08-15 the guard CLAUDE.md
+  called "mechanical" blocked **nothing**: every merge into main went through
+  unguarded, including housekeeping-02's own. Nothing bad got in — the
+  discipline was held by hand each time — which is precisely why it went
+  unnoticed. Found by checking why `.gate-ok` was not consumed after a merge,
+  then proven in a throwaway repo rather than argued from documentation.
+  The obvious fix (add `pre-merge-commit`) **does not work, and was tried
+  first**: at `pre-merge-commit` time `MERGE_HEAD` does not yet exist — only
+  `AUTO_MERGE`, a tree — so that hook cannot learn which commit is being
+  merged and cannot enforce the binding at all. Empirically mapping the merge
+  sequence gave the answer: `commit-msg` is the earliest hook that both sees
+  `MERGE_HEAD` and can abort, and it fires on **both** routes to a merge
+  commit (the clean merge, and the conflicted merge finished with
+  `git commit`). The guard moved there. `pre-commit` is now deliberately
+  empty with a comment saying why: duplicating the guard would double-consume
+  the one-shot `.gate-ok` on the conflicted route, where both hooks run — the
+  first eats the stamp and the second refuses a legitimate merge.
+  **The test is the other half of the story.** `test_the_hook_exists_and_guards_main_merges`
+  grepped the hook file for `MERGE_HEAD`, `.gate-ok` and `REFUSED`; it asserted
+  the file *mentioned* the right things and passed happily for three days while
+  the hook never ran. It is inverted and kept, per the repo rule, and joined by
+  four tests that build a scratch repo wired to the **real** `githooks/`
+  directory and run actual merges: refused with no stamp, refused with a stamp
+  for another commit, allowed exactly once with the right stamp and the stamp
+  consumed, refused on the conflicted route, and an ordinary direct commit to
+  main **not** blocked (`commit-msg` runs for every commit, so a careless guard
+  there would break routine work). Verified by reverting to the 2026-08-12
+  configuration: four tests fail, all eighteen pass with the fix.
 
 - **The gate log is now bound to the commit it tested (housekeeping-02).**
   `scripts/check_gate.py` verified *stamp → merged commit* and never

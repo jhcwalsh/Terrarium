@@ -2,7 +2,7 @@
 
 Validates a gate log (full-suite pytest output ending in an ``EXIT: N``
 line) and, when it is genuinely green, stamps ``.gate-ok`` with the current
-HEAD sha. The committed pre-commit hook (``githooks/pre-commit``) refuses a
+HEAD sha. The committed ``githooks/commit-msg`` hook refuses a
 merge into main unless ``.gate-ok`` matches the branch being merged — one
 guard, two incidents behind it:
 
