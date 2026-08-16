@@ -39,6 +39,29 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   private-market fields (`leverage_turns`, `income_yield_pct`,
   `recovery_rate_pct`, `spread_over_base_bps`, both infrastructure fields,
   and `inflation.peak_pct`, which changes no return to three decimals).
+- **`CLAUDE.md`'s engine-realism summary swept: ER-11 and ER-12 added, and a
+  stale alpha-stamp claim corrected.** The summary paragraph had never listed
+  either entry, so a reader working from `CLAUDE.md` alone would have missed
+  both. **ER-11 is the one with a live trap in it** and is now spelled out
+  there: the product's reported plane is the engine's own filter
+  (`ah/core/engine.py::_reported_marks`, three aggregates), **not** the sealed
+  per-sleeve kernel in `ah/port/smoothing.py`, which nothing player-facing has
+  ever called — they disagree materially (buyout quarterly reported ACF 0.55
+  vs 0.06), a VC mark and a mezzanine mark blur identically, and **de-smoothing
+  a shipped reported series does not recover the true series**, so SM-10's
+  inverse property does not hold on the shipped path. ER-12's summary records
+  the one-age opening book (three clones of an age-5.25 cohort lapsing in the
+  same quarter, 17% of the decade's calls expiring at once), the staggered
+  ladder that brought `peak_unfunded_ratio` into band untuned, and the
+  `linkage_bite` redefinition kept as its own change.
+
+  Corrected while in there: the ER-6 clause still said "play alphas now
+  `port-v2-cashflow`/`-gen`", which has been wrong since ER-12. The stamps are
+  `port-v4-ladder` and `port-v4-ladder-gen` — verified against
+  `src/ah/play.py:88` and `src/ah/port/adapter.py:108`, not copied from prose.
+  The clause now points at ER-12 for the current values rather than restating
+  a number that goes stale on every alpha bump.
+
 - **ER-14 filed in `docs/engine-realism-register.md` — "Inflation does not
   reach private markets at all" (owner decision, 2026-08-16).** The note above
   recommended it and deliberately did not file it, register entries being a
