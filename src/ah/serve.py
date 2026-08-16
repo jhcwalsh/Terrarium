@@ -372,6 +372,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "spending_rate_annual",
             "private_weight_reported",
             "next_plan_basis",
+            "plan_pace",
         ):
             doc[key] = None
         doc["forced_sales"] = []
@@ -456,6 +457,25 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "as_of_month": here.month,
             "private_weight_reported": here.private_weight_reported,
         }
+        # su-app-06 section 4.3: with a stored plan the pre-fill is the
+        # player's OWN number for this year - exact, so the audit-F4
+        # staleness caveat does not apply - and the pacing rule's view rides
+        # alongside as a comparison rather than acting as a silent default.
+        # A session with no plan keeps today's behaviour verbatim.
+        stored_plan = doc.get("commitment_plan")
+        if stored_plan:
+            plan = CommitmentPlan.model_validate_json(stored_plan)
+            # Plan index = the DECISION WINDOW ordinal, not a calendar year.
+            # Windows sit at quarters 2, 6, 10, ... (months 11, 23, 35, ...),
+            # each driving the commitment at the next multiple of 4. At those
+            # quarters `(q + 1) // 4` IS the window ordinal — verified: q=2 -> 0,
+            # q=6 -> 1, q=34 -> 8. The clamp guards a non-decade horizon.
+            year = min((here.quarter + 1) // 4, len(next(iter(plan.points.values()))) - 1)
+            doc["plan_pace"] = doc["next_plan_commitments"]
+            doc["next_plan_commitments"] = {
+                sleeve: round(points[year], 4) for sleeve, points in plan.points.items()
+            }
+            doc["next_plan_basis"] = None  # nothing is being approximated
         # sp-05 (E1's last gaps): the ladder by age and the trailing
         # distribution series, visible at the moment of decision.
         doc["vintage_nav"] = {k: round(float(v), 4) for k, v in here.vintage_nav.items()}

@@ -291,3 +291,49 @@ class TestBookThreadedThroughReplaySurfaces:
         outcome = client.get(f"/sessions/{custom_sid}/outcome").json()
 
         assert doc["value"] == pytest.approx(outcome["final_value"])
+
+
+class TestPlanDrivenLever:
+    """su-app-06 section 4.3, and its fence: the lever's pre-fill measures
+    deviation from the player's OWN stored plan, not the pacing rule — but
+    only for a session that actually carries one."""
+
+    def test_a_session_without_a_plan_keeps_todays_behaviour(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["next_plan_commitments"]  # recomputed from the reported weight
+        assert doc["next_plan_basis"] is not None  # the F4 caveat still declared
+        assert doc["plan_pace"] is None  # only meaningful when a plan is stored
+
+    def test_a_plan_carrying_session_pre_fills_the_players_own_number(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        plan = default["plan"]
+        # a deliberate, flat, non-default plan
+        plan["points"]["pe"] = [5.0] * len(plan["points"]["pe"])
+        sid = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": default["book"], "plan": plan},
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["next_plan_commitments"]["pe"] == pytest.approx(5.0)
+        assert doc["next_plan_basis"] is None  # nothing is being approximated
+
+    def test_the_pacing_rules_view_is_shown_beside_it_not_applied(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        plan = default["plan"]
+        plan["points"]["pe"] = [5.0] * len(plan["points"]["pe"])
+        sid = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": default["book"], "plan": plan},
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["plan_pace"] is not None
+        assert doc["plan_pace"]["pe"] != pytest.approx(5.0), (
+            "the flex must be a displayed comparison, not the applied number"
+        )
