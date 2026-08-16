@@ -28,7 +28,7 @@ Run locally:  uv run uvicorn ah.serve:app --port 8787
 import json
 import sqlite3
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterator, Mapping
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Literal
@@ -45,6 +45,7 @@ from ah.core.worldspec import WorldSpec
 from ah.play import (
     PLAY_ALPHA_VERSION,
     PRIVATE_ASSETS,
+    START_CASH,
     START_TARGETS,
     default_commitment_plan,
     default_opening_book,
@@ -119,6 +120,33 @@ def _world_book(
     months = ws.horizon.quarters * 3
     plan = default_commitment_plan(targets, windows=len(decision_months(months)))
     return default_opening_book(targets), plan, liquid
+
+
+def _policy_basis(
+    book: OpeningBook | None, world_targets: Mapping[str, float] | None
+) -> tuple[dict[str, float], float]:
+    """The POLICY basis this session paces and caps against, and its cash.
+
+    su-app-07 task 2. There are FOUR places on this service that need the
+    same answer — ``validate_plan`` at kickoff, the decision door's
+    ``validate_commitments``, and the two ``plan_commitments`` pre-fills —
+    and su-app-06's worst defect (C1) was a plan the service displayed and
+    the engine never applied. One function, so they cannot drift apart, and
+    so the served pre-fill agrees with the multiplier ``simulate_play``
+    computes for itself from ``OpeningBook.effective_targets()``.
+
+    Targets and cash are returned together on purpose: the pacing
+    denominator is ``sum(targets) + cash`` (Ruling C), so a caller that took
+    one from the book and the other from the world default would produce a
+    number neither of them means.
+
+    ``world_targets`` is the engine's own default (``None`` for toy-v0,
+    ``GEN_START_TARGETS`` for a generated world) and is used only when the
+    session carries no book at all.
+    """
+    if book is not None:
+        return book.effective_targets(), book.cash
+    return (dict(world_targets) if world_targets is not None else dict(START_TARGETS)), START_CASH
 
 
 def _window_ordinal(months: int, month: int) -> int | None:
@@ -322,7 +350,12 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             plan = body.plan or default_plan_
             try:
                 validate_book(book, liquid_sleeves=liquid)
-                validate_plan(plan, book.target_nav())
+                # su-app-07: the cap is measured against the book's POLICY
+                # targets, not the NAV it happens to open at — an institution
+                # holding 20 points of pe against a 30-point target paces
+                # toward the 30. Same basis as the decision door below and as
+                # `simulate_play`'s own check, via the one helper.
+                validate_plan(plan, _policy_basis(book, None)[0])
             except BookError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             # CommitmentPlan._shape only checks the three sleeves AGREE in
@@ -416,9 +449,18 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             from ah.port.adapter import GEN_START_TARGETS
 
             base_targets = GEN_START_TARGETS
+        # su-app-06: the SAME stored book (or None for the derived default)
+        # goes to both the active session and the twin — alpha must still
+        # isolate decisions, not differences in opening state. Read here
+        # rather than below the early return because su-app-07's pre-fill
+        # needs the book's POLICY targets before any quarter has closed.
+        book = _stored_opening_book(doc)
+        policy_targets, policy_cash = _policy_basis(book, base_targets)
         doc["next_plan_commitments"] = {
             k: round(v, 4)
-            for k, v in plan_commitments(0.0, base_targets, pacing_rule="fixed").items()
+            for k, v in plan_commitments(
+                0.0, policy_targets, pacing_rule="fixed", cash=policy_cash
+            ).items()
         }
         if revealed < 3:  # nothing closes before the first quarter ends
             return doc
@@ -426,10 +468,6 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, _alpha = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        # su-app-06: the SAME stored book (or None for the derived default)
-        # goes to both the active session and the twin — alpha must still
-        # isolate decisions, not differences in opening state.
-        book = _stored_opening_book(doc)
         active = simulate_play(
             paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
         )
@@ -466,9 +504,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         doc["spending_basis"] = here.spending_basis
         doc["spending_rate_annual"] = here.spending_rate_annual
         doc["private_weight_reported"] = here.private_weight_reported
+        # su-app-07: the SAME basis `simulate_play` paces off (the book's
+        # policy targets and its own cash), so the number the lever shows and
+        # the number the engine commits are one number, not two.
         doc["next_plan_commitments"] = {
             k: round(v, 4)
-            for k, v in plan_commitments(here.private_weight_reported, targets).items()
+            for k, v in plan_commitments(
+                here.private_weight_reported, policy_targets, cash=policy_cash
+            ).items()
         }
         # audit F4: the pre-fill is the plan AT THE LAST CLOSED QUARTER. The
         # engine commits on the weight at the commitment quarter — one quarter
@@ -611,17 +654,15 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 from ah.port.adapter import GEN_START_TARGETS
 
                 targets = GEN_START_TARGETS
-            # su-app-06 (I1): `validate_plan` caps a plan entry against the
-            # ENTERED book's own per-sleeve NAV (`OpeningBook.target_nav`), so
-            # an analyst holding 30 points of pe may legally store 10.8 for a
-            # window. Capping the same quantity here against START_TARGETS
-            # would have the server refuse a number it filled in itself. The
-            # book is the institution, so on a book-carrying session the cap
-            # is measured against the book — the bound is re-based, never
-            # removed, and sessions with no book are untouched.
-            entered = _stored_opening_book(doc)
-            if entered is not None:
-                targets = entered.target_nav()
+            # su-app-06 (I1), re-based by su-app-07: `validate_plan` caps a
+            # plan entry against the entered book's POLICY targets, so an
+            # analyst targeting 30 points of pe may legally store 10.8 for a
+            # window. Capping the same quantity here against a different
+            # basis would have the server refuse a number it filled in
+            # itself. The bound is re-based, never removed, and sessions with
+            # no book are untouched — one helper, so the four sites that need
+            # this answer cannot drift apart.
+            targets = _policy_basis(_stored_opening_book(doc), targets)[0]
             try:
                 validate_commitments(commitments, targets)
             except ValueError as exc:

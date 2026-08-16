@@ -34,6 +34,12 @@ def _shifted_book(default_book: dict, amount: float = 15.0) -> dict:
     return book
 
 
+def _retargeted_book(default_book: dict, **moves: float) -> dict:
+    """The served default book with its POLICY targets moved and its VALUES
+    left exactly as served (su-app-07). Nothing the institution holds changes."""
+    return {**default_book, "targets": {**default_book["targets"], **moves}}
+
+
 def _replanned(default_plan: dict, sleeve: str, value: float) -> dict:
     """The served default plan with one sleeve flattened to `value` everywhere."""
     plan = {**default_plan, "points": {k: list(v) for k, v in default_plan["points"].items()}}
@@ -523,10 +529,16 @@ class TestTheStoredPlanReachesTheEngine:
 
 
 class TestTheTwoCapsAgree:
-    """I1 — ``validate_plan`` caps a plan entry against the ENTERED book's
-    per-sleeve NAV (``_plan_targets``); ``validate_commitments`` at the
-    decision door capped against ``START_TARGETS``. With C1 in place the
-    server would fill in a number it then refuses itself."""
+    """I1 — ``validate_plan`` caps a plan entry against the ENTERED book;
+    ``validate_commitments`` at the decision door capped against
+    ``START_TARGETS``. With C1 in place the server would fill in a number it
+    then refuses itself.
+
+    su-app-07 moved the basis both of them read from the book's opening NAV
+    to the book's POLICY targets, so the book below now declares the
+    allocation it holds instead of leaving the world default in place. The
+    property under test is unchanged: the cap comes from the book the
+    analyst entered, never from ``START_TARGETS``."""
 
     def test_a_plan_legal_under_the_entered_book_plays_through_its_window(self, service):
         client, _db, rid = service
@@ -534,15 +546,17 @@ class TestTheTwoCapsAgree:
         book = dict(default["book"])
         book["liquid"] = dict(default["book"]["liquid"])
         book["private"] = {k: [dict(r) for r in v] for k, v in default["book"]["private"].items()}
-        # move 10 points of NAV from equity into the pe ladder's first rung:
-        # the book still totals 100, and pe's target NAV is now ~30, so the
-        # plan cap is 2 x 30 x 0.18 = 10.8 rather than START_TARGETS' 7.2.
+        # move 10 points from equity into the pe ladder's first rung, in BOTH
+        # the values and the policy targets: this institution is at its
+        # target weights and holds 30 points of pe, so the plan cap is
+        # 2 x 30 x 0.18 = 10.8 rather than START_TARGETS' 7.2.
         book["liquid"]["equity"] -= 10.0
+        book["targets"] = {**default["book"]["targets"], "equity": 23.0, "pe": 30.0}
         rung = dict(book["private"]["pe"][0])
         rung["value"] = {**rung["value"], "nav_true": rung["value"]["nav_true"] + 10.0}
         book["private"]["pe"][0] = rung
 
-        plan = _replanned(default["plan"], "pe", 9.0)  # legal at 30 NAV, illegal at 20
+        plan = _replanned(default["plan"], "pe", 9.0)  # legal at a 30 target, illegal at 20
         created = client.post("/sessions", json={"run_id": rid, "book": book, "plan": plan})
         assert created.status_code == 201, created.text
         sid = created.json()["session_id"]
@@ -551,6 +565,66 @@ class TestTheTwoCapsAgree:
         r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
         assert r.status_code == 200, r.text
         assert r.json()["decisions"]["11"]["commitments"]["pe"] == pytest.approx(9.0)
+
+    def test_a_policy_target_carries_the_cap_through_all_three_enforcement_points(self, service):
+        """su-app-07 task 2. The book HOLDS 20 points of pe (old cap 7.20) and
+        DECLARES a 30-point pe target (new cap 10.80). One number, 9.0, sits
+        between them, so each of the three gates has to be reading the target:
+
+        * ``validate_plan`` at ``POST /sessions`` — a 201, not a 422;
+        * the decision door at ``POST /sessions/{sid}/decisions`` — the server
+          fills 9.0 in from the stored plan and must not then refuse it;
+        * ``simulate_play``'s own ``_validate_commit_decisions`` — that same
+          request marks the session to market, so a 200 here is the simulator
+          accepting the commitment, not merely the door doing so.
+        """
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(default["book"], equity=23.0, pe=30.0)
+        plan = _replanned(default["plan"], "pe", 9.0)
+
+        created = client.post("/sessions", json={"run_id": rid, "book": book, "plan": plan})
+        assert created.status_code == 201, created.text
+        sid = created.json()["session_id"]
+
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
+        assert r.status_code == 200, r.text
+        assert r.json()["decisions"]["11"]["commitments"]["pe"] == pytest.approx(9.0)
+
+        # and the commitment quarter actually closes rather than 500ing.
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 23}).status_code == 200
+        doc = client.get(f"/sessions/{sid}")
+        assert doc.status_code == 200, doc.text
+        assert doc.json()["value"] is not None
+
+    def test_a_plan_over_the_policy_target_is_refused_at_the_kickoff_door(self, service):
+        """The bound is re-based, not removed: 11.0 is over the 10.80 the
+        30-point pe target allows."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(default["book"], equity=23.0, pe=30.0)
+        r = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": book, "plan": _replanned(default["plan"], "pe", 11.0)},
+        )
+        assert r.status_code == 422
+        assert "declared bound" in r.json()["detail"]
+
+    def test_a_commit_over_the_policy_target_is_422_at_the_decision_door(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(default["book"], equity=23.0, pe=30.0)
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": 11, "action": "hold", "commitments": {"pe": 11.0}},
+        )
+        assert r.status_code == 422, r.text
+        assert "declared bound" in r.json()["detail"]
 
     def test_the_door_still_refuses_a_number_over_the_entered_books_own_cap(self, service):
         """Reconciling the caps must not remove the bound — only re-base it."""

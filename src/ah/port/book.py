@@ -123,16 +123,17 @@ class OpeningBook(BaseModel):
         return [ClosedEndCohort.from_document(doc) for doc in self.private[sleeve]]
 
     def target_nav(self) -> dict[str, float]:
-        """Per-sleeve opening private NAV.
+        """Per-sleeve opening private NAV — what the analyst actually HOLDS.
 
-        This is the basis a commitment cap is measured against once an
-        analyst has entered a book (su-app-06 I1): the book IS the
-        institution, so ``2 x target x _ANNUAL_COMMITMENT_RATE`` has to be
-        measured against the sleeve the analyst actually holds, not against
-        ``START_TARGETS``. All three enforcement points — ``validate_plan``
-        at kickoff, the decision door in ``ah.serve``, and
-        ``simulate_play``'s own check — read the cap from here, so a plan
-        legal at kickoff cannot be refused at the window it is committed in.
+        su-app-06 (I1) measured the commitment cap against this, because the
+        book IS the institution and ``START_TARGETS`` is not. su-app-07 moved
+        the cap one step further on, to ``effective_targets()``: an
+        institution paces against the allocation it is aiming at, and a book
+        that holds 20 points of pe against a 30-point policy target must be
+        allowed to commit toward the 30. This method is still the fallback
+        that ``effective_targets()`` builds its private half from when no
+        targets were entered, and is still the opening NAV every value
+        surface reads — it is no longer the cap basis.
         """
         return {
             sleeve: sum(float(rung["value"]["nav_true"]) for rung in rungs)
@@ -146,9 +147,15 @@ class OpeningBook(BaseModel):
 
     def effective_targets(self) -> dict[str, float]:
         """The policy targets this book paces against: the entered `targets`
-        when present, else the book's own opening values."""
+        when present, else the book's own opening values.
+
+        Always a FRESH dict. ``simulate_play`` binds its local ``targets`` to
+        this return value (su-app-07 task 2), so handing back ``self.targets``
+        by reference would let a later in-place edit anywhere downstream
+        silently rewrite the stored book's own policy.
+        """
         if self.targets is not None:
-            return self.targets
+            return dict(self.targets)
         return {**self.liquid, **self.target_nav()}
 
 
