@@ -421,6 +421,94 @@ button.t {
   color: var(--jade);
 }
 
+/* policy bands (su-app-07 task 4b) --------------------------------------
+   A strip of one small cell per banded sleeve, directly under the stat
+   rail. The panel is a `.vitrine > section`, so its padding and bottom
+   rule come from the layout-band rule further down; only the cells are
+   styled here. Colour comes from the served AlertLevel and nothing else —
+   the app never judges a band (DN-3 W5). */
+.band-panel .eyebrow {
+  margin-bottom: 8px;
+}
+
+.band-cells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.band-cell {
+  flex: 1 1 190px;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-left: 3px solid var(--dim);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.band-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.band-name {
+  font-size: 14px;
+  color: var(--ice);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.band-badge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.band-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.band-weight {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 19px;
+}
+
+.band-range {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.band-cell.alert-watch {
+  border-left-color: var(--brass);
+}
+
+.band-cell.alert-watch .band-badge,
+.band-cell.alert-watch .band-weight {
+  color: var(--brass);
+}
+
+.band-cell.alert-breach {
+  border-left-color: var(--clay);
+  background: #2a1a18;
+}
+
+.band-cell.alert-breach .band-badge,
+.band-cell.alert-breach .band-weight {
+  color: var(--clay);
+}
+
 /* main grid: asset classes left, the wire (and the decision) right */
 .vgrid {
   flex: 1;

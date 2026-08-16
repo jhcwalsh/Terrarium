@@ -34,6 +34,7 @@ import {
   decide,
   getCioView,
   getOutcome,
+  planeForBasis,
   SessionApiError,
   type Action,
   type Book,
@@ -160,6 +161,76 @@ export function cockpitClass(viewMode: "book" | "cio", plane: Plane): string {
  * pinned by a test without mounting the session-backed component. */
 export function bookLabel(basis: string): string {
   return `Your book · ${basis} basis`;
+}
+
+/**
+ * su-app-07 task 4b: the policy-band report, rendered.
+ *
+ * The band a player entered on the entry screen is only a feature if a
+ * breach appears somewhere. This is that somewhere: one row per sleeve the
+ * server judged, in the SERVER'S order (`serve.py::_band_report` emits the
+ * world's own sleeve order — liquid then private — and the renderer does not
+ * sort), showing the weight and status on the plane this session's basis
+ * names.
+ *
+ * Three things it deliberately does NOT do:
+ *
+ *  - it never recomputes `alert`. The server judges on unrounded weights
+ *    while serving them rounded to 4dp, so a client re-running the rule
+ *    would agree almost always and disagree exactly at a band edge — the
+ *    one place the number matters (DN-3 W5; `_band_report`'s docstring says
+ *    this explicitly). The served word is printed.
+ *  - it never picks the plane by hand. `session.basis` is
+ *    `"reported" | "actual"` and the report's planes are
+ *    `"reported" | "true"`; `planeForBasis` in lib/session.ts is the one
+ *    place that mapping lives, and this is its first runtime consumer.
+ *  - it never names a sleeve set. Rows come from the server; a sleeve with
+ *    no declared range is simply absent, so there is no "no band" state to
+ *    render. `ASSET_LABELS` is consulted only for a display NAME, falling
+ *    back to the raw key for anything it does not know.
+ *
+ * Renders `null` — not an empty frame — when there is no report or no
+ * banded sleeve, so a session without ranges looks exactly as it did.
+ */
+export function BandPanel({ session }: { session: Session }) {
+  const rows = session.band_report?.sleeves ?? [];
+  if (rows.length === 0) return null;
+  const plane = planeForBasis(session.basis);
+  return (
+    <section className="band-panel">
+      <div className="eyebrow">
+        <span>Policy bands</span>
+        <span>
+          {plane} weights &middot; last closed quarter &middot; reporting only
+        </span>
+      </div>
+      <ul className="band-cells">
+        {rows.map((row) => {
+          const here = row[plane];
+          const name = ASSET_LABELS.find(([key]) => key === row.sleeve)?.[1] ?? row.sleeve;
+          return (
+            <li
+              key={row.sleeve}
+              className={`band-cell alert-${here.alert}`}
+              data-sleeve={row.sleeve}
+            >
+              <div className="band-head">
+                <span className="band-name">{name}</span>
+                <span className="band-badge">{here.alert}</span>
+              </div>
+              <div className="band-nums">
+                <span className="band-weight">{here.weight.toFixed(1)}</span>
+                <span className="band-range">
+                  target {row.target.toFixed(1)} &middot; band {row.lo.toFixed(1)}–
+                  {row.hi.toFixed(1)}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
 }
 
 interface PlayProps {
@@ -556,6 +627,12 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
           <div className="s">digest recomputed at build</div>
         </div>
       </div>
+
+      {/* su-app-07 task 4b: a band strip directly under the rail, in BOTH
+          view modes. It is session data, so it stays outside CioDashboard,
+          which renders one CioView and nothing else (DN-8 §1). It collapses
+          to nothing on a session with no ranges. */}
+      <BandPanel session={session} />
 
       {error && (
         <section>
