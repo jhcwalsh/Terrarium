@@ -250,6 +250,13 @@ def build_world_series(
         },
     )
 
+    # Deliberately empty, and deliberately not a TODO. No generator in this repo
+    # emits the book series; they arrive from the Step-3 portfolio layer, which
+    # the workbench does not consume (task §1: "optional; if absent the CAPITAL
+    # slot is omitted and the omission stated, never stubbed"). The seven
+    # book-gated parameters in UNRESOLVED.md become live the day this is
+    # populated, and the shape of the dict is the contract they will be read
+    # against.
     optional: dict[str, np.ndarray] = {}
     absent = tuple(name for name in OPTIONAL_SERIES if name not in optional)
     if absent:

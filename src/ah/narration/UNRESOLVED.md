@@ -6,7 +6,7 @@ Every entry below is a value the workbench build needed and `voices.yaml` does n
 
 **Nothing here has been decided, and the ordering of `candidates` is not a ranking.** Candidates are the values someone would choose between, in the order DN-9 or the `voices.yaml` skeleton raises them.
 
-**58 open parameters.** 7 of them are gated on inputs the workbench world does not carry (marked *gated*) and were not on the critical path of the first build; they are open all the same.
+**62 open parameters.** 7 of them are gated on inputs the workbench world does not carry (marked *gated*) and were not on the critical path of the first build; they are open all the same.
 
 ---
 
@@ -267,7 +267,14 @@ Every entry below is a value the workbench build needed and `voices.yaml` does n
 - **Needed for:** how many named members carry hawk-dove priors.
 - **Depends on it:** dissent counts, the two-sided-dissent event, the committee scorecard.
 - **Candidates:** `8` · `12`.
-- **Trade-off:** DN-9 §4.1 says eight to twelve. Fewer members means a dissent is a larger fraction of the vote and reads as more significant; more members means the tails of the prior distribution are populated and one-sided dissents become routine.
+- **Trade-off:** DN-9 §4.1 says eight to twelve. Fewer members means a dissent is a larger fraction of the vote and reads as more significant; more members means the tails of the prior distribution are populated and one-sided dissents become routine. NOTE THE ROSTER BOUND: `templates/fomc.yaml` ships twelve fictional surnames, so 12 is the largest committee the current bank can seat and a larger one is an editorial job before it is a parameter change. The voice raises rather than reusing a name.
+
+## `voices.fomc.surprise_chip_bp`
+
+- **Needed for:** the |epsilon| cut-point, in basis points, above which the meeting's verdict chip reads SURPRISE rather than IN LINE (DN-9 §D.5).
+- **Depends on it:** the verdict-chip distribution panel, and the reader's sense of what counts as a surprise at all.
+- **Candidates:** `12.5` · `25.0` · `6.25`.
+- **Trade-off:** This was silently riding on `voices.fomc.dissent.threshold` — a different question wearing the same number. Half a step (12.5bp) makes SURPRISE mean 'the rule did not imply this'; a whole step (25bp) reserves it for a decision the rule actively contradicted; a quarter step makes almost every meeting a surprise, which is how a verdict tag stops carrying information.
 
 ## `voices.fomc.dissent.prior_spread`
 
@@ -308,9 +315,18 @@ Every entry below is a value the workbench build needed and `voices.yaml` does n
 *Register: A3-B, N-e.*
 
 - **Needed for:** the model that collapses columnist dispersion when consensus is strong and widens it at turning points (DN-9 §D.11).
-- **Depends on it:** the who-thinks-what strip; the divergence signal between the three voices.
-- **Candidates:** `surprise_scaled` · `fixed` · `regime_conditional`.
-- **Trade-off:** 'surprise_scaled' derives dispersion from |surprise_sd| in the quarter, so it is a function of revealed state and cannot leak; 'regime_conditional' keys off the L2 label and would make dispersion a regime readout, which is exactly the non-injectivity failure §3.1 warns about; 'fixed' abandons the mechanic.
+- **Depends on it:** the who-thinks-what strip; the divergence signal between the three voices; the mean-dispersion figure on the columnists panel.
+- **Candidates:** `severity_band` · `surprise_sd_scaled` · `fixed` · `regime_conditional`.
+- **Trade-off:** 'severity_band' is what is BUILT: dispersion is the announcement's severity normalised onto [0,1] by the top of the grammar — a readout of the severity band, not of a surprise in sigma units. It is available on every slot, which is why it is buildable at all. 'surprise_sd_scaled' is the reading DN-9 §D.11 more naturally suggests and is a genuine candidate, but only E02/E03/E04 carry a `surprise_sd`; POLICY carries an epsilon and MARKETS carries neither, so adopting it requires a further decision about what the other slots use. 'regime_conditional' keys off the L2 label and would make dispersion a regime readout — the non-injectivity failure §3.1 warns about. 'fixed' abandons the mechanic. Only the first two of these four are implemented; the others raise.
+
+## `voices.columnists.flows_call_rule`
+
+*Register: A3-B, N-i.*
+
+- **Needed for:** how the flows columnist's directional call is formed, which is what the hit-rate column on the columnists panel scores.
+- **Depends on it:** whether the columnist scorecard can distinguish calibration at all.
+- **Candidates:** `complement_of_consensus` · `trailing_momentum` · `independent_of_the_print`.
+- **Trade-off:** 'complement_of_consensus' is the PLACEHOLDER currently in force and it has a measurement defect that must not become canon: the flows call is the exact negation of the other two, so the three hit rates are always (h, h, 1-h) and the panel cannot tell a well-calibrated cast from a badly calibrated one — it is reporting an identity. 'trailing_momentum' gives flows its own signal (the sign of the trailing window) and lets the three rates move independently; 'independent_of_the_print' draws the call from the bible rather than from the announcement, which is the most faithful to a voice that is supposed to be reading positioning rather than prices, and needs a bible. The panel states the defect while the placeholder is in force.
 
 ## `voices.columnists.hit_rate_target`
 
@@ -383,6 +399,15 @@ Every entry below is a value the workbench build needed and `voices.yaml` does n
 - **Depends on it:** every number the economist quotes about pi*, r* — and the r* revision, which §D.9 calls the best artifact in the appendix.
 - **Candidates:** `ewma_on_revealed` · `kalman_on_revealed` · `true_plus_noise`.
 - **Trade-off:** DN-9 explicitly recommends a filter over 'true value plus noise', because the noise version gets the error magnitude right and its SERIAL STRUCTURE wrong — and the serial structure is what produces slow realistic revisions instead of jitter. EWMA is the cheap filter: right serial structure, no uncertainty estimate, and one more open constant (its span). A Kalman filter gives the uncertainty and needs a state-space specification that is Quant's to write. The workbench implements EWMA only; the other two raise rather than approximate.
+
+## `voices.economist.filter_span_months`
+
+*Register: A3-B, N-s.*
+
+- **Needed for:** the span, in months, of the EWMA behind the filtered neutral-real-rate estimate r^*.
+- **Depends on it:** how fast r^* revises — and therefore whether the r^* revision of DN-9 §D.9 (which the note calls the best artifact in the appendix) happens at all inside a decade.
+- **Candidates:** `60` · `24` · `120`.
+- **Trade-off:** The span IS the mechanism: it decides whether the estimate 'was 1.4%, now 0.7%' over a year and a half or jitters month to month. A short span makes the economist look responsive and destroys the slow-revision effect; a very long one means the estimate barely moves across a decade and the artifact never fires. This was previously a bare `1/len(series)` in the estimator — an undisclosed tunable that also happened to be world-length-dependent, so the same world narrated at a different horizon filtered differently.
 
 ## `voices.economist.strain_weights`
 
@@ -487,6 +512,15 @@ Every entry below is a value the workbench build needed and `voices.yaml` does n
 - **Depends on it:** the deliberately non-injective layout mapping; the SPECIAL band.
 - **Candidates:** `{'EXP': 'benign', 'SLOW': 'turning', 'REC': 'stressed', 'CRI': 'dislocated', 'STAG': 'stressed', 'REF': 'benign'}` · `{'EXP': 'benign', 'SLOW': 'benign', 'REC': 'turning', 'CRI': 'dislocated', 'STAG': 'stressed', 'REF': 'turning'}`.
 - **Trade-off:** DN-9 §5.2 fixes four layout states against six regimes and says SLOW and REF each share a layout with a neighbour — but does not say which. Every assignment is a claim about which two regimes look alike on the page, and getting it wrong makes the furniture a cleaner regime read than the numbers (the §8 N-2 hazard).
+
+## `diagnostics.columnist_horizon_months`
+
+*Register: A3-B, N-i.*
+
+- **Needed for:** the forward horizon over which a columnist's directional call is scored on the columnists panel.
+- **Depends on it:** every hit rate the panel reports, and therefore whether the cast is judged in or out of `voices.columnists.hit_rate_target`.
+- **Candidates:** `12` · `6` · `18`.
+- **Trade-off:** DN-9 §6.1 sets the hit-rate target on a ONE-YEAR horizon, which argues for 12 — but the horizon and the target band are one decision taken twice, and a cast inside the band at twelve months can be well outside it at six. A short horizon scores the extrapolation the columnists actually make; a long one scores a view they never expressed. It was previously calendar arithmetic (`MONTHS_PER_QUARTER * QUARTERS_PER_YEAR`), which is a threshold wearing a constant's clothes, and it feeds a reported number.
 
 ## `diagnostics.repetition_ngram_n`
 

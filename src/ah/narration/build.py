@@ -30,7 +30,7 @@ from ah.narration.constants import BOOK_CLASSES, RECORD_PRECISION
 from ah.narration.errors import NarrationError
 from ah.narration.events import ConsensusParams, Event, EventParams, detect
 from ah.narration.params import PARAMETERS
-from ah.narration.probe import PROBE_STATUS, RATIFIED_STATUS
+from ah.narration.probe import PROBE_STATUS, UNKNOWN_STATUS
 from ah.narration.slate import Slate, SlateParams, build_slates
 from ah.narration.voices import (
     ColumnistsParams,
@@ -164,6 +164,7 @@ def _newsroom(config: VoicesConfig, banks: dict[str, TemplateBank], *, world_id:
                 config.raw["voices"]["fomc"]["mandate_boundary"]["may_not_speak_to"]
             ),
             base_seed=seed,
+            surprise_chip_bp=float(config.get("voices.fomc.surprise_chip_bp")),
         ),
     )
     columnists = ColumnistsVoice(
@@ -175,6 +176,7 @@ def _newsroom(config: VoicesConfig, banks: dict[str, TemplateBank], *, world_id:
             dispersion_model=str(config.get("voices.columnists.dispersion")),
             hit_rate_target=tuple(config.get("voices.columnists.hit_rate_target")),
             outlier_backend=str(config.raw["voices"]["columnists"]["outlier_backend"]),
+            flows_call_rule=str(config.get("voices.columnists.flows_call_rule")),
         ),
     )
     economist = EconomistVoice(
@@ -248,7 +250,11 @@ def build_from_ensemble(
     """Everything from a sampled ensemble to a rendered decade, in memory."""
     book_available = False  # decided by the adapter below; needed before preflight
     probe_keys = config.raw.get("probe_filled_keys", [])
-    status = str(config.raw.get("config_status", RATIFIED_STATUS))
+    # A config with no `config_status` has not been ratified — it has simply not
+    # said. Defaulting to RATIFIED would be the layer asserting a fact about a
+    # governance state nobody recorded, which is the whole class of thing this
+    # package refuses to do.
+    status = str(config.raw.get("config_status", UNKNOWN_STATUS))
     preflight(config, book_available=book_available)
 
     world = build_world_series(ensemble, path_index=path_index, params=adapter_params(config))
@@ -278,6 +284,7 @@ def build_from_ensemble(
         world.series["policy_rate"],
         world.series["cpi_yoy"],
         str(config.get("voices.economist.filtered_state")),
+        int(config.get("voices.economist.filter_span_months")),
     )
     rendered = newsroom.render(
         slates,

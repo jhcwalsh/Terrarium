@@ -30,7 +30,7 @@ from typing import Any
 
 import numpy as np
 
-from ah.narration.constants import DISPLAY_PRECISION, PERCENT
+from ah.narration.constants import BPS_PER_PP, DISPLAY_PRECISION
 from ah.narration.errors import NarrationError
 from ah.narration.events import Event
 from ah.narration.voices.base import Artifact, TemplateBank, fill, no_template, slot_values
@@ -54,6 +54,11 @@ class FomcParams:
     dissent_threshold: float
     may_not_speak_to: tuple[str, ...]
     base_seed: int
+    #: The |epsilon| cut-point, in basis points, above which the meeting's
+    #: verdict chip reads SURPRISE. Its own parameter: it was previously reusing
+    #: ``dissent.threshold``, which answers a different question (when a member
+    #: votes against) and merely happened to be a number in the same units.
+    surprise_chip_bp: float
 
 
 #: Words that would put a statement outside the mandate boundary. Keyed by the
@@ -289,7 +294,7 @@ class FomcVoice:
             ),
             chips=(
                 "SURPRISE"
-                if abs(terms.epsilon) * PERCENT >= self.params.dissent_threshold * PERCENT
+                if abs(terms.epsilon) * BPS_PER_PP >= self.params.surprise_chip_bp
                 else "IN LINE",
                 "HAWKISH" if terms.epsilon > 0 else "DOVISH" if terms.epsilon < 0 else "NEUTRAL",
             ),

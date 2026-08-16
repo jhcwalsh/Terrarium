@@ -77,15 +77,24 @@ class NarrativeState:
         }
 
 
-def filtered_r_star(policy_rate: np.ndarray, cpi_yoy: np.ndarray, spec: str) -> np.ndarray:
+def filtered_r_star(
+    policy_rate: np.ndarray, cpi_yoy: np.ndarray, spec: str, span_months: int
+) -> np.ndarray:
     """A contemporaneous estimate of the neutral real rate from revealed data.
 
     ``ewma_on_revealed`` is the only built candidate: an exponentially weighted
-    mean of the realised real policy rate, whose span is the meeting stickiness
-    so the estimate revises on the same beat the narrative does. It has the
-    right *serial structure* — slow, realistic revisions rather than jitter,
-    which is the property DN-9 §D.1 says matters — and no uncertainty estimate,
-    which is the property it lacks.
+    mean of the realised real policy rate over ``span_months``. It has the right
+    *serial structure* — slow, realistic revisions rather than jitter, which is
+    the property DN-9 §D.1 says matters — and no uncertainty estimate, which is
+    the property it lacks.
+
+    ``span_months`` comes from ``voices.economist.filter_span_months`` and is an
+    open decision. It was previously a bare ``1 / len(series)``: an undisclosed
+    tunable, and one that made the filter depend on how long the world happened
+    to be, so the same decade narrated over a different horizon filtered
+    differently. An earlier docstring claimed the span was bound to the meeting
+    stickiness; it never was, and it should not be — how fast an estimate of r*
+    revises and how long a thesis survives are two questions.
     """
     if spec != "ewma_on_revealed":
         raise NarrationError(
@@ -98,7 +107,12 @@ def filtered_r_star(policy_rate: np.ndarray, cpi_yoy: np.ndarray, spec: str) -> 
     real = np.where(np.isfinite(cpi_yoy), policy_rate - cpi_yoy, np.nan)
     out = np.full(real.shape, np.nan)
     running: float | None = None
-    alpha = 1.0 / float(len(real))
+    if span_months < 1:
+        raise NarrationError(
+            f"voices.economist.filter_span_months is {span_months}; an EWMA span shorter than "
+            "one month is not a filter."
+        )
+    alpha = 1.0 / float(span_months)
     for index, value in enumerate(real):
         if not np.isfinite(value):
             continue

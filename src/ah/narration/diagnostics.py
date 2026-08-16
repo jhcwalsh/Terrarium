@@ -29,8 +29,6 @@ from ah.narration.constants import (
     BPS_PER_PP,
     DIAGNOSTIC_TOP_ROWS,
     DISPLAY_PRECISION,
-    MONTHS_PER_QUARTER,
-    QUARTERS_PER_YEAR,
     RECORD_PRECISION,
     SEVERITY_MAX,
 )
@@ -40,6 +38,12 @@ from ah.narration.voices import RenderedSlate
 __all__ = ["compute"]
 
 _WORD = re.compile(r"[a-z]+")
+
+#: How many of the most frequent words the vocabulary panel scores for mutual
+#: information. A presentation budget on a measurement, not a threshold on the
+#: world: every word in it is reported, the ranking is by MI, and widening it
+#: adds rarer words with less data behind each estimate. Four screens' worth.
+_MI_VOCABULARY_BUDGET = DIAGNOSTIC_TOP_ROWS * 4
 
 #: Tokens too common to carry information about anything. A stop list for the
 #: vocabulary panel only — it never touches rendered copy.
@@ -128,6 +132,7 @@ def compute(
     ngram_n: int,
     min_slots: int,
     hit_rate_target: list[float],
+    columnist_horizon_months: int,
     uncovered: tuple[str, ...],
 ) -> dict[str, Any]:
     """Every panel's payload, as plain data. Rendering is :mod:`render`'s job."""
@@ -191,7 +196,7 @@ def compute(
     ]
     vocabulary = Counter(word for text in slate_text for word in sorted(set(_tokens(text))))
     rows = []
-    for word, _ in _ranked(vocabulary, DIAGNOSTIC_TOP_ROWS * 4):
+    for word, _ in _ranked(vocabulary, _MI_VOCABULARY_BUDGET):
         present = [word in set(_tokens(text)) for text in slate_text]
         rows.append(
             {"word": word, "mi_bits": round(_mutual_information(present, labels), RECORD_PRECISION)}
@@ -218,6 +223,14 @@ def compute(
     )
     panels["chips"] = {
         "title": "Verdict chips",
+        "note": (
+            "Informative for E01 only. DN-9 §D.5's two axes (surprise, stance) are "
+            "rendered as chips on the FOMC set piece; every other class currently carries "
+            "its delta label as its chip, and delta labels are near-unique strings, so the "
+            "distribution below is dominated by singletons that say nothing about tagging. "
+            "Verdict tags for the non-policy classes are a template-bank job, not a "
+            "diagnostics one."
+        ),
         "top": [
             {"chip": chip, "count": count} for chip, count in _ranked(chips, DIAGNOSTIC_TOP_ROWS)
         ],
@@ -281,7 +294,7 @@ def compute(
 
     # 9 -- columnists
     equity = world.series["equity_index"]
-    horizon = MONTHS_PER_QUARTER * QUARTERS_PER_YEAR
+    horizon = columnist_horizon_months
     scored: Counter[str] = Counter()
     right: Counter[str] = Counter()
     for call in columnist_calls:
@@ -299,8 +312,39 @@ def compute(
         for artifact in item.voices
         if artifact.voice == "columnists" and artifact.extras.get("dispersion") is not None
     ]
+    degenerate = any(
+        artifact.extras.get("calls_are_degenerate")
+        for slate in rendered
+        for item in slate.items
+        for artifact in item.voices
+        if artifact.voice == "columnists"
+    )
     panels["columnists"] = {
         "title": "Columnists",
+        "horizon_months": horizon,
+        "flows_call_rule": next(
+            (
+                str(artifact.extras.get("flows_call_rule"))
+                for slate in rendered
+                for item in slate.items
+                for artifact in item.voices
+                if artifact.voice == "columnists"
+            ),
+            None,
+        ),
+        "calls_are_degenerate": degenerate,
+        "note": (
+            (
+                "DISCLOSURE: voices.columnists.flows_call_rule is the placeholder "
+                "'complement_of_consensus', so the flows call is the exact negation of the "
+                "other two and the third hit rate below is the COMPLEMENT IDENTITY (1 - h), "
+                "not an independent measurement. This panel cannot distinguish a "
+                "well-calibrated cast from a badly calibrated one until that rule is "
+                "resolved."
+            )
+            if degenerate
+            else "Hit rates are independent measurements under the configured flows-call rule."
+        ),
         "hit_rate_target": [float(hit_rate_target[0]), float(hit_rate_target[1])],
         "records": [
             {

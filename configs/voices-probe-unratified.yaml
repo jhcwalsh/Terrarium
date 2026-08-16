@@ -45,6 +45,7 @@ derived_observables:
     source: g
     transform: okun
 diagnostics:
+  columnist_horizon_months: 12
   policy_reversal_window_months: 6
   repetition_ngram_n: 4
   strain_report_top_n: 10
@@ -121,6 +122,7 @@ probe_filled_keys:
 - derived_observables.headline_cpi.params
 - derived_observables.payrolls_change.params
 - derived_observables.unemployment.params
+- diagnostics.columnist_horizon_months
 - diagnostics.repetition_ngram_n
 - events.E01.threshold
 - events.E02.threshold
@@ -152,10 +154,12 @@ probe_filled_keys:
 - voices.columnists.consensus_lag_months
 - voices.columnists.count
 - voices.columnists.dispersion
+- voices.columnists.flows_call_rule
 - voices.columnists.hit_rate_target
 - voices.economist.capitulation_floor
 - voices.economist.confidence_decay_per_contradiction
 - voices.economist.confidence_start
+- voices.economist.filter_span_months
 - voices.economist.filtered_state
 - voices.economist.risk_book_size
 - voices.economist.risk_materialisation_rate
@@ -170,6 +174,7 @@ probe_filled_keys:
 - voices.fomc.dissent.prior_spread
 - voices.fomc.dissent.threshold
 - voices.fomc.meeting_months
+- voices.fomc.surprise_chip_bp
 severity:
   class_scale:
     E01: 0.8
@@ -244,7 +249,8 @@ voices:
     backend: template
     consensus_lag_months: 1
     count: 4
-    dispersion: surprise_scaled
+    dispersion: severity_band
+    flows_call_rule: complement_of_consensus
     hit_rate_target:
     - 0.45
     - 0.6
@@ -254,6 +260,7 @@ voices:
     capitulation_floor: 0.35
     confidence_decay_per_contradiction: 0.11
     confidence_start: 0.8
+    filter_span_months: 60
     filtered_state: ewma_on_revealed
     name: Calloway
     risk_book_size: 3
@@ -298,3 +305,4 @@ voices:
     - 11
     - 12
     meetings_per_year: 8
+    surprise_chip_bp: 12.5

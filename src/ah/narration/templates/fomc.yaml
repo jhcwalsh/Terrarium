@@ -23,19 +23,30 @@ STATUS: "MIXED — golden-set register, placeholder variants"
 
 # Fictional. DN-9 §A: real public institutions are named, real individuals never
 # are — the Federal Open Market Committee, yes; its members fictional (N-m).
+#
+# PROVENANCE, because two of these are the editorial record and ten are not.
+# Ostrander and Bell are FIXED by DN-9 §A.3 and golden set §1, where they cast
+# the two-sided dissent at the hawkish surprise. The other ten are PLACEHOLDER —
+# invented here to seat a twelve-member committee, traceable to no editorial
+# decision, and to be replaced by whoever owns the template pack.
+#
+# ROSTER BOUND: this list is twelve names, so
+# `voices.fomc.dissent.committee_size` cannot exceed twelve without editorial
+# work; the voice raises rather than reusing a name. The bound is stated in that
+# parameter's registry entry.
 committee_roster:
-  - Ostrander
-  - Bell
-  - Aldridge
-  - Farrow
-  - Nkemdirim
-  - Vasari
-  - Holbeck
-  - Reyes
-  - Tamblyn
-  - Quist
-  - Marchetti
-  - Ewell
+  - Ostrander        # traced_to: DN-9 §A.3, golden set §1 (the hawkish dissent)
+  - Bell             # traced_to: DN-9 §A.3, golden set §1 (the dovish dissent)
+  - Aldridge         # PLACEHOLDER - not the editorial golden set
+  - Farrow           # PLACEHOLDER - not the editorial golden set
+  - Nkemdirim        # PLACEHOLDER - not the editorial golden set
+  - Vasari           # PLACEHOLDER - not the editorial golden set
+  - Holbeck          # PLACEHOLDER - not the editorial golden set
+  - Reyes            # PLACEHOLDER - not the editorial golden set
+  - Tamblyn          # PLACEHOLDER - not the editorial golden set
+  - Quist            # PLACEHOLDER - not the editorial golden set
+  - Marchetti        # PLACEHOLDER - not the editorial golden set
+  - Ewell            # PLACEHOLDER - not the editorial golden set
 
 statement:
   activity:

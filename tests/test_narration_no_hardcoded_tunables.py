@@ -23,7 +23,7 @@ someone writes down why it is not a decision — which is the point.
 from __future__ import annotations
 
 import ast
-from collections import defaultdict
+from collections import Counter, defaultdict
 from pathlib import Path
 
 PACKAGE = Path(__file__).resolve().parents[1] / "src" / "ah" / "narration"
@@ -36,45 +36,71 @@ EXEMPT_MODULES = {"config.py", "params.py", "probe.py", "constants.py"}
 #: Float 0.0/1.0 compare equal to the ints and need no separate entry.
 UNIVERSAL = {0, 1, -1}
 
-#: (module, value) -> why this specific literal is not a tunable.
-JUSTIFIED: dict[tuple[str, float], str] = {
+#: ``(module, value) -> (expected occurrences, why it is not a tunable)``.
+#:
+#: **The count is load-bearing.** Keying on ``(module, value)`` alone let one
+#: justification silently cover every later use of the same number in the same
+#: file — ``("build.py", 2)`` was written about a severity constant and would
+#: have waved through any other 2 added to that module, and ``("events.py", 2)``
+#: covered three unrelated sites. A count pins how many uses were inspected, so
+#: adding a fourth 2 to ``events.py`` fails the test until someone says what it
+#: is. Every justification below therefore enumerates its own sites.
+JUSTIFIED: dict[tuple[str, float], tuple[int, str]] = {
     ("events.py", 2): (
-        "unpacking the two-element (mean, sd) window statistic, and indexing the "
-        "second-previous month in the persistence-weighted consensus; both are "
-        "the arity of an expression, not a quantity"
+        3,
+        "three sites, all arity rather than quantity: `return 2` as the third "
+        "severity band inside severity(); `if index < 2` guarding a consensus "
+        "that reads month-1 and month-2; and `series[index - 2]` reading the "
+        "second-previous month. The CUT-POINTS that decide what lands in band 2 "
+        "are config",
     ),
     ("events.py", 3): (
-        "SEVERITY_MAX as the top band inside severity(): the function returns "
-        "0/1/2/3 by grammar, and the CUT-POINTS that map onto them are the "
-        "tunable and come from config"
+        1,
+        "one site: `return 3`, SEVERITY_MAX as the top band inside severity(). "
+        "The function returns 0/1/2/3 by grammar; the cut-points are the tunable",
     ),
     ("build.py", 2): (
-        "_CREDIT_STRESS_SEVERITY: the severity at which E08 counts as credit "
-        "stress for the Committee's financial-conditions sentence. Expressed in "
-        "the severity grammar rather than in basis points, so it moves with "
-        "severity.cuts rather than independently of them"
+        2,
+        "two sites, different classes and both inspected: _CREDIT_STRESS_SEVERITY "
+        "(the severity at which E08 counts as credit stress for the Committee's "
+        "financial-conditions sentence -- expressed in the severity grammar, so "
+        "it moves with severity.cuts rather than independently of them); and "
+        "`json.dumps(indent=2)`, which is file formatting",
     ),
     ("build.py", 3): (
-        "the severity-3 count in the manifest's summary block - the top of the "
-        "grammar, reported, not a threshold applied to anything"
+        1,
+        "one site: the severity-3 count in the manifest's summary block. The top "
+        "of the grammar, reported, not a threshold applied to anything",
     ),
-    ("cli.py", 2): "process exit code for an unresolved-parameter failure",
-    ("cli.py", 3): "process exit code for a missing-series failure",
+    ("cli.py", 2): (1, "one site: process exit code for an unresolved-parameter failure"),
+    ("cli.py", 3): (1, "one site: process exit code for a missing-series failure"),
     ("diagnostics.py", 4): (
-        "the four severity levels (0..3) enumerated as columns of the per-class "
-        "histogram; the grammar, one row wider"
+        1,
+        "one site: _MI_VOCABULARY_BUDGET = DIAGNOSTIC_TOP_ROWS * 4, how many of "
+        "the most frequent words the vocabulary panel scores for mutual "
+        "information. A presentation budget on a measurement -- every word in it "
+        "is reported and the ranking is by MI, so widening it adds rarer words "
+        "with less data behind each estimate rather than changing a verdict. "
+        "(An earlier version of this entry described a per-class histogram that "
+        "does not use a literal 4 at all: the count now makes that kind of drift "
+        "fail rather than pass.)",
     ),
     ("voices/fomc.py", 3): (
-        "SEVERITY_MAX in the deletion rule: the Committee drops its commitment "
-        "to target only on a top-band departure from its own rule. The band is "
-        "the grammar; what lands in it is config"
+        1,
+        "one site: SEVERITY_MAX in the deletion rule -- the Committee drops its "
+        "commitment to target only on a top-band departure from its own rule. "
+        "The band is the grammar; what lands in it is config",
     ),
-    ("voices/__init__.py", 2): "indexing the previous-but-one month for a comparison",
+    ("voices/__init__.py", 2): (
+        1,
+        "one site: indexing the previous-but-one month for a comparison",
+    ),
 }
 
 
-def _literals() -> dict[str, set[float]]:
-    found: dict[str, set[float]] = defaultdict(set)
+def _literals() -> dict[str, Counter[float]]:
+    """Every numeric literal in the package, per module, WITH occurrence counts."""
+    found: dict[str, Counter[float]] = defaultdict(Counter)
     for path in sorted(PACKAGE.rglob("*.py")):
         if path.name in EXEMPT_MODULES:
             continue
@@ -86,14 +112,14 @@ def _literals() -> dict[str, set[float]]:
                 and isinstance(node.value, (int, float))
                 and not isinstance(node.value, bool)
             ):
-                found[module].add(node.value)
+                found[module][node.value] += 1
     return found
 
 
 def test_no_unjustified_numeric_literal_in_the_package():
     unexplained: list[str] = []
-    for module, values in sorted(_literals().items()):
-        for value in sorted(values):
+    for module, counts in sorted(_literals().items()):
+        for value in sorted(counts):
             if value in UNIVERSAL:
                 continue
             if (module, value) in JUSTIFIED:
@@ -108,16 +134,24 @@ def test_no_unjustified_numeric_literal_in_the_package():
     )
 
 
-def test_every_justification_is_still_load_bearing():
-    """A justification for a literal that no longer exists is stale documentation."""
+def test_every_justification_covers_exactly_the_sites_it_claims():
+    """A justification must be stale-proof in both directions.
+
+    Too few occurrences and the entry is documenting something that no longer
+    exists; too many and a new, uninspected use of the number has crept in under
+    a sentence written about a different one.
+    """
     actual = _literals()
-    stale = [
-        f"{module}: {value!r}"
-        for (module, value) in JUSTIFIED
-        if value not in actual.get(module, set())
-    ]
-    assert not stale, "JUSTIFIED entries for literals that no longer exist:\n  " + "\n  ".join(
-        stale
+    problems: list[str] = []
+    for (module, value), (expected, _) in sorted(JUSTIFIED.items()):
+        seen = actual.get(module, Counter()).get(value, 0)
+        if seen != expected:
+            problems.append(f"{module}: {value!r} justified for {expected} site(s), found {seen}")
+    assert not problems, (
+        "JUSTIFIED entries that no longer match the code:\n  "
+        + "\n  ".join(problems)
+        + "\n\nA changed count means a use of this number was added or removed. "
+        "Update the count AND the sentence, naming every site it now covers."
     )
 
 

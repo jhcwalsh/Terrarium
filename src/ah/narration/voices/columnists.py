@@ -38,6 +38,10 @@ class ColumnistsParams:
     dispersion_model: str
     hit_rate_target: tuple[float, float]
     outlier_backend: str
+    #: How the flows columnist's directional call is formed. The only built
+    #: value is ``complement_of_consensus``, and it is a PLACEHOLDER with a
+    #: known measurement defect — see :meth:`ColumnistsVoice.calls`.
+    flows_call_rule: str
 
 
 class ColumnistsVoice:
@@ -64,17 +68,32 @@ class ColumnistsVoice:
     def dispersion(self, event: Event, context: dict[str, Any]) -> float | None:
         """How far apart the columnists are this quarter, in [0, 1].
 
-        Only ``surprise_scaled`` and ``fixed`` are built. ``regime_conditional``
-        raises, and deliberately: it would key the visible dispersion of the
-        commentary off the L2 label, which is the non-injectivity failure DN-9
-        §3.1 warns about, and it needs a regime -> dispersion map that is a
-        further open decision nobody has taken.
+        ``severity_band`` — the built value — is exactly what its name says: the
+        announcement's severity normalised by the top of the grammar. It is a
+        readout of the severity band and **not** a surprise in sigma units; the
+        registry entry says so, because an entry that described it as the latter
+        would be describing something nobody built.
+
+        ``surprise_sd_scaled`` is the reading DN-9 §D.11 more naturally
+        suggests and is a live candidate, but only E02/E03/E04 carry a
+        ``surprise_sd`` — POLICY carries an epsilon and MARKETS carries neither
+        — so it raises rather than silently falling back for two slots in four.
+        ``regime_conditional`` raises deliberately: it would key the visible
+        dispersion of the commentary off the L2 label, the non-injectivity
+        failure §3.1 warns about, and it needs a map nobody has agreed.
         """
         model = self.params.dispersion_model
-        if model == "surprise_scaled":
+        if model == "severity_band":
             return round(event.severity / SEVERITY_MAX, DISPLAY_PRECISION)
         if model == "fixed":
             return None
+        if model == "surprise_sd_scaled":
+            raise NarrationError(
+                "voices.columnists.dispersion is 'surprise_sd_scaled', which is not built. "
+                "Only the DATA classes (E02/E03/E04) carry a surprise_sd; POLICY carries an "
+                "epsilon and MARKETS carries neither, so adopting it needs a stated rule for "
+                "the other two slots rather than a silent fallback."
+            )
         if model == "regime_conditional":
             raise NarrationError(
                 "voices.columnists.dispersion is 'regime_conditional', which is not built. It "
@@ -140,20 +159,43 @@ class ColumnistsVoice:
                 "deferred": list(self.deferred),
                 "hit_rate_target": list(self.params.hit_rate_target),
                 "calls": self._calls(event),
+                "flows_call_rule": self.params.flows_call_rule,
+                "calls_are_degenerate": self.calls_are_degenerate,
             },
             template_ids=tuple(ids),
             missing_template=missing,
         )
 
+    @property
+    def calls_are_degenerate(self) -> bool:
+        """True while the flows call is the exact complement of the other two.
+
+        Read by the diagnostics panel, which must disclose it: under the
+        placeholder rule the three hit rates are always ``(h, h, 1-h)``, so the
+        panel is reporting an identity and cannot distinguish a well-calibrated
+        cast from a badly calibrated one.
+        """
+        return self.params.flows_call_rule == "complement_of_consensus"
+
     def _calls(self, event: Event) -> list[dict[str, Any]]:
         """Each templated columnist's directional call, from revealed state only.
 
-        Consensus-hugging voices extrapolate the latest move; the policy and
-        flows voices lean against a large one. The realised hit rate is measured
-        in diagnostics against ``hit_rate_target`` — the point of the parameter
-        is that they must be *fallible*, so a build outside the band is a finding
-        about the bank rather than a bug.
+        Consensus-hugging voices extrapolate the latest move. What the *flows*
+        voice does is ``voices.columnists.flows_call_rule``, and the only built
+        value is the **placeholder** ``complement_of_consensus`` — the exact
+        negation of the other two. That is a measurement defect, not a voice: it
+        forces the three hit rates to ``(h, h, 1-h)``. It is kept, labelled and
+        disclosed on the panel rather than replaced, because inventing a third
+        call rule would be taking the decision the registry entry exists to
+        record.
         """
+        rule = self.params.flows_call_rule
+        if rule != "complement_of_consensus":
+            raise NarrationError(
+                f"voices.columnists.flows_call_rule is '{rule}', which is not built. "
+                "'trailing_momentum' needs a window length and 'independent_of_the_print' "
+                "needs a bible; both are further decisions rather than a code path away."
+            )
         direction = 1 if float(event.delta["value"]) > 0 else -1
         calls: list[dict[str, Any]] = []
         for member in self.cast:

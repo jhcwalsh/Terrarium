@@ -33,10 +33,22 @@ import yaml
 from ah.narration.config import UNRESOLVED, VoicesConfig
 from ah.narration.params import by_key
 
-__all__ = ["BANNER", "PROBE_STATUS", "RATIFIED_STATUS", "probe_document", "render_probe_yaml"]
+__all__ = [
+    "BANNER",
+    "PROBE_STATUS",
+    "RATIFIED_STATUS",
+    "UNKNOWN_STATUS",
+    "probe_document",
+    "render_probe_yaml",
+]
 
 PROBE_STATUS = "PROBE-UNRATIFIED"
 RATIFIED_STATUS = "RATIFIED"
+#: What a config that does not declare a status is. NOT "ratified": a file that
+#: has said nothing about its own governance state has not been ratified, and a
+#: manifest that claimed otherwise would be inventing the one fact this package
+#: exists to keep honest.
+UNKNOWN_STATUS = "UNKNOWN-UNRATIFIED"
 
 BANNER = """\
 # =========================================================================

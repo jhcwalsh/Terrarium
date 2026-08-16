@@ -206,7 +206,9 @@ def _window_stats(series: np.ndarray, index: int, window: int) -> tuple[float, f
 
 def _consensus(series: np.ndarray, index: int, cp: ConsensusParams) -> float | None:
     """Persistence-weighted street forecast from revealed state only (§4.2)."""
-    if index < MONTHS_PER_QUARTER - 1:
+    # 2, not MONTHS_PER_QUARTER - 1: the consensus reads month-1 and month-2, so
+    # the guard is the arity of the expression rather than a fact about quarters.
+    if index < 2:
         return None
     previous, before = series[index - 1], series[index - 2]
     if not (np.isfinite(previous) and np.isfinite(before) and np.isfinite(series[index])):

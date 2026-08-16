@@ -72,6 +72,7 @@ def run_build(world: str, voices: str, out: str) -> dict[str, Any]:
         ngram_n=int(config.get("diagnostics.repetition_ngram_n")),
         min_slots=result.slate_params.min_slots,
         hit_rate_target=list(config.get("voices.columnists.hit_rate_target")),
+        columnist_horizon_months=int(config.get("diagnostics.columnist_horizon_months")),
         uncovered=uncovered_classes(result.events, book_available=result.world.book_available),
     )
     manifest = finalise_manifest(result.manifest, config, panels)

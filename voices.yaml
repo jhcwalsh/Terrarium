@@ -100,6 +100,10 @@ voices:
       # ADDED narr-04: spread alone does not give a dissent rate; the distance
       # from the realised move at which a member votes against does.
       threshold: UNRESOLVED       # [A3-B] pp; candidates: 0.25 | 0.125 | 0.375
+    # ADDED narr-04 (review): the SURPRISE/IN LINE verdict chip was silently
+    # riding on dissent.threshold - a different question wearing the same
+    # number. It is its own cut-point on |epsilon|, in basis points.
+    surprise_chip_bp: UNRESOLVED  # [A3-B] candidates: 12.5 | 25 | 6.25
     mandate_boundary:             # [A3-C · N-aa] hard constraint, not prompt guidance
       may_speak_to: [inflation, expectations, labour_market, financial_conditions_re_mandate]
       may_not_speak_to: [asset_valuations, private_market_functioning, fiscal_policy, named_institutions]
@@ -108,7 +112,11 @@ voices:
     backend: template
     count: UNRESOLVED             # [A3-B] golden set fixes four; confirm
     consensus_lag_months: UNRESOLVED  # [A3-B] how far behind the print they turn
-    dispersion: UNRESOLVED        # [A3-B · N-e] collapse/widen model
+    dispersion: UNRESOLVED        # [A3-B · N-e] severity_band | surprise_sd_scaled | ...
+    # ADDED narr-04 (review): the flows columnist's call is currently the exact
+    # NEGATION of the other two, so the three hit rates are always (h, h, 1-h)
+    # and the panel is reporting an identity rather than calibration.
+    flows_call_rule: UNRESOLVED   # [A3-B · N-i] complement_of_consensus | ...
     hit_rate_target: UNRESOLVED   # [A3-B · N-i] candidates: [0.45,0.60]
     outlier_backend: llm          # Ferrers only — ~8 items/decade (golden set)
 
@@ -120,6 +128,10 @@ voices:
     risk_book_size: UNRESOLVED        # [A3-B] live concerns at any time, cand. [3,5]
     risk_materialisation_rate: UNRESOLVED  # [A3-B · N-z] cand. [0.15,0.25]
     filtered_state: UNRESOLVED    # [A3-B · N-s ⚖] estimator spec — Quant
+    # ADDED narr-04 (review): the EWMA behind r-hat-star had its span hardcoded
+    # as 1/len(series) - undisclosed, and world-length dependent, so the same
+    # world narrated at a different horizon filtered differently.
+    filter_span_months: UNRESOLVED  # [A3-B · N-s] candidates: 60 | 24 | 120
     # ADDED narr-04: stickiness is not one number. The reversal cycle needs the
     # confidence a thesis opens at, what each contradiction costs, and the floor
     # at which it capitulates; only the three together give a thesis life.
@@ -194,6 +206,10 @@ style:
 # -------------------------------------------------------------- diagnostics
 diagnostics:
   repetition_ngram_n: UNRESOLVED  # [A3-B] n for the repetition panel
+  # ADDED narr-04 (review): the horizon a columnist's directional call is scored
+  # over. It was calendar arithmetic in the panel; it is a threshold, and it
+  # decides whether the cast reads as inside or outside its hit-rate band.
+  columnist_horizon_months: UNRESOLVED  # [A3-B · N-i] candidates: 12 | 6 | 18
   # These two are diagnostics on the GENERATOR, not on narration (DN-9 C.6, D.6).
   # Report them; do not gate on them here. Sealing is A3 bucket E.
   policy_reversal_window_months: 6

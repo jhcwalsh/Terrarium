@@ -264,6 +264,7 @@ def render_diagnostics(panels: dict[str, Any], manifest: dict[str, Any]) -> str:
 
     chips = panels["chips"]
     out.append("<div class='panel'><h2>5 · Verdict chips</h2>")
+    out.append(f"<p class='sub'>{_e(chips['note'])}</p>")
     out.append(_table(["chip", "count"], [[r["chip"], r["count"]] for r in chips["top"]]))
     out.append("</div>")
 
@@ -319,8 +320,10 @@ def render_diagnostics(panels: dict[str, Any], manifest: dict[str, Any]) -> str:
 
     columnists = panels["columnists"]
     out.append("<div class='panel'><h2>9 · Columnists</h2>")
+    out.append(f"<p class='sub'>{_e(columnists['note'])}</p>")
     out.append(
-        f"<p>Target hit-rate band {columnists['hit_rate_target']}; mean dispersion "
+        f"<p>Target hit-rate band {columnists['hit_rate_target']}, scored over "
+        f"{columnists['horizon_months']} months; mean dispersion "
         f"{columnists['mean_dispersion']}. Deferred to Tier-2: "
         f"{_e(', '.join(columnists['deferred']) or 'none')}.</p>"
     )
