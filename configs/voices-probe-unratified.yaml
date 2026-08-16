@@ -1,0 +1,308 @@
+# =========================================================================
+# GENERATED — DO NOT HAND-EDIT, DO NOT TREAT AS A DECISION
+# =========================================================================
+# This file is `voices.yaml` with every UNRESOLVED key replaced by the FIRST
+# CANDIDATE listed for it in src/ah/narration/UNRESOLVED.md, by the mechanical
+# rule in src/ah/narration/probe.py. It exists so the workbench can be RUN and
+# MEASURED while its parameters are open.
+#
+# NOTHING IN HERE HAS BEEN RATIFIED. `candidates[0]` is the first value DN-9 or
+# the voices.yaml skeleton raises, not a recommendation and not a ranking.
+# Every key below is still an open decision in UNRESOLVED.md.
+#
+# Regenerate:  python -m ah.narration probe --voices voices.yaml --out <path>
+# =========================================================================
+adapter:
+  cpi_yoy_warmup: nan_suppress
+config_status: PROBE-UNRATIFIED
+consensus:
+  bias: 0.0
+  dispersion: 0.4
+  n_forecasters: 41
+  persistence_weight: 0.5
+derived_observables:
+  growth_print:
+    params:
+      transform: identity
+    source: g
+    transform: identity
+  headline_cpi:
+    params:
+      yoy_window_months: 12
+    source: cpi
+    transform: yoy
+  payrolls_change:
+    params:
+      labour_force_millions: 165.0
+      trend_thousands: 150.0
+    source: g
+    transform: okun
+  unemployment:
+    params:
+      beta: 0.5
+      g_star: 2.5
+      u_star: 5.0
+    source: g
+    transform: okun
+diagnostics:
+  columnist_horizon_months: 12
+  policy_reversal_window_months: 6
+  repetition_ngram_n: 4
+  strain_report_top_n: 10
+events:
+  E01:
+    kind: point
+    threshold: 0.18
+  E02:
+    kind: point
+    threshold: 0.3
+  E03:
+    kind: point
+    threshold: 0.2
+  E04:
+    kind: point
+    threshold: 0.5
+  E05:
+    kind: point
+    threshold: 1.5
+  E06:
+    kind: point
+    threshold: 25
+  E07:
+    kind: state
+    threshold: 0
+  E08:
+    kind: point
+    threshold:
+    - 400
+    - 600
+    - 800
+  E09:
+    kind: state
+    threshold:
+    - 15
+    - 25
+  E10:
+    kind: state
+    milestones:
+    - 0.1
+    - 0.2
+    - 0.3
+  E11:
+    kind: point
+    threshold: 0.2
+  E12:
+    kind: point
+    threshold: 1.0
+  E15:
+    kind: state
+    threshold: 0.75
+  E16:
+    kind: state
+    threshold: 1.0
+  E17:
+    kind: point
+    threshold: 10.0
+  E18:
+    kind: state
+    threshold: 0.0
+  E19:
+    kind: point
+    threshold: 1.0
+  E21:
+    kind: point
+    threshold: null
+probe_filled_keys:
+- adapter.cpi_yoy_warmup
+- consensus.bias
+- consensus.dispersion
+- consensus.n_forecasters
+- consensus.persistence_weight
+- derived_observables.growth_print.params
+- derived_observables.headline_cpi.params
+- derived_observables.payrolls_change.params
+- derived_observables.unemployment.params
+- diagnostics.columnist_horizon_months
+- diagnostics.repetition_ngram_n
+- events.E01.threshold
+- events.E02.threshold
+- events.E03.threshold
+- events.E04.threshold
+- events.E05.threshold
+- events.E06.threshold
+- events.E07.threshold
+- events.E08.threshold
+- events.E09.threshold
+- events.E10.milestones
+- events.E11.threshold
+- events.E12.threshold
+- events.E15.threshold
+- events.E16.threshold
+- events.E17.threshold
+- events.E18.threshold
+- events.E19.threshold
+- severity.class_scale
+- severity.cuts
+- severity.target_sev3_band
+- severity.z_window_months
+- slate.capital_drop_rule
+- slate.contest_rule
+- slate.min_slots
+- slate.tie_break
+- style.layout_states
+- style.vocabulary_cross_firing
+- voices.columnists.consensus_lag_months
+- voices.columnists.count
+- voices.columnists.dispersion
+- voices.columnists.flows_call_rule
+- voices.columnists.hit_rate_target
+- voices.economist.capitulation_floor
+- voices.economist.confidence_decay_per_contradiction
+- voices.economist.confidence_start
+- voices.economist.filter_span_months
+- voices.economist.filtered_state
+- voices.economist.risk_book_size
+- voices.economist.risk_materialisation_rate
+- voices.economist.stickiness_meetings
+- voices.economist.strain_weights
+- voices.fomc.anchor.cycle_source
+- voices.fomc.anchor.phi_c
+- voices.fomc.anchor.phi_pi
+- voices.fomc.anchor.quantise_bp
+- voices.fomc.anchor.rho
+- voices.fomc.dissent.committee_size
+- voices.fomc.dissent.prior_spread
+- voices.fomc.dissent.threshold
+- voices.fomc.meeting_months
+- voices.fomc.surprise_chip_bp
+severity:
+  class_scale:
+    E01: 0.8
+    E02: 1.0
+    E03: 1.1
+    E04: 1.1
+    E05: 1.0
+    E06: 1.0
+    E07: 1.2
+    E08: 0.9
+    E09: 1.2
+    E10: 0.7
+    E11: 1.1
+    E21: 1.4
+  cuts:
+  - 1.0
+  - 2.0
+  - 3.0
+  hard_overrides:
+    E16: 3
+    E18: 3
+  target_sev3_band:
+  - 4
+  - 10
+  z_window_months: 24
+slate:
+  capital_absent_message: CAPITAL omitted — portfolio layer not wired to this world
+  capital_drop_rule: drop_when_max_severity_zero
+  contest_rule: severity_then_abs_delta
+  min_slots: 3
+  slots:
+  - POLICY
+  - DATA
+  - MARKETS
+  - CAPITAL
+  special_edition_severity: 3
+  tie_break: lowest_class_id_then_lowest_month
+style:
+  banned_constructions:
+  - what would become
+  - what would later become
+  - the first sign of
+  - little did
+  - presaged
+  - in hindsight
+  - the beginning of the end
+  - as it turned out
+  - would later prove
+  - was always going to
+  layout_states:
+    CRI: dislocated
+    EXP: benign
+    REC: stressed
+    REF: benign
+    SLOW: turning
+    STAG: stressed
+  regime_labels:
+  - EXP
+  - SLOW
+  - REC
+  - CRI
+  - STAG
+  - REF
+  vocabulary_cross_firing:
+    crisis: 0.2
+    expansion: 0.3
+    recession: 0.3
+    stagflation: 0.25
+version: '0.1'
+voices:
+  columnists:
+    backend: template
+    consensus_lag_months: 1
+    count: 4
+    dispersion: severity_band
+    flows_call_rule: complement_of_consensus
+    hit_rate_target:
+    - 0.45
+    - 0.6
+    outlier_backend: llm
+  economist:
+    backend: template
+    capitulation_floor: 0.35
+    confidence_decay_per_contradiction: 0.11
+    confidence_start: 0.8
+    filter_span_months: 60
+    filtered_state: ewma_on_revealed
+    name: Calloway
+    risk_book_size: 3
+    risk_materialisation_rate: 0.15
+    stickiness_meetings: 4
+    strain_logging: true
+    strain_weights:
+      contradiction: 1.0
+      epsilon: 1.0
+      retries: 1.0
+      unmodelled_motive: 1.0
+  fomc:
+    anchor:
+      cycle_source: g_minus_trailing_mean
+      phi_c: 0.8
+      phi_pi: 0.55
+      quantise_bp: 25
+      rho: 0.85
+    backend: template
+    dissent:
+      committee_size: 8
+      prior_spread: 0.25
+      threshold: 0.25
+    mandate_boundary:
+      may_not_speak_to:
+      - asset_valuations
+      - private_market_functioning
+      - fiscal_policy
+      - named_institutions
+      may_speak_to:
+      - inflation
+      - expectations
+      - labour_market
+      - financial_conditions_re_mandate
+    meeting_months:
+    - 1
+    - 3
+    - 5
+    - 6
+    - 8
+    - 9
+    - 11
+    - 12
+    meetings_per_year: 8
+    surprise_chip_bp: 12.5

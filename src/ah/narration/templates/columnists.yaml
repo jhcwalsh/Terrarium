@@ -1,0 +1,152 @@
+# THE WIRE — the columnists
+#
+# STATUS: MIXED — the cast, the register of each voice and the two worked
+# quarters are the editorial golden set (§2 and §5, `[T]` for the first three
+# and `[L]` for Ferrers); everything else is PLACEHOLDER.
+#
+# The golden set's correction to the earlier spec is built into this file:
+# COLUMNISTS SPEAK FROM THE LATEST PRINT AND LAND WITH CONSENSUS. They are not
+# fixed-prior contrarians. Halloran is the tell -- he restates consensus and
+# adjusts a forecast, and the reader should learn to skim him. Rendering that
+# formulaically is accurate rather than cheap: consensus-hugging voices are
+# formulaic in life.
+#
+# FERRERS IS THE RETAINED OUTLIER and his backend is `llm`
+# (voices.columnists.outlier_backend). He is not templated here and must not be:
+# the golden set says the outlier resists templating -- "six good lines a decade,
+# and they must not repeat". The workbench records him as deferred rather than
+# inventing him, because Tier-2 is a task non-goal.
+STATUS: "MIXED — golden-set cast and register, placeholder variants"
+
+cast:
+  - name: Halloran
+    house: "Kestrel Research"
+    beat: consensus
+    backend: template
+    note: "restates consensus and adjusts a forecast — the whole voice"
+  - name: Vane
+    beat: policy
+    backend: template
+    note: "reads the statement, not the move"
+  - name: "Quinones"
+    beat: flows
+    backend: template
+    note: "closest to useful, and per DN-9 §A.8 the least quoted"
+  - name: Ferrers
+    beat: structural
+    backend: llm
+    note: "the retained outlier; Tier-2 only"
+
+# Keyed by the winning slot, then by severity band.
+Halloran:
+  POLICY:
+    "0":
+      - id: hal-pol-0
+        text: "No change and no news. We leave our terminal forecast unchanged."
+      - id: hal-pol-0b
+        text: "The decision matched our forecast and we make no revision."
+    "1":
+      - id: hal-pol-1
+        text: "In line with our call. We keep our terminal forecast and continue to expect the Committee to move meeting by meeting."
+    "2":
+      - id: hal-pol-2
+        text: "We are revising our terminal forecast and now characterise the risks as two-sided for the first time in this cycle."
+        traced_to: "golden set §5 — the herding voice, turning after the event"
+    "3":
+      - id: hal-pol-3
+        text: "{move_bp} basis points nobody had, and the deletion is the real signal. Our reading is that the Committee has moved to a meeting-by-meeting stance and will require two consecutive downside prints before pausing. We move our terminal forecast."
+        traced_to: "golden set §2"
+  DATA:
+    "1":
+      - id: hal-dat-1
+        text: "The print was close enough to our forecast that we make no change to the profile."
+    "2":
+      - id: hal-dat-2
+        text: "We are marking our near-term profile to the print. The medium-term view is unchanged."
+    "3":
+      - id: hal-dat-3
+        text: "We had {consensus_fmt}%. We were wrong, and we are revising the whole profile rather than the near term."
+  MARKETS:
+    "1":
+      - id: hal-mkt-1
+        text: "A move of this size is inside the range we would consider noise."
+    "2":
+      - id: hal-mkt-2
+        text: "We would characterise the repricing as orderly and we are not changing our allocation view."
+    "3":
+      - id: hal-mkt-3
+        text: "The speed of the repricing has changed the calculus. We are revising."
+        traced_to: "golden set §5"
+
+Vane:
+  POLICY:
+    "0":
+      - id: van-pol-0
+        text: "Nothing changed and nothing was said, which after eleven meetings of argument is itself a position."
+    "1":
+      - id: van-pol-1
+        text: "Read the language, not the level. The statement's alterations are small and consistent, which is what a committee does when it is comfortable."
+    "2":
+      - id: van-pol-2
+        text: "The insertion is the mirror image of the earlier deletion, and the restored commitment to target is the sentence to read twice. They have a second objective now and they did not choose it."
+        traced_to: "golden set §5"
+    "3":
+      - id: van-pol-3
+        text: "Read the deletion, not the hike. A committee that stops promising a return to target has privately revised its own model, and the {move_bp} basis points are almost beside the point."
+        traced_to: "golden set §2"
+  DATA:
+    "1":
+      - id: van-dat-1
+        text: "The print does not change the reaction function. It changes how much room the reaction function has."
+    "2":
+      - id: van-dat-2
+        text: "A reading this far from consensus is a fact about the forecasters before it is a fact about prices."
+    "3":
+      - id: van-dat-3
+        text: "This is the print that ends the argument, and the argument was not about the number. It was about whether the Committee still believed its own model."
+  MARKETS:
+    "1":
+      - id: van-mkt-1
+        text: "The front end is doing the work. It usually is."
+    "2":
+      - id: van-mkt-2
+        text: "Two-year yields have moved and the long end has not, which is the whole story."
+    "3":
+      - id: van-mkt-3
+        text: "Markets have repriced the reaction function, not the economy. Those are different things and only one of them is knowable this week."
+
+Quinones:
+  POLICY:
+    "1":
+      - id: qui-pol-1
+        text: "Positioning went in short duration and came out unchanged. Nobody was paid."
+    "2":
+      - id: qui-pol-2
+        text: "What interests me more is what did not move: the long end barely responded to a decision the front end repriced twice."
+        traced_to: "golden set §2"
+    "3":
+      - id: qui-pol-3
+        text: "Positioning went into this meeting short duration and long the front end, and got paid on both. Someone is still buying the long end, and it is not the people who write about it."
+        traced_to: "golden set §2"
+  DATA:
+    "1":
+      - id: qui-dat-1
+        text: "Flows did not anticipate the print and did not react to it, which is the more interesting half."
+    "2":
+      - id: qui-dat-2
+        text: "The reaction was in rates and not in credit, and credit is where the leverage is."
+    "3":
+      - id: qui-dat-3
+        text: "The bid did not fall. It left."
+        traced_to: "golden set §5"
+  MARKETS:
+    "1":
+      - id: qui-mkt-1
+        text: "Volumes were unremarkable. Prices moved anyway, which usually means the marginal seller was not price-sensitive."
+    "2":
+      - id: qui-mkt-2
+        text: "Two intermediaries reported no completed trades of size. That is not a price, it is an absence of one."
+    "3":
+      - id: qui-mkt-3
+        text: "Nine sessions, and no completed trades reported in the lower tiers at all. The bid did not fall. It left."
+        traced_to: "golden set §5"
