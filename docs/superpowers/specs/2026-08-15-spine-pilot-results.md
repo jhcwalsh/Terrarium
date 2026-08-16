@@ -282,3 +282,42 @@ The Task-7 sensitivity seeds are **NOT affected**: they use stride `1000003` (`s
 
 The E1 family's own headline reading: coverage moves 0.10 -> 1.57 across this same grid on world 703 (stress compiler, no spine). The row above lets the owner read world 802's spine-conditioned numbers against that side by side, arm for arm.
 
+## B3 -- the over-commitment grid under spine worlds (Task 8)
+
+Method citation: `docs/superpowers/specs/2026-08-15-e1-overcommitment-measurement.md` (the E1 declaration, world `...703`), ported VERBATIM onto world `...802` -- same four allocation arms, same 20-seed ladder harness (`199002 + 7919*k`, world 802's own base seed and the platform's own per-path stride), same book construction (cash fixed at 2; private sleeves scaled from 20/8/7; liquid sleeves scaled from 41/12/5/5), same coverage statistic (worst unfunded/liquid, breach line 1.0 -- `ah.eval.decision_metrics.liquidity_shortfall_probability`), same hold-course (no-decisions) institution run. Sealed b3 bar: `docs/superpowers/specs/spine-pilot-prereg.json` (commit `c9bd036`) -- grid `[15, 35, 40, 55]`, `min_breach_seeds_at_55=1`, `n_seeds=20`, `coverage_must_be_monotone=True`. **b3 harness postdates the seal; its method is the committed E1 declaration (2026-08-15), cited verbatim; sealed b3 thresholds unchanged.**
+
+Seeds attempted: 20. Refusals: 0 (none).
+
+### B3 grid table
+
+| arm (private pts) | coverage breach (>=1.0 ever) | forced secondaries | worst coverage med . max | final min . med | seeds below 100/75/50 |
+|---|---|---|---|---|---|
+| 15 | 0/20 | 0/20 | 0.090 . 0.149 | 73.6 . 161.3 | 3/1/0 |
+| 35 | 0/20 | 0/20 | 0.282 . 0.479 | 79.7 . 188.1 | 2/0/0 |
+| 40 | 0/20 | 0/20 | 0.351 . 0.611 | 81.3 . 194.6 | 1/0/0 |
+| 55 | 2/20 | 0/20 | 0.664 . 1.326 | 86.1 . 213.9 | 1/0/0 |
+
+### Hold-course depth (arm-invariant market fact, per seed)
+
+Median peak-to-trough equity drawdown across 20 successful seeds: **-0.3809** (-38.1%). Declared band: `[-0.4260, -0.3750]` (`[-42.6%, -37.5%]`) -- see `DEPTH_BAND` in `scripts/spine_pilot_b3.py` for the construction and citations (a documented deviation: neither the E1 doc nor the stress-03 method states a literal two-sided band).
+
+### B3 verdict (three-part)
+
+| check | value | threshold | verdict |
+|---|---|---|---|
+| (a) coverage monotone in allocation | [0.0901, 0.2821, 0.3514, 0.6643] | non-decreasing medians across the grid | PASS |
+| (b) breach seeds at 55 | 2/20 | >= 1 | PASS |
+| (c) hold-course depth inside declared band | -0.3809 | [-0.4260, -0.3750] | PASS |
+| **OVERALL** |  |  | PASS |
+
+### Comparison against the E1 family (world 703, stress compiler, no spine)
+
+| arm (private pts) | 703 worst coverage med . max (E1, cited) | 802 worst coverage med . max (this run) |
+|---|---|---|
+| 15 | 0.103 . 0.164 | 0.090 . 0.149 |
+| 35 | 0.309 . 0.540 | 0.282 . 0.479 |
+| 40 | 0.382 . 0.694 | 0.351 . 0.611 |
+| 55 | 0.719 . 1.571 | 0.664 . 1.326 |
+
+The E1 family's own headline reading: coverage moves 0.10 -> 1.57 across this same grid on world 703 (stress compiler, no spine). The row above lets the owner read world 802's spine-conditioned numbers against that side by side, arm for arm.
+
