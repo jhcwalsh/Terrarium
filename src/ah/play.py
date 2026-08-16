@@ -491,6 +491,7 @@ def _build_portfolio(
     policy: Policy,
     targets: Mapping[str, float],
     liquid: tuple[str, ...],
+    book: OpeningBook | None = None,
 ) -> tuple[Portfolio, dict[str, list[ClosedEndCohort]]]:
     """An ongoing institution at its target weights, with a cash buffer.
 
@@ -498,19 +499,26 @@ def _build_portfolio(
     :func:`_seed_ladder`), not one mid-life cohort: the institution opens at
     the same allocation it always did, but its vintages mature one a year
     instead of all at once.
+
+    su-app-06: when ``book`` is given, the liquid values, the cash and every
+    private rung come from it instead of being derived. ``book=None`` is the
+    derived path, unchanged — that is the whole feature's off switch.
     """
-    portfolio = Portfolio(cash=START_CASH)
+    portfolio = Portfolio(cash=START_CASH if book is None else book.cash)
     base = _doc("closed-end-cohort.example.json")
     liquid_doc = _doc("liquid-sleeve.example.json")
 
     for asset in liquid:
         sleeve = LiquidSleeve.from_document(liquid_doc)
-        sleeve.value = targets[asset]
+        sleeve.value = float(targets[asset]) if book is None else float(book.liquid[asset])
         portfolio.add(asset, sleeve)
 
     cohorts: dict[str, list[ClosedEndCohort]] = {}
     for asset in PRIVATE_ASSETS:
-        rungs = _seed_ladder(base, asset, float(targets[asset]))
+        if book is None:
+            rungs = _seed_ladder(base, asset, float(targets[asset]))
+        else:
+            rungs = book.cohorts(asset)
         for cohort in rungs:
             portfolio.add(cohort.contract.identity.cohort_id, cohort)
         cohorts[asset] = rungs
@@ -577,6 +585,7 @@ def simulate_play(
     start_targets: Mapping[str, float] | None = None,
     pacing_rule: str = "policy",
     pacing_band: tuple[float, float] = PACING_BAND,
+    opening_book: OpeningBook | None = None,
 ) -> PlayResult:
     """Run the institution over a tape, quarter by quarter, with consequences.
 
@@ -588,6 +597,11 @@ def simulate_play(
     tier 0's benchmark, the sealed "one model, linkage on or off" identity.
     It exists for the credibility console's counterfactual and is never used
     on the scored path.
+
+    ``opening_book`` (su-app-06) replaces the DERIVED opening state with an
+    entered one — liquid values, cash and every private rung. ``None`` is the
+    derived path and is bit-identical to the behaviour before this parameter
+    existed.
     """
     if pacing_rule not in ("policy", "fixed"):
         raise ValueError(f"pacing_rule must be 'policy' or 'fixed', got {pacing_rule!r}")
@@ -599,7 +613,7 @@ def simulate_play(
     liquid = tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
     _validate_commit_decisions(decisions, targets)
-    portfolio, cohorts = _build_portfolio(policy, targets, liquid)
+    portfolio, cohorts = _build_portfolio(policy, targets, liquid, opening_book)
     engine = PortfolioEngine(portfolio, policy)
     base_doc = _doc("closed-end-cohort.example.json")
     ladders: dict[str, list[ClosedEndCohort]] = {a: list(cohorts[a]) for a in PRIVATE_ASSETS}
