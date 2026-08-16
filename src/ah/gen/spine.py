@@ -132,3 +132,79 @@ def sample_spine(
         attempts=attempt,
         seed=int(seed),
     )
+
+
+MIN_CELL_MONTHS = 24
+
+#: R3: the investment clock. Index = (expanding << 1) | hot.
+QUADRANTS = ("recession", "stagflation", "recovery", "expansion")
+#: recovery -> expansion -> stagflation -> recession -> recovery
+CLOCKWISE = frozenset({(2, 3), (3, 1), (1, 0), (0, 2)})
+
+
+def panel_yoy(source) -> np.ndarray:
+    """Trailing CPI YoY per panel row, %; NaN where the 12-month lookback is
+    unavailable. The panel's cpi factor is a LEVEL (the 2026-08-15 finding):
+    YoY is only computed against the row 12 places earlier IN THE PANEL, which
+    is contiguous by construction within the panel's own ordering."""
+    ci = list(source.factor_names).index("cpi")
+    level = np.asarray(source.values)[:, ci].astype(np.float64)
+    out = np.full(source.n_rows, np.nan)
+    out[12:] = (level[12:] / level[:-12] - 1.0) * 100.0
+    return out
+
+
+def panel_quadrant(source, yoy: np.ndarray, era_threshold_pp: float) -> np.ndarray:
+    """Quadrant per panel row; -1 where yoy is NaN. Panel-space proxies (spec
+    3.3 disclosure): expanding = the row's regime label outside {REC, CRI};
+    hot = trailing YoY above the era threshold. CRI rows keep their quadrant --
+    crisis is the overlay, not a quadrant (R3)."""
+    contracting = np.isin(np.asarray(source.labels), ["REC", "CRI"])
+    cells = np.full(source.n_rows, -1, dtype=np.int8)
+    ok = ~np.isnan(yoy)
+    hot = (yoy > era_threshold_pp).astype(np.int8)
+    expanding = (~contracting).astype(np.int8)
+    cells[ok] = (expanding[ok] << 1) | hot[ok]
+    return cells
+
+
+def spine_quadrant(states_m: np.ndarray, label_m: int, *, mu_pi: float) -> int:
+    """Spine-space quadrant for one month. states_m is one row in STATE_NAMES
+    order; expanding = the six-label engine's month is outside REC/CRI."""
+    hot = int(states_m[0] - mu_pi > BACKDROP_MARGIN_PP)
+    expanding = int(int(label_m) not in CONTRACTION_CODES)
+    return (expanding << 1) | hot
+
+
+@dataclass(frozen=True)
+class HazardTable:
+    rates: np.ndarray  # (4,) monthly correction-onset probability per quadrant
+    era_threshold_pp: float
+    cell_months: np.ndarray  # (4,) panel months per quadrant
+    fallback_rate: float
+
+
+def fit_hazard(source) -> HazardTable:
+    """Empirical CRI-onset frequency per panel quadrant (spec 3.2, R3). Over
+    one categorical covariate the saturated fit IS the frequency table --
+    portfolio outcomes never enter (rule 1). Starved quadrants
+    (< MIN_CELL_MONTHS) take the marginal onset rate."""
+    yoy = panel_yoy(source)
+    era_thr = float(np.nanmedian(yoy) + BACKDROP_MARGIN_PP)
+    cells = panel_quadrant(source, yoy, era_thr)
+    labels = np.asarray(source.labels)
+    is_cri = labels == "CRI"
+    onset = is_cri & ~np.roll(is_cri, 1)
+    onset[0] = is_cri[0]
+    ok = cells >= 0
+    fallback = float(onset[ok].sum() / max(int(ok.sum()), 1))
+    rates = np.full(4, fallback)
+    months = np.zeros(4, dtype=np.int64)
+    for c in range(4):
+        mask = cells == c
+        months[c] = int(mask.sum())
+        if months[c] >= MIN_CELL_MONTHS:
+            rates[c] = float(onset[mask].sum() / months[c])
+    return HazardTable(
+        rates=rates, era_threshold_pp=era_thr, cell_months=months, fallback_rate=fallback
+    )

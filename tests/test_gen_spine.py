@@ -125,11 +125,50 @@ def test_unfillable_premise_refuses_with_a_named_reason(layers):
     from ah.gen.spine import SpineRefusal, sample_spine
 
     climate, regimes = layers
-    # a backdrop essentially impossible under the fitted posterior: benign
-    # inflation AND an immediate crash AND a slow decade is rare enough at a
-    # tiny attempt budget to refuse deterministically.
+    # refusal driven by budget arithmetic: with max_attempts_per_decade=1 the
+    # budget equals n_decades, so refusal requires all 50 independent attempts
+    # to accept in a row (~0.5^50 at observed ~50 percent per-attempt acceptance),
+    # which is deterministic-in-practice for any fixed seed.
     p = _premise(backdrop="benign", arrives_quarter=1)
     with pytest.raises(SpineRefusal, match="premise unfillable"):
         sample_spine(
             climate, regimes, p, n_decades=50, seed=11, months=120, max_attempts_per_decade=1
         )
+
+
+def test_panel_quadrants_and_hazard_calibration():
+    import numpy as np
+
+    from ah.gen.bootstrap import campaign_source
+    from ah.gen.spine import MIN_CELL_MONTHS, fit_hazard, panel_yoy
+
+    src = campaign_source()
+    yoy = panel_yoy(src)
+    assert yoy.shape == (src.n_rows,)
+    assert np.isnan(yoy[:12]).all()  # no 12-month lookback at the panel's start
+    table = fit_hazard(src)
+    assert table.rates.shape == (4,)
+    assert np.all((table.rates >= 0.0) & (table.rates <= 1.0))
+    # quadrants with enough months carry their own rate; starved ones the fallback
+    for c in range(4):
+        if table.cell_months[c] < MIN_CELL_MONTHS:
+            assert table.rates[c] == table.fallback_rate
+    # the loaded-dice property: with both cells populated, stagflation (1) must
+    # not be QUIETER than recovery (2) -- corrections cluster with hot
+    # inflation, not benign recoveries.
+    if table.cell_months[1] >= MIN_CELL_MONTHS and table.cell_months[2] >= MIN_CELL_MONTHS:
+        assert table.rates[1] >= table.rates[2]
+
+
+def test_spine_quadrant_encoding():
+    import numpy as np
+
+    from ah.gen.spine import CONTRACTION_CODES, spine_quadrant
+
+    states = np.array([3.5, 1.0, 1.5, 0.0, 1.2])  # pi*, r*, g, v, L
+    rec = next(iter(CONTRACTION_CODES))
+    # pi gap = 3.5 - 2.0 > 0.5 -> hot; contracting -> stagflation (1)
+    assert spine_quadrant(states, rec, mu_pi=2.0) == 1
+    assert spine_quadrant(states, 0, mu_pi=2.0) == 3  # expanding + hot = expansion
+    assert spine_quadrant(states, 0, mu_pi=4.0) == 2  # expanding + cool = recovery
+    assert spine_quadrant(states, rec, mu_pi=4.0) == 0  # contracting + cool = recession
