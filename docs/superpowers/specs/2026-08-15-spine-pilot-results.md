@@ -245,14 +245,31 @@ Seeds attempted: 20. Refusals: 0 (none).
 
 Median peak-to-trough equity drawdown across 20 successful seeds: **-0.3497** (-35.0%). Declared band: `[-0.4260, -0.3750]` (`[-42.6%, -37.5%]`) -- see `DEPTH_BAND` in `scripts/spine_pilot_b3.py` for the construction and citations (a documented deviation: neither the E1 doc nor the stress-03 method states a literal two-sided band).
 
-### B3 verdict (three-part)
+### B3 verdict - sealed bars (a),(b) + supplementary depth check (c)
 
 | check | value | threshold | verdict |
 |---|---|---|---|
 | (a) coverage monotone in allocation | [0.0810, 0.2420, 0.3006, 0.5776] | non-decreasing medians across the grid | PASS |
 | (b) breach seeds at 55 | 0/20 | >= 1 | FAIL |
-| (c) hold-course depth inside declared band | -0.3497 | [-0.4260, -0.3750] | FAIL |
-| **OVERALL** |  |  | FAIL |
+| **OVERALL (sealed)** |  |  | **FAIL** on (b) breach 0/20 vs >=1; (a) monotone PASS |
+
+#### (c) hold-course depth -- supplementary, post-seal, disclosed (not a sealed bar)
+
+| check | value | threshold | verdict |
+|---|---|---|---|
+| (c) hold-course depth inside declared band | -0.3497 | [-0.4260, -0.3750] (`DEPTH_BAND`, constructed post-seal -- see note above) | FAIL |
+
+(c) is reported alongside the sealed verdict for completeness -- it measures an arm-invariant market fact (hold-course drawdown), not the b3 over-commitment bar itself, and its band was constructed after the seal (see the "Hold-course depth" note above). It is **not** part of the sealed b3 judgment; it is disclosed as FAIL against a post-seal constructed band.
+
+### Spine multiplicity disclosure (final-review finding F3)
+
+The B3 ladder's 20 seeds are `199002 + 7919*k` for `k = 0..19` -- and `7919` is also `SEED_STRIDE`, the spine sampler's own attempt-retry stride (`src/ah/gen/spine.py`, `l1_seed = seed + LAYER_OFFSETS["climate"] + SEED_STRIDE * attempt`). Because the ladder step and the attempt stride coincide, consecutive B3 seeds land on **sliding windows of one shared attempt tape** rather than independent draws: seed `199002 + 7919*k` at attempt `a` produces the identical L1/L2 spine as seed `199002 + 7919*(k+1)` at attempt `a-1`, whenever both fall within the same refusal-driven attempt run.
+
+Empirically, this fired: seeds `k = 0..18` all produced the **identical spine** (states sha `4484403b...`, reached at attempts counting down `19, 18, ..., 1` across the ladder), and only `k = 19` produced a **second, distinct spine**. So across the 20-seed B3 ladder, the macro-storyline (L1/L2 spine) diversity was **~2 spines, not 20** -- the flesh/hazard/block streams (Layers F/H and the block draw) remained per-seed distinct throughout, since they are offset from the spine attempt counter (`LAYER_OFFSETS`), so B3's coverage numbers are not simply 20 copies of one run, but the *macro storyline* backing them was far less diverse than the seed count suggests.
+
+This does not reopen the certified B3 verdict: the bars were sealed and judged against the harness as specified, and the measured numbers stand as reported above. It is a disclosed limitation of the harness's seed selection, not a defect in the judged numbers. The repair -- an attempt stride coprime to the platform's per-path stride, or folding the attempt counter into a jumped/independent stream -- is deferred to the D-SP decision round, because `src/ah/gen/spine.py` is under the measurement seal and cannot be edited within this pilot.
+
+The Task-7 sensitivity seeds are **NOT affected**: they use stride `1000003` (`scripts/spine_pilot_seal.py`, amended pre-seal specifically to avoid stream collisions), which shares no common factor with `SEED_STRIDE=7919`.
 
 ### Comparison against the E1 family (world 703, stress compiler, no spine)
 
