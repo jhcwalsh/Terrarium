@@ -53,6 +53,7 @@ import numpy as np
 
 from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
+from ah.port.book import CommitmentPlan, OpeningBook
 from ah.port.cashflow_tier1 import f_call as tier1_f_call
 from ah.port.cashflow_tier1 import f_dist as tier1_f_dist
 from ah.port.cohort import ClosedEndCohort
@@ -64,10 +65,13 @@ __all__ = [
     "LIQUID_ASSETS",
     "PLAY_ALPHA_VERSION",
     "PRIVATE_ASSETS",
+    "START_CASH",
     "START_TARGETS",
     "PlayAttribution",
     "PlayQuarter",
     "PlayResult",
+    "default_commitment_plan",
+    "default_opening_book",
     "play_alpha",
     "simulate_play",
     "window_contributions_play",
@@ -181,6 +185,51 @@ def plan_commitments(
         else _pacing_multiplier(private_weight_reported, t, pacing_band)
     )
     return {a: t[a] * _ANNUAL_COMMITMENT_RATE * m for a in PRIVATE_ASSETS}
+
+
+def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningBook:
+    """Today's DERIVED book, as an OpeningBook document (su-app-06).
+
+    This is what the entry screen opens pre-filled with, and it is built by
+    the same ``_seed_ladder`` the engine uses — never a second implementation,
+    or the round-trip equivalence test would be comparing two copies of the
+    same mistake.
+    """
+    t = dict(targets) if targets is not None else dict(START_TARGETS)
+    base = _doc("closed-end-cohort.example.json")
+    return OpeningBook(
+        liquid={a: float(t[a]) for a in t if a not in PRIVATE_ASSETS},
+        private={
+            a: [c.to_document() for c in _seed_ladder(base, a, float(t[a]))] for a in PRIVATE_ASSETS
+        },
+        cash=START_CASH,
+    )
+
+
+def default_commitment_plan(
+    targets: Mapping[str, float] | None = None, windows: int = 9
+) -> CommitmentPlan:
+    """The kickoff plan: the FIXED-rule pace, flat across the decade.
+
+    ONE ENTRY PER DECISION WINDOW, not per calendar year. A 120-month decade
+    has nine windows (months 11, 23, ... 107) and the engine fires exactly
+    nine commitments (quarters 4, 8, ... 36 — ``q > 0 and q % 4 == 0``, so
+    there is no commitment at q=0; the t0 book is the entered ladder, not a
+    commitment). Plan index k is the k-th window, which drives the engine's
+    vintage year k+1. Callers with a non-decade horizon pass
+    ``windows=len(decision_months(months))``.
+
+    Flat because the policy flex is a function of the realized reported
+    private weight, which at kickoff cannot be known without simulating the
+    tape — and simulating it here would leak it. ``serve.py`` already uses
+    ``pacing_rule="fixed"`` for exactly this pre-quarter-0 case.
+
+    A non-flat schedule derived from the current portfolio is wanted and is
+    explicitly later work; ``CommitmentPlan``'s per-year shape already carries
+    one without a contract change.
+    """
+    base = plan_commitments(0.0, targets, pacing_rule="fixed")
+    return CommitmentPlan(points={a: [base[a]] * windows for a in PRIVATE_ASSETS})
 
 
 def validate_commitments(
