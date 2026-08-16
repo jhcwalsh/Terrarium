@@ -130,7 +130,12 @@ def validate_book(book: OpeningBook, liquid_sleeves: tuple[str, ...]) -> None:
         if not rungs:
             raise BookError(f"private sleeve '{sleeve}' has no rungs")
         for index, doc in enumerate(rungs):
-            ClosedEndCohort.from_document(doc)  # the state contract validates the rung
+            try:
+                ClosedEndCohort.from_document(doc)  # the state contract validates the rung
+            except ValueError as exc:
+                raise BookError(
+                    f"{sleeve} rung {index} is not a valid closed-end cohort document: {exc}"
+                ) from exc
             commitment = doc["commitment"]
             lhs = float(commitment["paid_in"]) + float(commitment["unfunded"])
             rhs = float(commitment["committed"]) + float(commitment["cumulative_recycled"])

@@ -107,6 +107,24 @@ class TestOpeningBook:
                 liquid_sleeves=TOY_LIQUID,
             )
 
+    def test_a_rung_that_breaks_the_state_contract_is_refused_as_a_book_error(self):
+        # A malformed rung must surface as BookError naming the sleeve and index,
+        # not as the state contract's own exception type: the HTTP layer catches
+        # BookError to build a 422, so a leaked SleeveStateSchemaError becomes a 500.
+        bad = _rung(40.0, 20.0, 20.0)
+        bad["vehicle_type"] = "open_ended"
+        with pytest.raises(BookError, match="pe rung 0"):
+            validate_book(
+                _book(
+                    private={
+                        "pe": [bad],
+                        "pc": [_rung(16.0, 8.0, 8.0)],
+                        "re": [_rung(14.0, 7.0, 7.0)],
+                    }
+                ),
+                liquid_sleeves=TOY_LIQUID,
+            )
+
     def test_negative_cash_is_refused_by_the_model_itself(self):
         with pytest.raises(ValueError):
             _book(cash=-1.0)
