@@ -446,13 +446,21 @@ button.t {
   flex-direction: column;
 }
 
-/* right column: the book and the decision keep their height, the wire
-   takes the slack and scrolls inside itself */
+/* right column: the decision keeps its height, the wire takes the slack
+   and scrolls inside itself. Two children only (wire-panel, decision-panel)
+   — Book.tsx was deleted (see Play.tsx's stat-rail comment) and this rule
+   was left at three rows, which mis-mapped the tracks: the wire (child 1)
+   got the uncapped "auto" track meant for a since-removed first section,
+   and the decision panel (child 2) got the freely-shrinkable "1fr" track
+   meant for the wire. Under a short viewport that squeezed the decision
+   panel toward zero height, and its content painted under the app footer
+   below it (app-open-01). Matches `.cockpit .vgrid .right` below, fixed at
+   cio-03 for the same reason. */
 .vgrid .right {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .vgrid .right > section {
@@ -1086,18 +1094,22 @@ button.commit {
 
 /* When a window is open the decision IS the screen: the wire gives up most
    of its room, and the panel scrolls inside itself rather than spilling over
-   the footer if a viewport is still too short for it. Book mode only: the
-   column still has 3 rows (book, wire, decision) here. */
+   the footer if a viewport is still too short for it. Book mode's column
+   has two children (wire-panel, decision-panel) since Book.tsx's removal —
+   this rule was left at three rows (app-open-01), which is what let the
+   squeezed-out decision panel's content bleed into the app footer below.
+   Now identical to `.cockpit .vgrid .right.deciding` below. */
 .vgrid .right.deciding {
-  grid-template-rows: auto minmax(0, 0.3fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 0.3fr) minmax(0, 1fr);
 }
 
-/* Cockpit mode's deciding template: only 2 rows (wire, decision) since the
-   book section never renders in CIO mode. Same intent as the book-mode rule
-   above — the wire cedes room, the decision panel takes it — but with one
-   fewer track. Four classes beats both `.vgrid .right.deciding` and
-   `.cockpit .vgrid .right` (three classes each) on specificity, so this
-   wins outright rather than depending on source order. */
+/* Cockpit mode's deciding template: same two rows (wire, decision) and same
+   values as the book-mode rule above post app-open-01 — kept as an explicit
+   override rather than folded together so cockpit mode cannot silently
+   regress if book mode's rule ever needs to diverge again. Four classes
+   beats both `.vgrid .right.deciding` and `.cockpit .vgrid .right` (three
+   classes each) on specificity, so this wins outright rather than depending
+   on source order. */
 .cockpit .vgrid .right.deciding {
   grid-template-rows: minmax(0, 0.3fr) minmax(0, 1fr);
 }
