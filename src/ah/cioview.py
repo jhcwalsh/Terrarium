@@ -182,6 +182,30 @@ def build_cio_view(
     )
     twin = simulate_play(frozen, None, start_targets=start_targets, opening_book=opening_book)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
+    cash_target = START_CASH
+    if opening_book is not None:
+        # su-app-07 Ruling G. Since task 2 the engine PACES AND CAPS off the
+        # book's `effective_targets()`, so a dashboard whose `targetPct` still
+        # read the world default would state a policy the institution is not
+        # running — su-app-06's worst defect class (displayed one thing,
+        # applied another) reappearing on the CIO surface.
+        #
+        # `effective_targets()` is the single resolver (it already carries the
+        # "entered targets, else the book's own opening values" fallback), so
+        # nothing is re-derived here. `ah/serve.py::_policy_basis` wraps the
+        # same answer for the four SERVICE sites, but `serve` imports this
+        # module, so importing it back would be circular; the book's own
+        # method is the shared thing, not the wrapper.
+        #
+        # The world's key ORDER is kept and the book's NUMBERS taken, because
+        # `_allocation` derives its display order from this dict; a sleeve
+        # only the book names is appended rather than dropped.
+        effective = opening_book.effective_targets()
+        targets = {
+            **{k: float(effective.get(k, v)) for k, v in targets.items()},
+            **{k: float(v) for k, v in effective.items() if k not in targets},
+        }
+        cash_target = float(opening_book.cash)
     last = active.quarters[n_q - 1]
     q_rets = _quarterly_returns(active, plane, n_q)
     twin_rets = _quarterly_returns(twin, plane, n_q)
@@ -282,6 +306,7 @@ def build_cio_view(
         "allocation": _allocation(
             active,
             targets,
+            cash_target,
             plane,
             n_q,
             # liquid sleeves have no reporting plane (port/portfolio.py:73 -
@@ -313,14 +338,20 @@ def build_cio_view(
 def _allocation(
     active: PlayResult,
     targets: Mapping[str, float],
+    cash_target: float,
     plane: str,
     n_q: int,
     tape: Mapping[str, np.ndarray],
     pre_market_paths: Mapping[str, Sequence[float]] | None = None,
 ) -> dict[str, Any]:
+    """``cash_target`` is the policy cash the targets are normalised against —
+    the entered book's own ``cash`` when there is one, else ``START_CASH``
+    (su-app-07 Ruling G). It has to travel WITH ``targets``: the denominator
+    is ``sum(targets) + cash``, so taking one from the book and the other
+    from the world default would print a percentage neither of them means."""
     last = active.quarters[n_q - 1]
     total = last.nav_reported if plane == "reported" else last.nav_true
-    target_total = sum(targets.values()) + START_CASH
+    target_total = sum(targets.values()) + cash_target
     private = last.private_reported if plane == "reported" else last.private_true
 
     def value_of(cid: str) -> float:
@@ -334,7 +365,7 @@ def _allocation(
     ordered = [cid for gid, _ in GOALS for cid in ids if GOAL_OF[cid] == gid]
     classes = []
     for cid in ordered:
-        points = START_CASH if cid == "cash" else targets[cid]
+        points = cash_target if cid == "cash" else targets[cid]
         classes.append(
             {
                 "id": cid,

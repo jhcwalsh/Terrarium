@@ -15,6 +15,7 @@ from typing import ClassVar
 
 import pytest
 
+from ah.cioview import WATCH_FRACTION
 from ah.core.institution import decision_months
 
 # reuse this module's established app/client fixtures — see tests/test_serve.py.
@@ -45,6 +46,53 @@ def _replanned(default_plan: dict, sleeve: str, value: float) -> dict:
     plan = {**default_plan, "points": {k: list(v) for k, v in default_plan["points"].items()}}
     plan["points"][sleeve] = [value] * len(plan["points"][sleeve])
     return plan
+
+
+#: A band no realized weight can leave — used to READ the served weights back
+#: before placing a real band relative to them (su-app-07 task 3).
+_WIDE: tuple[float, float] = (0.0, 100.0)
+
+
+def _banded_book(default_book: dict, ranges: dict[str, tuple[float, float]]) -> dict:
+    """The served default book with reporting bands declared and NOTHING else
+    touched — same values, same policy targets, same cash (su-app-07 task 3).
+    A range is a read-layer declaration; it must not move a number."""
+    return {**default_book, "ranges": {k: list(v) for k, v in ranges.items()}}
+
+
+def _banded_session(
+    client,
+    rid: str,
+    default: dict,
+    ranges: dict[str, tuple[float, float]],
+    to_month: int = 24,
+    basis: str = "reported",
+) -> dict:
+    """Open a session on the default book plus `ranges`, reveal to `to_month`,
+    and return the session document."""
+    body = {
+        "run_id": rid,
+        "basis": basis,
+        "book": _banded_book(default["book"], ranges),
+        "plan": default["plan"],
+    }
+    r = client.post("/sessions", json=body)
+    assert r.status_code == 201, r.text
+    sid, months = r.json()["session_id"], r.json()["months"]
+    _reveal_mid_decade(client, sid, months, to_month)
+    return client.get(f"/sessions/{sid}").json()
+
+
+def _all_sleeves(default: dict) -> list[str]:
+    return [*default["liquid_sleeves"], "pe", "pc", "re"]
+
+
+def _weights(doc: dict, plane: str) -> dict[str, float]:
+    return {s["sleeve"]: s[plane]["weight"] for s in doc["band_report"]["sleeves"]}
+
+
+def _entry(doc: dict, sleeve: str) -> dict:
+    return next(s for s in doc["band_report"]["sleeves"] if s["sleeve"] == sleeve)
 
 
 def _reveal_mid_decade(client, sid: str, months: int, to_month: int) -> None:
@@ -640,3 +688,201 @@ class TestTheTwoCapsAgree:
         )
         assert r.status_code == 422
         assert "declared bound" in r.json()["detail"]
+
+
+class TestBandReport:
+    """su-app-07 task 3: per-sleeve band status on the session document.
+
+    A READ layer. Every band here is placed relative to a weight the server
+    itself served back under a band no weight can leave (``_WIDE``), so the
+    thing under test is the CLASSIFICATION of a known weight, not the weight
+    — and every state asserted is one a player can actually be in: a real
+    band around a real policy target, with the institution drifting inside
+    it, at its edge, or out of it.
+    """
+
+    #: Real decisions, so the decade is not the degenerate hold-course twin.
+    _ACTIONS: ClassVar[dict[int, str]] = {11: "derisk", 23: "leanin"}
+
+    def test_the_key_is_present_and_null_for_a_session_with_no_book(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert "band_report" in doc, "the key is always on the document, never conditional"
+        assert doc["band_report"] is None
+
+    def test_the_key_is_null_for_a_book_that_declares_no_ranges(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": default["book"], "plan": default["plan"]}
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["band_report"] is None
+
+    def test_the_key_is_present_and_null_before_the_first_quarter_closes(self, service):
+        """The nulled-key list runs BEFORE the early return, so a banded
+        session serves the key from month 0 rather than growing it at 3."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _banded_book(default["book"], {"equity": _WIDE})
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 2}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert "band_report" in doc
+        assert doc["band_report"] is None
+
+    def test_a_sleeve_with_no_range_is_absent_from_the_report_entirely(self, service):
+        """Absent, not present-with-nulls: the app never has to tell "no band
+        declared" from "band declared and unmet"."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = _banded_session(client, rid, default, {"equity": _WIDE, "pe": _WIDE})
+        assert [s["sleeve"] for s in doc["band_report"]["sleeves"]] == ["equity", "pe"]
+
+    def test_the_sleeves_are_listed_in_the_worlds_own_order(self, service):
+        """Liquid in the engine's ``asset_order``, then pe/pc/re — regardless
+        of the order the analyst happened to type the ranges in."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        scrambled = {s: _WIDE for s in reversed(_all_sleeves(default))}
+        doc = _banded_session(client, rid, default, scrambled)
+        assert [s["sleeve"] for s in doc["band_report"]["sleeves"]] == [
+            "equity",
+            "bonds",
+            "hy",
+            "commodities",
+            "reits",
+            "pe",
+            "pc",
+            "re",
+        ]
+
+    def test_a_sleeve_comfortably_inside_its_band_reports_ok(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"equity": _WIDE})
+        w = _weights(probe, "true")["equity"]
+        target = default["book"]["targets"]["equity"]
+        # twenty points of room on the near edge: the weight is nowhere close
+        lo = max(0.0, min(w, target) - 20.0)
+        hi = min(100.0, max(w, target) + 20.0)
+
+        doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
+        entry = _entry(doc, "equity")
+        assert entry["true"]["weight"] == pytest.approx(w)
+        assert entry["true"]["alert"] == "ok"
+
+    def test_a_sleeve_outside_its_band_reports_breach(self, service):
+        """A band that CONTAINS the declared policy target and excludes the
+        realized weight — the breach an allocator would actually report, not
+        a band nobody would enter."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"equity": _WIDE})
+        w = _weights(probe, "true")["equity"]
+        target = default["book"]["targets"]["equity"]
+        assert w != pytest.approx(target), "the drifted weight must differ from the target"
+        edge = (w + target) / 2.0
+        lo, hi = (edge, target + 5.0) if w < target else (target - 5.0, edge)
+        assert lo <= target <= hi, "the target itself stays inside its own band"
+        assert not lo <= w <= hi
+
+        doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
+        assert _entry(doc, "equity")["true"]["alert"] == "breach"
+
+    def test_a_sleeve_within_the_alert_threshold_of_an_edge_reports_watch(self, service):
+        """Amber: inside the band, but 90% of the way out to the near edge —
+        past ``WATCH_FRACTION`` (0.75) and short of the edge itself. Widening
+        that same band puts the identical weight back at ``ok``, so the
+        threshold is the thing doing the work."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"equity": _WIDE})
+        w = _weights(probe, "true")["equity"]
+        target = default["book"]["targets"]["equity"]
+        assert w != pytest.approx(target)
+        room = abs(w - target) / 0.9  # the weight sits 0.9 of the way out
+        lo, hi = (target - room, target + 5.0) if w < target else (target - 5.0, target + room)
+        assert lo <= w <= hi
+
+        doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
+        assert doc["band_report"]["watch_fraction"] == WATCH_FRACTION
+        assert _entry(doc, "equity")["true"]["alert"] == "watch"
+
+        # the same weight, twice the room: 0.45 of the way out is `ok`.
+        wide = (
+            (target - 2.0 * room, target + 5.0)
+            if w < target
+            else (target - 5.0, target + 2.0 * room)
+        )
+        relaxed = _banded_session(client, rid, default, {"equity": wide})
+        assert _entry(relaxed, "equity")["true"]["weight"] == pytest.approx(w)
+        assert _entry(relaxed, "equity")["true"]["alert"] == "ok"
+
+    def test_both_planes_are_reported_and_a_private_sleeve_can_disagree(self, service):
+        """Appraisal smoothing is the whole reason both planes are served: a
+        private sleeve can be outside its band on the engine's true state and
+        inside it on the marks the committee actually sees."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"pe": _WIDE})
+        w_true = _weights(probe, "true")["pe"]
+        w_rep = _weights(probe, "reported")["pe"]
+        assert w_true != pytest.approx(w_rep)
+
+        edge = (w_true + w_rep) / 2.0
+        band = (edge, 100.0) if w_true < w_rep else (0.0, edge)
+        doc = _banded_session(client, rid, default, {"pe": band})
+        entry = _entry(doc, "pe")
+        assert entry["true"]["alert"] == "breach"
+        assert entry["reported"]["alert"] != "breach"
+        assert entry["true"]["weight"] != pytest.approx(entry["reported"]["weight"])
+
+    # the session's `basis` enum is "reported" | "actual"; "actual" is the
+    # engine's TRUE plane, which is the name the band report serves it under.
+    @pytest.mark.parametrize(("basis", "plane"), [("reported", "reported"), ("actual", "true")])
+    def test_the_served_weights_and_cash_close_on_one_hundred(self, service, basis, plane):
+        """The units answer, at the served layer: weights are points out of
+        100 against THAT PLANE'S NAV, so every sleeve plus the cash account
+        accounts for the whole book. (``tests/test_cioview.py::
+        test_per_asset_values_close_against_the_book`` pins the same identity
+        one layer down, to 1e-9, on both planes.)"""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = _banded_session(
+            client, rid, default, {s: _WIDE for s in _all_sleeves(default)}, basis=basis
+        )
+        served = sum(_weights(doc, plane).values())
+        # `doc["value"]` is the NAV on the session's own basis — the same
+        # denominator the report divided by.
+        cash_pct = doc["cash"] / doc["value"] * 100.0
+        assert served + cash_pct == pytest.approx(100.0, abs=1e-3)
+
+    def test_ranges_do_not_move_a_single_number(self, service):
+        """THE load-bearing test of this task. The same book, the same plan
+        and the same decisions, played twice — differing only in whether the
+        book declares reporting ranges. If a range can reach ``simulate_play``
+        at all, the two decades separate here."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        banded = _banded_book(default["book"], {s: _WIDE for s in _all_sleeves(default)})
+        assert banded["ranges"], "the banded book really does declare ranges"
+
+        plain_sid = _play_through(
+            client, rid, self._ACTIONS, book=default["book"], plan=default["plan"]
+        )
+        banded_sid = _play_through(client, rid, self._ACTIONS, book=banded, plan=default["plan"])
+
+        plain = client.get(f"/sessions/{plain_sid}/outcome").json()
+        with_bands = client.get(f"/sessions/{banded_sid}/outcome").json()
+        assert plain.pop("session_id") != with_bands.pop("session_id")
+
+        # the decade first, named explicitly, then the whole verdict
+        assert with_bands["series"] == plain["series"]
+        assert with_bands["window_contributions"] == plain["window_contributions"]
+        assert with_bands == plain

@@ -28,7 +28,7 @@ Run locally:  uv run uvicorn ah.serve:app --port 8787
 import json
 import sqlite3
 import tempfile
-from collections.abc import Iterator, Mapping
+from collections.abc import Iterator, Mapping, Sequence
 from contextlib import contextmanager
 from pathlib import Path
 from typing import Any, Literal
@@ -37,7 +37,7 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 
-from ah.cioview import PLANES, build_cio_view
+from ah.cioview import PLANES, WATCH_FRACTION, build_cio_view
 from ah.core.engine import run_path
 from ah.core.institution import decision_months
 from ah.core.numericworld import project_numeric
@@ -47,6 +47,7 @@ from ah.play import (
     PRIVATE_ASSETS,
     START_CASH,
     START_TARGETS,
+    PlayQuarter,
     default_commitment_plan,
     default_opening_book,
     plan_commitments,
@@ -147,6 +148,99 @@ def _policy_basis(
     if book is not None:
         return book.effective_targets(), book.cash
     return (dict(world_targets) if world_targets is not None else dict(START_TARGETS)), START_CASH
+
+
+def _alert_level(weight: float, target: float, lo: float, hi: float) -> str:
+    """One sleeve's band status: ``"ok" | "watch" | "breach"``.
+
+    The ``AlertLevel`` union declared at ``app/src/lib/cioView.ts:30-37``, and
+    a generalisation of the dashboard's own fallback rule
+    (``app/src/components/CioDashboard.tsx``'s ``alertLevel``) to an
+    ASYMMETRIC band. That rule assumes the band is a symmetric half-width
+    around the target and compares ``|current - target|`` to it; an entered
+    range is ``[lo, hi]`` and need not be centred on the target at all, so
+    the "room" the weight has before it leaves the band is measured on the
+    EDGE IT IS MOVING TOWARD. The meaning is unchanged: amber inside the last
+    ``WATCH_FRACTION`` of the way out.
+
+    ``WATCH_FRACTION`` is imported from ``ah.cioview`` (DN-8 section 3) rather
+    than redeclared — a second copy of a display threshold is exactly the
+    drift this work package exists to remove.
+    """
+    if weight < lo or weight > hi:
+        return "breach"
+    room = (hi - target) if weight >= target else (target - lo)
+    dist = abs(weight - target)
+    if room > 0.0 and dist >= WATCH_FRACTION * room:
+        return "watch"
+    return "ok"
+
+
+def _band_report(
+    book: OpeningBook | None,
+    here: PlayQuarter,
+    asset_order: Sequence[str],
+) -> dict[str, Any] | None:
+    """su-app-07 task 3: per-sleeve band status at the last CLOSED quarter.
+
+    A READ of state ``simulate_play`` already recorded — ``liquid_values``,
+    ``private_true``/``private_reported``, ``nav_true``/``nav_reported`` —
+    and nothing more. Ranges are INERT by design: they are never handed to
+    ``simulate_play`` or ``_build_portfolio``, so declaring a band cannot
+    move a number in the decade. The test that pins this
+    (``test_ranges_do_not_move_a_single_number``) is the load-bearing one.
+
+    Units are POINTS out of 100 on both sides: an entered range and
+    ``effective_targets()`` are already in points, so a weight is the
+    sleeve's value over THAT PLANE'S NAV times 100. The denominator is the
+    served ``nav_true`` / ``nav_reported``; ``cash + sum(liquid_values) +
+    sum(private_*)`` reproduces it to 1e-9 (pinned by
+    ``tests/test_cioview.py::test_per_asset_values_close_against_the_book``),
+    so there is no residual to name.
+
+    ``None`` when there is no book, no ranges on it, or no closed quarter —
+    the caller supplies the last of those by only calling here once a
+    quarter has closed.
+
+    Sleeve order is the world's own: liquid in ``paths.asset_order`` order,
+    then the private sleeves in ``PRIVATE_ASSETS`` order. A sleeve with no
+    declared range is absent from the list entirely rather than present with
+    nulls, so the app never has to distinguish "no band" from "band unmet".
+    """
+    if book is None or not book.ranges:
+        return None
+    targets = book.effective_targets()
+    order = [a for a in asset_order if a not in PRIVATE_ASSETS] + list(PRIVATE_ASSETS)
+    sleeves: list[dict[str, Any]] = []
+    for sleeve in order:
+        band = book.ranges.get(sleeve)
+        if band is None:
+            continue
+        lo, hi = float(band[0]), float(band[1])
+        # every sleeve a range may name is in `effective_targets()`:
+        # `validate_book` refuses a range outside the world's sleeve set and
+        # both branches of `effective_targets()` cover that set exactly.
+        target = float(targets[sleeve])
+        entry: dict[str, Any] = {
+            "sleeve": sleeve,
+            "target": round(target, 4),
+            "lo": round(lo, 4),
+            "hi": round(hi, 4),
+        }
+        for plane, nav, private in (
+            ("true", here.nav_true, here.private_true),
+            ("reported", here.nav_reported, here.private_reported),
+        ):
+            value = private[sleeve] if sleeve in PRIVATE_ASSETS else here.liquid_values[sleeve]
+            # a wiped plan reads as zero weight, which breaches any band with
+            # a positive floor. That is the honest reading, not a guard.
+            weight = (float(value) / float(nav) * 100.0) if nav > 0.0 else 0.0
+            entry[plane] = {
+                "weight": round(weight, 4),
+                "alert": _alert_level(weight, target, lo, hi),
+            }
+        sleeves.append(entry)
+    return {"watch_fraction": WATCH_FRACTION, "sleeves": sleeves}
 
 
 def _window_ordinal(months: int, month: int) -> int | None:
@@ -354,8 +448,18 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 # targets, not the NAV it happens to open at — an institution
                 # holding 20 points of pe against a 30-point target paces
                 # toward the 30. Same basis as the decision door below and as
-                # `simulate_play`'s own check, via the one helper.
-                validate_plan(plan, _policy_basis(book, None)[0])
+                # `simulate_play`'s own check.
+                #
+                # `_policy_basis` is deliberately NOT used here: `book` is
+                # `body.book or default_book_` and so is never None at this
+                # site, which left the call passing a dummy `None` world
+                # default. Harmless while the branch cannot admit `book is
+                # None`, but if it ever did, a GENERATED world would fall
+                # through to `START_TARGETS` instead of `GEN_START_TARGETS`
+                # and cap a whole class of worlds wrongly, in silence. There
+                # is no fallback to resolve here, so the single resolver
+                # `effective_targets()` is called directly.
+                validate_plan(plan, book.effective_targets())
             except BookError as exc:
                 raise HTTPException(status_code=422, detail=str(exc)) from exc
             # CommitmentPlan._shape only checks the three sleeves AGREE in
@@ -431,6 +535,11 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "private_weight_reported",
             "next_plan_basis",
             "plan_pace",
+            # su-app-07 task 3: always a KEY on the document, null until a
+            # quarter has closed on a session whose book declares ranges —
+            # a key that appears only after month 3 is a shape the app would
+            # have to sniff for.
+            "band_report",
         ):
             doc[key] = None
         doc["forced_sales"] = []
@@ -504,6 +613,9 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         doc["spending_basis"] = here.spending_basis
         doc["spending_rate_annual"] = here.spending_rate_annual
         doc["private_weight_reported"] = here.private_weight_reported
+        # su-app-07 task 3: reporting only. Computed from `here` — state the
+        # replay above already produced — and fed to nothing.
+        doc["band_report"] = _band_report(book, here, paths.asset_order)
         # su-app-07: the SAME basis `simulate_play` paces off (the book's
         # policy targets and its own cash), so the number the lever shows and
         # the number the engine commits are one number, not two.

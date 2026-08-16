@@ -196,7 +196,18 @@ class TestPolicyTargetsReachTheEngine:
     def test_a_book_with_no_entered_targets_paces_off_its_own_values(self, stagflation):
         """Ruling B's fence. ``targets=None`` means "the book's own values are
         the policy", so the DERIVED default book — whose values are
-        ``START_TARGETS`` — still plays su-app-06's decade."""
+        ``START_TARGETS`` — still plays su-app-06's decade.
+
+        ``_decades_equal(derived, entered)`` here depends on ``_seed_ladder``
+        scaling each private sleeve's rungs to a NAV that sums back to
+        ``START_TARGETS`` with ZERO float dust — that is what makes
+        ``effective_targets()``'s fallback (``{**liquid, **target_nav()}``)
+        bit-identical to the derived path's targets. It holds today and is
+        worth pinning. But a future rounding change inside the ladder would
+        break this test for a reason that has nothing to do with policy
+        targets: read a failure here as "the ladder's NAVs moved", not as
+        "the targets fallback regressed", and check ``target_nav()`` against
+        ``START_TARGETS`` before touching anything in ``book.py``."""
         book = default_opening_book(START_TARGETS)
         untargeted = book.model_copy(deep=True)
         untargeted.targets = None
