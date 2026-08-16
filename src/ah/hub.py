@@ -68,8 +68,16 @@ DOCS: dict[str, tuple[str, str, str]] = {
         "docs/engine-realism-register.md",
         "Engine realism register",
         "Where the engine is faithful to its plans but not to an allocator's "
-        "expectations: ER-1 through ER-8, open and closed, with what each fix "
+        "expectations: ER-1 through ER-14, open and closed, with what each fix "
         "invalidates.",
+    ),
+    "private-markets-inflation": (
+        "docs/current/private-markets-and-inflation.md",
+        "Private markets and inflation pass-through",
+        "How the private market asset classes are modelled across all three "
+        "layers, and the measured finding behind ER-14: private equity is "
+        "bit-identical from 1% to 12% inflation, and real estate moves the "
+        "wrong way.",
     ),
     "data-review": (
         "docs/data/DATA-REVIEW-2026-08-08.md",
