@@ -182,6 +182,21 @@ describe("BookEntry", () => {
     expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
   });
 
+  it("ranked comes back when an edit is reverted", async () => {
+    // isDefault is a deep-equal against the served default, not a one-way
+    // "touched" flag: putting a value back must restore ranked eligibility.
+    // A regression to a sticky boolean (set true on any onChange, never
+    // re-checked against the server value) would pass every OTHER test in
+    // this file while failing this one — see the fix report's bite-proof.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const bonds = byLabel<HTMLInputElement>("bonds");
+    setValue(bonds, "12.5");
+    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    setValue(bonds, "12");
+    expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
+  });
+
   it("restores only the targeted sleeve's ladder with reset", async () => {
     // Edit BOTH pe and pc, then reset only pc. "pe" is the FIRST private
     // sleeve served (fixture insertion order), so a broken implementation
