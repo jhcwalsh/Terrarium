@@ -10,6 +10,7 @@ against a HEAD that had moved under the running gate.
 from __future__ import annotations
 
 import importlib.util
+import subprocess
 from pathlib import Path
 
 _ROOT = Path(__file__).resolve().parents[1]
@@ -125,9 +126,157 @@ def test_the_gate_command_cannot_quietly_weaken():
 
 
 def test_the_hook_exists_and_guards_main_merges():
-    """The committed hook must check MERGE_HEAD against .gate-ok on main."""
-    hook = Path(__file__).resolve().parents[1] / "githooks" / "pre-commit"
-    text = hook.read_text(encoding="utf-8")
+    """The committed hook must check MERGE_HEAD against .gate-ok on main.
+
+    INVERTED (housekeeping-03) and kept, per the repo rule that a test which
+    catches a defect is inverted rather than deleted. It used to read
+    githooks/pre-commit and passed for three days while the guard never ran,
+    because it asserted the file MENTIONED the right things rather than that
+    the hook DID anything. It now reads the hook that actually fires, and the
+    real proof is the merges run below. A grep over a hook is not a test of a
+    hook.
+    """
+    hooks = Path(__file__).resolve().parents[1] / "githooks"
+    text = (hooks / "commit-msg").read_text(encoding="utf-8")
     assert "MERGE_HEAD" in text
     assert ".gate-ok" in text
     assert "REFUSED" in text
+    # and the guard must NOT be duplicated into pre-commit: on the conflicted
+    # route both hooks run, and the first to see the stamp consumes it
+    assert "REFUSED" not in (hooks / "pre-commit").read_text(encoding="utf-8")
+
+
+# ------------------------------------------------- the hooks, actually run
+#
+# housekeeping-03. `git merge` fires pre-merge-commit, NOT pre-commit, and git
+# does not fall back. From 2026-08-12 to 2026-08-15 only pre-commit existed,
+# so the guard never blocked a merge into main - proven by running it, after
+# three days of a grep-based test reporting green.
+
+
+def _scratch_repo(tmp_path: Path) -> Path:
+    """A throwaway repo wired to THIS repository's real githooks directory."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+
+    def run(*args: str, check: bool = True) -> subprocess.CompletedProcess[str]:
+        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=check)
+
+    run("init", "-q", "-b", "main", ".")
+    run("config", "user.email", "gate@test")
+    run("config", "user.name", "gate test")
+    # the shipped hooks, by absolute path - the artifact under test
+    run("config", "core.hooksPath", str(_ROOT / "githooks"))
+
+    (repo / "f.txt").write_text("base\n", encoding="utf-8")
+    run("add", "f.txt")
+    run("commit", "-qm", "base", "--no-verify")
+    run("checkout", "-qb", "feat")
+    (repo / "g.txt").write_text("feat\n", encoding="utf-8")
+    run("add", "g.txt")
+    run("commit", "-qm", "feat", "--no-verify")
+    run("checkout", "-q", "main")
+    return repo
+
+
+def _merge(repo: Path) -> subprocess.CompletedProcess[str]:
+    return subprocess.run(
+        ["git", "merge", "--no-ff", "feat", "-m", "merge feat"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+
+
+def _head(repo: Path) -> str:
+    return subprocess.run(
+        ["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True, check=True
+    ).stdout.strip()
+
+
+def test_a_merge_into_main_is_actually_refused_without_a_stamp(tmp_path: Path):
+    """The test that was missing. Not "the hook file says REFUSED" - an actual
+    merge into main, actually refused, by the actually-installed hooks."""
+    repo = _scratch_repo(tmp_path)
+    before = _head(repo)
+    result = _merge(repo)
+    assert result.returncode != 0, "the merge was allowed through with no gate stamp"
+    assert "REFUSED" in result.stdout + result.stderr
+    assert _head(repo) == before, "a merge commit was created despite the refusal"
+
+
+def test_a_merge_into_main_is_refused_when_the_stamp_is_for_another_commit(tmp_path: Path):
+    """The stamp binds ONE commit. A stamp for anything else is not a key."""
+    repo = _scratch_repo(tmp_path)
+    (repo / ".gate-ok").write_text("0" * 40 + "\n", encoding="utf-8")
+    before = _head(repo)
+    result = _merge(repo)
+    assert result.returncode != 0
+    assert "REFUSED" in result.stdout + result.stderr
+    assert _head(repo) == before
+
+
+def test_a_merge_into_main_succeeds_with_the_right_stamp_and_consumes_it(tmp_path: Path):
+    """And the guard must not be merely obstructive: the correct stamp opens
+    it exactly once, then is consumed so it cannot authorise a second merge."""
+    repo = _scratch_repo(tmp_path)
+    feat = subprocess.run(
+        ["git", "rev-parse", "feat"], cwd=repo, capture_output=True, text=True, check=True
+    ).stdout.strip()
+    (repo / ".gate-ok").write_text(feat + "\n", encoding="utf-8")
+    before = _head(repo)
+
+    result = _merge(repo)
+    assert result.returncode == 0, f"the correct stamp was rejected: {result.stderr}"
+    assert _head(repo) != before, "no merge commit was created"
+    assert not (repo / ".gate-ok").exists(), "the stamp must be one-shot"
+
+
+def test_an_ordinary_commit_on_main_is_not_blocked(tmp_path: Path):
+    """The guard fires on merges into main, not on commits. commit-msg runs
+    for every commit, so a guard written carelessly there would block the
+    owner's direct commits to main - which happen routinely."""
+    repo = _scratch_repo(tmp_path)
+    (repo / "h.txt").write_text("direct\n", encoding="utf-8")
+    subprocess.run(["git", "add", "h.txt"], cwd=repo, check=True, capture_output=True)
+    result = subprocess.run(
+        ["git", "commit", "-m", "a direct commit on main"],
+        cwd=repo,
+        capture_output=True,
+        text=True,
+        check=False,
+    )
+    assert result.returncode == 0, f"an ordinary commit was blocked: {result.stderr}"
+
+
+def test_the_conflicted_merge_route_is_guarded_too(tmp_path: Path):
+    """The second route to a merge commit: the merge conflicts, git stops
+    without committing, and `git commit` finishes it. MERGE_HEAD is still set,
+    so the guard must apply there as well - and must not have been consumed by
+    an earlier hook on the same commit."""
+    repo = _scratch_repo(tmp_path)
+
+    def run(*args: str, check: bool = True):
+        return subprocess.run(["git", *args], cwd=repo, capture_output=True, text=True, check=check)
+
+    # make feat and main touch the same file so the merge cannot auto-resolve
+    run("checkout", "-q", "feat")
+    (repo / "f.txt").write_text("feat side\n", encoding="utf-8")
+    run("add", "f.txt")
+    run("commit", "-qm", "feat edits f", "--no-verify")
+    run("checkout", "-q", "main")
+    (repo / "f.txt").write_text("main side\n", encoding="utf-8")
+    run("add", "f.txt")
+    run("commit", "-qm", "main edits f", "--no-verify")
+
+    conflicted = _merge(repo)
+    assert conflicted.returncode != 0, "expected a conflict"
+    (repo / "f.txt").write_text("resolved\n", encoding="utf-8")
+    run("add", "f.txt")
+    before = _head(repo)
+
+    finish = run("commit", "-m", "finish the merge", check=False)
+    assert finish.returncode != 0, "the conflicted route completed with no stamp"
+    assert "REFUSED" in finish.stdout + finish.stderr
+    assert _head(repo) == before

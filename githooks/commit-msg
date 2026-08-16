@@ -1,0 +1,35 @@
+#!/bin/sh
+# The gate-merge guard (housekeeping-01, moved to the right hook by -03).
+# Merging into main requires a .gate-ok stamped by scripts/check_gate.py for
+# EXACTLY the commit being merged. Activated by: git config core.hooksPath githooks
+#
+# WHY commit-msg AND NOT pre-commit. `git merge` never runs pre-commit, so from
+# 2026-08-12 to 2026-08-15 this guard blocked nothing: every merge into main
+# went through unguarded and the discipline was held by hand. `git merge` runs
+# pre-merge-commit -- but MERGE_HEAD does not exist yet at that point (only
+# AUTO_MERGE, a tree), so that hook cannot learn which commit is being merged
+# and cannot enforce the binding. commit-msg is the earliest hook that both
+# sees MERGE_HEAD and can abort, and it fires on BOTH routes to a merge
+# commit: the clean merge, and the conflicted merge finished with `git commit`.
+# One hook, one implementation, no double-consume of the one-shot stamp.
+# Verified by tests/test_gate_guard.py running real merges, not by grep.
+
+branch=$(git rev-parse --abbrev-ref HEAD)
+git_dir=$(git rev-parse --git-dir)
+if [ "$branch" = "main" ] && [ -f "$git_dir/MERGE_HEAD" ]; then
+    merged=$(cat "$git_dir/MERGE_HEAD")
+    if [ ! -f .gate-ok ]; then
+        echo "REFUSED: merging into main needs a verified green gate."
+        echo "  On the branch: uv run python scripts/run_gate.py <gate-log>"
+        echo "                 uv run python scripts/check_gate.py <gate-log>"
+        exit 1
+    fi
+    stamped=$(head -n 1 .gate-ok | tr -d '\r\n')
+    if [ "$stamped" != "$merged" ]; then
+        echo "REFUSED: .gate-ok is for $stamped, not the merged $merged."
+        echo "  Re-run the gate on the branch tip, then check_gate.py again."
+        exit 1
+    fi
+    rm -f .gate-ok
+fi
+exit 0
