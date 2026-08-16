@@ -203,6 +203,13 @@ def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningB
             a: [c.to_document() for c in _seed_ladder(base, a, float(t[a]))] for a in PRIVATE_ASSETS
         },
         cash=START_CASH,
+        # su-app-07 Ruling D: the entry screen pre-fills its target inputs
+        # from this default and posts them back untouched by default. If the
+        # served default carried `targets=None`, an untouched pre-fill would
+        # digest differently from what was served, and `serve.py` would
+        # demote it to practice-only. `ranges` stays unset — no default bands
+        # are declared yet.
+        targets=dict(t),
     )
 
 

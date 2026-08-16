@@ -59,7 +59,9 @@ class TestDefaultBookEndpoint:
         r = client.get(f"/book/default?run_id={rid}")
         assert r.status_code == 200
         body = r.json()
-        assert body["book"]["state_version"] == "opening-book-0.1"
+        # su-app-07 Ruling D: default_opening_book now populates `targets`,
+        # at the new state_version ("opening-book-0.2").
+        assert body["book"]["state_version"] == "opening-book-0.2"
         assert body["plan"]["state_version"] == "commitment-plan-0.1"
         assert set(body["book"]["liquid"]) == set(body["liquid_sleeves"])
         assert len(body["book_digest"]) == 64
