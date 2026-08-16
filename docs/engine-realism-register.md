@@ -888,3 +888,144 @@ This inherited past is a *consistent simulated* construction: it passes the vali
 **Consequences.** Any change to how the opening book is derived changes every scored path and requires a **`PLAY_ALPHA_VERSION` bump**, so no leaderboard row can mix prehistory models. It does **not** touch `TOY_ENGINE_VERSION` (the engine sees the same returns) or the pre-registration seal.
 
 **Why it is recorded and left as-is.** The inherited decade closes the dashboard's usability gap (the long columns and plan chart exist at world start) and the scoring model is unchanged — it is a display-only solution with known boundaries. A real history would be materially more credible but has higher cost and broader scope: the audit trail would need to exist, the opening state would need to be validated, and the alpha definition would restart leaderboards. The current delivery is honest about what it is and recoverable later without breaking the product.
+
+---
+
+## ER-14 — Inflation does not reach private markets at all
+
+**Status:** open (owner-filed 2026-08-16; no fix scheduled)
+**Found:** 2026-08-15, writing up how the private classes are modeled. Not
+found by playing a world — found by varying one field and measuring, which is
+why it survived a stagflation preset, a validation battery and five gates
+unnoticed.
+
+**Scope note.** Like ER-3, ER-6 and ER-12 this spans two layers: the `toy-v0`
+return process AND the `ah/port/` + `ah/play.py` cohort/institution model.
+Unlike them it is not a mechanic that behaves wrongly — it is a channel that
+does not exist. Supporting detail, with the probe scripts,
+in `docs/current/private-markets-and-inflation.md`.
+
+**What happens.** No private market return has an inflation term. Varying only
+`factor_conditions.inflation.average_pct` on the stagflation preset, 200 paths,
+`base_seed=12345`, annualized:
+
+| infl % | equity | bonds | hy | commodities | reits | **pe** | **pc** | **re** |
+|---|---|---|---|---|---|---|---|---|
+| 1.0 | −0.997 | 5.314 | 9.352 | 11.322 | −1.051 | **−1.772** | **7.369** | **1.839** |
+| 2.0 | −0.997 | 5.314 | 9.352 | 11.322 | −1.051 | **−1.772** | **7.369** | **1.839** |
+| 6.5 | −0.997 | 5.236 | 9.363 | 15.817 | −1.064 | **−1.772** | **7.378** | **1.798** |
+| 12.0 | −0.997 | 5.059 | 9.378 | 22.271 | −1.089 | **−1.772** | **7.391** | **1.722** |
+
+**Private equity is bit-identical across a twelvefold change in inflation** —
+`pe = 1.4*eq + const`, and the equity stream carries no inflation term either,
+so the pass-through is zero by construction rather than merely small. Private
+credit moves +0.02pp; real estate moves **−0.12pp**, the wrong sign for the
+class most often held as an inflation hedge. Commodities is the only asset with
+material pass-through. The 1.0 and 2.0 rows are identical in every column: the
+rate-shock term is `max(0, infl_avg − 2.0)`, so below the anchor a deflationary
+world and a target world are the same world. Declared `inflation.peak_pct`
+changes no return to three decimals — `_inflation_path` reads only
+`average_pct`, and `peak_pct` is consumed solely by the generator's joinery.
+
+**The negative signs are volatility drag, not repricing** — worth stating,
+because the intuitive mechanism (inflation → rates → property marked down) is
+*not* what the code does, and was disproved by probe when this entry was
+drafted. The realized policy path is nearly unmoved (mean 6.342 → 6.358 across
+the range; start-to-end change actually falls 1.774 → 1.741). What rises is the
+rate-shock magnitude, and each asset's compounded return falls in proportion to
+its own `d_rate` coefficient while its arithmetic mean rises:
+
+| asset | `d_rate` coef | Δ compounded | Δ arithmetic | Δ vol |
+|---|---|---|---|---|
+| bonds | −6.0 | −0.255 | +0.055 | +4.313 |
+| re | −4.0 | −0.117 | +0.013 | +1.367 |
+| reits | −2.5 | −0.038 | +0.008 | +0.331 |
+| pc | 0.0 | +0.022 | +0.015 | +0.006 |
+| **pe** | **0.0** | **0.000** | **0.000** | **0.000** |
+
+**The cashflow layer does not carry it either.** Tier 1's linkage functions
+take equity drawdown depth and the spread ratio and nothing else, by signature
+(Delta 3, structural), so a stagflation world starves distributions only insofar
+as it also crashes equities or widens spreads. Summed over the decade,
+`simulate_play` with no player decisions: distributions 46.325 → 46.390 from 1%
+to 12% inflation, and 28 forced-sale quarters at every level.
+
+**The institution *looks* inflation-sensitive, and is not.** Final private NAV
+rises 34.98 → 37.92 across the range. Move the five commodity points into
+equity and it reverses:
+
+| infl % | private NAV (with commodities) | private NAV (commodities → equity) |
+|---|---|---|
+| 1.0 | 34.982 | 31.066 |
+| 6.5 | 36.016 | 30.953 |
+| 12.0 | 37.917 | **30.702** |
+
+Every bit of the private book's inflation response is a second-order effect of
+a *liquid* sleeve sitting beside it, transmitted through total NAV → reported
+private weight → the pacing multiplier → commitments → calls. Nothing in the
+private model responds. Strip the commodity sleeve and higher inflation makes
+the private programme slightly smaller.
+
+**The contract knows how to say it; nothing implements it.** The only
+asset-side inflation-linkage field in the whole of `schemas/` is
+`structural.infrastructure.inflation_linkage` ("Share of revenues contractually
+inflation-linked", 0–1) — and infrastructure is not in `ASSETS`. The single
+field that expresses this concept belongs to the one private class the engine
+does not simulate. Six further private-market fields are declared, carried in
+presets, and read by no engine: `private_equity.leverage_turns` (the 1.4×
+beta is a constant), `private_credit.recovery_rate_pct` and
+`.spread_over_base_bps` (+4.5% hardcoded), `real_estate.income_yield_pct`
+(4.5% hardcoded), both infrastructure fields, and
+`smoothing.weights_on_truth.infrastructure`. This is not a schema defect —
+`schemas/` is vendored read-only truth and may describe more than any engine
+implements — but it marks where a world author's intent stops at the contract
+boundary.
+
+**Spending is nominal too.** `Policy.spending_rate_annual` charges 4.5% of
+nominal reported value with no CPI indexation, so an inflationary world quietly
+erodes real spending power instead of forcing the liquidity squeeze an indexed
+payout would — which is the direction that would actually bite. `ah/port/twin.py`
+(the pension twin, off the play path) *does* index: `inflation_linked_share`
+defaults to 0.7 and `inflation_shock()` moves liability PV against an
+`inflation_hedge_ratio` offset. The machinery exists and the played institution
+does not use it.
+
+**What a fix looks like.** Minimally, an inflation term on the private return
+streams with a per-class linkage share — real estate and infrastructure high,
+buyout partial (revenue pass-through net of input costs), direct lending
+negative in real terms — hung off the existing
+`structural.infrastructure.inflation_linkage` field extended to the other
+classes, and an `infra` asset so that field has something to attach to.
+Honestly, that alone is cosmetic: the cashflow layer would still be blind,
+because tier 1's linkage cannot see inflation by signature. A real fix admits
+inflation as a third continuous state to `f_dist`/`f_call` (an amendment to a
+frozen artifact and to the Delta 3 structural rule), and indexes the spending
+policy. The `_inflation_path` the engine already simulates and currently uses
+for display only is the obvious carrier — it exists, it is on the digest, and
+nothing reads it.
+
+**Consequences.** Large, which is why this is filed rather than fixed.
+Changing any private return bumps **`TOY_ENGINE_VERSION`** and invalidates every
+existing RunRecord digest; changing the institution's response bumps
+**`PLAY_ALPHA_VERSION`** (both stamps — `port-v4-ladder` and
+`port-v4-ladder-gen`) and restarts leaderboards; both committed bundles
+(`app/fixtures/toy.bundle.gz`, `gen.bundle.gz`) rebuild; the validation battery
+re-runs and its stylized facts move. Touching `f_dist`/`f_call` additionally
+means amending a sealed artifact (`mappings/cashflow-tier1-v1.0.yaml`) through
+the machine-checked log, and relaxing the no-regime-label rule far enough to
+admit a new state is a decision about Delta 3, not a parameter change.
+`decision_alpha_version` inside the G5 seal is **not** touched — that names
+Step 5's research definition and would mean something different.
+
+**Why it is recorded and left as-is.** The mechanisms above are all faithful to
+their plans; several are close-outs of real defects (ER-1, ER-6, ER-7, ER-10,
+ER-12), and the cashflow layer is the most trustworthy part of the system. What
+this entry records is a *missing* channel, not a broken one. But the standing
+caveat applies with unusual force here: stagflation is one of the four shipped
+worlds and the one the battery runs on, so a player allocating in it — or a
+reader of a stagflation chronicle — sees a private book measurably indifferent
+to the defining feature of that world. Real allocators hold infrastructure and
+property *specifically* for inflation linkage. Until this is closed, no
+inflation-conditioned result about private markets from this platform means
+anything, and that should be said out loud rather than inferred from a register
+entry.
