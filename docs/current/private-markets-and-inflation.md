@@ -1,8 +1,15 @@
 # Private markets and inflation pass-through
 
-*Status: GOVERNING (2026-08-15). A technical account of how the private market
-asset classes are modeled across the three layers that model them, and of what
-happens to a private book when the world's inflation changes.*
+*Status: GOVERNING (2026-08-15; ER-14 filed 2026-08-16). A technical account of
+how the private market asset classes are modeled across the three layers that
+model them, and of what happens to a private book when the world's inflation
+changes.*
+
+> **The inflation finding below is filed as ER-14** in
+> `docs/engine-realism-register.md`, which is the governing statement of it and
+> carries the consequences of any fix. This document is the supporting detail —
+> the layer-by-layer account of the model, the unconsumed-field map, and the
+> probes that produced the numbers.
 
 **The short version.** Private markets are modeled in three separate places
 that agree on the state contract and disagree on almost everything else: the
@@ -342,15 +349,16 @@ and `inflation_shock()` moves liability PV with an
 `inflation_hedge_ratio` offset. The machinery exists; the played institution
 does not use it.
 
-**Recommended, and explicitly the owner's call:** this is register-shaped —
-faithful to plan, not faithful to an allocator's expectations — and belongs in
-`docs/engine-realism-register.md` as **ER-14**, not in a side document. It is
-not filed here because CLAUDE.md makes register entries a release event and the
-owner's decision, and because a fix would move every private return in every
-world: new `TOY_ENGINE_VERSION`, a new play-alpha stamp, both committed bundles
-rebuilt, and the battery re-run. The `structural.infrastructure.inflation_linkage`
-field is the natural hook if it is ever taken up — the contract already knows
-how to express the thing.
+**Filed as ER-14** (owner decision, 2026-08-16). The finding is
+register-shaped — faithful to plan, not faithful to an allocator's expectations
+— and `docs/engine-realism-register.md` **ER-14 is now the governing statement
+of it**, including the consequences of any fix: `TOY_ENGINE_VERSION` and both
+`PLAY_ALPHA_VERSION` stamps bump, every RunRecord digest is invalidated, both
+committed bundles rebuild, the battery re-runs, and admitting inflation to
+tier 1's linkage would need an amendment to a sealed artifact plus a decision
+about the Delta 3 no-regime-label rule. Status is `open`, no fix scheduled.
+This document remains the supporting detail: the layer-by-layer account, the
+unconsumed-field map, and the probes in §7.
 
 ---
 
@@ -403,6 +411,6 @@ Reading, rather than running: `ah/core/engine.py:405-448` (the return block),
 
 ## Related
 
-- `docs/engine-realism-register.md` — ER-1, ER-3, ER-6, ER-7, ER-10, ER-11, ER-12 all touch this surface directly. ER-3's "what is still open" note is the closest existing statement of the boundary described here.
+- `docs/engine-realism-register.md` — **ER-14** is this document's finding, filed. ER-1, ER-3, ER-6, ER-7, ER-10, ER-11 and ER-12 all touch the same surface; ER-3's "what is still open" note is the closest prior statement of the boundary described here.
 - `Instructions/DN1.1-multiyear-generator-design-note.md`, DN-5 §3.3 — the PM growth-loading priors that `sleeve-mappings-v1.0.yaml` superseded.
 - `G1-EVIDENCE.md` — the Step 3 completion gate, an honest FAIL, with tier 1 beaten by tier 0 on the 2022 episode.

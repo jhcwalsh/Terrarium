@@ -39,11 +39,27 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
   private-market fields (`leverage_turns`, `income_yield_pct`,
   `recovery_rate_pct`, `spread_over_base_bps`, both infrastructure fields,
   and `inflation.peak_pct`, which changes no return to three decimals).
-  **This is register-shaped and the note says so: it recommends an ER-14 in
-  `docs/engine-realism-register.md` but does not file one**, because CLAUDE.md
-  makes register entries a release event and the owner's call, and a fix would
-  bump `TOY_ENGINE_VERSION`, bump the play-alpha stamp, rebuild both committed
-  bundles and re-run the battery.
+- **ER-14 filed in `docs/engine-realism-register.md` — "Inflation does not
+  reach private markets at all" (owner decision, 2026-08-16).** The note above
+  recommended it and deliberately did not file it, register entries being a
+  release event and the owner's call; the owner made the call. ER-14 is now the
+  governing statement of the finding and the note is its supporting detail —
+  both cross-reference, and `CLAUDE.md`'s register summary and
+  `docs/current/README.md` are updated. Status `open`, no fix scheduled.
+
+  The entry carries the measured tables, the volatility-drag correction, and
+  the full consequences of any fix, which are why it is filed rather than
+  fixed: **`TOY_ENGINE_VERSION`** bumps and every RunRecord digest is
+  invalidated; **both `PLAY_ALPHA_VERSION` stamps** (`port-v4-ladder` and
+  `port-v4-ladder-gen`) bump and leaderboards restart; both committed bundles
+  rebuild; the battery re-runs and its stylized facts move. It also records
+  what a *real* fix costs beyond the return process: tier 1's `f_dist`/`f_call`
+  cannot see inflation **by signature** (Delta 3, structural), so admitting it
+  means amending the sealed `mappings/cashflow-tier1-v1.0.yaml` through the
+  machine-checked log and taking a decision about the no-regime-label rule
+  itself — not a parameter change. `decision_alpha_version` inside the G5 seal
+  is explicitly untouched. The engine already simulates an inflation path that
+  nothing reads; it is the obvious carrier if this is ever taken up.
 
 - **The gate-merge guard now actually fires (housekeeping-03).** It never had.
   **`git merge` does not run `pre-commit`**, and this repository shipped only

@@ -213,7 +213,13 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   months) and ER-13 (the CIO dashboard's inherited decade is a simulated
   past scaled to the opening book's NAV, not a reconstruction of the history
   that actually produced it — opening weights sit exactly at target, with no
-  drift) are open. **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
+  drift) and **ER-14** (inflation does not reach private markets AT ALL:
+  PE is bit-identical from 1% to 12% inflation, RE moves the wrong way,
+  the tier-1 linkage cannot see inflation by signature, and the whole
+  apparent response of the private book is a second-order effect of the
+  commodity sleeve beside it — filed 2026-08-16, detail in
+  `docs/current/private-markets-and-inflation.md`) are open.
+  **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
   10 + expiry-at-lapse ledger; play alphas now `port-v2-cashflow`/`-gen`; the E1
   commitment lever is unblocked). **ER-10 CLOSED 2026-08-13** (`_reported_marks`
   filtered only the quarter-end month's true return through the appraisal
