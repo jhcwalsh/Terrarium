@@ -285,3 +285,39 @@ def test_full_play_completes(stored_run):
     assert done["status"] == "completed"
     with pytest.raises(ss.SessionError, match="not active"):
         ss.record_decision(conn, sid, month=11, action="hold")
+
+
+class TestOpeningBookColumns:
+    """su-app-06: the entered book is the session's book of record."""
+
+    def test_a_session_defaults_to_no_book(self, stored_run):
+        db, rid = stored_run
+        conn = connect(db)
+        rec = ss.create_session(conn, run_id=rid, months=120)
+        assert rec["opening_book"] is None
+        assert rec["commitment_plan"] is None
+
+    def test_a_book_and_plan_round_trip_as_stored_json(self, stored_run):
+        db, rid = stored_run
+        conn = connect(db)
+        book = '{"state_version":"opening-book-0.1","cash":2.0}'
+        plan = '{"state_version":"commitment-plan-0.1"}'
+        rec = ss.create_session(
+            conn, run_id=rid, months=120, opening_book=book, commitment_plan=plan
+        )
+        again = ss.get_session(conn, rec["session_id"])
+        assert again["opening_book"] == book
+        assert again["commitment_plan"] == plan
+
+    def test_the_columns_are_added_to_a_pre_existing_database(self, tmp_path):
+        """The additive-column pattern: an old database upgrades in place and
+        its rows read back NULL rather than failing."""
+        path = tmp_path / "old.db"
+        conn = connect(path)
+        conn.execute("ALTER TABLE sessions DROP COLUMN opening_book")
+        conn.execute("ALTER TABLE sessions DROP COLUMN commitment_plan")
+        conn.commit()
+        conn.close()
+        conn = connect(path)  # migrate() must put them back
+        columns = {row["name"] for row in conn.execute("PRAGMA table_info(sessions)")}
+        assert {"opening_book", "commitment_plan"} <= columns
