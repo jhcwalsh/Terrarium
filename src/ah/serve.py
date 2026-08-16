@@ -44,11 +44,16 @@ from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import (
     PLAY_ALPHA_VERSION,
+    PRIVATE_ASSETS,
+    START_TARGETS,
+    default_commitment_plan,
+    default_opening_book,
     plan_commitments,
     simulate_play,
     validate_commitments,
     window_contributions_play,
 )
+from ah.port.book import BookError, CommitmentPlan, OpeningBook, validate_book, validate_plan
 from ah.store import sessions as session_store
 from ah.store.db import connect
 from ah.store.runrecords import get_run_record
@@ -89,6 +94,35 @@ def _build_bundle_bytes(conn: sqlite3.Connection, run_id: str) -> bytes:
         return target.read_bytes()
 
 
+def _world_book(
+    conn: sqlite3.Connection, run_id: str
+) -> tuple[OpeningBook, CommitmentPlan, tuple[str, ...]]:
+    """The derived default for the world behind ``run_id``, and its sleeve set."""
+    rec = get_run_record(conn, run_id)
+    if rec is None:
+        raise HTTPException(status_code=404, detail=f"no run_record {run_id}")
+    world = get_world(conn, rec["world_id"])
+    if world is None:  # pragma: no cover - FK'd at creation
+        raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
+    ws = WorldSpec.model_validate(world)
+    targets = dict(START_TARGETS)
+    if ws.engine_defaults.generator_id != "toy-v0":
+        from ah.port.adapter import GEN_START_TARGETS
+
+        targets = dict(GEN_START_TARGETS)
+    liquid = tuple(a for a in targets if a not in PRIVATE_ASSETS)
+    return default_opening_book(targets), default_commitment_plan(targets), liquid
+
+
+def _plan_targets(book: OpeningBook) -> dict[str, float]:
+    """The per-sleeve target NAV a plan's cap is measured against — for an
+    entered book that is the sleeve's own opening NAV, not START_TARGETS."""
+    return {
+        sleeve: sum(float(r["value"]["nav_true"]) for r in rungs)
+        for sleeve, rungs in book.private.items()
+    }
+
+
 _REPO_ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 
@@ -98,6 +132,10 @@ class CreateSession(BaseModel):
     basis: str = "reported"
     ranked: bool = False
     participant: str | None = None
+    # su-app-06: an entered book and kickoff plan. Absent = the derived
+    # default, which is every session that existed before this.
+    book: OpeningBook | None = None
+    plan: CommitmentPlan | None = None
 
 
 class Advance(BaseModel):
@@ -209,6 +247,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             )
         return {"worlds": worlds}
 
+    @app.get("/book/default")
+    def default_book(run_id: str, conn: sqlite3.Connection = Depends(db)):
+        """su-app-06: the pre-fill the entry screen opens with — today's
+        derived book and the flat fixed-rule plan, for THIS world's sleeve
+        set. Built by the engine's own code, never a second implementation."""
+        book, plan, liquid = _world_book(conn, run_id)
+        return {
+            "book": book.model_dump(),
+            "plan": plan.model_dump(),
+            "liquid_sleeves": list(liquid),
+            "book_digest": book.digest(),
+            "plan_digest": plan.digest(),
+        }
+
     @app.get("/runs/{run_id}/bundle")
     def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):
         """sib-01: served bytes are byte-identical to ``ah bundle`` — same
@@ -229,14 +281,35 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         if world is None:
             raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
         months = WorldSpec.model_validate(world).horizon.quarters * 3
+
+        default_book_, default_plan_, liquid = _world_book(conn, body.run_id)
+        ranked = body.ranked
+        book_json = plan_json = None
+        if body.book is not None or body.plan is not None:
+            book = body.book or default_book_
+            plan = body.plan or default_plan_
+            try:
+                validate_book(book, liquid_sleeves=liquid)
+                validate_plan(plan, _plan_targets(book))
+            except BookError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            # section 2: a custom book is PRACTICE ONLY. Enforced here, on the
+            # authority, not in the app.
+            if book.digest() != default_book_.digest() or plan.digest() != default_plan_.digest():
+                ranked = False
+            book_json = book.model_dump_json()
+            plan_json = plan.model_dump_json()
+
         try:
             return session_store.create_session(
                 conn,
                 run_id=body.run_id,
                 months=months,
                 basis=body.basis,
-                ranked=body.ranked,
+                ranked=ranked,
                 participant=body.participant,
+                opening_book=book_json,
+                commitment_plan=plan_json,
             )
         except session_store.SessionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -298,8 +371,17 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, _alpha = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
-        twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
+        # su-app-06: the SAME stored book (or None for the derived default)
+        # goes to both the active session and the twin — alpha must still
+        # isolate decisions, not differences in opening state.
+        stored = doc.get("opening_book")
+        book = OpeningBook.model_validate_json(stored) if stored else None
+        active = simulate_play(
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
+        twin = simulate_play(
+            paths, None, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
         # only quarters that have CLOSED inside the revealed window
         q = min(revealed // 3, len(active.quarters)) - 1
         here, twin_here = active.quarters[q], twin.quarters[q]
