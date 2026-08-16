@@ -29,6 +29,7 @@ from ah.play import (
     simulate_play,
     window_contributions_play,
 )
+from ah.port.book import OpeningBook
 
 __all__ = ["post_game_annotations"]
 
@@ -43,12 +44,28 @@ def post_game_annotations(
     *,
     use_reported: bool = True,
     start_targets: Mapping[str, float] | None = None,
+    opening_book: OpeningBook | None = None,
 ) -> list[dict[str, Any]]:
-    """The E4 annotations for one played decade, deterministic."""
+    """The E4 annotations for one played decade, deterministic.
+
+    ``opening_book`` (su-app-06) rides along on every replay here — the
+    active run, the attribution, and the flinch-cost restoration — so the
+    annotations describe the book the player actually held.
+    """
     decisions = dict(decisions or {})
-    active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=start_targets)
+    active = simulate_play(
+        paths,
+        decisions,
+        use_reported=use_reported,
+        start_targets=start_targets,
+        opening_book=opening_book,
+    )
     attribution = window_contributions_play(
-        paths, decisions, use_reported=use_reported, start_targets=start_targets
+        paths,
+        decisions,
+        use_reported=use_reported,
+        start_targets=start_targets,
+        opening_book=opening_book,
     )
     contrib_by_month = dict(zip(attribution.months, attribution.contributions, strict=True))
     quarters = active.quarters
@@ -71,7 +88,11 @@ def post_game_annotations(
                 counter: dict[int, str | Mapping[str, Any]] = dict(decisions)
                 counter[month] = name if name != "commit" else "hold"
                 restored = simulate_play(
-                    paths, counter, use_reported=use_reported, start_targets=start_targets
+                    paths,
+                    counter,
+                    use_reported=use_reported,
+                    start_targets=start_targets,
+                    opening_book=opening_book,
                 )
                 shortfall = sum(q.distributions_received for q in restored.quarters) - sum(
                     q.distributions_received for q in quarters

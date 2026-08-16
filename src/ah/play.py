@@ -868,16 +868,26 @@ def window_contributions_play(
     use_reported: bool = True,
     policy: Policy | None = None,
     start_targets: Mapping[str, float] | None = None,
+    opening_book: OpeningBook | None = None,
 ) -> PlayAttribution:
     """K+1 runs for K windows — exact, no sampling.
 
     Windows the participant left unmapped default to hold inside
     :func:`simulate_play` exactly as they did when the sequence was played, so
     a partial decision map still decomposes correctly.
+
+    ``opening_book`` (su-app-06) rides along on the twin AND every prefix
+    replay — the same entered book throughout, so the chain-link
+    decomposition still isolates decisions rather than mixing institutions.
     """
     months_list = decision_months(paths.months)
     twin = simulate_play(
-        paths, None, use_reported=use_reported, policy=policy, start_targets=start_targets
+        paths,
+        None,
+        use_reported=use_reported,
+        policy=policy,
+        start_targets=start_targets,
+        opening_book=opening_book,
     )
     prev_final = float(twin.final_value)
 
@@ -893,6 +903,7 @@ def window_contributions_play(
             use_reported=use_reported,
             policy=policy,
             start_targets=start_targets,
+            opening_book=opening_book,
         )
         final = float(run.final_value)
         contributions.append(final - prev_final)

@@ -335,6 +335,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         except session_store.SessionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
 
+    def _stored_opening_book(doc: dict[str, Any]) -> OpeningBook | None:
+        """The session's entered book, or ``None`` for the derived default —
+        su-app-06's single deserialization point, shared by every replay
+        surface (`_mark_to_market`, `/outcome`, `/cio`) so a session's book
+        is decoded the same way everywhere it is read back."""
+        stored = doc.get("opening_book")
+        return OpeningBook.model_validate_json(stored) if stored else None
+
     def _mark_to_market(conn: sqlite3.Connection, doc: dict[str, Any]) -> dict[str, Any]:
         """Attach the book's value AS AT the reveal pointer, and the twin's.
 
@@ -395,8 +403,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         # su-app-06: the SAME stored book (or None for the derived default)
         # goes to both the active session and the twin — alpha must still
         # isolate decisions, not differences in opening state.
-        stored = doc.get("opening_book")
-        book = OpeningBook.model_validate_json(stored) if stored else None
+        book = _stored_opening_book(doc)
         active = simulate_play(
             paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
         )
@@ -491,6 +498,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
         decisions = {int(m): a for m, a in doc["decisions"].items()}
         resolved = rec.get("resolved_engine") or {}
+        # su-app-06: this is a LIVE surface, not just an endgame one — a
+        # player on a custom book must see a dashboard for that book at
+        # every reveal, matching the header's own value (task 5b).
+        book = _stored_opening_book(doc)
         return build_cio_view(
             paths,
             decisions,
@@ -508,6 +519,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             # splicing it onto a generated (non-toy-v0) world would stitch two
             # engines into one chart, so generated worlds opt out here.
             prehistory=(ws.engine_defaults.generator_id == "toy-v0"),
+            opening_book=book,
         )
 
     @app.post("/sessions/{sid}/advance")
@@ -612,16 +624,30 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
-        active = simulate_play(paths, decisions, use_reported=use_reported, start_targets=targets)
-        twin = simulate_play(paths, None, use_reported=use_reported, start_targets=targets)
+        # su-app-06: the SAME stored book (or None for the derived default)
+        # goes to every replay below — active, twin, drift twin, the
+        # per-window attribution and the annotations — so the endgame
+        # verdict describes the book the player actually held (task 5b).
+        book = _stored_opening_book(doc)
+        active = simulate_play(
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
+        twin = simulate_play(
+            paths, None, use_reported=use_reported, start_targets=targets, opening_book=book
+        )
         # sp-01: the DRIFT twin (DN-5's fixed nominal schedule) — E7's slot
         # receives its data at last; the difference between these two series
         # across a decade is the vintage-timing argument, drawn not argued.
         drift = simulate_play(
-            paths, None, use_reported=use_reported, start_targets=targets, pacing_rule="fixed"
+            paths,
+            None,
+            use_reported=use_reported,
+            start_targets=targets,
+            pacing_rule="fixed",
+            opening_book=book,
         )
         attribution = window_contributions_play(
-            paths, decisions, use_reported=use_reported, start_targets=targets
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
         )
 
         # sp-03 (E4): the flinch cost and the arithmetic warning ride the
@@ -629,7 +655,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         from ah.annotations import post_game_annotations
 
         annotations = post_game_annotations(
-            paths, decisions, use_reported=use_reported, start_targets=targets
+            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
         )
 
         alpha = active.final_value - twin.final_value

@@ -20,6 +20,7 @@ import numpy as np
 
 from ah.core.engine import EnginePaths
 from ah.play import PRIVATE_ASSETS, START_CASH, START_TARGETS, PlayResult, simulate_play
+from ah.port.book import OpeningBook
 from ah.prehistory import PreHistory, build_prehistory
 
 PLANES: tuple[str, str] = ("reported", "true")
@@ -152,6 +153,7 @@ def build_cio_view(
     revealed_months: int,
     forecast_quarters: int = 4,
     prehistory: bool = True,
+    opening_book: OpeningBook | None = None,
 ) -> dict[str, Any]:
     """``prehistory`` prepends the inherited decade (cio-04) ahead of world
     month 0 — the plan chart, the long return windows and the market-path
@@ -161,7 +163,13 @@ def build_cio_view(
     which engine produced ``paths``, so a caller splicing it onto a
     generated (non-toy-v0) world would be stitching two engines into one
     chart. This function does not sniff ``paths`` for that — the caller
-    decides and passes the flag (``ah/serve.py``)."""
+    decides and passes the flag (``ah/serve.py``).
+
+    ``opening_book`` (su-app-06) rides along on both the active replay and
+    its twin — this is a LIVE surface (mid-decade, not just at outcome), so
+    a player who entered a custom book must see a dashboard for that book
+    the whole way through, not just at the end.
+    """
     if plane not in PLANES:
         raise ValueError(f"plane must be one of {PLANES}, got {plane!r}")
     n_q = revealed_months // 3
@@ -169,8 +177,10 @@ def build_cio_view(
         raise ValueError("no closed quarter inside the revealed window")
     hist_months = n_q * 3
     frozen = _frozen_paths(paths, hist_months, forecast_quarters)
-    active = simulate_play(frozen, dict(decisions), start_targets=start_targets)
-    twin = simulate_play(frozen, None, start_targets=start_targets)
+    active = simulate_play(
+        frozen, dict(decisions), start_targets=start_targets, opening_book=opening_book
+    )
+    twin = simulate_play(frozen, None, start_targets=start_targets, opening_book=opening_book)
     targets = dict(start_targets) if start_targets is not None else dict(START_TARGETS)
     last = active.quarters[n_q - 1]
     q_rets = _quarterly_returns(active, plane, n_q)
