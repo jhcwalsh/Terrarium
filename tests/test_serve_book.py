@@ -439,6 +439,18 @@ class TestBookThreadedThroughReplaySurfaces:
         `_allocation`'s `value_of` reads `private_reported` on the default
         "reported" plane, a different (if numerically equal, by fixture
         luck) number.
+
+        Both tie-out checks below assert EXACT equality (`==`), not
+        `pytest.approx`. Every sleeve here carries exactly one rung, so the
+        "sum" on both sides is a single float passed through with no
+        addition to round — JSON round-trips a value like `20.0` or `25.0`
+        bit-for-bit (it is exactly representable in float64), and
+        `_allocation`'s `round(value_of(cid), 4)` (`ah/cioview.py`) is a
+        no-op on a number that is already round to zero decimal places.
+        There is no operation on either side of this comparison that
+        reorders or accumulates floats, so exact equality is the correct
+        (and stronger) assertion — an `approx` here would have quietly
+        accepted a real desync as small as `rel=1e-6` of the compared value.
         """
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
@@ -452,7 +464,7 @@ class TestBookThreadedThroughReplaySurfaces:
         classes = {c["id"]: c for c in cio["allocation"]["classes"]}
         for sleeve in ("pe", "pc", "re"):
             ladder_sum = sum(rung["value"]["nav_true"] for rung in book["private"][sleeve])
-            assert classes[sleeve]["value"] == pytest.approx(ladder_sum)
+            assert classes[sleeve]["value"] == ladder_sum
 
         # And again on an EDITED ladder — the default book's targets equal
         # its values (Ruling D), so the check above alone could pass a CIO
@@ -478,7 +490,7 @@ class TestBookThreadedThroughReplaySurfaces:
 
         cio2 = client.get(f"/sessions/{sid2}/cio", params={"plane": "true"}).json()
         classes2 = {c["id"]: c for c in cio2["allocation"]["classes"]}
-        assert classes2["pe"]["value"] == pytest.approx(25.0)
+        assert classes2["pe"]["value"] == 25.0
         assert classes2["pe"]["value"] != pytest.approx(classes["pe"]["value"])
 
 
