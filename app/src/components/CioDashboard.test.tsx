@@ -587,6 +587,23 @@ describe("CioDashboard — allocation table Band column (app-open-02 task 2)", (
     const cells = [...cashRow!.querySelectorAll("td")];
     expect(cells[5]?.textContent).toBe("—");
   });
+
+  it("renders an em dash for a NON-cash class the book carries no range for (branch-review I1)", () => {
+    // The renderer already tolerates null bandLoPct/bandHiPct generically
+    // (isNum checks, not a cid === "cash" special case) — this pins that a
+    // book-silent sleeve (not just cash) reads as "no band", not as the
+    // old hardcoded BAND_PCT fallback.
+    const v: CioView = JSON.parse(JSON.stringify(view));
+    const commodities = v.allocation.classes.find((c) => c.id === "commodities")!;
+    commodities.bandLoPct = null;
+    commodities.bandHiPct = null;
+    render(<CioDashboard view={v} onPlaneChange={() => {}} />);
+    const rows = [...host!.querySelectorAll("tr")];
+    const row = rows.find((r) => (r.textContent ?? "").includes("Commodities"));
+    expect(row).toBeTruthy();
+    const cells = [...row!.querySelectorAll("td")];
+    expect(cells[5]?.textContent).toBe("—");
+  });
 });
 
 describe("CioDashboard — table & panel labels spelled out (app-open-02 task 5)", () => {
@@ -683,6 +700,20 @@ describe("CioDashboard — allocation panel band zones (app-open-02 task 3)", ()
     );
     expect(cashRow).toBeTruthy();
     expect(bandZonesIn(cashRow as Element).length).toBe(0);
+  });
+
+  it("a non-cash class with a null band (branch-review I1: book-silent sleeve) renders no zone either", () => {
+    const v: CioView = JSON.parse(JSON.stringify(view));
+    const commodities = v.allocation.classes.find((c) => c.id === "commodities")!;
+    commodities.bandLoPct = null;
+    commodities.bandHiPct = null;
+    render(<CioDashboard view={v} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    const commoditiesRow = [...panel.querySelectorAll("div")].find(
+      (d) => (d.textContent ?? "").trim().startsWith("Commodities") && d.querySelector("span"),
+    );
+    expect(commoditiesRow).toBeTruthy();
+    expect(bandZonesIn(commoditiesRow as Element).length).toBe(0);
   });
 
   it("renders one band zone per class that carries a band — 8 of the fixture's 9 classes (cash excluded)", () => {

@@ -358,8 +358,12 @@ export function validateCioView(v: CioView): string[] {
     if (c.returns && c.returns.length !== v.performance.periods.length)
       e.push(`class ${c.id} has ${c.returns.length} returns, expected ${v.performance.periods.length}`);
     const { bandLoPct: lo, bandHiPct: hi } = c;
-    if (c.id === "cash") {
-      if (lo != null || hi != null) e.push(`class ${c.id} carries a band but cash has none`);
+    if (lo == null && hi == null) {
+      // no band declared for this class — always true for cash, and
+      // (branch-review I1) true for any non-cash sleeve a present book is
+      // silent on.
+    } else if (c.id === "cash") {
+      e.push(`class ${c.id} carries a band but cash has none`);
     } else if (lo == null || hi == null) {
       e.push(`class ${c.id} is missing bandLoPct/bandHiPct`);
     } else if (!(lo >= 0 && lo < hi && hi <= 100)) {

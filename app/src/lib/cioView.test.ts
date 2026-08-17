@@ -163,4 +163,19 @@ describe("validateCioView — bandLoPct/bandHiPct (app-open-02 task 2)", () => {
     v.allocation.classes[0].bandHiPct = 20.0;
     expect(validateCioView(v)).toEqual([]);
   });
+
+  it("allows a null band on a non-cash class (branch-review I1: a book-silent sleeve carries no band)", () => {
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = null;
+    v.allocation.classes[0].bandHiPct = null;
+    expect(validateCioView(v)).toEqual([]);
+  });
+
+  it("rejects a partial (one-sided) null band on a non-cash class", () => {
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = 10.0;
+    v.allocation.classes[0].bandHiPct = null;
+    const errors = validateCioView(v);
+    expect(errors.some((e) => e.includes("missing bandLoPct/bandHiPct"))).toBe(true);
+  });
 });

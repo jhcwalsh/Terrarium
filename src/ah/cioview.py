@@ -423,12 +423,19 @@ def _allocation(
     ``book_ranges`` (app-open-02 task 2) is ``OpeningBook.ranges`` — absolute
     allocation POINTS on the SAME scale as ``targets``, so a named sleeve's
     ``lo``/``hi`` converts to percent exactly like ``targetPct`` does
-    (``points / target_total * 100``), not as a symmetric half-width. A
-    sleeve the book is silent on (``book_ranges`` is ``None``, or carries no
-    entry for this sleeve) falls back to the OLD shape: ``BAND_PCT[cid]``
-    half-width around this class's own ``targetPct``. Cash never carries a
-    band either way — it has no target to band around (BookEntry says so
-    on-screen)."""
+    (``points / target_total * 100``), not as a symmetric half-width.
+
+    Branch-review I1: the ``BAND_PCT[cid]`` half-width fallback applies ONLY
+    when there is NO BOOK AT ALL (``book_ranges is None`` — the replay/console
+    no-book view). With a book present, a sleeve absent from ``book_ranges``
+    gets ``(None, None)`` — the same "no band" shape as cash — rather than
+    the hardcoded policy fallback. That fallback used to show a band the
+    player had never declared, or had deliberately cleared via BookEntry,
+    with nothing on screen distinguishing it from one they actually set, and
+    free to raise its own watch/breach alert against it. This now agrees with
+    ``serve.py::_band_report``, which omits such a sleeve entirely rather
+    than inventing a band for it. Cash never carries a band either way — it
+    has no target to band around (BookEntry says so on-screen)."""
     target_total = sum(targets.values()) + cash_target
     if n_q > 0:
         last = active.quarters[n_q - 1]
@@ -455,8 +462,13 @@ def _allocation(
         # meaningful for cash, a reporting band is not).
         if cid == "cash":
             return None, None
-        book_band = (book_ranges or {}).get(cid)
-        if book_band is not None:
+        if book_ranges is not None:
+            # a book is present: a sleeve it is silent on gets no band at
+            # all (I1) — the BAND_PCT fallback below is reserved for the
+            # no-book-at-all case.
+            book_band = book_ranges.get(cid)
+            if book_band is None:
+                return None, None
             lo_points, hi_points = book_band
             return (
                 round(lo_points / target_total * 100.0, 4),
@@ -863,9 +875,12 @@ def validate_cio_view(v: dict[str, Any]) -> list[str]:
         if c.get("returns") is not None and len(c["returns"]) != len(periods):
             e.append(f"class {c['id']} has {len(c['returns'])} returns, expected {len(periods)}")
         lo, hi = c.get("bandLoPct"), c.get("bandHiPct")
-        if c["id"] == "cash":
-            if lo is not None or hi is not None:
-                e.append(f"class {c['id']} carries a band but cash has none")
+        if lo is None and hi is None:
+            # no band declared for this class — always true for cash, and
+            # (I1) true for any non-cash sleeve a present book is silent on.
+            pass
+        elif c["id"] == "cash":
+            e.append(f"class {c['id']} carries a band but cash has none")
         elif lo is None or hi is None:
             e.append(f"class {c['id']} is missing bandLoPct/bandHiPct")
         elif not (0.0 <= lo < hi <= 100.0):

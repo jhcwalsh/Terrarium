@@ -223,6 +223,26 @@ def test_validator_rejects_a_band_on_a_cash_class():
     assert any("cash" in e and "band" in e for e in errors)
 
 
+def test_validator_allows_a_null_band_on_a_non_cash_class():
+    """Branch-review I1: a non-cash class the book is silent on now carries
+    ``bandLoPct = bandHiPct = None``, same as cash — the validator must not
+    flag that as "missing"."""
+    v = _minimal_view()
+    v["allocation"]["classes"][0]["bandLoPct"] = None
+    v["allocation"]["classes"][0]["bandHiPct"] = None
+    assert validate_cio_view(v) == []
+
+
+def test_validator_rejects_a_partial_band_on_a_non_cash_class():
+    """Only-one-side-None stays an error — it is a malformed payload, not the
+    "no band declared" shape (which is both sides None)."""
+    v = _minimal_view()
+    v["allocation"]["classes"][0]["bandLoPct"] = 10.0
+    v["allocation"]["classes"][0]["bandHiPct"] = None
+    errors = validate_cio_view(v)
+    assert any("missing bandLoPct/bandHiPct" in e for e in errors)
+
+
 def _view(
     plane: str = "reported",
     revealed: int = 60,
@@ -348,10 +368,17 @@ def test_bands_fall_back_to_band_pct_around_target_with_no_book():
         assert c["bandHiPct"] == pytest.approx(c["targetPct"] + half)
 
 
-def test_bands_fall_back_when_the_book_has_no_range_for_a_named_sleeve():
-    """A book can carry ``ranges`` for some sleeves and not others (or none
-    at all) — a sleeve the book is silent on still gets the BAND_PCT
-    fallback around its own (book-derived) targetPct, not a missing field."""
+def test_book_present_sleeve_without_a_range_gets_no_band():
+    """Branch-review I1: a book can carry ``ranges`` for some sleeves and not
+    others. With a book PRESENT, a sleeve the book is silent on gets NO band
+    (``None, None`` — same shape as cash), not the ``BAND_PCT`` policy
+    fallback. That fallback would show the player a hardcoded band they never
+    declared (or, per the failure scenario, deliberately cleared via
+    BookEntry), indistinguishable on screen from a band they actually set,
+    and free to raise its own watch/breach alert — contradicting
+    ``serve.py::_band_report``, which omits such a sleeve entirely rather
+    than inventing one. ``BAND_PCT`` remains the fallback ONLY when there is
+    no book at all (see ``test_bands_fall_back_to_band_pct_around_target_with_no_book``)."""
     book = default_opening_book(START_TARGETS)
     partial = book.model_copy(deep=True)
     partial.ranges = {"equity": (20.0, 45.0)}  # every other sleeve is silent
@@ -361,8 +388,14 @@ def test_bands_fall_back_when_the_book_has_no_range_for_a_named_sleeve():
     assert classes["equity"]["bandLoPct"] == pytest.approx(20.0)
     assert classes["equity"]["bandHiPct"] == pytest.approx(45.0)
     bonds = classes["bonds"]
-    assert bonds["bandLoPct"] == pytest.approx(bonds["targetPct"] - BAND_PCT["bonds"])
-    assert bonds["bandHiPct"] == pytest.approx(bonds["targetPct"] + BAND_PCT["bonds"])
+    assert bonds["bandLoPct"] is None
+    assert bonds["bandHiPct"] is None
+    # every other book-silent sleeve is None too, not just bonds
+    for cid in BAND_PCT:
+        if cid in ("cash", "equity"):
+            continue
+        assert classes[cid]["bandLoPct"] is None
+        assert classes[cid]["bandHiPct"] is None
     assert validate_cio_view(v) == []
 
 
