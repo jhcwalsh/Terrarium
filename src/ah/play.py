@@ -268,13 +268,32 @@ def default_commitment_plan(
     in line with the plan's own expected growth instead of shrinking relative
     to a growing book (D-SP-6 session) — ``CommitmentPlan``'s per-year shape
     already carried a non-flat schedule without needing a contract change.
+
+    Every window is also clamped to ``validate_plan``'s own bound
+    (``COMMIT_CAP_MULTIPLE`` x the sleeve's FIXED-rule pace) — the shipped
+    nine-window decade never reaches it (``1.06**8`` ~= 1.594, well under
+    the 2.0x cap), but the schema permits far longer horizons, and at
+    ``k=12`` unclamped growth (``1.06**12`` ~= 2.012) crosses it. The default
+    the server itself serves must never 422 against the server's own
+    validator, for any horizon the schema allows. The clamp reuses
+    ``COMMIT_CAP_MULTIPLE`` and ``_ANNUAL_COMMITMENT_RATE`` — the exact
+    constants and the exact expression ``validate_plan`` computes its cap
+    with — via ``min(escalated, cap)`` rather than a literal, and rather
+    than a scaled growth factor, so a late window sits at *exactly* the cap
+    float ``validate_plan`` computes, never a reordered recomputation of it
+    that could round a hair above. ``validate_plan`` only raises on
+    ``points > cap`` (strict), so landing exactly on the cap always passes.
     """
-    base = plan_commitments(0.0, targets, pacing_rule="fixed")
+    t = dict(targets) if targets is not None else dict(START_TARGETS)
+    base = plan_commitments(0.0, t, pacing_rule="fixed")
+
+    def _window(asset: str, k: int) -> float:
+        escalated = base[asset] * (1.0 + EXPECTED_PLAN_GROWTH) ** k
+        cap = COMMIT_CAP_MULTIPLE * float(t[asset]) * _ANNUAL_COMMITMENT_RATE
+        return min(escalated, cap)
+
     return CommitmentPlan(
-        points={
-            a: [base[a] * (1.0 + EXPECTED_PLAN_GROWTH) ** k for k in range(windows)]
-            for a in PRIVATE_ASSETS
-        }
+        points={a: [_window(a, k) for k in range(windows)] for a in PRIVATE_ASSETS}
     )
 
 

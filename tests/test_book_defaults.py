@@ -10,6 +10,8 @@ from __future__ import annotations
 import pytest
 
 from ah.play import (
+    _ANNUAL_COMMITMENT_RATE,
+    COMMIT_CAP_MULTIPLE,
     EXPECTED_PLAN_GROWTH,
     PRIVATE_ASSETS,
     START_CASH,
@@ -119,3 +121,34 @@ class TestDefaultPlan:
 
     def test_the_default_plan_is_inside_the_declared_bound(self):
         validate_plan(default_commitment_plan(START_TARGETS), dict(START_TARGETS))
+
+    def test_the_shipped_nine_windows_are_unclamped_and_byte_unchanged(self):
+        # 2026-08-17 review fix: default_commitment_plan now clamps each
+        # window to validate_plan's own cap (see below), which must not
+        # move a single value for the shipped decade — 1.06**8 ~= 1.594
+        # stays well under COMMIT_CAP_MULTIPLE (2.0x), so every one of the
+        # nine shipped windows is still the exact unclamped escalation, not
+        # an approximation of it.
+        plan = default_commitment_plan(START_TARGETS)
+        base = plan_commitments(0.0, START_TARGETS, pacing_rule="fixed")
+        for sleeve in PRIVATE_ASSETS:
+            for k, points in enumerate(plan.points[sleeve]):
+                assert points == base[sleeve] * (1.0 + EXPECTED_PLAN_GROWTH) ** k
+
+    def test_a_long_horizon_default_plan_clamps_to_its_own_cap_and_validates(self):
+        # Found in review of app-open-02 task 11 (2026-08-17): unclamped 6%
+        # growth crosses COMMIT_CAP_MULTIPLE (2.0x) at k=12 (1.06**12 ~=
+        # 2.012) — the schema permits horizons far beyond the shipped 40
+        # quarters, so a longer-horizon world's SERVED DEFAULT would 422
+        # against the SERVER'S OWN validator. `windows=15` is synthetic
+        # (no shipped world runs this long) but must still validate and
+        # sit exactly at the cap once escalation would otherwise cross it.
+        windows = 15
+        plan = default_commitment_plan(START_TARGETS, windows=windows)
+        validate_plan(plan, dict(START_TARGETS))  # must not raise
+        for sleeve in PRIVATE_ASSETS:
+            cap = COMMIT_CAP_MULTIPLE * START_TARGETS[sleeve] * _ANNUAL_COMMITMENT_RATE
+            pace = plan.points[sleeve]
+            assert pace[11] < cap  # 1.06**11 ~= 1.898: still below the cap
+            for k in range(12, windows):  # 1.06**12 ~= 2.012: clamps from here
+                assert pace[k] == cap
