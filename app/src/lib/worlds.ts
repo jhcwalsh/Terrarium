@@ -84,14 +84,17 @@ function isWorldsDoc(x: unknown): x is WorldsDoc {
  */
 export const SHOWN_GENERATOR_IDS: readonly string[] = ["bootstrap-stratified"];
 
-/** The latest `created_at` among a world's runs. Doesn't assume the caller's
- * `runs` array is sorted (the server's is; a hand-built payload need not
- * be) — takes the max explicitly. */
-function newestCreatedAt(world: WorldEntry): string {
-  let max = "";
-  for (const run of world.runs) if (run.created_at > max) max = run.created_at;
-  return max;
-}
+/**
+ * app-open-01 review round fix 2 (owner ruling 2026-08-16): world_ids the
+ * store still holds but whose methodology is retired.
+ *
+ * 702 is The Lost Decade at 18-month blocks, superseded by 703 (6-month
+ * blocks, the 2026-08-15 declaration); owner ruling 2026-08-16: worlds on
+ * retired methodology are hidden, never deleted.
+ */
+export const HIDDEN_WORLD_IDS: readonly string[] = [
+  "00000000-0000-4000-9000-000000000702",
+];
 
 /** The single newest run for a world, by `created_at`. */
 function newestRun(world: WorldEntry): WorldRun | null {
@@ -102,22 +105,28 @@ function newestRun(world: WorldEntry): WorldRun | null {
   return best;
 }
 
-/** The worlds this picker renders: `SHOWN_GENERATOR_IDS` only, collapsed to
- * one entry per `world_id` (the reported symptom — "The Lost Decade"
- * appearing twice — is two runs for the same world; keep the entry whose
- * newest run is the most recent). Worlds with no runs are dropped, since
- * there is nothing for their button to open. */
+/**
+ * The worlds this picker renders: `SHOWN_GENERATOR_IDS` only, with
+ * `HIDDEN_WORLD_IDS` fenced out. Worlds with no runs are dropped, since
+ * there is nothing for their button to open.
+ *
+ * app-open-01 review round fix 2: the real duplicate is TWO DIFFERENT
+ * world_ids — 702 and 703 — sharing the display title "The Lost Decade",
+ * which is why a player saw it twice. The `/worlds` document lists each
+ * world_id once (one `WorldEntry` per world, `runs` nested inside it), so
+ * there was never a same-`world_id` collision to dedupe here; a prior
+ * version of this function carried an unreachable Map-based dedupe built
+ * on that false premise. The fix for a title collision is naming which
+ * world_id to hide (`HIDDEN_WORLD_IDS`), not deduping by world_id.
+ */
 export function selectShownWorlds(worlds: WorldEntry[]): WorldEntry[] {
-  const byWorldId = new Map<string, WorldEntry>();
-  for (const world of worlds) {
-    if (!world.generator_id || !SHOWN_GENERATOR_IDS.includes(world.generator_id)) continue;
-    if (world.runs.length === 0) continue;
-    const existing = byWorldId.get(world.world_id);
-    if (!existing || newestCreatedAt(world) > newestCreatedAt(existing)) {
-      byWorldId.set(world.world_id, world);
-    }
-  }
-  return Array.from(byWorldId.values());
+  return worlds.filter(
+    (world) =>
+      !!world.generator_id &&
+      SHOWN_GENERATOR_IDS.includes(world.generator_id) &&
+      !HIDDEN_WORLD_IDS.includes(world.world_id) &&
+      world.runs.length > 0,
+  );
 }
 
 /** Fetches and shape-checks the decade picker's data. Throws
@@ -138,12 +147,12 @@ export function bundleUrlFor(runId: string): string {
 }
 
 /** The "Choose your decade" list: one load button per shown world
- * (`selectShownWorlds` — declared-stress only, deduped by `world_id`),
- * wired to that world's newest run. Renders nothing when there is no doc or
- * nothing survives the filter — `fetchWorlds` failed, hasn't resolved yet,
- * the store has no worlds, or none of them are declared-stress — so the
- * landing view falls back to exactly the picker/URL flow that already
- * existed. */
+ * (`selectShownWorlds` — declared-stress only, `HIDDEN_WORLD_IDS` fenced
+ * out), wired to that world's newest run. Renders nothing when there is no
+ * doc or nothing survives the filter — `fetchWorlds` failed, hasn't
+ * resolved yet, the store has no worlds, or none of them are
+ * declared-stress — so the landing view falls back to exactly the
+ * picker/URL flow that already existed. */
 export function WorldPicker({
   doc,
   onOpen,

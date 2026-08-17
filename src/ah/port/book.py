@@ -44,23 +44,52 @@ PRIVATE_SLEEVES: tuple[str, ...] = ("pe", "pc", "re")
 DEFAULT_BAND_FRACTION = 0.10
 
 
+#: app-open-01 review round fix 5: the minimum half-width for any POSITIVE
+#: target, in allocation points. Without a floor, a small enough target's
+#: ten-percent half-width rounds down to a flat 0.0 (0.4 * 0.10 = 0.04,
+#: which rounds to 0.0) and the band degenerates to ``lo == hi`` — an
+#: interval no weight can ever sit strictly inside or outside of, which
+#: breaks every band-status caller (``_alert_level`` chief among them,
+#: `serve.py`) that assumes ``lo < hi``. 0.1 is one allocation point's own
+#: display precision, so it never shows a floor finer than every other
+#: figure on the book already carries.
+MIN_BAND_HALF_WIDTH = 0.1
+
+
 def default_band(target: float) -> tuple[float, float]:
     """The default +/-``DEFAULT_BAND_FRACTION`` reporting band for one sleeve.
 
     Rounding rule: the half-width is rounded to ONE DECIMAL PLACE of
     allocation points FIRST, and ``lo``/``hi`` are then computed from that
     rounded half-width — not rounded independently after subtracting/adding
-    the raw fraction. That order means ``round(hi - lo, 1)`` always recovers
-    the exact half-width this function used (immune to the float dust
+    the raw fraction. That order means ``round(hi - lo, 1)`` recovers the
+    exact half-width this function used (immune to the float dust
     ``target - target * 0.1`` can otherwise leave on the low edge), and two
     sleeves entered at the same target always get an identically-shaped
-    band. One decimal place matches the precision every other allocation
+    band — UNLESS the high edge was capped (see below), in which case
+    ``hi - lo`` is narrower than the half-width actually used on the low
+    side. One decimal place matches the precision every other allocation
     figure on the book already carries (``START_TARGETS``, a book's own
     ``liquid``/rung points), so the served default cannot show a raw digit
     the analyst never typed.
+
+    FLOOR (app-open-01 review round fix 5): for a target greater than zero,
+    the half-width is floored to ``MIN_BAND_HALF_WIDTH`` BEFORE rounding, so
+    ``lo < hi`` always holds — see ``MIN_BAND_HALF_WIDTH``'s own docstring
+    for why an unfloored band can degenerate. A target of exactly zero (or
+    below, though a legal book never enters one) is unaffected — there is
+    nothing to band around — and still bands to ``(0.0, 0.0)``.
+
+    CAP: the high edge is clamped to 100.0, the top of the allocation scale,
+    so a target already near the ceiling (e.g. 95) does not band to an edge
+    past what any weight could ever reach.
     """
-    half = round(target * DEFAULT_BAND_FRACTION, 1)
-    return (round(target - half, 1), round(target + half, 1))
+    if target <= 0.0:
+        return (round(target, 1), round(target, 1))
+    half = round(max(target * DEFAULT_BAND_FRACTION, MIN_BAND_HALF_WIDTH), 1)
+    lo = round(target - half, 1)
+    hi = min(round(target + half, 1), 100.0)
+    return (lo, hi)
 
 
 #: Cohort ids the ENGINE mints for itself during play. ``ah.play`` commits one

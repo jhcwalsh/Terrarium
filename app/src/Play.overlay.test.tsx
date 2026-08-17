@@ -315,9 +315,10 @@ describe("the CIO is the front door (app-open-01 item 1)", () => {
     expect(pane.textContent).toContain("Stagflation"); // meta.worldTitle
     expect(pane.textContent).toMatch(/Plan growth/i);
     // app-open-01 item 1 (owner ruling 2026-08-16): the CIO headline is the
-    // $10bn display denomination now — 62.1323 points -> usd() -> $6.2bn,
-    // not the raw meta.unitLabel figure this used to assert.
-    expect(pane.textContent).toContain("$6.2bn"); // plan.totalValue via usd()
+    // $10bn display denomination now — 62.1323 points -> usd() -> $6.21bn
+    // (two-decimal bn precision is review round fix 3), not the raw
+    // meta.unitLabel figure this used to assert.
+    expect(pane.textContent).toContain("$6.21bn"); // plan.totalValue via usd()
 
     // the timeline is reached FROM here, not removed — every existing
     // route stays reachable (constraint: reordering, not removal).

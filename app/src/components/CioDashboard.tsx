@@ -8,7 +8,12 @@
  *
  *  Contract summary — DN-8 §3 has the full field list:
  *    · percentages are numbers in percentage points (26.1, not 0.261)
- *    · money is in the unit named by meta.unitLabel (default $m)
+ *    · money is served in the unit named by meta.unitLabel ("$m", 1 point
+ *      = $1m declared) — but this renderer no longer echoes that caption
+ *      or scales by it directly. Every money figure goes through usd()
+ *      (lib/money.ts), which re-denominates the SAME served points as a
+ *      $10bn book (app-open-01 review round fix 1); meta.unitLabel/
+ *      unitSuffix are otherwise unused here.
  *    · calls, distributions and payout are POSITIVE MAGNITUDES; the
  *      renderer applies sign. net = distributions − calls.
  *    · any period the run has not reached must be null, never 0.
@@ -31,7 +36,7 @@ import type {
   MarketSeries,
   VintageRung,
 } from "../lib/cioView";
-import { usd } from "../lib/money";
+import { DENOMINATION_NOTE, usd } from "../lib/money";
 
 /* ---------------------------------------------------------------- *
  *  THEME
@@ -76,12 +81,11 @@ const goalColour = (id: string, i: number) => GOAL_COLOUR[id] || FALLBACK[i % FA
 const NA = "—";
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
-const money = (v: number | null | undefined, unit = "m") => {
-  if (!isNum(v)) return NA;
-  const s = v < 0 ? "−" : "";
-  const a = Math.abs(v);
-  return unit === "m" && a >= 1000 ? `${s}$${(a / 1000).toFixed(2)}bn` : `${s}$${Math.round(a)}${unit}`;
-};
+// app-open-01 review round fix 1: the local money() helper (which read
+// meta.unitLabel/unitSuffix and used a unicode minus sign) is retired.
+// Every money figure in this component now renders through usd() from
+// lib/money.ts — one dollar language across the whole app, ASCII "-" for
+// every negative, and the same $10bn book denomination as Reckoning/Play.
 const pct = (v: number | null | undefined, d = 1) => (isNum(v) ? `${v.toFixed(d)}%` : NA);
 const sgn = (v: number | null | undefined, d = 1) => (isNum(v) ? (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d) : NA);
 const num = (v: number | null | undefined, d = 2) => (isNum(v) ? v.toFixed(d) : NA);
@@ -762,8 +766,7 @@ function CoverageBar({ current, worst, breach }: { current: number; worst: numbe
 }
 
 function LiquidityTab() {
-  const { liquidity, plan, meta } = useView();
-  const u = meta.unitSuffix;
+  const { liquidity, plan } = useView();
   const tiers = liquidity.tiers;
   const total = tiers.reduce((s, t) => s + t.value, 0) || 1;
   const f = liquidity.forecast12m;
@@ -787,13 +790,13 @@ function LiquidityTab() {
   return (
     <Fragment>
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <Tile label="Tier 1 · cash" value={money(t1 && t1.value, u)} sub={`${pct(((t1 ? t1.value : 0) / total) * 100)} of plan`}
+        <Tile label="Tier 1 · cash" value={usd(t1 && t1.value)} sub={`${pct(((t1 ? t1.value : 0) / total) * 100)} of plan`}
           tone={t1 && t1.value / total < 0.02 ? C.warn : undefined} />
-        <Tile label="Tiers 1–2 · defensive" value={money(defensive, u)} sub={pct((defensive / total) * 100) + " of plan"} />
-        <Tile label="Liquid, tiers 1–3" value={money(liquid, u)} sub={pct((liquid / total) * 100) + " of plan"} />
+        <Tile label="Tiers 1–2 · defensive" value={usd(defensive)} sub={pct((defensive / total) * 100) + " of plan"} />
+        <Tile label="Liquid, tiers 1–3" value={usd(liquid)} sub={pct((liquid / total) * 100) + " of plan"} />
         {hasForecast && (
           <Fragment>
-            <Tile label="Net outflow, 12m" value={money(net, u)} sub={pct((outflow / plan.totalValue) * 100) + " of plan"} tone={C.warn} />
+            <Tile label="Net outflow, 12m" value={usd(net)} sub={pct((outflow / plan.totalValue) * 100) + " of plan"} tone={C.warn} />
             <Tile label="Cover of 12m outflow" value={`${(liquid / outflow).toFixed(1)}×`} sub={`tiers 1–2 alone: ${(defensive / outflow).toFixed(1)}×`} tone={C.good} />
           </Fragment>
         )}
@@ -836,7 +839,7 @@ function LiquidityTab() {
               <div style={{ font: `13px ${F.body}`, color: C.ice }}>{t.label}</div>
               <div style={{ font: `11px ${F.body}`, color: C.faint }}>{t.note}</div>
             </div>
-            <span style={{ width: 90, textAlign: "right", font: `14px ${F.mono}`, color: C.ice }}>{money(t.value, u)}</span>
+            <span style={{ width: 90, textAlign: "right", font: `14px ${F.mono}`, color: C.ice }}>{usd(t.value)}</span>
             <span style={{ width: 60, textAlign: "right", font: `13px ${F.mono}`, color: C.faint }}>{pct((t.value / total) * 100)}</span>
             {hasForecast && (
               <span style={{ width: 110, textAlign: "right", font: `13px ${F.mono}`, color: C.mist }}>
@@ -870,7 +873,7 @@ function LiquidityTab() {
       )}
 
       {hasForecast && (
-        <Panel title="Anticipated cashflows" note={`next twelve months · ${meta.unitLabel}`} style={{ marginTop: 10 }}>
+        <Panel title="Anticipated cashflows" note={`next twelve months · ${DENOMINATION_NOTE}`} style={{ marginTop: 10 }}>
           <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 420px", minWidth: 340 }}>
               {flows.map((x) => (
@@ -886,14 +889,14 @@ function LiquidityTab() {
                     <div style={{ position: "absolute", left: "50%", top: -3, bottom: -3, width: 1, background: C.rule }} />
                   </div>
                   <span style={{ font: `14px ${F.mono}`, color: x.v >= 0 ? C.good : C.warn, width: 72, textAlign: "right" }}>
-                    {x.v >= 0 ? "+" : ""}{money(x.v, u)}
+                    {x.v >= 0 ? "+" : ""}{usd(x.v)}
                   </span>
                 </div>
               ))}
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderTop: `1px solid ${C.rule}` }}>
                 <span style={{ font: `600 13px ${F.body}`, color: C.ice, width: 190 }}>Net</span>
                 <span style={{ flex: 1 }} />
-                <span style={{ font: `600 16px ${F.mono}`, color: net < 0 ? C.warn : C.good, width: 72, textAlign: "right" }}>{money(net, u)}</span>
+                <span style={{ font: `600 16px ${F.mono}`, color: net < 0 ? C.warn : C.good, width: 72, textAlign: "right" }}>{usd(net)}</span>
               </div>
               {liquidity.flowFootnote && <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>{liquidity.flowFootnote}</div>}
             </div>
@@ -908,7 +911,7 @@ function LiquidityTab() {
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                       <span style={{ width: 8, height: 8, background: s.colour || FALLBACK[i], display: "inline-block" }} />
                       <span style={{ font: `13px ${F.body}`, color: C.mist }}>{s.label}</span>
-                      <span style={{ marginLeft: "auto", font: `13px ${F.mono}`, color: s.value ? C.ice : C.faint }}>{money(s.value, u)}</span>
+                      <span style={{ marginLeft: "auto", font: `13px ${F.mono}`, color: s.value ? C.ice : C.faint }}>{usd(s.value)}</span>
                     </div>
                     <div style={{ height: 5, background: C.well, marginTop: 5, marginLeft: 16 }}>
                       <div style={{ height: "100%", width: `${(s.value / maxF) * 100}%`, background: s.colour || FALLBACK[i], opacity: 0.7 }} />
@@ -1073,10 +1076,10 @@ function RatioChart({
  *  (CioDashboard.test.tsx's zero-lapse assertion targets it, since the
  *  surrounding table has plenty of legitimate "$0m" cells in unrelated
  *  columns). */
-function lapseCell(v: number | null | undefined, u: string) {
+function lapseCell(v: number | null | undefined) {
   if (!isNum(v)) return <span className="lapse-value" style={{ color: C.faint }}>{NA}</span>;
-  if (v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{money(0, u)}</span>;
-  return <span className="lapse-value" style={{ color: C.warn }}>{money(v, u)}</span>;
+  if (v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{usd(0)}</span>;
+  return <span className="lapse-value" style={{ color: C.warn }}>{usd(v)}</span>;
 }
 
 /** The programme's cohort NAV stack at the as-of quarter, oldest vintage
@@ -1086,11 +1089,9 @@ function lapseCell(v: number | null | undefined, u: string) {
 function VintageLadder({
   vintages,
   classes,
-  unit,
 }: {
   vintages: VintageRung[];
   classes: { id: string; label: string }[];
-  unit: string;
 }) {
   const total = vintages.reduce((s, v) => s + v.navTrue, 0);
   const colourOf = (assetId: string) => {
@@ -1116,7 +1117,7 @@ function VintageLadder({
             <div
               key={v.id}
               className="vintage-rung"
-              title={`${v.label}: ${money(v.navTrue, unit)}`}
+              title={`${v.label}: ${usd(v.navTrue)}`}
               style={{ width: `${w}%`, background: colourOf(asset), opacity: 0.78 }}
             />
           );
@@ -1130,9 +1131,8 @@ function VintageLadder({
 }
 
 function PrivateTab() {
-  const { privateCashflows: pcf, plan, liquidity, meta } = useView();
+  const { privateCashflows: pcf, plan, liquidity } = useView();
   const [sel, setSel] = useState<string>("aggregate");
-  const u = meta.unitSuffix;
   if (!pcf || !pcf.series) return <Empty what="private cashflow series" />;
 
   const options: { id: string; label: string }[] = [{ id: "aggregate", label: pcf.aggregateLabel || "Aggregate" }].concat(pcf.classes);
@@ -1200,14 +1200,14 @@ function PrivateTab() {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <Tile label={opened ? "NAV (opening)" : "NAV"} value={money(navNow, u)} sub={`${pct((navNow / plan.totalValue) * 100)} of plan`} />
-        <Tile label={opened ? "Unfunded (opening)" : "Unfunded"} value={money(unfundedNow, u)} />
+        <Tile label={opened ? "NAV (opening)" : "NAV"} value={usd(navNow)} sub={`${pct((navNow / plan.totalValue) * 100)} of plan`} />
+        <Tile label={opened ? "Unfunded (opening)" : "Unfunded"} value={usd(unfundedNow)} />
         <Tile label="Unfunded ÷ NAV" value={num(coverageNow)} sub={isNum(anchor) ? `${num(anchor)} anchor` : undefined}
           tone={isNum(danger) && Number(coverageNow) > danger ? C.warn : undefined} />
         <Tile label="Calls ÷ unfunded" value={pct(isNum(callRateUnfundedNow) ? callRateUnfundedNow * 100 : null)} sub="quarterly call rate" />
         <Tile label="Calls ÷ NAV" value={pct(isNum(callRateNavNow) ? callRateNavNow * 100 : null)} sub="quarterly" />
-        <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
-          sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
+        <Tile label="Net cashflow, LTM" value={usd(sum(ltm, "net"))} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
+          sub={fwd.length ? `next 4q: ${usd(sum(fwd, "net"))}` : undefined} />
         {/* F2's closure required both halves: the release in the quarter it
             happens AND the running total afterwards. `lapsedToDate` gives the
             second; without the first, a monotonically-rising cumulative never
@@ -1215,15 +1215,15 @@ function PrivateTab() {
             a year spread across many quarters, not one large event, so that
             distinction is the whole point (I-2). `expiredNow` is the as-of
             quarter's own figure, real zero when nothing has closed yet. */}
-        <Tile label="Lapsed to date" value={lapsedToDate > 0 ? money(lapsedToDate, u) : NA}
+        <Tile label="Lapsed to date" value={lapsedToDate > 0 ? usd(lapsedToDate) : NA}
           tone={lapsedToDate > 0 ? C.warn : undefined}
           sub={isNum(expiredNow) && expiredNow > 0
-            ? `${money(expiredNow, u)} this quarter · ER-6`
+            ? `${usd(expiredNow)} this quarter · ER-6`
             : "ER-6: undrawn commitment released, never called"} />
       </div>
 
       <Panel title="Capital calls, distributions and net"
-        note={`${meta.unitLabel} per quarter · ${H} realised, ${rows.length - H} forecast`}
+        note={`${DENOMINATION_NOTE} per quarter · ${H} realised, ${rows.length - H} forecast`}
         right={<Legend items={[{ label: "Distributions", c: C.good, w: 8 }, { label: "Calls", c: C.mist, w: 8 }, { label: "Net", c: C.amber }]} />}>
         <CashflowBars rows={rows} histCount={H} />
       </Panel>
@@ -1269,15 +1269,15 @@ function PrivateTab() {
                 return (
                   <tr key={cl.id} onClick={() => setSel(cl.id)} style={{ borderTop: `1px solid ${agg ? C.rule : C.ruleSoft}`, cursor: "pointer" }}>
                     <td style={{ ...td, textAlign: "left", font: `${agg ? 600 : 400} 13px ${F.body}`, color: sel === cl.id ? C.amber : C.mist }}>{cl.label}</td>
-                    <td style={td}>{money(rowNav, u)}</td>
-                    <td style={td}>{money(rowUnfunded, u)}</td>
+                    <td style={td}>{usd(rowNav)}</td>
+                    <td style={td}>{usd(rowUnfunded)}</td>
                     <td style={{ ...td, color: isNum(danger) && Number(rowCoverage) > danger ? C.warn : C.ice }}>{num(rowCoverage)}</td>
-                    <td style={td}>{money(s(h, "calls"), u)}</td>
-                    <td style={td}>{money(s(h, "distributions"), u)}</td>
-                    <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{money(s(h, "net"), u)}</td>
+                    <td style={td}>{usd(s(h, "calls"))}</td>
+                    <td style={td}>{usd(s(h, "distributions"))}</td>
+                    <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{usd(s(h, "net"))}</td>
                     <td style={{ ...td, color: C.mist }}>{pct(isNum(rowCallRate) ? rowCallRate * 100 : null)}</td>
-                    <td style={td}>{lapseCell(lapsed, u)}</td>
-                    <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? money(s(fw, "net"), u) : NA}</td>
+                    <td style={td}>{lapseCell(lapsed)}</td>
+                    <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? usd(s(fw, "net")) : NA}</td>
                   </tr>
                 );
               })}
@@ -1289,7 +1289,7 @@ function PrivateTab() {
 
       {pcf.vintages && pcf.vintages.length > 0 && (
         <Panel title="Vintage ladder" note="as-of quarter · true NAV · oldest first" style={{ marginTop: 10 }}>
-          <VintageLadder vintages={pcf.vintages} classes={pcf.classes} unit={u} />
+          <VintageLadder vintages={pcf.vintages} classes={pcf.classes} />
         </Panel>
       )}
     </Fragment>
@@ -1529,14 +1529,14 @@ export default function CioDashboard({
                   would otherwise get uncomfortably narrow, no separate
                   media query needed. */}
               <div className="cio-plan-row">
-                <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${meta.unitLabel}`}
+                <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${DENOMINATION_NOTE}`}
                   right={
                     <div style={{ display: "flex", gap: 16, font: `12px ${F.body}`, color: C.faint }}>
                       {/* app-open-01 item 1: same headline figure as the
                           donut center, same usd() rendering. */}
                       <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{usd(plan.totalValue)}</b></span>
                       {isNum(plan.growthPct) && <span>Growth <b style={{ color: plan.growthPct >= 0 ? C.good : C.warn, font: `13px ${F.mono}` }}>{sgn(plan.growthPct)}%</b></span>}
-                      {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.netOfFlows, meta.unitSuffix)}</b></span>}
+                      {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{usd(plan.netOfFlows)}</b></span>}
                     </div>
                   }>
                   <PlanGrowth />

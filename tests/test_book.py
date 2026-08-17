@@ -338,6 +338,24 @@ class TestDefaultBand:
     def test_a_zero_target_bands_to_zero_zero(self):
         assert default_band(0.0) == (0.0, 0.0)
 
+    def test_a_small_positive_target_still_gets_a_valid_lo_less_than_hi_band(self):
+        # app-open-01 review round fix 5: 0.4 * 0.10 = 0.04, which rounds to
+        # a full 0.0 under the plain fraction rule -- lo == hi, a degenerate
+        # band no weight can ever sit strictly inside or outside of. The
+        # half-width floors to a minimum of 0.1 allocation points (one
+        # point's own precision) for any positive target, so the band stays
+        # a real interval.
+        lo, hi = default_band(0.4)
+        assert lo < hi
+        assert (lo, hi) == (0.3, 0.5)
+
+    def test_a_target_near_the_ceiling_has_its_high_edge_capped_at_one_hundred(self):
+        # a 95-point target's raw +/-9.5 band would put hi at 104.5 -- past
+        # the top of the allocation scale, which no weight can ever reach.
+        lo, hi = default_band(95.0)
+        assert hi == 100.0
+        assert lo == 85.5
+
 
 class TestCommitmentPlan:
     def test_a_valid_plan_passes(self):

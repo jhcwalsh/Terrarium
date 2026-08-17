@@ -959,12 +959,33 @@ class TestBandReport:
         book declares reporting ranges. If a range can reach ``simulate_play``
         at all, the two decades separate here.
 
-        The bands are ``_TIGHT``: two points wide and deliberately placed off
-        the sleeve's own policy target. A wide band would not do — a leak that
-        surfaced as a rebalance or clamp bound would be a no-op under
-        ``[0, 100]`` and this test would have certified the defect. Under
-        ``_TIGHT`` every sleeve's target sits OUTSIDE its band, so any bound
-        derived from a range has to move a weight in quarter 1."""
+        Two arms, and this is exactly what each one now is (app-open-01
+        review round fix 4 — a prior version of this test compared the
+        WRONG two things and passed anyway, see below):
+
+          * ``plain`` — ``ranges`` explicitly overridden back to ``None`` on
+            the served default book: no bands declared AT ALL, the
+            ``OpeningBook.ranges`` docstring's own "no bands entered" state.
+            This is the arm that vanished. app-open-01 delta 1 made
+            ``/book/default`` serve a book with its own +/-10% band per
+            sleeve already attached (``default_opening_book``), so simply
+            replaying ``default["book"]`` unmodified — what this test used
+            to do — no longer means "no ranges": it means "the DEFAULT
+            ranges", and the comparison below was quietly testing "do
+            default bands and ``_TIGHT`` bands move the same number" (both
+            arms had *some* range), never "does declaring a range move a
+            number relative to none at all". The explicit override here is
+            what makes ``ranges=None`` real again — the same construction
+            ``TestBandReport`` already uses to pin the read side of the same
+            fact (``test_the_key_is_null_for_a_book_that_declares_no_ranges``).
+          * ``banded`` — ``_TIGHT``: two points wide and deliberately placed
+            off the sleeve's own policy target. A wide band would not do — a
+            leak that surfaced as a rebalance or clamp bound would be a
+            no-op under ``[0, 100]`` and this test would have certified the
+            defect. Under ``_TIGHT`` every sleeve's target sits OUTSIDE its
+            band, so any bound derived from a range has to move a weight in
+            quarter 1. Unweakened by this fix.
+        """
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
         assert set(_TIGHT) == set(_all_sleeves(default)), (
@@ -977,12 +998,15 @@ class TestBandReport:
                 f"{sleeve}'s band [{lo}, {hi}] contains its target {target} — a "
                 "leaked bound would be satisfied already and the test would not bite"
             )
+        # the genuinely rangeless arm: the served default already carries its
+        # own +/-10% band per sleeve (app-open-01 delta 1), so "no ranges"
+        # has to be entered explicitly by overriding it back to None.
+        plain_book = {**default["book"], "ranges": None}
+        assert plain_book["ranges"] is None, "the plain book really does declare no ranges"
         banded = _banded_book(default["book"], _TIGHT)
         assert banded["ranges"], "the banded book really does declare ranges"
 
-        plain_sid = _play_through(
-            client, rid, self._ACTIONS, book=default["book"], plan=default["plan"]
-        )
+        plain_sid = _play_through(client, rid, self._ACTIONS, book=plain_book, plan=default["plan"])
         banded_sid = _play_through(client, rid, self._ACTIONS, book=banded, plan=default["plan"])
 
         plain = client.get(f"/sessions/{plain_sid}/outcome").json()

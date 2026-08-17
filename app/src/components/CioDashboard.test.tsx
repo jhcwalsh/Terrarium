@@ -57,8 +57,9 @@ describe("CioDashboard", () => {
   it("renders the CIO headline value in the $10bn display denomination (app-open-01 item 1)", () => {
     // view.plan.totalValue is 62.1323 (fixture) — the underlying scored
     // points are untouched; only the rendering (money.ts usd()) changed.
+    // Two-decimal bn precision is review-round fix 3 ($10m granularity).
     render(<CioDashboard view={view} onPlaneChange={() => {}} />);
-    expect(host!.textContent).toContain("$6.2bn");
+    expect(host!.textContent).toContain("$6.21bn");
   });
 
   it("switches tabs and renders each", () => {
@@ -220,7 +221,10 @@ describe("CioDashboard", () => {
       pcf.series.aggregate[0].expiredUndrawn = 733;
       pcf.series.pe[0].expiredUndrawn = 733;
       render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
-      expect(host!.textContent).toMatch(/\$733m/);
+      // 733 points -> $73.30bn through usd()'s $10bn book denomination
+      // (app-open-01 review round fix 1) — the distinctive VALUE (733) is
+      // what proves this figure and no other, not its old $m rendering.
+      expect(host!.textContent).toMatch(/\$73\.30bn/);
     });
 
     it("shows the current-quarter lapse alongside the running total, not only the total (I-2)", () => {
@@ -241,17 +245,23 @@ describe("CioDashboard", () => {
       }
       pcf.series.aggregate[H - 1].expiredUndrawn = 415;
       render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
-      expect(host!.textContent).toMatch(/\$415m this quarter/);
+      // 415 points -> $41.50bn through usd() (app-open-01 review round fix 1)
+      expect(host!.textContent).toMatch(/\$41\.50bn this quarter/);
     });
 
-    it("renders zero lapse as a muted $0m, never the missing-data dash (M-1)", () => {
+    it("renders zero lapse as a muted $0, never the missing-data dash (M-1)", () => {
       // DN-8 s3: an em dash means UNAVAILABLE. A known, tracked zero must
       // not borrow it — this WAS the bug (`lapseCell` returned NA for
       // `v <= 0`), which made a class that genuinely never lapsed
       // indistinguishable from one where lapse isn't tracked in a table
       // where "—" also marks an unreached forecast column. Fixed by
-      // rendering a muted "$0m" instead: colour signals "don't worry about
-      // this", the glyph stays reserved for "no data".
+      // rendering a muted zero instead: colour signals "don't worry about
+      // this", the glyph stays reserved for "no data". The exact string is
+      // now usd(0)'s bare "$0" (app-open-01 review round fix 1 routed
+      // lapseCell through usd(), which deliberately renders exact zero as
+      // "$0" rather than "$0m" — money.test.ts pins that) — the M-1
+      // guarantee this test protects is "not the em dash", not the unit
+      // suffix.
       //
       // The committed fixture is the wrong vehicle for this: every class's
       // and the aggregate's lapsed-to-date sum is already non-zero there
@@ -259,8 +269,8 @@ describe("CioDashboard", () => {
       // against it. Zero out expiredUndrawn on EVERY row of EVERY series so
       // the "By asset class" table's "Lapsed to date" column is genuinely
       // zero for every row, then check the actual lapse cells — not the
-      // whole table's text, which legitimately prints "$0m" elsewhere
-      // (Net LTM / Net next 4q for the quieter classes).
+      // whole table's text, which legitimately prints other zero-ish money
+      // figures elsewhere (Net LTM / Net next 4q for the quieter classes).
       const v: CioView = JSON.parse(JSON.stringify(view));
       for (const rows of Object.values(v.privateCashflows.series)) {
         for (const r of rows) r.expiredUndrawn = 0;
@@ -270,7 +280,7 @@ describe("CioDashboard", () => {
       // one per row of the "By asset class" table (classes + aggregate)
       expect(lapseCells.length).toBeGreaterThan(0);
       for (const cell of lapseCells) {
-        expect(cell.textContent).toBe("$0m");
+        expect(cell.textContent).toBe("$0");
         expect(cell.textContent).not.toBe("—");
       }
     });

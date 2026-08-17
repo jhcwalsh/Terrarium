@@ -187,6 +187,104 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **app-open-01 — the CIO front door, book-entry bands, the declared-stress
+  picker, and the $10bn display denomination, plus the whole-branch review
+  round's fix pass.** Five controller commits landed the feature; a sixth
+  pass (this entry's second half) reviewed the whole branch and fixed what
+  it found.
+
+  - **The decision-stop defect and its root cause.** Advancing past a
+    decision window from the overlay/cockpit view could leave the lever
+    unreachable, and footer chrome could overprint the panel beneath it.
+    Root cause: a stale 3-row grid template left over from a layout that
+    predated the cockpit's extra rail row, so the decision panel and footer
+    fought the same track. Fixed by re-deriving the grid from the rows the
+    cockpit actually renders (`1edb059`).
+  - **Book entry gained real reporting bands.** The entry screen's default
+    reporting band is now +/-10% OF the sleeve's own target allocation
+    (`default_band`, `src/ah/port/book.py`) rather than a flat points-wide
+    band, private asset classes (`pe`/`pc`/`re`) joined the allocation
+    table alongside the liquid sleeves, and every sleeve label is spelled
+    out in full rather than abbreviated (`3e927de`).
+  - **The "choose your decade" picker shows only the declared-stress
+    generation** (`bootstrap-stratified`) — toy-engine and plain-bootstrap
+    worlds stay in the store but are hidden from the opening list
+    (`app/src/lib/worlds.ts`, `7e2a53f`). That commit's own dedupe was
+    built on a false premise (see the review-round fix below).
+  - **The CIO dashboard is the front door.** A session now opens straight
+    into the dashboard, populated with the opening book's STARTING values,
+    with the "Plan growth" and "Asset allocation" panels sitting side by
+    side. Getting there needed a month-0 endpoint fix: `build_cio_view`
+    used to 409 at `revealed_months == 0` ("no closed quarter yet"), which
+    made the front door impossible to open before a player had advanced at
+    least one quarter; it now serves the entered opening book directly at
+    month 0. The plan-growth chart's timeframe caption is derived from the
+    ACTUAL plotted window and how much of it is inherited pre-history,
+    never a hardcoded "past 3 years" — the ER-13 honesty marker ("INHERITED
+    DECADE (SIMULATED)") travels with it rather than inventing a second
+    wording (`a8675e7`).
+  - **The $10bn display denomination.** Scored points remain the truth
+    server-side and in every stored/leaderboard figure; the client
+    re-denominates them for display only, as though the institution were a
+    $10bn book (1 scored point = $100m, `app/src/lib/money.ts`'s `usd()`).
+    Decision windows in `DecisionWindow.tsx` show each lever's dollar
+    impact beside its points (`67f1ff2`).
+  - **`280c2d7` merges `su-app-07-targets-and-ranges` into this branch** —
+    the policy-targets/reporting-bands work (see that entry above) landed
+    first and `default_band`/`OpeningBook.ranges` are what item 2's bands
+    build on; the merge is recorded here because every fix in this entry's
+    second half sits downstream of it.
+
+  **The whole-branch review round (2026-08-16), six fixes, none reopening
+  a settled ruling:**
+
+  - **One dollar language.** The CIO dashboard had TWO dollar scales on
+    screen at once: the plan-total headline already rendered through
+    `usd()` (the $10bn book), while roughly twenty other call sites — the
+    liquidity tiles, tier rows, cashflow rows, private tiles, the quarterly
+    table, vintage tooltips — still rendered through a local `money()`
+    helper carrying the OLD $1m-per-point scale and a unicode minus sign.
+    Every site in `CioDashboard.tsx` now routes through `usd()`; the local
+    helper is gone. The served `meta.unitLabel` ("$m", `src/ah/cioview.py`'s
+    `UNIT_LABEL` — untouched, still served byte-stable) is no longer echoed
+    as a caption; the client shows its own denomination note, "USD, $10bn
+    book" (`DENOMINATION_NOTE`, `money.ts`), instead. Every negative money
+    figure now prints the ASCII `-`, never the unicode `−`.
+  - **World 702 fenced, not deduped.** The picker's Map-based dedupe (keyed
+    on `world_id`, `7e2a53f`) was unreachable: the `/worlds` document lists
+    each world_id once, so there was never a same-world_id collision to
+    dedupe. The real duplicate a player saw was two DIFFERENT world_ids —
+    702 (The Lost Decade at 18-month blocks) and 703 (the 2026-08-15
+    declaration, 6-month blocks) — sharing the display title "The Lost
+    Decade." `worlds.ts` now names `HIDDEN_WORLD_IDS = [702]` and fences it
+    out of `selectShownWorlds`; 703 and the Long Squeeze show, one button
+    each. Owner ruling: worlds on retired methodology are hidden, never
+    deleted.
+  - **Headline precision.** `usd()` renders the bn branch to two decimals
+    ($10m granularity, e.g. `$11.57bn`) instead of one. Fixed alongside it:
+    a LOW boundary bug where the unit was chosen BEFORE rounding, so a
+    value like 9.9999 points ($999.99m) printed `$1000m` instead of rolling
+    over to `$1.00bn` — the bn/m branch is now chosen after rounding to the
+    bn branch's own precision.
+  - **The vanished no-ranges test arm, restored.** `app-open-01` delta 1
+    (su-app-07) made `/book/default` serve a book with its own +/-10% band
+    per sleeve already attached, so `test_ranges_do_not_move_a_single_number`
+    — which claims to compare "the same book... differing only in whether
+    it declares ranges" — had quietly stopped covering that: both arms it
+    played had *some* range (the served default's vs. `_TIGHT`'s), so "no
+    ranges reaches the engine" was untested. The plain arm now overrides
+    `ranges` back to `None` explicitly (the same construction
+    `TestBandReport` already uses on the read side); the `_TIGHT` arm is
+    unchanged.
+  - **`default_band`'s degenerate-band floor.** A small enough positive
+    target's ten-percent half-width rounds down to a flat `0.0` (0.4 * 0.10
+    = 0.04), producing `lo == hi` — a band no weight can ever sit strictly
+    inside or outside of. The half-width now floors to a minimum of 0.1
+    allocation points for any positive target, and the high edge clamps to
+    100.0 so a target near the ceiling (e.g. 95) doesn't band past what any
+    weight could reach.
+  - **CHANGELOG** — this entry.
+
 - **su-app-07 — policy targets and reporting ranges, separating the
   institution's SAA from its opening values.** `OpeningBook` gains two
   optional fields, `targets: {sleeve -> points} | None` and

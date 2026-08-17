@@ -17,6 +17,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   bundleUrlFor,
   fetchWorlds,
+  HIDDEN_WORLD_IDS,
   selectShownWorlds,
   SHOWN_GENERATOR_IDS,
   WorldPicker,
@@ -110,10 +111,7 @@ describe("bundleUrlFor", () => {
  * app-open-01 (owner ruling, 2026-08-16): the opening picker shows only the
  * declared-stress generation (`bootstrap-stratified`) — toy-engine
  * ("The Long Stagflation") and plain-bootstrap ("Nineteen Seventy-Four")
- * worlds stay in the store but are hidden here. This payload spans all
- * three generations, plus the reported symptom: "The Lost Decade"
- * (`world_id: "lost-decade"`) appearing as two separate entries because two
- * runs exist for it.
+ * worlds stay in the store but are hidden here.
  */
 const MULTI_GEN_DOC: WorldsDoc = {
   worlds: [
@@ -130,22 +128,41 @@ const MULTI_GEN_DOC: WorldsDoc = {
       runs: [{ run_id: "plain-r1", seed: 2, created_at: "2026-01-02T00:00:00Z" }],
     },
     {
-      world_id: "squeeze",
+      world_id: "00000000-0000-4000-9000-000000000701",
+      title: "The Long Squeeze",
+      generator_id: "bootstrap-stratified",
+      runs: [{ run_id: "squeeze-r1", seed: 3, created_at: "2026-01-03T00:00:00Z" }],
+    },
+  ],
+};
+
+/**
+ * app-open-01 review round fix 2 (owner ruling 2026-08-16): the REAL
+ * `/worlds` shape behind the reported symptom — THREE DISTINCT world_ids,
+ * not a repeat. 702 (The Lost Decade at 18-month blocks) and 703 (the
+ * 2026-08-15 declaration, 6-month blocks) share the display title "The
+ * Lost Decade" because 703 supersedes 702's methodology; it is not a
+ * second run of the same world. `HIDDEN_WORLD_IDS` fences 702 out.
+ */
+const REVIEW_ROUND_DOC: WorldsDoc = {
+  worlds: [
+    {
+      world_id: "00000000-0000-4000-9000-000000000701",
       title: "The Long Squeeze",
       generator_id: "bootstrap-stratified",
       runs: [{ run_id: "squeeze-r1", seed: 3, created_at: "2026-01-03T00:00:00Z" }],
     },
     {
-      world_id: "lost-decade",
+      world_id: "00000000-0000-4000-9000-000000000702",
       title: "The Lost Decade",
       generator_id: "bootstrap-stratified",
-      runs: [{ run_id: "lost-r-old", seed: 4, created_at: "2026-01-04T00:00:00Z" }],
+      runs: [{ run_id: "lost-702-r1", seed: 4, created_at: "2026-08-10T00:00:00Z" }],
     },
     {
-      world_id: "lost-decade",
+      world_id: "00000000-0000-4000-9000-000000000703",
       title: "The Lost Decade",
       generator_id: "bootstrap-stratified",
-      runs: [{ run_id: "lost-r-new", seed: 5, created_at: "2026-01-05T00:00:00Z" }],
+      runs: [{ run_id: "lost-703-r1", seed: 5, created_at: "2026-08-16T00:00:00Z" }],
     },
   ],
 };
@@ -158,32 +175,34 @@ describe("selectShownWorlds", () => {
     expect(shown.some((w) => w.world_id === "plain-1974")).toBe(false);
   });
 
-  it("collapses a duplicated world_id, keeping the entry with the newest run", () => {
-    const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
-    const lost = shown.filter((w) => w.world_id === "lost-decade");
-    expect(lost).toHaveLength(1);
-    expect(lost[0].runs.map((r) => r.run_id)).toEqual(["lost-r-new"]);
+  it("HIDDEN_WORLD_IDS names exactly 702", () => {
+    expect(HIDDEN_WORLD_IDS).toEqual(["00000000-0000-4000-9000-000000000702"]);
   });
 
-  it("returns one entry per world_id, squeeze plus the deduped lost-decade", () => {
-    const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
-    expect(shown.map((w) => w.world_id).sort()).toEqual(["lost-decade", "squeeze"]);
+  it("hides 702 (retired methodology) and keeps 703 and the Long Squeeze — three distinct world_ids, not a same-world_id repeat", () => {
+    const shown = selectShownWorlds(REVIEW_ROUND_DOC.worlds);
+    expect(shown.map((w) => w.world_id).sort()).toEqual([
+      "00000000-0000-4000-9000-000000000701",
+      "00000000-0000-4000-9000-000000000703",
+    ]);
+    expect(shown.some((w) => w.world_id === "00000000-0000-4000-9000-000000000702")).toBe(false);
   });
 });
 
 describe("WorldPicker", () => {
-  it("renders only the declared-stress worlds, one button per world_id", () => {
-    const html = renderToStaticMarkup(WorldPicker({ doc: MULTI_GEN_DOC, onOpen: () => {} }));
+  it("renders one button per shown world_id — 703's Lost Decade, not 702's", () => {
+    const html = renderToStaticMarkup(WorldPicker({ doc: REVIEW_ROUND_DOC, onOpen: () => {} }));
     expect(html).toContain("Choose your decade");
     expect(html).toContain("The Long Squeeze");
     expect(html).toContain("The Lost Decade");
-    expect(html).not.toContain("The Long Stagflation");
-    expect(html).not.toContain("Nineteen Seventy-Four");
-    // one <li> for squeeze, one for the deduped lost-decade — not two.
+    // one <li> for the Long Squeeze, one for 703 — 702 fenced out, so
+    // "The Lost Decade" appears exactly once despite two worlds sharing
+    // the title.
     expect((html.match(/<li/g) ?? []).length).toBe(2);
+    expect((html.match(/The Lost Decade/g) ?? []).length).toBe(1);
   });
 
-  it("wires the kept lost-decade button to its newest run — same load path as before", () => {
+  it("wires the shown Lost Decade button to 703's run — 702 is hidden, never reachable", () => {
     let opened: string | null = null;
     let root: Root | null = null;
     const host = document.createElement("div");
@@ -191,16 +210,24 @@ describe("WorldPicker", () => {
     try {
       root = createRoot(host);
       act(() => {
-        root!.render(WorldPicker({ doc: MULTI_GEN_DOC, onOpen: (url) => (opened = url) }));
+        root!.render(WorldPicker({ doc: REVIEW_ROUND_DOC, onOpen: (url) => (opened = url) }));
       });
       const buttons = [...host.querySelectorAll("button")];
       const lostButton = buttons.find((b) => b.textContent?.includes("The Lost Decade"))!;
       act(() => lostButton.click());
-      expect(opened).toBe(bundleUrlFor("lost-r-new"));
+      expect(opened).toBe(bundleUrlFor("lost-703-r1"));
+      expect(opened).not.toBe(bundleUrlFor("lost-702-r1"));
     } finally {
       act(() => root?.unmount());
       host.remove();
     }
+  });
+
+  it("renders only the declared-stress worlds", () => {
+    const html = renderToStaticMarkup(WorldPicker({ doc: MULTI_GEN_DOC, onOpen: () => {} }));
+    expect(html).toContain("The Long Squeeze");
+    expect(html).not.toContain("The Long Stagflation");
+    expect(html).not.toContain("Nineteen Seventy-Four");
   });
 
   it("falls back to world_id when a shown world has no title", () => {
