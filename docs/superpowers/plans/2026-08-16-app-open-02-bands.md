@@ -17,6 +17,16 @@ be regenerated for a new value, and the book screen stops scrolling.
 4. "TGT" → "Target" (and "Dev" → "Deviation")
 5. Illiquid NAV ties to the targets-and-bands value + regenerate-ladder button
 6. Commitment plan on its own tab; no scrolling
+9. Park ranked sessions — "we're not remotely ready for that" (owner ruling
+   2026-08-16; the play surface is practice-only until further notice)
+10. Opening book gets three NAMED tabs: "Targets and bands" (just the
+    sleeves — and rename "sleeve" → "Asset class" in player copy),
+    "Historical vintages", "Cashflow projections"
+11. Opening book page: a "Play" button at the top for easy move-on
+12. Each historical vintage table gains a chart: stacked bar per vintage
+    (paid-in + unfunded), with a line for each vintage's NAV
+13. The commitment plan grows in line with the expected growth of the plan
+    (the served default is currently flat by design)
 
 ## Global constraints
 
@@ -182,34 +192,115 @@ expected — `default_opening_book` already scales `_seed_ladder` by target),
   risk. But a ladder built by the server's own seeder at a new total is BY
   CONSTRUCTION on the fitted staggered shape — making server-built ladders
   ranked-eligible is a real option and the OWNER'S call. Flag it in the
-  commit body; do not implement it here.
+  commit body; do not implement it here. (Mooted in practice by item 9 —
+  ranked is parked — but the ruling stays on the books for its return.)
 - Tests: endpoint determinism + scaling (sum of NAVs == requested value at
   the seeder's own rounding); 422 arms; client replaces rungs and re-derives
   the value cell; an untouched book still posts ranked.
 
-### Task 8 — tab the book screen (item 6)
+### Task 8 — tab the book screen, "Play" at the top (items 6, 10, 11)
 
 **Files:** `app/src/BookEntry.tsx`, `app/src/styles.css`,
 `app/src/BookEntry.test.tsx`.
 
-- Three tabs: **Targets and bands** / **Private ladders** / **Commitment
-  plan** (dictated minimum was moving the plan out; three is what actually
-  kills the scroll — the ladders are the longest section). Default tab:
-  Targets and bands.
-- The commit footer (faults list + digest state + commit button) stays
-  OUTSIDE the tabs, always visible. A fault in a hidden tab must still show
-  in the footer and block commit — the fault strings already name their
-  sleeve; prefix them with the tab name if they don't locate themselves.
+- Three tabs, the OWNER'S names (item 10 supersedes this plan's first
+  draft): **Targets and bands** / **Historical vintages** / **Cashflow
+  projections**. Default tab: Targets and bands, holding just the
+  asset-class table. The vintage ladders live on Historical vintages; the
+  commitment plan on Cashflow projections.
+- Player-copy rename on this screen: "sleeve" → "Asset class" (column head
+  `sleeve` → "Asset class", section copy "Private sleeves'" → "Private
+  asset classes'", aria-labels may keep their keys — flagged judgment
+  carried from app-open-01).
+- **"Play" at the top (item 11):** the primary commit control moves to a
+  top action bar — a button labeled "Play" that does exactly what the
+  footer commit does today (same validation gating, same POST, disabled on
+  faults). The faults list stays visible beside/below it; a fault on a
+  hidden tab must still show there and block. One canonical control — the
+  old footer button is removed, not duplicated.
 - Tab switching is display state only: no unmount-losing-edits (keep all
   three mounted, `hidden`/CSS, so input state and the derived `book` are
   untouched — and the app-open-01 grid regression tests keep their DOM).
 - Tests: edits survive a tab round-trip; a ladder fault entered on tab 2
-  blocks commit while tab 1 is shown and the footer names it; keyboard
-  focus lands on the tab list sanely (buttons with `aria-selected`).
+  blocks Play while tab 1 is shown and the bar names it; keyboard focus
+  lands on the tab list sanely (buttons with `aria-selected`).
+
+### Task 9 — park ranked sessions (item 9)
+
+**Files:** `app/src/App.tsx` (the `RankedSetup` step), `app/src/Play.tsx`
+(chip copy unchanged — "Practice" is now the only word it prints),
+`app/src/BookEntry.tsx` (the `ranked-note`), their tests.
+
+- **Fence, never delete** (the house rule): the app flow SKIPS the
+  RankedSetup screen and always creates `ranked: false` sessions; the
+  component, its tests, the server's ranked contract, the leaderboard
+  store, and the digest/eligibility machinery all stay intact and green —
+  re-opening ranked later is deleting one bypass, not rebuilding a feature.
+- BookEntry's `ranked-note` (which currently reads "ranked is available" /
+  "practice only") is reworded to a neutral practice statement while
+  parked — its digest-tracking tests are UPDATED to the new copy, with the
+  ruling and date in the test docstring (never weakened: the touched-flag
+  behavior they pin stays pinned).
+- Record the ruling in `governance/decision-register.md` at close-out.
+- Tests: the flow from world pick → book → play never mounts RankedSetup;
+  created sessions are `ranked: false`; RankedSetup's own component tests
+  still pass untouched.
+
+### Task 10 — vintage charts on Historical vintages (item 12)
+
+**Files:** new `app/src/components/VintageChart.tsx` + test,
+`app/src/BookEntry.tsx` (one chart per private asset class, above its
+table), `app/src/styles.css`.
+
+- Per vintage rung: a stacked bar — **paid-in** (bottom) + **unfunded**
+  (top) — and a line across vintages carrying each rung's **NAV**. X axis:
+  vintage index/age (the ladder is one rung per year of contractual life);
+  Y: points, with the `usd()` rendering in the tooltip/labels per the $10bn
+  rule.
+- One axis only (paid-in/unfunded and NAV share the points scale — no dual
+  axis, per the dataviz house rules); direct labels sparingly; the two
+  stack segments get distinct fills with a 2px gap, the NAV line a marker
+  per vintage.
+- The chart re-derives from the CURRENT rung inputs (edit a rung → the bar
+  moves), same derivation discipline as the value cell; it renders from
+  the entered book only — no fetch.
+- Tests: geometry from a known 3-rung fixture (bar heights proportional to
+  paid_in/unfunded, line hits NAV values); editing a rung input moves the
+  chart; a zero-NAV lapsed rung renders without crashing.
+
+### Task 11 — the default commitment plan grows with the plan (item 13)
+
+**Files:** `src/ah/play.py` (`default_commitment_plan`),
+`src/ah/serve.py` (no change expected — it already calls the builder),
+`tests/test_play.py` / `tests/test_serve_book.py`,
+`app/src/BookEntry.test.tsx` (fixture refresh).
+
+- Today's default is FLAT by design (its docstring: a non-flat schedule is
+  "explicitly later work" — this task is that work arriving). The dictated
+  rule: year k's commitment escalates with the plan's EXPECTED growth, so
+  the programme keeps pace with a growing book instead of shrinking
+  relative to it.
+- **The rate must have one source.** First locate an existing declared
+  expected-growth number (the CIO plan chart's forecast is flat/frozen, so
+  there may be none). If none exists, STOP and ask the owner for the
+  annual rate before implementing — do not invent one silently; it becomes
+  a declared display-policy constant next to its kin, applied as
+  `base * (1+g)^k` per window-year k.
+- The engine's pacing contract is untouched (`CommitmentPlan`'s per-year
+  shape already carries a non-flat schedule without a contract change —
+  its own docstring says so). The entered-plan path, validation, and
+  digest mechanics are unchanged; only the served DEFAULT points change.
+- Ranked-eligibility interplay: the served default and the pre-fill move
+  together, so an untouched POST still digests as the default (same Ruling
+  D invariant app-open-01 preserved) — and ranked is parked anyway
+  (Task 9).
+- Tests: served default plan points grow at (1+g)^k exactly; POSTing the
+  served default back is accepted and digests as untouched; the flat-rule
+  engine invariants (`pacing_rule="fixed"` pre-quarter-0) still hold.
 
 ---
 
-## Close-out (after Task 8)
+## Close-out (after Task 11)
 
 - CHANGELOG.md: one entry per task, app-open-01 style.
 - Whole-branch adversarial review (opus), findings fixed before the gate.
