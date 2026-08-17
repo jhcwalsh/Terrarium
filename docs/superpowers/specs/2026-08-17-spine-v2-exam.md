@@ -8,6 +8,11 @@ include the allocation tests") plus the owner rulings of 2026-08-17 recorded in 
 and its plain-language companion `docs/superpowers/specs/2026-08-16-spine-v2-estimation-anchors.md`.
 **Prior rounds carried forward:** `docs/superpowers/specs/spine02-prereg.json` (byte-frozen
 thresholds) and `docs/superpowers/specs/2026-08-16-spine02-results.md` (the verdicts).
+**Added the same day, before the seal:** **§11**, the two owner-agreed
+regime-identification obligations — the classifier's thresholds perturbed each way, and a
+richer identification of the same four seasons compared under a decision rule declared in
+advance. Its result is that **the simple two-dial classifier stays as the grader and no bar
+is re-anchored**, with two disclosures the owner should read beside D1–D3 (§11.3, §11.6).
 
 Nothing in this document has been fitted to. No engine work has started. That is the point:
 these bars are written down, with their justifications, **before** any result exists.
@@ -202,6 +207,13 @@ being goalpost-moving.**
 order, so nothing a player learns in one world about what usually follows what transfers to
 the next — the game becomes a slot machine with economic vocabulary.
 
+**Threshold-sensitivity disclosure, added 2026-08-17 (§11.2–11.3).** O1 is the most robust
+of the six classifier-dependent bars. Perturbing either dial by 50 basis points moves the
+historical clockwise fraction only within **0.5556 – 0.6250**, well inside its own 95%
+interval and **above this bar under every one of the eight perturbed arms** (worst arm clears
+by 0.0370). The richer five-input classifier of §11.4 moves it by 0.0064. O1 can therefore
+be quoted without a threshold caveat — which is not true of D1, D2 or D3.
+
 ---
 
 ## 3. The persistence tier — do the seasons last as long as they should?
@@ -250,6 +262,16 @@ arithmetic changes; what changes is that a marginal FAIL may not be reported as 
 *A floor note that applies to D1 and D2.* No spell can be shorter than one month (0.33
 quarters), so where the ±1 quarter band's lower edge falls at or below that floor, the bar
 binds only from above. This is stated per bar rather than hidden.
+
+**A second disclosure that applies to all four, added 2026-08-17 (§11.3).** These four
+anchors are computed from a classifier with two threshold dials, and §11 perturbs each by
+50 basis points. The four medians survive that perturbation *relative to their own sampling
+intervals* (all four verdicts are STABLE), but **relative to the ±1 quarter bands above they
+do not**: history's recession median leaves D1's band under 3 of the 8 perturbed arms, its
+stagflation median leaves D2's under 6 of 8, and its recovery median leaves D3's under 3 of
+8. **D4 is the only one of the four that stays inside its band under every arm.** No band is
+changed because of this — that would be the goalpost move pre-registration exists to prevent
+— but a D verdict should be read with it in view, alongside the OPEN-3 caution above.
 
 ### D1 — "how long a recession lasts" (contracting, inflation cool)
 
@@ -741,7 +763,10 @@ Stated plainly so the exam's scope cannot be over-read from its passing.
    decisions are waiting on this step and all three are cheap now and expensive later:** O1's
    bar (interval edge, as written, or the stricter one-SE variant — §2), D3's band (which a
    correct engine cannot clear as written — §3), and A2's 65% ceiling (2.8 points of headroom
-   against a decade-measured statistic — §4).
+   against a decade-measured statistic — §4). **§11's threshold-sensitivity result belongs
+   with them**: it changes no bar, but it shows that D1, D2 and D3 each sit outside their own
+   band when the inflation line moves half a percentage point, which bears on what the owner
+   decides about D3 in particular.
 2. ~~The OPEN items are closed~~ — **done, 2026-08-17.** See the table at the top for what was
    measured and what moved: O1's bar and A2's margin now sit at the lower edge of their
    anchors' own 95% intervals, the dwell tolerance stands but its reading changed, and the
@@ -852,3 +877,367 @@ Recorded verbatim in substance so the provenance of each choice is auditable:
 6. **Plain language, and every bar carries its justification** — what real quantity anchors
    it and why the tolerance is the size it is — written before results exist (D-SP-6's
    standing communication rule). → the whole document.
+7. **Regime identification must be shown to be robust before the seal** — the classifier's
+   thresholds perturbed each way, and a richer identification of the same four seasons
+   built and compared under a decision rule declared in advance. → §11, added the same day.
+
+---
+
+## 11. Regime identification robustness (pre-seal, owner-agreed 2026-08-17)
+
+Six of this exam's ten bars — **O1** and **D1–D4**, and through its downturn labels **T1**
+— are measured on months that a classifier sorted into four boxes. If the boxes move when
+the classifier's questions are nudged, those bars are partly measuring the questions rather
+than the economy. Two obligations were agreed with the owner on 2026-08-17 and both were
+run before the seal. Their full output is in `docs/superpowers/specs/spine-v2-anchors.json`
+under `i_label_stability` and `j_richer_identification`; the plain-language derivation of
+every number below is in §10 of the estimation-anchors companion. **Neither obligation
+draws a random number** — both are deterministic recomputations of the same anchors under a
+different labelling of the same months, so there is no new seed and no new tape.
+
+### 11.0 Where this sits: hard labels now, soft labels if fitting proves unstable
+
+Every season in this exam is a **hard label** — a month sits in exactly one of four boxes,
+and a month a hair either side of a line is treated as fully in one box and not at all in
+the other. That is the right place to start: it is the vocabulary the judges, the bars and
+the product itself are written in, and a hard label can be audited in a way a probability
+cannot. It is also a choice with a known failure mode, and the owner and the drafter agreed
+on 2026-08-17 how it will be watched, in two halves. **This section is the first half**: a
+pre-seal check that the labels do not move under a defensible nudge of the lines. **The
+second half falls in week 2, when the engine is actually fitted** — the fit is repeated
+under the same threshold perturbations used here, and if the *fitted parameters*, not
+merely the historical anchors, move materially when the lines move, then the labelling
+**escalates from hard labels to soft ones**: each month carries a membership weight across
+the four seasons instead of a single box, and the dwell, ordering and transition statistics
+become the weighted versions of the same quantities. Agreeing that escalation now, before
+any fitting result exists, is what makes taking it later the execution of a plan rather
+than a reaction to a number. Nothing measured below triggers it; §11.4 records the reason
+it may nonetheless be needed.
+
+### 11.1 Obligation A — what was perturbed, and why by that much
+
+**The classifier has exactly two dials, and they are not the same kind of object.**
+
+- The **inflation dial** is a threshold inside the classifier itself: `ah.gen.spine.
+  panel_quadrant` calls a month hot when its trailing 12-month CPI inflation exceeds the
+  panel's era threshold, **3.351323828920571 pp**. It is perturbed directly.
+- The **growth dial** is not a threshold at all at the classifier level: `panel_quadrant`
+  reads a published month label and asks only whether it is `REC` or `CRI`. Its boundary
+  therefore lives one layer down, in `regime_ruleset_v1`'s **`growth_weak`** line on
+  trailing industrial-production growth (**0.0 %/yr**). It is perturbed *there* and the
+  months are re-labelled through `ah.data.derive.label_regime`.
+
+**The perturbation is ±0.50 pp on each dial, in that dial's own units.** Fifty basis points
+is not a round number picked for looking tidy: on the inflation side it is the platform's
+own `ah.gen.spine.BACKDROP_MARGIN_PP`, the displacement the spine already treats as the
+smallest meaningful move in an inflation state — it sits inside the era threshold itself
+(`median(YoY) + 0.5`) and inside `spine_quadrant`'s hot test — and it is one conventional
+central-bank move. The growth dial takes the same 50 basis points so that neither dial is
+nudged harder than the other *in the units the dials are stated in*.
+
+**The honest asymmetry, stated rather than hidden.** Equal in stated units is not equal in
+each dial's own spread. Trailing CPI inflation has a panel standard deviation of **2.81 pp**
+and **157** of the panel's months sit within 50 bp of the inflation line; trailing
+industrial-production growth has a standard deviation of **5.37 pp** and only **38** months
+sit within 50 bp of the growth line. So the same 50 bp is a bigger move relative to the
+inflation dial, and the arms below duly relabel far more months on that dial (70–86 months)
+than on the growth dial (8 months). Equalising the two in standard deviations instead would
+mean nudging the inflation line by an amount no practitioner would call a threshold choice.
+
+**The re-labelling is verified, not assumed.** The features `label_regime` classifies are
+rebuilt with `ah.gen.bootstrap`'s own helpers on the same frames `build_source` uses, and
+the script **asserts that the unperturbed rebuild reproduces the panel's own labels exactly**
+before any threshold moves. Without that assertion every difference below could be a second
+implementation drifting rather than a dial turning.
+
+**One quirk the perturbation exposes, worth carrying.** `growth_weak` also gates the
+ruleset's `STAG` branch, and `panel_quadrant` treats `STAG` as **expanding** — its
+contracting test is `REC`-or-`CRI` membership and nothing else. So the six-label ruleset's
+"stagflation" and the investment clock's "stagflation" are not the same object, and a hot
+weak-growth month can move between *recession* and an *expanding* quadrant rather than into
+the stagflation cell. §11.5 finds this biting on real months (1975).
+
+**The nine arms** — the baseline, each dial moved each way alone, and the four joint
+corners. A positive inflation delta raises the hot line (fewer hot months); a positive
+growth delta raises the contraction line (more contracting months).
+
+| arm | Δinfl | Δgrowth | months relabelled | contracting months | clockwise fraction | transitions | recession | stagflation | recovery | expansion | T1 lift |
+|---|---|---|---|---|---|---|---|---|---|---|---|
+| baseline | 0 | 0 | 0 (0.0%) | 197 | 0.6029 | 68 | **3** | **4** | **9** | **6** | 2.372 |
+| growth −50bp | 0 | −0.5 | 8 (1.0%) | 189 | 0.5970 | 67 | 3 | 6 | 8.5 | 6 | 2.430 |
+| growth +50bp | 0 | +0.5 | 8 (1.0%) | 205 | 0.6250 | 72 | 2 | 4 | 6 | 6.5 | 2.243 |
+| inflation −50bp | −0.5 | 0 | 86 (10.7%) | 197 | 0.5811 | 74 | 8 | 8.5 | 8 | 7 | 2.372 |
+| inflation +50bp | +0.5 | 0 | 70 (8.7%) | 197 | 0.5556 | 54 | 4 | 9 | 15 | 4 | 2.372 |
+| infl − / growth − | −0.5 | −0.5 | 94 (11.7%) | 189 | 0.5833 | 72 | 7.5 | 9 | 9 | 7 | 2.430 |
+| infl − / growth + | −0.5 | +0.5 | 92 (11.5%) | 205 | 0.5921 | 76 | 4 | 8.5 | 6.5 | 7 | 2.243 |
+| infl + / growth − | +0.5 | −0.5 | 77 (9.6%) | 189 | 0.5577 | 52 | 8.5 | 9 | 15 | 4 | 2.430 |
+| infl + / growth + | +0.5 | +0.5 | 76 (9.5%) | 205 | 0.5763 | 59 | 3.5 | 9 | 12.5 | 4 | 2.243 |
+
+The four season columns are **completed-spell median dwells in months**, on exactly §3's
+completed-spell rule (a spell touching either end of the usable record is dropped), and the
+script asserts its own spell decomposition reproduces §3's lists on the baseline arm.
+
+### 11.2 Obligation A — the verdicts against sampling noise
+
+The rule, stated before the numbers: **STABLE** means every arm's value lies inside the
+anchor's own 95% sampling interval — the interval OPEN-1 measured for the ordering fraction
+and OPEN-3 measured for the dwell medians — so a 50 bp move of the line does not move the
+anchor further than resampling the same history already moves it. **FRAGILE** means at
+least one arm lands outside.
+
+| anchor | baseline | arm range across the nine arms | perturbation spread | its own 95% interval | spread ÷ interval width | verdict |
+|---|---|---|---|---|---|---|
+| clockwise fraction (O1) | 0.6029 | 0.5556 – 0.6250 | 0.0694 | [0.5185, 0.6842] | 0.42 | **STABLE** |
+| recession dwell (D1) | 3 m | 2.0 – 8.5 m | 6.5 m | [1.0, 12.5] m | 0.57 | **STABLE** |
+| stagflation dwell (D2) | 4 m | 4.0 – 9.0 m | 5.0 m | [1.0, 10.5] m | 0.53 | **STABLE** |
+| recovery dwell (D3) | 9 m | 6.0 – 15.0 m | 9.0 m | [5.0, 16.0] m | 0.82 | **STABLE** |
+| expansion dwell (D4) | 6 m | 4.0 – 7.0 m | 3.0 m | [3.0, 12.0] m | 0.33 | **STABLE** |
+
+**All five anchors are STABLE. Read that carefully — it is a weaker statement than it
+sounds.** Every anchor passes because the sampling intervals it is measured against are
+very wide, which is OPEN-3's own finding, not a new one. The recovery median moves through
+a **nine-month** range under a half-point nudge of a line and still counts as stable, because
+its sampling interval is eleven months wide. What §11.2 establishes is that threshold
+choice adds no *more* uncertainty than the panel's own smallness already does. It does not
+establish that the seasons are firmly identified, and it should not be quoted as if it did.
+
+**Transition counts carry no verdict**, and the reason is stated rather than glossed: no
+sampling interval for a *count* exists anywhere in this exam on the same footing (the
+ordering bootstrap deliberately drops about one pair in `mean_block` at its block joins, so
+its per-draw transition count is below the panel's by construction and is not an error bar
+on it). The counts are reported as context and they move a lot — 52 to 76 against the
+baseline's 68 — which is itself the point: the *number of season changes* in US history is
+a function of where the inflation line sits. The O1 bar is cut from the **fraction**, which
+does carry a verdict above.
+
+**T1 is untouched in the ways that matter, and this was checked rather than assumed.** The
+growth-dial perturbation moves `REC` labels, and T1's downturn definition is the
+`REC`-or-`CRI` union, so T1's lift moves with it: across the nine arms the historical lift
+runs **2.243 to 2.430** (panel onset counts 16 to 19 against the baseline's 17), against
+T1's band of **[1.78, 3.35]**. Every arm is comfortably inside. The tight-policy side of
+T1 — the 10-year-below-2-year curve test — is untouched by either dial. **A1 and A2 are
+untouched entirely**: they split months at the fixed 4% CPI line, not at the era threshold,
+so neither dial reaches them.
+
+### 11.3 Obligation A — the second reading, and why it matters more
+
+The verdict rule above answers the question the owner asked: *is the perturbation spread
+inside the anchor's own sampling noise?* There is a different question the exam actually
+judges with: *does the anchor stay inside its own **bar** when the line moves 50 bp?* The
+two can disagree, and here they do, because the ±1 quarter bands of §3 are much narrower
+than the sampling intervals of OPEN-3. Each arm was therefore also checked against the bar
+cut from it (`i_label_stability.bar_band_check`):
+
+| bar | its band | arm range | arms whose value falls **outside the bar** |
+|---|---|---|---|
+| **O1** ≥ 0.5185 | one-sided | 0.5556 – 0.6250 | **none** (worst arm clears by 0.0370) |
+| **D1** recession | [0, 6] m | 2.0 – 8.5 m | **3 of 8** — inflation −50bp alone (8.0 m), and the two corners pairing growth −50bp with either inflation move (7.5 m and 8.5 m) |
+| **D2** stagflation | [1, 7] m | 4.0 – 9.0 m | **6 of 8** — every arm that moves the inflation line at all |
+| **D3** recovery | [6, 12] m | 6.0 – 15.0 m | **3 of 8** — inflation +50bp and both corners containing it |
+| **D4** expansion | [3, 9] m | 4.0 – 7.0 m | **none** |
+
+**What this says in one sentence: for D1, D2 and D3, history itself — re-measured with the
+inflation line moved half a percentage point — would fail the bar that was cut from
+history.** D2 is the sharpest case: *every* arm that touches the inflation line puts the
+historical stagflation median at 8.5 or 9 months against a band of [1, 7]. D4 and O1 are
+the two robust ones and can be quoted without this caveat.
+
+This does not change any bar and no bar is re-cut here — re-cutting a bar because of a
+sensitivity result would be exactly the goalpost-move pre-registration exists to prevent.
+It is recorded for three purposes: it is the strongest argument in this document for the
+week-2 soft-label escalation described in §11.0; it is a second, independent reason to read
+a marginal D verdict as uninformative (§3 already gives the first); and it means **D2's
+bar, like D3's, rests on a number that a defensible alternative threshold would move
+outside its own band** — a fact the owner should have alongside the two ⚠ items §8 already
+puts to them.
+
+### 11.4 Obligation B — a richer identification of the same four seasons
+
+**The taxonomy does not change.** Recession, recovery, expansion and stagflation, read off
+the same two axes and the same `ah.gen.spine.QUADRANTS` encoding (the script asserts that
+feeding it the incumbent growth dial reproduces `panel_quadrant`'s cells bit-identically).
+What changes is *how the growth axis is decided*: four voters vote, and a stated tie-break
+settles a tie.
+
+**The rule, in full, as it would be printed in a judge:**
+
+```
+GROWTH AXIS — four voters, each firing on the months its own indicator calls most
+contraction-like:
+  V1  LABEL   the month's regime_ruleset_v1 label is REC or CRI      (the incumbent dial)
+  V2  LABOR   the 12-month change in the unemployment rate
+  V3  CREDIT  the Baa-minus-Aaa investment-grade spread
+  V4  STRESS  the equity drawdown from its running peak
+
+V2, V3 and V4 fire above a threshold set at the (1 − b) quantile of their own panel
+values, where b = 0.23595505617977527 is the share of the panel's classifiable months
+the incumbent dial itself calls contracting — so no voter is louder than another merely
+by calling more months bad.
+
+Let c = V1 + V2 + V3 + V4.
+    c >= 3   ->  contracting
+    c <= 1   ->  expanding
+    c == 2   ->  V1 decides                                    (the stated tie-break)
+
+INFLATION AXIS — unchanged: hot = trailing 12-month CPI inflation above the panel's era
+threshold, 3.351323828920571 pp.
+
+SEASON = (expanding << 1) | hot, read through ah.gen.spine.QUADRANTS.
+```
+
+**Why the thresholds are base-rate matched rather than named round numbers.** The move has
+direct precedent in this exam's own measurements: `b_transmission_lift` already evaluates
+every alternative tight-policy definition at the primary definition's base rate, for the
+same reason — an indicator that calls more months bad scores differently for reasons that
+have nothing to do with the indicator. No threshold here was chosen by looking at what it
+does to an anchor, and each one's realised value is published:
+
+| voter | indicator | threshold it lands on | months it fires on | agreement with the incumbent dial |
+|---|---|---|---|---|
+| V1 LABEL | `REC`/`CRI` | — | 23.60% | 100% |
+| V2 LABOR | 12-month change in unemployment, pp | **> +0.4236 pp** | 23.60% | 85.0% |
+| V3 CREDIT | Baa − Aaa, pp | **> 1.19 pp** | 23.22% | 73.7% |
+| V4 STRESS | equity drawdown | **deeper than −10.28%** | 23.60% | 73.8% |
+
+Vote counts across the 801 classifiable months: **398** months with no contracting vote,
+**211** with one, **78** at the 2–2 tie the incumbent settles, **70** with three, **44**
+with all four.
+
+**Exactly which series each voter reads, and over what span.**
+
+- **LABOR — `fred.UNRATE`**, monthly, registered in `requirements.yaml` and present in the
+  campaign vintage from **1948-01**. That is more than five years before the panel starts,
+  so the 12-month lookback exists for every panel month and no month is dropped.
+- **CREDIT — the panel's own `ig_spread` factor**, Baa minus Aaa in percentage points,
+  monthly across the whole panel.
+- **STRESS — the equity drawdown** from the running peak of the `equity_mkt` cumulative
+  index, computed by `ah.gen.bootstrap._drawdown_fraction`: the platform's *own* drawdown
+  feature, the same one `regime_ruleset_v1`'s crisis branch reads.
+
+**What was considered and NOT used, stated rather than substituted silently.**
+
+- **`bis.credit_gap_us`** — the climate model's credit gap — is **not** the credit input,
+  and the reason is availability, not preference: it is **quarterly** and begins
+  **1957-10**, fifty-four months after the panel starts. Using it would mean forward-filling
+  a quarterly series into a monthly classifier *and* leaving a four-and-a-half-year hole at
+  the panel's head. The monthly `ig_spread` carries the same dimension over the whole span
+  and is used instead.
+- **`hy_spread`** is not used because on this panel it carries no information `ig_spread`
+  does not: `fred.HY_OAS`'s licensed history begins 2023-08 and lies entirely inside the
+  holdout, so every panel month of `hy_spread` is the spliced Baa−Aaa proxy.
+- **A second inflation input does not exist over the whole panel.** The only other monthly
+  inflation series in the campaign vintage is `fred.CPI_CORE`, which begins **1957-01** —
+  forty-five months after the panel starts. A classifier whose rule changes part-way through
+  the panel is worse than one with a single input, so the inflation axis keeps its single
+  input. **This is the dimension this comparison does not enrich, and nothing is substituted
+  for it.** The three extra inputs the owner named — credit, labor, market stress — are all
+  cyclical or financial-conditions indicators and none is an inflation indicator, so all
+  three enter the growth axis; the disagreement map below is entirely a map of
+  growth-direction disagreement.
+
+### 11.5 Obligation B — the disagreement map
+
+**The two classifications disagree on 52 of the 801 classifiable months — 6.49%.**
+
+Where, by decade:
+
+| decade | classifiable months | disagreeing | share |
+|---|---|---|---|
+| 1950s (from 1954-04) | 69 | 1 | 1.4% |
+| 1960s | 120 | 8 | 6.7% |
+| 1970s | 120 | 10 | 8.3% |
+| 1980s | 120 | 1 | 0.8% |
+| 1990s | 120 | 0 | **0.0%** |
+| 2000s | 120 | 4 | 3.3% |
+| 2010s | 120 | 26 | **21.7%** |
+| 2020 | 12 | 2 | 16.7% |
+
+Where, by the season the simple classifier assigned (rows), and what the richer one made of
+those months (columns):
+
+| simple ↓ / richer → | recession | stagflation | recovery | expansion | months | reassigned |
+|---|---|---|---|---|---|---|
+| **recession** | 72 | 0 | **37** | 0 | 109 | **33.9%** |
+| **stagflation** | 0 | 79 | 0 | 1 | 80 | 1.3% |
+| **recovery** | **4** | 0 | 374 | 0 | 378 | 1.1% |
+| **expansion** | 0 | **10** | 0 | 224 | 234 | 4.3% |
+
+**The disagreement is not spread thinly — it is one concentrated defect plus three
+episodes.** A third of every month the simple classifier calls a recession is reassigned,
+almost all of it to recovery, and almost all of it in the 2010s. **Six runs of three or more
+consecutive disagreeing months** account for 48 of the 52:
+
+| run | months | simple | richer | what is happening in the data |
+|---|---|---|---|---|
+| **1960-05 → 1960-11** | 7 | recession | recovery | NBER *was* in recession (`usrec` = 1) and all three corroborating voters were quiet: unemployment up at most 0.40 pp, spread 0.76–0.82, drawdown never worse than −8%. **The richer classifier overrules a real recession here** — the 1960–61 downturn was mild on every corroborating measure. |
+| **1975-04 → 1975-12** | 9 | expansion | stagflation | Industrial production −11% year on year, unemployment +3.7 pp, spread 1.6–1.8, drawdown −15% to −25%, inflation ~10%. All three voters fire. The simple classifier called these months *expanding* only because the ruleset labelled them `STAG`, which `panel_quadrant` treats as expanding — the §11.1 quirk biting on the tail of the 1973–75 bust. **The richer classifier is plainly right here.** |
+| **2002-06 → 2002-09** | 4 | recovery | recession | The post-dot-com equity bear: drawdown −34% to −45%, unemployment +0.7 to +1.3 pp, spread 1.21–1.37. No NBER recession, so the simple dial says recovery. |
+| **2015-03 → 2015-08** | 6 | recession | recovery | `usrec` = 0; the label is `REC` on industrial-production growth alone (−0.0% to −2.1%). Unemployment **falling** 0.7–1.3 pp, spread 0.90–1.15, drawdown ≤ 6%. |
+| **2016-04 → 2017-02** | 11 | recession | recovery | Same shape: the industrial/energy slump, `usrec` = 0, unemployment falling, spreads normal, essentially no drawdown. |
+| **2019-04 → 2020-02** | 11 | recession | recovery | Same shape again: the 2019 manufacturing slowdown. **This is exactly the right-censored recession spell §3 discloses beside the D1 headline** — the "observed minimum 21 months" that runs 2019-04 → 2020-12. The richer classifier keeps only its COVID tail. |
+
+**The plain reading.** Four of the six runs are one recurring defect: `regime_ruleset_v1`
+calls a month `REC` whenever trailing industrial-production growth is at or below zero, even
+with no NBER recession, no rise in unemployment, no credit stress and no equity drawdown.
+Those are **industrial-production-only recessions**, and they are why the simple
+classifier's recession season is a third larger than the richer one's (109 months against
+76). One run (1975) is the opposite error and the simple classifier is clearly wrong. One
+run (1960) is a case where the **richer** classifier is wrong, because a genuine but mild
+recession registers on none of its corroborating measures — a real cost of the extra
+inputs, and the reason the richer classifier is not obviously the better instrument.
+
+### 11.6 Obligation B — the decision rule and its verdicts
+
+**The rule, quoted verbatim as declared before the comparison was run:**
+
+> the richer classifier replaces the simple one ONLY IF the disagreement changes an anchor
+> by more than that anchor's own sampling noise. Otherwise simplicity wins.
+
+**How "sampling noise" is read**, stated because the phrase admits two readings and the
+answer here is the same under both. The primary reading is the one this exam already
+publishes per anchor: the absolute change between the two classifiers' values must exceed
+the anchor's **95% interval half-width** — the `ci95_half_width_months` OPEN-3 already
+computes, and the equivalent for the ordering fraction. The stricter alternative reading —
+*the richer value leaves the interval altogether* — is reported beside every verdict.
+
+| anchor | simple | richer | change | its 95% half-width | change exceeds it? | richer value still inside the interval? | verdict |
+|---|---|---|---|---|---|---|---|
+| clockwise fraction | 0.6029 | 0.6094 | 0.0064 | 0.0844 | no | yes | **SIMPLICITY WINS** |
+| recession dwell | 3 m | 5 m | 2.0 m | 9.5 m | no | yes | **SIMPLICITY WINS** |
+| stagflation dwell | 4 m | 3.5 m | 0.5 m | 6.5 m | no | yes | **SIMPLICITY WINS** |
+| recovery dwell | 9 m | 12 m | 3.0 m | 7.0 m | no | yes | **SIMPLICITY WINS** |
+| expansion dwell | 6 m | 6 m | 0.0 m | 6.0 m | no | yes | **SIMPLICITY WINS** |
+
+**The decision rule does not trigger on any anchor, under either reading. The simple
+two-dial classifier becomes the sealed grader, and no bar in this document is re-anchored.**
+
+Two things the owner should carry out of that result rather than take it as a clean bill of
+health.
+
+1. **The rule was met comfortably in ratio terms and not in absolute ones.** The richer
+   classifier moves the recession median from 3 to 5 months and the recovery median from 9
+   to 12 — a third and a half of a play-quarter tolerance's worth in one case and a full
+   quarter in the other — and both survive the rule only because the sampling half-widths
+   they are compared against are 9.5 and 7.0 months. Recovery is also the anchor D3's ⚠
+   already concerns; if the owner reopens D3, **12 months is the number the richer
+   classifier would have put there**, which sits exactly on that band's upper edge.
+2. **"Simplicity wins" is a verdict about the anchors, not about the labels.** The two
+   classifications disagree about a third of all recession months, and §11.5 shows the
+   simple one is the wrong side of that disagreement in the 2010s. The anchors survive
+   because a median over ten-to-twelve spells is a blunt instrument, not because the
+   seasons agree. Anything that reads *individual months* rather than a pooled median —
+   the generation-time hazard link, for instance — has no protection from this result.
+
+### 11.7 What §11 licenses and what it does not
+
+It licenses sealing the simple two-dial classifier as the grader, with O1 and D4 quotable
+without a threshold caveat, and T1 shown to be insensitive to both dials.
+
+It does **not** license the claim that the four seasons are firmly identified. The five
+anchors are STABLE only against sampling intervals that OPEN-3 already showed are very
+wide; measured against the exam's own ±1 quarter bands, three of the four D anchors leave
+their band under a half-point move of the inflation line; and the richer classifier
+disagrees about a third of recession months on a defect (industrial-production-only
+recessions) that is real. **The week-2 fitting-stability check of §11.0 is the obligation
+that carries this forward, and the soft-label escalation is the agreed response if the fit
+proves threshold-unstable.**

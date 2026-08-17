@@ -26,6 +26,23 @@ close the exam's four OPEN items
 - **H (OPEN-4)** a generated-side power calculation: how many generated decades
   a TRUE engine needs before it clears each bar with >= 90% probability.
 
+Sections I and J were added on 2026-08-17 for the two owner-agreed
+regime-identification obligations, and neither draws a random number -- both are
+deterministic recomputations of anchors under a different labelling of the same
+panel months, judged against the sampling intervals E and G already measured:
+
+- **I (obligation A)** label stability: each of the two-dial classifier's dials
+  is perturbed +-0.50 pp in its own units and every affected anchor is re-derived,
+  then compared with its own sampling noise. The growth dial has no threshold of
+  its own, so it is perturbed one layer down in ``regime_ruleset_v1`` and the
+  months are re-labelled -- with an assertion that the unperturbed rebuild
+  reproduces the panel's labels exactly.
+- **J (obligation B)** a second classification of the SAME four seasons, built
+  from five inputs rather than two (the two dials plus credit conditions, labor
+  direction and market stress) by a transparent vote with a stated tie-break,
+  with the disagreement map, the re-derived anchors, and the owner's
+  pre-declared decision rule applied per anchor.
+
 Nothing here is a new definition where the platform already has one. Every
 concept this script needs is imported from the module that owns it:
 
@@ -65,8 +82,30 @@ from typing import Any, cast
 import numpy as np
 import pandas as pd
 
+from ah.data import derive
 from ah.eval.metrics.tails import derived_series_values
-from ah.gen.bootstrap import campaign_source
+
+# Sections I and J must rebuild the platform's OWN regime features (so a
+# perturbed threshold re-labels exactly what an unperturbed one labels) and must
+# read two series the factor panel does not carry. Both jobs are done with
+# ``ah.gen.bootstrap``'s own helpers rather than with a second implementation
+# written here -- which is why the private names are imported: a re-implementation
+# that drifted from ``build_source`` by one line would make every perturbation
+# result a measurement of the drift. ``section_i`` asserts the rebuild reproduces
+# ``source.labels`` bit-identically before any threshold is moved.
+from ah.gen.bootstrap import (
+    CAMPAIGN_VINTAGE_ID,
+    INDPRO_SERIES_ID,
+    USREC_SERIES_ID,
+    _catalog_access,
+    _drawdown_fraction,
+    _monthly,
+    _read_series,
+    _yoy_percent,
+    campaign_source,
+    load_manifest,
+    read_factor_frames,
+)
 from ah.gen.regimes.semimarkov import spells_from_labels
 from ah.gen.spine import CLOCKWISE, QUADRANTS, fit_hazard, panel_quadrant, panel_yoy
 from ah.strategies import load_derived_series
@@ -135,6 +174,55 @@ DWELL_TOLERANCE_MONTHS = 3.0
 #: range, not from a sampling interval, so section F does not move them.
 A2_SHARE_HIGH_FLOOR = 0.80
 A2_SHARE_LOW_CEILING = 0.65
+
+#: Section I (label stability). The size of the threshold perturbation applied
+#: to EACH dial, in percentage points of that dial's own units -- 0.50 pp on the
+#: inflation line (trailing CPI YoY) and 0.50 pp on the growth line
+#: (``regime_ruleset_v1``'s ``growth_weak``, trailing INDPRO YoY). 50 basis
+#: points is not an arbitrary round number here: it is the platform's own
+#: ``ah.gen.spine.BACKDROP_MARGIN_PP``, the displacement the spine already
+#: treats as the smallest meaningful move in an inflation state (it is inside
+#: the era threshold itself and inside ``spine_quadrant``'s hot test), and it is
+#: one conventional central-bank move. Applying the SAME 0.50 pp to the growth
+#: dial keeps the two perturbations the same size in each dial's own units.
+STABILITY_PERTURBATION_PP = 0.5
+
+#: The nine arms: the baseline, each dial moved each way on its own, and the
+#: four joint corners. ``(name, inflation_line_delta_pp, growth_line_delta_pp)``.
+#: Sign convention, stated because it is easy to read backwards: a POSITIVE
+#: inflation delta raises the hot line (fewer hot months); a POSITIVE growth
+#: delta raises the contraction line (more months called weak, i.e. MORE
+#: contracting months).
+STABILITY_ARMS: tuple[tuple[str, float, float], ...] = (
+    ("baseline", 0.0, 0.0),
+    ("inflation_line_minus_50bp", -STABILITY_PERTURBATION_PP, 0.0),
+    ("inflation_line_plus_50bp", +STABILITY_PERTURBATION_PP, 0.0),
+    ("growth_line_minus_50bp", 0.0, -STABILITY_PERTURBATION_PP),
+    ("growth_line_plus_50bp", 0.0, +STABILITY_PERTURBATION_PP),
+    ("inflation_minus_growth_minus", -STABILITY_PERTURBATION_PP, -STABILITY_PERTURBATION_PP),
+    ("inflation_minus_growth_plus", -STABILITY_PERTURBATION_PP, +STABILITY_PERTURBATION_PP),
+    ("inflation_plus_growth_minus", +STABILITY_PERTURBATION_PP, -STABILITY_PERTURBATION_PP),
+    ("inflation_plus_growth_plus", +STABILITY_PERTURBATION_PP, +STABILITY_PERTURBATION_PP),
+)
+
+#: Section J. The unemployment series the labor voter reads. Registered in
+#: ``requirements.yaml`` (fred.UNRATE, monthly from 1948-01) and present in the
+#: campaign vintage, so its 12-month lookback exists for every panel month.
+UNRATE_SERIES_ID = "fred.UNRATE"
+#: The panel factor the credit voter reads: Baa minus Aaa, in percentage points.
+CREDIT_FACTOR = "ig_spread"
+#: The labor voter's lookback, in months.
+LABOR_CHANGE_MONTHS = 12
+#: A run of this many or more consecutive disagreeing months is reported as a
+#: CLUSTER with its dates, rather than being averaged into a percentage.
+DISAGREEMENT_CLUSTER_MIN_MONTHS = 3
+
+#: The pre-declared decision rule, owner-agreed 2026-08-17, quoted verbatim in
+#: the exam document and carried in the JSON so the two cannot drift.
+RICHER_DECISION_RULE = (
+    "the richer classifier replaces the simple one ONLY IF the disagreement changes an "
+    "anchor by more than that anchor's own sampling noise. Otherwise simplicity wins."
+)
 
 #: The bars section H's recommendation is taken over. ``A1_with_containment``
 #: and the ``A2*`` components are diagnostics reported beside their headline
@@ -1627,6 +1715,731 @@ def section_h(
 
 
 # --------------------------------------------------------------------------- #
+# I and J -- regime-identification robustness (owner-agreed 2026-08-17)
+#
+# Neither section draws a single random number. Every figure below is a
+# deterministic recomputation of an anchor under a different labelling of the
+# SAME panel months, compared against sampling intervals that sections E and G
+# already measured. That is why no new seed constant appears above: there is no
+# new tape to keep distinct.
+# --------------------------------------------------------------------------- #
+
+
+class _RelabelledSource:
+    """The two fields ``ah.gen.spine.panel_quadrant`` reads, and nothing else.
+
+    ``panel_quadrant`` is the classifier under test and must never be
+    re-implemented here, but it takes its growth direction from
+    ``source.labels``. Handing it this projection is how a perturbed label
+    vector is classified by the REAL classifier rather than by a copy of it.
+    """
+
+    def __init__(self, source: Any, labels: tuple[str, ...]) -> None:
+        self.labels = labels
+        self.n_rows = int(source.n_rows)
+
+
+def _completed_spells_by_quadrant(cells: np.ndarray) -> list[list[int]]:
+    """Per-quadrant COMPLETED spell lengths, by section C's own censoring rule.
+
+    A spell is censored if it opens the panel, opens straight out of a stretch
+    with no defined quadrant, or is still running at the last row; censored
+    spells are dropped. Written once here so every arm of section I and both
+    classifiers of section J are measured identically; ``section_i`` asserts it
+    reproduces section C's own completed-spell lists on the baseline cells.
+    """
+    spells = spells_from_labels(cells.astype(np.int8))
+    n_spells = len(spells)
+    out: list[list[int]] = [[] for _ in QUADRANTS]
+    for position, (state, _start, length) in enumerate(spells):
+        if state < 0:
+            continue
+        left = position == 0 or spells[position - 1][0] < 0
+        right = position == n_spells - 1
+        if left or right:
+            continue
+        out[state].append(int(length))
+    return out
+
+
+def _classification_anchors(cells: np.ndarray) -> dict[str, Any]:
+    """The anchors a re-labelling can move: dwell medians, ordering, counts."""
+    n_trans, n_cw = _clockwise_counts(cells[:-1], cells[1:])
+    total = int(n_trans)
+    clockwise = int(n_cw)
+    completed = _completed_spells_by_quadrant(cells)
+    per_quadrant: dict[str, Any] = {}
+    for i, quadrant in enumerate(QUADRANTS):
+        lengths = sorted(completed[i])
+        per_quadrant[quadrant] = {
+            "n_completed_spells": len(lengths),
+            "median_months": _f(float(np.median(lengths))) if lengths else None,
+            "months_in_quadrant": int((cells == i).sum()),
+            "sorted_spells_months": lengths,
+        }
+    return {
+        "clockwise_fraction": _f(float(clockwise) / total) if total else None,
+        "n_transitions": total,
+        "n_clockwise_transitions": clockwise,
+        "defined_months": int((cells >= 0).sum()),
+        "per_quadrant": per_quadrant,
+    }
+
+
+def _regime_features(source: Any, access: Any, frames: dict[str, Any]) -> pd.DataFrame:
+    """The five-column feature frame ``ah.data.derive.label_regime`` classifies.
+
+    Built by exactly the calls ``ah.gen.bootstrap.build_source`` makes -- the
+    same helpers on the same frames -- so that re-labelling with an unperturbed
+    threshold dict returns the panel's own labels character for character.
+    ``hy_oas`` is absent by construction on this vintage (the licensed history
+    is all inside the holdout), which ``regime_labels_for`` records as a known
+    gap; it is passed as NaN here for the same reason.
+    """
+    dates = pd.DatetimeIndex(source.dates)
+    usrec_frame = _read_series(access, USREC_SERIES_ID)
+    indpro_frame = _read_series(access, INDPRO_SERIES_ID)
+    if usrec_frame is None or indpro_frame is None:
+        raise RuntimeError(f"the panel's labels need {USREC_SERIES_ID} and {INDPRO_SERIES_ID}")
+    features = pd.DataFrame(index=dates)
+    features["cpi_yoy"] = _yoy_percent(_monthly(frames["cpi"])).reindex(dates)
+    features["growth_yoy"] = _yoy_percent(_monthly(indpro_frame)).reindex(dates)
+    features["drawdown"] = _drawdown_fraction(_monthly(frames["equity_mkt"])).reindex(dates)
+    features["usrec"] = _monthly(usrec_frame).reindex(dates)
+    if bool(features.isna().to_numpy().any()):
+        raise RuntimeError("a regime feature is missing over the panel span")
+    return features
+
+
+def _feature_columns(features: pd.DataFrame) -> dict[str, np.ndarray]:
+    """The feature frame as plain float columns, in ``label_regime``'s own names."""
+    return {
+        name: features[name].to_numpy(dtype=np.float64)
+        for name in ("usrec", "cpi_yoy", "growth_yoy", "drawdown")
+    }
+
+
+def _labels_at(columns: dict[str, np.ndarray], thresholds: dict[str, Any]) -> tuple[str, ...]:
+    """``regime_ruleset_v1`` labels under a (possibly perturbed) threshold set."""
+    return tuple(
+        derive.label_regime(
+            usrec=float(usrec),
+            cpi_yoy=float(cpi_yoy),
+            growth_yoy=float(growth_yoy),
+            drawdown=float(drawdown),
+            hy_oas=float("nan"),
+            thr=thresholds,
+        )
+        for usrec, cpi_yoy, growth_yoy, drawdown in zip(
+            columns["usrec"],
+            columns["cpi_yoy"],
+            columns["growth_yoy"],
+            columns["drawdown"],
+            strict=True,
+        )
+    )
+
+
+def _t1_lift_for_labels(source: Any, yoy: np.ndarray, labels: tuple[str, ...]) -> dict[str, Any]:
+    """T1's recession-or-crisis lift under one arm's labels, point estimate only.
+
+    The growth dial's perturbation moves ``REC`` labels, and T1's downturn
+    definition is the REC-or-CRI union, so a growth perturbation moves T1 as
+    well as the quadrant anchors. Reported as a disclosure beside section I --
+    the tight-policy side (the yield curve) is untouched by either dial.
+    """
+    n = int(source.n_rows)
+    eligible = _eligible_mask(yoy, n, K_MONTHS)
+    names = list(source.factor_names)
+    values = np.asarray(source.values)
+    tight = (values[:, names.index("ust_2y")] - values[:, names.index("ust_10y")]) > 0.0
+    onset_at = _onset_flags(np.isin(np.asarray(labels), ["REC", "CRI"]))
+    outcome = _followed_within(onset_at, np.flatnonzero(eligible), K_MONTHS)
+    conditional, unconditional, lift = _lift(tight[eligible], outcome)
+    return {
+        "lift": _f(lift),
+        "conditional_rate": _f(conditional),
+        "unconditional_rate": _f(unconditional),
+        "n_onsets_panel": int(onset_at.sum()),
+    }
+
+
+def _interval_verdict(values: list[float], lo: float, hi: float, point: float) -> dict[str, Any]:
+    """STABLE/FRAGILE for one anchor, by the stated containment rule.
+
+    STABLE means every arm's value lies inside the anchor's own 95% sampling
+    interval -- i.e. no perturbation of that size moves the anchor further than
+    resampling the same history already moves it. ``spread_vs_interval_width``
+    is published beside the verdict as the continuous version of the same
+    comparison, so a reader who prefers "is the spread smaller than the interval
+    is wide?" can apply that reading instead without recomputing anything.
+    """
+    finite = [v for v in values if np.isfinite(v)]
+    spread = (max(finite) - min(finite)) if finite else float("nan")
+    width = hi - lo
+    inside = all(lo <= v <= hi for v in finite)
+    return {
+        "arm_min": _f(min(finite)) if finite else None,
+        "arm_max": _f(max(finite)) if finite else None,
+        "perturbation_spread": _f(spread),
+        "sampling_ci95": [_f(lo), _f(hi)],
+        "sampling_ci95_width": _f(width),
+        "sampling_ci95_half_width": _f(max(point - lo, hi - point)),
+        "spread_vs_interval_width": _f(spread / width) if width > 0 else None,
+        "all_arms_inside_ci95": bool(inside),
+        "verdict": "STABLE" if inside else "FRAGILE",
+    }
+
+
+def section_i(
+    source: Any,
+    yoy: np.ndarray,
+    cells: np.ndarray,
+    era_threshold_pp: float,
+    access: Any,
+    frames: dict[str, Any],
+    regime_durations: dict[str, Any],
+    ordering: dict[str, Any],
+    dwell_intervals: dict[str, Any],
+    bars: dict[str, Any],
+) -> dict[str, Any]:
+    """Obligation A: how far do the anchors move when the two dials are nudged?
+
+    The investment clock has exactly two dials. The INFLATION dial is a
+    threshold inside the classifier itself (``panel_quadrant``'s
+    ``yoy > era_threshold_pp``), so it is perturbed directly. The GROWTH dial is
+    not a threshold at the classifier level at all -- ``panel_quadrant`` reads a
+    published label and asks whether it is ``REC`` or ``CRI`` -- so its boundary
+    lives one layer down, in ``regime_ruleset_v1``'s ``growth_weak`` line on
+    trailing INDPRO growth, and it is perturbed THERE and the months re-labelled.
+    Both moves are +-0.50 pp in the dial's own units.
+    """
+    base_thresholds = dict(derive.regime_thresholds())
+    columns = _feature_columns(_regime_features(source, access, frames))
+    growth_yoy = columns["growth_yoy"]
+    growth_line = float(base_thresholds["growth_weak"])
+    rebuilt = _labels_at(columns, base_thresholds)
+    if rebuilt != tuple(source.labels):
+        raise RuntimeError(
+            "the rebuilt regime labels do not reproduce the panel's own; every "
+            "perturbation below would be measuring that drift instead of the dial"
+        )
+    baseline_anchors = _classification_anchors(cells)
+    for quadrant in QUADRANTS:
+        observed = baseline_anchors["per_quadrant"][quadrant]["sorted_spells_months"]
+        expected = regime_durations["per_quadrant"][quadrant]["sorted_spells_months"]
+        if observed != expected:
+            raise RuntimeError(f"completed-spell rule disagrees with section C on {quadrant}")
+
+    incumbent_contracting = np.isin(np.asarray(source.labels), ["REC", "CRI"])
+    arms: dict[str, Any] = {}
+    per_arm_cells: dict[str, np.ndarray] = {}
+    for name, d_infl, d_growth in STABILITY_ARMS:
+        thresholds = dict(base_thresholds)
+        thresholds["growth_weak"] = growth_line + d_growth
+        labels = tuple(source.labels) if d_growth == 0.0 else _labels_at(columns, thresholds)
+        arm_cells = panel_quadrant(
+            _RelabelledSource(source, labels), yoy, era_threshold_pp + d_infl
+        )
+        per_arm_cells[name] = arm_cells
+        contracting = np.isin(np.asarray(labels), ["REC", "CRI"])
+        defined = cells >= 0
+        moved = int((arm_cells[defined] != cells[defined]).sum())
+        arms[name] = {
+            "inflation_line_delta_pp": d_infl,
+            "growth_line_delta_pp": d_growth,
+            "inflation_line_pp": _f(era_threshold_pp + d_infl),
+            "growth_weak_pp": _f(thresholds["growth_weak"]),
+            "contracting_months": int(contracting.sum()),
+            "contracting_months_change": int(contracting.sum() - incumbent_contracting.sum()),
+            "months_reassigned_vs_baseline": moved,
+            "months_reassigned_share": _f(float(moved) / float(defined.sum())),
+            "anchors": _classification_anchors(arm_cells),
+            "t1_disclosure": _t1_lift_for_labels(source, yoy, labels),
+        }
+
+    # ---- verdicts, one per anchor -------------------------------------------
+    verdicts: dict[str, Any] = {}
+    cw_ci = ordering["bootstrap_ci95"][f"block_{PRIMARY_BLOCK_MONTHS}m"]["clockwise_fraction_ci95"]
+    verdicts["clockwise_fraction"] = _interval_verdict(
+        [cast(float, arms[name]["anchors"]["clockwise_fraction"]) for name, _, _ in STABILITY_ARMS],
+        cast(float, cw_ci["lo"]),
+        cast(float, cw_ci["hi"]),
+        cast(float, ordering["clockwise_fraction"]),
+    )
+    for quadrant in QUADRANTS:
+        row = dwell_intervals["per_quadrant"][quadrant]
+        lo, hi = cast(list[float], row["ci95_months"])
+        verdicts[f"dwell_median_{quadrant}"] = _interval_verdict(
+            [
+                cast(float, arms[name]["anchors"]["per_quadrant"][quadrant]["median_months"])
+                for name, _, _ in STABILITY_ARMS
+            ],
+            lo,
+            hi,
+            cast(float, row["median_months"]),
+        )
+
+    transition_counts = {
+        name: arms[name]["anchors"]["n_transitions"] for name, _, _ in STABILITY_ARMS
+    }
+    t1_lifts = [cast(float, arms[name]["t1_disclosure"]["lift"]) for name, _, _ in STABILITY_ARMS]
+
+    # ---- the second reading the verdicts above do NOT give ------------------
+    # "Inside the anchor's own sampling interval" is what the owner asked for
+    # and it is what the verdicts report. But those intervals are very wide
+    # (OPEN-3's finding), and the exam does not judge with them -- it judges
+    # with the D bands and the O1 minimum. So the same arms are also checked
+    # against the bars themselves. A season whose HISTORICAL anchor leaves its
+    # own band when the dial moves 50 bp is a fact about the bar, and it is
+    # computed here rather than left to be noticed later.
+    band_check: dict[str, Any] = {}
+    dwell_bands = cast(dict[str, list[float]], bars["D_median_bands_months"])
+    o1_min = cast(float, bars["O1_clockwise_min"])
+    o1_values = [
+        cast(float, arms[name]["anchors"]["clockwise_fraction"]) for name, _, _ in STABILITY_ARMS
+    ]
+    band_check["O1_clockwise_fraction"] = {
+        "bar_minimum": _f(o1_min),
+        "arms_outside": [
+            name
+            for name, _, _ in STABILITY_ARMS
+            if not (cast(float, arms[name]["anchors"]["clockwise_fraction"]) >= o1_min)
+        ],
+        "arm_min": _f(min(o1_values)),
+        "headroom_at_worst_arm": _f(min(o1_values) - o1_min),
+    }
+    for code, quadrant in zip(("D1", "D2", "D3", "D4"), QUADRANTS, strict=True):
+        band = dwell_bands[quadrant]
+        values = [
+            cast(float, arms[name]["anchors"]["per_quadrant"][quadrant]["median_months"])
+            for name, _, _ in STABILITY_ARMS
+        ]
+        outside = [
+            name
+            for name, value in zip([n for n, _, _ in STABILITY_ARMS], values, strict=True)
+            if not (band[0] <= value <= band[1])
+        ]
+        band_check[f"{code}_dwell_median_{quadrant}"] = {
+            "bar": [_f(band[0]), _f(band[1])],
+            "arm_min": _f(min(values)),
+            "arm_max": _f(max(values)),
+            "arms_outside": outside,
+            "n_arms_outside": len(outside),
+        }
+
+    return {
+        "obligation": (
+            "owner-agreed 2026-08-17 (A): perturb each dial of the two-dial classifier and "
+            "report each anchor's spread across the perturbations against its own sampling "
+            "noise"
+        ),
+        "perturbation_pp": STABILITY_PERTURBATION_PP,
+        "perturbation_rationale": (
+            "0.50 pp on EACH dial, in that dial's own units. On the inflation dial that is "
+            "the platform's own ah.gen.spine.BACKDROP_MARGIN_PP -- the displacement the "
+            "spine already treats as the smallest meaningful move in an inflation state, "
+            "since it sits inside both the era threshold itself and spine_quadrant's hot "
+            "test -- and it is one conventional central-bank move. The growth dial takes "
+            "the same 50 basis points on trailing INDPRO growth, so neither dial is nudged "
+            "harder than the other"
+        ),
+        "dials": {
+            "inflation": (
+                "panel_quadrant's hot test, yoy > era_threshold_pp, where era_threshold_pp "
+                "= median(panel trailing CPI YoY) + BACKDROP_MARGIN_PP = "
+                f"{era_threshold_pp!r} pp. Perturbed directly"
+            ),
+            "growth": (
+                "panel_quadrant's contracting test, 'the month's regime_ruleset_v1 label is "
+                "REC or CRI'. This dial carries NO threshold of its own: its boundary is "
+                "regime_ruleset_v1's growth_weak line on trailing INDPRO growth (0.0 %/yr), "
+                "one layer below the classifier. It is perturbed there and the months are "
+                "re-labelled through ah.data.derive.label_regime"
+            ),
+        },
+        "relabelling_check": {
+            "rebuilt_labels_reproduce_panel": True,
+            "note": (
+                "the features are rebuilt with ah.gen.bootstrap's own helpers on the same "
+                "frames build_source uses, and the unperturbed rebuild is asserted equal to "
+                "source.labels before any threshold moves -- so a difference below is the "
+                "dial, never a second implementation drifting"
+            ),
+        },
+        "stag_branch_note": (
+            "one consequence of perturbing growth_weak that a reader should see: the same "
+            "line gates the ruleset's STAG branch, and panel_quadrant treats STAG as "
+            "EXPANDING (its contracting test is REC-or-CRI membership, nothing else). So a "
+            "hot weak-growth month can move between 'recession' and an EXPANDING quadrant "
+            "rather than into the 'stagflation' cell -- the six-label ruleset's stagflation "
+            "and the investment clock's stagflation are not the same object"
+        ),
+        "verdict_rule": (
+            "STABLE means every arm's value lies inside the anchor's own 95% sampling "
+            "interval (section E's block bootstrap for the ordering fraction, section G's "
+            "spell bootstrap for the dwell medians): a perturbation of this size moves the "
+            "anchor no further than resampling the same history already moves it. FRAGILE "
+            "means at least one arm lands outside. spread_vs_interval_width is published "
+            "beside every verdict for the alternative reading"
+        ),
+        "dial_scale_disclosure": {
+            "inflation_indicator_sd_pp": _f(float(np.nanstd(yoy, ddof=1))),
+            "growth_indicator_sd_pp": _f(float(np.std(growth_yoy, ddof=1))),
+            "inflation_months_within_50bp_of_line": int(
+                np.nansum(np.abs(yoy - era_threshold_pp) <= STABILITY_PERTURBATION_PP)
+            ),
+            "growth_months_within_50bp_of_line": int(
+                (np.abs(growth_yoy - growth_line) <= STABILITY_PERTURBATION_PP).sum()
+            ),
+            "note": (
+                "the same 50 basis points is NOT the same fraction of each dial's own "
+                "spread, and the reader should see that rather than infer symmetry from "
+                "the number: trailing CPI inflation is a much tighter series than trailing "
+                "industrial-production growth, so 0.50 pp is a larger move relative to the "
+                "inflation dial's own scale, and the arms below duly relabel far more "
+                "months on the inflation dial than on the growth dial. The two "
+                "perturbations are equal in the units the dials are STATED in, which is "
+                "what a threshold-sensitivity check can honestly hold fixed; equalising "
+                "them in standard deviations instead would mean nudging the inflation line "
+                "by an amount no practitioner would call a threshold choice"
+            ),
+        },
+        "arms": arms,
+        "verdicts": verdicts,
+        "bar_band_check": band_check,
+        "bar_band_check_note": (
+            "the verdicts above answer the question the owner asked -- is the perturbation "
+            "spread inside the anchor's own SAMPLING noise. This block answers the "
+            "different question the exam actually judges with: does the anchor stay inside "
+            "its own BAR when the dial moves 50 bp. The two can disagree, and here they do, "
+            "because OPEN-3 established that the dwell intervals are much wider than the "
+            "+-1 quarter bands. An arm listed under arms_outside is a case where HISTORY "
+            "ITSELF, re-measured with a 50 bp different line, would fail the bar cut from it"
+        ),
+        "transition_counts_by_arm": transition_counts,
+        "transition_count_note": (
+            "transition counts are reported as context and carry NO stable/fragile verdict: "
+            "no sampling interval for a COUNT is measured anywhere in this file on the same "
+            "footing (section E's block bootstrap drops about one pair in mean_block at "
+            "block joins by design, so its per-draw transition count is deliberately below "
+            "the panel's and is not an error bar on it). The O1 bar is cut from the "
+            "FRACTION, which does carry a verdict above"
+        ),
+        "t1_disclosure_summary": {
+            "lift_min": _f(min(t1_lifts)),
+            "lift_max": _f(max(t1_lifts)),
+            "note": (
+                "the growth-dial perturbation moves REC labels, and T1's downturn definition "
+                "is the REC-or-CRI union, so T1's lift moves with it; the tight-policy side "
+                "(the 10y-below-2y curve test) is untouched by either dial. Point estimates "
+                "only, per arm, under t1_disclosure -- this is a disclosure that the growth "
+                "dial reaches beyond the quadrant anchors, not a second T1 measurement. The "
+                "allocation bars A1 and A2 split months at the fixed 4% CPI line, not at the "
+                "era threshold, so neither dial reaches them at all"
+            ),
+        },
+    }
+
+
+def section_j(
+    source: Any,
+    yoy: np.ndarray,
+    cells: np.ndarray,
+    era_threshold_pp: float,
+    access: Any,
+    ordering: dict[str, Any],
+    dwell_intervals: dict[str, Any],
+) -> dict[str, Any]:
+    """Obligation B: the same four seasons, identified from five inputs not two.
+
+    The taxonomy does not change -- recession, recovery, expansion, stagflation,
+    read off the same two axes. What changes is how the GROWTH axis is decided:
+    instead of one published label, four voters vote and a stated tie-break
+    settles a tie. The inflation axis is unchanged, and the reason is a data
+    fact rather than a preference (see ``inflation_axis_note``).
+    """
+    n = int(source.n_rows)
+    names = list(source.factor_names)
+    values = np.asarray(source.values)
+    dates = pd.DatetimeIndex(source.dates)
+    months = _month_labels(dates)
+    defined = cells >= 0
+
+    # ---- the three corroborating indicators ---------------------------------
+    unrate_frame = _read_series(access, UNRATE_SERIES_ID)
+    if unrate_frame is None:
+        raise RuntimeError(f"{UNRATE_SERIES_ID} is not in the campaign vintage")
+    unrate = _monthly(unrate_frame)
+    lagged = unrate.shift(LABOR_CHANGE_MONTHS)
+    labor_change = (unrate - lagged).reindex(dates).to_numpy(dtype=np.float64)
+    credit = values[:, names.index(CREDIT_FACTOR)]
+    frames_equity = pd.Series(values[:, names.index("equity_mkt")], index=dates, dtype=np.float64)
+    # The platform's own drawdown feature, over the panel's own equity factor.
+    drawdown = _drawdown_fraction(frames_equity).reindex(dates).to_numpy(dtype=np.float64)
+    stress = -drawdown  # oriented so larger = more contraction-like, like the others
+
+    indicators = {
+        "labor": labor_change,
+        "credit": credit,
+        "stress": stress,
+    }
+    if any(bool(np.isnan(v[defined]).any()) for v in indicators.values()):
+        raise RuntimeError("a corroborating indicator is undefined inside the panel's own months")
+
+    # ---- calibration: every voter fires as often as the incumbent dial -------
+    incumbent = np.isin(np.asarray(source.labels), ["REC", "CRI"])
+    base_rate = float(incumbent[defined].mean())
+    voters: dict[str, np.ndarray] = {"label": incumbent}
+    voter_meta: dict[str, Any] = {}
+    for key, series in indicators.items():
+        threshold = float(np.quantile(series[defined], 1.0 - base_rate))
+        vote = series > threshold
+        voters[key] = vote
+        voter_meta[key] = {
+            "threshold": _f(threshold),
+            "realized_fire_share": _f(float(vote[defined].mean())),
+            "agreement_with_incumbent": _f(float((vote[defined] == incumbent[defined]).mean())),
+        }
+    voter_meta["label"] = {
+        "threshold": None,
+        "realized_fire_share": _f(base_rate),
+        "agreement_with_incumbent": 1.0,
+    }
+
+    # ---- the combination rule ------------------------------------------------
+    votes = np.zeros(n, dtype=np.int64)
+    for vote in voters.values():
+        votes = votes + vote.astype(np.int64)
+    contracting_richer = (votes >= 3) | ((votes == 2) & incumbent)
+
+    # ---- the richer cells, built through panel_quadrant's own encoding -------
+    hot = (yoy > era_threshold_pp).astype(np.int8)
+    ok = ~np.isnan(yoy)
+
+    def _cells_from(contracting: np.ndarray) -> np.ndarray:
+        out = np.full(n, -1, dtype=np.int8)
+        expanding = (~contracting).astype(np.int8)
+        out[ok] = (expanding[ok] << 1) | hot[ok]
+        return out
+
+    if not np.array_equal(_cells_from(incumbent), cells):
+        raise RuntimeError(
+            "the richer classifier's cell encoding does not reproduce panel_quadrant when "
+            "its growth input is the incumbent dial; the comparison below would be invalid"
+        )
+    richer_cells = _cells_from(contracting_richer)
+
+    # ---- the disagreement map -------------------------------------------------
+    differs = defined & (richer_cells != cells)
+    by_decade: dict[str, Any] = {}
+    decades = np.array([(int(label[:4]) // 10) * 10 for label in months], dtype=np.int64)
+    for decade in sorted({int(d) for d in decades}):
+        mask = defined & (decades == decade)
+        by_decade[f"{decade}s"] = {
+            "defined_months": int(mask.sum()),
+            "disagreeing_months": int((differs & mask).sum()),
+            "share": _f(float((differs & mask).sum()) / float(mask.sum())) if mask.any() else None,
+        }
+    by_season: dict[str, Any] = {}
+    confusion: dict[str, Any] = {}
+    for i, quadrant in enumerate(QUADRANTS):
+        mask = defined & (cells == i)
+        by_season[quadrant] = {
+            "months_under_simple": int(mask.sum()),
+            "disagreeing_months": int((differs & mask).sum()),
+            "share": _f(float((differs & mask).sum()) / float(mask.sum())) if mask.any() else None,
+        }
+        confusion[quadrant] = {
+            QUADRANTS[j]: int((mask & (richer_cells == j)).sum()) for j in range(len(QUADRANTS))
+        }
+
+    clusters: list[dict[str, Any]] = []
+    for value, start, length in spells_from_labels(differs.astype(np.int8)):
+        if value != 1 or length < DISAGREEMENT_CLUSTER_MIN_MONTHS:
+            continue
+        end = start + length - 1
+        clusters.append(
+            {
+                "start": months[start],
+                "end": months[end],
+                "months": int(length),
+                "simple_seasons": sorted(
+                    {QUADRANTS[int(c)] for c in cells[start : end + 1] if c >= 0}
+                ),
+                "richer_seasons": sorted(
+                    {QUADRANTS[int(c)] for c in richer_cells[start : end + 1] if c >= 0}
+                ),
+            }
+        )
+
+    # ---- the anchors under each classifier, and the decision rule ------------
+    simple_anchors = _classification_anchors(cells)
+    richer_anchors = _classification_anchors(richer_cells)
+
+    def _decide(
+        name: str, simple: float | None, richer: float | None, lo: float, hi: float, point: float
+    ) -> dict[str, Any]:
+        if simple is None or richer is None:
+            return {"anchor": name, "verdict": "NOT COMPARABLE"}
+        change = abs(richer - simple)
+        half_width = max(point - lo, hi - point)
+        triggers = change > half_width
+        return {
+            "anchor": name,
+            "simple": _f(simple),
+            "richer": _f(richer),
+            "change": _f(change),
+            "sampling_ci95": [_f(lo), _f(hi)],
+            "sampling_ci95_half_width": _f(half_width),
+            "change_exceeds_half_width": bool(triggers),
+            "richer_inside_sampling_ci95": bool(lo <= richer <= hi),
+            "verdict": "RICHER REPLACES SIMPLE" if triggers else "SIMPLICITY WINS",
+        }
+
+    cw_ci = ordering["bootstrap_ci95"][f"block_{PRIMARY_BLOCK_MONTHS}m"]["clockwise_fraction_ci95"]
+    decisions: dict[str, Any] = {
+        "clockwise_fraction": _decide(
+            "clockwise_fraction",
+            cast(float, simple_anchors["clockwise_fraction"]),
+            cast(float, richer_anchors["clockwise_fraction"]),
+            cast(float, cw_ci["lo"]),
+            cast(float, cw_ci["hi"]),
+            cast(float, ordering["clockwise_fraction"]),
+        )
+    }
+    for quadrant in QUADRANTS:
+        row = dwell_intervals["per_quadrant"][quadrant]
+        lo, hi = cast(list[float], row["ci95_months"])
+        decisions[f"dwell_median_{quadrant}"] = _decide(
+            f"dwell_median_{quadrant}",
+            cast(float, simple_anchors["per_quadrant"][quadrant]["median_months"]),
+            cast(float, richer_anchors["per_quadrant"][quadrant]["median_months"]),
+            lo,
+            hi,
+            cast(float, row["median_months"]),
+        )
+    any_triggers = any(d.get("verdict") == "RICHER REPLACES SIMPLE" for d in decisions.values())
+
+    return {
+        "obligation": (
+            "owner-agreed 2026-08-17 (B): build a second classification of the SAME four "
+            "seasons from more inputs, map where it disagrees, re-derive the affected "
+            "anchors, and apply the pre-declared decision rule"
+        ),
+        "taxonomy": list(QUADRANTS),
+        "combination_rule": (
+            "GROWTH AXIS -- four voters, each firing on the months its own indicator calls "
+            "most contraction-like: (1) the incumbent dial, the month's regime_ruleset_v1 "
+            "label being REC or CRI; (2) LABOR, the 12-month change in the unemployment "
+            "rate; (3) CREDIT, the Baa-minus-Aaa spread; (4) MARKET STRESS, the equity "
+            "drawdown. Voters 2-4 are calibrated to fire on the same share of panel months "
+            "as voter 1 does, so no voter is louder merely by calling more months bad. "
+            "Let c be the number of contracting votes: c >= 3 is contracting, c <= 1 is "
+            "expanding, and c == 2 is settled by voter 1, the incumbent dial. "
+            "INFLATION AXIS -- unchanged: hot is trailing 12-month CPI inflation above the "
+            "panel's era threshold. SEASON -- (expanding << 1) | hot, read through "
+            "ah.gen.spine.QUADRANTS, the same encoding panel_quadrant uses (asserted)"
+        ),
+        "base_rate_calibration": {
+            "incumbent_contracting_share": _f(base_rate),
+            "note": (
+                "the threshold for each corroborating voter is the (1 - base rate) quantile "
+                "of its own indicator over the panel's defined months. This is the same move "
+                "b_transmission_lift already makes in its base_rate_matched arms, and it is "
+                "made for the same reason: an indicator that calls more months bad scores "
+                "differently for reasons that have nothing to do with the indicator. No "
+                "threshold here was chosen by looking at what it does to an anchor"
+            ),
+            "per_voter": voter_meta,
+            "vote_count_distribution": {
+                str(k): int((votes[defined] == k).sum()) for k in range(len(voters) + 1)
+            },
+        },
+        "inputs_used": {
+            "labor": (
+                f"{UNRATE_SERIES_ID} (monthly, 1948-01 onward in this vintage), "
+                f"{LABOR_CHANGE_MONTHS}-month change in the unemployment rate, in percentage "
+                "points; rising unemployment is contraction-like. The series starts more "
+                "than five years before the panel does, so the lookback exists for every "
+                "panel month and no month is dropped"
+            ),
+            "credit": (
+                f"the panel's own '{CREDIT_FACTOR}' factor -- Baa minus Aaa, in percentage "
+                "points, monthly across the whole panel; a wider spread is contraction-like"
+            ),
+            "stress": (
+                "the equity drawdown from the running peak of the panel's equity_mkt "
+                "cumulative index, computed by ah.gen.bootstrap._drawdown_fraction -- the "
+                "platform's OWN drawdown feature, the same one regime_ruleset_v1's crisis "
+                "branch reads; a deeper drawdown is contraction-like"
+            ),
+        },
+        "inputs_considered_and_rejected": {
+            "bis.credit_gap_us": (
+                "REJECTED as the credit input, and the reason is availability, not "
+                "preference: the series is QUARTERLY and begins 1957-10, fifty-four months "
+                "after the panel starts. Using it would mean forward-filling a quarterly "
+                "series into a monthly classifier AND leaving a four-and-a-half-year hole at "
+                "the panel's head. The monthly ig_spread carries the same dimension over the "
+                "whole span, so it is used instead and this substitution is stated rather "
+                "than made silently"
+            ),
+            "hy_spread": (
+                "NOT used, because on this panel it carries no information ig_spread does "
+                "not: fred.HY_OAS's licensed history begins 2023-08 and lies entirely inside "
+                "the holdout, so every panel month of hy_spread is the spliced Baa-minus-Aaa "
+                "proxy. ig_spread is the same quantity without the proxy flag"
+            ),
+            "second_inflation_input": (
+                "NONE EXISTS over the whole panel. The only other monthly inflation series "
+                "in the campaign vintage is fred.CPI_CORE, which begins 1957-01 -- forty-five "
+                "months after the panel starts. A classifier whose rule changes part-way "
+                "through the panel is worse than one with a single input, so the inflation "
+                "axis keeps its single input and THIS IS THE DIMENSION THIS COMPARISON DOES "
+                "NOT ENRICH. Nothing is substituted for it"
+            ),
+        },
+        "inflation_axis_note": (
+            "the three extra inputs the owner named -- credit conditions, labor direction and "
+            "market stress -- are all cyclical or financial-conditions indicators; none of "
+            "them is an inflation indicator, so all three enter the GROWTH axis. The richer "
+            "classifier is therefore richer on one axis and identical on the other, and the "
+            "disagreement map below is entirely a map of growth-direction disagreement"
+        ),
+        "disagreement": {
+            "defined_months": int(defined.sum()),
+            "disagreeing_months": int(differs.sum()),
+            "fraction": _f(float(differs.sum()) / float(defined.sum())),
+            "by_decade": by_decade,
+            "by_simple_season": by_season,
+            "confusion_simple_rows_richer_columns": confusion,
+            "cluster_min_months": DISAGREEMENT_CLUSTER_MIN_MONTHS,
+            "clusters": clusters,
+            "n_clusters": len(clusters),
+            "months_in_clusters": int(sum(c["months"] for c in clusters)),
+        },
+        "anchors_simple": simple_anchors,
+        "anchors_richer": richer_anchors,
+        "decision_rule": RICHER_DECISION_RULE,
+        "decision_rule_operationalisation": (
+            "'more than that anchor's own sampling noise' is read as: the absolute change "
+            "between the two classifiers' values exceeds the anchor's 95% interval "
+            "half-width (section G's for a dwell median, section E's for the ordering "
+            "fraction) -- the same half-width g_dwell_intervals already publishes. The "
+            "stricter alternative reading, 'the richer value leaves the interval "
+            "altogether', is published beside every verdict as "
+            "richer_inside_sampling_ci95, so the owner can apply either without recomputing"
+        ),
+        "decisions": decisions,
+        "any_anchor_triggers": bool(any_triggers),
+        "recommended_sealed_grader": (
+            "the RICHER classifier" if any_triggers else "the SIMPLE two-dial classifier"
+        ),
+    }
+
+
+# --------------------------------------------------------------------------- #
 
 
 def main() -> None:
@@ -1646,8 +2459,33 @@ def main() -> None:
     bars = exam_bars(transmission, regime_durations, allocation, ordering, correlation_intervals)
     power = section_h(source, yoy, cells, bars)
 
+    # Sections I and J read two series the factor panel does not carry
+    # (fred.USREC and fred.INDPRO for the re-labelling, fred.UNRATE for the
+    # labor voter) plus the untruncated factor frames, so they open the same
+    # pinned campaign vintage campaign_source() reads. Read-only and offline.
+    catalog, access = _catalog_access(_REPO_ROOT / "data", CAMPAIGN_VINTAGE_ID)
+    try:
+        frames = read_factor_frames(access, load_manifest())
+        stability = section_i(
+            source,
+            yoy,
+            cells,
+            hazard.era_threshold_pp,
+            access,
+            frames,
+            regime_durations,
+            ordering,
+            dwell_intervals,
+            bars,
+        )
+        richer = section_j(
+            source, yoy, cells, hazard.era_threshold_pp, access, ordering, dwell_intervals
+        )
+    finally:
+        catalog.close()
+
     anchors: dict[str, Any] = {
-        "schema": "spine-v2-anchors-2",
+        "schema": "spine-v2-anchors-3",
         "purpose": (
             "Historical anchors measured BEFORE the decade generator's economic engine "
             "is rebuilt (spine v2, stage 1). Every number is reproducible by re-running "
@@ -1680,6 +2518,8 @@ def main() -> None:
         "f_correlation_intervals": correlation_intervals,
         "g_dwell_intervals": dwell_intervals,
         "h_generated_side_power": power,
+        "i_label_stability": stability,
+        "j_richer_identification": richer,
         "exam_bars": bars,
     }
 
@@ -1735,6 +2575,27 @@ def main() -> None:
             f"{row['power_at_pilot_n_seeds']:.3f}  "
             f"min n for {POWER_TARGET:.0%}: {row['min_n_seeds_for_target']}"
         )
+    for name, row in stability["verdicts"].items():
+        print(
+            f"I {name:26s} arms [{row['arm_min']:.4f}, {row['arm_max']:.4f}]  "
+            f"ci95 [{row['sampling_ci95'][0]:.4f}, {row['sampling_ci95'][1]:.4f}]  "
+            f"{row['verdict']}"
+        )
+    for name, row in stability["bar_band_check"].items():
+        print(f"I bar-band {name:26s} arms outside its own bar: {row['arms_outside']}")
+    dis = richer["disagreement"]
+    print(
+        f"J disagreement = {dis['disagreeing_months']}/{dis['defined_months']} months "
+        f"({dis['fraction']:.4f}), {dis['n_clusters']} clusters of "
+        f">= {dis['cluster_min_months']} months"
+    )
+    for name, row in richer["decisions"].items():
+        print(
+            f"J {name:26s} simple={row['simple']:.4f} richer={row['richer']:.4f}  "
+            f"change={row['change']:.4f} vs half-width "
+            f"{row['sampling_ci95_half_width']:.4f}  {row['verdict']}"
+        )
+    print(f"J recommended sealed grader: {richer['recommended_sealed_grader']}")
 
 
 if __name__ == "__main__":
