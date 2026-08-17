@@ -589,7 +589,7 @@ describe("CioDashboard — allocation table Band column (app-open-02 task 2)", (
   });
 });
 
-describe("CioDashboard — PerfTable header labels spelled out (app-open-02 task 5)", () => {
+describe("CioDashboard — table & panel labels spelled out (app-open-02 task 5)", () => {
   it("renders Weight, Target and Deviation as header text, not the Wt/Tgt/Dev abbreviations", () => {
     render(<CioDashboard view={view} onPlaneChange={() => {}} />);
     const headerCells = [...host!.querySelectorAll("th")].map((th) => th.textContent?.trim());
@@ -599,6 +599,19 @@ describe("CioDashboard — PerfTable header labels spelled out (app-open-02 task
     expect(headerCells).not.toContain("Wt");
     expect(headerCells).not.toContain("Tgt");
     expect(headerCells).not.toContain("Dev");
+  });
+
+  it('renders "Current" and "Deviation" on the allocation panel legend, not the old "NOW"/"DEV" abbreviations', () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = [...host!.querySelectorAll("section")].find(
+      (s) => s.querySelector("h2")?.textContent === "Asset allocation",
+    );
+    expect(panel).toBeTruthy();
+    const spans = [...panel!.querySelectorAll("span")].map((s) => s.textContent?.trim());
+    expect(spans).toContain("Current");
+    expect(spans).toContain("Deviation");
+    expect(spans).not.toContain("NOW");
+    expect(spans).not.toContain("DEV");
   });
 });
 

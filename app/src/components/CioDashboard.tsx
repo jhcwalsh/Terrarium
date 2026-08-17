@@ -568,15 +568,21 @@ function AllocationDonut() {
           <span style={{ flex: 1 }}>GOAL</span>
           {/* app-open-02 task 3: band swatch, same muted token the zones
               below are painted with, so the legend and the rows read as one
-              language. "Target" replaces "TGT" on this same line — the rest
-              of the panel's abbreviations are a later task. */}
+              language. "Target" replaces "TGT" on this same line; app-open-02
+              task 5 spells out the remaining NOW/DEV abbreviations below as
+              Current/Deviation — no textTransform on this row (unlike
+              PerfTable's th, which uppercases via CSS), so the words are
+              written mixed-case here directly, matching Band/Target already
+              on this line. Widths widen to fit the longer words; the
+              matching value-row spans below widen in lockstep to keep the
+              columns aligned. */}
           <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}>
             <span style={{ width: 8, height: 8, background: "rgba(88,180,158,0.13)", border: `1px solid ${C.rule}`, display: "inline-block" }} />
             Band
           </span>
-          <span style={{ width: 46, textAlign: "right" }}>NOW</span>
+          <span style={{ width: 60, textAlign: "right", whiteSpace: "nowrap" }}>Current</span>
           <span style={{ width: 40, textAlign: "right" }}>Target</span>
-          <span style={{ width: 44, textAlign: "right" }}>DEV</span>
+          <span style={{ width: 70, textAlign: "right", whiteSpace: "nowrap" }}>Deviation</span>
         </div>
         {rings.inner.map((s) => {
           const tgt = allocation.classes.filter((c) => c.goalId === s.id).reduce((a, c) => a + c.targetPct, 0);
@@ -607,9 +613,9 @@ function AllocationDonut() {
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                       <span style={{ width: 9, height: 9, background: c.c, display: "inline-block" }} />
                       <span style={{ flex: 1, font: `12px ${F.body}`, color: level === "breach" ? C.ice : C.mist }}>{c.label}</span>
-                      <span style={{ width: 46, textAlign: "right", font: `13px ${F.mono}`, color: C.ice }}>{num(c.currentPct, 1)}</span>
+                      <span style={{ width: 60, textAlign: "right", font: `13px ${F.mono}`, color: C.ice }}>{num(c.currentPct, 1)}</span>
                       <span style={{ width: 40, textAlign: "right", font: `12px ${F.mono}`, color: C.faint }}>{num(c.targetPct, 1)}</span>
-                      <span style={{ width: 44, textAlign: "right", font: `12px ${F.mono}`, color: ALERT_COLOUR[level] || C.faint }}>{sgn(dev)}</span>
+                      <span style={{ width: 70, textAlign: "right", font: `12px ${F.mono}`, color: ALERT_COLOUR[level] || C.faint }}>{sgn(dev)}</span>
                       <AlertFlag level={level} dir={dev} label={flagLabel} />
                     </div>
                     <div style={{ marginTop: 5, marginLeft: 17, marginRight: 15 }}>
