@@ -455,17 +455,56 @@ class TestBookThreadedThroughReplaySurfaces:
         "reported" plane, a different (if numerically equal, by fixture
         luck) number.
 
-        Both tie-out checks below assert EXACT equality (`==`), not
-        `pytest.approx`. Every sleeve here carries exactly one rung, so the
-        "sum" on both sides is a single float passed through with no
-        addition to round — JSON round-trips a value like `20.0` or `25.0`
-        bit-for-bit (it is exactly representable in float64), and
-        `_allocation`'s `round(value_of(cid), 4)` (`ah/cioview.py`) is a
-        no-op on a number that is already round to zero decimal places.
-        There is no operation on either side of this comparison that
-        reorders or accumulates floats, so exact equality is the correct
-        (and stronger) assertion — an `approx` here would have quietly
-        accepted a real desync as small as `rel=1e-6` of the compared value.
+        Branch-review I3 correction (this docstring previously claimed
+        otherwise): the served default book carries TEN rungs per private
+        sleeve, not one (`ah/play.py::_seed_ladder` — a staggered ladder,
+        one per year of contractual life; `ah/port/book.py:31`'s own comment
+        names the same ladder "scaling a ten-rung ladder to a target NAV
+        leaves float dust"). The FIRST check below therefore compares two
+        REAL ten-term sums, not two single floats passed through:
+
+          * the server's is `sum(c.nav_true for c in ladders[sleeve])`
+            (`ah/play.py::_private_snapshot`), where `ladders[sleeve]` is
+            `OpeningBook.cohorts(sleeve)` — `[ClosedEndCohort.from_document(doc)
+            for doc in book.private[sleeve]]` — the SAME rung documents, in
+            the SAME list order, reconstructed via a pydantic round-trip
+            that does not alter an already-float `nav_true` value;
+          * this test's `ladder_sum` sums `book["private"][sleeve]`'s own
+            `nav_true` values directly, in that same served order.
+
+        Verified directly: both sums are computing `sum()` over the
+        IDENTICAL ten float64s in the IDENTICAL order, so they are
+        bit-for-bit the same number as each other — Python's `sum()` is a
+        deterministic left-to-right fold, and running it twice on the same
+        sequence cannot itself introduce a divergence. That much would hold
+        exactly no matter what `_seed_ladder` scaled the rungs to.
+
+        What is NOT structurally guaranteed is that this raw sum survives
+        `_allocation`'s `round(value_of(cid), 4)` (`ah/cioview.py`)
+        unchanged — the SERVED side is rounded, `ladder_sum` here is not.
+        `round(x, 4) == x` only when `x` already sits exactly on a value
+        `round` maps to itself, which is true today only because
+        `_seed_ladder`'s uniform rescale (`target_nav / total`, applied to
+        ten warmed-up cohorts) happens to land the sum on exactly 20.0 / 8.0
+        / 7.0 in float64 — confirmed by direct probe, not assumed. That is a
+        numeric coincidence of the current scaling, not a property the
+        summation order or algorithm enforces; a future change to the
+        warm-up mechanics or the rescale itself could leave a few ULPs of
+        dust that `round(..., 4)` would then paper over on the served side
+        only. The first check below therefore uses `pytest.approx(...,
+        abs=1e-9)` — the same absolute tolerance `BookEntry.tsx`'s own
+        `RUNG_TOLERANCE` uses for a ten-rung identity — loose enough to
+        survive that coincidence changing, tight by roughly nine orders of
+        magnitude against the sleeve's own scale (~20 / 8 / 7) relative to
+        anything a real desync (a dropped rung, a unit error, a stale
+        snapshot) would produce.
+
+        The SECOND check (the edited-rung block below) really is the
+        one-rung case the old docstring described for both: `pe` is
+        replaced with a single element list, so `classes2["pe"]["value"]`
+        is one float (25.0) passed through `round(25.0, 4)`, a genuine
+        no-op with nothing to sum on either side — EXACT equality (`==`)
+        there is correct and unchanged.
         """
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
@@ -479,7 +518,7 @@ class TestBookThreadedThroughReplaySurfaces:
         classes = {c["id"]: c for c in cio["allocation"]["classes"]}
         for sleeve in ("pe", "pc", "re"):
             ladder_sum = sum(rung["value"]["nav_true"] for rung in book["private"][sleeve])
-            assert classes[sleeve]["value"] == ladder_sum
+            assert classes[sleeve]["value"] == pytest.approx(ladder_sum, abs=1e-9)
 
         # And again on an EDITED ladder — the default book's targets equal
         # its values (Ruling D), so the check above alone could pass a CIO
