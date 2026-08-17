@@ -6,7 +6,8 @@
   },
   "classes": [
    {
-    "bandPct": 5.0,
+    "bandHiPct": 38.0,
+    "bandLoPct": 28.0,
     "currentPct": 17.1983,
     "goalId": "growth",
     "id": "equity",
@@ -23,7 +24,8 @@
     "value": 10.6857
    },
    {
-    "bandPct": 4.0,
+    "bandHiPct": 24.0,
+    "bandLoPct": 16.0,
     "currentPct": 22.935,
     "goalId": "growth",
     "id": "pe",
@@ -41,7 +43,8 @@
     "value": 14.25
    },
    {
-    "bandPct": 2.0,
+    "bandHiPct": 7.0,
+    "bandLoPct": 3.0,
     "currentPct": 7.3975,
     "goalId": "real",
     "id": "commodities",
@@ -58,7 +61,8 @@
     "value": 4.5962
    },
    {
-    "bandPct": 2.0,
+    "bandHiPct": 10.0,
+    "bandLoPct": 6.0,
     "currentPct": 6.3507,
     "goalId": "real",
     "id": "reits",
@@ -75,7 +79,8 @@
     "value": 3.9459
    },
    {
-    "bandPct": 2.0,
+    "bandHiPct": 9.0,
+    "bandLoPct": 5.0,
     "currentPct": 9.2129,
     "goalId": "real",
     "id": "re",
@@ -93,7 +98,8 @@
     "value": 5.7242
    },
    {
-    "bandPct": 3.0,
+    "bandHiPct": 15.0,
+    "bandLoPct": 9.0,
     "currentPct": 18.4107,
     "goalId": "income",
     "id": "bonds",
@@ -110,7 +116,8 @@
     "value": 11.439
    },
    {
-    "bandPct": 2.0,
+    "bandHiPct": 7.0,
+    "bandLoPct": 3.0,
     "currentPct": 6.1953,
     "goalId": "income",
     "id": "hy",
@@ -127,7 +134,8 @@
     "value": 3.8493
    },
    {
-    "bandPct": 2.0,
+    "bandHiPct": 10.0,
+    "bandLoPct": 6.0,
     "currentPct": 11.4904,
     "goalId": "income",
     "id": "pc",
@@ -145,7 +153,8 @@
     "value": 7.1393
    },
    {
-    "bandPct": 2.0,
+    "bandHiPct": null,
+    "bandLoPct": null,
     "currentPct": 0.8093,
     "goalId": "diversifier",
     "id": "cash",

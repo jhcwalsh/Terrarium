@@ -10,11 +10,15 @@ from __future__ import annotations
 import pytest
 
 from ah.play import (
+    _ANNUAL_COMMITMENT_RATE,
+    COMMIT_CAP_MULTIPLE,
+    EXPECTED_PLAN_GROWTH,
     PRIVATE_ASSETS,
     START_CASH,
     START_TARGETS,
     default_commitment_plan,
     default_opening_book,
+    plan_commitments,
 )
 from ah.port.adapter import GEN_START_TARGETS
 from ah.port.book import BOOK_TOTAL, default_band, validate_book, validate_plan
@@ -94,12 +98,57 @@ class TestDefaultPlan:
         for sleeve in PRIVATE_ASSETS:
             assert len(plan.points[sleeve]) == len(decision_months(120)) == 9
 
-    def test_the_default_plan_is_flat_at_the_fixed_rule_pace(self):
+    def test_the_default_plan_escalates_at_the_owner_ruled_growth_rate(self):
+        # INVERTED 2026-08-16 (owner-ruled, D-SP-6 session; app-open-02 task
+        # 11): the default plan used to be flat across all nine windows
+        # (`len(set(pace)) == 1`, `pace[0] == target * 0.18`) — see
+        # `default_commitment_plan`'s docstring for why, and for the history
+        # this test now pins instead. The rule is now window k = the FIXED-
+        # rule base times (1 + EXPECTED_PLAN_GROWTH) ** k, so the programme
+        # keeps pace with the plan's own expected growth instead of shrinking
+        # relative to it. `base` is derived from the same
+        # `plan_commitments(..., pacing_rule="fixed")` call
+        # `default_commitment_plan` itself makes — not a re-derived magic
+        # float.
         plan = default_commitment_plan(START_TARGETS)
+        base = plan_commitments(0.0, START_TARGETS, pacing_rule="fixed")
         for sleeve in PRIVATE_ASSETS:
             pace = plan.points[sleeve]
-            assert len(set(pace)) == 1  # flat: the kickoff default, section 10
-            assert pace[0] == pytest.approx(START_TARGETS[sleeve] * 0.18)
+            assert pace[0] == pytest.approx(base[sleeve])  # k=0: no escalation yet
+            for k, points in enumerate(pace):
+                assert points == pytest.approx(base[sleeve] * (1.0 + EXPECTED_PLAN_GROWTH) ** k)
+            assert len(set(pace)) == len(pace)  # flat retired: every window differs
 
     def test_the_default_plan_is_inside_the_declared_bound(self):
         validate_plan(default_commitment_plan(START_TARGETS), dict(START_TARGETS))
+
+    def test_the_shipped_nine_windows_are_unclamped_and_byte_unchanged(self):
+        # 2026-08-17 review fix: default_commitment_plan now clamps each
+        # window to validate_plan's own cap (see below), which must not
+        # move a single value for the shipped decade — 1.06**8 ~= 1.594
+        # stays well under COMMIT_CAP_MULTIPLE (2.0x), so every one of the
+        # nine shipped windows is still the exact unclamped escalation, not
+        # an approximation of it.
+        plan = default_commitment_plan(START_TARGETS)
+        base = plan_commitments(0.0, START_TARGETS, pacing_rule="fixed")
+        for sleeve in PRIVATE_ASSETS:
+            for k, points in enumerate(plan.points[sleeve]):
+                assert points == base[sleeve] * (1.0 + EXPECTED_PLAN_GROWTH) ** k
+
+    def test_a_long_horizon_default_plan_clamps_to_its_own_cap_and_validates(self):
+        # Found in review of app-open-02 task 11 (2026-08-17): unclamped 6%
+        # growth crosses COMMIT_CAP_MULTIPLE (2.0x) at k=12 (1.06**12 ~=
+        # 2.012) — the schema permits horizons far beyond the shipped 40
+        # quarters, so a longer-horizon world's SERVED DEFAULT would 422
+        # against the SERVER'S OWN validator. `windows=15` is synthetic
+        # (no shipped world runs this long) but must still validate and
+        # sit exactly at the cap once escalation would otherwise cross it.
+        windows = 15
+        plan = default_commitment_plan(START_TARGETS, windows=windows)
+        validate_plan(plan, dict(START_TARGETS))  # must not raise
+        for sleeve in PRIVATE_ASSETS:
+            cap = COMMIT_CAP_MULTIPLE * START_TARGETS[sleeve] * _ANNUAL_COMMITMENT_RATE
+            pace = plan.points[sleeve]
+            assert pace[11] < cap  # 1.06**11 ~= 1.898: still below the cap
+            for k in range(12, windows):  # 1.06**12 ~= 2.012: clamps from here
+                assert pace[k] == cap

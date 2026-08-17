@@ -509,6 +509,34 @@ button.t {
   color: var(--clay);
 }
 
+/* app-open-02: the same band cells, compact, inside an OPEN decision window —
+   above the four action cards, so the levers are chosen with the bands in
+   view. Smaller cells than the between-window panel: this strip shares its
+   room with the actions and (on a plan-carrying session) the commit lever
+   below it. */
+.band-strip {
+  margin: 0 0 11px;
+  gap: 6px 8px;
+}
+
+.band-strip .band-cell {
+  flex-basis: 130px;
+  padding: 4px 8px;
+}
+
+.band-strip .band-name {
+  font-size: 12.5px;
+}
+
+.band-strip .band-weight {
+  font-size: 15px;
+}
+
+.band-strip .band-range,
+.band-strip .band-badge {
+  font-size: 10px;
+}
+
 /* main grid: asset classes left, the wire (and the decision) right */
 .vgrid {
   flex: 1;
@@ -1549,6 +1577,69 @@ button.commit {
   flex-direction: column;
 }
 
+/* -- task 8: the tab bar + Play, sitting under the h1/tagline -------------- */
+.book-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 1.1rem 0 1.3rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.book-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.book-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  padding: 8px 4px;
+  margin-bottom: -9px;
+  cursor: pointer;
+}
+
+.book-tab + .book-tab {
+  margin-left: 14px;
+}
+
+/* deliberately no separate :hover rule here: the base `button:hover` rule
+   (jade) already wins on specificity and reads fine against the underline
+   treatment below — one hover language for every button on the screen. */
+.book-tab.active {
+  color: var(--ice);
+  border-bottom-color: var(--clay);
+}
+
+.book-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* the fault list rendered next to Play — this screen's only shape-fault
+   surface (task 8: never two divergent renderings, one list, one place). */
+.book-topbar-actions .book-note.error {
+  margin: 0;
+  max-width: 420px;
+}
+
+.book-play {
+  font-weight: 600;
+  padding: 0.4rem 1.1rem;
+  border-color: var(--clay);
+}
+
 /* -- su-app-07: values, policy targets and reporting bands side by side ---- */
 .policy-grid {
   display: grid;
@@ -1662,6 +1753,25 @@ button.commit {
   margin-bottom: 6px;
 }
 
+/* app-open-02: the "set a new value" input + Rebuild ladder + Reset group,
+   right-aligned beside the sleeve heading. */
+.book-ladder-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.book-ladder-actions .ladder-rebuild-value {
+  width: 76px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ice);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+
 .book-ladder-scroll {
   overflow-x: auto;
   border: 1px solid var(--hair);
@@ -1698,6 +1808,95 @@ button.commit {
 
 .book-carry {
   color: var(--dim);
+}
+
+/* ==================================================================
+ * app-open-02 task 10: the per-vintage paid-in/unfunded stacked bars +
+ * NAV line chart on BookEntry's Historical vintages tab
+ * (components/VintageChart.tsx). Colours follow the same tokens
+ * CioDashboard's SVG idiom uses (--dim/--muted as the two muted fills,
+ * --brass for the NAV line — matching the "net" line elsewhere in the app).
+ * ================================================================== */
+.vintage-chart {
+  margin-bottom: 10px;
+}
+
+.vintage-chart-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+  background: #0c2427;
+  border: 1px solid var(--hair);
+  border-radius: 6px;
+}
+
+.vintage-baseline {
+  stroke: var(--line);
+  stroke-width: 1;
+}
+
+.vintage-axis-label {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10px;
+  fill: var(--dim);
+}
+
+.vintage-tick-label {
+  font-family: Archivo, system-ui, sans-serif;
+  font-size: 10px;
+  fill: var(--dim);
+}
+
+.vintage-bar-paid {
+  fill: var(--dim);
+}
+
+.vintage-bar-unfunded {
+  fill: var(--muted);
+}
+
+.vintage-nav-line {
+  fill: none;
+  stroke: var(--brass);
+  stroke-width: 2;
+}
+
+.vintage-nav-marker {
+  fill: var(--brass);
+}
+
+.vintage-chart-legend {
+  display: flex;
+  gap: 14px;
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.vintage-chart-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.vintage-chart-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+}
+
+.vintage-chart-swatch-paid {
+  background: var(--dim);
+}
+
+.vintage-chart-swatch-unfunded {
+  background: var(--muted);
+}
+
+.vintage-chart-swatch-nav {
+  background: var(--brass);
+  border-radius: 50%;
 }
 
 .book-rail {

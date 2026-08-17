@@ -11,6 +11,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CioDashboard, {
+  alertLevel,
   planWindowLabel,
   planWindowMonths,
   planWindowSlice,
@@ -518,5 +519,235 @@ describe("CioDashboard", () => {
         false,
       );
     });
+  });
+});
+
+describe("alertLevel — app-open-02 task 2's asymmetric [lo, hi] port", () => {
+  const policy = { watchFraction: 0.75 };
+
+  it("serve.py's own worked example: lo=10, hi=20, target=30 (outside its own band), weight 15.0 is NOT watch", () => {
+    // The old symmetric-band rule inverted on this exact shape (picked the
+    // wrong edge to measure room against once the target sat outside the
+    // band at all) — this is the probe serve.py's _alert_level docstring
+    // records finding it backwards on. weight=15.0 sits mid-band, nowhere
+    // near either edge, so it must read "ok".
+    expect(alertLevel(15.0, 30, 10, 20, policy, undefined)).toBe("ok");
+  });
+
+  it("a weight exactly on the edge the target is approaching (hi=20) is watch, not ok", () => {
+    // Same lo/hi/target as the worked example: clamped target t = hi = 20
+    // (30 clamped into [10, 20]), so the upper watch zone collapses to the
+    // edge itself (serve.py docstring's t == hi degenerate case) and 20.0
+    // — sitting exactly on it — is watch.
+    expect(alertLevel(20.0, 30, 10, 20, policy, undefined)).toBe("watch");
+  });
+
+  it("breach is unaffected by target position — outside [lo, hi] is always breach", () => {
+    expect(alertLevel(21.0, 30, 10, 20, policy, undefined)).toBe("breach");
+    expect(alertLevel(9.0, 30, 10, 20, policy, undefined)).toBe("breach");
+  });
+
+  it("an ordinary in-band case (target inside its own band) matches the old symmetric shape", () => {
+    // lo=95, hi=105 around a target of 100 (a +/-5 band): 25% watch fraction
+    // means the outer 1.25 points on each side are amber, same numbers the
+    // old |dev| >= watchFraction * band rule produced.
+    expect(alertLevel(100.0, 100, 95, 105, policy, undefined)).toBe("ok");
+    expect(alertLevel(103.9, 100, 95, 105, policy, undefined)).toBe("watch");
+    expect(alertLevel(104.5, 100, 95, 105, policy, undefined)).toBe("watch");
+    expect(alertLevel(106.0, 100, 95, 105, policy, undefined)).toBe("breach");
+  });
+
+  it("the served alert word wins over the computed rule, unchanged precedence", () => {
+    expect(alertLevel(15.0, 30, 10, 20, policy, "breach")).toBe("breach");
+  });
+
+  it("no watchFraction on the policy: only breach can fire, never watch", () => {
+    expect(alertLevel(20.0, 30, 10, 20, undefined, undefined)).toBe("ok");
+  });
+
+  it("a degenerate lo >= hi band is treated as no band at all (ok)", () => {
+    expect(alertLevel(15.0, 15, 20, 20, policy, undefined)).toBe("ok");
+  });
+});
+
+describe("CioDashboard — allocation table Band column (app-open-02 task 2)", () => {
+  it("renders the class's own lo-hi band with an en dash, one decimal each", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    // the reported fixture's equity class: bandLoPct 28.0, bandHiPct 38.0
+    expect(host!.textContent).toContain("28.0–38.0");
+  });
+
+  it("renders an em dash for cash, which carries no band", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const rows = [...host!.querySelectorAll("tr")];
+    const cashRow = rows.find((r) => (r.textContent ?? "").includes("Cash"));
+    expect(cashRow).toBeTruthy();
+    // Band column is the 6th <td> in a class row (Asset class, Weight v
+    // target bar, !, Weight, Target, Band, Deviation, ...periods) — cell index 5.
+    const cells = [...cashRow!.querySelectorAll("td")];
+    expect(cells[5]?.textContent).toBe("—");
+  });
+
+  it("renders an em dash for a NON-cash class the book carries no range for (branch-review I1)", () => {
+    // The renderer already tolerates null bandLoPct/bandHiPct generically
+    // (isNum checks, not a cid === "cash" special case) — this pins that a
+    // book-silent sleeve (not just cash) reads as "no band", not as the
+    // old hardcoded BAND_PCT fallback.
+    const v: CioView = JSON.parse(JSON.stringify(view));
+    const commodities = v.allocation.classes.find((c) => c.id === "commodities")!;
+    commodities.bandLoPct = null;
+    commodities.bandHiPct = null;
+    render(<CioDashboard view={v} onPlaneChange={() => {}} />);
+    const rows = [...host!.querySelectorAll("tr")];
+    const row = rows.find((r) => (r.textContent ?? "").includes("Commodities"));
+    expect(row).toBeTruthy();
+    const cells = [...row!.querySelectorAll("td")];
+    expect(cells[5]?.textContent).toBe("—");
+  });
+});
+
+describe("CioDashboard — table & panel labels spelled out (app-open-02 task 5)", () => {
+  it("renders Weight, Target and Deviation as header text, not the Wt/Tgt/Dev abbreviations", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const headerCells = [...host!.querySelectorAll("th")].map((th) => th.textContent?.trim());
+    expect(headerCells).toContain("Weight");
+    expect(headerCells).toContain("Target");
+    expect(headerCells).toContain("Deviation");
+    expect(headerCells).not.toContain("Wt");
+    expect(headerCells).not.toContain("Tgt");
+    expect(headerCells).not.toContain("Dev");
+  });
+
+  it('renders "Current" and "Deviation" on the allocation panel legend, not the old "NOW"/"DEV" abbreviations', () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = [...host!.querySelectorAll("section")].find(
+      (s) => s.querySelector("h2")?.textContent === "Asset allocation",
+    );
+    expect(panel).toBeTruthy();
+    const spans = [...panel!.querySelectorAll("span")].map((s) => s.textContent?.trim());
+    expect(spans).toContain("Current");
+    expect(spans).toContain("Deviation");
+    expect(spans).not.toContain("NOW");
+    expect(spans).not.toContain("DEV");
+  });
+});
+
+// app-open-02 task 3: band zones on the front-page allocation panel
+// (AllocationDonut, "Asset allocation" beside "Plan growth"). The
+// coordinator's ruling (2026-08-16, superseding the by-goal reading in
+// app-open-01): rows become MEMBER-CLASS rows grouped under goal headers —
+// the same heading-then-members idiom the lower table (PerfTable) already
+// uses — each class row drawing its OWN real bandLoPct-bandHiPct zone, not
+// an invented sum-of-members band on the goal header (that would show the
+// player numbers they never set — the exact BAND_PCT sin task 2 removed).
+describe("CioDashboard — allocation panel band zones (app-open-02 task 3)", () => {
+  // BandBar's muted band-zone underlay is drawn as this exact literal
+  // (CioDashboard.tsx's BandBar, already shipped by task 2's PerfTable
+  // wiring) — happy-dom renders inline rgba with a space after each comma,
+  // confirmed against the already-shipped PerfTable row before writing this
+  // selector. It is the ONLY element in a class row painted with this
+  // colour (the watch zones use amber, the fill uses the alert/level
+  // colour), so filtering on it picks the band zone uniquely.
+  const BAND_ZONE_BG = "rgba(88, 180, 158, 0.13)";
+
+  function allocationPanel(): HTMLElement {
+    const panel = [...host!.querySelectorAll("section")].find(
+      (s) => s.querySelector("h2")?.textContent === "Asset allocation",
+    );
+    if (!panel) throw new Error('no "Asset allocation" panel found');
+    return panel as HTMLElement;
+  }
+
+  function bandZonesIn(container: Element): HTMLElement[] {
+    return [...container.querySelectorAll("div")].filter(
+      (d) => (d as HTMLElement).style.backgroundColor === BAND_ZONE_BG,
+    ) as HTMLElement[];
+  }
+
+  it("a member class's band zone sits at lo/hi on the row's own max scale", () => {
+    // A single-goal, single-class view keeps the row's max (the same
+    // Math.max(cur, target, bandHi) * 1.05 headroom pattern as PerfTable's
+    // `max`, computed independently here, not imported from the component)
+    // fully predictable: max = 45.1 * 1.05 = 47.355.
+    const v: CioView = JSON.parse(JSON.stringify(view));
+    v.allocation.goals = [{ id: "g1", label: "Solo goal" }];
+    v.allocation.classes = [
+      {
+        id: "c1",
+        label: "Solo class",
+        goalId: "g1",
+        targetPct: 41,
+        bandLoPct: 36.9,
+        bandHiPct: 45.1,
+        currentPct: 40,
+        value: 1,
+        returns: [],
+      },
+    ];
+    render(<CioDashboard view={v} onPlaneChange={() => {}} />);
+    const zones = bandZonesIn(allocationPanel());
+    expect(zones.length).toBe(1);
+    const max = Math.max(40, 41, 45.1) * 1.05;
+    expect(parseFloat(zones[0].style.left)).toBeCloseTo((36.9 / max) * 100, 1);
+    expect(parseFloat(zones[0].style.width)).toBeCloseTo(((45.1 - 36.9) / max) * 100, 1);
+  });
+
+  it("cash (a null band) renders no zone", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    const cashRow = [...panel.querySelectorAll("div")].find(
+      (d) => (d.textContent ?? "").trim().startsWith("Cash") && d.querySelector("span"),
+    );
+    expect(cashRow).toBeTruthy();
+    expect(bandZonesIn(cashRow as Element).length).toBe(0);
+  });
+
+  it("a non-cash class with a null band (branch-review I1: book-silent sleeve) renders no zone either", () => {
+    const v: CioView = JSON.parse(JSON.stringify(view));
+    const commodities = v.allocation.classes.find((c) => c.id === "commodities")!;
+    commodities.bandLoPct = null;
+    commodities.bandHiPct = null;
+    render(<CioDashboard view={v} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    const commoditiesRow = [...panel.querySelectorAll("div")].find(
+      (d) => (d.textContent ?? "").trim().startsWith("Commodities") && d.querySelector("span"),
+    );
+    expect(commoditiesRow).toBeTruthy();
+    expect(bandZonesIn(commoditiesRow as Element).length).toBe(0);
+  });
+
+  it("renders one band zone per class that carries a band — 8 of the fixture's 9 classes (cash excluded)", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    expect(bandZonesIn(allocationPanel()).length).toBe(8);
+  });
+
+  it("goal headers show no band zone of their own — only member-class rows draw one", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    // the fixture's own goal labels (cioView.ts's Goal.label, as authored
+    // by cio-sample.reported.json) — CSS text-transform: uppercase is a
+    // paint-time effect and never changes textContent, so this asserts the
+    // actual DOM text, not the rendered casing.
+    for (const label of ["Growth", "Real return", "Income", "Diversifiers"]) {
+      const header = [...panel.querySelectorAll("span")].find((s) => s.textContent === label);
+      expect(header).toBeTruthy();
+      // the header's own line (its parent) carries no band zone — the zones
+      // that exist for this goal live on its member-class rows, siblings of
+      // this header line, not on the heading line itself.
+      expect(bandZonesIn(header!.parentElement as Element).length).toBe(0);
+    }
+  });
+
+  it('legend renders "Target", not the old "TGT" abbreviation, and gains a band swatch', () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    expect(panel.textContent).toContain("Target");
+    expect([...panel.querySelectorAll("span")].some((s) => s.textContent?.trim() === "TGT")).toBe(false);
+    // the swatch is a small block painted the same muted band colour as the
+    // zones themselves, so the legend and the rows read as one language.
+    const swatches = [...panel.querySelectorAll("span")].filter(
+      (s) => (s as HTMLElement).style.backgroundColor === BAND_ZONE_BG,
+    );
+    expect(swatches.length).toBeGreaterThan(0);
   });
 });

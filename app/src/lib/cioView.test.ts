@@ -64,7 +64,8 @@ function minimalView(): CioView {
           label: "Equity",
           goalId: "growth",
           targetPct: 100.0,
-          bandPct: 5.0,
+          bandLoPct: 95.0,
+          bandHiPct: 100.0,
           currentPct: 100.0,
           value: 100.0,
           returns: [1.0],
@@ -122,5 +123,59 @@ describe("validateCioView — coverage line (cov-01)", () => {
     v.liquidity.breachLine = 0.9;
     const errors = validateCioView(v);
     expect(errors.some((e) => e.includes("breachLine"))).toBe(true);
+  });
+});
+
+describe("validateCioView — bandLoPct/bandHiPct (app-open-02 task 2)", () => {
+  it("rejects lo === hi", () => {
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = 50.0;
+    v.allocation.classes[0].bandHiPct = 50.0;
+    const errors = validateCioView(v);
+    expect(errors.some((e) => e.includes("band"))).toBe(true);
+  });
+
+  it("rejects lo > hi", () => {
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = 60.0;
+    v.allocation.classes[0].bandHiPct = 40.0;
+    const errors = validateCioView(v);
+    expect(errors.some((e) => e.includes("band"))).toBe(true);
+  });
+
+  it("rejects a band on a cash class", () => {
+    const v = minimalView();
+    v.allocation.classes[0].id = "cash";
+    v.allocation.classes[0].bandLoPct = 0.0;
+    v.allocation.classes[0].bandHiPct = 10.0;
+    const errors = validateCioView(v);
+    expect(errors.some((e) => e.includes("cash") && e.includes("band"))).toBe(true);
+  });
+
+  it("passes an asymmetric band, not centred on the target, with the target outside it", () => {
+    // minimalView's lone class must keep currentPct/targetPct summing to
+    // 100 (the allocation-closes check) — the band itself is what's under
+    // test here, and validateCioView never requires the target to sit
+    // inside its own band (serve.py's _alert_level docstring: it may
+    // legally sit outside).
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = 10.0;
+    v.allocation.classes[0].bandHiPct = 20.0;
+    expect(validateCioView(v)).toEqual([]);
+  });
+
+  it("allows a null band on a non-cash class (branch-review I1: a book-silent sleeve carries no band)", () => {
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = null;
+    v.allocation.classes[0].bandHiPct = null;
+    expect(validateCioView(v)).toEqual([]);
+  });
+
+  it("rejects a partial (one-sided) null band on a non-cash class", () => {
+    const v = minimalView();
+    v.allocation.classes[0].bandLoPct = 10.0;
+    v.allocation.classes[0].bandHiPct = null;
+    const errors = validateCioView(v);
+    expect(errors.some((e) => e.includes("missing bandLoPct/bandHiPct"))).toBe(true);
   });
 });

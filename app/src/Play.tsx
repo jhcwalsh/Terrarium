@@ -16,6 +16,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { BandRow } from "./components/BandRow";
 import CioDashboard, { type ExtraTab } from "./components/CioDashboard";
 import { DecisionWindow } from "./components/DecisionWindow";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
@@ -25,6 +26,7 @@ import Provenance from "./components/Provenance";
 import { Ticker } from "./components/Ticker";
 import { Reckoning } from "./Reckoning";
 import type { PlayConfig } from "./RankedSetup";
+import { ASSET_LABELS } from "./lib/assetLabels";
 import type { WorldBundle } from "./lib/bundle";
 import { type CioView, type Plane, validateCioView } from "./lib/cioView";
 import { usd } from "./lib/money";
@@ -44,18 +46,13 @@ import {
   type Session,
 } from "./lib/session";
 
-// Display order + names for every asset the bundle carries bands for.
-// The engine's contract order, not the JSON's alphabetical key order.
-export const ASSET_LABELS: ReadonlyArray<readonly [string, string]> = [
-  ["equity", "Equities"],
-  ["bonds", "Bonds"],
-  ["hy", "High yield"],
-  ["commodities", "Commodities"],
-  ["reits", "REITs"],
-  ["pe", "Private equity"],
-  ["pc", "Private credit"],
-  ["re", "Real estate"],
-];
+// Display order + names for every asset the bundle carries bands for, and
+// its display name lookup — moved to lib/assetLabels.ts (app-open-02) so
+// components/BandRow.tsx can share it without importing back out of this
+// file (Play.tsx already imports DecisionWindow, which now imports
+// BandRow). Re-exported here so App.tsx's existing `import { ASSET_LABELS }
+// from "./Play"` is unaffected.
+export { ASSET_LABELS };
 
 const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
 
@@ -206,29 +203,9 @@ export function BandPanel({ session }: { session: Session }) {
         </span>
       </div>
       <ul className="band-cells">
-        {rows.map((row) => {
-          const here = row[plane];
-          const name = ASSET_LABELS.find(([key]) => key === row.sleeve)?.[1] ?? row.sleeve;
-          return (
-            <li
-              key={row.sleeve}
-              className={`band-cell alert-${here.alert}`}
-              data-sleeve={row.sleeve}
-            >
-              <div className="band-head">
-                <span className="band-name">{name}</span>
-                <span className="band-badge">{here.alert}</span>
-              </div>
-              <div className="band-nums">
-                <span className="band-weight">{here.weight.toFixed(1)}</span>
-                <span className="band-range">
-                  target {row.target.toFixed(1)} &middot; band {row.lo.toFixed(1)}–
-                  {row.hi.toFixed(1)}
-                </span>
-              </div>
-            </li>
-          );
-        })}
+        {rows.map((row) => (
+          <BandRow key={row.sleeve} row={row} plane={plane} />
+        ))}
       </ul>
     </section>
   );
@@ -723,6 +700,8 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
               planCommitments={session?.next_plan_commitments ?? null}
               planBasis={session?.next_plan_basis ?? null}
               planPace={session?.plan_pace ?? null}
+              bandReport={session?.band_report ?? null}
+              basis={session?.basis}
             />
           </section>
         </div>

@@ -22,7 +22,14 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usd } from "../lib/money";
-import { ACTIONS, type Action } from "../lib/session";
+import {
+  ACTIONS,
+  planeForBasis,
+  type Action,
+  type BandReport,
+  type Session,
+} from "../lib/session";
+import { BandRow } from "./BandRow";
 
 // app-open-01 item 2 (owner ruling 2026-08-16): each lever's point-impact
 // gains its dollar rendering via the same usd() the rest of the app uses —
@@ -93,6 +100,18 @@ interface DecisionWindowProps {
    * also what replaces the F4 staleness caveat (`planBasis`), which the
    * server suppresses for these sessions because nothing is approximated. */
   planPace?: Record<string, number> | null;
+  /** app-open-02: `session.band_report` — per-sleeve policy-band status at
+   * the last CLOSED quarter, SERVER-judged. Rendered as a compact strip
+   * ABOVE the four action cards while the window is open, so "which band am
+   * I about to fix or break" is visible at the moment of the decision, not
+   * only between windows (BandPanel, Play.tsx). Null (no book, no ranges,
+   * or no closed quarter yet) or an empty sleeve list renders nothing here —
+   * the window is otherwise unchanged. */
+  bandReport?: BandReport | null;
+  /** the session's scoring basis, mapped to the report's plane via
+   * `planeForBasis` — the ONE mapping (lib/session.ts), same as BandPanel.
+   * Never picked by hand. */
+  basis?: Session["basis"];
 }
 
 export function DecisionWindow({
@@ -105,6 +124,8 @@ export function DecisionWindow({
   planCommitments,
   planBasis,
   planPace,
+  bandReport,
+  basis,
 }: DecisionWindowProps) {
   const [selected, setSelected] = useState<Action | null>(null);
   const [commitments, setCommitments] = useState<Record<string, number> | null>(null);
@@ -144,6 +165,18 @@ export function DecisionWindow({
           </>
         )}
       </header>
+      {open && bandReport && bandReport.sleeves.length > 0 && (
+        <ul className="band-cells band-strip" aria-label="policy bands">
+          {bandReport.sleeves.map((row) => (
+            <BandRow
+              key={row.sleeve}
+              row={row}
+              plane={planeForBasis(basis ?? "reported")}
+              compact
+            />
+          ))}
+        </ul>
+      )}
       <div className="actions" role={open ? "radiogroup" : "list"} aria-label="actions">
         {ACTIONS.map((action) => {
           const card = (

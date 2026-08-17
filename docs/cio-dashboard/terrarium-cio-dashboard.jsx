@@ -73,13 +73,20 @@ const num = (v, d = 2) => (isNum(v) ? v.toFixed(d) : NA);
 
 const ALERT_COLOUR = { breach: C.warn, watch: C.amber, ok: null };
 
-function alertLevel(cur, target, band, policy, explicit) {
+// cur/target measured against the class's own declared [lo, hi] band — not
+// a half-width. The target may legally sit outside its own band; clamp it
+// in first, then take whichever edge margin is more severe (see DN-8's
+// bandLoPct/bandHiPct note; ported from serve.py's _alert_level).
+function alertLevel(cur, target, lo, hi, policy, explicit) {
   if (explicit) return explicit;
-  if (!isNum(cur) || !isNum(target) || !isNum(band) || band <= 0) return "ok";
-  const d = Math.abs(cur - target);
-  if (d > band) return "breach";
+  if (!isNum(cur) || !isNum(target) || !isNum(lo) || !isNum(hi) || lo >= hi) return "ok";
+  if (cur < lo || cur > hi) return "breach";
   const wf = policy && isNum(policy.watchFraction) ? policy.watchFraction : null;
-  if (wf !== null && d >= wf * band) return "watch";
+  if (wf === null) return "ok";
+  const t = Math.min(Math.max(target, lo), hi);
+  const margin = 1 - wf;
+  if (hi - cur <= margin * (hi - t)) return "watch";
+  if (cur - lo <= margin * (t - lo)) return "watch";
   return "ok";
 }
 
@@ -101,7 +108,7 @@ function allocationAlerts(allocation) {
   const policy = allocation.alertPolicy;
   let breach = 0, watch = 0;
   allocation.classes.forEach((c) => {
-    const l = alertLevel(c.currentPct, c.targetPct, c.bandPct, policy, c.alert);
+    const l = alertLevel(c.currentPct, c.targetPct, c.bandLoPct, c.bandHiPct, policy, c.alert);
     if (l === "breach") breach++; else if (l === "watch") watch++;
   });
   return { breach, watch, policy };
@@ -341,7 +348,7 @@ function AllocationDonut() {
           ))}
           {rings.inner.map((s) => <path key={s.id} d={arcPath(cx, cy, R_IN0, R_IN1, s.a0 + 0.5, s.a1 - 0.5)} fill={s.c} opacity={0.4} />)}
           {rings.outer.map((s) => {
-            const lvl = alertLevel(s.currentPct, s.targetPct, s.bandPct, policy, s.alert);
+            const lvl = alertLevel(s.currentPct, s.targetPct, s.bandLoPct, s.bandHiPct, policy, s.alert);
             return (
               <Fragment key={s.id}>
                 <path d={arcPath(cx, cy, R_OUT0, R_OUT1, s.a0 + 0.6, s.a1 - 0.6)} fill={s.c} opacity={0.92} />
@@ -370,7 +377,7 @@ function AllocationDonut() {
               <circle cx={l.right ? l.x - 8 : l.x + 8} cy={l.y} r={2} fill={l.c} />
               <text x={l.x} y={l.y - 2} textAnchor={l.right ? "start" : "end"} fill={C.ice} style={{ font: `12px ${F.body}` }}>{l.label}</text>
               <text x={l.x} y={l.y + 12} textAnchor={l.right ? "start" : "end"}
-                fill={ALERT_COLOUR[alertLevel(l.currentPct, l.targetPct, l.bandPct, policy, l.alert)] || C.faint}
+                fill={ALERT_COLOUR[alertLevel(l.currentPct, l.targetPct, l.bandLoPct, l.bandHiPct, policy, l.alert)] || C.faint}
                 style={{ font: `11px ${F.mono}` }}>{pct(l.currentPct)}</text>
             </g>
           ))}
@@ -391,7 +398,9 @@ function AllocationDonut() {
           const tgt = allocation.classes.filter((c) => c.goalId === s.id).reduce((a, c) => a + c.targetPct, 0);
           const tol = s.tolerancePct;
           const dev = s.tot - tgt;
-          const level = alertLevel(s.tot, tgt, tol, policy, s.alert);
+          // goal-level tolerance is still symmetric — reuse alertLevel's
+          // lo/hi rule by expressing it as [tgt-tol, tgt+tol]
+          const level = alertLevel(s.tot, tgt, isNum(tol) ? tgt - tol : null, isNum(tol) ? tgt + tol : null, policy, s.alert);
           const flagLabel = level === "ok" ? "" :
             `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} the goal target of ${tgt.toFixed(1)}%`;
           const zoneW = wf === null || !isNum(tol) ? 0 : (1 - wf) * tol;
@@ -434,22 +443,33 @@ function AllocationDonut() {
  *  PLAN — performance & allocation table
  * ---------------------------------------------------------------- */
 
-function BandBar({ cur, target, band, max, watchFraction, level }) {
+function BandBar({ cur, target, lo, hi, max, watchFraction, level }) {
+  const hasBand = isNum(lo) && isNum(hi);
   const pc = (v) => `${(Math.max(0, Math.min(v, max)) / max) * 100}%`;
   const wf = isNum(watchFraction) ? watchFraction : null;
-  const zoneW = wf === null ? 0 : ((1 - wf) * band / max) * 100;
+  // the target may sit outside its own [lo, hi] band; clamp it first, then
+  // size each watch zone off the clamped target — same rule alertLevel uses,
+  // so the zones drawn here agree with the level actually reported.
+  const t = hasBand ? Math.min(Math.max(target, lo), hi) : target;
+  const margin = 1 - (wf ?? 0);
+  const loZoneW = hasBand && wf !== null ? ((margin * (t - lo)) / max) * 100 : 0;
+  const hiZoneW = hasBand && wf !== null ? ((margin * (hi - t)) / max) * 100 : 0;
   const fill = level === "breach" ? "rgba(217,112,90,0.62)"
     : level === "watch" ? "rgba(240,196,106,0.5)"
     : "rgba(143,162,190,0.45)";
   return (
     <div style={{ position: "relative", height: 14, background: C.well, border: `1px solid ${C.ruleSoft}`, minWidth: 90 }}>
-      {/* band */}
-      <div style={{ position: "absolute", top: 0, bottom: 0, left: pc(target - band), width: `${((2 * band) / max) * 100}%`, background: "rgba(88,180,158,0.13)" }} />
-      {/* watch zones — the outer slice of the band at each edge */}
-      {wf !== null && (
+      {hasBand && (
         <Fragment>
-          <div style={{ position: "absolute", top: 0, bottom: 0, left: pc(target - band), width: `${zoneW}%`, background: "rgba(240,196,106,0.16)" }} />
-          <div style={{ position: "absolute", top: 0, bottom: 0, left: pc(target + wf * band), width: `${zoneW}%`, background: "rgba(240,196,106,0.16)" }} />
+          {/* band */}
+          <div style={{ position: "absolute", top: 0, bottom: 0, left: pc(lo), width: `${((hi - lo) / max) * 100}%`, background: "rgba(88,180,158,0.13)" }} />
+          {/* watch zones — the outer slice of the band at each edge, sized off the clamped target */}
+          {wf !== null && (
+            <Fragment>
+              <div style={{ position: "absolute", top: 0, bottom: 0, left: pc(lo), width: `${loZoneW}%`, background: "rgba(240,196,106,0.16)" }} />
+              <div style={{ position: "absolute", top: 0, bottom: 0, left: pc(hi - margin * (hi - t)), width: `${hiZoneW}%`, background: "rgba(240,196,106,0.16)" }} />
+            </Fragment>
+          )}
         </Fragment>
       )}
       <div style={{ position: "absolute", top: 3, bottom: 3, left: 0, width: pc(cur), background: fill }} />
@@ -463,7 +483,7 @@ function PerfTable() {
   const periods = performance.periods || [];
   const policy = allocation.alertPolicy;
   const wf = policy && isNum(policy.watchFraction) ? policy.watchFraction : null;
-  const max = Math.max(...allocation.classes.map((c) => Math.max(c.currentPct || 0, c.targetPct + c.bandPct))) * 1.05;
+  const max = Math.max(...allocation.classes.map((c) => Math.max(c.currentPct || 0, isNum(c.bandHiPct) ? c.bandHiPct : c.targetPct))) * 1.05;
 
   const th = { font: `10px ${F.body}`, letterSpacing: "0.1em", color: C.faint, textTransform: "uppercase", padding: "0 8px 7px", textAlign: "right", whiteSpace: "nowrap" };
   const td = { font: `13px ${F.mono}`, color: C.ice, padding: "5px 8px", textAlign: "right", whiteSpace: "nowrap" };
@@ -498,24 +518,24 @@ function PerfTable() {
                 </tr>
                 {members.map((c) => {
                   const dev = (c.currentPct || 0) - c.targetPct;
-                  const level = alertLevel(c.currentPct, c.targetPct, c.bandPct, policy, c.alert);
+                  const level = alertLevel(c.currentPct, c.targetPct, c.bandLoPct, c.bandHiPct, policy, c.alert);
                   const flagLabel = level === "breach"
-                    ? `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} target — outside the ±${c.bandPct} band`
+                    ? `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} target — outside the ${num(c.bandLoPct, 1)}–${num(c.bandHiPct, 1)} band`
                     : level === "watch"
-                      ? `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} target — approaching the ±${c.bandPct} band`
+                      ? `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} target — approaching the ${num(c.bandLoPct, 1)}–${num(c.bandHiPct, 1)} band`
                       : "";
                   return (
                     <tr key={c.id} style={{ borderTop: `1px solid ${C.ruleSoft}` }}>
                       <td style={{ ...td, textAlign: "left", paddingLeft: 0, font: `13px ${F.body}`, color: level === "breach" ? C.ice : C.mist }}>{c.label}</td>
                       <td style={{ padding: "5px 8px", width: 110 }}>
-                        <BandBar cur={c.currentPct} target={c.targetPct} band={c.bandPct} max={max} watchFraction={wf} level={level} />
+                        <BandBar cur={c.currentPct} target={c.targetPct} lo={c.bandLoPct} hi={c.bandHiPct} max={max} watchFraction={wf} level={level} />
                       </td>
                       <td style={{ padding: "5px 2px", textAlign: "center", width: 19 }}>
                         <AlertFlag level={level} dir={dev} label={flagLabel} />
                       </td>
                       <td style={td}>{num(c.currentPct, 1)}</td>
                       <td style={{ ...td, color: C.faint }}>{num(c.targetPct, 1)}</td>
-                      <td style={{ ...td, color: C.faint }}>±{num(c.bandPct, 1)}</td>
+                      <td style={{ ...td, color: C.faint }}>{isNum(c.bandLoPct) ? `${num(c.bandLoPct, 1)}–${num(c.bandHiPct, 1)}` : NA}</td>
                       <td style={{ ...td, color: ALERT_COLOUR[level] || C.faint, paddingRight: 16 }}>{sgn(dev)}</td>
                       {periods.map((p, i) => <td key={p} style={ret(c.returns && c.returns[i])}>{sgn(c.returns && c.returns[i])}</td>)}
                     </tr>
@@ -1134,6 +1154,11 @@ function noisy(arr, seed, amp) {
   return arr.map((v, i) => (i === 0 ? v : v * (1 + (rnd() - 0.5) * amp)));
 }
 
+// [id, label, goalId, targetPct, bandHalfWidth, cur, returns, priv] —
+// bandHalfWidth is a MOCK convenience column only, symmetric around
+// targetPct; makeSampleView() below turns it into the real contract's
+// bandLoPct/bandHiPct (a book's actual band need not be symmetric). Cash
+// gets no band, matching the served contract.
 const MOCK_CLASSES = [
   ["equity", "Global equity", "growth", 28, 3.0, 24.0, [2.8, 6.4, 11.2, 7.9, 11.4, 9.6], false],
   ["buyout", "Buyout", "growth", 14, 3.0, 17.4, [1.1, 2.4, 4.8, 6.2, 13.1, 12.4], true],
@@ -1162,8 +1187,11 @@ function makeSampleView(plane) {
   const PLAN_V = 2400, M = 60, NH = 12, NF = 6;
   const trueF = plane === "true" ? 1.068 : 1;
 
-  const raw = MOCK_CLASSES.map(([id, label, goalId, targetPct, bandPct, cur, returns, priv]) => ({
-    id, label, goalId, targetPct, bandPct, returns, priv, currentPct: priv ? cur * trueF : cur,
+  const raw = MOCK_CLASSES.map(([id, label, goalId, targetPct, bandHalfWidth, cur, returns, priv]) => ({
+    id, label, goalId, targetPct,
+    bandLoPct: id === "cash" ? null : targetPct - bandHalfWidth,
+    bandHiPct: id === "cash" ? null : targetPct + bandHalfWidth,
+    returns, priv, currentPct: priv ? cur * trueF : cur,
   }));
   const privSum = raw.filter((c) => c.priv).reduce((s, c) => s + c.currentPct, 0);
   const cashPct = raw.find((c) => c.id === "cash").currentPct;

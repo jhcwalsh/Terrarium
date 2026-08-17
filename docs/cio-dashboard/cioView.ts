@@ -132,7 +132,13 @@ export interface AssetClass {
   label: string;
   goalId: string;
   targetPct: Percent;
-  bandPct: Percent;        // half-width; the band is target ± bandPct
+  /**
+   * The book's own declared band, in percent. `null` when the book names
+   * no range for this class (falls back to a declared display-policy
+   * band, not a field on this contract). Cash always carries null.
+   */
+  bandLoPct: Nullable<Percent>;
+  bandHiPct: Nullable<Percent>;
   currentPct: Percent;     // plane-sensitive
   value: Money;            // plane-sensitive
   /** One entry per performance.periods, same order. null where unreached. */
@@ -309,7 +315,10 @@ export function validateCioView(v: CioView): string[] {
     if (!goalIds.has(c.goalId)) e.push(`class ${c.id} references unknown goal ${c.goalId}`);
     if (c.returns && c.returns.length !== v.performance.periods.length)
       e.push(`class ${c.id} has ${c.returns.length} returns, expected ${v.performance.periods.length}`);
-    if (c.bandPct < 0) e.push(`class ${c.id} has a negative band`);
+    if ((c.bandLoPct != null) !== (c.bandHiPct != null))
+      e.push(`class ${c.id} has one of bandLoPct/bandHiPct null and the other set`);
+    if (c.bandLoPct != null && c.bandHiPct != null && !(c.bandLoPct < c.bandHiPct))
+      e.push(`class ${c.id} has bandLoPct >= bandHiPct`);
   });
 
   // alert policy and explicit levels
@@ -324,10 +333,11 @@ export function validateCioView(v: CioView): string[] {
   if (explicit > 0 && explicit < v.allocation.classes.length)
     e.push(`${explicit} of ${v.allocation.classes.length} classes carry an explicit alert — supply it for all or for none, mixed sources are not auditable`);
   v.allocation.classes.forEach((c) => {
-    if (!c.alert) return;
-    const d = Math.abs((c.currentPct || 0) - c.targetPct);
-    if (c.alert === "breach" && d <= c.bandPct) e.push(`class ${c.id} is flagged breach but sits inside its band — intended?`);
-    if (c.alert === "ok" && d > c.bandPct) e.push(`class ${c.id} is flagged ok but sits outside its band — intended?`);
+    if (!c.alert || c.bandLoPct == null || c.bandHiPct == null) return;
+    const cur = c.currentPct || 0;
+    const inside = cur >= c.bandLoPct && cur <= c.bandHiPct;
+    if (c.alert === "breach" && inside) e.push(`class ${c.id} is flagged breach but sits inside its band — intended?`);
+    if (c.alert === "ok" && !inside) e.push(`class ${c.id} is flagged ok but sits outside its band — intended?`);
   });
   v.allocation.goals.forEach((g) => {
     if (g.tolerancePct != null && g.tolerancePct <= 0) e.push(`goal ${g.id} has a non-positive tolerancePct`);

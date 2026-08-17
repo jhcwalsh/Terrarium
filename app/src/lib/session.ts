@@ -290,18 +290,43 @@ export interface Plan {
   points: Record<string, number[]>;
 }
 
+/** Branch-review I2: the exact constants `ah.port.book.validate_plan`
+ * computes its per-window commitment cap from
+ * (`cap = multiple * target * annual_rate`) — served so the entry screen's
+ * client-side pre-flight mirror uses the SAME numbers rather than a
+ * re-derived literal copy that could drift from the server's. */
+export interface PlanCap {
+  multiple: number;
+  annual_rate: number;
+}
+
 export interface DefaultBookResponse {
   book: Book;
   plan: Plan;
   liquid_sleeves: string[];
   book_digest: string;
   plan_digest: string;
+  plan_cap: PlanCap;
 }
 
 /** su-app-06: the entry screen's pre-fill — today's derived book and the
  * flat fixed-rule plan, for this world's own sleeve set. */
 export function getDefaultBook(runId: string): Promise<DefaultBookResponse> {
   return request(`/book/default?run_id=${encodeURIComponent(runId)}`);
+}
+
+/** app-open-02: rebuild one private sleeve's vintage ladder to sum to a NEW
+ * total value, via `GET /book/ladder` — the SAME `_seed_ladder` builder that
+ * produced the served default's rungs, server-side. The caller replaces
+ * `book.private[sleeve]` wholesale with the returned rungs; this function
+ * does no client-side arithmetic of its own. */
+export function rebuildLadder(
+  runId: string,
+  sleeve: string,
+  value: number,
+): Promise<{ rungs: Rung[] }> {
+  const params = new URLSearchParams({ run_id: runId, sleeve, value: String(value) });
+  return request(`/book/ladder?${params}`);
 }
 
 export function createSession(body: {

@@ -51,18 +51,51 @@
  *     `aria-label`s keep the codes: they are accessibility/test hooks, not
  *     text the player reads, and the server contract's field names
  *     (`liquid`/`private`/`targets`/`ranges` keys) are untouched.
+ *
+ * app-open-02 (owner-dictated 2026-08-16): each private ladder's header adds
+ * a "set a new value" alternative to hand-editing rungs one at a time. The
+ * typed value is sent to `GET /book/ladder`, which runs the SAME
+ * `_seed_ladder` builder the served default's rungs came from
+ * (`ah/play.py`) — never a second, client-side ladder. A successful rebuild
+ * replaces `book.private[sleeve]` WHOLESALE with the returned rungs, which
+ * re-derives the value cell and every fault exactly as a hand-edited rung
+ * does; a refused rebuild changes nothing (never partially applied) and
+ * surfaces the server's own detail message next to that sleeve's ladder.
+ * Rebuilding counts as an edit like any other — it changes the book's
+ * digest, so ranked eligibility is lost exactly as a hand-edited rung would
+ * lose it; this file does not touch that machinery.
+ *
+ * Task 8 (owner-dictated 2026-08-16), "so they can move on easily": the
+ * screen was one long scroll; it becomes three TABS — Targets and bands /
+ * Historical vintages / Cashflow projections — with a single "Play" control
+ * at the top of the tab bar. Tabs are display-only (`role="tab"`/
+ * `role="tabpanel"`, `hidden` on the inactive panels): all three stay
+ * mounted, so typed input, the derived book and shape faults survive any tab
+ * round-trip, and a fault raised on a hidden tab still blocks Play. Play
+ * replaces the old bottom "Continue" button one-for-one — same gating (`!
+ * ready`), same `onReady(book, plan, isDefault)` call, same navigation
+ * consequence in the caller — there is no second, divergent commit control.
+ * The fault list moves with it, next to Play, and is rendered in exactly one
+ * place. This pass also drops the visible word "sleeve" from the screen
+ * ("Asset class" column head, "Private asset classes'" note) — aria-labels
+ * and the `liquid`/`private` contract keys are untouched, same judgment as
+ * app-open-01 delta 3.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { usd } from "./lib/money";
 import {
   getDefaultBook,
+  rebuildLadder,
+  SessionApiError,
   type Book,
   type DefaultBookResponse,
   type Plan,
+  type PlanCap,
   type Rung,
 } from "./lib/session";
 import { sleeveLabel } from "./lib/sleeveLabels";
+import { VintageChart } from "./components/VintageChart";
 
 const RUNG_FIELDS = [
   "vintage_year",
@@ -78,6 +111,14 @@ type RungField = (typeof RUNG_FIELDS)[number];
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
+
+/** task 8: the three tabs, in the owner's order — default is the first. */
+type TabId = "targets" | "vintages" | "cashflow";
+const TABS: { id: TabId; label: string }[] = [
+  { id: "targets", label: "Targets and bands" },
+  { id: "vintages", label: "Historical vintages" },
+  { id: "cashflow", label: "Cashflow projections" },
+];
 
 function rungField(rung: Rung, field: RungField): number {
   if (field === "vintage_year") return rung.identity.vintage_year;
@@ -195,6 +236,39 @@ function rangeFaults(text: Record<string, RangeText>): string[] {
   return faults;
 }
 
+/**
+ * Branch-review I2: a client-side PRE-FLIGHT mirror of
+ * `ah.port.book.validate_plan`'s per-window cap check, run against the
+ * CURRENT typed targets and the CURRENT plan grid — not the served
+ * defaults. `validate_plan` refuses a plan window whose points exceed
+ * `COMMIT_CAP_MULTIPLE * target * annual_rate`; the default plan is built
+ * from the WORLD's targets, so a player who lowers a private target enough
+ * (without ever touching the Cashflow projections tab) can otherwise reach
+ * `POST /sessions` and be refused there, naming a plan year they never
+ * touched. This surfaces the same refusal here, in plain language, before
+ * Play — the exact constants and the exact comparison strictness
+ * (`points > cap`, not `>=`) mirror `validate_plan`, and `cap` is the
+ * server's OWN served `plan_cap` (never a re-derived literal copy, which
+ * could silently drift from `ah.play`'s constants).
+ */
+function planCapFaults(plan: Plan, targets: Record<string, number>, cap: PlanCap): string[] {
+  const faults: string[] = [];
+  for (const [sleeve, years] of Object.entries(plan.points)) {
+    const target = targets[sleeve];
+    if (!Number.isFinite(target)) continue; // a blank/NaN target is already reported elsewhere
+    const capValue = cap.multiple * target * cap.annual_rate;
+    years.forEach((points, k) => {
+      if (!Number.isFinite(points) || points <= capValue) return;
+      faults.push(
+        `${sleeve} plan year ${k} (${points.toFixed(1)}) exceeds the commitment cap for a ` +
+          `${target.toFixed(1)} target - lower that plan year on the Cashflow projections ` +
+          "tab, or raise the target",
+      );
+    });
+  }
+  return faults;
+}
+
 function fmt1(x: number): string {
   return Number.isFinite(x) ? x.toFixed(1) : "—";
 }
@@ -280,6 +354,22 @@ export function BookEntry({
    * edit — it is the posted document, this is the editing surface. */
   const [rangeText, setRangeText] = useState<Record<string, RangeText>>({});
   const [error, setError] = useState<string | null>(null);
+  /** app-open-02: the "rebuild to this value" input, per private sleeve, as
+   * TYPED text (not a number) — same reasoning as `rangeText`: an
+   * in-progress edit is not yet a value. */
+  const [rebuildText, setRebuildText] = useState<Record<string, string>>({});
+  /** app-open-02: the last rebuild's refusal, per sleeve — this screen's own
+   * fault surface for the endpoint, styled and worded exactly like
+   * `shapeFaults` (`className="book-note error"`) rather than the
+   * full-screen `error` above, which is reserved for "the entry screen
+   * itself could not load" and would otherwise discard every other typed
+   * field on a single ladder's refusal. */
+  const [ladderError, setLadderError] = useState<Record<string, string | null>>({});
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
+  /** task 8: display-only — which panel is showing. All three stay mounted
+   * regardless (see the file header), so this never gates what state exists,
+   * only what is visible. */
+  const [activeTab, setActiveTab] = useState<TabId>("targets");
 
   useEffect(() => {
     let cancelled = false;
@@ -352,6 +442,9 @@ export function BookEntry({
         if (Math.abs(policyBase - 100) > 0.01) shapeFaults.push("the targets do not total 100");
       }
       shapeFaults.push(...rangeFaults(rangeText));
+      // I2: only meaningful once the server has told us its cap constants
+      // (`resp.plan_cap`, always present once the default has loaded).
+      if (resp?.plan_cap) shapeFaults.push(...planCapFaults(plan, targets, resp.plan_cap));
     }
   }
   const ready = !!book && !!plan && shapeFaults.length === 0;
@@ -436,6 +529,39 @@ export function BookEntry({
         : b,
     );
 
+  /** app-open-02: the parsed, positive rebuild value for `sleeve`, or `null`
+   * while the box is blank/unparseable — a SHAPE check only, same tier as
+   * `allFieldsFinite`. Whether a POSITIVE-but-server-refused value (the
+   * server also enforces `value > 0`) goes through is left to the server:
+   * this screen does not duplicate that rule, only gates on "is this a
+   * number at all" so the button is not clickable while empty. */
+  const rebuildTargetValue = (sleeve: string): number | null => {
+    const typed = rebuildText[sleeve]?.trim();
+    if (!typed) return null;
+    const n = Number(typed);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const doRebuildLadder = (sleeve: string) => {
+    const value = rebuildTargetValue(sleeve);
+    if (value === null) return;
+    setRebuilding(sleeve);
+    setLadderError((e) => ({ ...e, [sleeve]: null }));
+    rebuildLadder(runId, sleeve, value)
+      .then(({ rungs }) => {
+        // never partially applied: the sleeve's rungs are replaced WHOLESALE,
+        // in one state update, or not at all.
+        setBook((b) => (b ? { ...b, private: { ...b.private, [sleeve]: rungs } } : b));
+      })
+      .catch((e) => {
+        setLadderError((prev) => ({
+          ...prev,
+          [sleeve]: e instanceof SessionApiError ? e.message : String(e),
+        }));
+      })
+      .finally(() => setRebuilding(null));
+  };
+
   const setPlanPoint = (sleeve: string, i: number, value: number) =>
     setPlan((p) => {
       if (!p) return p;
@@ -455,18 +581,58 @@ export function BookEntry({
         actually holds — everything else stays on the plan.
       </p>
 
+      <div className="book-topbar">
+        <div className="book-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`book-tab-${t.id}`}
+              aria-controls={`book-panel-${t.id}`}
+              aria-selected={activeTab === t.id}
+              className={`book-tab${activeTab === t.id ? " active" : ""}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="book-topbar-actions">
+          {shapeFaults.length > 0 && (
+            <p className="book-note error" data-testid="shape-faults">
+              {shapeFaults.join("; ")}
+            </p>
+          )}
+          <button
+            type="button"
+            className="book-play"
+            disabled={!ready}
+            onClick={() => onReady(book, plan, isDefault)}
+          >
+            Play
+          </button>
+        </div>
+      </div>
+
+      <div
+        role="tabpanel"
+        id="book-panel-targets"
+        aria-labelledby="book-tab-targets"
+        hidden={activeTab !== "targets"}
+      >
       <section className="setup book-liquid">
         <h2>Targets and bands</h2>
         <p className="book-note">
           <strong>Value</strong> is what you hold today. <strong>Target</strong> is your
           policy allocation, and it is what the commitment programme paces
           against. The <strong>band</strong> is optional and{" "}
-          <strong>reports only</strong> — nothing rebalances to it. Private sleeves'
-          value is the ladder below it, summed — edit it there, not here.
+          <strong>reports only</strong> — nothing rebalances to it. Private asset
+          classes' value is the ladder below it, summed — edit it there, not here.
         </p>
         <div className="policy-grid">
           <div className="policy-head">
-            <span>sleeve</span>
+            <span>Asset class</span>
             <span>value</span>
             <span>target</span>
             <span>policy wt</span>
@@ -524,15 +690,52 @@ export function BookEntry({
           </div>
         </div>
       </section>
+      </div>
 
+      <div
+        role="tabpanel"
+        id="book-panel-vintages"
+        aria-labelledby="book-tab-vintages"
+        hidden={activeTab !== "vintages"}
+      >
       {privateSleeves.map((sleeve) => (
         <section key={sleeve} className="book-ladder">
           <div className="book-ladder-head">
             <h2>{sleeveLabel(sleeve)}</h2>
-            <button type="button" onClick={() => resetSleeve(sleeve)}>
-              {`Reset ${sleeveLabel(sleeve)}`}
-            </button>
+            <div className="book-ladder-actions">
+              <input
+                type="number"
+                className="ladder-rebuild-value"
+                aria-label={`${sleeve} rebuild value`}
+                placeholder="new value"
+                value={rebuildText[sleeve] ?? ""}
+                onChange={(e) =>
+                  setRebuildText((t) => ({ ...t, [sleeve]: e.target.value }))
+                }
+              />
+              <button
+                type="button"
+                aria-label={`${sleeve} rebuild ladder`}
+                disabled={rebuildTargetValue(sleeve) === null || rebuilding === sleeve}
+                onClick={() => doRebuildLadder(sleeve)}
+              >
+                Rebuild ladder
+              </button>
+              <button type="button" onClick={() => resetSleeve(sleeve)}>
+                {`Reset ${sleeveLabel(sleeve)}`}
+              </button>
+            </div>
           </div>
+          {ladderError[sleeve] && (
+            <p className="book-note error" data-testid={`ladder-error-${sleeve}`}>
+              {ladderError[sleeve]}
+            </p>
+          )}
+          {/* task 10 (owner-dictated 2026-08-16): the rung array passed here
+              IS the live typed state, book.private[sleeve] — not a copy, not
+              memoized — so editing a rung input below moves this chart on
+              the very next render. */}
+          <VintageChart rungs={book.private[sleeve]} />
           <div className="book-ladder-scroll">
             <table>
               <thead>
@@ -571,7 +774,14 @@ export function BookEntry({
           </div>
         </section>
       ))}
+      </div>
 
+      <div
+        role="tabpanel"
+        id="book-panel-cashflow"
+        aria-labelledby="book-tab-cashflow"
+        hidden={activeTab !== "cashflow"}
+      >
       <section className="book-plan">
         <div className="book-ladder-head">
           <h2>Commitment plan</h2>
@@ -612,6 +822,7 @@ export function BookEntry({
           </table>
         </div>
       </section>
+      </div>
 
       {/* app-open-01 item 1 (owner ruling 2026-08-16): every field on this
           screen is entered in points (the book totals 100), so the running
@@ -642,21 +853,18 @@ export function BookEntry({
         </div>
       </div>
 
-      {shapeFaults.length > 0 && (
-        <p className="book-note error" data-testid="shape-faults">
-          {shapeFaults.join("; ")}
-        </p>
-      )}
-
+      {/* app-open-02 park (owner ruling 2026-08-16): ranked is parked, so
+          this no longer states ranked ELIGIBILITY (that would be
+          misleading while nothing offers ranked at all). It stays a
+          neutral statement of the book's touched/untouched state — the
+          `isDefault` distinction and its telemetry are unchanged, only the
+          copy is. */}
       <p className="book-note" data-testid="ranked-note">
         {isDefault
-          ? "Ranked is available — this is the default book."
-          : "Practice only — you have edited the book."}
+          ? "This is the served default book. (Ranked play is parked; every session runs as practice.)"
+          : "This book has been edited from the served default. (Ranked play is parked; every session runs as practice.)"}
       </p>
 
-      <button disabled={!ready} onClick={() => onReady(book, plan, isDefault)}>
-        Continue
-      </button>
       <button onClick={onCancel}>back</button>
     </main>
   );

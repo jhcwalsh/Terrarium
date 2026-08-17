@@ -165,6 +165,21 @@ class TestDefaultBookEndpoint:
         client, _db, _rid = service
         assert client.get("/book/default?run_id=nope").status_code == 404
 
+    def test_it_serves_the_plan_caps_own_constants(self, service):
+        """Branch-review I2: the entry screen mirrors `validate_plan`'s
+        per-window cap arithmetic client-side (a pre-flight fault before the
+        server would 422 at POST /sessions), and it must use these SAME
+        served constants rather than a re-derived literal copy — this pins
+        that they equal `ah.play`'s own, so there is one source of truth."""
+        from ah.play import _ANNUAL_COMMITMENT_RATE, COMMIT_CAP_MULTIPLE
+
+        client, _db, rid = service
+        body = client.get(f"/book/default?run_id={rid}").json()
+        assert body["plan_cap"] == {
+            "multiple": COMMIT_CAP_MULTIPLE,
+            "annual_rate": _ANNUAL_COMMITMENT_RATE,
+        }
+
     def test_the_generated_worlds_sleeve_set_has_no_reits(self, gen_service):
         """A toy-v0 world's book carries a `reits` sleeve; a generated
         world's does not (GEN_START_TARGETS folds reits into equity). This
@@ -419,6 +434,118 @@ class TestBookThreadedThroughReplaySurfaces:
         outcome = client.get(f"/sessions/{custom_sid}/outcome").json()
 
         assert doc["value"] == pytest.approx(outcome["final_value"])
+
+    def test_cio_month_zero_private_value_ties_to_the_book_ladder(self, service):
+        """Task 6 (verification, owner-dictated): "confirm that the total
+        NAV for each illiquid asset class sums to the value in the
+        targets-and-bands table." The table's own arithmetic is
+        `BookEntry.tsx::sleeveValues` — a private sleeve's `value` cell is
+        the sum of its ladder's `nav_true` rungs, pinned client-side by
+        `BookEntry.test.tsx`'s "pins the private value cell..." test. This
+        is the server half: month 0 (`revealed_months == 0`, the CIO's
+        front door, reached here without any `/advance`) must report the
+        SAME number for each private class's `value` — both sides are
+        transitively the same claim (this sum), which is the whole point of
+        checking both rather than either alone.
+
+        `plane="true"` names `nav_true` explicitly rather than relying on
+        the default-fixture coincidence that `nav_true == nav_reported` on
+        every seeded rung (`ah/port/book.py::default_opening_book`) —
+        `_allocation`'s `value_of` reads `private_reported` on the default
+        "reported" plane, a different (if numerically equal, by fixture
+        luck) number.
+
+        Branch-review I3 correction (this docstring previously claimed
+        otherwise): the served default book carries TEN rungs per private
+        sleeve, not one (`ah/play.py::_seed_ladder` — a staggered ladder,
+        one per year of contractual life; `ah/port/book.py:31`'s own comment
+        names the same ladder "scaling a ten-rung ladder to a target NAV
+        leaves float dust"). The FIRST check below therefore compares two
+        REAL ten-term sums, not two single floats passed through:
+
+          * the server's is `sum(c.nav_true for c in ladders[sleeve])`
+            (`ah/play.py::_private_snapshot`), where `ladders[sleeve]` is
+            `OpeningBook.cohorts(sleeve)` — `[ClosedEndCohort.from_document(doc)
+            for doc in book.private[sleeve]]` — the SAME rung documents, in
+            the SAME list order, reconstructed via a pydantic round-trip
+            that does not alter an already-float `nav_true` value;
+          * this test's `ladder_sum` sums `book["private"][sleeve]`'s own
+            `nav_true` values directly, in that same served order.
+
+        Verified directly: both sums are computing `sum()` over the
+        IDENTICAL ten float64s in the IDENTICAL order, so they are
+        bit-for-bit the same number as each other — Python's `sum()` is a
+        deterministic left-to-right fold, and running it twice on the same
+        sequence cannot itself introduce a divergence. That much would hold
+        exactly no matter what `_seed_ladder` scaled the rungs to.
+
+        What is NOT structurally guaranteed is that this raw sum survives
+        `_allocation`'s `round(value_of(cid), 4)` (`ah/cioview.py`)
+        unchanged — the SERVED side is rounded, `ladder_sum` here is not.
+        `round(x, 4) == x` only when `x` already sits exactly on a value
+        `round` maps to itself, which is true today only because
+        `_seed_ladder`'s uniform rescale (`target_nav / total`, applied to
+        ten warmed-up cohorts) happens to land the sum on exactly 20.0 / 8.0
+        / 7.0 in float64 — confirmed by direct probe, not assumed. That is a
+        numeric coincidence of the current scaling, not a property the
+        summation order or algorithm enforces; a future change to the
+        warm-up mechanics or the rescale itself could leave a few ULPs of
+        dust that `round(..., 4)` would then paper over on the served side
+        only. The first check below therefore uses `pytest.approx(...,
+        abs=1e-9)` — the same absolute tolerance `BookEntry.tsx`'s own
+        `RUNG_TOLERANCE` uses for a ten-rung identity — loose enough to
+        survive that coincidence changing, tight by roughly nine orders of
+        magnitude against the sleeve's own scale (~20 / 8 / 7) relative to
+        anything a real desync (a dropped rung, a unit error, a stale
+        snapshot) would produce.
+
+        The SECOND check (the edited-rung block below) really is the
+        one-rung case the old docstring described for both: `pe` is
+        replaced with a single element list, so `classes2["pe"]["value"]`
+        is one float (25.0) passed through `round(25.0, 4)`, a genuine
+        no-op with nothing to sum on either side — EXACT equality (`==`)
+        there is correct and unchanged.
+        """
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = default["book"]
+
+        r = client.post("/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]})
+        assert r.status_code == 201, r.text
+        sid = r.json()["session_id"]
+
+        cio = client.get(f"/sessions/{sid}/cio", params={"plane": "true"}).json()
+        classes = {c["id"]: c for c in cio["allocation"]["classes"]}
+        for sleeve in ("pe", "pc", "re"):
+            ladder_sum = sum(rung["value"]["nav_true"] for rung in book["private"][sleeve])
+            assert classes[sleeve]["value"] == pytest.approx(ladder_sum, abs=1e-9)
+
+        # And again on an EDITED ladder — the default book's targets equal
+        # its values (Ruling D), so the check above alone could pass a CIO
+        # that read the book's `targets` (or any other book-shaped number
+        # that happens to equal the ladder sum on the untouched default)
+        # instead of actually summing the rungs. Editing one rung's
+        # `nav_true` breaks that coincidence: the tie-out must hold for
+        # whatever the analyst actually typed, not just the served default.
+        # `equity` absorbs the same 5 points pe gains, off cash's own
+        # residual role, so the edited book still totals 100 and posts.
+        edited_pe_rung = {
+            **book["private"]["pe"][0],
+            "value": {**book["private"]["pe"][0]["value"], "nav_true": 25.0},
+        }
+        edited = {
+            **book,
+            "liquid": {**book["liquid"], "equity": book["liquid"]["equity"] - 5.0},
+            "private": {**book["private"], "pe": [edited_pe_rung]},
+        }
+        r2 = client.post("/sessions", json={"run_id": rid, "book": edited, "plan": default["plan"]})
+        assert r2.status_code == 201, r2.text
+        sid2 = r2.json()["session_id"]
+
+        cio2 = client.get(f"/sessions/{sid2}/cio", params={"plane": "true"}).json()
+        classes2 = {c["id"]: c for c in cio2["allocation"]["classes"]}
+        assert classes2["pe"]["value"] == 25.0
+        assert classes2["pe"]["value"] != pytest.approx(classes["pe"]["value"])
 
 
 class TestPlanDrivenLever:
@@ -1129,3 +1256,98 @@ class TestAlertLevel:
             assert _alert_level(9.999, target, lo, hi) == "breach", target
             assert _alert_level(20.001, target, lo, hi) == "breach", target
             assert _alert_level(15.0, target, lo, hi) != "breach", target
+
+
+class TestLadderRebuildEndpoint:
+    """``GET /book/ladder`` (app-open-02): a server-seeded vintage ladder for
+    a NEW total value, so the entry screen can offer "set a value" instead of
+    hand-editing rungs into shapes ``ah.port.cashflow_tier1`` was never
+    fitted on.
+
+    Built by calling ``ah.play._seed_ladder`` with ``value`` in place of the
+    target points -- the exact function ``default_opening_book`` calls for
+    the served default -- never a second implementation. The equivalence
+    test below is what pins that: asking for the sleeve's OWN default target
+    value must reproduce the served default's rungs exactly, not merely
+    something close.
+    """
+
+    def test_the_default_target_value_reproduces_the_default_rungs_exactly(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        for sleeve in ("pe", "pc", "re"):
+            value = default["book"]["targets"][sleeve]
+            r = client.get(f"/book/ladder?run_id={rid}&sleeve={sleeve}&value={value}")
+            assert r.status_code == 200, r.text
+            assert r.json()["rungs"] == default["book"]["private"][sleeve]
+
+    def test_the_rungs_sum_to_the_requested_value(self, service):
+        """``_seed_ladder`` scales a warmed-up ladder to ``target_nav / total``
+        (``ah/play.py::_seed_ladder``), which leaves float dust of the same
+        order ``ah.port.book.BOOK_TOLERANCE`` (1e-6) already names for
+        exactly this operation ("scaling a ten-rung ladder to a target NAV
+        leaves float dust") -- so the sum is asserted to that tolerance,
+        not exactly."""
+        client, _db, rid = service
+        value = 12.5
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value={value}")
+        assert r.status_code == 200, r.text
+        rungs = r.json()["rungs"]
+        assert len(rungs) > 1, "a ladder, not a single rung"
+        total = sum(rung["value"]["nav_true"] for rung in rungs)
+        assert abs(total - value) < 1e-6
+
+    def test_two_calls_are_byte_identical(self, service):
+        """The seeder is deterministic and no randomness is added at the
+        door: same inputs, same bytes -- not just equal JSON."""
+        client, _db, rid = service
+        r1 = client.get(f"/book/ladder?run_id={rid}&sleeve=pc&value=9.0")
+        r2 = client.get(f"/book/ladder?run_id={rid}&sleeve=pc&value=9.0")
+        assert r1.status_code == r2.status_code == 200
+        assert r1.content == r2.content
+
+    def test_an_unknown_sleeve_is_422(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=equity&value=10.0")
+        assert r.status_code == 422
+
+    def test_zero_value_is_422(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value=0")
+        assert r.status_code == 422
+
+    def test_negative_value_is_422(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value=-5")
+        assert r.status_code == 422
+
+    def test_an_unknown_run_is_404(self, service):
+        client, _db, _rid = service
+        r = client.get("/book/ladder?run_id=nope&sleeve=pe&value=10.0")
+        assert r.status_code == 404
+
+    def test_rung_documents_are_shaped_like_the_default_books(self, service):
+        """Same ``to_document()`` shape the default book serves: the rung
+        keys the client relies on (``identity``, ``commitment``, ``value``)
+        must be present and typed the same way."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        example_rung = default["book"]["private"]["pe"][0]
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value=15.0")
+        assert r.status_code == 200
+        rung = r.json()["rungs"][0]
+        assert set(rung.keys()) == set(example_rung.keys())
+        assert set(rung["value"].keys()) == set(example_rung["value"].keys())
+        assert set(rung["commitment"].keys()) == set(example_rung["commitment"].keys())
+
+    def test_a_generated_worlds_run_id_also_works(self, gen_service):
+        """The base fixture ``_seed_ladder`` warms up from does not depend on
+        the world's engine (``_build_portfolio`` reads the same
+        ``closed-end-cohort.example.json`` for toy and generated worlds
+        alike), so the endpoint must serve a generated world's run_id too."""
+        client, _db, rid = gen_service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=re&value=8.0")
+        assert r.status_code == 200, r.text
+        rungs = r.json()["rungs"]
+        total = sum(rung["value"]["nav_true"] for rung in rungs)
+        assert abs(total - 8.0) < 1e-6
