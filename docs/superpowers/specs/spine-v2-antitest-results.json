@@ -1,0 +1,433 @@
+{
+  "all_monotone": true,
+  "decade_months": 120,
+  "n_decades_per_batch": 50,
+  "n_replicates": 24,
+  "non_monotone_sweeps": [],
+  "obligation": "exam section 6.1: before a judge is sealed, sweep the model property the judge claims to measure and confirm the judge's pass rate increases in it",
+  "rule": "one-sided bars (O1, A1, A2) are swept on the effect itself, from absent to history's own level, and the pass rate must not fall along it. Two-sided bars (T1, D1-D4) are swept on CLOSENESS to the historical anchor, because a raw sweep of a two-sided bar would correctly fall at the top and prove nothing: D1-D4 do it by generating half the batches a fixed distance above the anchor and half the same distance below it at each grid point, and T1 does it by running a raw parameter grid that spans both sides and then re-ordering the points by how far the REALIZED lift sits from history's, normalised by the band's own half-width on that side (its band is not symmetric around the anchor). T1 additionally gets the one-sided sweep, because that is the literal B1 v2 comparison",
+  "schema": "spine-v2-antitest-1",
+  "seeds": {
+    "A1": 20260908,
+    "A2": 20260909,
+    "D1": 20260904,
+    "D2": 20260905,
+    "D3": 20260906,
+    "D4": 20260907,
+    "O1": 20260903,
+    "T1_closeness": 20260902,
+    "T1_directional": 20260901
+  },
+  "sweeps": {
+    "A1": {
+      "bar": "A1",
+      "effect": "the commodities-minus-bonds excess, in pp/yr, added when inflation is high",
+      "grid": [
+        -4.0,
+        -2.0,
+        0.0,
+        1.0,
+        2.0,
+        3.5,
+        5.0
+      ],
+      "mean_statistic": [
+        -4.418183207860426,
+        -2.0763293183276543,
+        -0.013925789863160029,
+        1.2928234650739947,
+        3.0628973262286396,
+        3.895724127743868,
+        5.52319166891747
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.0,
+        0.08333333333333333,
+        0.4583333333333333,
+        0.7916666666666666,
+        0.9583333333333334,
+        1.0,
+        1.0
+      ],
+      "shape": "one-sided sweep of the effect itself",
+      "statistic": "pooled spread(high) minus spread(low), pp/yr"
+    },
+    "A2": {
+      "bar": "A2",
+      "effect": "the stock-bond correlation imposed on high-inflation months",
+      "grid": [
+        -0.1,
+        0.0,
+        0.1,
+        0.2,
+        0.3,
+        0.45,
+        0.6
+      ],
+      "mean_statistic": [
+        -0.09270194232020279,
+        -0.00155574519375789,
+        0.10390769120534726,
+        0.2002701214756788,
+        0.30079647374108215,
+        0.4537886230308497,
+        0.6025355775735929
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.20833333333333334,
+        0.9583333333333334,
+        1.0,
+        1.0
+      ],
+      "shape": "one-sided sweep of the effect itself",
+      "statistic": "pooled high-minus-low stock-bond correlation difference"
+    },
+    "D1": {
+      "anchor_months": 2.0,
+      "bar": "D1",
+      "effect": "closeness of the generated recession spell median to history's decade-pooled 2 months, both directions",
+      "grid_miss_months": [
+        8.0,
+        6.0,
+        4.0,
+        3.0,
+        2.0,
+        1.0,
+        0.0
+      ],
+      "mean_statistic": [
+        5.5,
+        4.5,
+        3.5,
+        3.0,
+        2.5,
+        2.0,
+        2.0
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "season": "recession",
+      "shape": "two-sided closeness sweep",
+      "statistic": "pooled completed-spell median, months"
+    },
+    "D2": {
+      "anchor_months": 4.0,
+      "bar": "D2",
+      "effect": "closeness of the generated stagflation spell median to history's decade-pooled 4 months, both directions",
+      "grid_miss_months": [
+        8.0,
+        6.0,
+        4.0,
+        3.0,
+        2.0,
+        1.0,
+        0.0
+      ],
+      "mean_statistic": [
+        6.5,
+        5.5,
+        4.5,
+        4.0,
+        4.0,
+        4.0,
+        4.0
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "season": "stagflation",
+      "shape": "two-sided closeness sweep",
+      "statistic": "pooled completed-spell median, months"
+    },
+    "D3": {
+      "anchor_months": 5.0,
+      "bar": "D3",
+      "effect": "closeness of the generated recovery spell median to history's decade-pooled 5 months, both directions",
+      "grid_miss_months": [
+        8.0,
+        6.0,
+        4.0,
+        3.0,
+        2.0,
+        1.0,
+        0.0
+      ],
+      "mean_statistic": [
+        7.0,
+        6.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0,
+        5.0
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "season": "recovery",
+      "shape": "two-sided closeness sweep",
+      "statistic": "pooled completed-spell median, months"
+    },
+    "D4": {
+      "anchor_months": 4.0,
+      "bar": "D4",
+      "effect": "closeness of the generated expansion spell median to history's decade-pooled 4 months, both directions",
+      "grid_miss_months": [
+        8.0,
+        6.0,
+        4.0,
+        3.0,
+        2.0,
+        1.0,
+        0.0
+      ],
+      "mean_statistic": [
+        6.5,
+        5.5,
+        4.5,
+        4.0,
+        4.0,
+        4.0,
+        4.0
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "season": "expansion",
+      "shape": "two-sided closeness sweep",
+      "statistic": "pooled completed-spell median, months"
+    },
+    "O1": {
+      "bar": "O1",
+      "effect": "the probability that a season change follows the clock's order",
+      "grid": [
+        0.0,
+        0.15,
+        0.3,
+        0.45,
+        0.6,
+        0.75,
+        0.9
+      ],
+      "mean_statistic": [
+        0.0,
+        0.1497751979623395,
+        0.3018518693139482,
+        0.44975176546768525,
+        0.6074781451644916,
+        0.7507522803834639,
+        0.9011914237931055
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "shape": "one-sided sweep of the effect itself",
+      "statistic": "pooled clockwise fraction"
+    },
+    "T1_closeness": {
+      "bar": "T1",
+      "distance_from_history": [
+        1.3468682170579334,
+        0.7834169781138709,
+        0.38489530231215974,
+        0.1496791154620789,
+        0.22331666844718967,
+        0.5871136001957393,
+        4.682735694727922
+      ],
+      "effect": "closeness of the realized transmission lift to history's 2.3719x, spanning both sides of the band",
+      "grid": [
+        {
+          "background": 0.012,
+          "p_cause": 0.0
+        },
+        {
+          "background": 0.012,
+          "p_cause": 0.3
+        },
+        {
+          "background": 0.012,
+          "p_cause": 0.6
+        },
+        {
+          "background": 0.012,
+          "p_cause": 1.0
+        },
+        {
+          "background": 0.006,
+          "p_cause": 1.0
+        },
+        {
+          "background": 0.0018,
+          "p_cause": 1.0
+        },
+        {
+          "background": 0.0,
+          "gap": [
+            60,
+            110
+          ],
+          "p_cause": 1.0
+        }
+      ],
+      "historical_lift": 2.3718540268456376,
+      "mean_statistic": [
+        1.0249858097877043,
+        1.5884370487317667,
+        1.9869587245334779,
+        2.2221749113835587,
+        2.5951706952928273,
+        2.958967627041377,
+        7.05458972157356
+      ],
+      "monotone_non_decreasing": true,
+      "note": "the raw grid is re-ordered by the realized lift's distance from history's, so the monotonicity claim is about closeness and not about the synthetic parameter; the raw pass_rate row is published beside it and does fall at the top, which is the two-sided band working as intended",
+      "pass_rate": [
+        0.0,
+        0.16666666666666666,
+        0.875,
+        1.0,
+        1.0,
+        0.9583333333333334,
+        0.0
+      ],
+      "pass_rate_ordered_by_closeness": [
+        0.0,
+        0.0,
+        0.16666666666666666,
+        0.875,
+        0.9583333333333334,
+        1.0,
+        1.0
+      ],
+      "reach_toward_band_edge": [
+        2.2576819691556653,
+        1.3131992895946603,
+        0.6451790702590352,
+        0.250898963876411,
+        0.22892341883493672,
+        0.6018541004389062,
+        4.8003038563644616
+      ],
+      "shape": "two-sided closeness sweep",
+      "statistic": "pooled transmission lift"
+    },
+    "T1_directional": {
+      "bar": "T1",
+      "effect": "the probability that a tight-policy episode causes a downturn within a year",
+      "grid": [
+        0.0,
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "mean_statistic": [
+        1.0025217617290025,
+        1.4580503245756908,
+        1.7640002886059725,
+        1.9123294196519698,
+        2.171903343096775,
+        2.256967046752866
+      ],
+      "monotone_non_decreasing": true,
+      "note": "the literal B1 v2 comparison: a judge whose pass rate falls as the modelled effect grows toward history's is measuring something other than the effect",
+      "pass_rate": [
+        0.0,
+        0.125,
+        0.4583333333333333,
+        0.75,
+        0.9583333333333334,
+        1.0
+      ],
+      "shape": "one-sided sweep of the effect itself",
+      "statistic": "pooled transmission lift"
+    }
+  },
+  "thresholds_judged_against": {
+    "A1_containment_pp": [
+      -5.053054679081145,
+      32.31605649965673
+    ],
+    "A2_correlation_margin": 0.13609378139729844,
+    "A2_share_high_floor": 0.8,
+    "A2_share_low_ceiling": null,
+    "A2_share_low_ceiling_dropped_value": 0.65,
+    "D_anchor_medians_months": {
+      "expansion": 4.0,
+      "recession": 2.0,
+      "recovery": 5.0,
+      "stagflation": 4.0
+    },
+    "D_median_bands_months": {
+      "expansion": [
+        1.0,
+        7.0
+      ],
+      "recession": [
+        0.0,
+        5.0
+      ],
+      "recovery": [
+        2.0,
+        8.0
+      ],
+      "stagflation": [
+        1.0,
+        7.0
+      ]
+    },
+    "D_statistic": "median of the completed spells POOLED over the whole batch",
+    "D_tolerance_months": 3.0,
+    "O1_clockwise_min": 0.5180669104991394,
+    "T1_lift_band": [
+      1.7752827491108736,
+      3.3473622102535145
+    ],
+    "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
+    "grader": "grader_v2",
+    "n_seeds": 50
+  }
+}
