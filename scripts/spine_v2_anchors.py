@@ -76,6 +76,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import sys
 from pathlib import Path
 from typing import Any, cast
 
@@ -109,6 +110,19 @@ from ah.gen.bootstrap import (
 from ah.gen.regimes.semimarkov import spells_from_labels
 from ah.gen.spine import CLOCKWISE, QUADRANTS, fit_hazard, panel_quadrant, panel_yoy
 from ah.strategies import load_derived_series
+
+_SCRIPTS_DIR = Path(__file__).resolve().parent
+if str(_SCRIPTS_DIR) not in sys.path:  # running as a script puts it there already
+    sys.path.insert(0, str(_SCRIPTS_DIR))
+
+# Section K's window rule and the sealed judge's window rule must be the SAME
+# code, not two implementations that agree today: the whole point of the pooled
+# re-derivation is that both sides of a D bar are measured identically. So the
+# completed-spell decomposition is imported from the grader module the judges
+# import, rather than written a second time here.
+from spine_v2_grader import INCUMBENT_CONTRACTING_LABELS  # noqa: E402
+from spine_v2_grader import completed_spells as grader_completed_spells  # noqa: E402
+from spine_v2_grader import season_cells as grader_season_cells  # noqa: E402
 
 _REPO_ROOT = Path(__file__).resolve().parents[1]
 OUT_PATH = _REPO_ROOT / "docs" / "superpowers" / "specs" / "spine-v2-anchors.json"
@@ -165,6 +179,10 @@ POWER_SEED_GRID = (5, 10, 15, 20, 25, 30, 40, 50, 60, 80, 100, 150, 200, 300, 40
 POWER_TARGET = 0.90
 #: The ensemble size the prior rounds ran at, reported per bar for comparison.
 POWER_PILOT_N_SEEDS = 20
+#: The campaign's batch size, owner-ruled 2026-08-17: 50 decades per premise.
+#: Every retained bar's power is reported at this size (section M).
+SEALED_N_SEEDS = 50
+assert SEALED_N_SEEDS in POWER_SEED_GRID, "the sealed batch size must be a grid point"
 
 #: The exam's +-1 quarter dwell tolerance, in months. A policy choice (the
 #: quarter is the game's smallest play unit), not an estimate -- section G
@@ -1902,6 +1920,8 @@ def section_i(
     ordering: dict[str, Any],
     dwell_intervals: dict[str, Any],
     bars: dict[str, Any],
+    sealed_bars: dict[str, Any],
+    sealed_contracting_labels: tuple[str, ...],
 ) -> dict[str, Any]:
     """Obligation A: how far do the anchors move when the two dials are nudged?
 
@@ -1934,10 +1954,12 @@ def section_i(
     incumbent_contracting = np.isin(np.asarray(source.labels), ["REC", "CRI"])
     arms: dict[str, Any] = {}
     per_arm_cells: dict[str, np.ndarray] = {}
+    per_arm_labels: dict[str, tuple[str, ...]] = {}
     for name, d_infl, d_growth in STABILITY_ARMS:
         thresholds = dict(base_thresholds)
         thresholds["growth_weak"] = growth_line + d_growth
         labels = tuple(source.labels) if d_growth == 0.0 else _labels_at(columns, thresholds)
+        per_arm_labels[name] = labels
         arm_cells = panel_quadrant(
             _RelabelledSource(source, labels), yoy, era_threshold_pp + d_infl
         )
@@ -2028,6 +2050,52 @@ def section_i(
             "n_arms_outside": len(outside),
         }
 
+    # ---- the same check, re-run on the SEALED construct ----------------------
+    # ``band_check`` above compares each arm's PANEL-WIDE median against the
+    # pre-ruling panel-wide band, which is what §11 measured and reported. The
+    # owner's pooled-spells re-derivation changed both halves of that comparison
+    # (decade-pooled statistic, decade-pooled anchor), so the disclosure has to
+    # be re-taken on the construct that is actually being sealed -- otherwise
+    # the exam would ship a threshold-sensitivity result about bars it no longer
+    # has. Each arm's months are re-classified under the sealed grader's
+    # contracting set and pooled over the panel's own 120-month windows, exactly
+    # as the sealed judge pools a generated batch.
+    sealed_dwell_bands = cast(dict[str, list[float]], sealed_bars["D_median_bands_months"])
+    starts = _decade_starts(int(cells.size), POWER_DECADE_MONTHS)
+    sealed_band_check: dict[str, Any] = {}
+    pooled_by_arm: dict[str, list[float]] = {}
+    for name, d_infl, _d_growth in STABILITY_ARMS:
+        arm_labels = per_arm_labels[name]
+        arm_cells = grader_season_cells(
+            np.asarray(arm_labels),
+            yoy,
+            era_threshold_pp + d_infl,
+            contracting_labels=sealed_contracting_labels,
+        )
+        pooled = _pooled_decade_spells(
+            arm_cells, starts, POWER_DECADE_MONTHS, POWER_YOY_WARMUP_MONTHS
+        )
+        pooled_by_arm[name] = [
+            float(np.median(pooled[i])) if pooled[i] else float("nan")
+            for i in range(len(QUADRANTS))
+        ]
+    for i, (code, quadrant) in enumerate(zip(("D1", "D2", "D3", "D4"), QUADRANTS, strict=True)):
+        band = sealed_dwell_bands[quadrant]
+        values = [pooled_by_arm[name][i] for name, _, _ in STABILITY_ARMS]
+        outside = [
+            name
+            for name, value in zip([n for n, _, _ in STABILITY_ARMS], values, strict=True)
+            if not (band[0] <= value <= band[1])
+        ]
+        sealed_band_check[f"{code}_pooled_dwell_median_{quadrant}"] = {
+            "bar": [_f(band[0]), _f(band[1])],
+            "baseline_pooled_median_months": _f(values[0]),
+            "arm_min": _f(min(values)),
+            "arm_max": _f(max(values)),
+            "arms_outside": outside,
+            "n_arms_outside": len(outside),
+        }
+
     return {
         "obligation": (
             "owner-agreed 2026-08-17 (A): perturb each dial of the two-dial classifier and "
@@ -2108,6 +2176,16 @@ def section_i(
         "arms": arms,
         "verdicts": verdicts,
         "bar_band_check": band_check,
+        "bar_band_check_under_sealed_bars": sealed_band_check,
+        "bar_band_check_under_sealed_bars_note": (
+            "bar_band_check compares each arm's PANEL-WIDE median against the pre-ruling "
+            "panel-wide band -- the comparison section 11 reported and the record of it. "
+            "This block re-takes the same disclosure on the construct actually sealed: "
+            "each arm's months re-classified under the sealed grader's contracting set, "
+            "its completed spells pooled over the panel's own 120-month windows (the "
+            "sealed D statistic), against the sealed decade-pooled band. Read THIS one "
+            "for what a 50 bp move of a dial does to the bars that were sealed"
+        ),
         "bar_band_check_note": (
             "the verdicts above answer the question the owner asked -- is the perturbation "
             "spread inside the anchor's own SAMPLING noise. This block answers the "
@@ -2442,6 +2520,243 @@ def section_j(
 # --------------------------------------------------------------------------- #
 
 
+# --------------------------------------------------------------------------- #
+# K -- the pooled-spells re-derivation of D1-D4 (owner ruling, 2026-08-17)
+#
+# The four season-length bars were drafted as "the generated worlds' median
+# completed spell, against history's". Two things about that construct were
+# left implicit, and OPEN-4 found both of them biting:
+#
+#   (1) WHOSE median. A single generated decade contributes only a handful of
+#       completed spells per season (the panel's own decades average 1.3
+#       completed recession spells and 2.4 recovery ones), so a median taken
+#       decade by decade is dominated by sampling noise rather than by the
+#       engine -- which is exactly why D2 needed 50 decades for 90% power and
+#       why a marginal D verdict could not be read. Pooling every completed
+#       spell in the batch into ONE distribution and taking its median is the
+#       fix: 50 decades pool ~120 recovery spells instead of ~2.4, and the
+#       statistic then measures the engine.
+#
+#   (2) MEASURED ON WHAT WINDOW. Pooling alone does not close the gap, and this
+#       section is where that is made visible. The panel-wide anchor is measured
+#       on one unbroken 68-year record; the judged statistic is measured on
+#       120-month decades, each of which drops the spell it opens with and the
+#       spell it closes with. Long spells are far likelier to touch an edge, so
+#       the decade-measured distribution is systematically shorter -- recovery's
+#       median falls from 9 months panel-wide to 5 months on decades, because
+#       recovery's spell list runs 2,2,3,3,3,4,5,5,5,6,6,12,13,... and the
+#       panel-wide median of 9 is the midpoint of a jump nothing observed sits
+#       in. Judging a decade-measured statistic against a panel-measured anchor
+#       is the same class of error the spine-02 verdict-integrity review found
+#       in B6 (recession-or-crisis on one side, crisis-only on the other), and
+#       the exam's own remedy for it (T1's identical-conditioning ruling) is
+#       what is applied here: BOTH sides are measured on 120-month windows with
+#       the same 12-month warm-up and the same completed-spell rule.
+#
+# So the anchor a D bar is cut from is the panel's own decade-pooled completed
+# spell median, and the tolerance stays +-1 quarter (a product fact -- the
+# game's smallest play unit -- which no measurement here touches). What a D bar
+# asks becomes: "does a decade of the generated world show seasons the length a
+# decade of history shows?" -- which is also the question the product poses,
+# since a player is handed one decade and never sees 68 years.
+# --------------------------------------------------------------------------- #
+
+
+def _decade_starts(n_rows: int, decade: int) -> np.ndarray:
+    """Every start row of a full ``decade``-month window inside ``n_rows``."""
+    return np.arange(0, n_rows - decade + 1)
+
+
+def _pooled_decade_spells(
+    cells: np.ndarray, starts: np.ndarray, decade: int, warmup: int
+) -> list[list[int]]:
+    """Completed spells of every window in ``starts``, pooled per season.
+
+    One window is one simulated decade's worth of months: rows
+    ``[start + warmup, start + decade - 1]`` (the warm-up months are dropped
+    because a generated decade has no trailing inflation for them either), and
+    the completed-spell rule inside it is ``spine_v2_grader.completed_spells``
+    -- the SAME function the sealed judge calls on a generated decade.
+    """
+    pooled: list[list[int]] = [[] for _ in QUADRANTS]
+    for start in starts:
+        window = cells[int(start) + warmup : int(start) + decade]
+        for i, lengths in enumerate(grader_completed_spells(window)):
+            pooled[i].extend(lengths)
+    return pooled
+
+
+def _spell_summary(lengths: list[int], n_windows: int) -> dict[str, Any]:
+    arr = np.asarray(sorted(lengths), dtype=np.float64)
+    if arr.size == 0:
+        return {"n_spells": 0, "median_months": None}
+    q25, q50, q75 = (float(x) for x in np.percentile(arr, [25, 50, 75]))
+    return {
+        "n_spells": int(arr.size),
+        "spells_per_window": _f(float(arr.size) / n_windows) if n_windows else None,
+        "median_months": _f(q50),
+        "median_quarters": _f(q50 / 3.0),
+        "iqr_months": [_f(q25), _f(q75)],
+        "mean_months": _f(float(arr.mean())),
+        "max_months": _f(float(arr.max())),
+    }
+
+
+def section_k(cells_by_grader: dict[str, np.ndarray]) -> dict[str, Any]:
+    """The decade-pooled completed-spell distribution, per grader.
+
+    Reported three ways so the choice of anchor is auditable rather than
+    asserted: ``overlapping_windows`` (every 120-month window of the panel, one
+    per start row -- the primary), ``disjoint_windows`` (the panel cut into
+    non-overlapping decades, which uses each month once and is the sensitivity
+    check on the overlapping version's uneven month weighting), and
+    ``panel_wide_comparison`` (section C's own numbers beside them, so the size
+    and direction of the windowing effect is visible per season).
+    """
+    decade = POWER_DECADE_MONTHS
+    warmup = POWER_YOY_WARMUP_MONTHS
+    per_grader: dict[str, Any] = {}
+    for grader, cells in cells_by_grader.items():
+        n_rows = int(cells.size)
+        overlapping = _decade_starts(n_rows, decade)
+        disjoint = np.arange(0, n_rows - decade + 1, decade)
+        pooled_overlap = _pooled_decade_spells(cells, overlapping, decade, warmup)
+        pooled_disjoint = _pooled_decade_spells(cells, disjoint, decade, warmup)
+        panel_wide = _completed_spells_by_quadrant(cells)
+        comparison: dict[str, Any] = {}
+        for i, quadrant in enumerate(QUADRANTS):
+            panel_median = float(np.median(panel_wide[i])) if panel_wide[i] else float("nan")
+            pooled_median = (
+                float(np.median(pooled_overlap[i])) if pooled_overlap[i] else float("nan")
+            )
+            comparison[quadrant] = {
+                "panel_wide_median_months": _f(panel_median),
+                "panel_wide_n_completed_spells": len(panel_wide[i]),
+                "decade_pooled_median_months": _f(pooled_median),
+                "decade_minus_panel_wide_months": _f(pooled_median - panel_median),
+                "panel_wide_max_spell_months": (
+                    _f(float(max(panel_wide[i]))) if panel_wide[i] else None
+                ),
+            }
+        per_grader[grader] = {
+            "overlapping_windows": {
+                "n_windows": int(overlapping.size),
+                "per_quadrant": {
+                    quadrant: _spell_summary(pooled_overlap[i], int(overlapping.size))
+                    for i, quadrant in enumerate(QUADRANTS)
+                },
+            },
+            "disjoint_windows": {
+                "n_windows": int(disjoint.size),
+                "starts": [int(x) for x in disjoint],
+                "per_quadrant": {
+                    quadrant: _spell_summary(pooled_disjoint[i], int(disjoint.size))
+                    for i, quadrant in enumerate(QUADRANTS)
+                },
+            },
+            "panel_wide_comparison": comparison,
+        }
+    return {
+        "decade_months": decade,
+        "warmup_months": warmup,
+        "usable_months_per_decade": decade - warmup,
+        "primary": "overlapping_windows",
+        "rule": (
+            "pool the COMPLETED spells of every 120-month window (12-month trailing-"
+            "inflation warm-up dropped, then a spell that opens or closes the window is "
+            "dropped as censored) and take the median of the pooled multiset. The window "
+            "rule, the warm-up and the censoring are identical to what the sealed judge "
+            "applies to a generated decade -- that identity is the point of the section"
+        ),
+        "why_pooling": (
+            "a single decade contributes ~1-3 completed spells per season, so a "
+            "per-decade median measures sampling noise; pooling the whole batch into one "
+            "distribution makes the median a statement about the engine. At the sealed "
+            "50 decades per premise the pooled recovery count is ~120 spells"
+        ),
+        "why_the_same_window_on_both_sides": (
+            "a 120-month window drops the spell it opens with and the spell it closes "
+            "with, and long spells are likelier to touch an edge, so a decade-measured "
+            "median is systematically shorter than the same season's panel-wide median. "
+            "Judging the generated side's decade-measured statistic against a "
+            "panel-measured anchor is a definition mismatch of the same class the "
+            "spine-02 review found in B6; the exam's remedy there (identical "
+            "conditioning on both sides, T1) is applied here"
+        ),
+        "weighting_disclosure": (
+            "overlapping windows weight the panel's months unevenly -- an interior month "
+            "falls inside up to 109 windows, the first and last few years inside far "
+            "fewer. disjoint_windows is the sensitivity check that uses every month "
+            "exactly once; it rests on a handful of decades, so it is a check and not "
+            "the anchor"
+        ),
+        "per_grader": per_grader,
+    }
+
+
+def exam_bars_sealed(
+    transmission: dict[str, Any],
+    pooled_dwells: dict[str, Any],
+    allocation: dict[str, Any],
+    ordering: dict[str, Any],
+    correlation_intervals: dict[str, Any],
+    *,
+    grader: str,
+) -> dict[str, Any]:
+    """The SEALED bar block, derived -- never restated -- from the sections above.
+
+    Same discipline as :func:`exam_bars`, which this supersedes: T1's band is
+    section B's primary bootstrap interval, A1's containment range is section
+    D's episode spreads, O1's minimum is the ordering interval's lower edge and
+    A2's margin is section F's. What changed, both by owner ruling of
+    2026-08-17: each D band is now cut from section K's **decade-pooled** median
+    for ``grader`` rather than from section C's panel-wide one, and the
+    ordering interval is the one measured under the same grader.
+    """
+    lift_ci = transmission["bootstrap_ci95"][f"block_{PRIMARY_BLOCK_MONTHS}m"]["rec_plus_cri"][
+        "lift_ci95"
+    ]
+    pooled = pooled_dwells["per_grader"][grader]["overlapping_windows"]["per_quadrant"]
+    dwell: dict[str, Any] = {}
+    for quadrant in QUADRANTS:
+        median = cast(float, pooled[quadrant]["median_months"])
+        dwell[quadrant] = [
+            max(0.0, median - DWELL_TOLERANCE_MONTHS),
+            median + DWELL_TOLERANCE_MONTHS,
+        ]
+    spreads = [
+        episode["returns"]["spreads_ann_arith_pp"]["commodities_minus_bonds"]
+        for episode in allocation["named_episodes"].values()
+        if episode["available"]
+    ]
+    return {
+        "grader": grader,
+        "T1_lift_band": [lift_ci["lo"], lift_ci["hi"]],
+        "O1_clockwise_min": ordering["ci95_lower_edge"],
+        "D_median_bands_months": dwell,
+        "D_anchor_medians_months": {
+            quadrant: pooled[quadrant]["median_months"] for quadrant in QUADRANTS
+        },
+        "D_tolerance_months": DWELL_TOLERANCE_MONTHS,
+        "D_statistic": "median of the completed spells POOLED over the whole batch",
+        "A1_containment_pp": [_f(min(spreads)), _f(max(spreads))],
+        "A2_correlation_margin": correlation_intervals["correlation_level"]["ci95_lower_edge"],
+        "A2_share_high_floor": A2_SHARE_HIGH_FLOOR,
+        "A2_share_low_ceiling": A2_SHARE_LOW_CEILING,
+        "derivation_note": (
+            "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for "
+            "the recession-or-crisis lift; D_median_bands_months = each season's "
+            "DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping "
+            "windows, this bar block's grader) +- 1 quarter, floored at zero because no "
+            "spell is shorter than a month; A1_containment_pp = the min and max "
+            "commodities-minus-bonds spread across the five in-panel episodes; "
+            "O1_clockwise_min = the ordering interval's LOWER edge measured under this "
+            "grader; A2_correlation_margin = f_correlation_intervals' 95% interval's "
+            "LOWER edge for the high-minus-low correlation difference"
+        ),
+    }
+
+
 def main() -> None:
     source = campaign_source()
     yoy = panel_yoy(source)
@@ -2456,8 +2771,39 @@ def main() -> None:
     ordering = section_e(cells, float(pilot_seal["b4"]["panel_clockwise_fraction"]))
     correlation_intervals = section_f(source, yoy)
     dwell_intervals = section_g(regime_durations)
-    bars = exam_bars(transmission, regime_durations, allocation, ordering, correlation_intervals)
-    power = section_h(source, yoy, cells, bars)
+    # The pre-ruling derivation, kept because section H's OPEN-4 finding is a
+    # record of what those bars did and must not move when the bars are
+    # re-specified. Everything sealed comes from exam_bars_sealed below.
+    bars_open4 = exam_bars(
+        transmission, regime_durations, allocation, ordering, correlation_intervals
+    )
+    power = section_h(source, yoy, cells, bars_open4)
+
+    pooled_dwells = section_k({"incumbent": cells})
+    # Cross-check, not decoration: section K's decade-pooled medians are the same
+    # object section H reports as its true-engine large-n limit, computed by a
+    # different route (K pools spell lists window by window; H pools length
+    # histograms through a matrix product). If the two ever disagree, one of them
+    # is wrong and the D bars are being cut from a number nobody can reproduce.
+    for code, quadrant in zip(("D1", "D2", "D3", "D4"), QUADRANTS, strict=True):
+        pooled_median = pooled_dwells["per_grader"]["incumbent"]["overlapping_windows"][
+            "per_quadrant"
+        ][quadrant]["median_months"]
+        limit_median = power["true_engine_limit_statistics"][f"{code}_median_months_{quadrant}"]
+        assert pooled_median == limit_median, (
+            f"{code}: section K's decade-pooled median {pooled_median} disagrees with "
+            f"section H's true-engine limit {limit_median}"
+        )
+
+    bars = exam_bars_sealed(
+        transmission,
+        pooled_dwells,
+        allocation,
+        ordering,
+        correlation_intervals,
+        grader="incumbent",
+    )
+    power_sealed = section_h(source, yoy, cells, bars)
 
     # Sections I and J read two series the factor panel does not carry
     # (fred.USREC and fred.INDPRO for the re-labelling, fred.UNRATE for the
@@ -2476,7 +2822,9 @@ def main() -> None:
             regime_durations,
             ordering,
             dwell_intervals,
+            bars_open4,
             bars,
+            INCUMBENT_CONTRACTING_LABELS,
         )
         richer = section_j(
             source, yoy, cells, hazard.era_threshold_pp, access, ordering, dwell_intervals
@@ -2485,7 +2833,7 @@ def main() -> None:
         catalog.close()
 
     anchors: dict[str, Any] = {
-        "schema": "spine-v2-anchors-3",
+        "schema": "spine-v2-anchors-4",
         "purpose": (
             "Historical anchors measured BEFORE the decade generator's economic engine "
             "is rebuilt (spine v2, stage 1). Every number is reproducible by re-running "
@@ -2520,7 +2868,18 @@ def main() -> None:
         "h_generated_side_power": power,
         "i_label_stability": stability,
         "j_richer_identification": richer,
+        "k_pooled_decade_dwells": pooled_dwells,
+        "m_power_under_sealed_bars": power_sealed,
         "exam_bars": bars,
+        "exam_bars_superseded": {
+            "open4_derivation": bars_open4,
+            "note": (
+                "the bar block as it stood when OPEN-4 measured power against it "
+                "(h_generated_side_power). Superseded 2026-08-17 by the owner's pre-seal "
+                "rulings; kept so the OPEN-4 finding stays readable against the bars it "
+                "was actually measured on. exam_bars is what is sealed"
+            ),
+        },
     }
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -2573,6 +2932,19 @@ def main() -> None:
         print(
             f"H {name:20s} power at n={POWER_PILOT_N_SEEDS}: "
             f"{row['power_at_pilot_n_seeds']:.3f}  "
+            f"min n for {POWER_TARGET:.0%}: {row['min_n_seeds_for_target']}"
+        )
+    for quadrant in QUADRANTS:
+        row = pooled_dwells["per_grader"][bars["grader"]]["panel_wide_comparison"][quadrant]
+        print(
+            f"K {quadrant:12s} panel-wide {row['panel_wide_median_months']:.1f}m  "
+            f"decade-pooled {row['decade_pooled_median_months']:.1f}m  "
+            f"band {bars['D_median_bands_months'][quadrant]}"
+        )
+    for name, row in power_sealed["per_bar"].items():
+        print(
+            f"M {name:20s} power at n={SEALED_N_SEEDS}: "
+            f"{row['power_by_n_seeds'][str(SEALED_N_SEEDS)]:.3f}  "
             f"min n for {POWER_TARGET:.0%}: {row['min_n_seeds_for_target']}"
         )
     for name, row in stability["verdicts"].items():

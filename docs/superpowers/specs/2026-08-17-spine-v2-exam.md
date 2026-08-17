@@ -221,7 +221,7 @@ be quoted without a threshold caveat — which is not true of D1, D2 or D3.
 Four bars, one per season. **A "spell" is an unbroken run of months in one season**, and its
 length is what these bars test.
 
-**Two rules that apply to all four, stated once.**
+**Three rules that apply to all four, stated once.**
 
 *Completed spells only, censored ones disclosed.* A spell that was already running when the
 usable record starts, or is still running when it ends, has an unknown true length — we only
@@ -230,15 +230,80 @@ anchors use **completed spells only**. The panel contains exactly two censored s
 in the recession season, and both are disclosed beside the D1 headline with their observed
 minimum lengths.
 
+*Pooled across the batch, and measured on the same window on both sides (owner ruling,
+2026-08-17, pre-seal).* **The statistic each D bar judges is the median of every completed
+spell in the whole generated batch, pooled into one distribution** — not a median taken
+decade by decade. And **the anchor it is compared against is measured the same way**: the
+panel's own completed spells, pooled over 120-month windows with the same 12-month
+inflation warm-up and the same completed-spell rule. Both halves of that ruling fix a
+defect the OPEN-4 power calculation exposed, and they are different defects:
+
+1. **Pooling fixes the small-sample-per-decade defect.** One decade contributes barely a
+   handful of completed spells per season — history's own decades average **1.3** completed
+   recession spells, **1.6** stagflation, **2.4** recovery and **2.7** expansion. A median
+   over two or three numbers is a measurement of luck, which is exactly why D2 needed 50
+   decades to reach 90% power and why a marginal D verdict could not be read as evidence.
+   Pooling 50 decades gives ~120 recovery spells and ~65 recession spells, and the median
+   then says something about the engine.
+2. **Measuring both sides on the same window fixes the censoring mismatch — and this is
+   what made D3 unpassable.** A 120-month decade drops the spell it opens with and the
+   spell it closes with, and a long spell is far likelier to touch an edge than a short
+   one, so a decade-measured distribution is systematically shorter than the same season's
+   panel-wide one. Recovery's median falls from **9 months panel-wide to 5 months on
+   decades**: its spell list runs 2, 2, 3, 3, 3, 4, 5, 5, 5, 6, 6, **12**, 13, 14, … so the
+   panel-wide median of 9 is the midpoint of a jump nothing observed sits in, and a slight
+   re-weighting toward the short end moves it discontinuously. Judging a decade-measured
+   statistic against a panel-measured anchor is the same class of error the spine-02
+   verdict-integrity review found in B6 — recession-or-crisis counted on one side,
+   crisis-only on the other — and the remedy this exam already adopted there (§2's
+   identical-conditioning ruling for T1) is what is applied here. **The two sides are now
+   the same measurement, so a D verdict is about the engine.**
+
+   *This is not a widening of the bars.* The tolerance is unchanged at ±1 quarter and both
+   sides moved together; what changed is that the comparison is now like-for-like. The
+   plain-language question a D bar asks becomes: **"does a decade of the generated world
+   show seasons the length a decade of history shows?"** — which is also the only question
+   the product can pose, since a player is handed one decade and never sees 68 years.
+
 *Tolerance ± 1 quarter on every season's median.* Owner ruling, with its justification: **a
 quarter is the game's smallest play unit.** The player makes decisions on a quarterly cycle,
 so a season whose length is right to within one quarter is right to within the finest
 distinction the product can express; a tighter bar would be grading a difference no player
 can act on, and a looser one would let a season be off by a decision cycle. **The tolerance
-is unchanged by OPEN-3** — its justification is a product fact, and a product fact is not
-overturned by a sampling interval.
+is unchanged by OPEN-3 and unchanged by the pooled re-derivation** — its justification is a
+product fact, and a product fact is not overturned by a sampling interval or a windowing
+rule.
 
-**But the check OPEN-3 was asked to perform came back negative in all four seasons, and that
+**The anchors, old and new, in one table.** The right-hand column is what the bars are now
+cut from (`k_pooled_decade_dwells.per_grader.*.overlapping_windows`, 694 windows; the
+panel-wide column is `c_regime_durations` and is retained as the superseded anchor):
+
+| season | panel-wide median (superseded) | completed spells | **decade-pooled median (the anchor)** | pooled spells | **the band** |
+|---|---|---|---|---|---|
+| recession (D1) | 3 months | 12 | **2 months** | 893 | **[0, 5] months** |
+| stagflation (D2) | 4 months | 12 | **6 months** | 1085 | **[3, 9] months** |
+| recovery (D3) | 9 months | 22 | **5 months** | 1661 | **[2, 8] months** |
+| expansion (D4) | 6 months | 21 | **6 months** | 1878 | **[3, 9] months** |
+
+**What the re-derivation costs, stated before any result exists.** Two things, both of which
+the owner should see rather than discover afterwards.
+
+- **D3 loses most of its discriminating power against round two's engine.** Round two's five
+  seeds produced recovery medians of **2 to 3 months** against history's panel-wide 9, and
+  that was the clearest apples-to-apples signal in the whole prior record. Against the
+  decade-pooled band **[2, 8]**, a pooled median of 2 sits exactly on the lower edge and 3
+  sits inside it. The bar that caught the defect would now barely catch it. That is the
+  price of making the bar passable by a correct engine — the same trade, and the same
+  disclosure, as the completed-spell ruling that loosened D1 (below).
+- **The pooled anchor is measured on overlapping windows**, which weights the panel's
+  interior months more heavily than its first and last few years (an interior month falls
+  inside up to 109 windows). The disjoint-decade sensitivity, which uses each month exactly
+  once, gives 3 / 2 / 5 / 5 months on ten to eighteen spells — recovery and recession agree
+  within the tolerance, stagflation does not, and it rests on ten spells. Both are published
+  (`disjoint_windows`); the overlapping version is the anchor because it is the version the
+  judge's own statistic converges to.
+
+**The check OPEN-3 was asked to perform came back negative in all four seasons, and that
 changes how a D verdict must be read.** The medians were bootstrapped by resampling
 **spells** — a spell's months are one observation of one dwell, not many independent
 observations of it, so the spells are the independent units and resampling months would have
@@ -259,31 +324,51 @@ sampling noise and is not evidence about the engine**; a FAIL that misses by two
 more is outside it for stagflation, recovery and expansion. Nothing about the pass/fail
 arithmetic changes; what changes is that a marginal FAIL may not be reported as a finding.
 
+*(That table is measured on the panel-wide completed spells, i.e. on the superseded anchors.
+It is retained because the reading it licenses — a one-quarter miss is inside the noise — is
+if anything more conservative applied to the pooled anchors, which rest on the same 68 years
+of history however they are windowed. No sampling interval is claimed for the decade-pooled
+medians themselves: the 694 windows overlap, so a bootstrap over them would understate the
+error by treating one panel as 694 independent records.)*
+
 *A floor note that applies to D1 and D2.* No spell can be shorter than one month (0.33
 quarters), so where the ±1 quarter band's lower edge falls at or below that floor, the bar
 binds only from above. This is stated per bar rather than hidden.
 
-**A second disclosure that applies to all four, added 2026-08-17 (§11.3).** These four
-anchors are computed from a classifier with two threshold dials, and §11 perturbs each by
-50 basis points. The four medians survive that perturbation *relative to their own sampling
-intervals* (all four verdicts are STABLE), but **relative to the ±1 quarter bands above they
-do not**: history's recession median leaves D1's band under 3 of the 8 perturbed arms, its
-stagflation median leaves D2's under 6 of 8, and its recovery median leaves D3's under 3 of
-8. **D4 is the only one of the four that stays inside its band under every arm.** No band is
-changed because of this — that would be the goalpost move pre-registration exists to prevent
-— but a D verdict should be read with it in view, alongside the OPEN-3 caution above.
+**A second disclosure that applies to all four, added 2026-08-17 (§11.3), and re-taken on the
+sealed construct.** These four anchors are computed from a classifier with two threshold
+dials, and §11 perturbs each by 50 basis points. Because the pooled re-derivation changed
+both halves of the D comparison, the disclosure was re-run on the bars that are actually
+being sealed — each arm's months re-classified, its completed spells pooled over the panel's
+own 120-month windows, against the pooled band
+(`i_label_stability.bar_band_check_under_sealed_bars`):
+
+| bar | its band | arm range across the 9 arms | arms whose value falls outside the bar |
+|---|---|---|---|
+| **D1** recession | [0, 5] m | 2 – 13 m | **3 of 8** (every arm pairing a lower growth line with an inflation move, plus inflation −50bp alone) |
+| **D2** stagflation | [3, 9] m | 6 – 9 m | **none** |
+| **D3** recovery | [2, 8] m | 4 – 14 m | **2 of 8** (inflation +50bp, and that corner with growth −50bp) |
+| **D4** expansion | [3, 9] m | 3 – 6 m | **none** |
+
+The §11.3 result on the superseded panel-wide bands (D1 3 of 8, D2 6 of 8, D3 3 of 8, D4
+none) is kept in §11 as the record of what was measured there. On the sealed construct the
+picture improves — **D2 becomes robust** and D3's exposure halves — but D1 and D3 still have
+arms outside their own band, so **the reading stands: a marginal D verdict is not a finding.**
+No band is changed because of this; re-cutting a bar from a sensitivity result is the
+goalpost move pre-registration exists to prevent.
 
 ### D1 — "how long a recession lasts" (contracting, inflation cool)
 
-**(a) The bar.** Median completed recession spell in **[0.00, 2.00] quarters** = **[0, 6]
-months**. Because a spell is at least one month, the achievable band is [0.33, 2.00]
-quarters and **the bar binds only from above**: a recession season whose median exceeds 6
-months fails.
+**(a) The bar.** Pooled median completed recession spell in **[0, 5] months** (the anchor,
+2 months, ± 1 quarter, floored at zero). Because a spell is at least one month, the
+achievable band is [1, 5] months and **the bar binds only from above**: a batch whose pooled
+recession median exceeds 5 months fails.
 
-**(b) The historical anchor.** **1.00 quarter (3 months)**, from **12 completed spells**
-(`c_regime_durations.per_quadrant.recession.median_quarters` = 1.0,
-`median_months` = 3.0, `n_completed_spells` = 12). Interquartile range 0.33–4.08 quarters
-(1–12.25 months).
+**(b) The historical anchor.** **2 months**, the median of the **893 completed recession
+spells** history's own 120-month windows contain (`k_pooled_decade_dwells`, 694 windows,
+1.29 completed recession spells per decade), interquartile range 1–12 months, longest 24
+months. *Superseded panel-wide figure, retained for comparison:* 3 months from 12 completed
+spells, IQR 1–12.25 months (`c_regime_durations.per_quadrant.recession`).
 
 **Censored disclosure (owner ruling).** Two recession spells are censored and are excluded
 from the anchor above:
@@ -293,22 +378,25 @@ from the anchor above:
 - **2019-04 → 2020-12**, right-censored, **observed minimum 21 months** (still running when
   the panel ends in December 2020).
 
-Including both, the recession median rises from 3 months to **5 months** — which is exactly
-the pilot's sealed anchor `panel_dwell_medians = [5, 4, 9, 6]` **months** (not quarters; the
-unit slip is corrected in the anchors document §4). Recession is the *only* season where the
-choice matters; stagflation, recovery and expansion read identically either way.
+Including both, the panel-wide recession median rises from 3 months to **5 months** — which is
+exactly the pilot's sealed anchor `panel_dwell_medians = [5, 4, 9, 6]` **months** (not
+quarters; the unit slip is corrected in the anchors document §4). Recession is the *only*
+season where the choice matters; stagflation, recovery and expansion read identically either
+way. The same censoring rule is what the pooled anchor applies at each 120-month window's
+edges, on both sides of the comparison.
 
 **(c) Why ±1 quarter.** The quarter is the smallest play unit (see above). Note also that
-recession's median rests on twelve spells whose middle half runs from 1 to 12.25 months — a
-distribution that wide, observed twelve times, cannot support a tighter bar than this.
+recession's median rests on a distribution whose middle half runs from 1 to 12 months — that
+wide a spread cannot support a tighter bar than this.
 
 **Disclosure the owner should carry: this bar is looser on recession than round one's was.**
 Round one judged the recession median as a ratio against the all-spells anchor of 5 months
 inside a [0.6, 1.4] band, i.e. 3.0–7.0 months; three of five seeds failed it at medians of 2
-months. The completed-spell switch moves the anchor to 3 months and the band to 0–6 months,
-under which those same seeds would pass. This is a consequence of the correctness ruling
-(completed spells only), not a weakening chosen to make a result look better — and it is
-stated here, before results, for exactly that reason.
+months. The completed-spell switch and the pooled re-derivation move the anchor to 2 months
+and the band to 0–5 months, under which those same seeds would pass. This is a consequence of
+two correctness rulings (completed spells only; the same window on both sides), not a
+weakening chosen to make a result look better — and it is stated here, before results, for
+exactly that reason.
 
 **(d) What a FAIL means in product terms.** A fail means recessions in the game run longer
 than history's, so the player spends implausible stretches of every world in a downturn and
@@ -317,19 +405,22 @@ pessimism rewarded by a bug.
 
 ### D2 — "how long stagflation lasts" (contracting, inflation hot) — first-class, per the owner
 
-**(a) The bar.** Median completed stagflation spell in **[0.33, 2.33] quarters** = **[1, 7]
-months** (the arithmetic band is 1.33 ± 1.00 quarters; its lower edge coincides with the
-one-month floor, so it binds mainly from above).
+**(a) The bar.** Pooled median completed stagflation spell in **[3, 9] months** (the anchor,
+6 months, ± 1 quarter).
 
-**(b) The historical anchor.** **1.3333333333333333 quarters (4 months)**, from **12
-completed spells**, none censored
-(`c_regime_durations.per_quadrant.stagflation`). Interquartile range 0.33–3.42 quarters
-(1–10.25 months). The full sorted list is short enough to print: 1, 1, 1, 1, 2, 2, 6, 8, 10,
-11, 16, 21 months.
+**(b) The historical anchor.** **6 months**, the median of the **1,085 completed stagflation
+spells** in history's own 120-month windows (1.56 per decade), interquartile range 1–11
+months, longest 21 months. *Superseded panel-wide figure:* 4 months from 12 completed spells,
+none censored, the full list being 1, 1, 1, 1, 2, 2, 6, 8, 10, 11, 16, 21 months
+(`c_regime_durations.per_quadrant.stagflation`). Stagflation is the season where the two
+footings disagree most in *direction* — pooling over decades raises it rather than lowering
+it — because its long spells sit in the middle of the record (the 1970s and early 1980s),
+where they are least likely to be cut off by a window edge, while its many one-month spells
+are spread thinly across decades that contain little else.
 
-**(c) Why ±1 quarter.** Smallest play unit, as above. Twelve spells with a median of 4 months
-means moving a single spell by one month can move the median by half a month; a bar tighter
-than a quarter would be testing that wobble rather than the engine.
+**(c) Why ±1 quarter.** Smallest play unit, as above. The distribution's middle half runs
+from 1 to 11 months; a bar tighter than a quarter would be testing that spread rather than
+the engine.
 
 **Why this bar is first-class (owner's emphasis, 2026-08-17).** Stagflation — the economy
 contracting *while* inflation runs hot — is **as bad or worse for a portfolio than an
@@ -346,44 +437,38 @@ single trade rather than robust allocation.
 
 ### D3 — "how long a recovery lasts" (expanding, inflation cool)
 
-**(a) The bar.** Median completed recovery spell in **[2.00, 4.00] quarters** = **[6, 12]
-months**. Both edges bind.
+**(a) The bar.** Pooled median completed recovery spell in **[2, 8] months** (the anchor,
+5 months, ± 1 quarter). Both edges bind.
 
-**(b) The historical anchor.** **3.00 quarters (9 months)**, from **22 completed spells**,
-none censored. Interquartile range 1.42–5.83 quarters (4.25–17.5 months).
+**(b) The historical anchor.** **5 months**, the median of the **1,661 completed recovery
+spells** in history's own 120-month windows (2.39 per decade), interquartile range 3–14
+months, longest 100 months. *Superseded panel-wide figure:* 9 months from 22 completed
+spells, none censored, the sorted list being 2, 2, 3, 3, 3, 4, 5, 5, 5, 6, 6, 12, 13, 14, 16,
+16, 18, 19, 25, 39, 62, **100** months.
 
-**(c) Why ±1 quarter.** Smallest play unit. Twenty-two spells is the best-supported of the
-four cells, so this bar could in principle be tighter than the thin ones — but the owner's
-ruling sets one tolerance across all four seasons for comparability, and a quarter is the
-finest distinction the product can express regardless of how well-measured the anchor is. The
-distribution is extremely skewed (2, 2, 3, 3, 3, 4, 5, 5, 5, 6, 6, 12, 13, 14, 16, 16, 18,
-19, 25, 39, 62, **100** months), so the median is the right summary and the tail is not
+**(c) Why ±1 quarter.** Smallest play unit. Recovery is the best-supported of the four cells
+on either footing, so this bar could in principle be tighter than the thin ones — but the
+owner's ruling sets one tolerance across all four seasons for comparability, and a quarter is
+the finest distinction the product can express regardless of how well-measured the anchor is.
+The distribution is extremely skewed, so the median is the right summary and the tail is not
 tested by this bar.
 
-**This is the bar that caught the real defect.** Round two's engine produced recovery medians
-of 2 to 3 months against history's 9, failing on **all five seeds** — the clearest
-apples-to-apples signal in the whole prior record, judged by frozen code both rounds. It is
-also squarely inside D-SP-6's funded scope ("recovery-duration refit to the historical event
-chronology"), so this is a bar the rebuild is expected to flip.
-
-**⚠ OPEN-4 found that this bar, as written, cannot be passed by a correct engine — owner
-decision needed before the seal.** The power calculation measures a *true* engine — one
-emitting real contiguous 120-month stretches of US history — producing a pooled recovery
-median of **5 months**, outside the [6, 12] band, with power *falling* as the ensemble grows
-(0.36 at 20 decades, 0.14 at 300) because it is converging on a value the band excludes. No
-other bar behaves this way, and the cause is not the engine, the tolerance, or the ensemble
-size: **the anchor was measured panel-wide and the bar is judged per decade.** Cutting 68
-years into decades censors long spells at the decade edges, and recovery's distribution has a
-hole exactly where its median sits — sorted, it runs 2, 2, 3, 3, 3, 4, 5, 5, 5, 6, 6, **12**,
-13, 14, … so the panel-wide median of 9 is the midpoint of a jump from 6 to 12 and nothing
-observed lies there. A slight re-weighting toward shorter spells moves it discontinuously to
-5. OPEN-3's interval says the same thing from the other side: recovery's median has a 95%
-interval of **[5, 16] months**, so 9 was never a firm number.
-**This is a bar-design question and it is deliberately not resolved here** — the options
-(re-anchor D3 on decade-measured spells, widen its band to the sampling interval, or accept
-that D3 is a bar the engine is expected to fail for a reason that is not the engine's) each
-change what the exam tests, and that is the owner's call, taken before results exist rather
-than after.
+**⚠ RESOLVED — this is the bar the pooled re-derivation was ruled for.** OPEN-4 found that
+D3 as originally written **could not be passed by a correct engine**: a true engine — one
+emitting real contiguous 120-month stretches of US history — produces a pooled recovery
+median of **5 months**, outside the old [6, 12] band, with power *falling* as the ensemble
+grew (0.36 at 20 decades, 0.14 at 300) because it was converging on a value the band
+excluded. The cause was neither the engine, the tolerance nor the ensemble size: **the anchor
+was measured panel-wide and the statistic on 120-month decades.** The owner's ruling of
+2026-08-17 measures both sides on the decade window, which puts the anchor at 5 months and
+the true engine at the middle of its own band; D3's power at the sealed 50 decades is
+**0.987**. What that fix costs is stated in the preamble above and repeated here because it
+is the important half: **round two's failing recovery medians of 2–3 months would now pass or
+sit exactly on the band's lower edge**, so D3 is no longer the sharp instrument it was
+against that engine. D3 remains inside D-SP-6's funded scope ("recovery-duration refit to the
+historical event chronology"), and the honest statement of what it now tests is *"a decade's
+recoveries are the length a decade of history's recoveries are"*, not *"recoveries last as
+long as history's longest"*.
 
 **(d) What a FAIL means in product terms.** Too short, and the good stretches never last, so
 patience is never rewarded and the player learns to stay defensive forever — the exact
@@ -391,14 +476,17 @@ opposite of the robust-allocation lesson.
 
 ### D4 — "how long an expansion lasts" (expanding, inflation hot)
 
-**(a) The bar.** Median completed expansion spell in **[1.00, 3.00] quarters** = **[3, 9]
-months**.
+**(a) The bar.** Pooled median completed expansion spell in **[3, 9] months** (the anchor,
+6 months, ± 1 quarter).
 
-**(b) The historical anchor.** **2.00 quarters (6 months)**, from **21 completed spells**,
-none censored. Interquartile range 1.00–4.33 quarters (3–13 months).
+**(b) The historical anchor.** **6 months**, the median of the **1,878 completed expansion
+spells** in history's own 120-month windows (2.71 per decade), interquartile range 3–13
+months, longest 58 months. *Superseded panel-wide figure:* also 6 months, from 21 completed
+spells (1, 1, 1, 1, 1, 3, 3, 3, 4, 4, 6, 7, 8, 11, 12, 13, 14, 19, 24, 40, 58) — expansion is
+the one season where the two footings agree exactly.
 
-**(c) Why ±1 quarter.** Smallest play unit; 21 spells, skewed (1, 1, 1, 1, 1, 3, 3, 3, 4, 4,
-6, 7, 8, 11, 12, 13, 14, 19, 24, 40, 58 months), same reasoning as D3.
+**(c) Why ±1 quarter.** Smallest play unit; a skewed distribution whose middle half runs 3 to
+13 months, same reasoning as D3.
 
 **(d) What a FAIL means in product terms.** A fail means the hot-and-growing season — the one
 where an allocator is most tempted to add risk and most needs to judge how long the party
@@ -830,10 +918,10 @@ to fix rather than compute to buy.
 |---|---|---|---|---|
 | causal | **T1** | does tightening cause downturns | lift inside **[1.78, 3.35]** | 2.37× (86/149 vs 192/789) |
 | causal | **O1** | the seasons turn the right way round | clockwise fraction **≥ 0.5185** (the anchor's 95% interval's lower edge) | 0.6029 (68 transitions, 95% CI [0.5185, 0.6842]) |
-| persistence | **D1** | how long a recession lasts | median **[0, 6] months** (binds from above) | 1.00 q / 3 months, 12 completed spells |
-| persistence | **D2** | how long stagflation lasts | median **[1, 7] months** | 1.33 q / 4 months, 12 completed spells |
-| persistence | **D3** | how long a recovery lasts | median **[6, 12] months** | 3.00 q / 9 months, 22 completed spells |
-| persistence | **D4** | how long an expansion lasts | median **[3, 9] months** | 2.00 q / 6 months, 21 completed spells |
+| persistence | **D1** | how long a recession lasts | pooled median **[0, 5] months** (binds from above) | 2 months, 893 decade-pooled spells |
+| persistence | **D2** | how long stagflation lasts | pooled median **[3, 9] months** | 6 months, 1085 decade-pooled spells |
+| persistence | **D3** | how long a recovery lasts | pooled median **[2, 8] months** | 5 months, 1661 decade-pooled spells |
+| persistence | **D4** | how long an expansion lasts | pooled median **[3, 9] months** | 6 months, 1878 decade-pooled spells |
 | allocation | **A1** | does the inflation hedge pay | spread(high) > spread(low) at 4%; inside [−5.05, +32.32] pp | +4.87 pp vs +1.38 pp |
 | allocation | **A2** | stocks and bonds fall together | corr(high) > 0 and exceeds corr(low) by ≥ **0.1361** (the difference's 95% interval's lower edge); ≥ 80% / ≤ 65% of 3-year windows positive | +0.30 vs −0.02, difference 0.3195 (95% CI [0.1361, 0.5568]); 94.7% vs 54.2% |
 | no-regression | **R1** | severity still bites the book | b3 byte-frozen: monotone coverage, ≥ 1/20 breach at 55% | prior seal (round two: PASS) |
@@ -845,10 +933,10 @@ this table is a field in `docs/superpowers/specs/spine-v2-anchors.json` under `e
 derived there from the measurement it is cut from rather than restated — so this table, that
 file and the judges cannot disagree about a number.
 
-**Two bars carry a ⚠ into the approval step**, both found by the OPEN-4 power calculation and
-neither resolved here: **D3** cannot be passed by a correct engine as written (§3), and
-**A2**'s 65% low-inflation ceiling has 2.8 points of headroom against a decade-measured
-statistic and needs 400 decades to clear at 90% (§4).
+**D3's ⚠ is resolved** by the owner's pooled-spells re-derivation of D1–D4 (§3), ruled
+2026-08-17 before the seal and before any result exists, with what it costs recorded beside
+it. **A2**'s 65% low-inflation ceiling still carries its ⚠: 2.8 points of headroom against a
+decade-measured statistic and 400 decades to clear at 90% (§4).
 
 ---
 
