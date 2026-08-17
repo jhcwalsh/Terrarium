@@ -1,18 +1,24 @@
 # The spine v2, stage 1 exam — what the rebuilt engine has to prove
 
-**Date:** 2026-08-17 · **Status:** DRAFT for owner review, **OPEN items closed 2026-08-17**
-· **Branch:** `spine2-01-exam`
+**Date:** 2026-08-17 · **Status: SEALED.** The owner ruled "Seal it" on 2026-08-17, after
+four pre-seal changes taken first (§8 step 1). · **Branch:** `spine2-01-exam`
+**The seal:** `docs/superpowers/specs/spine-v2-prereg.json` — every threshold in this
+document, plus the sha256 of the code that judges them. **After that commit this document
+cannot be edited except through the seal's own amendment log**, and a threshold here that
+disagreed with the seal would be a defect in this document, not in the seal.
 **Authority:** `governance/decision-register.md` D-SP-6 (2026-08-16, "go on the engine work,
-include the allocation tests") plus the owner rulings of 2026-08-17 recorded in §9.
+include the allocation tests") plus the owner rulings of 2026-08-17 recorded in §10.
 **Measurements this document cuts bars from:** `docs/superpowers/specs/spine-v2-anchors.json`
 and its plain-language companion `docs/superpowers/specs/2026-08-16-spine-v2-estimation-anchors.md`.
 **Prior rounds carried forward:** `docs/superpowers/specs/spine02-prereg.json` (byte-frozen
 thresholds) and `docs/superpowers/specs/2026-08-16-spine02-results.md` (the verdicts).
-**Added the same day, before the seal:** **§11**, the two owner-agreed
-regime-identification obligations — the classifier's thresholds perturbed each way, and a
-richer identification of the same four seasons compared under a decision rule declared in
-advance. Its result is that **the simple two-dial classifier stays as the grader and no bar
-is re-anchored**, with two disclosures the owner should read beside D1–D3 (§11.3, §11.6).
+**The judges:** `scripts/spine_v2_report.py`, with the season classifier in
+`scripts/spine_v2_grader.py`; **their anti-test sweeps**, run before the seal and all nine
+monotone, are in `docs/superpowers/specs/spine-v2-antitest-results.md`.
+**Added before the seal:** **§11**, the two owner-agreed regime-identification obligations
+(read its opening note: §11 studies the *incumbent* classifier, and the mapping fix §2 seals
+is what its central finding led to), and **§12**, the declared limitations and the two
+omissions the owner confirmed.
 
 Nothing in this document has been fitted to. No engine work has started. That is the point:
 these bars are written down, with their justifications, **before** any result exists.
