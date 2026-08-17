@@ -358,3 +358,15 @@ the deep repair is funded as a staged campaign.
   second leg of the owner's allocation thesis — surfaced to the owner this
   session, not yet scheduled; batching with F5 remains the standing
   recommendation.
+
+## D-SP-7 — RULED 2026-08-16: RANKED PLAY PARKED
+
+Owner ruling, in their words: "Park the ranked sessions for now, we're not
+remotely ready for that." The play surface is practice-only until further
+notice. Implemented in `app-open-02` as a fenced bypass (one commented
+constant in `app/src/App.tsx` plus one `if` branch; the RankedSetup screen,
+its tests, the server's ranked contract, the leaderboard store, and the
+digest-eligibility machinery are all intact and green). Un-parking is a new
+owner decision: delete the bypass and restore the book screen's ranked-note
+copy. The rebuilt-ladder ranked-eligibility question (Task 7 flag) is
+mooted while this stands and revives with it.
