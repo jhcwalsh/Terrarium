@@ -147,6 +147,38 @@ function stubFetch(response: unknown = DEFAULT_RESPONSE) {
   );
 }
 
+/**
+ * app-open-02: unlike `stubFetch`, which always answers the same body no
+ * matter what URL is asked, the ladder-rebuild tests need `/book/default`
+ * (fetched on mount) and `/book/ladder` (fetched on the Rebuild click) to
+ * answer DIFFERENTLY — so this routes by a substring match on the URL,
+ * first match wins, and throws loudly on an unstubbed URL rather than
+ * silently returning the wrong body.
+ */
+function stubFetchRouted(
+  routes: { match: string; ok: boolean; status?: number; body: unknown }[],
+) {
+  const fn = vi.fn((url: string) => {
+    const route = routes.find((r) => String(url).includes(r.match));
+    if (!route) throw new Error(`unstubbed fetch: ${url}`);
+    const status = route.status ?? (route.ok ? 200 : 422);
+    return Promise.resolve({
+      ok: route.ok,
+      status,
+      statusText: String(status),
+      json: () => Promise.resolve(route.body),
+    });
+  });
+  vi.stubGlobal("fetch", fn);
+  return fn;
+}
+
+async function flush() {
+  await act(async () => {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  });
+}
+
 function byLabel<T extends HTMLElement = HTMLElement>(label: string): T {
   const el = host!.querySelector<T>(`[aria-label="${label}"]`);
   if (!el) throw new Error(`no element with aria-label "${label}"`);
@@ -639,5 +671,134 @@ describe("BookEntry — policy targets and reporting bands", () => {
     expect(findButton(/continue/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/target is negative/i);
     expect(byTestId("shape-faults").textContent).not.toMatch(/targets do not total 100/i);
+  });
+});
+
+/**
+ * app-open-02 (owner-dictated): a NEW total value for an illiquid asset
+ * class, regenerated into a vintage ladder server-side (`GET /book/ladder`)
+ * instead of hand-edited rung by rung. Never a client-side arithmetic
+ * substitute — the returned rungs replace `book.private[sleeve]` wholesale,
+ * exactly as a served reset does.
+ */
+describe("BookEntry — rebuild a private ladder to a new value", () => {
+  const NEW_PE_RUNGS = [
+    {
+      commitment: {
+        committed: 3,
+        paid_in: 1.5,
+        unfunded: 1.5,
+        recallable_balance: 0,
+        cumulative_recycled: 0,
+      },
+      value: { nav_true: 6, nav_reported: 6, cumulative_distributions: 0 },
+      identity: { vintage_year: 2022 },
+    },
+    {
+      commitment: {
+        committed: 3,
+        paid_in: 1.5,
+        unfunded: 1.5,
+        recallable_balance: 0,
+        cumulative_recycled: 0,
+      },
+      value: { nav_true: 6, nav_reported: 6, cumulative_distributions: 0 },
+      identity: { vintage_year: 2021 },
+    },
+  ];
+
+  it("replaces only the rebuilt sleeve's rungs and moves its value cell to the new sum", async () => {
+    stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      { match: "/book/ladder", ok: true, body: { rungs: NEW_PE_RUNGS } },
+    ]);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "12");
+    act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
+    await flush();
+    // 6 + 6 = 12, reachable only from the server's own rungs, not a local echo
+    expect(byTestId("value-pe").textContent).toBe("12.0");
+    expect(byLabel<HTMLInputElement>("pe rung 1 nav_true").value).toBe("6");
+    // the OTHER private sleeve's ladder is untouched
+    expect(byTestId("value-pc").textContent).toBe("8.0");
+    expect(byLabel<HTMLInputElement>("pc rung 0 nav_true").value).toBe("8");
+  });
+
+  it("sends the typed value, sleeve and run_id in the query string", async () => {
+    const fn = stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      { match: "/book/ladder", ok: true, body: { rungs: [] } },
+    ]);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pc rebuild value"), "9.5");
+    act(() => byLabel<HTMLButtonElement>("pc rebuild ladder").click());
+    await flush();
+    const call = fn.mock.calls.find(([url]) => String(url).includes("/book/ladder"));
+    expect(call).toBeDefined();
+    const url = String(call![0]);
+    expect(url).toContain("run_id=r1");
+    expect(url).toContain("sleeve=pc");
+    expect(url).toContain("value=9.5");
+  });
+
+  it("a refused rebuild shows the endpoint's detail and leaves the book unchanged", async () => {
+    stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      {
+        match: "/book/ladder",
+        ok: false,
+        status: 422,
+        body: { detail: "value must be > 0, got -5.0" },
+      },
+    ]);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "-5");
+    act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
+    await flush();
+    expect(byTestId("ladder-error-pe").textContent).toMatch(/value must be > 0/);
+    // never partially applied: pe's ladder still reads exactly as served
+    expect(byTestId("value-pe").textContent).toBe("20.0");
+    expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("20");
+  });
+
+  it("a fresh rebuild attempt clears a previous error once it succeeds", async () => {
+    let ladderCalls = 0;
+    const fn = vi.fn((url: string) => {
+      const u = String(url);
+      if (u.includes("/book/default")) {
+        return Promise.resolve({
+          ok: true,
+          status: 200,
+          statusText: "200",
+          json: () => Promise.resolve(DEFAULT_RESPONSE),
+        });
+      }
+      ladderCalls += 1;
+      if (ladderCalls === 1) {
+        return Promise.resolve({
+          ok: false,
+          status: 422,
+          statusText: "422",
+          json: () => Promise.resolve({ detail: "value must be > 0, got -5.0" }),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        status: 200,
+        statusText: "200",
+        json: () => Promise.resolve({ rungs: NEW_PE_RUNGS }),
+      });
+    });
+    vi.stubGlobal("fetch", fn);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "-5");
+    act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
+    await flush();
+    expect(byTestId("ladder-error-pe").textContent).toMatch(/value must be > 0/);
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "12");
+    act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
+    await flush();
+    expect(host!.querySelector('[data-testid="ladder-error-pe"]')).toBeNull();
+    expect(byTestId("value-pe").textContent).toBe("12.0");
   });
 });

@@ -51,12 +51,27 @@
  *     `aria-label`s keep the codes: they are accessibility/test hooks, not
  *     text the player reads, and the server contract's field names
  *     (`liquid`/`private`/`targets`/`ranges` keys) are untouched.
+ *
+ * app-open-02 (owner-dictated 2026-08-16): each private ladder's header adds
+ * a "set a new value" alternative to hand-editing rungs one at a time. The
+ * typed value is sent to `GET /book/ladder`, which runs the SAME
+ * `_seed_ladder` builder the served default's rungs came from
+ * (`ah/play.py`) — never a second, client-side ladder. A successful rebuild
+ * replaces `book.private[sleeve]` WHOLESALE with the returned rungs, which
+ * re-derives the value cell and every fault exactly as a hand-edited rung
+ * does; a refused rebuild changes nothing (never partially applied) and
+ * surfaces the server's own detail message next to that sleeve's ladder.
+ * Rebuilding counts as an edit like any other — it changes the book's
+ * digest, so ranked eligibility is lost exactly as a hand-edited rung would
+ * lose it; this file does not touch that machinery.
  */
 
 import { useEffect, useMemo, useState } from "react";
 import { usd } from "./lib/money";
 import {
   getDefaultBook,
+  rebuildLadder,
+  SessionApiError,
   type Book,
   type DefaultBookResponse,
   type Plan,
@@ -280,6 +295,18 @@ export function BookEntry({
    * edit — it is the posted document, this is the editing surface. */
   const [rangeText, setRangeText] = useState<Record<string, RangeText>>({});
   const [error, setError] = useState<string | null>(null);
+  /** app-open-02: the "rebuild to this value" input, per private sleeve, as
+   * TYPED text (not a number) — same reasoning as `rangeText`: an
+   * in-progress edit is not yet a value. */
+  const [rebuildText, setRebuildText] = useState<Record<string, string>>({});
+  /** app-open-02: the last rebuild's refusal, per sleeve — this screen's own
+   * fault surface for the endpoint, styled and worded exactly like
+   * `shapeFaults` (`className="book-note error"`) rather than the
+   * full-screen `error` above, which is reserved for "the entry screen
+   * itself could not load" and would otherwise discard every other typed
+   * field on a single ladder's refusal. */
+  const [ladderError, setLadderError] = useState<Record<string, string | null>>({});
+  const [rebuilding, setRebuilding] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -436,6 +463,39 @@ export function BookEntry({
         : b,
     );
 
+  /** app-open-02: the parsed, positive rebuild value for `sleeve`, or `null`
+   * while the box is blank/unparseable — a SHAPE check only, same tier as
+   * `allFieldsFinite`. Whether a POSITIVE-but-server-refused value (the
+   * server also enforces `value > 0`) goes through is left to the server:
+   * this screen does not duplicate that rule, only gates on "is this a
+   * number at all" so the button is not clickable while empty. */
+  const rebuildTargetValue = (sleeve: string): number | null => {
+    const typed = rebuildText[sleeve]?.trim();
+    if (!typed) return null;
+    const n = Number(typed);
+    return Number.isFinite(n) ? n : null;
+  };
+
+  const doRebuildLadder = (sleeve: string) => {
+    const value = rebuildTargetValue(sleeve);
+    if (value === null) return;
+    setRebuilding(sleeve);
+    setLadderError((e) => ({ ...e, [sleeve]: null }));
+    rebuildLadder(runId, sleeve, value)
+      .then(({ rungs }) => {
+        // never partially applied: the sleeve's rungs are replaced WHOLESALE,
+        // in one state update, or not at all.
+        setBook((b) => (b ? { ...b, private: { ...b.private, [sleeve]: rungs } } : b));
+      })
+      .catch((e) => {
+        setLadderError((prev) => ({
+          ...prev,
+          [sleeve]: e instanceof SessionApiError ? e.message : String(e),
+        }));
+      })
+      .finally(() => setRebuilding(null));
+  };
+
   const setPlanPoint = (sleeve: string, i: number, value: number) =>
     setPlan((p) => {
       if (!p) return p;
@@ -529,10 +589,35 @@ export function BookEntry({
         <section key={sleeve} className="book-ladder">
           <div className="book-ladder-head">
             <h2>{sleeveLabel(sleeve)}</h2>
-            <button type="button" onClick={() => resetSleeve(sleeve)}>
-              {`Reset ${sleeveLabel(sleeve)}`}
-            </button>
+            <div className="book-ladder-actions">
+              <input
+                type="number"
+                className="ladder-rebuild-value"
+                aria-label={`${sleeve} rebuild value`}
+                placeholder="new value"
+                value={rebuildText[sleeve] ?? ""}
+                onChange={(e) =>
+                  setRebuildText((t) => ({ ...t, [sleeve]: e.target.value }))
+                }
+              />
+              <button
+                type="button"
+                aria-label={`${sleeve} rebuild ladder`}
+                disabled={rebuildTargetValue(sleeve) === null || rebuilding === sleeve}
+                onClick={() => doRebuildLadder(sleeve)}
+              >
+                Rebuild ladder
+              </button>
+              <button type="button" onClick={() => resetSleeve(sleeve)}>
+                {`Reset ${sleeveLabel(sleeve)}`}
+              </button>
+            </div>
           </div>
+          {ladderError[sleeve] && (
+            <p className="book-note error" data-testid={`ladder-error-${sleeve}`}>
+              {ladderError[sleeve]}
+            </p>
+          )}
           <div className="book-ladder-scroll">
             <table>
               <thead>

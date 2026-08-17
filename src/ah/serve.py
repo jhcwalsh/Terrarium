@@ -461,6 +461,37 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "plan_digest": plan.digest(),
         }
 
+    @app.get("/book/ladder")
+    def rebuild_ladder(
+        run_id: str, sleeve: str, value: float, conn: sqlite3.Connection = Depends(db)
+    ):
+        """app-open-02: rebuild ONE private sleeve's vintage ladder to sum to
+        a NEW total value, so the entry screen can offer "set a value"
+        instead of hand-editing rungs into shapes the pacing model was never
+        fitted on (``ah.port.cashflow_tier1``).
+
+        Built by ``ah.play._seed_ladder`` with ``value`` in place of the
+        target points -- the SAME builder ``default_opening_book`` calls for
+        the served default -- never a second implementation. The rung
+        documents are ``ClosedEndCohort.to_document()``, exactly the shape
+        ``/book/default`` serves under ``book.private[sleeve]``.
+        """
+        if get_run_record(conn, run_id) is None:
+            raise HTTPException(status_code=404, detail=f"no run_record {run_id}")
+        if sleeve not in PRIVATE_ASSETS:
+            raise HTTPException(
+                status_code=422,
+                detail=f"sleeve must be one of {sorted(PRIVATE_ASSETS)}, got {sleeve!r}",
+            )
+        if value <= 0.0:
+            raise HTTPException(status_code=422, detail=f"value must be > 0, got {value}")
+
+        from ah.play import _doc, _seed_ladder
+
+        base = _doc("closed-end-cohort.example.json")
+        rungs = _seed_ladder(base, sleeve, value)
+        return {"rungs": [c.to_document() for c in rungs]}
+
     @app.get("/runs/{run_id}/bundle")
     def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):
         """sib-01: served bytes are byte-identical to ``ah bundle`` — same

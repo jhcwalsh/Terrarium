@@ -1190,3 +1190,98 @@ class TestAlertLevel:
             assert _alert_level(9.999, target, lo, hi) == "breach", target
             assert _alert_level(20.001, target, lo, hi) == "breach", target
             assert _alert_level(15.0, target, lo, hi) != "breach", target
+
+
+class TestLadderRebuildEndpoint:
+    """``GET /book/ladder`` (app-open-02): a server-seeded vintage ladder for
+    a NEW total value, so the entry screen can offer "set a value" instead of
+    hand-editing rungs into shapes ``ah.port.cashflow_tier1`` was never
+    fitted on.
+
+    Built by calling ``ah.play._seed_ladder`` with ``value`` in place of the
+    target points -- the exact function ``default_opening_book`` calls for
+    the served default -- never a second implementation. The equivalence
+    test below is what pins that: asking for the sleeve's OWN default target
+    value must reproduce the served default's rungs exactly, not merely
+    something close.
+    """
+
+    def test_the_default_target_value_reproduces_the_default_rungs_exactly(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        for sleeve in ("pe", "pc", "re"):
+            value = default["book"]["targets"][sleeve]
+            r = client.get(f"/book/ladder?run_id={rid}&sleeve={sleeve}&value={value}")
+            assert r.status_code == 200, r.text
+            assert r.json()["rungs"] == default["book"]["private"][sleeve]
+
+    def test_the_rungs_sum_to_the_requested_value(self, service):
+        """``_seed_ladder`` scales a warmed-up ladder to ``target_nav / total``
+        (``ah/play.py::_seed_ladder``), which leaves float dust of the same
+        order ``ah.port.book.BOOK_TOLERANCE`` (1e-6) already names for
+        exactly this operation ("scaling a ten-rung ladder to a target NAV
+        leaves float dust") -- so the sum is asserted to that tolerance,
+        not exactly."""
+        client, _db, rid = service
+        value = 12.5
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value={value}")
+        assert r.status_code == 200, r.text
+        rungs = r.json()["rungs"]
+        assert len(rungs) > 1, "a ladder, not a single rung"
+        total = sum(rung["value"]["nav_true"] for rung in rungs)
+        assert abs(total - value) < 1e-6
+
+    def test_two_calls_are_byte_identical(self, service):
+        """The seeder is deterministic and no randomness is added at the
+        door: same inputs, same bytes -- not just equal JSON."""
+        client, _db, rid = service
+        r1 = client.get(f"/book/ladder?run_id={rid}&sleeve=pc&value=9.0")
+        r2 = client.get(f"/book/ladder?run_id={rid}&sleeve=pc&value=9.0")
+        assert r1.status_code == r2.status_code == 200
+        assert r1.content == r2.content
+
+    def test_an_unknown_sleeve_is_422(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=equity&value=10.0")
+        assert r.status_code == 422
+
+    def test_zero_value_is_422(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value=0")
+        assert r.status_code == 422
+
+    def test_negative_value_is_422(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value=-5")
+        assert r.status_code == 422
+
+    def test_an_unknown_run_is_404(self, service):
+        client, _db, _rid = service
+        r = client.get("/book/ladder?run_id=nope&sleeve=pe&value=10.0")
+        assert r.status_code == 404
+
+    def test_rung_documents_are_shaped_like_the_default_books(self, service):
+        """Same ``to_document()`` shape the default book serves: the rung
+        keys the client relies on (``identity``, ``commitment``, ``value``)
+        must be present and typed the same way."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        example_rung = default["book"]["private"]["pe"][0]
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=pe&value=15.0")
+        assert r.status_code == 200
+        rung = r.json()["rungs"][0]
+        assert set(rung.keys()) == set(example_rung.keys())
+        assert set(rung["value"].keys()) == set(example_rung["value"].keys())
+        assert set(rung["commitment"].keys()) == set(example_rung["commitment"].keys())
+
+    def test_a_generated_worlds_run_id_also_works(self, gen_service):
+        """The base fixture ``_seed_ladder`` warms up from does not depend on
+        the world's engine (``_build_portfolio`` reads the same
+        ``closed-end-cohort.example.json`` for toy and generated worlds
+        alike), so the endpoint must serve a generated world's run_id too."""
+        client, _db, rid = gen_service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=re&value=8.0")
+        assert r.status_code == 200, r.text
+        rungs = r.json()["rungs"]
+        total = sum(rung["value"]["nav_true"] for rung in rungs)
+        assert abs(total - 8.0) < 1e-6

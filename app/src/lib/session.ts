@@ -304,6 +304,20 @@ export function getDefaultBook(runId: string): Promise<DefaultBookResponse> {
   return request(`/book/default?run_id=${encodeURIComponent(runId)}`);
 }
 
+/** app-open-02: rebuild one private sleeve's vintage ladder to sum to a NEW
+ * total value, via `GET /book/ladder` — the SAME `_seed_ladder` builder that
+ * produced the served default's rungs, server-side. The caller replaces
+ * `book.private[sleeve]` wholesale with the returned rungs; this function
+ * does no client-side arithmetic of its own. */
+export function rebuildLadder(
+  runId: string,
+  sleeve: string,
+  value: number,
+): Promise<{ rungs: Rung[] }> {
+  const params = new URLSearchParams({ run_id: runId, sleeve, value: String(value) });
+  return request(`/book/ladder?${params}`);
+}
+
 export function createSession(body: {
   run_id: string;
   basis?: "reported" | "actual";

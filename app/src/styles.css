@@ -1690,6 +1690,25 @@ button.commit {
   margin-bottom: 6px;
 }
 
+/* app-open-02: the "set a new value" input + Rebuild ladder + Reset group,
+   right-aligned beside the sleeve heading. */
+.book-ladder-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.book-ladder-actions .ladder-rebuild-value {
+  width: 76px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  color: var(--ice);
+  border-radius: 6px;
+  padding: 0.3rem 0.5rem;
+}
+
 .book-ladder-scroll {
   overflow-x: auto;
   border: 1px solid var(--hair);
