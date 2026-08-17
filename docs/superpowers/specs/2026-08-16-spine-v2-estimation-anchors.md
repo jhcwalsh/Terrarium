@@ -19,6 +19,16 @@ this document is a field in that file, and every figure in that file states its
 own derivation. If a number here and a number there ever disagree, the JSON is
 what was measured and this document is wrong.
 
+**Extended 2026-08-17.** Sections A–D below are the original measurement, unchanged.
+Four further measurements — **sections E, F, G and H**, written up in **§9** — were
+added to close the four OPEN items the exam
+(`docs/superpowers/specs/2026-08-17-spine-v2-exam.md`) raised against it, and the
+JSON's schema tag moved from `spine-v2-anchors-1` to `spine-v2-anchors-2`
+accordingly. Two of the new sections carry numbers the exam turns directly into
+thresholds (O1's minimum and A2's margin); §9 says so where it happens. Three of
+the four turned up something the exam did not expect, and those are in §9 too,
+stated plainly rather than buried.
+
 ---
 
 ## 0. The words used here, in plain English
@@ -610,15 +620,235 @@ medians `[5, 4, 9, 6]` as quarters. They are **months** (`[1.67, 1.33, 3.00,
 
 ## 8. Provenance
 
-- **Script:** `scripts/spine_v2_anchors.py` — deterministic, offline, one seed
-  (`20260816`), verified byte-identical across consecutive runs.
-- **Output:** `docs/superpowers/specs/spine-v2-anchors.json`.
+- **Script:** `scripts/spine_v2_anchors.py` — deterministic, offline, five literal
+  seeds (`20260816` for section B, `20260817` for E, `20260818` for F, `20260819`
+  for G, `20260820` for H — one per resampling section, held distinct by a module
+  level assertion, none derived from another by an arithmetic stride), verified
+  byte-identical across consecutive runs.
+- **Output:** `docs/superpowers/specs/spine-v2-anchors.json`, schema
+  `spine-v2-anchors-2`.
 - **Panel:** vintage `2026-08-10.1`, ruleset `regime_ruleset_v1`, 813 months
   1953-04 … 2020-12, campaign train+validation only.
 - **Definitions imported, not reimplemented:** `ah.gen.spine.panel_yoy`,
   `ah.gen.spine.panel_quadrant`, `ah.gen.spine.fit_hazard`,
-  `ah.gen.regimes.semimarkov.spells_from_labels`,
+  `ah.gen.spine.CLOCKWISE`, `ah.gen.regimes.semimarkov.spells_from_labels`,
   `ah.strategies.load_derived_series` + `ah.eval.metrics.tails.
   derived_series_values` (the sealed `govt_tr_10y` transform).
 - **Nothing under `schemas/`, `src/ah/eval/`, `src/ah/gen/`, `src/ah/battery/`,
   or any `*.lock` file was modified.** This work package is measurement only.
+
+---
+
+## 9. Sections E–H — the four measurements added on 2026-08-17
+
+The exam document listed four things it needed and did not have, and blocked named
+bars on each. This section is what the script now measures for them. The
+convention of §6 still holds: **a measurement is not a bar**, and where the exam
+chooses to cut a bar from one of these numbers, that choice lives in the exam, not
+here — but because two of the cuts are simply "the lower edge of the interval
+below", the number is stated here in full precision so the two documents cannot
+drift apart.
+
+### 9.1 Section E — the clockwise-ordering fraction, on this vintage (OPEN-1)
+
+The exam's O1 bar rested on a figure sealed in **round one**, measured by an
+earlier run of the pipeline, and never re-measured on the vintage every other
+number in the exam comes from. It has now been re-measured, reusing the pilot's own
+definitions by import: quadrants from `ah.gen.spine.panel_quadrant` (era threshold
+from `ah.gen.spine.fit_hazard`), and the clockwise order from
+`ah.gen.spine.CLOCKWISE` — the same frozenset
+`scripts/spine_pilot_seal._b4_clockwise_fraction` scored against, with the same
+transition rule: a pair counts when both months have a defined quadrant **and the
+quadrant changes**.
+
+**It reproduces the sealed value exactly.**
+
+| | |
+|---|---|
+| clockwise fraction | **0.6029411764705882** |
+| transitions | **68** (41 of them clockwise) |
+| round-one sealed value | 0.6029411764705882 — **identical, bit for bit** |
+| binomial standard error | 0.05933493096110905 (the "≈ 0.059" the round-one seal disclosed) |
+
+**The error bar.** The same stationary block bootstrap section B uses, run over the
+panel's month sequence, at the same 12/24/36-month block lengths, from seed
+`20260817`. One rule is specific to this statistic: a pair of adjacent months in a
+resampled history is scored **only when it is a genuine consecutive pair of the real
+panel**. A pair straddling a block join would be a transition that never happened,
+and inventing transitions is precisely the way to corrupt this particular number.
+About one pair in `mean_block` is dropped that way, which is why each draw carries
+slightly fewer than 68 transitions.
+
+| average run length | 95% interval | transitions per draw |
+|---|---|---|
+| 12 months | [0.5098, 0.6957] | 62.1 |
+| **24 months (primary)** | **[0.5185185185185185, 0.6842285508291275]** | 64.7 |
+| 36 months | [0.5273, 0.6818] | 66.1 |
+
+**The interval is *narrower* than the naive one, and the reason is measured, not
+assumed.** An i.i.d. resample of the 68 transitions gives **[0.4853, 0.7206]** —
+wider. That is the opposite of what clustering usually does, and the cause is in
+the JSON beside it: the clockwise indicator's **lag-1 autocorrelation across
+consecutive transitions is −0.342**. The clock backtracks and then returns — a
+counter-clockwise move is disproportionately followed by a clockwise one — so
+keeping consecutive transitions together carries *more* information per transition
+than scrambling them, not less. Both intervals are published; the block one is the
+one the exam cuts from, because it is the same object every other interval in this
+file is.
+
+### 9.2 Section F — intervals on the stock–bond correlation gap (OPEN-2)
+
+The exam's A2 margin was a **halving rule** applied to a threshold sensitivity: half
+of history's 0.3195 gap, rounded to 0.15. That is a plausible guess at the sampling
+noise, not a measurement of it. Both differences have now been bootstrapped, at the
+primary 4% line, with the **same machinery and the same block lengths** as the
+transmission lift (seed `20260818`).
+
+Two populations, because the two statistics live on different rows: the level
+difference is resampled over **months**; the share-of-windows difference over
+**rolling windows** (one per month, each carrying its end month's inflation state),
+so a block of consecutive months is a block of consecutive windows and a block
+length means the same thing on both sides.
+
+**(a) The high-minus-low correlation difference.** Point estimate **0.3194875488039316**
+(+0.30125 minus −0.01823), on 225 high-inflation and 576 low-inflation months.
+
+| average run length | 95% interval |
+|---|---|
+| 12 months | [0.1195, 0.5429] |
+| **24 months (primary)** | **[0.13609378139729844, 0.556828299873221]** |
+| 36 months | [0.1204, 0.5509] |
+
+**(b) The difference in share-of-windows-positive.** Point estimate
+**0.40507701786814543** (94.7% minus 54.2%), on 225 high-inflation and 541
+low-inflation windows.
+
+| average run length | 95% interval |
+|---|---|
+| 12 months | [0.2284, 0.5922] |
+| **24 months (primary)** | **[0.17717364337543898, 0.6231004989665900]** |
+| 36 months | [0.1504, 0.6323] |
+
+**What this says about the exam's numbers, in both directions.**
+
+- **The halving rule was slightly optimistic.** The measured lower edge of the level
+  difference is **0.1361**, a shade *below* the provisional 0.15. So a margin of
+  0.15 would have demanded marginally more than consistency with history. The
+  correction is small and it goes the honest way: the margin loosens to the measured
+  edge, decided before any result exists.
+- **The 80%/65% edges are not contradicted.** Those two edges together demand a
+  high-minus-low share difference of at least **15 percentage points**, which is
+  *below* this measurement's lower edge of **17.7 points**. So the pair of absolute
+  edges asks for less than the measured interval would, and nothing about them
+  needs to move. They were cut from the published 3%/4%/5% threshold range rather
+  than from sampling noise, and they stay there.
+
+### 9.3 Section G — how firm are the dwell medians? (OPEN-3)
+
+**The resampling unit is the spell, not the month, and that choice is the whole
+point.** A spell's sixteen months are one observation of one dwell, not sixteen
+independent facts about how long stagflation lasts; resampling months would count a
+single long spell sixteen times and would return an interval far too narrow. The
+completed spells are the units the median is taken over, so they are what is
+resampled — with replacement, one draw the same size as the observed list, 10,000
+draws from seed `20260819`, 2.5/97.5 percentiles over the draws' medians. No block
+structure is needed or used, because spells are already the independent units.
+
+| season | completed spells | median | **95% interval** | half-width | ±1 quarter tolerance is wider? |
+|---|---|---|---|---|---|
+| recession | 12 | 3 months (1.00 q) | **[1.0, 12.5] months** | 9.5 months (3.17 q) | **no** |
+| stagflation | 12 | 4 months (1.33 q) | **[1.0, 10.5] months** | 6.5 months (2.17 q) | **no** |
+| recovery | 22 | 9 months (3.00 q) | **[5.0, 16.0] months** | 7.0 months (2.33 q) | **no** |
+| expansion | 21 | 6 months (2.00 q) | **[3.0, 12.0] months** | 6.0 months (2.00 q) | **no** |
+
+**The finding is uncomfortable and it is not hedged here: the ±1 quarter tolerance
+is narrower than the median's own sampling wobble in every one of the four
+seasons** — by a factor of about two for expansion and stagflation, and by more
+than three for recession. §4's sparsity discussion argued from the interquartile
+ranges that the medians were soft; this measures it, and the softness is worse than
+the argument suggested.
+
+That does **not** make the tolerance wrong. The tolerance's justification is a
+product fact — a quarter is the game's smallest play unit, so a season right to
+within a quarter is right to within the finest distinction the product can
+express — and a product fact is not overturned by a sampling interval. What the
+measurement does establish is the **reading**: a D-bar FAIL that misses by one
+quarter is inside the anchor's own noise and is not evidence about the engine,
+while a FAIL that misses by two quarters or more is outside it for stagflation,
+recovery and expansion. That distinction belongs beside every D verdict.
+
+### 9.4 Section H — how many generated decades does a *true* engine need? (OPEN-4)
+
+The exam fixed pass bands without knowing how large an ensemble those bands need on
+the generated side. This section answers it by simulation, from seed `20260820`.
+
+**What "a true engine" means here.** An engine actually sitting at the historical
+point estimates is modelled as one that emits, for each decade, a **uniformly-drawn
+contiguous 120-month stretch of the panel**. That model has history's point
+estimates by construction *and* history's own month-to-month dependence — which an
+i.i.d. binomial calculation would throw away — and it is close to what the
+selection-only compiler does in spirit. Each bar is then judged on the pooled
+statistic over *n* such decades, exactly as it would be judged on *n* generated
+ones, 2,000 times; the reported power is the share of those ensembles that pass.
+Eligibility is matched to the judge throughout: a decade's own trailing inflation
+does not exist for its first 12 months, T1 also needs a full 12-month lookahead
+(the exam's 96 eligible months), A2's rolling windows are computed **inside** the
+decade (84 of them), and D1–D4 drop spells touching either edge of the usable
+window — the same completed-spell rule the anchors use.
+
+| bar | power at *n* = 20 | *n* for 90% | true engine's own value | its band |
+|---|---|---|---|---|
+| **T1** transmission lift | 0.999 | **5** | 2.4714235804089193 | [1.7753, 3.3474] |
+| **O1** clockwise fraction | 1.000 | **5** | 0.6143938174207052 | ≥ 0.5185 |
+| **D1** recession median | 0.967 | **15** | 2 months | [0, 6] |
+| **D2** stagflation median | 0.807 | **50** | 6 months | [1, 7] |
+| **D3** recovery median | 0.359 | **never** | **5 months** | **[6, 12]** |
+| **D4** expansion median | 0.994 | **10** | 6 months | [3, 9] |
+| **A1** spread direction | 0.830 | **40** | +4.87 pp vs +1.77 pp | high > low |
+| **A2** correlation flip | 0.608 | **400** | see below | see below |
+
+**Two of these are findings about the bars, not about ensemble size, and both need
+to be read before the seal.**
+
+**D3 cannot be passed at any ensemble size.** A true engine's pooled recovery
+median, measured on decades, is **5 months** — outside the [6, 12] band, and its
+power *falls* as *n* rises (0.36 at 20 decades, 0.14 at 300) because it is
+converging on a value the band excludes. The cause is not the engine and not the
+tolerance: it is that the anchor was measured **panel-wide** and the bar is judged
+**per decade**. Two things happen when 68 years is cut into decades. Long spells are
+more often censored by a decade's edges and drop out, and — decisively here —
+recovery's own spell distribution has a *hole* in it: sorted, it runs 2, 2, 3, 3, 3,
+4, 5, 5, 5, 6, 6, **12**, 13, 14, … so the panel-wide median of 9 is the midpoint of
+a jump from 6 to 12 and nothing observed sits there. A slight re-weighting toward
+shorter spells therefore moves the median discontinuously from 9 to 5. §9.3's
+interval says the same thing from the other side: recovery's median has a 95%
+interval of [5, 16] months, so 9 was never a firm number. **This is a bar-design
+question for the owner, not something an ensemble size or an engine fix can
+address.**
+
+**A2 is dominated by one of its four conditions.** Split apart, A2's conditions need
+5 decades (correlation positive), 10 (the margin), and 10 (the ≥ 80% high-inflation
+share). The fourth — **no more than 65% of low-inflation windows positive** — needs
+**400**, and it drags the whole bar there. The reason is that a true engine's
+low-inflation share, measured on decades, is **0.6216**, only 2.8 points under the
+ceiling, against the panel-wide figure of 0.5416 the ceiling was cut from. The
+mechanism is disclosed in the JSON: drawing decade *starts* uniformly weights panel
+months unevenly — an interior month enters up to 84 decades while the first and last
+few years enter far fewer — and the panel's two most negatively-correlated
+low-inflation stretches, the 1950s–60s and the 2010s, are exactly the down-weighted
+ones. Part of that 0.54 → 0.62 shift is therefore a property of this model rather
+than of any engine, which is a reason to treat the 400 as soft; what is not soft is
+that **the 65% ceiling has far less headroom against a decade-measured statistic
+than against the panel-wide one it was cut from.**
+
+**The rest is straightforward.** T1 and O1 are comfortable at any plausible size;
+D1 and D4 want 15 and 10; D2 wants 50 and A1 wants 40, so the pilot's 20 is **not**
+enough for those two. Setting A2 and D3 aside as bar questions, **50 decades per
+premise** clears every remaining bar with 90% probability.
+
+**Three honest limits on all of the above,** all pushing the same way — they make
+the recommended *n* an upper bound rather than a floor. The decades overlap (694
+distinct starts), so this is a bootstrap whose large-*n* limit is the panel's own
+value rather than an independent truth; it inherits history's full between-decade
+heterogeneity, plausibly wider than a well-behaved engine's; and the uniform-start
+draw carries the edge-weighting described above.

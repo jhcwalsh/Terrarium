@@ -1,6 +1,7 @@
 # The spine v2, stage 1 exam — what the rebuilt engine has to prove
 
-**Date:** 2026-08-17 · **Status:** DRAFT for owner review · **Branch:** `spine2-01-exam`
+**Date:** 2026-08-17 · **Status:** DRAFT for owner review, **OPEN items closed 2026-08-17**
+· **Branch:** `spine2-01-exam`
 **Authority:** `governance/decision-register.md` D-SP-6 (2026-08-16, "go on the engine work,
 include the allocation tests") plus the owner rulings of 2026-08-17 recorded in §9.
 **Measurements this document cuts bars from:** `docs/superpowers/specs/spine-v2-anchors.json`
@@ -13,19 +14,24 @@ these bars are written down, with their justifications, **before** any result ex
 
 ---
 
-## Before sealing — the OPEN items
+## Closed before sealing — the OPEN items
 
-Four things this exam needs that the anchors file does not yet carry. Each is a
-measurement to add to `scripts/spine_v2_anchors.py` (or, for OPEN-4, a power calculation
-to run) **before** the seal. Nothing below has been computed here; where a bar depends on
-one, the bar says so in its own subsection.
+This document was drafted with four measurements missing, each blocking named bars.
+**All four have been made** (2026-08-17), by extending `scripts/spine_v2_anchors.py` —
+same determinism rules, one literal seed per new section, byte-identical re-runs — and
+they are recorded in the anchors JSON as sections `e_ordering`,
+`f_correlation_intervals`, `g_dwell_intervals` and `h_generated_side_power`, with the
+plain-language write-up in §9 of
+`docs/superpowers/specs/2026-08-16-spine-v2-estimation-anchors.md`. This table is now the
+record of what was added and what it changed. The bars themselves are stated, as always,
+in their own subsections below.
 
-| # | What is missing | What must be added | Which bar depends on it |
+| # | What was missing | What was measured | Effect on the bars |
 |---|---|---|---|
-| **OPEN-1** | `spine-v2-anchors.json` contains no clockwise-fraction measurement. The 0.6029411764705882 anchor and its "68 transitions, standard error ≈ 0.059" disclosure come from round one's seal (`spine-pilot-prereg.json`), measured on an earlier run of the pipeline. | Recompute the clockwise fraction and its transition count on the same panel vintage (`2026-08-10.1`) as every other number in this exam, and confirm it reproduces the sealed value exactly. | **O1** (the seasons turn the right way round) |
-| **OPEN-2** | No sampling interval on the stock–bond correlation gap. The anchors give the correlation levels and the share-of-windows figures at the 3%, 4% and 5% inflation lines, but no error bar on the *difference* between the high- and low-inflation figures. | A block bootstrap (the same Politis–Romano machinery and seed discipline already used for the transmission interval) for (i) the high-minus-low correlation difference and (ii) the difference in share-of-windows-positive, both at the 4% line. | **A2** (stocks and bonds fall together when inflation is high) — its 0.15 margin currently rests on published threshold sensitivity plus a halving rule, not on a measured interval |
-| **OPEN-3** | No sampling interval on the per-season dwell medians. The anchors give every season's full sorted spell list and its interquartile range, but no bootstrap interval for the median itself. | A bootstrap over spells (resample the completed spells of each season) giving a 95% interval for each season's median. | **D1–D4** (how long each season lasts) — needed to confirm the ±1 quarter tolerance is *at least* as wide as the anchors' own wobble, which is currently argued from the interquartile ranges rather than measured |
-| **OPEN-4** | No power calculation for the generated side. We know the panel's transmission lift rests on 789 eligible months; we have not established how many generated decades are needed for the generated-side lift's own sampling error to be small relative to the [1.78, 3.35] pass band. | A short calculation (or simulation) fixing `n_seeds` and `n_paths` so that the generated side's own error bar is a small fraction of each bar's band width, for **T1** and for **A1/A2** (which need enough high-inflation months per world). | **T1**, **A1**, **A2** — this determines the ensemble size the exam is run at |
+| **OPEN-1** | No clockwise-fraction measurement on this vintage; the 0.6029411764705882 anchor came from round one's seal, measured by an earlier run of the pipeline. | Recomputed on vintage `2026-08-10.1`, reusing the pilot's own definitions by import (`ah.gen.spine.panel_quadrant`, `ah.gen.spine.CLOCKWISE`; the transition rule of `scripts/spine_pilot_seal._b4_clockwise_fraction`). **0.6029411764705882 on 68 transitions, 41 of them clockwise — bit-identical to the sealed value.** Block-bootstrap 95% interval **[0.5185185185185185, 0.6842285508291275]**. | **O1 changed.** Its bar moves from the point anchor to the interval's **lower edge, 0.5185** — see §2, O1(a) and O1(c). |
+| **OPEN-2** | No sampling interval on the stock–bond correlation gap; A2's 0.15 margin rested on threshold sensitivity plus a halving rule. | Block bootstrap, same machinery and block lengths as the transmission interval. High-minus-low **correlation difference 0.3194875488039316, 95% interval [0.13609378139729844, 0.556828299873221]**. High-minus-low **share-of-windows-positive difference 0.40507701786814543, 95% interval [0.17717364337543898, 0.6231004989665900]**. | **A2(i) changed.** Its margin moves from 0.15 to the measured **lower edge, 0.1361** — see §4, A2(a) and A2(c). **A2(ii) unchanged**; the measurement supports its edges rather than moving them. |
+| **OPEN-3** | No sampling interval on the per-season dwell medians. | Bootstrap over **spells** (the independent units), 10,000 draws: recession 3 months **[1.0, 12.5]**, stagflation 4 **[1.0, 10.5]**, recovery 9 **[5.0, 16.0]**, expansion 6 **[3.0, 12.0]**. | **D1–D4 unchanged** — the ±1 quarter tolerance stands on its play-unit justification. But the check it was asked to pass **failed in all four seasons**: the tolerance is *narrower* than the median's own sampling wobble everywhere. Recorded in §3 and it changes how a D verdict must be read. |
+| **OPEN-4** | No power calculation for the generated side. | Simulation, 2,000 ensembles per grid point, a true engine modelled as one emitting uniformly-drawn contiguous 120-month stretches of the panel. Decades needed for a 90% pass: **T1 5, O1 5, D1 15, D4 10, A1 40, D2 50, A2 400, D3 never.** | **Ensemble size fixed at 50 decades per premise** (§8.1). Two bars came back as bar-design problems rather than sizing problems — **D3 is unpassable by a true engine as written, and A2 is dominated by its low-inflation ceiling** — both flagged for the owner in §8.1. |
 
 An amendment after the seal goes through the machine-checked log, never by editing this file.
 
@@ -149,26 +155,47 @@ order.
 
 **(a) The bar.** The generated worlds' clockwise fraction must be
 
-> **≥ 0.6029411764705882** (0.6029) — one-sided.
+> **≥ 0.5185185185185185** (0.5185) — one-sided.
 
-**(b) The historical anchor.** 0.6029411764705882 is history's own clockwise fraction, sealed
-in round one as `b4.panel_clockwise_fraction` in
-`docs/superpowers/specs/spine-pilot-prereg.json`. It rests on **68 season transitions**, and
-the sealed power disclosure that travels with it states a standard error of **≈ 0.059**.
-See **OPEN-1**: this figure is not yet reproduced in the v2 anchors file.
+That number is the **lower edge of the historical anchor's own 95% interval**, not a
+tolerance chosen around it.
 
-**(c) Why the tolerance is what it is — and it is the strictest choice on the page.** Round
-one's bar was two-sided, ±0.15 around the anchor, which put its lower edge at 0.4529. Round
-two's engine measured clockwise fractions of 0.4574, 0.4820, 0.4831, 0.4886 and 0.5176 — a
-clock barely better than a coin flip — and **passed on all five seeds**. A bar that a coin
-flip passes is not measuring the thing it claims to measure. The owner's ruling makes it
-one-sided at the anchor itself: the engine must be *at least as* clockwise as history, with
-no allowance below. The honest consequence, stated now rather than after results: the anchor
-is itself an estimate with a standard error of about 0.059, so an engine whose true ordering
-exactly matched history's true ordering could still land a little below 0.6029 and fail. That
-strictness is deliberate — it is the price of not repeating round two's false pass — but if
-the owner wants the bar to absorb the anchor's own sampling error (e.g. ≥ 0.6029 − 0.059 =
-0.5439), **now, before any result exists, is the only time that can be decided without it
+**(b) The historical anchor.** History's clockwise fraction is **0.6029411764705882**, on
+**68 season transitions**, 41 of them clockwise. Sealed in round one as
+`b4.panel_clockwise_fraction` in `docs/superpowers/specs/spine-pilot-prereg.json`, and
+**re-measured on this exam's own panel vintage (`2026-08-10.1`) where it reproduces
+bit-identically** (`e_ordering.clockwise_fraction`, OPEN-1 closed). Its block-bootstrap 95%
+interval is **[0.5185185185185185, 0.6842285508291275]** at the primary 24-month run length,
+moving to [0.5098, 0.6957] at 12 months and [0.5273, 0.6818] at 36 — so, as with T1, the run
+length is not driving it. The binomial standard error is **0.05933493096110905**, the "≈
+0.059" the round-one seal disclosed.
+
+**(c) Why the bar sits at the interval's lower edge.** The draft of this document set the bar
+at the point anchor itself and flagged the problem in the same breath: *the anchor is an
+estimate*, so an engine whose true ordering exactly matched history's could still land below
+0.6029 and fail. A bar that a correct engine fails one time in two is not a test of the
+engine. The bar therefore demands what a bar can honestly demand — **consistency with
+history** — and 0.5185 is the point below which the generated fraction is no longer
+consistent with the historical one.
+
+**This does not reopen round two's false pass, and the margin is thin enough to state
+exactly.** Round two's five seeds measured 0.4574, 0.4820, 0.4831, 0.4886 and **0.5176**.
+All five are still below 0.5185 — the best of them by **0.0009**. The bar that a coin flip
+passed (round one's two-sided ±0.15, lower edge 0.4529) is not what this is; but the owner
+should see that this bar's discriminating power against round two's engine now rests on the
+last decimal place of one seed rather than on a comfortable gap.
+
+**Two alternatives, both stated before any v2 result exists.** The drafter's own suggestion
+was to absorb *one* standard error rather than the full interval: **≥ 0.6029 − 0.0593 =
+0.5436** (`e_ordering.one_se_below_point`), which is stricter and would fail all five
+round-two seeds with room to spare. And an i.i.d.-over-transitions bootstrap would put the
+edge at **0.4853**, which is looser and *would* let round two's best seed through. The block
+interval was chosen because it is the same kind of object as every other interval in this
+exam; the fact that it comes back **narrower** than the i.i.d. one is not a mistake but a
+measured property — the clockwise indicator's lag-1 autocorrelation across consecutive
+transitions is **−0.342**, i.e. the clock backtracks and then returns, so consecutive
+transitions carry more information kept together than scrambled. If the owner prefers the
+one-SE bar, **now, before any result exists, is the only time that can be decided without it
 being goalpost-moving.**
 
 **(d) What a FAIL means in product terms.** A fail means the seasons arrive in a shuffled
@@ -195,9 +222,30 @@ minimum lengths.
 quarter is the game's smallest play unit.** The player makes decisions on a quarterly cycle,
 so a season whose length is right to within one quarter is right to within the finest
 distinction the product can express; a tighter bar would be grading a difference no player
-can act on, and a looser one would let a season be off by a decision cycle. See **OPEN-3**:
-this tolerance should also be confirmed to be at least as wide as the medians' own sampling
-wobble, which the anchors' interquartile ranges strongly suggest but do not yet measure.
+can act on, and a looser one would let a season be off by a decision cycle. **The tolerance
+is unchanged by OPEN-3** — its justification is a product fact, and a product fact is not
+overturned by a sampling interval.
+
+**But the check OPEN-3 was asked to perform came back negative in all four seasons, and that
+changes how a D verdict must be read.** The medians were bootstrapped by resampling
+**spells** — a spell's months are one observation of one dwell, not many independent
+observations of it, so the spells are the independent units and resampling months would have
+returned an interval far too narrow (`g_dwell_intervals`, 10,000 draws, seed `20260819`):
+
+| season | completed spells | median | **95% interval** | half-width | ±1 quarter is wider? |
+|---|---|---|---|---|---|
+| recession (D1) | 12 | 3 months | **[1.0, 12.5] months** | 9.5 months (3.17 q) | **no** |
+| stagflation (D2) | 12 | 4 months | **[1.0, 10.5] months** | 6.5 months (2.17 q) | **no** |
+| recovery (D3) | 22 | 9 months | **[5.0, 16.0] months** | 7.0 months (2.33 q) | **no** |
+| expansion (D4) | 21 | 6 months | **[3.0, 12.0] months** | 6.0 months (2.00 q) | **no** |
+
+The anchors' interquartile ranges suggested the medians were soft; this measures it, and they
+are softer than the argument suggested — by about a factor of two for expansion and
+stagflation, and more than three for recession. The consequence, which the judge must print
+beside every D verdict: **a D-bar FAIL that misses by one quarter is inside the anchor's own
+sampling noise and is not evidence about the engine**; a FAIL that misses by two quarters or
+more is outside it for stagflation, recovery and expansion. Nothing about the pass/fail
+arithmetic changes; what changes is that a marginal FAIL may not be reported as a finding.
 
 *A floor note that applies to D1 and D2.* No spell can be shorter than one month (0.33
 quarters), so where the ±1 quarter band's lower edge falls at or below that floor, the bar
@@ -295,6 +343,25 @@ of 2 to 3 months against history's 9, failing on **all five seeds** — the clea
 apples-to-apples signal in the whole prior record, judged by frozen code both rounds. It is
 also squarely inside D-SP-6's funded scope ("recovery-duration refit to the historical event
 chronology"), so this is a bar the rebuild is expected to flip.
+
+**⚠ OPEN-4 found that this bar, as written, cannot be passed by a correct engine — owner
+decision needed before the seal.** The power calculation measures a *true* engine — one
+emitting real contiguous 120-month stretches of US history — producing a pooled recovery
+median of **5 months**, outside the [6, 12] band, with power *falling* as the ensemble grows
+(0.36 at 20 decades, 0.14 at 300) because it is converging on a value the band excludes. No
+other bar behaves this way, and the cause is not the engine, the tolerance, or the ensemble
+size: **the anchor was measured panel-wide and the bar is judged per decade.** Cutting 68
+years into decades censors long spells at the decade edges, and recovery's distribution has a
+hole exactly where its median sits — sorted, it runs 2, 2, 3, 3, 3, 4, 5, 5, 5, 6, 6, **12**,
+13, 14, … so the panel-wide median of 9 is the midpoint of a jump from 6 to 12 and nothing
+observed lies there. A slight re-weighting toward shorter spells moves it discontinuously to
+5. OPEN-3's interval says the same thing from the other side: recovery's median has a 95%
+interval of **[5, 16] months**, so 9 was never a firm number.
+**This is a bar-design question and it is deliberately not resolved here** — the options
+(re-anchor D3 on decade-measured spells, widen its band to the sampling interval, or accept
+that D3 is a bar the engine is expected to fail for a reason that is not the engine's) each
+change what the exam tests, and that is the owner's call, taken before results exist rather
+than after.
 
 **(d) What a FAIL means in product terms.** Too short, and the good stretches never last, so
 patience is never rewarded and the player learns to stay defensive forever — the exact
@@ -437,7 +504,8 @@ inflation state of its **final month** — the month the correlation is "as of".
 **(a) The bar.** Both conditions must hold, at the 4% line:
 - **A2(i) — level and margin.** The correlation over high-inflation months must be
   **positive**, and must exceed the correlation over low-inflation months by at least
-  **0.15**.
+  **0.13609378139729844** (0.1361) — the **lower edge of the historical difference's own 95%
+  interval**, not a tolerance chosen around it.
 - **A2(ii) — how common the flip is.** At least **80%** of 36-month windows ending in a
   high-inflation month must show a positive stock–bond correlation, and **no more than 65%**
   of windows ending in a low-inflation month.
@@ -456,9 +524,43 @@ History's level gap is **0.3195** (+0.30125 minus −0.01823). The rolling-windo
 sharpest in the whole measurement: **95% of three-year windows ending in high inflation show
 a positive stock–bond correlation, against 54% — a coin flip — in low inflation.**
 
-**(c) Where the 0.15 margin and the 80%/65% edges come from.** Both are derived from the
-published threshold sensitivity, which is the one uncertainty the anchors do quantify for
-this statistic:
+**(c) Where the 0.1361 margin and the 80%/65% edges come from.** The margin is now a
+**measured sampling interval** (OPEN-2 closed); the two share edges remain cut from the
+published threshold sensitivity, which the measurement supports rather than moves.
+
+**The margin.** History's high-minus-low correlation difference is
+**0.3194875488039316**, and its block-bootstrap 95% interval — the same Politis–Romano
+machinery, the same 12/24/36-month block lengths and the same seed discipline as the
+transmission interval — is **[0.13609378139729844, 0.556828299873221]** at the primary
+24-month run length, moving only to [0.1195, 0.5429] at 12 months and [0.1204, 0.5509] at 36.
+The bar is the **lower edge**, by the same logic as O1: what a bar can honestly demand is
+that the generated difference be *consistent with* history, not that it exceed a point
+estimate that is itself noisy. This is slightly **looser** than the draft's provisional 0.15,
+which came from halving the historical gap — a reasonable guess at the sampling noise that
+the measurement shows was a little optimistic. The correction goes the honest way and is made
+here, before any result exists, exactly as the draft undertook to do.
+
+**The two share edges are unchanged, and the same measurement supports them.** The
+high-minus-low difference in share-of-windows-positive is **0.40507701786814543** with a 95%
+interval of **[0.17717364337543898, 0.6231004989665900]**. The 80% floor and 65% ceiling
+together demand a difference of at least **15 percentage points** — *below* that interval's
+lower edge of 17.7 — so the pair of absolute edges asks for less than the measured interval
+would, and neither needs to move.
+
+**⚠ But OPEN-4 found the 65% ceiling is the binding condition and has little headroom —
+owner decision needed before the seal.** Split into its four conditions, A2 needs 5 generated
+decades for "correlation positive", 10 for the margin and 10 for the ≥ 80% high-inflation
+share; the **≤ 65% low-inflation share needs 400**, and drags the whole bar there. The reason
+is that a true engine's low-inflation share **measured on decades** is **0.6216** — 2.8 points
+under the ceiling — against the **0.5416** panel-wide figure the ceiling was cut from. Part of
+that shift is a property of the power model rather than of any engine (drawing decade starts
+uniformly down-weights the panel's first and last few years, which are exactly its two most
+negatively-correlated low-inflation stretches, the 1950s–60s and the 2010s), so the 400 is
+soft. What is not soft: **the ceiling has far less room against a decade-measured statistic
+than against the panel-wide one it was derived from.** Raising it is a live option and is the
+owner's call, taken now.
+
+**The threshold sensitivity the two share edges rest on:**
 
 | inflation line | correlation, high | correlation, low | gap | windows positive, high | windows positive, low |
 |---|---|---|---|---|---|
@@ -466,23 +568,17 @@ this statistic:
 | **4% (the bar)** | +0.30125403304704923 | −0.01823351575688256 | **0.3195** | **94.7%** | **54.2%** |
 | 5% | +0.3390382145390731 | +0.010927392717242666 | 0.3281 | 98.0% | 58.1% |
 
-- **The 0.15 margin** is a little under **half** the smallest gap history shows at any
-  published line (0.3195, at the 4% line itself). Halving leaves room for the generated
-  side's own sampling noise while still failing an engine that gets the sign right but the
-  magnitude weakly — which is precisely the failure mode the spine-02 review found for
-  transmission ("present but weak", 1.14× against history's 2.37×). It is also a bit over
-  **twice** the threshold sensitivity of the high-inflation level itself, which moves only
-  0.07 across the whole 3%→5% range, so the bar cannot be passed or failed by the choice of
-  line.
+- **The 0.1361 margin** is a little over **twice** the threshold sensitivity of the
+  high-inflation level itself, which moves only 0.07 across the whole 3%→5% range, so the bar
+  cannot be passed or failed by the choice of line. It still fails an engine that gets the
+  sign right but the magnitude weakly — the failure mode the spine-02 review found for
+  transmission ("present but weak", 1.14× against history's 2.37×) — because 0.1361 is a
+  little under half history's own 0.3195 gap.
 - **The 80% floor** sits 5.8 points below the *lowest* share history shows at any line
   (85.8%, at 3%); **the 65% ceiling** sits 6.9 points above the *highest* low-inflation share
   (58.1%, at 5%). Both edges therefore clear the entire published threshold range by 6–7
-  points, so neither is an artefact of the 4% choice.
-
-**See OPEN-2.** These margins rest on threshold sensitivity plus a halving rule, not on a
-measured sampling interval. A block bootstrap of the high-minus-low difference should be
-added before the seal; if it comes back wider than expected, the honest response is to widen
-the margin **now**, before results, and record why.
+  points, so neither is an artefact of the 4% choice. Read the ⚠ above for what happens to
+  the ceiling's headroom once the statistic is measured on decades rather than panel-wide.
 
 **(d) What a FAIL means in product terms.** A fail means bonds keep diversifying equities
 even when inflation is high — so the generated worlds never take away the protection a
@@ -641,12 +737,15 @@ Stated plainly so the exam's scope cannot be over-read from its passing.
 ## 8. Process — what happens after the owner approves
 
 1. **Approval.** The owner approves this document, or amends it. Amendments made now cost
-   nothing; amendments made after the seal go through the machine-checked log.
-2. **The OPEN items are closed** (the table at the top): the clockwise anchor is recomputed on
-   the current vintage, bootstrap intervals are added for the correlation gap and the dwell
-   medians, and the ensemble size is fixed by the power calculation. If any measurement comes
-   back wider than assumed, the affected tolerance is widened **here, before results**, with
-   the reason recorded.
+   nothing; amendments made after the seal go through the machine-checked log. **Three
+   decisions are waiting on this step and all three are cheap now and expensive later:** O1's
+   bar (interval edge, as written, or the stricter one-SE variant — §2), D3's band (which a
+   correct engine cannot clear as written — §3), and A2's 65% ceiling (2.8 points of headroom
+   against a decade-measured statistic — §4).
+2. ~~The OPEN items are closed~~ — **done, 2026-08-17.** See the table at the top for what was
+   measured and what moved: O1's bar and A2's margin now sit at the lower edge of their
+   anchors' own 95% intervals, the dwell tolerance stands but its reading changed, and the
+   ensemble size is fixed below.
 3. **The judges are coded from this document**, one per bar, each printing its own inputs
    (both sides' base rates, counts and eligible-month totals) so a verdict can be read rather
    than trusted.
@@ -660,6 +759,44 @@ Stated plainly so the exam's scope cannot be over-read from its passing.
 6. **Then, and only then, the engine work starts.** Verdicts pass through the
    verdict-integrity review (§6.2) before they reach the owner.
 
+### 8.1 The ensemble size — 50 decades per premise (OPEN-4 closed)
+
+**How it was established.** A true engine — one actually sitting at the historical point
+estimates — is modelled as one that emits, for each decade, a uniformly-drawn contiguous
+**120-month stretch of the panel**: history's point estimates by construction, and history's
+own month-to-month dependence, which an i.i.d. binomial calculation would discard. Each bar
+is judged on the pooled statistic over *n* such decades exactly as the judge will judge it on
+*n* generated ones, 2,000 times per grid point, from the anchor script's own seeded generator
+(`h_generated_side_power`, seed `20260820`). Eligibility is matched to the judge throughout:
+the decade's own 12-month inflation warm-up, T1's further 12-month lookahead (the 96 eligible
+months of §2), A2's rolling windows computed **inside** the decade (84 of them), and D1–D4's
+completed-spell rule applied to the decade's own edges.
+
+| bar | power at the pilot's 20 seeds | decades needed for 90% |
+|---|---|---|
+| **T1** | 0.999 | **5** |
+| **O1** | 1.000 | **5** |
+| **D4** | 0.994 | **10** |
+| **D1** | 0.967 | **15** |
+| **A1** | 0.830 | **40** |
+| **D2** | 0.807 | **50** |
+| **A2** | 0.608 | **400** — see §4's ⚠ |
+| **D3** | 0.359 | **never** — see §3's ⚠ |
+
+**The ruling.** The exam runs at **`n_seeds` = 50 decades per premise**, which clears every
+bar that a correct engine can clear — T1, O1, D1, D2, D4 and A1 — at 90% or better. **The
+pilot's 20 is not enough**: it leaves A1 at 0.83 and D2 at 0.81, so either could record a
+FAIL from ensemble size alone. A2's 400 and D3's impossibility are **not sizing problems and
+are not bought with compute**; they are the two bar-design questions §8 step 1 puts to the
+owner, and 50 is the right size whichever way those go.
+
+**The compute implication, in one sentence.** Fifty decades per premise is 2.5× the pilot's
+ensemble and the compiler is selection-only, so the decade generation itself is cheap — but
+R1's b3 arm multiplies by its four allocation grid points and stays byte-frozen at its own
+`n_seeds` = 20, so the incremental cost lands on the eight new judges rather than on the
+carried ones, and the one number that would have made the exam expensive (A2's 400) is a bar
+to fix rather than compute to buy.
+
 ---
 
 ## 9. The bars at a glance
@@ -667,17 +804,26 @@ Stated plainly so the exam's scope cannot be over-read from its passing.
 | tier | code | plain name | the bar | historical anchor |
 |---|---|---|---|---|
 | causal | **T1** | does tightening cause downturns | lift inside **[1.78, 3.35]** | 2.37× (86/149 vs 192/789) |
-| causal | **O1** | the seasons turn the right way round | clockwise fraction **≥ 0.6029** | 0.6029 (68 transitions, SE ≈ 0.059) |
+| causal | **O1** | the seasons turn the right way round | clockwise fraction **≥ 0.5185** (the anchor's 95% interval's lower edge) | 0.6029 (68 transitions, 95% CI [0.5185, 0.6842]) |
 | persistence | **D1** | how long a recession lasts | median **[0, 6] months** (binds from above) | 1.00 q / 3 months, 12 completed spells |
 | persistence | **D2** | how long stagflation lasts | median **[1, 7] months** | 1.33 q / 4 months, 12 completed spells |
 | persistence | **D3** | how long a recovery lasts | median **[6, 12] months** | 3.00 q / 9 months, 22 completed spells |
 | persistence | **D4** | how long an expansion lasts | median **[3, 9] months** | 2.00 q / 6 months, 21 completed spells |
 | allocation | **A1** | does the inflation hedge pay | spread(high) > spread(low) at 4%; inside [−5.05, +32.32] pp | +4.87 pp vs +1.38 pp |
-| allocation | **A2** | stocks and bonds fall together | corr(high) > 0 and exceeds corr(low) by ≥ 0.15; ≥ 80% / ≤ 65% of 3-year windows positive | +0.30 vs −0.02; 94.7% vs 54.2% |
+| allocation | **A2** | stocks and bonds fall together | corr(high) > 0 and exceeds corr(low) by ≥ **0.1361** (the difference's 95% interval's lower edge); ≥ 80% / ≤ 65% of 3-year windows positive | +0.30 vs −0.02, difference 0.3195 (95% CI [0.1361, 0.5568]); 94.7% vs 54.2% |
 | no-regression | **R1** | severity still bites the book | b3 byte-frozen: monotone coverage, ≥ 1/20 breach at 55% | prior seal (round two: PASS) |
 | no-regression | **R2** | eras don't teleport at the seams | b2 byte-frozen: join jump ≤ 2.5 pp, p95 ≤ 0.9292 pp | panel p95 0.7434 pp (round two: FAIL) |
 
-**Ten bars: 2 causal, 4 persistence, 2 allocation, 2 no-regression.**
+**Ten bars: 2 causal, 4 persistence, 2 allocation, 2 no-regression.** Run at **50 decades per
+premise** (§8.1); R1's b3 grid keeps its own byte-frozen `n_seeds` = 20. Every threshold in
+this table is a field in `docs/superpowers/specs/spine-v2-anchors.json` under `exam_bars`,
+derived there from the measurement it is cut from rather than restated — so this table, that
+file and the judges cannot disagree about a number.
+
+**Two bars carry a ⚠ into the approval step**, both found by the OPEN-4 power calculation and
+neither resolved here: **D3** cannot be passed by a correct engine as written (§3), and
+**A2**'s 65% low-inflation ceiling has 2.8 points of headroom against a decade-measured
+statistic and needs 400 decades to clear at 90% (§4).
 
 ---
 

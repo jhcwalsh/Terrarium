@@ -1267,6 +1267,745 @@
       "windows_defined": 766
     }
   },
+  "e_ordering": {
+    "bar_note": "the O1 bar is cut from ci95_lower_edge: a generated clockwise fraction at or above it is CONSISTENT WITH history, which is what the bar can honestly demand. one_se_below_point is the tighter alternative the exam's drafter named (anchor minus one standard error); both are published so the owner can see the cost of each",
+    "binomial_se": 0.05933493096110905,
+    "bootstrap_ci95": {
+      "block_12m": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.6956521739130435,
+          "lo": 0.5097860962566845,
+          "median": 0.6060606060606061
+        },
+        "draws_dropped_no_transition": 0,
+        "draws_used": 2000,
+        "mean_transitions_per_draw": 62.051
+      },
+      "block_24m": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.6842285508291275,
+          "lo": 0.5185185185185185,
+          "median": 0.6027397260273972
+        },
+        "draws_dropped_no_transition": 0,
+        "draws_used": 2000,
+        "mean_transitions_per_draw": 64.726
+      },
+      "block_36m": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.6818181818181818,
+          "lo": 0.5272665847665847,
+          "median": 0.6031746031746031
+        },
+        "draws_dropped_no_transition": 0,
+        "draws_used": 2000,
+        "mean_transitions_per_draw": 66.145
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the panel's month sequence; only genuine consecutive-month pairs are scored, so block joins cannot invent a transition; 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260817,
+    "ci95_lower_edge": 0.5185185185185185,
+    "ci95_upper_edge": 0.6842285508291275,
+    "clockwise_fraction": 0.6029411764705882,
+    "definition": "over consecutive panel rows where both quadrants are defined and DIFFER, the share of (previous, next) pairs in ah.gen.spine.CLOCKWISE (recovery -> expansion -> stagflation -> recession -> recovery). Quadrants from ah.gen.spine.panel_quadrant, era threshold from ah.gen.spine.fit_hazard; the transition rule is scripts/spine_pilot_seal._b4_clockwise_fraction's",
+    "iid_over_transitions_ci95": {
+      "hi": 0.7205882352941176,
+      "lo": 0.4852941176470588,
+      "median": 0.6029411764705882
+    },
+    "n_bootstrap": 2000,
+    "n_clockwise_transitions": 41,
+    "n_transitions": 68,
+    "one_se_below_point": 0.5436062455094791,
+    "pilot_sealed_fraction": 0.6029411764705882,
+    "primary_block_months": 24,
+    "reproduces_pilot_seal_exactly": true,
+    "transition_lag1_autocorrelation": -0.34203896544238627,
+    "width_note": "the block interval is NARROWER than the i.i.d.-over-transitions one, which is unusual and has a measured cause: transition_lag1_autocorrelation is negative, i.e. a counter-clockwise move tends to be followed by a clockwise one (the clock backtracks and returns). Keeping consecutive transitions together therefore carries MORE information per transition than scrambling them. Both intervals are published; the bar is cut from the block one, on the same machinery as every other interval in this file"
+  },
+  "exam_bars": {
+    "A1_containment_pp": [
+      -5.053054679081145,
+      32.31605649965673
+    ],
+    "A2_correlation_margin": 0.13609378139729844,
+    "A2_share_high_floor": 0.8,
+    "A2_share_low_ceiling": 0.65,
+    "D_median_bands_months": {
+      "expansion": [
+        3.0,
+        9.0
+      ],
+      "recession": [
+        0.0,
+        6.0
+      ],
+      "recovery": [
+        6.0,
+        12.0
+      ],
+      "stagflation": [
+        1.0,
+        7.0
+      ]
+    },
+    "D_tolerance_months": 3.0,
+    "O1_clockwise_min": 0.5185185185185185,
+    "T1_lift_band": [
+      1.7752827491108736,
+      3.3473622102535145
+    ],
+    "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's completed-spell median +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = e_ordering's 95% interval's LOWER edge; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference"
+  },
+  "f_correlation_intervals": {
+    "bar_note": "A2(i)'s margin is cut from correlation_level.ci95_lower_edge: the generated high-minus-low correlation difference must exceed the lower edge of the historical interval, i.e. must be CONSISTENT WITH history rather than exceed a point estimate that is itself noisy. The share-of-windows interval is published as the evidence behind A2(ii)'s 80%/65% edges, which are unchanged",
+    "bootstrap_ci95": {
+      "block_12m": {
+        "correlation_difference_ci95": {
+          "hi": 0.5428540727754096,
+          "lo": 0.11953661363734239,
+          "median": 0.32517973034945397
+        },
+        "correlation_high_ci95": {
+          "hi": 0.46717400417221594,
+          "lo": 0.15555817168110775,
+          "median": 0.310673458646607
+        },
+        "correlation_low_ci95": {
+          "hi": 0.10719674791459809,
+          "lo": -0.15237208973899005,
+          "median": -0.015249040332556654
+        },
+        "draws_used_correlation": 2000,
+        "draws_used_share_positive": 2000,
+        "share_positive_difference_ci95": {
+          "hi": 0.5921694662247576,
+          "lo": 0.2283792695892199,
+          "median": 0.4005996972153492
+        },
+        "share_positive_high_ci95": {
+          "hi": 1.0,
+          "lo": 0.8409008563899869,
+          "median": 0.9506375893437298
+        },
+        "share_positive_low_ci95": {
+          "hi": 0.7083564814814813,
+          "lo": 0.36648685918234913,
+          "median": 0.5417038859935046
+        }
+      },
+      "block_24m": {
+        "correlation_difference_ci95": {
+          "hi": 0.556828299873221,
+          "lo": 0.13609378139729844,
+          "median": 0.32473471539895116
+        },
+        "correlation_high_ci95": {
+          "hi": 0.4679594534036976,
+          "lo": 0.17737982046081946,
+          "median": 0.31023947096535665
+        },
+        "correlation_low_ci95": {
+          "hi": 0.1240853084386137,
+          "lo": -0.16203218235346048,
+          "median": -0.01820613041350759
+        },
+        "draws_used_correlation": 2000,
+        "draws_used_share_positive": 2000,
+        "share_positive_difference_ci95": {
+          "hi": 0.62310049896659,
+          "lo": 0.17717364337543898,
+          "median": 0.3951160468473019
+        },
+        "share_positive_high_ci95": {
+          "hi": 1.0,
+          "lo": 0.8136277517141826,
+          "median": 0.953307392996109
+        },
+        "share_positive_low_ci95": {
+          "hi": 0.7674547089811127,
+          "lo": 0.33534783317041383,
+          "median": 0.5433393043545498
+        }
+      },
+      "block_36m": {
+        "correlation_difference_ci95": {
+          "hi": 0.5508506146739962,
+          "lo": 0.12044608900041799,
+          "median": 0.32613608747694567
+        },
+        "correlation_high_ci95": {
+          "hi": 0.4601792140432245,
+          "lo": 0.17083933425009692,
+          "median": 0.3112589516493174
+        },
+        "correlation_low_ci95": {
+          "hi": 0.13872381520221214,
+          "lo": -0.17575077099394656,
+          "median": -0.01877830650278178
+        },
+        "draws_used_correlation": 2000,
+        "draws_used_share_positive": 2000,
+        "share_positive_difference_ci95": {
+          "hi": 0.6322644310036276,
+          "lo": 0.15036495291184282,
+          "median": 0.39199441509545674
+        },
+        "share_positive_high_ci95": {
+          "hi": 1.0,
+          "lo": 0.78492134607726,
+          "median": 0.953873431533006
+        },
+        "share_positive_low_ci95": {
+          "hi": 0.8003786869225302,
+          "lo": 0.3046387412876958,
+          "median": 0.5431548333413343
+        }
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap, the same machinery and the same 12/24/36-month block lengths as b_transmission_lift; the level statistic is resampled over months, the rolling-window statistic over windows (one per month, each carrying its end month's inflation state); 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260818,
+    "correlation_level": {
+      "ci95_lower_edge": 0.13609378139729844,
+      "ci95_upper_edge": 0.556828299873221,
+      "difference": 0.3194875488039316,
+      "high_inflation": 0.30125403304704906,
+      "low_inflation": -0.018233515756882535,
+      "months_high": 225,
+      "months_low": 576
+    },
+    "n_bootstrap": 2000,
+    "primary_block_months": 24,
+    "share_of_rolling_windows_positive": {
+      "ci95_lower_edge": 0.17717364337543898,
+      "ci95_upper_edge": 0.62310049896659,
+      "difference": 0.40507701786814543,
+      "high_inflation": 0.9466666666666667,
+      "low_inflation": 0.5415896487985212,
+      "window_months": 36,
+      "windows_high": 225,
+      "windows_low": 541
+    },
+    "threshold_pp": 4.0
+  },
+  "g_dwell_intervals": {
+    "bootstrap_seed": 20260819,
+    "n_bootstrap": 10000,
+    "per_quadrant": {
+      "expansion": {
+        "bootstrap_median_of_medians_months": 6.0,
+        "ci95_half_width_months": 6.0,
+        "ci95_half_width_quarters": 2.0,
+        "ci95_months": [
+          3.0,
+          12.0
+        ],
+        "ci95_quarters": [
+          1.0,
+          4.0
+        ],
+        "median_months": 6.0,
+        "median_quarters": 2.0,
+        "n_completed_spells": 21,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -3.0,
+        "tolerance_months": 3.0
+      },
+      "recession": {
+        "bootstrap_median_of_medians_months": 3.0,
+        "ci95_half_width_months": 9.5,
+        "ci95_half_width_quarters": 3.1666666666666665,
+        "ci95_months": [
+          1.0,
+          12.5
+        ],
+        "ci95_quarters": [
+          0.3333333333333333,
+          4.166666666666667
+        ],
+        "median_months": 3.0,
+        "median_quarters": 1.0,
+        "n_completed_spells": 12,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -6.5,
+        "tolerance_months": 3.0
+      },
+      "recovery": {
+        "bootstrap_median_of_medians_months": 9.0,
+        "ci95_half_width_months": 7.0,
+        "ci95_half_width_quarters": 2.3333333333333335,
+        "ci95_months": [
+          5.0,
+          16.0
+        ],
+        "ci95_quarters": [
+          1.6666666666666667,
+          5.333333333333333
+        ],
+        "median_months": 9.0,
+        "median_quarters": 3.0,
+        "n_completed_spells": 22,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -4.0,
+        "tolerance_months": 3.0
+      },
+      "stagflation": {
+        "bootstrap_median_of_medians_months": 4.0,
+        "ci95_half_width_months": 6.5,
+        "ci95_half_width_quarters": 2.1666666666666665,
+        "ci95_months": [
+          1.0,
+          10.5
+        ],
+        "ci95_quarters": [
+          0.3333333333333333,
+          3.5
+        ],
+        "median_months": 4.0,
+        "median_quarters": 1.3333333333333333,
+        "n_completed_spells": 12,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -3.5,
+        "tolerance_months": 3.0
+      }
+    },
+    "resampling_unit": "completed spells (i.i.d.), NOT months",
+    "resampling_unit_note": "a spell's months are one observation of one dwell, not many independent observations of it; resampling months would understate the interval. The completed spells are the units the median is taken over, so they are what is resampled -- with replacement, one draw of the same size as the observed list, 2.5/97.5 percentiles over the draws' medians",
+    "tolerance_note": "tolerance_months = 3.0 is the exam's +-1 quarter dwell tolerance, unchanged by this measurement (its justification is the game's smallest play unit, not sampling noise). tolerance_at_least_as_wide records, per season, whether the tolerance is at least as wide as the median's own 95% sampling wobble"
+  },
+  "h_generated_side_power": {
+    "bars_judged": {
+      "A1_containment_pp": [
+        -5.053054679081145,
+        32.31605649965673
+      ],
+      "A2_correlation_margin": 0.13609378139729844,
+      "A2_share_high_floor": 0.8,
+      "A2_share_low_ceiling": 0.65,
+      "D_median_bands_months": {
+        "expansion": [
+          3.0,
+          9.0
+        ],
+        "recession": [
+          0.0,
+          6.0
+        ],
+        "recovery": [
+          6.0,
+          12.0
+        ],
+        "stagflation": [
+          1.0,
+          7.0
+        ]
+      },
+      "D_tolerance_months": 3.0,
+      "O1_clockwise_min": 0.5185185185185185,
+      "T1_lift_band": [
+        1.7752827491108736,
+        3.3473622102535145
+      ],
+      "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's completed-spell median +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = e_ordering's 95% interval's LOWER edge; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference"
+    },
+    "bars_unreachable_on_grid": [
+      "D3"
+    ],
+    "decade_months": 120,
+    "distinct_decade_starts": 694,
+    "eligibility_note": "inflation-conditioned statistics start at decade month 13 (108 usable months, the decade's own trailing-inflation warm-up); T1 also needs a full 12-month lookahead (96 eligible months); A2(ii)'s rolling windows are computed inside the decade and start at end month 37 (84 windows); D1-D4 drop spells touching either edge of the usable window, the same completed-spell rule the anchors use",
+    "headline_bars": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "A1",
+      "A2"
+    ],
+    "limits_note": "three limits, all of which push the same way -- toward treating the recommended n as an upper bound. (1) The decades overlap (694 distinct starts), so this is a bootstrap whose large-n limit is the panel's own value rather than an independent truth. (2) It inherits history's full between-decade heterogeneity (the 1970s against the 1990s), plausibly wider than a well-behaved engine's. (3) Drawing decade STARTS uniformly weights panel months unevenly: an interior month enters up to 84 decades while the first and last few years of the panel enter far fewer, so a statistic whose extremes sit at the panel's ends shifts. That is why the decade-measured low-inflation share-of-windows-positive (0.62) sits above the panel-wide figure (0.54): the two most negatively-correlated low-inflation stretches, the 1950s-60s and the 2010s, are exactly the down-weighted ones",
+    "n_ensembles": 2000,
+    "per_bar": {
+      "A1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 40,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8295,
+        "power_by_n_seeds": {
+          "10": 0.726,
+          "100": 0.987,
+          "15": 0.767,
+          "150": 0.9955,
+          "20": 0.8295,
+          "200": 0.9995,
+          "25": 0.8555,
+          "30": 0.897,
+          "300": 1.0,
+          "40": 0.9205,
+          "400": 1.0,
+          "5": 0.628,
+          "50": 0.9355,
+          "500": 1.0,
+          "60": 0.953,
+          "80": 0.985
+        },
+        "true_engine_limit_passes": true
+      },
+      "A1_with_containment": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 40,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8295,
+        "power_by_n_seeds": {
+          "10": 0.726,
+          "100": 0.987,
+          "15": 0.767,
+          "150": 0.9955,
+          "20": 0.8295,
+          "200": 0.9995,
+          "25": 0.8555,
+          "30": 0.897,
+          "300": 1.0,
+          "40": 0.9205,
+          "400": 1.0,
+          "5": 0.628,
+          "50": 0.9355,
+          "500": 1.0,
+          "60": 0.953,
+          "80": 0.985
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 0.945,
+        "min_n_seeds_for_target": 400,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.608,
+        "power_by_n_seeds": {
+          "10": 0.5215,
+          "100": 0.7475,
+          "15": 0.553,
+          "150": 0.7915,
+          "20": 0.608,
+          "200": 0.829,
+          "25": 0.64,
+          "30": 0.6415,
+          "300": 0.882,
+          "40": 0.675,
+          "400": 0.9135,
+          "5": 0.4435,
+          "50": 0.689,
+          "500": 0.945,
+          "60": 0.687,
+          "80": 0.727
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2i_level_positive": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 0.999,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.9775,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2i_margin": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.993,
+        "power_by_n_seeds": {
+          "10": 0.9625,
+          "100": 1.0,
+          "15": 0.991,
+          "150": 1.0,
+          "20": 0.993,
+          "200": 1.0,
+          "25": 0.9975,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.875,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2ii_share_high_floor": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.994,
+        "power_by_n_seeds": {
+          "10": 0.9665,
+          "100": 1.0,
+          "15": 0.9865,
+          "150": 1.0,
+          "20": 0.994,
+          "200": 1.0,
+          "25": 0.997,
+          "30": 0.9995,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.8935,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2ii_share_low_ceiling": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 0.945,
+        "min_n_seeds_for_target": 400,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.6135,
+        "power_by_n_seeds": {
+          "10": 0.5515,
+          "100": 0.7475,
+          "15": 0.566,
+          "150": 0.7915,
+          "20": 0.6135,
+          "200": 0.829,
+          "25": 0.643,
+          "30": 0.642,
+          "300": 0.882,
+          "40": 0.675,
+          "400": 0.9135,
+          "5": 0.539,
+          "50": 0.689,
+          "500": 0.945,
+          "60": 0.687,
+          "80": 0.727
+        },
+        "true_engine_limit_passes": true
+      },
+      "D1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 15,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.967,
+        "power_by_n_seeds": {
+          "10": 0.894,
+          "100": 1.0,
+          "15": 0.9505,
+          "150": 1.0,
+          "20": 0.967,
+          "200": 1.0,
+          "25": 0.983,
+          "30": 0.9915,
+          "300": 1.0,
+          "40": 0.997,
+          "400": 1.0,
+          "5": 0.78,
+          "50": 0.998,
+          "500": 1.0,
+          "60": 0.9995,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "D2": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 50,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8075,
+        "power_by_n_seeds": {
+          "10": 0.7355,
+          "100": 0.9705,
+          "15": 0.791,
+          "150": 0.992,
+          "20": 0.8075,
+          "200": 0.997,
+          "25": 0.8595,
+          "30": 0.851,
+          "300": 0.9995,
+          "40": 0.8695,
+          "400": 1.0,
+          "5": 0.6845,
+          "50": 0.9015,
+          "500": 1.0,
+          "60": 0.9255,
+          "80": 0.9545
+        },
+        "true_engine_limit_passes": true
+      },
+      "D3": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 0.359,
+        "min_n_seeds_for_target": null,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.359,
+        "power_by_n_seeds": {
+          "10": 0.3245,
+          "100": 0.2485,
+          "15": 0.353,
+          "150": 0.2115,
+          "20": 0.359,
+          "200": 0.199,
+          "25": 0.353,
+          "30": 0.356,
+          "300": 0.1385,
+          "40": 0.3305,
+          "400": 0.1125,
+          "5": 0.294,
+          "50": 0.328,
+          "500": 0.082,
+          "60": 0.304,
+          "80": 0.2755
+        },
+        "true_engine_limit_passes": false
+      },
+      "D4": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.9935,
+        "power_by_n_seeds": {
+          "10": 0.946,
+          "100": 1.0,
+          "15": 0.978,
+          "150": 1.0,
+          "20": 0.9935,
+          "200": 1.0,
+          "25": 0.9975,
+          "30": 0.999,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.858,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "O1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 0.9985,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.984,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "T1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.9985,
+        "power_by_n_seeds": {
+          "10": 0.9825,
+          "100": 1.0,
+          "15": 0.996,
+          "150": 1.0,
+          "20": 0.9985,
+          "200": 1.0,
+          "25": 0.999,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.916,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      }
+    },
+    "pilot_n_seeds": 20,
+    "power_seed": 20260820,
+    "recommended_n_seeds": 400,
+    "seed_grid": [
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      40,
+      50,
+      60,
+      80,
+      100,
+      150,
+      200,
+      300,
+      400,
+      500
+    ],
+    "target_pass_probability": 0.9,
+    "true_engine_limit_note": "each statistic as a true engine would produce it in the large-n limit -- every 120-month decade of the panel pooled once. Read each against bars_judged: where the limit sits outside a band, the bar cannot be cleared at ANY ensemble size, because the offset is between a panel-wide anchor and the same statistic measured on decades, not between history and an engine",
+    "true_engine_limit_statistics": {
+      "A1_spread_high_pp": 4.87195849895034,
+      "A1_spread_low_pp": 1.774167357438475,
+      "A2_correlation_difference": 0.2823955862757072,
+      "A2_correlation_high": 0.3012540330470492,
+      "A2_correlation_low": 0.01885844677134195,
+      "A2_share_positive_high": 0.9466666666666667,
+      "A2_share_positive_low": 0.6215859478119606,
+      "D1_median_months_recession": 2.0,
+      "D2_median_months_stagflation": 6.0,
+      "D3_median_months_recovery": 5.0,
+      "D4_median_months_expansion": 6.0,
+      "O1_clockwise_fraction": 0.6143938174207052,
+      "T1_lift": 2.4714235804089193
+    },
+    "true_engine_model": "each generated decade is a uniformly-drawn contiguous 120-month stretch of the panel, so the engine sits at history's point estimates WITH history's own month-to-month dependence; bars are judged on the pooled statistic over n such decades, POWER_N_ENSEMBLES times"
+  },
   "panel": {
     "factor_names": [
       "cape_v",
@@ -1295,8 +2034,8 @@
     "split_note": "campaign train+validation only (ah.splits: train 1871-01..2010-12, validation 2011-01..2020-12). The holdout (2021-01 onward) is not read",
     "vintage_id": "2026-08-10.1"
   },
-  "purpose": "Historical anchors measured BEFORE the decade generator's economic engine is rebuilt (spine v2, stage 1). Every number is reproducible by re-running scripts/spine_v2_anchors.py; no number here is a threshold yet.",
-  "schema": "spine-v2-anchors-1",
+  "purpose": "Historical anchors measured BEFORE the decade generator's economic engine is rebuilt (spine v2, stage 1). Every number is reproducible by re-running scripts/spine_v2_anchors.py. Sections A-D are measurement only; sections E-H close the exam's four OPEN items and DO carry the two thresholds the exam cuts from them (O1's minimum and A2's margin), each stated as the lower edge of the historical interval beside it.",
+  "schema": "spine-v2-anchors-2",
   "source_module_sha256": {
     "src/ah/data/derive.py": "b763fb986f2611fb7c620872a29e1ac2485f158a5464023d1ec25a20cea3b182",
     "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
