@@ -588,3 +588,109 @@ describe("CioDashboard — allocation table Band column (app-open-02 task 2)", (
     expect(cells[5]?.textContent).toBe("—");
   });
 });
+
+// app-open-02 task 3: band zones on the front-page allocation panel
+// (AllocationDonut, "Asset allocation" beside "Plan growth"). The
+// coordinator's ruling (2026-08-16, superseding the by-goal reading in
+// app-open-01): rows become MEMBER-CLASS rows grouped under goal headers —
+// the same heading-then-members idiom the lower table (PerfTable) already
+// uses — each class row drawing its OWN real bandLoPct-bandHiPct zone, not
+// an invented sum-of-members band on the goal header (that would show the
+// player numbers they never set — the exact BAND_PCT sin task 2 removed).
+describe("CioDashboard — allocation panel band zones (app-open-02 task 3)", () => {
+  // BandBar's muted band-zone underlay is drawn as this exact literal
+  // (CioDashboard.tsx's BandBar, already shipped by task 2's PerfTable
+  // wiring) — happy-dom renders inline rgba with a space after each comma,
+  // confirmed against the already-shipped PerfTable row before writing this
+  // selector. It is the ONLY element in a class row painted with this
+  // colour (the watch zones use amber, the fill uses the alert/level
+  // colour), so filtering on it picks the band zone uniquely.
+  const BAND_ZONE_BG = "rgba(88, 180, 158, 0.13)";
+
+  function allocationPanel(): HTMLElement {
+    const panel = [...host!.querySelectorAll("section")].find(
+      (s) => s.querySelector("h2")?.textContent === "Asset allocation",
+    );
+    if (!panel) throw new Error('no "Asset allocation" panel found');
+    return panel as HTMLElement;
+  }
+
+  function bandZonesIn(container: Element): HTMLElement[] {
+    return [...container.querySelectorAll("div")].filter(
+      (d) => (d as HTMLElement).style.backgroundColor === BAND_ZONE_BG,
+    ) as HTMLElement[];
+  }
+
+  it("a member class's band zone sits at lo/hi on the row's own max scale", () => {
+    // A single-goal, single-class view keeps the row's max (the same
+    // Math.max(cur, target, bandHi) * 1.05 headroom pattern as PerfTable's
+    // `max`, computed independently here, not imported from the component)
+    // fully predictable: max = 45.1 * 1.05 = 47.355.
+    const v: CioView = JSON.parse(JSON.stringify(view));
+    v.allocation.goals = [{ id: "g1", label: "Solo goal" }];
+    v.allocation.classes = [
+      {
+        id: "c1",
+        label: "Solo class",
+        goalId: "g1",
+        targetPct: 41,
+        bandLoPct: 36.9,
+        bandHiPct: 45.1,
+        currentPct: 40,
+        value: 1,
+        returns: [],
+      },
+    ];
+    render(<CioDashboard view={v} onPlaneChange={() => {}} />);
+    const zones = bandZonesIn(allocationPanel());
+    expect(zones.length).toBe(1);
+    const max = Math.max(40, 41, 45.1) * 1.05;
+    expect(parseFloat(zones[0].style.left)).toBeCloseTo((36.9 / max) * 100, 1);
+    expect(parseFloat(zones[0].style.width)).toBeCloseTo(((45.1 - 36.9) / max) * 100, 1);
+  });
+
+  it("cash (a null band) renders no zone", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    const cashRow = [...panel.querySelectorAll("div")].find(
+      (d) => (d.textContent ?? "").trim().startsWith("Cash") && d.querySelector("span"),
+    );
+    expect(cashRow).toBeTruthy();
+    expect(bandZonesIn(cashRow as Element).length).toBe(0);
+  });
+
+  it("renders one band zone per class that carries a band — 8 of the fixture's 9 classes (cash excluded)", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    expect(bandZonesIn(allocationPanel()).length).toBe(8);
+  });
+
+  it("goal headers show no band zone of their own — only member-class rows draw one", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    // the fixture's own goal labels (cioView.ts's Goal.label, as authored
+    // by cio-sample.reported.json) — CSS text-transform: uppercase is a
+    // paint-time effect and never changes textContent, so this asserts the
+    // actual DOM text, not the rendered casing.
+    for (const label of ["Growth", "Real return", "Income", "Diversifiers"]) {
+      const header = [...panel.querySelectorAll("span")].find((s) => s.textContent === label);
+      expect(header).toBeTruthy();
+      // the header's own line (its parent) carries no band zone — the zones
+      // that exist for this goal live on its member-class rows, siblings of
+      // this header line, not on the heading line itself.
+      expect(bandZonesIn(header!.parentElement as Element).length).toBe(0);
+    }
+  });
+
+  it('legend renders "Target", not the old "TGT" abbreviation, and gains a band swatch', () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const panel = allocationPanel();
+    expect(panel.textContent).toContain("Target");
+    expect([...panel.querySelectorAll("span")].some((s) => s.textContent?.trim() === "TGT")).toBe(false);
+    // the swatch is a small block painted the same muted band colour as the
+    // zones themselves, so the legend and the rows read as one language.
+    const swatches = [...panel.querySelectorAll("span")].filter(
+      (s) => (s as HTMLElement).style.backgroundColor === BAND_ZONE_BG,
+    );
+    expect(swatches.length).toBeGreaterThan(0);
+  });
+});

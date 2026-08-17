@@ -459,6 +459,14 @@ function AllocationDonut() {
   const wf = policy && isNum(policy.watchFraction) ? policy.watchFraction : null;
   const W = 560, H = 420, cx = 268, cy = 208;
   const R_IN0 = 78, R_IN1 = 112, R_OUT0 = 116, R_OUT1 = 148, LABEL_X = 196, GAP = 27;
+  // app-open-02 task 3: the same headroom pattern PerfTable's `max` already
+  // uses (largest of current/target/bandHi across all classes, +5%) so a
+  // class row's band zone can't run past its own bar — computed locally
+  // rather than shared with PerfTable, which is out of this task's scope.
+  const classMax = useMemo(
+    () => Math.max(...allocation.classes.map((c) => Math.max(c.currentPct || 0, c.targetPct, c.bandHiPct ?? 0))) * 1.05,
+    [allocation.classes],
+  );
 
   const rings = useMemo<{ inner: InnerArc[]; outer: OuterArc[] }>(() => {
     let a = 0;
@@ -556,53 +564,67 @@ function AllocationDonut() {
       </div>
 
       <div style={{ flex: "1 1 250px", minWidth: 240 }}>
-        <div style={{ display: "flex", font: `10px ${F.body}`, color: C.faint, letterSpacing: "0.1em", paddingBottom: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", font: `10px ${F.body}`, color: C.faint, letterSpacing: "0.1em", paddingBottom: 6 }}>
           <span style={{ flex: 1 }}>GOAL</span>
+          {/* app-open-02 task 3: band swatch, same muted token the zones
+              below are painted with, so the legend and the rows read as one
+              language. "Target" replaces "TGT" on this same line — the rest
+              of the panel's abbreviations are a later task. */}
+          <span style={{ display: "inline-flex", alignItems: "center", gap: 4, marginRight: 10 }}>
+            <span style={{ width: 8, height: 8, background: "rgba(88,180,158,0.13)", border: `1px solid ${C.rule}`, display: "inline-block" }} />
+            Band
+          </span>
           <span style={{ width: 46, textAlign: "right" }}>NOW</span>
-          <span style={{ width: 40, textAlign: "right" }}>TGT</span>
+          <span style={{ width: 40, textAlign: "right" }}>Target</span>
           <span style={{ width: 44, textAlign: "right" }}>DEV</span>
         </div>
         {rings.inner.map((s) => {
           const tgt = allocation.classes.filter((c) => c.goalId === s.id).reduce((a, c) => a + c.targetPct, 0);
-          const tol = s.tolerancePct;
-          const dev = s.tot - tgt;
-          // Goal.tolerancePct is still a symmetric half-width (unchanged by
-          // app-open-02 task 2, which only made AssetClass bands
-          // asymmetric) — expressed as [tgt - tol, tgt + tol] purely to
-          // reuse the one alertLevel rule rather than keep two.
-          const level = alertLevel(s.tot, tgt, isNum(tol) ? tgt - tol : null, isNum(tol) ? tgt + tol : null, policy, s.alert);
-          const flagLabel = level === "ok" ? "" :
-            `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} the goal target of ${tgt.toFixed(1)}%`;
-          const zoneW = wf === null || !isNum(tol) ? 0 : (1 - wf) * tol;
+          const members = rings.outer.filter((o) => o.goalId === s.id);
           return (
-            <div key={s.id} style={{ padding: "8px 0", borderTop: `1px solid ${C.ruleSoft}` }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                <span style={{ width: 9, height: 9, background: s.c, display: "inline-block" }} />
-                <span style={{ flex: 1, font: `13px ${F.body}`, color: C.ice }}>{s.label}</span>
-                <span style={{ width: 46, textAlign: "right", font: `14px ${F.mono}`, color: C.ice }}>{s.tot.toFixed(1)}</span>
-                <span style={{ width: 40, textAlign: "right", font: `13px ${F.mono}`, color: C.faint }}>{tgt.toFixed(1)}</span>
-                <span style={{ width: 44, textAlign: "right", font: `13px ${F.mono}`, color: ALERT_COLOUR[level] || C.faint }}>{sgn(dev)}</span>
-                <AlertFlag level={level} dir={dev} label={flagLabel} />
+            <div key={s.id}>
+              {/* the goal heading line — summed current/target only, same
+                  idiom PerfTable already uses for its goal groupings
+                  (heading line, then member-class rows beneath). No band
+                  zone here: bandLoPct/bandHiPct are entered PER CLASS, and
+                  summing members' own bands into an aggregate would show
+                  the player a range they never actually set — the same
+                  BAND_PCT fabrication app-open-02 task 2 removed one level
+                  down, just re-invented at the goal level. */}
+              <div style={{ padding: "10px 0 4px", borderTop: `1px solid ${C.ruleSoft}` }}>
+                <span style={{ font: `600 11px ${F.body}`, letterSpacing: "0.1em", textTransform: "uppercase", color: s.c }}>{s.label}</span>
+                <span style={{ font: `12px ${F.mono}`, color: C.faint, marginLeft: 8 }}>{s.tot.toFixed(1)} / {tgt.toFixed(1)}</span>
               </div>
-              <div style={{ position: "relative", height: 6, background: C.well, marginTop: 6, marginLeft: 17, marginRight: 15 }}>
-                {isNum(tol) && (
-                  <div style={{ position: "absolute", top: 0, bottom: 0, left: `${tgt - tol}%`, width: `${2 * tol}%`, background: "rgba(88,180,158,0.16)" }} />
-                )}
-                {zoneW > 0 && isNum(tol) && wf !== null && (
-                  <Fragment>
-                    <div style={{ position: "absolute", top: 0, bottom: 0, left: `${tgt - tol}%`, width: `${zoneW}%`, background: "rgba(240,196,106,0.2)" }} />
-                    <div style={{ position: "absolute", top: 0, bottom: 0, left: `${tgt + wf * tol}%`, width: `${zoneW}%`, background: "rgba(240,196,106,0.2)" }} />
-                  </Fragment>
-                )}
-                <div style={{ position: "absolute", top: 0, bottom: 0, left: 0, width: `${s.tot}%`, background: ALERT_COLOUR[level] || s.c, opacity: level === "ok" ? 0.6 : 0.75 }} />
-                <div style={{ position: "absolute", top: -2, bottom: -2, left: `${tgt}%`, width: 1, background: C.ice, opacity: 0.85 }} />
-              </div>
+              {members.map((c) => {
+                const dev = (c.currentPct || 0) - c.targetPct;
+                const level = alertLevel(c.currentPct, c.targetPct, c.bandLoPct, c.bandHiPct, policy, c.alert);
+                const bandLabel = isNum(c.bandLoPct) && isNum(c.bandHiPct) ? `${num(c.bandLoPct, 1)}–${num(c.bandHiPct, 1)}` : null;
+                const flagLabel = level === "ok" ? "" :
+                  `${Math.abs(dev).toFixed(1)} points ${dev >= 0 ? "above" : "below"} target` +
+                  (bandLabel ? ` — ${level === "breach" ? "outside" : "approaching"} the ${bandLabel} band` : "");
+                return (
+                  <div key={c.id} style={{ padding: "6px 0", borderTop: `1px solid ${C.ruleSoft}` }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <span style={{ width: 9, height: 9, background: c.c, display: "inline-block" }} />
+                      <span style={{ flex: 1, font: `12px ${F.body}`, color: level === "breach" ? C.ice : C.mist }}>{c.label}</span>
+                      <span style={{ width: 46, textAlign: "right", font: `13px ${F.mono}`, color: C.ice }}>{num(c.currentPct, 1)}</span>
+                      <span style={{ width: 40, textAlign: "right", font: `12px ${F.mono}`, color: C.faint }}>{num(c.targetPct, 1)}</span>
+                      <span style={{ width: 44, textAlign: "right", font: `12px ${F.mono}`, color: ALERT_COLOUR[level] || C.faint }}>{sgn(dev)}</span>
+                      <AlertFlag level={level} dir={dev} label={flagLabel} />
+                    </div>
+                    <div style={{ marginTop: 5, marginLeft: 17, marginRight: 15 }}>
+                      <BandBar cur={c.currentPct} target={c.targetPct} lo={c.bandLoPct} hi={c.bandHiPct} max={classMax} watchFraction={wf} level={level} />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           );
         })}
         <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 10, lineHeight: 1.5 }}>
-          Inner ring is the goal split, outer ring the asset classes inside each. Tick on the bar is the policy target,
-          shaded region the tolerance. A rim on the outer ring marks a class outside its band or approaching it.
+          Inner ring is the goal split, outer ring the asset classes inside each. Each class row's own shaded
+          region is the entered book's band around its target — cash carries none. A rim on the outer ring marks
+          a class outside its band or approaching it.
         </div>
       </div>
     </div>
