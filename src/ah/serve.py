@@ -43,6 +43,8 @@ from ah.core.institution import decision_months
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import (
+    _ANNUAL_COMMITMENT_RATE,
+    COMMIT_CAP_MULTIPLE,
     PLAY_ALPHA_VERSION,
     PRIVATE_ASSETS,
     START_CASH,
@@ -451,7 +453,18 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     def default_book(run_id: str, conn: sqlite3.Connection = Depends(db)):
         """su-app-06: the pre-fill the entry screen opens with — today's
         derived book and the flat fixed-rule plan, for THIS world's sleeve
-        set. Built by the engine's own code, never a second implementation."""
+        set. Built by the engine's own code, never a second implementation.
+
+        Branch-review I2 (app-open-02): also carries ``plan_cap`` — the exact
+        constants ``ah.port.book.validate_plan`` computes its per-window cap
+        from (``cap = multiple * target * annual_rate``). This is additive:
+        the entry screen mirrors ``validate_plan``'s arithmetic client-side
+        (a pre-flight fault when a lowered target makes the SERVED plan
+        exceed the cap it would be validated against at ``POST /sessions``),
+        and must use these SAME values rather than re-derive its own copy of
+        them — a server test pins that they equal ``ah.play``'s constants,
+        so there is one source of truth, not two that can drift.
+        """
         book, plan, liquid = _world_book(conn, run_id)
         return {
             "book": book.model_dump(),
@@ -459,6 +472,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "liquid_sleeves": list(liquid),
             "book_digest": book.digest(),
             "plan_digest": plan.digest(),
+            "plan_cap": {"multiple": COMMIT_CAP_MULTIPLE, "annual_rate": _ANNUAL_COMMITMENT_RATE},
         }
 
     @app.get("/book/ladder")

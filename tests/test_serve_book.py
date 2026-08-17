@@ -165,6 +165,21 @@ class TestDefaultBookEndpoint:
         client, _db, _rid = service
         assert client.get("/book/default?run_id=nope").status_code == 404
 
+    def test_it_serves_the_plan_caps_own_constants(self, service):
+        """Branch-review I2: the entry screen mirrors `validate_plan`'s
+        per-window cap arithmetic client-side (a pre-flight fault before the
+        server would 422 at POST /sessions), and it must use these SAME
+        served constants rather than a re-derived literal copy — this pins
+        that they equal `ah.play`'s own, so there is one source of truth."""
+        from ah.play import _ANNUAL_COMMITMENT_RATE, COMMIT_CAP_MULTIPLE
+
+        client, _db, rid = service
+        body = client.get(f"/book/default?run_id={rid}").json()
+        assert body["plan_cap"] == {
+            "multiple": COMMIT_CAP_MULTIPLE,
+            "annual_rate": _ANNUAL_COMMITMENT_RATE,
+        }
+
     def test_the_generated_worlds_sleeve_set_has_no_reits(self, gen_service):
         """A toy-v0 world's book carries a `reits` sleeve; a generated
         world's does not (GEN_START_TARGETS folds reits into equity). This

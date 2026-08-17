@@ -91,6 +91,7 @@ import {
   type Book,
   type DefaultBookResponse,
   type Plan,
+  type PlanCap,
   type Rung,
 } from "./lib/session";
 import { sleeveLabel } from "./lib/sleeveLabels";
@@ -232,6 +233,39 @@ function rangeFaults(text: Record<string, RangeText>): string[] {
   if (unparsed) faults.push("a band is not a number");
   if (inverted) faults.push("a band needs lo below hi");
   if (outside) faults.push("a band must lie between 0 and 100");
+  return faults;
+}
+
+/**
+ * Branch-review I2: a client-side PRE-FLIGHT mirror of
+ * `ah.port.book.validate_plan`'s per-window cap check, run against the
+ * CURRENT typed targets and the CURRENT plan grid — not the served
+ * defaults. `validate_plan` refuses a plan window whose points exceed
+ * `COMMIT_CAP_MULTIPLE * target * annual_rate`; the default plan is built
+ * from the WORLD's targets, so a player who lowers a private target enough
+ * (without ever touching the Cashflow projections tab) can otherwise reach
+ * `POST /sessions` and be refused there, naming a plan year they never
+ * touched. This surfaces the same refusal here, in plain language, before
+ * Play — the exact constants and the exact comparison strictness
+ * (`points > cap`, not `>=`) mirror `validate_plan`, and `cap` is the
+ * server's OWN served `plan_cap` (never a re-derived literal copy, which
+ * could silently drift from `ah.play`'s constants).
+ */
+function planCapFaults(plan: Plan, targets: Record<string, number>, cap: PlanCap): string[] {
+  const faults: string[] = [];
+  for (const [sleeve, years] of Object.entries(plan.points)) {
+    const target = targets[sleeve];
+    if (!Number.isFinite(target)) continue; // a blank/NaN target is already reported elsewhere
+    const capValue = cap.multiple * target * cap.annual_rate;
+    years.forEach((points, k) => {
+      if (!Number.isFinite(points) || points <= capValue) return;
+      faults.push(
+        `${sleeve} plan year ${k} (${points.toFixed(1)}) exceeds the commitment cap for a ` +
+          `${target.toFixed(1)} target - lower that plan year on the Cashflow projections ` +
+          "tab, or raise the target",
+      );
+    });
+  }
   return faults;
 }
 
@@ -408,6 +442,9 @@ export function BookEntry({
         if (Math.abs(policyBase - 100) > 0.01) shapeFaults.push("the targets do not total 100");
       }
       shapeFaults.push(...rangeFaults(rangeText));
+      // I2: only meaningful once the server has told us its cap constants
+      // (`resp.plan_cap`, always present once the default has loaded).
+      if (resp?.plan_cap) shapeFaults.push(...planCapFaults(plan, targets, resp.plan_cap));
     }
   }
   const ready = !!book && !!plan && shapeFaults.length === 0;

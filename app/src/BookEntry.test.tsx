@@ -98,6 +98,10 @@ const DEFAULT_RESPONSE: DefaultBookResponse = {
   liquid_sleeves: ["equity", "bonds", "hy", "commodities"],
   book_digest: "a".repeat(64),
   plan_digest: "b".repeat(64),
+  // branch-review I2: ah.play's own COMMIT_CAP_MULTIPLE / _ANNUAL_COMMITMENT_RATE
+  // (2.0, 0.18) — mirrored here as the literal values, not re-imported,
+  // because this file stands in for the served response.
+  plan_cap: { multiple: 2.0, annual_rate: 0.18 },
 };
 
 /**
@@ -534,6 +538,47 @@ describe("BookEntry — policy targets and reporting bands", () => {
     >;
     expect(onReady.mock.calls[0][0].ranges).toEqual(rest);
     expect(onReady.mock.calls[0][2]).toBe(false);
+  });
+
+  describe("commitment plan pre-flight cap check (branch-review I2)", () => {
+    // DEFAULT_RESPONSE: pe target 20, plan.points.pe = [3.6], plan_cap
+    // {multiple: 2.0, annual_rate: 0.18} -> cap = 2.0 * target * 0.18.
+    // At target 20 the cap is 7.2 (3.6 comfortably under it); dropping pe to
+    // 5 drops the cap to 1.8, which 3.6 now exceeds. equity absorbs the
+    // 15-point move so the targets still total 100 -- isolating the plan-cap
+    // fault from the unrelated "targets do not total 100" one.
+    function lowerPeBelowItsCap() {
+      setValue(byLabel<HTMLInputElement>("equity target"), "56");
+      setValue(byLabel<HTMLInputElement>("pe target"), "5");
+    }
+
+    it("lowering a private target below the plan's own cap blocks Play and names the sleeve and window", async () => {
+      stubFetch();
+      await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+      expect(findButton(/play/i).disabled).toBe(false);
+      lowerPeBelowItsCap();
+      expect(findButton(/play/i).disabled).toBe(true);
+      const faults = byTestId("shape-faults").textContent ?? "";
+      expect(faults).toMatch(/pe plan year 0/);
+      expect(faults).toMatch(/exceeds the commitment cap for a 5\.0 target/);
+    });
+
+    it("restoring the target above the cap threshold clears the fault and re-enables Play", async () => {
+      stubFetch();
+      await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+      lowerPeBelowItsCap();
+      expect(findButton(/play/i).disabled).toBe(true);
+      setValue(byLabel<HTMLInputElement>("equity target"), "41");
+      setValue(byLabel<HTMLInputElement>("pe target"), "20");
+      expect(findButton(/play/i).disabled).toBe(false);
+      expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
+    });
+
+    it("does not fault a plan that is comfortably inside the cap at the served default", async () => {
+      stubFetch();
+      await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+      expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
+    });
   });
 
   it("shows the policy weight the target implies, not the number typed", async () => {

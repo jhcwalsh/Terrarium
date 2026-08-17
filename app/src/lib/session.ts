@@ -290,12 +290,23 @@ export interface Plan {
   points: Record<string, number[]>;
 }
 
+/** Branch-review I2: the exact constants `ah.port.book.validate_plan`
+ * computes its per-window commitment cap from
+ * (`cap = multiple * target * annual_rate`) — served so the entry screen's
+ * client-side pre-flight mirror uses the SAME numbers rather than a
+ * re-derived literal copy that could drift from the server's. */
+export interface PlanCap {
+  multiple: number;
+  annual_rate: number;
+}
+
 export interface DefaultBookResponse {
   book: Book;
   plan: Plan;
   liquid_sleeves: string[];
   book_digest: string;
   plan_digest: string;
+  plan_cap: PlanCap;
 }
 
 /** su-app-06: the entry screen's pre-fill — today's derived book and the

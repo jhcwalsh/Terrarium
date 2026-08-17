@@ -55,6 +55,10 @@ const DEFAULT_RESPONSE: DefaultBookResponse = {
   liquid_sleeves: ["equity"],
   book_digest: "a".repeat(64),
   plan_digest: "b".repeat(64),
+  // branch-review I2: ah.play's own COMMIT_CAP_MULTIPLE / _ANNUAL_COMMITMENT_RATE
+  // (2.0, 0.18) — no private sleeves in this fixture, so the cap check has
+  // nothing to fault regardless; carried only to satisfy the response shape.
+  plan_cap: { multiple: 2.0, annual_rate: 0.18 },
 };
 
 function jsonResponse(body: unknown, ok = true, status = 200) {
