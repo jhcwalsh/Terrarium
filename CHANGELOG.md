@@ -187,6 +187,88 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **app-open-02 — bands on every surface, honest labels, the ladder tie-out,
+  and the tabbed opening book (drive session 2, 2026-08-16).** Eleven tasks
+  off the owner's dictated list; one reviewed commit per task, base `d50bd9a`.
+
+  - **"Bands not showing" was a stale process, not a defect.** The 8787
+    session service (PID 74844) had started before the app-open-01 merge
+    that landed default bands; it was still serving a book with
+    `ranges=None`. Killed and restarted from the merged tree — no code
+    changed. Filed under CLAUDE.md's own serve.py gotcha, verbatim.
+  - **The CIO reads the book's own bands.** `build_cio_view` now threads
+    `opening_book.ranges` through `_allocation()`; each class emits
+    `bandLoPct`/`bandHiPct` — the book's actual `[lo, hi]`, in percent, when
+    the book names that sleeve — instead of the hardcoded, module-level
+    `BAND_PCT` symmetric half-width. `BAND_PCT` survives only as the
+    no-book/no-range fallback. Cash carries no band. The client
+    (`cioView.ts`, `CioDashboard.tsx`) follows the same contract change, and
+    `alertLevel` was rewritten as a faithful port of `serve.py`'s clamp rule
+    — margin to the nearer edge of `[lo, hi]`, not a fixed half-width
+    (`d9eaedb`).
+  - **Per-class band zones on the CIO allocation panel.** The panel's brief
+    assumed per-class bar rows already existed; they didn't — the panel
+    iterated four goal-level rows with a symmetric tolerance, and
+    `bandLoPct`/`bandHiPct` live at class granularity. Ruling: the row list
+    became goal headers (summed current/target, no bar) with member-class
+    rows underneath, each drawing its own real band zone — the same
+    heading-then-members shape the table below it already uses. Four rows
+    became four headers plus nine class rows (cash carries no zone). This is
+    a real granularity change, not just "add a zone to what's there" —
+    flagged to the owner as a cheap veto (Task 3).
+  - **A band strip on open decision windows.** Decision windows now render
+    the last-closed-quarter `band_report` verbatim, in compact rows, above
+    the action grid — server-judged alert words, no client-side re-derivation.
+    Closed windows and reports with no sleeves render nothing extra (Task 4).
+  - **Labels spelled out.** "TGT"/"Wt"/"Dev" become "Target"/"Weight"/
+    "Deviation" across the CIO tables and panel legends (Tasks 5, plus a
+    follow-up fix pass for the allocation-panel legend's "NOW"/"DEV").
+  - **The private-ladder NAV tie-out: held, no defect.** A verification-only
+    task pinned that a private sleeve's book-table "value" cell, the CIO's
+    month-0 value for that sleeve, and the sum of the ladder's own rung NAVs
+    all agree — on both the client and the server, bite-proofed by
+    perturbing each side and confirming the new tests catch it. No
+    production code changed; a reviewer-requested follow-up tightened the
+    server assertions from `pytest.approx` to exact equality, which also
+    held (Task 6).
+  - **Rebuild a private ladder for a new value.** A new endpoint,
+    `GET /book/ladder?run_id=..&sleeve=..&value=..`, reseeds a sleeve's
+    vintage ladder to sum to a player-typed total, through the SAME builder
+    `default_opening_book` uses — never a second implementation. The book
+    screen gained a per-ladder numeric input and "Rebuild ladder" button;
+    a rebuild replaces that sleeve's rungs wholesale and counts as an edit
+    like any hand-typed rung, so the existing practice-only demotion applies
+    unchanged (Task 7).
+  - **The opening book screen stops scrolling: three tabs, and a Play
+    button up top.** "Targets and bands", "Historical vintages", and
+    "Cashflow projections" — the owner's own names, all three panels stay
+    mounted so typed state and faults survive a tab round-trip. The
+    screen's one commit control moved to a top action bar labeled "Play",
+    with the old bottom button removed; player-facing "sleeve" became
+    "Asset class" (aria-labels and code identifiers untouched) (Task 8).
+  - **Ranked play parked.** Owner ruling (D-SP-6 session, 2026-08-16):
+    "we're not remotely ready for that" — the play surface is practice-only
+    until further notice. The flow bypasses `RankedSetup` behind one
+    commented constant (`RANKED_PARKED`); the component, its tests, the
+    server's ranked contract, and the leaderboard store are all left intact
+    — fenced, not deleted, so un-parking later is deleting one bypass. The
+    book screen's ranked-note copy was reworded to a neutral practice
+    statement that still distinguishes touched/untouched books by the same
+    underlying flag (Task 9).
+  - **Per-vintage stacked paid-in/unfunded bars, with a NAV line.** A new
+    `VintageChart` component (plain SVG, no chart library, one y-axis) sits
+    above each sleeve's table on the Historical vintages tab: a stacked bar
+    per vintage (paid-in below, unfunded above) and a NAV line across
+    vintages, redrawn live as the player edits a rung (Task 10).
+  - **The default commitment plan escalates at 6%/yr.** Owner ruling
+    (2026-08-16): "the commitment plan should grow in line with the
+    expected growth of the plan." The served default plan, flat by design
+    until now, escalates window `k` as `base * 1.06**k`
+    (`EXPECTED_PLAN_GROWTH` in `src/ah/play.py`); the flat-default tests
+    were inverted, with history kept in their docstrings, and the
+    round-trip invariant (posting the served default back digests as the
+    untouched default) still holds against the growing plan (Task 11).
+
 - **app-open-01 — the CIO front door, book-entry bands, the declared-stress
   picker, and the $10bn display denomination, plus the whole-branch review
   round's fix pass.** Five controller commits landed the feature; a sixth
