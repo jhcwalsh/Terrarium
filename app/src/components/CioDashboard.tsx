@@ -235,10 +235,69 @@ function Empty({ what }: { what: string }) {
  *  PLAN — growth
  * ---------------------------------------------------------------- */
 
+export type PlanWindow = "3y" | "full";
+
+/** How many trailing months of `plan.history.values` a window mode shows —
+ * capped at what actually exists, never invented (app-open-01 item 3:
+ * "read the series length it plots"). */
+export function planWindowMonths(totalMonths: number, mode: PlanWindow): number {
+  return mode === "full" ? totalMonths : Math.min(36, totalMonths);
+}
+
+/** The trailing slice of plan.history a window mode actually plots — the
+ * one array both the chart and its header label read, so the label can
+ * never claim a window the chart isn't showing. */
+export function planWindowSlice(
+  values: number[],
+  worldStartIndex: number,
+  mode: PlanWindow,
+): { values: number[]; worldStartIndex: number } {
+  const shown = planWindowMonths(values.length, mode);
+  const from = values.length - shown;
+  return { values: values.slice(from), worldStartIndex: Math.max(0, worldStartIndex - from) };
+}
+
+/**
+ * The chart header's timeframe label (app-open-01 item 3). Driven entirely
+ * by the ACTUAL plotted window (`shownMonths`, from `planWindowSlice`) and
+ * how much of it is still the inherited pre-history (`inheritedMonths`) —
+ * never a hardcoded "past 3 years" divorced from what the SVG below it
+ * draws.
+ *
+ * ER-13's honesty marker travels with the label rather than inventing new
+ * wording: the chart already carries "INHERITED DECADE (SIMULATED)"
+ * (plan.preRunLabel, cio-04) inside the hatched band itself, directly below
+ * this label — the qualifier here names the SAME fact in three words so a
+ * reader does not have to reach the chart body to learn it.
+ */
+export function planWindowLabel(
+  shownMonths: number,
+  inheritedMonths: number,
+  mode: PlanWindow,
+): string {
+  const years = shownMonths / 12;
+  const yearsText = Number.isInteger(years) ? String(years) : years.toFixed(1);
+  const base =
+    mode === "full"
+      ? `FULL RANGE — ${yearsText}Y`
+      : `PAST ${yearsText} YEAR${years === 1 ? "" : "S"}`;
+  if (inheritedMonths <= 0) return base;
+  if (inheritedMonths >= shownMonths) return `${base} (INHERITED, SIMULATED)`;
+  return `${base} (PARTLY INHERITED)`;
+}
+
 function PlanGrowth() {
   const { plan, meta } = useView();
-  const p = plan.history;
-  if (!p || !p.values || !p.values.length) return <Empty what="plan history" />;
+  const [mode, setMode] = useState<PlanWindow>("3y");
+  const full = plan.history;
+  if (!full || !full.values || !full.values.length) return <Empty what="plan history" />;
+
+  // the toggle only earns its place when "3y" and "full" would actually
+  // differ — a world younger than 3 years already shows everything.
+  const canWindow = full.values.length > planWindowMonths(full.values.length, "3y");
+  const p = planWindowSlice(full.values, full.worldStartIndex ?? 0, mode);
+  const inheritedShown = Math.max(0, Math.min(p.worldStartIndex, p.values.length));
+  const timeframeLabel = planWindowLabel(p.values.length, inheritedShown, mode);
 
   const N = p.values.length - 1;
   const START = Math.max(0, Math.min(p.worldStartIndex == null ? 0 : p.worldStartIndex, N));
@@ -253,7 +312,36 @@ function PlanGrowth() {
   const xTicks: number[] = []; for (let m = N; m >= 0; m -= 12) xTicks.unshift(m);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+    <div>
+      <div
+        className="plan-growth-header"
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 6 }}
+      >
+        <span
+          className="plan-growth-timeframe"
+          style={{ font: `600 11px ${F.body}`, letterSpacing: "0.12em", textTransform: "uppercase", color: C.mist }}
+        >
+          {timeframeLabel}
+        </span>
+        {canWindow && (
+          <div style={{ display: "flex", gap: 4 }}>
+            {(["3y", "full"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  padding: "3px 9px", cursor: "pointer", borderRadius: 2, font: `11px ${F.body}`,
+                  border: `1px solid ${mode === m ? C.ice : C.rule}`,
+                  background: mode === m ? C.ice : "transparent", color: mode === m ? C.ink : C.mist,
+                }}
+              >
+                {m === "3y" ? "3Y" : "Full range"}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
       <defs>
         <linearGradient id="pgPost" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={C.good} stopOpacity="0.28" /><stop offset="100%" stopColor={C.good} stopOpacity="0.02" />
@@ -312,7 +400,8 @@ function PlanGrowth() {
       {meta.plane === "true" && (
         <text x={W - R} y={T + 2} textAnchor="end" fill={C.mist} style={{ font: `10px ${F.body}`, letterSpacing: "0.1em" }}>TRUE PLANE</text>
       )}
-    </svg>
+      </svg>
+    </div>
   );
 }
 
@@ -940,7 +1029,11 @@ function RatioChart({
             segments.push(`${pendingMove ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`);
             pendingMove = false;
           }
-          const markerY = y(s.get(rows[histCount - 1]));
+          // histCount === 0 (month 0, app-open-01/cio-05): there is no
+          // closed row to mark as "as-of" — `rows[histCount - 1]` would be
+          // `rows[-1]`, `undefined` in JS (not "the last element"), and
+          // `s.get(undefined)` would throw reading a field off it.
+          const markerY = histCount > 0 ? y(s.get(rows[histCount - 1])) : null;
           return (
             <g key={s.label}>
               <path d={segments.join(" ")} fill="none" stroke={s.c} strokeWidth={1.9} />
@@ -1039,11 +1132,31 @@ function PrivateTab() {
 
   const options: { id: string; label: string }[] = [{ id: "aggregate", label: pcf.aggregateLabel || "Aggregate" }].concat(pcf.classes);
   const rows = pcf.series[sel] || pcf.series.aggregate;
+  // app-open-01 (cio-05): the month-0 CIO view can legitimately serve zero
+  // rows (histCount 0 AND forecast_quarters 0 both requested) — nothing to
+  // plot at all, honestly, rather than a crash.
+  if (rows.length === 0) return <Empty what="private cashflow history — advance past the opening quarter" />;
   const H = pcf.histCount;
+  // month 0 (H === 0): nothing has CLOSED yet, so `rows[H - 1]` (JS: -1 is
+  // not "the last element", it's `undefined`) would both crash and, if it
+  // didn't, misname the FIRST FORECAST row's mechanically-projected
+  // navClose/unfundedClose as "now". The real "now" at H === 0 is the
+  // entered opening book itself — rows[0].navOpen/.unfundedOpen ARE that
+  // (cioview.py's row() reads them straight off active.opening for i===0),
+  // so `opened` routes the static tiles there and nulls the flow-rate ones
+  // (calls÷unfunded, calls÷NAV): those describe something that happened
+  // OVER a quarter, and no quarter — real or forecast — represents "now".
+  const opened = H === 0;
+  const cur = rows[Math.max(0, H - 1)];
+  const navNow = opened ? cur.navOpen : cur.navClose;
+  const unfundedNow = opened ? cur.unfundedOpen : cur.unfundedClose;
+  const coverageNow = opened ? (navNow > 0 ? unfundedNow / navNow : null) : cur.coverage;
+  const callRateUnfundedNow = opened ? null : cur.callRateUnfunded;
+  const callRateNavNow = opened ? null : cur.callRateNav;
+  const expiredNow = opened ? 0 : cur.expiredUndrawn;
   const sum = (a: PrivateQuarter[], k: "calls" | "distributions" | "net") => a.reduce((s, r) => s + (r[k] || 0), 0);
   const ltm = rows.slice(Math.max(0, H - 4), H);
   const fwd = rows.slice(H, H + 4);
-  const cur = rows[H - 1];
   // ER-6's terminal lapse: undrawn commitment cancelled at the end of a
   // cohort's life. Real but rare — an LTM window mostly reads zero, so this
   // sums the FULL realised history, not just the trailing four quarters.
@@ -1082,12 +1195,12 @@ function PrivateTab() {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <Tile label="NAV" value={money(cur.navClose, u)} sub={`${pct((cur.navClose / plan.totalValue) * 100)} of plan`} />
-        <Tile label="Unfunded" value={money(cur.unfundedClose, u)} />
-        <Tile label="Unfunded ÷ NAV" value={num(cur.coverage)} sub={isNum(anchor) ? `${num(anchor)} anchor` : undefined}
-          tone={isNum(danger) && Number(cur.coverage) > danger ? C.warn : undefined} />
-        <Tile label="Calls ÷ unfunded" value={pct(isNum(cur.callRateUnfunded) ? cur.callRateUnfunded * 100 : null)} sub="quarterly call rate" />
-        <Tile label="Calls ÷ NAV" value={pct(isNum(cur.callRateNav) ? cur.callRateNav * 100 : null)} sub="quarterly" />
+        <Tile label={opened ? "NAV (opening)" : "NAV"} value={money(navNow, u)} sub={`${pct((navNow / plan.totalValue) * 100)} of plan`} />
+        <Tile label={opened ? "Unfunded (opening)" : "Unfunded"} value={money(unfundedNow, u)} />
+        <Tile label="Unfunded ÷ NAV" value={num(coverageNow)} sub={isNum(anchor) ? `${num(anchor)} anchor` : undefined}
+          tone={isNum(danger) && Number(coverageNow) > danger ? C.warn : undefined} />
+        <Tile label="Calls ÷ unfunded" value={pct(isNum(callRateUnfundedNow) ? callRateUnfundedNow * 100 : null)} sub="quarterly call rate" />
+        <Tile label="Calls ÷ NAV" value={pct(isNum(callRateNavNow) ? callRateNavNow * 100 : null)} sub="quarterly" />
         <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
           sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
         {/* F2's closure required both halves: the release in the quarter it
@@ -1095,12 +1208,12 @@ function PrivateTab() {
             second; without the first, a monotonically-rising cumulative never
             says which quarter moved — and post-ER-12 the lapse is ~0.47-0.49
             a year spread across many quarters, not one large event, so that
-            distinction is the whole point (I-2). `cur` is the as-of quarter's
-            row, already bound above. */}
+            distinction is the whole point (I-2). `expiredNow` is the as-of
+            quarter's own figure, real zero when nothing has closed yet. */}
         <Tile label="Lapsed to date" value={lapsedToDate > 0 ? money(lapsedToDate, u) : NA}
           tone={lapsedToDate > 0 ? C.warn : undefined}
-          sub={isNum(cur.expiredUndrawn) && cur.expiredUndrawn > 0
-            ? `${money(cur.expiredUndrawn, u)} this quarter · ER-6`
+          sub={isNum(expiredNow) && expiredNow > 0
+            ? `${money(expiredNow, u)} this quarter · ER-6`
             : "ER-6: undrawn commitment released, never called"} />
       </div>
 
@@ -1135,7 +1248,15 @@ function PrivateTab() {
             <tbody>
               {pcf.classes.concat([{ id: "aggregate", label: pcf.aggregateLabel || "Aggregate" }]).map((cl) => {
                 const rs = pcf.series[cl.id]; if (!rs) return null;
-                const h = rs.slice(Math.max(0, H - 4), H), fw = rs.slice(H, H + 4), c = rs[H - 1];
+                const h = rs.slice(Math.max(0, H - 4), H), fw = rs.slice(H, H + 4);
+                // month 0 (H === 0): same reasoning as the tiles above — the
+                // real "now" is the opening book, not the first forecast
+                // row's projected close, and no quarter's calls have landed.
+                const c = rs[Math.max(0, H - 1)];
+                const rowNav = H > 0 ? c.navClose : c.navOpen;
+                const rowUnfunded = H > 0 ? c.unfundedClose : c.unfundedOpen;
+                const rowCoverage = H > 0 ? c.coverage : (rowNav > 0 ? rowUnfunded / rowNav : null);
+                const rowCallRate = H > 0 ? c.callRateUnfunded : null;
                 const s = (a: PrivateQuarter[], k: "calls" | "distributions" | "net") => a.reduce((x, r) => x + (r[k] || 0), 0);
                 const lapsed = rs.slice(0, H).reduce((x, r) => x + (r.expiredUndrawn || 0), 0);
                 const agg = cl.id === "aggregate";
@@ -1143,13 +1264,13 @@ function PrivateTab() {
                 return (
                   <tr key={cl.id} onClick={() => setSel(cl.id)} style={{ borderTop: `1px solid ${agg ? C.rule : C.ruleSoft}`, cursor: "pointer" }}>
                     <td style={{ ...td, textAlign: "left", font: `${agg ? 600 : 400} 13px ${F.body}`, color: sel === cl.id ? C.amber : C.mist }}>{cl.label}</td>
-                    <td style={td}>{money(c.navClose, u)}</td>
-                    <td style={td}>{money(c.unfundedClose, u)}</td>
-                    <td style={{ ...td, color: isNum(danger) && Number(c.coverage) > danger ? C.warn : C.ice }}>{num(c.coverage)}</td>
+                    <td style={td}>{money(rowNav, u)}</td>
+                    <td style={td}>{money(rowUnfunded, u)}</td>
+                    <td style={{ ...td, color: isNum(danger) && Number(rowCoverage) > danger ? C.warn : C.ice }}>{num(rowCoverage)}</td>
                     <td style={td}>{money(s(h, "calls"), u)}</td>
                     <td style={td}>{money(s(h, "distributions"), u)}</td>
                     <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{money(s(h, "net"), u)}</td>
-                    <td style={{ ...td, color: C.mist }}>{pct(isNum(c.callRateUnfunded) ? c.callRateUnfunded * 100 : null)}</td>
+                    <td style={{ ...td, color: C.mist }}>{pct(isNum(rowCallRate) ? rowCallRate * 100 : null)}</td>
                     <td style={td}>{lapseCell(lapsed, u)}</td>
                     <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? money(s(fw, "net"), u) : NA}</td>
                   </tr>
@@ -1396,21 +1517,29 @@ export default function CioDashboard({
 
           {tab === "plan" && (
             <Fragment>
-              <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${meta.unitLabel}`}
-                right={
-                  <div style={{ display: "flex", gap: 16, font: `12px ${F.body}`, color: C.faint }}>
-                    <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.totalValue, meta.unitSuffix)}</b></span>
-                    {isNum(plan.growthPct) && <span>Growth <b style={{ color: plan.growthPct >= 0 ? C.good : C.warn, font: `13px ${F.mono}` }}>{sgn(plan.growthPct)}%</b></span>}
-                    {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.netOfFlows, meta.unitSuffix)}</b></span>}
-                  </div>
-                }>
-                <PlanGrowth />
-              </Panel>
+              {/* app-open-01 item 2: plan growth and asset allocation sit
+                  side by side, each half width — .cio-plan-row (styles.css)
+                  follows the app's existing minmax-grid idiom (.chart-grid)
+                  and stacks on its own below the same width a single panel
+                  would otherwise get uncomfortably narrow, no separate
+                  media query needed. */}
+              <div className="cio-plan-row">
+                <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${meta.unitLabel}`}
+                  right={
+                    <div style={{ display: "flex", gap: 16, font: `12px ${F.body}`, color: C.faint }}>
+                      <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.totalValue, meta.unitSuffix)}</b></span>
+                      {isNum(plan.growthPct) && <span>Growth <b style={{ color: plan.growthPct >= 0 ? C.good : C.warn, font: `13px ${F.mono}` }}>{sgn(plan.growthPct)}%</b></span>}
+                      {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.netOfFlows, meta.unitSuffix)}</b></span>}
+                    </div>
+                  }>
+                  <PlanGrowth />
+                </Panel>
 
-              <Panel title="Asset allocation" note="by goal · current weights" style={{ marginTop: 10 }}
-                right={<AlertSummary counts={allocationAlerts(view.allocation)} />}>
-                <AllocationDonut />
-              </Panel>
+                <Panel title="Asset allocation" note="by goal · current weights"
+                  right={<AlertSummary counts={allocationAlerts(view.allocation)} />}>
+                  <AllocationDonut />
+                </Panel>
+              </div>
 
               <Panel title="Performance and allocation" note={meta.plane === "true" ? "true plane" : "reported plane"} style={{ marginTop: 10 }}
                 right={<AlertSummary counts={allocationAlerts(view.allocation)} />}>

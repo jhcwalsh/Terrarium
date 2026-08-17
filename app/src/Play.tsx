@@ -252,7 +252,14 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [plane, setPlane] = useState<Plane>("reported");
-  const [viewMode, setViewMode] = useState<"book" | "cio">("book");
+  // app-open-01 item 1 (owner-dictated 2026-08-16): the CIO is the front
+  // door. After the opening book is confirmed the first thing a player
+  // sees is this dashboard, populated with STARTING values — the timeline
+  // (book mode) is reached FROM here via the same modeswitch button that
+  // already went the other way (cio-02). The server backs revealed_months
+  // === 0 now (cio-05 / ah/cioview.py), so this default no longer hits the
+  // "no closed quarter yet" 409 it used to.
+  const [viewMode, setViewMode] = useState<"book" | "cio">("cio");
   const [cioView, setCioView] = useState<CioView | null>(null);
   const [cioError, setCioError] = useState<string | null>(null);
 

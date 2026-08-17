@@ -208,7 +208,13 @@ describe("the vitrine overlay at a decision stop (app-open-01)", () => {
     expect(commit!.textContent).toMatch(/choose an action to commit/i);
   });
 
-  it("stays reachable after switching into CIO view — the decision panel is not book-mode-only", async () => {
+  it("stays reachable in book mode too — the decision panel is not CIO-mode-only", async () => {
+    // Was: "stays reachable after switching into CIO view" — book mode was
+    // the default and this test switched INTO cio to prove the panel
+    // survived. app-open-01 item 1 made cio the default (the front door);
+    // inverted rather than deleted (CLAUDE.md) to prove the same claim in
+    // the other direction — the panel survives switching OUT of the new
+    // default and into book.
     const bundle = await loadBundle();
     const firstWindow = bundle.summary.decision_months[0];
     const session = makeSession(bundle, {
@@ -219,7 +225,7 @@ describe("the vitrine overlay at a decision stop (app-open-01)", () => {
     await render(<Play bundle={bundle} onExit={() => {}} />);
 
     const modeswitch = host!.querySelector<HTMLButtonElement>("button.modeswitch")!;
-    expect(modeswitch.textContent).toMatch(/cio view/i);
+    expect(modeswitch.textContent).toMatch(/book view/i);
     await act(async () => {
       modeswitch.click();
       await new Promise((resolve) => setTimeout(resolve, 0));
@@ -279,5 +285,46 @@ describe("the vitrine overlay at a decision stop (app-open-01)", () => {
     expect(host!.querySelector(".vgrid .right")!.className).toContain("deciding");
     const decidingTracks = gridTemplateRowsTracks(css, ".vgrid .right.deciding");
     expect(decidingTracks.length).toBe(rightChildren.length);
+  });
+});
+
+describe("the CIO is the front door (app-open-01 item 1)", () => {
+  it("renders the CIO, populated, immediately after a session opens — no click required", async () => {
+    // A freshly opened session (revealed_months: 0) is exactly the state
+    // right after the opening book is confirmed and RankedSetup hands off
+    // to Play — the server now serves a real CioView here (cio-05), and
+    // the front door is the dashboard, not the timeline.
+    const bundle = await loadBundle();
+    const session = makeSession(bundle, { revealed_months: 0, decisions: {} });
+    stubFetch(session, cioSample as unknown as CioView);
+    await render(<Play bundle={bundle} onExit={() => {}} />);
+
+    // the modeswitch already reads "Book view" — proof CIO is the CURRENT
+    // mode, not something reached by a click.
+    const modeswitch = host!.querySelector<HTMLButtonElement>("button.modeswitch")!;
+    expect(modeswitch.textContent).toMatch(/book view/i);
+    expect(host!.querySelector("main")!.className).toContain("cockpit");
+
+    // populated with STARTING values from the served payload — not the
+    // loading placeholder, not the "no closed quarter" error the old
+    // default (revealed_months 409ing at month 0) used to force.
+    const pane = host!.querySelector(".cockpit-pane")!;
+    expect(pane).not.toBeNull();
+    expect(pane.textContent).not.toMatch(/loading the cio view/i);
+    expect(pane.textContent).not.toMatch(/no closed quarter/i);
+    expect(pane.textContent).toContain("Stagflation"); // meta.worldTitle
+    expect(pane.textContent).toMatch(/Plan growth/i);
+    expect(pane.textContent).toContain("$62m"); // plan.totalValue, rounded
+
+    // the timeline is reached FROM here, not removed — every existing
+    // route stays reachable (constraint: reordering, not removal).
+    await act(async () => {
+      modeswitch.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    expect(host!.querySelector(".chart-grid")).not.toBeNull();
+    expect(
+      host!.querySelector<HTMLButtonElement>("button.modeswitch")!.textContent,
+    ).toMatch(/cio view/i);
   });
 });

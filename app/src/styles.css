@@ -717,6 +717,19 @@ button.t {
   gap: 8px 14px;
 }
 
+/* CIO dashboard, plan tab (app-open-01 item 2): plan growth and asset
+   allocation side by side, half width each. Same minmax-grid idiom as
+   .chart-grid above rather than a hand-picked breakpoint — auto-fit drops
+   to a single column on its own once two panels can no longer fit at
+   their minimum width, so narrow hosts (a squeezed cockpit pane, a phone)
+   stack without a separate media query. */
+.cio-plan-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
 /* the key is one line under the eyebrow */
 .fan-key {
   font-size: 12.5px;

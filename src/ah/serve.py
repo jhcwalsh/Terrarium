@@ -728,7 +728,12 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             raise HTTPException(status_code=422, detail="forecast_quarters must be 0..8")
         doc = _get(conn, sid)
         revealed = int(doc.get("revealed_months") or 0)
-        if revealed < 3:
+        # app-open-01 (cio-05): revealed == 0 is the CIO's new front door — the
+        # state right after the opening book is confirmed, before the player
+        # has advanced at all. `build_cio_view` now serves that (populated
+        # from the opening book + the inherited prehistory). 1 or 2 months
+        # revealed is still mid-quarter with nothing closed, and stays a 409.
+        if 0 < revealed < 3:
             raise HTTPException(status_code=409, detail="no closed quarter yet")
         rec = get_run_record(conn, doc["run_id"])
         assert rec is not None  # FK'd at creation

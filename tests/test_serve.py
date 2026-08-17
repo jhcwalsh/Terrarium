@@ -934,10 +934,52 @@ def test_cio_view_rejects_bad_params(service):
 
 
 def test_cio_view_needs_a_closed_quarter(service):
+    """Was: a FRESH session (revealed_months == 0) 409ed here — "no closed
+    quarter yet". app-open-01 (cio-05) makes the CIO the front door: the
+    first thing a player sees after the opening book is confirmed is this
+    dashboard, populated with STARTING values, not an error screen. Inverted
+    (CLAUDE.md: invert, don't delete, when the thing a test pinned changes on
+    purpose) — see test_cio_view_at_month_zero below for the new contract.
+    The still-true half of the old claim survives: mid-quarter (1 or 2
+    months revealed — unreachable through the UI's quarterly rhythm, but not
+    through the raw API) still has no closed quarter and still 409s."""
     client, _db, rid = service
     r = client.post("/sessions", json={"run_id": rid})
     sid = r.json()["session_id"]
+    assert client.get(f"/sessions/{sid}/cio").status_code == 200
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": 2}).status_code == 200
     assert client.get(f"/sessions/{sid}/cio").status_code == 409
+
+
+def test_cio_view_at_month_zero(service):
+    """app-open-01 (cio-05): the CIO is now the front door. A session that
+    has never advanced still returns a full, valid CioView — populated from
+    the opening book (the derived default here) and, for this toy-v0 world,
+    the inherited decade (ER-13), not the world's own (nonexistent) tape."""
+    client, _db, rid = service
+    sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+    r = client.get(f"/sessions/{sid}/cio")
+    assert r.status_code == 200, r.text
+    v = r.json()
+    assert v["meta"]["asOfLabel"] == "T0"
+    assert v["privateCashflows"]["histCount"] == 0
+    # "now" IS the opening state: zero elapsed growth, a real (non-null,
+    # non-fabricated) total, and an allocation that closes on 100 — the
+    # dashboard's STARTING values, not an empty payload.
+    assert v["plan"]["growthPct"] == 0.0
+    assert v["plan"]["totalValue"] > 0
+    cur = sum(c["currentPct"] for c in v["allocation"]["classes"])
+    assert abs(cur - 100.0) < 0.1
+    # the inherited decade (this world is toy-v0) still lands: the chart has
+    # something to draw and the honesty label is present, same as any other
+    # reveal (cio-04's contract, unchanged by this WP).
+    assert v["plan"]["history"]["values"]
+    assert v["plan"]["preRunLabel"]
+    # no world quarter has closed, so YTD (a "this calendar year" concept)
+    # cannot mean anything yet — null, not a value borrowed from the
+    # inherited decade the way 1Q/1Y legitimately are.
+    idx = {p: i for i, p in enumerate(v["performance"]["periods"])}
+    assert v["performance"]["total"][idx["YTD"]] is None
 
 
 def test_cio_view_parity_with_mark_to_market(service):

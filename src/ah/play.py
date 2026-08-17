@@ -864,7 +864,18 @@ def simulate_play(
             )
         )
 
-    final = out[-1].nav_reported if use_reported else out[-1].nav_true
+    # app-open-01 (cio-05): a month-0 CIO view runs simulate_play with ZERO
+    # world quarters and a forecast_quarters=0 caller on top of that, leaving
+    # `out` empty (`_frozen_paths(paths, 0, 0)` -> paths.months=0 ->
+    # n_quarters=0). Every OTHER caller has always had out non-empty
+    # (months>=3 was enforced upstream), so this branch is new and additive:
+    # it falls back to the opening state, which is exactly what "no quarter
+    # has run yet" means.
+    final = (
+        (out[-1].nav_reported if use_reported else out[-1].nav_true)
+        if out
+        else (opening["nav_reported"] if use_reported else opening["nav_true"])
+    )
     secondaries = [e for e in portfolio.forced_sales if e["kind"] == "forced_secondary"]
     return PlayResult(
         quarters=out,

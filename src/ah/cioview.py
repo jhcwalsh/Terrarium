@@ -95,7 +95,13 @@ TIER2_CLASSES: tuple[str, ...] = ("equity", "hy", "commodities", "reits")
 def _frozen_paths(paths: EnginePaths, hist_months: int, extra_quarters: int) -> EnginePaths:
     """The revealed tape verbatim plus flat forecast months."""
     n, extra = hist_months, extra_quarters * 3
-    hold = lambda a: np.concatenate([a[:n], np.full(extra, float(a[n - 1]))])  # noqa: E731
+    # n=0 (app-open-01, cio-05: a month-0 CIO payload has no revealed month at
+    # all) has no "last revealed month" to hold — `a[n - 1]` would silently
+    # wrap to `a[-1]`, the world's FINAL month, and feed the mechanical
+    # forecast the wrong rate/spread/inflation regime. Hold at month 0's own
+    # reading instead, the only defensible baseline before anything has run.
+    base_month = n - 1 if n > 0 else 0
+    hold = lambda a: np.concatenate([a[:n], np.full(extra, float(a[base_month]))])  # noqa: E731
     flat = lambda d: {k: np.concatenate([v[:n], np.zeros(extra)]) for k, v in d.items()}  # noqa: E731
     return replace(
         paths,
@@ -134,6 +140,15 @@ def _window_return(q_rets: list[float], n: int, annualise: bool) -> float | None
 def _period_row(q_rets: list[float], last_q: int) -> list[float | None]:
     out: list[float | None] = []
     for i, p in enumerate(PERIODS):
+        # last_q < 0 (app-open-01, cio-05: no world quarter has closed —
+        # month-0) has no "this calendar year" to speak of; Python's modulo
+        # would otherwise silently produce a positive-looking YTD window out
+        # of a negative last_q. Every other period is a plain trailing
+        # window and stays well-defined off q_rets alone (empty at month 0,
+        # so _window_return already nulls it).
+        if p == "YTD" and last_q < 0:
+            out.append(None)
+            continue
         n = (last_q % 4) + 1 if p == "YTD" else _WINDOW_QUARTERS[p]
         out.append(_window_return(q_rets, n, i >= ANNUALISED_FROM))
     return out
@@ -173,7 +188,13 @@ def build_cio_view(
     if plane not in PLANES:
         raise ValueError(f"plane must be one of {PLANES}, got {plane!r}")
     n_q = revealed_months // 3
-    if n_q < 1:
+    # app-open-01 (cio-05): revealed_months == 0 is the CIO's new front door —
+    # the state right after the opening book is confirmed, before the player
+    # has advanced at all. It is handled below (n_q == 0 throughout this
+    # function reads active.opening instead of active.quarters[n_q - 1]).
+    # revealed_months in (1, 2) is still mid-quarter with nothing closed —
+    # that 409 is unchanged.
+    if revealed_months > 0 and n_q < 1:
         raise ValueError("no closed quarter inside the revealed window")
     hist_months = n_q * 3
     frozen = _frozen_paths(paths, hist_months, forecast_quarters)
@@ -217,17 +238,21 @@ def build_cio_view(
             **{k: float(v) for k, v in effective.items() if k not in targets},
         }
         cash_target = float(opening_book.cash)
-    last = active.quarters[n_q - 1]
     q_rets = _quarterly_returns(active, plane, n_q)
     twin_rets = _quarterly_returns(twin, plane, n_q)
 
     nav_attr = "nav_reported_months" if plane == "reported" else "nav_true_months"
     history = [round(m, 4) for q in active.quarters[:n_q] for m in getattr(q, nav_attr)]
-    total = last.nav_reported if plane == "reported" else last.nav_true
     # world month 0's own opening book — untouched by prehistory (cio-04's
     # seam is stitched on NAV only); growthPct/netOfFlows read off this, not
     # off history[0], so they stay world-relative regardless of prehistory.
     opening_nav = active.opening["nav_reported" if plane == "reported" else "nav_true"]
+    if n_q > 0:
+        last = active.quarters[n_q - 1]
+        total = last.nav_reported if plane == "reported" else last.nav_true
+    else:
+        # nothing has closed yet: "now" IS the opening state, by definition.
+        total = opening_nav
     spend_total = sum(q.spending_paid for q in active.quarters[:n_q])
 
     pre: PreHistory | None = None
@@ -256,6 +281,14 @@ def build_cio_view(
     )
     world_start_index = len(pre_nav_months)
     history_values = [round(m, 4) for m in pre_nav_months] + history
+    if n_q == 0:
+        # No world month has been revealed at all — `history` is empty, so
+        # without this the chart would have nothing to draw at "now" (or, with
+        # no prehistory either, literally zero points). The opening NAV is
+        # exactly one real, known point: append it, and worldStartIndex (set
+        # below) then points AT it — the hatched pre-history right up to a
+        # single dot at "now", nothing of the world's own drawn yet.
+        history_values = [*history_values, round(total, 4)]
     pre_q_rets = (
         list(pre.quarterly_returns_reported if plane == "reported" else pre.quarterly_returns_true)
         if pre is not None
@@ -314,8 +347,12 @@ def build_cio_view(
             "worldVersion": world_version,
             "linkageVersion": LINKAGE_VERSION,
             "decisionAlphaVersion": alpha_version,
-            "asOfLabel": f"Y{(n_q - 1) // 4 + 1} Q{(n_q - 1) % 4 + 1}",
-            "asOfMonth": hist_months - 1,
+            # n_q == 0: no world quarter has closed, so there is no "Y_ Q_" to
+            # name — "T0" matches the label Play.tsx's own clock already uses
+            # for revealed_months == 0 (dateNow), rather than inventing a
+            # second wording for the same moment.
+            "asOfLabel": (f"Y{(n_q - 1) // 4 + 1} Q{(n_q - 1) % 4 + 1}" if n_q > 0 else "T0"),
+            "asOfMonth": (hist_months - 1 if n_q > 0 else 0),
             "plane": plane,
             "planesAvailable": list(PLANES),
             "unitLabel": UNIT_LABEL,
@@ -370,18 +407,31 @@ def _allocation(
     the entered book's own ``cash`` when there is one, else ``START_CASH``
     (su-app-07 Ruling G). It has to travel WITH ``targets``: the denominator
     is ``sum(targets) + cash``, so taking one from the book and the other
-    from the world default would print a percentage neither of them means."""
-    last = active.quarters[n_q - 1]
-    total = last.nav_reported if plane == "reported" else last.nav_true
+    from the world default would print a percentage neither of them means.
+
+    ``n_q == 0`` (app-open-01, cio-05: the month-0 CIO view) has no closed
+    quarter to read — ``active.quarters[-1]`` would silently be the FURTHEST
+    forecast quarter, not "now". Reads ``active.opening`` instead, which is
+    exactly what "now" means before anything has run."""
     target_total = sum(targets.values()) + cash_target
-    private = last.private_reported if plane == "reported" else last.private_true
+    if n_q > 0:
+        last = active.quarters[n_q - 1]
+        total = last.nav_reported if plane == "reported" else last.nav_true
+        private = last.private_reported if plane == "reported" else last.private_true
+        cash_now = last.cash
+        liquid_now = last.liquid_values
+    else:
+        total = active.opening["nav_reported" if plane == "reported" else "nav_true"]
+        private = active.opening["private_reported" if plane == "reported" else "private_true"]
+        cash_now = active.opening["cash"]
+        liquid_now = active.opening["liquid_values"]
 
     def value_of(cid: str) -> float:
         if cid == "cash":
-            return last.cash
+            return cash_now
         if cid in PRIVATE_ASSETS:
             return private[cid]
-        return last.liquid_values[cid]
+        return liquid_now[cid]
 
     ids = [*targets.keys(), "cash"]
     ordered = [cid for gid, _ in GOALS for cid in ids if GOAL_OF[cid] == gid]
@@ -451,14 +501,28 @@ def _liquidity(
     n_q: int,
     forecast_quarters: int,
 ) -> dict[str, Any]:
-    last = active.quarters[n_q - 1]
-    total = last.nav_reported if plane == "reported" else last.nav_true
-    private = last.private_reported if plane == "reported" else last.private_true
+    # n_q == 0 (app-open-01, cio-05): no closed quarter — read the opening
+    # state directly rather than `active.quarters[-1]`, which would silently
+    # be the FURTHEST forecast quarter, not "now" (same reasoning as
+    # `_allocation`).
+    if n_q > 0:
+        last = active.quarters[n_q - 1]
+        total = last.nav_reported if plane == "reported" else last.nav_true
+        private = last.private_reported if plane == "reported" else last.private_true
+        cash_now = last.cash
+        liquid_now = last.liquid_values
+        unfunded_now = last.unfunded_total
+    else:
+        total = active.opening["nav_reported" if plane == "reported" else "nav_true"]
+        private = active.opening["private_reported" if plane == "reported" else "private_true"]
+        cash_now = active.opening["cash"]
+        liquid_now = active.opening["liquid_values"]
+        unfunded_now = sum(active.opening["private_unfunded"].values())
     liquid_ids = [a for a in targets if a not in PRIVATE_ASSETS]
     t1_ids = ["cash"] + [a for a in TIER1_CLASSES if a in liquid_ids]
     t2_ids = [a for a in TIER2_CLASSES if a in liquid_ids]
-    t1 = last.cash + sum(last.liquid_values[a] for a in t1_ids if a != "cash")
-    t2 = sum(last.liquid_values[a] for a in t2_ids)
+    t1 = cash_now + sum(liquid_now[a] for a in t1_ids if a != "cash")
+    t2 = sum(liquid_now[a] for a in t2_ids)
     illiquid = sum(private.values())
     fwd = active.quarters[n_q : n_q + forecast_quarters]
     dist = sum(q.distributions_received for q in fwd)
@@ -467,10 +531,10 @@ def _liquidity(
 
     # unfundedToLiquid: the same liquid base as tiers t1+t2 (cash plus every
     # non-private sleeve), not the t1/t2 SUBSET filtered to `targets` above --
-    # last.liquid_values already only carries non-private ids (play.py's
+    # liquid_now already only carries non-private ids (play.py's
     # _liquid_snapshot), so summing it whole is the full liquid base.
-    liquid_base = last.cash + sum(last.liquid_values.values())
-    unfunded_to_liquid = round(last.unfunded_total / liquid_base, 4) if liquid_base > 0 else None
+    liquid_base = cash_now + sum(liquid_now.values())
+    unfunded_to_liquid = round(unfunded_now / liquid_base, 4) if liquid_base > 0 else None
 
     # worstUnfundedToLiquid: the E1 ladder's statistic, live -- the running
     # maximum of unfunded/liquid over every CLOSED quarter so far, not just
@@ -520,7 +584,7 @@ def _liquidity(
             "net": round(dist + 0.0 - calls - payout, 4),
         },
         "payoutLabel": "spending",
-        "unfundedToNav": round(last.unfunded_total / total, 4) if total > 0 else None,
+        "unfundedToNav": round(unfunded_now / total, 4) if total > 0 else None,
         "coverageAnchor": COVERAGE_ANCHOR,
         "unfundedToLiquid": unfunded_to_liquid,
         "breachLine": COVERAGE_BREACH_LINE,
@@ -580,7 +644,13 @@ def _private_cashflows(
         "classes": [{"id": a, "label": CLASS_LABEL[a]} for a in PRIVATE_ASSETS],
         "aggregateLabel": "All private sleeves",
         "series": series,
-        "vintages": _vintage_ladder(active.quarters[n_q - 1]),
+        # n_q == 0 (app-open-01, cio-05): no closed quarter carries a
+        # `vintage_nav` snapshot yet, and the opening book only tracks
+        # per-SLEEVE NAV, not per-cohort — `vintages` is optional on the
+        # contract precisely for this, so it is omitted rather than
+        # approximated from the first forecast quarter's (already-projected)
+        # cohort state.
+        "vintages": _vintage_ladder(active.quarters[n_q - 1]) if n_q > 0 else [],
         "footnote": (
             "Closed-end cohorts only; the model holds no open-end or evergreen "
             "vehicles in this book (DN-8 O-8). Forecast rows are a mechanical "
@@ -812,7 +882,13 @@ def validate_cio_view(v: dict[str, Any]) -> list[str]:
     pcf = v.get("privateCashflows")
     if pcf:
         agg = (pcf.get("series") or {}).get("aggregate")
-        if not agg:
+        # `agg is None`, not `not agg`: an EMPTY (but present) aggregate is a
+        # legitimate month-0 payload (app-open-01, cio-05 — histCount=0 and
+        # forecast_quarters=0 together leave every series at length 0). The
+        # TS twin's `!agg` already treats `[]` as present (arrays are
+        # truthy in JS); `not agg` was a silent parity gap only reachable
+        # once this shape became real.
+        if agg is None:
             e.append("privateCashflows.series.aggregate is required")
         n = len(agg or [])
         if pcf["histCount"] > n:
