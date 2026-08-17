@@ -316,7 +316,7 @@ Adoption of C1 or C2 is a named owner release event (`ah/port/mapping.py`
 `ARTIFACT_PATH` bump + `world_id` block move for touched presets) — the
 Campaign R1 rule — not a side effect of a report existing.
 
-## D-SP-4 — RULED 2026-08-16: PARK
+## D-SP-4 — RULED 2026-08-16: PARK — superseded same day by D-SP-6
 
 Owner ruling: the spine architecture is parked with its two-round sealed
 record (spine-01 f988952, spine-02 deac7fc). The deep repair (L2
@@ -325,3 +325,36 @@ funded now. Re-opening requires a new owner decision and starts from the
 logged v3 judge defects (B1 anti-test, B6 outcome-event match) plus
 B5 clustering-aware variance. The product line proceeds on the plain
 stress compiler (memo Path A); the disclosure work is the live item.
+
+## D-SP-6 — RULED 2026-08-16 (evening): FUND THE DEEP REPAIR (spine v2, stage 1)
+
+Owner ruling, in their words: "go on the engine work, include the
+allocation tests." The re-opening decision D-SP-4 reserved is hereby taken;
+the deep repair is funded as a staged campaign.
+
+- **Scope (stage 1 only):** the generation-time hazard link (climate states
+  drive regime transitions DURING sampling, replacing the post-hoc overlay),
+  recovery-duration refit to the historical event chronology, and
+  join-constraint tightening. The flesh stays selection-only (R1 stands).
+  Model-implied conditional means ("stage 2") and any L3 generator are
+  explicitly NOT funded by this ruling.
+- **The exam gains two allocation bars** (owner's purpose statement: the
+  product tests robust asset ALLOCATION, not lever timing): (i) the
+  inflation-hedge spread test — real assets vs nominal bonds conditioned on
+  the spine's inflation state, banded by the historical episodes; (ii) the
+  stock–bond correlation regime-flip test. Both defined on ASSET returns,
+  never portfolio outcomes — rule 1 (severity never tuned to portfolio
+  results) is reaffirmed and is the reason for the asset-level definition.
+- **Standing communication rule attached** (owner, same session): plain
+  language in owner-facing reporting; every sealed pass/fail bar carries its
+  justification — what real quantity anchors it and why the tolerance is
+  the size it is — written before results exist.
+- Week-1 deliverables before any fitting: estimation dataset (event
+  chronology, transmission lift with its confidence interval, allocation
+  episode bands), v3 judges with anti-test sweeps run on the judges
+  themselves, sealed prereg. Prior-round verdicts stay frozen; v1/v2 judges
+  remain byte-pinned.
+- ER-14 (inflation does not reach private markets) is acknowledged as the
+  second leg of the owner's allocation thesis — surfaced to the owner this
+  session, not yet scheduled; batching with F5 remains the standing
+  recommendation.
