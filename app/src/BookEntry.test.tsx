@@ -572,6 +572,41 @@ describe("BookEntry — policy targets and reporting bands", () => {
     expect(host!.querySelector('.policy-grid input[aria-label="pe"]')).toBeNull();
   });
 
+  it("pins the private value cell to the SUM of the ladder's rung NAVs, and editing a rung moves it", async () => {
+    // Task 6 (verification, owner-dictated): the value cell must be the
+    // ladder's own arithmetic, not a static echo of a served total — a
+    // second rung on pe (nav_true 10, alongside the fixture's existing
+    // rung 0 at 20) makes "20.0" only reachable by actually summing both
+    // rows, and editing EITHER rung must move the cell by exactly the
+    // typed delta. This is the client half of the tie-out task; the
+    // server half is test_serve_book.py's
+    // "test_cio_month_zero_private_value_ties_to_the_book_ladder" — both
+    // assert on the same ladder-sum claim, which is the point of pinning
+    // both rather than either alone (see that test's docstring).
+    const twoRungPe = JSON.parse(JSON.stringify(DEFAULT_RESPONSE)) as DefaultBookResponse;
+    twoRungPe.book.private.pe.push({
+      commitment: {
+        committed: 2,
+        paid_in: 1,
+        unfunded: 1,
+        recallable_balance: 0,
+        cumulative_recycled: 0,
+      },
+      value: { nav_true: 10, nav_reported: 10, cumulative_distributions: 0 },
+      identity: { vintage_year: 2020 },
+    });
+    stubFetch(twoRungPe);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    // 20 (rung 0) + 10 (rung 1) — reachable only by summing both rows
+    expect(byTestId("value-pe").textContent).toBe("30.0");
+    setValue(byLabel<HTMLInputElement>("pe rung 1 nav_true"), "15");
+    expect(byTestId("value-pe").textContent).toBe("35.0");
+    setValue(byLabel<HTMLInputElement>("pe rung 0 nav_true"), "5");
+    expect(byTestId("value-pe").textContent).toBe("20.0");
+    // an edit on ONE sleeve's ladder must not move another sleeve's cell
+    expect(byTestId("value-pc").textContent).toBe("8.0");
+  });
+
   it("a target override on a private sleeve still works, exactly like a liquid one", async () => {
     // task requirement: an override still works once the classes are moved
     // into the merged table — same setter, same validation, same digest

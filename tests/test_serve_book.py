@@ -420,6 +420,67 @@ class TestBookThreadedThroughReplaySurfaces:
 
         assert doc["value"] == pytest.approx(outcome["final_value"])
 
+    def test_cio_month_zero_private_value_ties_to_the_book_ladder(self, service):
+        """Task 6 (verification, owner-dictated): "confirm that the total
+        NAV for each illiquid asset class sums to the value in the
+        targets-and-bands table." The table's own arithmetic is
+        `BookEntry.tsx::sleeveValues` — a private sleeve's `value` cell is
+        the sum of its ladder's `nav_true` rungs, pinned client-side by
+        `BookEntry.test.tsx`'s "pins the private value cell..." test. This
+        is the server half: month 0 (`revealed_months == 0`, the CIO's
+        front door, reached here without any `/advance`) must report the
+        SAME number for each private class's `value` — both sides are
+        transitively the same claim (this sum), which is the whole point of
+        checking both rather than either alone.
+
+        `plane="true"` names `nav_true` explicitly rather than relying on
+        the default-fixture coincidence that `nav_true == nav_reported` on
+        every seeded rung (`ah/port/book.py::default_opening_book`) —
+        `_allocation`'s `value_of` reads `private_reported` on the default
+        "reported" plane, a different (if numerically equal, by fixture
+        luck) number.
+        """
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = default["book"]
+
+        r = client.post("/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]})
+        assert r.status_code == 201, r.text
+        sid = r.json()["session_id"]
+
+        cio = client.get(f"/sessions/{sid}/cio", params={"plane": "true"}).json()
+        classes = {c["id"]: c for c in cio["allocation"]["classes"]}
+        for sleeve in ("pe", "pc", "re"):
+            ladder_sum = sum(rung["value"]["nav_true"] for rung in book["private"][sleeve])
+            assert classes[sleeve]["value"] == pytest.approx(ladder_sum)
+
+        # And again on an EDITED ladder — the default book's targets equal
+        # its values (Ruling D), so the check above alone could pass a CIO
+        # that read the book's `targets` (or any other book-shaped number
+        # that happens to equal the ladder sum on the untouched default)
+        # instead of actually summing the rungs. Editing one rung's
+        # `nav_true` breaks that coincidence: the tie-out must hold for
+        # whatever the analyst actually typed, not just the served default.
+        # `equity` absorbs the same 5 points pe gains, off cash's own
+        # residual role, so the edited book still totals 100 and posts.
+        edited_pe_rung = {
+            **book["private"]["pe"][0],
+            "value": {**book["private"]["pe"][0]["value"], "nav_true": 25.0},
+        }
+        edited = {
+            **book,
+            "liquid": {**book["liquid"], "equity": book["liquid"]["equity"] - 5.0},
+            "private": {**book["private"], "pe": [edited_pe_rung]},
+        }
+        r2 = client.post("/sessions", json={"run_id": rid, "book": edited, "plan": default["plan"]})
+        assert r2.status_code == 201, r2.text
+        sid2 = r2.json()["session_id"]
+
+        cio2 = client.get(f"/sessions/{sid2}/cio", params={"plane": "true"}).json()
+        classes2 = {c["id"]: c for c in cio2["allocation"]["classes"]}
+        assert classes2["pe"]["value"] == pytest.approx(25.0)
+        assert classes2["pe"]["value"] != pytest.approx(classes["pe"]["value"])
+
 
 class TestPlanDrivenLever:
     """su-app-06 section 4.3, and its fence: the lever's pre-fill measures
