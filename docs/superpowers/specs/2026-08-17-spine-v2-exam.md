@@ -939,9 +939,8 @@ Stated plainly so the exam's scope cannot be over-read from its passing.
 - **No reaction-function bar and no hazard-frequency bar are carried.** B1's v2 construct was
   found uninformative and no v3 judge is specified; B5 v2's weak cross-seed over-firing signal
   (pooled +16.9%, z = 2.41) was recorded but its construct changes once the hazard becomes
-  generation-time rather than a post-hoc overlay. Both are **omissions the owner should
-  confirm are intended**, not oversights — if either belongs in stage 1, it must be added
-  before the seal.
+  generation-time rather than a post-hoc overlay. **Both omissions were put to the owner
+  before the seal and confirmed as intended** (2026-08-17) — see §12.2.
 
 ---
 
@@ -1460,3 +1459,95 @@ disagrees about a third of recession months on a defect (industrial-production-o
 recessions) that is real. **The week-2 fitting-stability check of §11.0 is the obligation
 that carries this forward, and the soft-label escalation is the agreed response if the fit
 proves threshold-unstable.**
+
+---
+
+## 12. Declared limitations and confirmed omissions (finalized pre-seal, 2026-08-17)
+
+Written before the seal, because a limitation discovered afterwards reads as an excuse and a
+limitation declared beforehand is part of the specification. §7 says what is not *in* the
+exam; this section says what is wrong with what *is*.
+
+### 12.1 The sealed grader's known defect: industrial-production-only recessions
+
+**The defect.** The growth axis of both graders reads `regime_ruleset_v1`'s month label, and
+that ruleset calls a month `REC` whenever trailing industrial-production growth is at or below
+zero — **with no NBER recession, no rise in unemployment, no credit stress and no equity
+drawdown required**. §11.4's richer five-input classifier, built and compared under a decision
+rule declared in advance, disagrees with the simple one on 52 of 801 classifiable months, and
+the disagreement is not spread thinly: **a third of every month the simple classifier calls a
+recession (37 of 109) is reassigned, almost all of it to recovery.** The simple classifier's
+recession season is 109 months where the richer one's is 76.
+
+**Where it bites, by name** (§11.5): **2015-03 → 2015-08** (6 months), **2016-04 → 2017-02**
+(11 months) and **2019-04 → 2020-02** (11 months) — the industrial/energy slump and the 2019
+manufacturing slowdown, `usrec` = 0 throughout, unemployment *falling*, spreads normal,
+essentially no drawdown. The third of those is **exactly the right-censored recession spell D1
+discloses** (2019-04 → 2020-12, observed minimum 21 months); the richer classifier keeps only
+its COVID tail.
+
+**Why it is declared rather than fixed.** `regime_ruleset_v1` is a **sealed** labelling
+ruleset (`src/ah/data/regime_thresholds.yaml`, `ah.data.derive.label_regime`); changing it
+would change the panel's own labels, and with them every anchor in this exam, every prior
+round's sealed record, and surfaces far outside this campaign. That is a platform decision,
+not a pre-seal cleanup. `grader_v2` fixes the one cell the owner ruled on — `STAG` counting as
+expanding — and inherits this one untouched.
+
+**What it means for a verdict.** D1's anchor rests on months a second reasonable classifier
+calls recoveries, and §11.6's "simplicity wins" verdict protects only *pooled medians*, not
+individual months: the medians survive because a median over a wide distribution is a blunt
+instrument, not because the two classifications agree. **Anything that reads individual months
+— the generation-time hazard link above all — has no protection from this result.**
+
+### 12.2 The two omissions, confirmed by the owner
+
+Put to the owner before the seal and confirmed as intended, not oversights:
+
+1. **No reaction-function bar.** Round two's B1 v2 judge produced a clean FAIL on all five
+   seeds that carried zero information about the model (its pass fraction *decreased* in the
+   reaction strength `phi`; a model with no reaction function scored best). No v3 construct is
+   specified, so **the exam does not test whether policy responds to inflation at all.**
+2. **No hazard-frequency bar.** B5 v2's weak cross-seed over-firing signal (pooled +16.9%,
+   z = 2.41) was recorded, but its construct changes once the hazard becomes generation-time
+   rather than a post-hoc overlay — which is the central thing D-SP-6 funds. **So the one
+   change the campaign is most about is not directly graded**; it is graded through its
+   consequences (T1's transmission lift, the dwell bars, R1's severity).
+
+### 12.3 The rest of the standing list, in one place
+
+Each of these is argued where it arises; collected here so the seal carries a single list.
+
+- **T1's downturn union is not re-anchored under `grader_v2`.** A `STAG` month is contracting
+  for the clock and is still not a downturn onset for T1, whose band was measured on the
+  `REC`-or-`CRI` union. The asymmetry is deliberate — folding `STAG` in would mean
+  re-measuring T1's anchor, which the owner did not rule — and it means the exam's two causal
+  bars do not use one definition of "the economy is contracting".
+  (§2, `l_grader_v2.t1_note`.)
+- **T1 tests transmission and flesh-alignment together.** Under selection-only compilation the
+  yield curve comes in with the selected months while the labels come from the spine, so a
+  FAIL does not say which broke; the judge prints both sides' base rates so they can be
+  separated by eye. (§2.)
+- **D3 is much weaker than it was against round two's engine.** Round two's failing recovery
+  medians of 2–3 months would now pass or sit on the band's lower edge. (§3.)
+- **D2 is threshold-fragile under the sealed grader.** Seven of eight perturbed arms put
+  history's own pooled stagflation median outside D2's band. (§3.)
+- **The D anchors are measured on overlapping windows**, which weights the panel's interior
+  months more than its ends; the disjoint-decade sensitivity is published beside them. (§3.)
+- **The D bars' power calculation is close to tautological** — the anchor is cut from the same
+  object the power model's true engine emits. (§8.1.)
+- **A2 no longer tests a contrast in the share statistic**, only in the correlation levels.
+  (§4.)
+- **A1's containment half is nearly a plumbing assertion** under selection-only compilation,
+  because the generated spread is structurally bounded by history's own months; the
+  directional half is the real test. (§4.)
+- **A1 is commodities-minus-bonds, never real-assets-minus-bonds** — no monthly real-asset
+  total-return series exists in the catalog, and `real_assets_minus_bonds` is `null`
+  throughout rather than substituted. (§4, §7.)
+- **The 2021–22 inflation surge anchors nothing**, because it lies inside the spent holdout.
+  (§7.)
+- **ER-14 is untouched by a clean pass on A1 and A2**: inflation does not reach the private
+  book at all, and this exam measures asset returns, not the institution's book. (§7.)
+- **Hard labels, with a declared escalation.** Every season here is a hard label, and the
+  agreed response if week-2 fitting proves threshold-unstable is the move to soft (weighted)
+  membership — agreed now, before any fitting result exists, so that taking it later is the
+  execution of a plan rather than a reaction to a number. (§11.0.)
