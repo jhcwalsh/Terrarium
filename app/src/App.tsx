@@ -25,6 +25,26 @@ import { RankedSetup, type PlayConfig } from "./RankedSetup";
 
 type Mode = "browse" | "book" | "setup" | "play";
 
+/**
+ * Owner ruling (D-SP-6 session, 2026-08-16): ranked sessions are PARKED —
+ * the play surface is practice-only until further notice. House rule:
+ * fence, never delete. `RankedSetup`, `RankedSetup.test.tsx`, the server's
+ * ranked contract and the leaderboard store all stay intact and green;
+ * this constant is the ONE bypass that keeps the "setup" step from ever
+ * being reached. Delete this constant (and the `if (RANKED_PARKED)` branch
+ * in `onReady` below) to restore the setup screen.
+ */
+const RANKED_PARKED = true;
+
+/**
+ * The exact `PlayConfig` shape `RankedSetup`'s own practice path produces:
+ * its `ranked` radio defaults to `false`, `participant` stays `undefined`
+ * (only set when `ranked` is true), and `basis` defaults to `"reported"`.
+ * Constructed here only because `RANKED_PARKED` skips ever mounting that
+ * screen, so nothing ever calls its `onStart` to build this for us.
+ */
+const PRACTICE_CONFIG: PlayConfig = { ranked: false, participant: undefined, basis: "reported" };
+
 export default function App() {
   const [loaded, setLoaded] = useState<LoadedBundle | null>(null);
   const [revealed, setRevealed] = useState(0);
@@ -133,7 +153,16 @@ export default function App() {
           setBook(b);
           setPlan(p);
           setBookIsDefault(isDefault);
-          setMode("setup");
+          // RANKED_PARKED (owner ruling 2026-08-16): skip the "setup" step
+          // entirely and go straight to play with a practice config — the
+          // bypass. `RankedSetup` below is left fully wired for when this
+          // flips back.
+          if (RANKED_PARKED) {
+            setPlayConfig(PRACTICE_CONFIG);
+            setMode("play");
+          } else {
+            setMode("setup");
+          }
         }}
         onCancel={() => setMode("browse")}
       />

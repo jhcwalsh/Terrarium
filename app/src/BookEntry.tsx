@@ -810,10 +810,16 @@ export function BookEntry({
         </div>
       </div>
 
+      {/* app-open-02 park (owner ruling 2026-08-16): ranked is parked, so
+          this no longer states ranked ELIGIBILITY (that would be
+          misleading while nothing offers ranked at all). It stays a
+          neutral statement of the book's touched/untouched state — the
+          `isDefault` distinction and its telemetry are unchanged, only the
+          copy is. */}
       <p className="book-note" data-testid="ranked-note">
         {isDefault
-          ? "Ranked is available — this is the default book."
-          : "Practice only — you have edited the book."}
+          ? "This is the served default book. (Ranked play is parked; every session runs as practice.)"
+          : "This book has been edited from the served default. (Ranked play is parked; every session runs as practice.)"}
       </p>
 
       <button onClick={onCancel}>back</button>

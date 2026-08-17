@@ -3,7 +3,10 @@
  *
  * The screen validates SHAPE only. Every value that matters comes from the
  * server (DN-3 W5), so these tests assert on totals, sleeve names and the
- * ranked-availability statement — never on NAV, coverage or alpha.
+ * touched/untouched book statement (`ranked-note` — worded around ranked
+ * ELIGIBILITY before the app-open-02 park, and around the book's own
+ * touched/untouched state since, per owner ruling 2026-08-16) — never on
+ * NAV, coverage or alpha.
  *
  * Idiom note (task-7 CORRECTION, 2026-08-16): this project has neither
  * @testing-library/react nor jest-dom. Rendering uses createRoot + act
@@ -246,33 +249,42 @@ describe("BookEntry", () => {
     expect(host!.querySelector('[aria-label="reits"]')).toBeNull();
   });
 
-  it("says ranked is available while the book is untouched", async () => {
+  // Copy changed for the ranked PARK (owner ruling 2026-08-16, D-SP-6
+  // session): the note used to state ranked ELIGIBILITY ("ranked is
+  // available" / "practice only"), which is misleading now that ranked is
+  // parked and every session runs as practice regardless. The three tests
+  // below still pin the underlying touched-flag (`isDefault`) logic — an
+  // untouched book and an edited one must still render DIFFERENT text —
+  // only the strings they assert changed.
+
+  it("says the book is the served default while it is untouched", async () => {
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
   });
 
-  it("says ranked is lost once anything is edited", async () => {
+  it("says the book has been edited once anything is changed", async () => {
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     const bonds = byLabel<HTMLInputElement>("bonds");
     setValue(bonds, "12.5");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
   });
 
-  it("ranked comes back when an edit is reverted", async () => {
+  it("the untouched statement comes back when an edit is reverted", async () => {
     // isDefault is a deep-equal against the served default, not a one-way
-    // "touched" flag: putting a value back must restore ranked eligibility.
-    // A regression to a sticky boolean (set true on any onChange, never
-    // re-checked against the server value) would pass every OTHER test in
-    // this file while failing this one — see the fix report's bite-proof.
+    // "touched" flag: putting a value back must restore the untouched
+    // statement. A regression to a sticky boolean (set true on any
+    // onChange, never re-checked against the server value) would pass
+    // every OTHER test in this file while failing this one — see the fix
+    // report's bite-proof. Unchanged by the park: only the copy moved.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     const bonds = byLabel<HTMLInputElement>("bonds");
     setValue(bonds, "12.5");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
     setValue(bonds, "12");
-    expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
   });
 
   it("restores only the targeted sleeve's ladder with reset", async () => {
@@ -326,7 +338,7 @@ describe("BookEntry", () => {
     expect(byLabel<HTMLInputElement>("bonds").value).toBe("17");
     // and it is still measured against the SERVER's default, not against
     // itself: a retained edit is still an edit.
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
     // the per-sleeve reset still restores the server's ladder
     act(() => findButton(/reset private equity/i).click());
     expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("20");
@@ -424,7 +436,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     stubFetch();
     const onReady = vi.fn();
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
-    expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
     act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][2]).toBe(true);
     const posted = onReady.mock.calls[0][0];
@@ -442,9 +454,9 @@ describe("BookEntry — policy targets and reporting bands", () => {
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity target"), "35");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
     setValue(byLabel<HTMLInputElement>("equity target"), "41");
-    expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
   });
 
   it("a band with lo at or above hi blocks the commit and names the reason", async () => {
@@ -478,7 +490,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity range lo"), "30");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
     act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][0].ranges).toEqual({
       ...DEFAULT_RESPONSE.book.ranges,
@@ -495,10 +507,10 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity range lo"), "30");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
     setValue(byLabel<HTMLInputElement>("equity range lo"), "36.9");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45.1");
-    expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
     act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][0].ranges).toEqual(DEFAULT_RESPONSE.book.ranges);
     expect(onReady.mock.calls[0][2]).toBe(true);
@@ -514,7 +526,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity range lo"), "");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
     act(() => findButton(/play/i).click());
     const { equity: _equity, ...rest } = DEFAULT_RESPONSE.book.ranges as Record<
       string,
@@ -647,7 +659,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("pe target"), "26");
     expect(byLabel<HTMLInputElement>("pe target").value).toBe("26");
-    expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
+    expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
   });
 
   it("blocks the commit when the targets do not total 100 with cash", async () => {
