@@ -708,8 +708,8 @@ function PerfTable() {
             <th style={{ ...th, textAlign: "left", paddingLeft: 0 }}>Asset class</th>
             <th style={{ ...th, textAlign: "left" }}>Weight v target</th>
             <th style={{ ...th, textAlign: "center", padding: "0 2px 7px" }}>!</th>
-            <th style={th}>Wt</th><th style={th}>Tgt</th><th style={th}>Band</th>
-            <th style={{ ...th, paddingRight: 16 }}>Dev</th>
+            <th style={th}>Weight</th><th style={th}>Target</th><th style={th}>Band</th>
+            <th style={{ ...th, paddingRight: 16 }}>Deviation</th>
             {periods.map((p) => <th key={p} style={th}>{p}</th>)}
           </tr>
         </thead>

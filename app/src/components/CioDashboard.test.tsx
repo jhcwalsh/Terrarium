@@ -583,9 +583,22 @@ describe("CioDashboard — allocation table Band column (app-open-02 task 2)", (
     const cashRow = rows.find((r) => (r.textContent ?? "").includes("Cash"));
     expect(cashRow).toBeTruthy();
     // Band column is the 6th <td> in a class row (Asset class, Weight v
-    // target bar, !, Wt, Tgt, Band, Dev, ...periods) — cell index 5.
+    // target bar, !, Weight, Target, Band, Deviation, ...periods) — cell index 5.
     const cells = [...cashRow!.querySelectorAll("td")];
     expect(cells[5]?.textContent).toBe("—");
+  });
+});
+
+describe("CioDashboard — PerfTable header labels spelled out (app-open-02 task 5)", () => {
+  it("renders Weight, Target and Deviation as header text, not the Wt/Tgt/Dev abbreviations", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const headerCells = [...host!.querySelectorAll("th")].map((th) => th.textContent?.trim());
+    expect(headerCells).toContain("Weight");
+    expect(headerCells).toContain("Target");
+    expect(headerCells).toContain("Deviation");
+    expect(headerCells).not.toContain("Wt");
+    expect(headerCells).not.toContain("Tgt");
+    expect(headerCells).not.toContain("Dev");
   });
 });
 
