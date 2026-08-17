@@ -10,7 +10,11 @@
 import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import CioDashboard from "./CioDashboard";
+import CioDashboard, {
+  planWindowLabel,
+  planWindowMonths,
+  planWindowSlice,
+} from "./CioDashboard";
 import type { CioView } from "../lib/cioView";
 import reported from "../../fixtures/cio-sample.reported.json";
 import decided from "../../fixtures/cio-sample.decided.json";
@@ -48,6 +52,14 @@ describe("CioDashboard", () => {
     expect(host!.textContent).toContain("Stagflation");
     expect(host!.textContent).toMatch(/Plan growth/i);
     expect(host!.textContent).toMatch(/run fixture-stagflation/);
+  });
+
+  it("renders the CIO headline value in the $10bn display denomination (app-open-01 item 1)", () => {
+    // view.plan.totalValue is 62.1323 (fixture) — the underlying scored
+    // points are untouched; only the rendering (money.ts usd()) changed.
+    // Two-decimal bn precision is review-round fix 3 ($10m granularity).
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    expect(host!.textContent).toContain("$6.21bn");
   });
 
   it("switches tabs and renders each", () => {
@@ -209,7 +221,10 @@ describe("CioDashboard", () => {
       pcf.series.aggregate[0].expiredUndrawn = 733;
       pcf.series.pe[0].expiredUndrawn = 733;
       render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
-      expect(host!.textContent).toMatch(/\$733m/);
+      // 733 points -> $73.30bn through usd()'s $10bn book denomination
+      // (app-open-01 review round fix 1) — the distinctive VALUE (733) is
+      // what proves this figure and no other, not its old $m rendering.
+      expect(host!.textContent).toMatch(/\$73\.30bn/);
     });
 
     it("shows the current-quarter lapse alongside the running total, not only the total (I-2)", () => {
@@ -230,17 +245,23 @@ describe("CioDashboard", () => {
       }
       pcf.series.aggregate[H - 1].expiredUndrawn = 415;
       render(<CioDashboard view={v} onPlaneChange={() => {}} initialTab="private" />);
-      expect(host!.textContent).toMatch(/\$415m this quarter/);
+      // 415 points -> $41.50bn through usd() (app-open-01 review round fix 1)
+      expect(host!.textContent).toMatch(/\$41\.50bn this quarter/);
     });
 
-    it("renders zero lapse as a muted $0m, never the missing-data dash (M-1)", () => {
+    it("renders zero lapse as a muted $0, never the missing-data dash (M-1)", () => {
       // DN-8 s3: an em dash means UNAVAILABLE. A known, tracked zero must
       // not borrow it — this WAS the bug (`lapseCell` returned NA for
       // `v <= 0`), which made a class that genuinely never lapsed
       // indistinguishable from one where lapse isn't tracked in a table
       // where "—" also marks an unreached forecast column. Fixed by
-      // rendering a muted "$0m" instead: colour signals "don't worry about
-      // this", the glyph stays reserved for "no data".
+      // rendering a muted zero instead: colour signals "don't worry about
+      // this", the glyph stays reserved for "no data". The exact string is
+      // now usd(0)'s bare "$0" (app-open-01 review round fix 1 routed
+      // lapseCell through usd(), which deliberately renders exact zero as
+      // "$0" rather than "$0m" — money.test.ts pins that) — the M-1
+      // guarantee this test protects is "not the em dash", not the unit
+      // suffix.
       //
       // The committed fixture is the wrong vehicle for this: every class's
       // and the aggregate's lapsed-to-date sum is already non-zero there
@@ -248,8 +269,8 @@ describe("CioDashboard", () => {
       // against it. Zero out expiredUndrawn on EVERY row of EVERY series so
       // the "By asset class" table's "Lapsed to date" column is genuinely
       // zero for every row, then check the actual lapse cells — not the
-      // whole table's text, which legitimately prints "$0m" elsewhere
-      // (Net LTM / Net next 4q for the quieter classes).
+      // whole table's text, which legitimately prints other zero-ish money
+      // figures elsewhere (Net LTM / Net next 4q for the quieter classes).
       const v: CioView = JSON.parse(JSON.stringify(view));
       for (const rows of Object.values(v.privateCashflows.series)) {
         for (const r of rows) r.expiredUndrawn = 0;
@@ -259,7 +280,7 @@ describe("CioDashboard", () => {
       // one per row of the "By asset class" table (classes + aggregate)
       expect(lapseCells.length).toBeGreaterThan(0);
       for (const cell of lapseCells) {
-        expect(cell.textContent).toBe("$0m");
+        expect(cell.textContent).toBe("$0");
         expect(cell.textContent).not.toBe("—");
       }
     });
@@ -369,6 +390,133 @@ describe("CioDashboard", () => {
       // unreached/incomparable period) are both non-signals, not evidence
       // of divergence — only a printed +/- figure other than "+0.0" counts.
       expect(cells.some((c) => c !== "" && c !== "—" && c !== "+0.0")).toBe(true);
+    });
+  });
+
+  // app-open-01 item 1's real precondition: the CIO must render at month 0
+  // without errors. The server can now legitimately serve histCount === 0
+  // (cio-05) — every private-cashflow row is forecast, nothing has closed.
+  // `rows[histCount - 1]` is `rows[-1]` in JS (not "the last element" —
+  // `undefined`), which crashed here before this WP.
+  describe("app-open-01 (cio-05): private cashflows tab survives histCount === 0", () => {
+    it("renders the tiles and the by-asset-class table without throwing, from the opening figures", () => {
+      const monthZero: CioView = JSON.parse(JSON.stringify(view));
+      monthZero.privateCashflows.histCount = 0;
+      for (const key of Object.keys(monthZero.privateCashflows.series)) {
+        monthZero.privateCashflows.series[key] = monthZero.privateCashflows.series[key]
+          .slice(0, 4)
+          .map((r) => ({ ...r, forecast: true }));
+      }
+      monthZero.privateCashflows.vintages = [];
+
+      expect(() =>
+        render(<CioDashboard view={monthZero} onPlaneChange={() => {}} initialTab="private" />),
+      ).not.toThrow();
+      expect(host!.textContent).toMatch(/NAV \(opening\)/i);
+      expect(host!.textContent).toMatch(/Unfunded \(opening\)/i);
+      expect(host!.querySelectorAll("table").length).toBeGreaterThan(0);
+    });
+
+    it("renders the empty state, not a crash, when every series is genuinely zero rows", () => {
+      const empty: CioView = JSON.parse(JSON.stringify(view));
+      empty.privateCashflows.histCount = 0;
+      for (const key of Object.keys(empty.privateCashflows.series)) {
+        empty.privateCashflows.series[key] = [];
+      }
+      empty.privateCashflows.vintages = [];
+
+      expect(() =>
+        render(<CioDashboard view={empty} onPlaneChange={() => {}} initialTab="private" />),
+      ).not.toThrow();
+      expect(host!.textContent).toMatch(/no private cashflow history/i);
+    });
+  });
+
+  // app-open-01 item 2: plan growth and asset allocation side by side.
+  describe("app-open-01 item 2: plan growth and asset allocation sit side by side", () => {
+    it("renders both panels inside one two-panel row container", () => {
+      render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+      const row = host!.querySelector(".cio-plan-row");
+      expect(row).not.toBeNull();
+      // exactly the two panels, in this order — a structural assert, not a
+      // pixel-position one (jsdom does not lay out CSS grid); the CSS rule
+      // itself (grid-template-columns: repeat(auto-fit, minmax(...))) is
+      // trusted to do the actual side-by-side placement.
+      const panelTitles = [...row!.children].map(
+        (child) => child.querySelector("h2")?.textContent,
+      );
+      expect(panelTitles).toEqual(["Plan growth", "Asset allocation"]);
+      // "Performance and allocation" stays OUTSIDE the row, full width,
+      // unchanged — only the two named panels moved.
+      expect(row!.querySelector("h2")?.textContent).not.toMatch(/Performance/i);
+    });
+  });
+
+  // app-open-01 item 3: the plan-growth chart states its actual timeframe.
+  describe("app-open-01 item 3: the plan-growth chart states its timeframe (ER-13 honesty)", () => {
+    it("planWindowMonths never invents more than exists", () => {
+      expect(planWindowMonths(180, "3y")).toBe(36);
+      expect(planWindowMonths(24, "3y")).toBe(24); // capped, not padded
+      expect(planWindowMonths(180, "full")).toBe(180);
+    });
+
+    it("planWindowSlice's worldStartIndex tracks the SAME point after slicing", () => {
+      const values = Array.from({ length: 180 }, (_, i) => i);
+      // worldStartIndex 150 sits INSIDE the trailing-36 window (from index
+      // 144 on), so the slice keeps it, shifted by how much was cut off.
+      const sliced = planWindowSlice(values, 150, "3y");
+      expect(sliced.values).toHaveLength(36);
+      expect(sliced.worldStartIndex).toBe(6); // 150 - (180 - 36)
+      expect(sliced.values[sliced.worldStartIndex]).toBe(150);
+
+      // worldStartIndex 120 sits BEFORE that window entirely — the world
+      // began earlier than the visible 3 years, so it clamps to 0 rather
+      // than going negative (everything shown is already the world's own).
+      const clamped = planWindowSlice(values, 120, "3y");
+      expect(clamped.worldStartIndex).toBe(0);
+    });
+
+    it("planWindowLabel reads the ACTUAL window, not a hardcoded string", () => {
+      expect(planWindowLabel(36, 0, "3y")).toBe("PAST 3 YEARS");
+      expect(planWindowLabel(24, 0, "3y")).toBe("PAST 2 YEARS"); // a younger world, not padded to "3"
+      expect(planWindowLabel(180, 120, "full")).toBe("FULL RANGE — 15Y (PARTLY INHERITED)");
+      // wholly inside the inherited decade (month 0, before any world
+      // month exists) — the honesty marker the register demands (ER-13).
+      expect(planWindowLabel(36, 36, "3y")).toBe("PAST 3 YEARS (INHERITED, SIMULATED)");
+    });
+
+    it("renders the timeframe label matching the default 3-year window actually plotted", () => {
+      // the fixture: 180 months of history, worldStartIndex 120 (60 world
+      // months revealed) — the trailing 3 years is entirely the world's own
+      // data, so the label carries no inherited qualifier, and the chart
+      // has no hatched region to disclose at THIS window (correctly: there
+      // isn't one visible).
+      render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+      const label = host!.querySelector(".plan-growth-timeframe");
+      expect(label).not.toBeNull();
+      expect(label!.textContent).toBe("PAST 3 YEARS");
+      expect(host!.textContent).not.toContain("INHERITED DECADE (SIMULATED)");
+    });
+
+    it("switching to full range updates the label AND surfaces cio-04's existing disclosure, adjacent — never a second wording", () => {
+      render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+      clickButton("Full range");
+      const label = host!.querySelector(".plan-growth-timeframe");
+      expect(label!.textContent).toBe("FULL RANGE — 15Y (PARTLY INHERITED)");
+      // the full window now includes the hatched pre-history, so the
+      // chart's own cio-04 disclosure (plan.preRunLabel) appears — same
+      // wording as always, not a second one invented for this label.
+      expect(host!.textContent).toContain("INHERITED DECADE (SIMULATED)");
+    });
+
+    it("offers no window toggle when the world is younger than 3 years — nothing to switch to", () => {
+      const young: CioView = JSON.parse(JSON.stringify(view));
+      young.plan.history = { values: young.plan.history.values.slice(-24), worldStartIndex: 0 };
+      render(<CioDashboard view={young} onPlaneChange={() => {}} />);
+      expect(host!.querySelector(".plan-growth-timeframe")!.textContent).toBe("PAST 2 YEARS");
+      expect([...host!.querySelectorAll("button")].some((b) => b.textContent === "Full range")).toBe(
+        false,
+      );
     });
   });
 });

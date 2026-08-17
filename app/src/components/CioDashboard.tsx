@@ -8,7 +8,12 @@
  *
  *  Contract summary — DN-8 §3 has the full field list:
  *    · percentages are numbers in percentage points (26.1, not 0.261)
- *    · money is in the unit named by meta.unitLabel (default $m)
+ *    · money is served in the unit named by meta.unitLabel ("$m", 1 point
+ *      = $1m declared) — but this renderer no longer echoes that caption
+ *      or scales by it directly. Every money figure goes through usd()
+ *      (lib/money.ts), which re-denominates the SAME served points as a
+ *      $10bn book (app-open-01 review round fix 1); meta.unitLabel/
+ *      unitSuffix are otherwise unused here.
  *    · calls, distributions and payout are POSITIVE MAGNITUDES; the
  *      renderer applies sign. net = distributions − calls.
  *    · any period the run has not reached must be null, never 0.
@@ -31,6 +36,7 @@ import type {
   MarketSeries,
   VintageRung,
 } from "../lib/cioView";
+import { DENOMINATION_NOTE, usd } from "../lib/money";
 
 /* ---------------------------------------------------------------- *
  *  THEME
@@ -75,12 +81,11 @@ const goalColour = (id: string, i: number) => GOAL_COLOUR[id] || FALLBACK[i % FA
 const NA = "—";
 const isNum = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
-const money = (v: number | null | undefined, unit = "m") => {
-  if (!isNum(v)) return NA;
-  const s = v < 0 ? "−" : "";
-  const a = Math.abs(v);
-  return unit === "m" && a >= 1000 ? `${s}$${(a / 1000).toFixed(2)}bn` : `${s}$${Math.round(a)}${unit}`;
-};
+// app-open-01 review round fix 1: the local money() helper (which read
+// meta.unitLabel/unitSuffix and used a unicode minus sign) is retired.
+// Every money figure in this component now renders through usd() from
+// lib/money.ts — one dollar language across the whole app, ASCII "-" for
+// every negative, and the same $10bn book denomination as Reckoning/Play.
 const pct = (v: number | null | undefined, d = 1) => (isNum(v) ? `${v.toFixed(d)}%` : NA);
 const sgn = (v: number | null | undefined, d = 1) => (isNum(v) ? (v >= 0 ? "+" : "−") + Math.abs(v).toFixed(d) : NA);
 const num = (v: number | null | undefined, d = 2) => (isNum(v) ? v.toFixed(d) : NA);
@@ -235,10 +240,69 @@ function Empty({ what }: { what: string }) {
  *  PLAN — growth
  * ---------------------------------------------------------------- */
 
+export type PlanWindow = "3y" | "full";
+
+/** How many trailing months of `plan.history.values` a window mode shows —
+ * capped at what actually exists, never invented (app-open-01 item 3:
+ * "read the series length it plots"). */
+export function planWindowMonths(totalMonths: number, mode: PlanWindow): number {
+  return mode === "full" ? totalMonths : Math.min(36, totalMonths);
+}
+
+/** The trailing slice of plan.history a window mode actually plots — the
+ * one array both the chart and its header label read, so the label can
+ * never claim a window the chart isn't showing. */
+export function planWindowSlice(
+  values: number[],
+  worldStartIndex: number,
+  mode: PlanWindow,
+): { values: number[]; worldStartIndex: number } {
+  const shown = planWindowMonths(values.length, mode);
+  const from = values.length - shown;
+  return { values: values.slice(from), worldStartIndex: Math.max(0, worldStartIndex - from) };
+}
+
+/**
+ * The chart header's timeframe label (app-open-01 item 3). Driven entirely
+ * by the ACTUAL plotted window (`shownMonths`, from `planWindowSlice`) and
+ * how much of it is still the inherited pre-history (`inheritedMonths`) —
+ * never a hardcoded "past 3 years" divorced from what the SVG below it
+ * draws.
+ *
+ * ER-13's honesty marker travels with the label rather than inventing new
+ * wording: the chart already carries "INHERITED DECADE (SIMULATED)"
+ * (plan.preRunLabel, cio-04) inside the hatched band itself, directly below
+ * this label — the qualifier here names the SAME fact in three words so a
+ * reader does not have to reach the chart body to learn it.
+ */
+export function planWindowLabel(
+  shownMonths: number,
+  inheritedMonths: number,
+  mode: PlanWindow,
+): string {
+  const years = shownMonths / 12;
+  const yearsText = Number.isInteger(years) ? String(years) : years.toFixed(1);
+  const base =
+    mode === "full"
+      ? `FULL RANGE — ${yearsText}Y`
+      : `PAST ${yearsText} YEAR${years === 1 ? "" : "S"}`;
+  if (inheritedMonths <= 0) return base;
+  if (inheritedMonths >= shownMonths) return `${base} (INHERITED, SIMULATED)`;
+  return `${base} (PARTLY INHERITED)`;
+}
+
 function PlanGrowth() {
   const { plan, meta } = useView();
-  const p = plan.history;
-  if (!p || !p.values || !p.values.length) return <Empty what="plan history" />;
+  const [mode, setMode] = useState<PlanWindow>("3y");
+  const full = plan.history;
+  if (!full || !full.values || !full.values.length) return <Empty what="plan history" />;
+
+  // the toggle only earns its place when "3y" and "full" would actually
+  // differ — a world younger than 3 years already shows everything.
+  const canWindow = full.values.length > planWindowMonths(full.values.length, "3y");
+  const p = planWindowSlice(full.values, full.worldStartIndex ?? 0, mode);
+  const inheritedShown = Math.max(0, Math.min(p.worldStartIndex, p.values.length));
+  const timeframeLabel = planWindowLabel(p.values.length, inheritedShown, mode);
 
   const N = p.values.length - 1;
   const START = Math.max(0, Math.min(p.worldStartIndex == null ? 0 : p.worldStartIndex, N));
@@ -253,7 +317,36 @@ function PlanGrowth() {
   const xTicks: number[] = []; for (let m = N; m >= 0; m -= 12) xTicks.unshift(m);
 
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
+    <div>
+      <div
+        className="plan-growth-header"
+        style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", flexWrap: "wrap", gap: 8, marginBottom: 6 }}
+      >
+        <span
+          className="plan-growth-timeframe"
+          style={{ font: `600 11px ${F.body}`, letterSpacing: "0.12em", textTransform: "uppercase", color: C.mist }}
+        >
+          {timeframeLabel}
+        </span>
+        {canWindow && (
+          <div style={{ display: "flex", gap: 4 }}>
+            {(["3y", "full"] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setMode(m)}
+                style={{
+                  padding: "3px 9px", cursor: "pointer", borderRadius: 2, font: `11px ${F.body}`,
+                  border: `1px solid ${mode === m ? C.ice : C.rule}`,
+                  background: mode === m ? C.ice : "transparent", color: mode === m ? C.ink : C.mist,
+                }}
+              >
+                {m === "3y" ? "3Y" : "Full range"}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+      <svg viewBox={`0 0 ${W} ${H}`} style={{ width: "100%", height: "auto", display: "block" }}>
       <defs>
         <linearGradient id="pgPost" x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={C.good} stopOpacity="0.28" /><stop offset="100%" stopColor={C.good} stopOpacity="0.02" />
@@ -312,7 +405,8 @@ function PlanGrowth() {
       {meta.plane === "true" && (
         <text x={W - R} y={T + 2} textAnchor="end" fill={C.mist} style={{ font: `10px ${F.body}`, letterSpacing: "0.1em" }}>TRUE PLANE</text>
       )}
-    </svg>
+      </svg>
+    </div>
   );
 }
 
@@ -339,7 +433,7 @@ interface OuterArc extends AssetClass { a0: number; a1: number; mid: number; c: 
 interface Label extends OuterArc { ax: number; ay: number; ex: number; ey: number; right: boolean; x: number; y: number; }
 
 function AllocationDonut() {
-  const { allocation, plan, meta } = useView();
+  const { allocation, plan } = useView();
   const policy = allocation.alertPolicy;
   const wf = policy && isNum(policy.watchFraction) ? policy.watchFraction : null;
   const W = 560, H = 420, cx = 268, cy = 208;
@@ -431,7 +525,11 @@ function AllocationDonut() {
             </g>
           ))}
 
-          <text x={cx} y={cy - 6} textAnchor="middle" fill={C.ice} style={{ font: `500 25px ${F.mono}` }}>{money(plan.totalValue, meta.unitSuffix)}</text>
+          {/* app-open-01 item 1 (owner ruling 2026-08-16): the CIO's headline
+              value is the $10bn display denomination (money.ts's usd()),
+              not the raw meta.unitLabel figure — plan.totalValue is still
+              the same scored points, only the rendering changed. */}
+          <text x={cx} y={cy - 6} textAnchor="middle" fill={C.ice} style={{ font: `500 25px ${F.mono}` }}>{usd(plan.totalValue)}</text>
           <text x={cx} y={cy + 12} textAnchor="middle" fill={C.faint} style={{ font: `10px ${F.body}`, letterSpacing: "0.16em" }}>TOTAL PLAN</text>
         </svg>
       </div>
@@ -668,8 +766,7 @@ function CoverageBar({ current, worst, breach }: { current: number; worst: numbe
 }
 
 function LiquidityTab() {
-  const { liquidity, plan, meta } = useView();
-  const u = meta.unitSuffix;
+  const { liquidity, plan } = useView();
   const tiers = liquidity.tiers;
   const total = tiers.reduce((s, t) => s + t.value, 0) || 1;
   const f = liquidity.forecast12m;
@@ -693,13 +790,13 @@ function LiquidityTab() {
   return (
     <Fragment>
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <Tile label="Tier 1 · cash" value={money(t1 && t1.value, u)} sub={`${pct(((t1 ? t1.value : 0) / total) * 100)} of plan`}
+        <Tile label="Tier 1 · cash" value={usd(t1 && t1.value)} sub={`${pct(((t1 ? t1.value : 0) / total) * 100)} of plan`}
           tone={t1 && t1.value / total < 0.02 ? C.warn : undefined} />
-        <Tile label="Tiers 1–2 · defensive" value={money(defensive, u)} sub={pct((defensive / total) * 100) + " of plan"} />
-        <Tile label="Liquid, tiers 1–3" value={money(liquid, u)} sub={pct((liquid / total) * 100) + " of plan"} />
+        <Tile label="Tiers 1–2 · defensive" value={usd(defensive)} sub={pct((defensive / total) * 100) + " of plan"} />
+        <Tile label="Liquid, tiers 1–3" value={usd(liquid)} sub={pct((liquid / total) * 100) + " of plan"} />
         {hasForecast && (
           <Fragment>
-            <Tile label="Net outflow, 12m" value={money(net, u)} sub={pct((outflow / plan.totalValue) * 100) + " of plan"} tone={C.warn} />
+            <Tile label="Net outflow, 12m" value={usd(net)} sub={pct((outflow / plan.totalValue) * 100) + " of plan"} tone={C.warn} />
             <Tile label="Cover of 12m outflow" value={`${(liquid / outflow).toFixed(1)}×`} sub={`tiers 1–2 alone: ${(defensive / outflow).toFixed(1)}×`} tone={C.good} />
           </Fragment>
         )}
@@ -742,7 +839,7 @@ function LiquidityTab() {
               <div style={{ font: `13px ${F.body}`, color: C.ice }}>{t.label}</div>
               <div style={{ font: `11px ${F.body}`, color: C.faint }}>{t.note}</div>
             </div>
-            <span style={{ width: 90, textAlign: "right", font: `14px ${F.mono}`, color: C.ice }}>{money(t.value, u)}</span>
+            <span style={{ width: 90, textAlign: "right", font: `14px ${F.mono}`, color: C.ice }}>{usd(t.value)}</span>
             <span style={{ width: 60, textAlign: "right", font: `13px ${F.mono}`, color: C.faint }}>{pct((t.value / total) * 100)}</span>
             {hasForecast && (
               <span style={{ width: 110, textAlign: "right", font: `13px ${F.mono}`, color: C.mist }}>
@@ -776,7 +873,7 @@ function LiquidityTab() {
       )}
 
       {hasForecast && (
-        <Panel title="Anticipated cashflows" note={`next twelve months · ${meta.unitLabel}`} style={{ marginTop: 10 }}>
+        <Panel title="Anticipated cashflows" note={`next twelve months · ${DENOMINATION_NOTE}`} style={{ marginTop: 10 }}>
           <div style={{ display: "flex", gap: 22, flexWrap: "wrap" }}>
             <div style={{ flex: "1 1 420px", minWidth: 340 }}>
               {flows.map((x) => (
@@ -792,14 +889,14 @@ function LiquidityTab() {
                     <div style={{ position: "absolute", left: "50%", top: -3, bottom: -3, width: 1, background: C.rule }} />
                   </div>
                   <span style={{ font: `14px ${F.mono}`, color: x.v >= 0 ? C.good : C.warn, width: 72, textAlign: "right" }}>
-                    {x.v >= 0 ? "+" : ""}{money(x.v, u)}
+                    {x.v >= 0 ? "+" : ""}{usd(x.v)}
                   </span>
                 </div>
               ))}
               <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "11px 0", borderTop: `1px solid ${C.rule}` }}>
                 <span style={{ font: `600 13px ${F.body}`, color: C.ice, width: 190 }}>Net</span>
                 <span style={{ flex: 1 }} />
-                <span style={{ font: `600 16px ${F.mono}`, color: net < 0 ? C.warn : C.good, width: 72, textAlign: "right" }}>{money(net, u)}</span>
+                <span style={{ font: `600 16px ${F.mono}`, color: net < 0 ? C.warn : C.good, width: 72, textAlign: "right" }}>{usd(net)}</span>
               </div>
               {liquidity.flowFootnote && <div style={{ font: `11px ${F.body}`, color: C.faint, marginTop: 8, lineHeight: 1.5 }}>{liquidity.flowFootnote}</div>}
             </div>
@@ -814,7 +911,7 @@ function LiquidityTab() {
                     <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
                       <span style={{ width: 8, height: 8, background: s.colour || FALLBACK[i], display: "inline-block" }} />
                       <span style={{ font: `13px ${F.body}`, color: C.mist }}>{s.label}</span>
-                      <span style={{ marginLeft: "auto", font: `13px ${F.mono}`, color: s.value ? C.ice : C.faint }}>{money(s.value, u)}</span>
+                      <span style={{ marginLeft: "auto", font: `13px ${F.mono}`, color: s.value ? C.ice : C.faint }}>{usd(s.value)}</span>
                     </div>
                     <div style={{ height: 5, background: C.well, marginTop: 5, marginLeft: 16 }}>
                       <div style={{ height: "100%", width: `${(s.value / maxF) * 100}%`, background: s.colour || FALLBACK[i], opacity: 0.7 }} />
@@ -940,7 +1037,11 @@ function RatioChart({
             segments.push(`${pendingMove ? "M" : "L"}${px.toFixed(1)},${py.toFixed(1)}`);
             pendingMove = false;
           }
-          const markerY = y(s.get(rows[histCount - 1]));
+          // histCount === 0 (month 0, app-open-01/cio-05): there is no
+          // closed row to mark as "as-of" — `rows[histCount - 1]` would be
+          // `rows[-1]`, `undefined` in JS (not "the last element"), and
+          // `s.get(undefined)` would throw reading a field off it.
+          const markerY = histCount > 0 ? y(s.get(rows[histCount - 1])) : null;
           return (
             <g key={s.label}>
               <path d={segments.join(" ")} fill="none" stroke={s.c} strokeWidth={1.9} />
@@ -975,10 +1076,10 @@ function RatioChart({
  *  (CioDashboard.test.tsx's zero-lapse assertion targets it, since the
  *  surrounding table has plenty of legitimate "$0m" cells in unrelated
  *  columns). */
-function lapseCell(v: number | null | undefined, u: string) {
+function lapseCell(v: number | null | undefined) {
   if (!isNum(v)) return <span className="lapse-value" style={{ color: C.faint }}>{NA}</span>;
-  if (v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{money(0, u)}</span>;
-  return <span className="lapse-value" style={{ color: C.warn }}>{money(v, u)}</span>;
+  if (v <= 0) return <span className="lapse-value" style={{ color: C.faint }}>{usd(0)}</span>;
+  return <span className="lapse-value" style={{ color: C.warn }}>{usd(v)}</span>;
 }
 
 /** The programme's cohort NAV stack at the as-of quarter, oldest vintage
@@ -988,11 +1089,9 @@ function lapseCell(v: number | null | undefined, u: string) {
 function VintageLadder({
   vintages,
   classes,
-  unit,
 }: {
   vintages: VintageRung[];
   classes: { id: string; label: string }[];
-  unit: string;
 }) {
   const total = vintages.reduce((s, v) => s + v.navTrue, 0);
   const colourOf = (assetId: string) => {
@@ -1018,7 +1117,7 @@ function VintageLadder({
             <div
               key={v.id}
               className="vintage-rung"
-              title={`${v.label}: ${money(v.navTrue, unit)}`}
+              title={`${v.label}: ${usd(v.navTrue)}`}
               style={{ width: `${w}%`, background: colourOf(asset), opacity: 0.78 }}
             />
           );
@@ -1032,18 +1131,37 @@ function VintageLadder({
 }
 
 function PrivateTab() {
-  const { privateCashflows: pcf, plan, liquidity, meta } = useView();
+  const { privateCashflows: pcf, plan, liquidity } = useView();
   const [sel, setSel] = useState<string>("aggregate");
-  const u = meta.unitSuffix;
   if (!pcf || !pcf.series) return <Empty what="private cashflow series" />;
 
   const options: { id: string; label: string }[] = [{ id: "aggregate", label: pcf.aggregateLabel || "Aggregate" }].concat(pcf.classes);
   const rows = pcf.series[sel] || pcf.series.aggregate;
+  // app-open-01 (cio-05): the month-0 CIO view can legitimately serve zero
+  // rows (histCount 0 AND forecast_quarters 0 both requested) — nothing to
+  // plot at all, honestly, rather than a crash.
+  if (rows.length === 0) return <Empty what="private cashflow history — advance past the opening quarter" />;
   const H = pcf.histCount;
+  // month 0 (H === 0): nothing has CLOSED yet, so `rows[H - 1]` (JS: -1 is
+  // not "the last element", it's `undefined`) would both crash and, if it
+  // didn't, misname the FIRST FORECAST row's mechanically-projected
+  // navClose/unfundedClose as "now". The real "now" at H === 0 is the
+  // entered opening book itself — rows[0].navOpen/.unfundedOpen ARE that
+  // (cioview.py's row() reads them straight off active.opening for i===0),
+  // so `opened` routes the static tiles there and nulls the flow-rate ones
+  // (calls÷unfunded, calls÷NAV): those describe something that happened
+  // OVER a quarter, and no quarter — real or forecast — represents "now".
+  const opened = H === 0;
+  const cur = rows[Math.max(0, H - 1)];
+  const navNow = opened ? cur.navOpen : cur.navClose;
+  const unfundedNow = opened ? cur.unfundedOpen : cur.unfundedClose;
+  const coverageNow = opened ? (navNow > 0 ? unfundedNow / navNow : null) : cur.coverage;
+  const callRateUnfundedNow = opened ? null : cur.callRateUnfunded;
+  const callRateNavNow = opened ? null : cur.callRateNav;
+  const expiredNow = opened ? 0 : cur.expiredUndrawn;
   const sum = (a: PrivateQuarter[], k: "calls" | "distributions" | "net") => a.reduce((s, r) => s + (r[k] || 0), 0);
   const ltm = rows.slice(Math.max(0, H - 4), H);
   const fwd = rows.slice(H, H + 4);
-  const cur = rows[H - 1];
   // ER-6's terminal lapse: undrawn commitment cancelled at the end of a
   // cohort's life. Real but rare — an LTM window mostly reads zero, so this
   // sums the FULL realised history, not just the trailing four quarters.
@@ -1082,30 +1200,30 @@ function PrivateTab() {
       </div>
 
       <div style={{ display: "flex", gap: 8, marginBottom: 10, flexWrap: "wrap" }}>
-        <Tile label="NAV" value={money(cur.navClose, u)} sub={`${pct((cur.navClose / plan.totalValue) * 100)} of plan`} />
-        <Tile label="Unfunded" value={money(cur.unfundedClose, u)} />
-        <Tile label="Unfunded ÷ NAV" value={num(cur.coverage)} sub={isNum(anchor) ? `${num(anchor)} anchor` : undefined}
-          tone={isNum(danger) && Number(cur.coverage) > danger ? C.warn : undefined} />
-        <Tile label="Calls ÷ unfunded" value={pct(isNum(cur.callRateUnfunded) ? cur.callRateUnfunded * 100 : null)} sub="quarterly call rate" />
-        <Tile label="Calls ÷ NAV" value={pct(isNum(cur.callRateNav) ? cur.callRateNav * 100 : null)} sub="quarterly" />
-        <Tile label="Net cashflow, LTM" value={money(sum(ltm, "net"), u)} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
-          sub={fwd.length ? `next 4q: ${money(sum(fwd, "net"), u)}` : undefined} />
+        <Tile label={opened ? "NAV (opening)" : "NAV"} value={usd(navNow)} sub={`${pct((navNow / plan.totalValue) * 100)} of plan`} />
+        <Tile label={opened ? "Unfunded (opening)" : "Unfunded"} value={usd(unfundedNow)} />
+        <Tile label="Unfunded ÷ NAV" value={num(coverageNow)} sub={isNum(anchor) ? `${num(anchor)} anchor` : undefined}
+          tone={isNum(danger) && Number(coverageNow) > danger ? C.warn : undefined} />
+        <Tile label="Calls ÷ unfunded" value={pct(isNum(callRateUnfundedNow) ? callRateUnfundedNow * 100 : null)} sub="quarterly call rate" />
+        <Tile label="Calls ÷ NAV" value={pct(isNum(callRateNavNow) ? callRateNavNow * 100 : null)} sub="quarterly" />
+        <Tile label="Net cashflow, LTM" value={usd(sum(ltm, "net"))} tone={sum(ltm, "net") < 0 ? C.warn : C.good}
+          sub={fwd.length ? `next 4q: ${usd(sum(fwd, "net"))}` : undefined} />
         {/* F2's closure required both halves: the release in the quarter it
             happens AND the running total afterwards. `lapsedToDate` gives the
             second; without the first, a monotonically-rising cumulative never
             says which quarter moved — and post-ER-12 the lapse is ~0.47-0.49
             a year spread across many quarters, not one large event, so that
-            distinction is the whole point (I-2). `cur` is the as-of quarter's
-            row, already bound above. */}
-        <Tile label="Lapsed to date" value={lapsedToDate > 0 ? money(lapsedToDate, u) : NA}
+            distinction is the whole point (I-2). `expiredNow` is the as-of
+            quarter's own figure, real zero when nothing has closed yet. */}
+        <Tile label="Lapsed to date" value={lapsedToDate > 0 ? usd(lapsedToDate) : NA}
           tone={lapsedToDate > 0 ? C.warn : undefined}
-          sub={isNum(cur.expiredUndrawn) && cur.expiredUndrawn > 0
-            ? `${money(cur.expiredUndrawn, u)} this quarter · ER-6`
+          sub={isNum(expiredNow) && expiredNow > 0
+            ? `${usd(expiredNow)} this quarter · ER-6`
             : "ER-6: undrawn commitment released, never called"} />
       </div>
 
       <Panel title="Capital calls, distributions and net"
-        note={`${meta.unitLabel} per quarter · ${H} realised, ${rows.length - H} forecast`}
+        note={`${DENOMINATION_NOTE} per quarter · ${H} realised, ${rows.length - H} forecast`}
         right={<Legend items={[{ label: "Distributions", c: C.good, w: 8 }, { label: "Calls", c: C.mist, w: 8 }, { label: "Net", c: C.amber }]} />}>
         <CashflowBars rows={rows} histCount={H} />
       </Panel>
@@ -1135,7 +1253,15 @@ function PrivateTab() {
             <tbody>
               {pcf.classes.concat([{ id: "aggregate", label: pcf.aggregateLabel || "Aggregate" }]).map((cl) => {
                 const rs = pcf.series[cl.id]; if (!rs) return null;
-                const h = rs.slice(Math.max(0, H - 4), H), fw = rs.slice(H, H + 4), c = rs[H - 1];
+                const h = rs.slice(Math.max(0, H - 4), H), fw = rs.slice(H, H + 4);
+                // month 0 (H === 0): same reasoning as the tiles above — the
+                // real "now" is the opening book, not the first forecast
+                // row's projected close, and no quarter's calls have landed.
+                const c = rs[Math.max(0, H - 1)];
+                const rowNav = H > 0 ? c.navClose : c.navOpen;
+                const rowUnfunded = H > 0 ? c.unfundedClose : c.unfundedOpen;
+                const rowCoverage = H > 0 ? c.coverage : (rowNav > 0 ? rowUnfunded / rowNav : null);
+                const rowCallRate = H > 0 ? c.callRateUnfunded : null;
                 const s = (a: PrivateQuarter[], k: "calls" | "distributions" | "net") => a.reduce((x, r) => x + (r[k] || 0), 0);
                 const lapsed = rs.slice(0, H).reduce((x, r) => x + (r.expiredUndrawn || 0), 0);
                 const agg = cl.id === "aggregate";
@@ -1143,15 +1269,15 @@ function PrivateTab() {
                 return (
                   <tr key={cl.id} onClick={() => setSel(cl.id)} style={{ borderTop: `1px solid ${agg ? C.rule : C.ruleSoft}`, cursor: "pointer" }}>
                     <td style={{ ...td, textAlign: "left", font: `${agg ? 600 : 400} 13px ${F.body}`, color: sel === cl.id ? C.amber : C.mist }}>{cl.label}</td>
-                    <td style={td}>{money(c.navClose, u)}</td>
-                    <td style={td}>{money(c.unfundedClose, u)}</td>
-                    <td style={{ ...td, color: isNum(danger) && Number(c.coverage) > danger ? C.warn : C.ice }}>{num(c.coverage)}</td>
-                    <td style={td}>{money(s(h, "calls"), u)}</td>
-                    <td style={td}>{money(s(h, "distributions"), u)}</td>
-                    <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{money(s(h, "net"), u)}</td>
-                    <td style={{ ...td, color: C.mist }}>{pct(isNum(c.callRateUnfunded) ? c.callRateUnfunded * 100 : null)}</td>
-                    <td style={td}>{lapseCell(lapsed, u)}</td>
-                    <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? money(s(fw, "net"), u) : NA}</td>
+                    <td style={td}>{usd(rowNav)}</td>
+                    <td style={td}>{usd(rowUnfunded)}</td>
+                    <td style={{ ...td, color: isNum(danger) && Number(rowCoverage) > danger ? C.warn : C.ice }}>{num(rowCoverage)}</td>
+                    <td style={td}>{usd(s(h, "calls"))}</td>
+                    <td style={td}>{usd(s(h, "distributions"))}</td>
+                    <td style={{ ...td, color: s(h, "net") < 0 ? C.warn : C.good }}>{usd(s(h, "net"))}</td>
+                    <td style={{ ...td, color: C.mist }}>{pct(isNum(rowCallRate) ? rowCallRate * 100 : null)}</td>
+                    <td style={td}>{lapseCell(lapsed)}</td>
+                    <td style={{ ...td, color: s(fw, "net") < 0 ? C.warn : C.good }}>{fw.length ? usd(s(fw, "net")) : NA}</td>
                   </tr>
                 );
               })}
@@ -1163,7 +1289,7 @@ function PrivateTab() {
 
       {pcf.vintages && pcf.vintages.length > 0 && (
         <Panel title="Vintage ladder" note="as-of quarter · true NAV · oldest first" style={{ marginTop: 10 }}>
-          <VintageLadder vintages={pcf.vintages} classes={pcf.classes} unit={u} />
+          <VintageLadder vintages={pcf.vintages} classes={pcf.classes} />
         </Panel>
       )}
     </Fragment>
@@ -1396,21 +1522,31 @@ export default function CioDashboard({
 
           {tab === "plan" && (
             <Fragment>
-              <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${meta.unitLabel}`}
-                right={
-                  <div style={{ display: "flex", gap: 16, font: `12px ${F.body}`, color: C.faint }}>
-                    <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.totalValue, meta.unitSuffix)}</b></span>
-                    {isNum(plan.growthPct) && <span>Growth <b style={{ color: plan.growthPct >= 0 ? C.good : C.warn, font: `13px ${F.mono}` }}>{sgn(plan.growthPct)}%</b></span>}
-                    {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.netOfFlows, meta.unitSuffix)}</b></span>}
-                  </div>
-                }>
-                <PlanGrowth />
-              </Panel>
+              {/* app-open-01 item 2: plan growth and asset allocation sit
+                  side by side, each half width — .cio-plan-row (styles.css)
+                  follows the app's existing minmax-grid idiom (.chart-grid)
+                  and stacks on its own below the same width a single panel
+                  would otherwise get uncomfortably narrow, no separate
+                  media query needed. */}
+              <div className="cio-plan-row">
+                <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${DENOMINATION_NOTE}`}
+                  right={
+                    <div style={{ display: "flex", gap: 16, font: `12px ${F.body}`, color: C.faint }}>
+                      {/* app-open-01 item 1: same headline figure as the
+                          donut center, same usd() rendering. */}
+                      <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{usd(plan.totalValue)}</b></span>
+                      {isNum(plan.growthPct) && <span>Growth <b style={{ color: plan.growthPct >= 0 ? C.good : C.warn, font: `13px ${F.mono}` }}>{sgn(plan.growthPct)}%</b></span>}
+                      {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{usd(plan.netOfFlows)}</b></span>}
+                    </div>
+                  }>
+                  <PlanGrowth />
+                </Panel>
 
-              <Panel title="Asset allocation" note="by goal · current weights" style={{ marginTop: 10 }}
-                right={<AlertSummary counts={allocationAlerts(view.allocation)} />}>
-                <AllocationDonut />
-              </Panel>
+                <Panel title="Asset allocation" note="by goal · current weights"
+                  right={<AlertSummary counts={allocationAlerts(view.allocation)} />}>
+                  <AllocationDonut />
+                </Panel>
+              </div>
 
               <Panel title="Performance and allocation" note={meta.plane === "true" ? "true plane" : "reported plane"} style={{ marginTop: 10 }}
                 right={<AlertSummary counts={allocationAlerts(view.allocation)} />}>

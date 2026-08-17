@@ -421,6 +421,94 @@ button.t {
   color: var(--jade);
 }
 
+/* policy bands (su-app-07 task 4b) --------------------------------------
+   A strip of one small cell per banded sleeve, directly under the stat
+   rail. The panel is a `.vitrine > section`, so its padding and bottom
+   rule come from the layout-band rule further down; only the cells are
+   styled here. Colour comes from the served AlertLevel and nothing else —
+   the app never judges a band (DN-3 W5). */
+.band-panel .eyebrow {
+  margin-bottom: 8px;
+}
+
+.band-cells {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 10px;
+}
+
+.band-cell {
+  flex: 1 1 190px;
+  min-width: 0;
+  background: var(--panel);
+  border: 1px solid var(--hair);
+  border-left: 3px solid var(--dim);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.band-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.band-name {
+  font-size: 14px;
+  color: var(--ice);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.band-badge {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 10.5px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.band-nums {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.band-weight {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 19px;
+}
+
+.band-range {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.band-cell.alert-watch {
+  border-left-color: var(--brass);
+}
+
+.band-cell.alert-watch .band-badge,
+.band-cell.alert-watch .band-weight {
+  color: var(--brass);
+}
+
+.band-cell.alert-breach {
+  border-left-color: var(--clay);
+  background: #2a1a18;
+}
+
+.band-cell.alert-breach .band-badge,
+.band-cell.alert-breach .band-weight {
+  color: var(--clay);
+}
+
 /* main grid: asset classes left, the wire (and the decision) right */
 .vgrid {
   flex: 1;
@@ -446,13 +534,21 @@ button.t {
   flex-direction: column;
 }
 
-/* right column: the book and the decision keep their height, the wire
-   takes the slack and scrolls inside itself */
+/* right column: the decision keeps its height, the wire takes the slack
+   and scrolls inside itself. Two children only (wire-panel, decision-panel)
+   — Book.tsx was deleted (see Play.tsx's stat-rail comment) and this rule
+   was left at three rows, which mis-mapped the tracks: the wire (child 1)
+   got the uncapped "auto" track meant for a since-removed first section,
+   and the decision panel (child 2) got the freely-shrinkable "1fr" track
+   meant for the wire. Under a short viewport that squeezed the decision
+   panel toward zero height, and its content painted under the app footer
+   below it (app-open-01). Matches `.cockpit .vgrid .right` below, fixed at
+   cio-03 for the same reason. */
 .vgrid .right {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: auto minmax(0, 1fr) auto;
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
 .vgrid .right > section {
@@ -619,6 +715,19 @@ button.t {
   grid-template-columns: repeat(3, minmax(0, 1fr));
   grid-auto-rows: minmax(0, 1fr);
   gap: 8px 14px;
+}
+
+/* CIO dashboard, plan tab (app-open-01 item 2): plan growth and asset
+   allocation side by side, half width each. Same minmax-grid idiom as
+   .chart-grid above rather than a hand-picked breakpoint — auto-fit drops
+   to a single column on its own once two panels can no longer fit at
+   their minimum width, so narrow hosts (a squeezed cockpit pane, a phone)
+   stack without a separate media query. */
+.cio-plan-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+  gap: 10px;
+  margin-bottom: 10px;
 }
 
 /* the key is one line under the eyebrow */
@@ -1086,18 +1195,22 @@ button.commit {
 
 /* When a window is open the decision IS the screen: the wire gives up most
    of its room, and the panel scrolls inside itself rather than spilling over
-   the footer if a viewport is still too short for it. Book mode only: the
-   column still has 3 rows (book, wire, decision) here. */
+   the footer if a viewport is still too short for it. Book mode's column
+   has two children (wire-panel, decision-panel) since Book.tsx's removal —
+   this rule was left at three rows (app-open-01), which is what let the
+   squeezed-out decision panel's content bleed into the app footer below.
+   Now identical to `.cockpit .vgrid .right.deciding` below. */
 .vgrid .right.deciding {
-  grid-template-rows: auto minmax(0, 0.3fr) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 0.3fr) minmax(0, 1fr);
 }
 
-/* Cockpit mode's deciding template: only 2 rows (wire, decision) since the
-   book section never renders in CIO mode. Same intent as the book-mode rule
-   above — the wire cedes room, the decision panel takes it — but with one
-   fewer track. Four classes beats both `.vgrid .right.deciding` and
-   `.cockpit .vgrid .right` (three classes each) on specificity, so this
-   wins outright rather than depending on source order. */
+/* Cockpit mode's deciding template: same two rows (wire, decision) and same
+   values as the book-mode rule above post app-open-01 — kept as an explicit
+   override rather than folded together so cockpit mode cannot silently
+   regress if book mode's rule ever needs to diverge again. Four classes
+   beats both `.vgrid .right.deciding` and `.cockpit .vgrid .right` (three
+   classes each) on specificity, so this wins outright rather than depending
+   on source order. */
 .cockpit .vgrid .right.deciding {
   grid-template-rows: minmax(0, 0.3fr) minmax(0, 1fr);
 }
@@ -1164,6 +1277,16 @@ button.commit {
   letter-spacing: 0.12em;
   color: var(--dim);
   font-family: "IBM Plex Mono", monospace;
+}
+
+/* app-open-01 item 1: the dollar equivalent riding alongside decision
+   alpha — points are the scored headline, this is the visceral one. */
+.outcome-alpha-usd {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--dim);
+  font-family: "IBM Plex Mono", monospace;
+  margin-top: 2px;
 }
 
 .outcome-note {
@@ -1423,12 +1546,94 @@ button.commit {
 }
 
 .book-liquid {
-  flex-wrap: wrap;
-  flex-direction: row;
+  flex-direction: column;
 }
 
-.book-liquid .setup-row {
-  min-width: 140px;
+/* -- su-app-07: values, policy targets and reporting bands side by side ---- */
+.policy-grid {
+  display: grid;
+  grid-template-columns:
+    minmax(110px, 1fr) 88px 88px minmax(64px, 78px) minmax(52px, 66px)
+    76px 76px;
+  gap: 6px 10px;
+  align-items: center;
+  overflow-x: auto;
+}
+
+.policy-head,
+.policy-row {
+  display: contents;
+}
+
+.policy-head > span {
+  color: var(--dim);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  text-align: right;
+  padding-bottom: 2px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.policy-head > span:first-child {
+  text-align: left;
+}
+
+.policy-name {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 13px;
+}
+
+.policy-wt,
+.policy-drift {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.policy-wt {
+  color: var(--dim);
+}
+
+/* drift only earns colour when there IS drift — a book sitting on its policy
+   should look quiet. */
+.policy-drift {
+  color: var(--clay);
+}
+
+.policy-drift.flat {
+  color: var(--dim);
+  opacity: 0.65;
+}
+
+/* the grid owns the column widths; the shared 88px input rule would overflow
+   the two narrower band columns. */
+.policy-grid input {
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.policy-band::placeholder {
+  color: var(--dim);
+  opacity: 0.55;
+}
+
+.policy-residual {
+  grid-column: 3 / -1;
+  font-size: 11px;
+  color: var(--dim);
+}
+
+/* a private sleeve's held value in the merged table (app-open-01 delta 2) —
+   read-only text, not an input: it is the ladder below summed at nav_true,
+   edited there rather than here. */
+.policy-value {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  color: var(--dim);
 }
 
 .book-liquid input,
@@ -1517,6 +1722,15 @@ button.commit {
   font-family: "IBM Plex Mono", monospace;
   font-size: 24px;
   font-weight: 500;
+}
+
+/* app-open-01 item 1: the $10bn display denomination riding alongside the
+   points total the rest of this screen is entered in — secondary weight,
+   not a second hero number. */
+.book-rail-usd {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--dim);
 }
 
 .ranked-locked {

@@ -6,11 +6,20 @@ import json
 from pathlib import Path
 from typing import Any
 
+import pytest
+
 from ah.cioview import _frozen_paths, build_cio_view, validate_cio_view
 from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
-from ah.play import PRIVATE_ASSETS, simulate_play
+from ah.play import (
+    PRIVATE_ASSETS,
+    START_CASH,
+    START_TARGETS,
+    default_opening_book,
+    simulate_play,
+)
+from ah.port.book import OpeningBook
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESETS = ROOT / "src" / "ah" / "presets"
@@ -194,6 +203,7 @@ def _view(
     fq: int = 4,
     preset: str = "stagflation",
     prehistory: bool = True,
+    book: OpeningBook | None = None,
 ):
     return build_cio_view(
         _paths(preset),
@@ -208,7 +218,69 @@ def _view(
         revealed_months=revealed,
         forecast_quarters=fq,
         prehistory=prehistory,
+        opening_book=book,
     )
+
+
+def test_target_pct_follows_the_entered_books_policy_targets():
+    """su-app-07 Ruling G. Since task 2 the engine paces and caps off the
+    book's ``effective_targets()``. A dashboard whose ``targetPct`` still read
+    the world default would state a policy the institution is not running —
+    su-app-06's worst defect class (displayed one thing, applied another),
+    reappearing on the CIO surface.
+
+    Values are left exactly as the derived book has them; only the AIM moves,
+    so nothing but the target basis can explain a change here."""
+    book = default_opening_book(START_TARGETS)
+    tilted = book.model_copy(deep=True)
+    tilted.targets = {**START_TARGETS, "equity": 23.0, "pe": 30.0}
+    assert tilted.liquid == book.liquid and tilted.private == book.private
+
+    default_classes = {c["id"]: c for c in _view()["allocation"]["classes"]}
+    assert default_classes["pe"]["targetPct"] == pytest.approx(20.0)
+    assert default_classes["equity"]["targetPct"] == pytest.approx(33.0)
+
+    v = _view(book=tilted)
+    classes = {c["id"]: c for c in v["allocation"]["classes"]}
+    assert classes["pe"]["targetPct"] == pytest.approx(30.0)
+    assert classes["equity"]["targetPct"] == pytest.approx(23.0)
+    assert validate_cio_view(v) == []
+
+
+def test_the_target_cash_addend_follows_the_entered_books_cash():
+    """The denominator is ``sum(targets) + cash`` (Ruling C), so the cash
+    addend has to travel with the targets: a book holding 5 points of cash
+    normalised against ``START_CASH``'s 2.0 would print percentages that sum
+    past 100."""
+    book = default_opening_book(START_TARGETS)
+    heavy = book.model_copy(deep=True)
+    heavy.liquid = {**book.liquid, "equity": book.liquid["equity"] - 3.0}
+    heavy.cash = book.cash + 3.0
+    heavy.targets = {**START_TARGETS, "equity": START_TARGETS["equity"] - 3.0}
+
+    v = _view(book=heavy)
+    classes = {c["id"]: c for c in v["allocation"]["classes"]}
+    assert classes["cash"]["targetPct"] == pytest.approx(5.0)
+    assert sum(c["targetPct"] for c in v["allocation"]["classes"]) == pytest.approx(100.0)
+    assert validate_cio_view(v) == []
+
+
+def test_a_book_with_no_entered_targets_still_targets_its_own_values():
+    """``effective_targets()``'s fallback reaches the dashboard too: a 0.1-era
+    book (``targets=None``) aims at the allocation it opened holding, which is
+    exactly what ``simulate_play`` paces against for it."""
+    book = default_opening_book(START_TARGETS)
+    untargeted = book.model_copy(deep=True)
+    untargeted.targets = None
+    untargeted.liquid = {
+        **book.liquid,
+        "equity": book.liquid["equity"] - 4.0,
+        "bonds": book.liquid["bonds"] + 4.0,
+    }
+
+    classes = {c["id"]: c for c in _view(book=untargeted)["allocation"]["classes"]}
+    assert classes["equity"]["targetPct"] == pytest.approx(29.0)
+    assert classes["bonds"]["targetPct"] == pytest.approx(16.0)
 
 
 def test_view_validates_clean_on_both_planes():
@@ -246,6 +318,102 @@ def test_unreached_windows_are_null_not_zero():
         assert v["performance"]["total"][idx[p]] is None
     for p in ("1Q", "1Y"):
         assert v["performance"]["total"][idx[p]] is not None
+
+
+def test_month_zero_builds_a_valid_view_populated_from_the_opening_book():
+    """app-open-01 (cio-05): the CIO is the front door — the first thing a
+    player sees after the opening book is confirmed, before any advance().
+    ``revealed_months=0`` used to raise ("no closed quarter inside the
+    revealed window") for every caller; now it builds a real payload off
+    ``active.opening`` (never ``active.quarters[-1]``, which would silently
+    read the FURTHEST forecast quarter as "now")."""
+    v = _view(revealed=0)
+    assert validate_cio_view(v) == []
+    assert v["meta"]["asOfLabel"] == "T0"
+    assert v["meta"]["asOfMonth"] == 0
+    assert v["privateCashflows"]["histCount"] == 0
+    # "now" is the opening state exactly: zero elapsed growth on a real
+    # (nonzero) total, not a null placeholder.
+    assert v["plan"]["growthPct"] == 0.0
+    assert v["plan"]["netOfFlows"] == 0.0
+    assert v["plan"]["totalValue"] > 0
+    # allocation is POPULATED, not empty or null — the whole point of
+    # "starting values" (item 1).
+    cur = sum(c["currentPct"] for c in v["allocation"]["classes"])
+    assert abs(cur - 100.0) < 0.1
+    assert all(c["currentPct"] is not None for c in v["allocation"]["classes"])
+
+
+def test_month_zero_ytd_is_null_but_the_inherited_decade_still_feeds_1q_1y():
+    """YTD is a "this calendar year of the WORLD" concept; at month 0 there
+    is no world-year to speak of, so it must be null regardless of
+    prehistory. 1Q/1Y are plain trailing windows and, with prehistory on,
+    are already-established policy (cio-04) to blend from the inherited
+    decade whenever fewer world quarters exist than the window needs — at
+    month 0 that blend is total, not partial, but the rule is the same
+    one already documented in performance.footnote."""
+    v = _view(revealed=0, prehistory=True)
+    idx = {p: i for i, p in enumerate(v["performance"]["periods"])}
+    assert v["performance"]["total"][idx["YTD"]] is None
+    assert v["performance"]["total"][idx["1Q"]] is not None
+    assert v["performance"]["total"][idx["1Y"]] is not None
+
+
+def test_month_zero_without_prehistory_has_no_null_crash_and_one_chart_point():
+    """A generated (non-toy-v0) world opts out of the inherited decade
+    (serve.py). At month 0 that leaves nothing of the world's own tape
+    either — the chart still needs at least the opening point to draw, and
+    every performance column is honestly null (nothing has been reached at
+    all, inherited or otherwise)."""
+    v = _view(revealed=0, prehistory=False)
+    assert validate_cio_view(v) == []
+    assert v["plan"]["history"]["values"] == [round(v["plan"]["totalValue"], 4)]
+    assert v["plan"]["history"]["worldStartIndex"] == 0
+    assert all(x is None for x in v["performance"]["total"])
+    assert "preRunLabel" not in v["plan"]
+
+
+def test_month_zero_with_forecast_quarters_zero_does_not_crash():
+    """The fully degenerate case: no closed quarter AND no forecast
+    requested. Every downstream table is legitimately empty rather than
+    fabricated — this used to be unreachable (n_q was always >= 1), so
+    nothing enforced Python/JS validator parity on an empty (but present)
+    aggregate series until this shape became real."""
+    v = _view(revealed=0, fq=0)
+    assert validate_cio_view(v) == []
+    assert v["privateCashflows"]["series"]["aggregate"] == []
+    assert v["liquidity"]["forecast12m"] == {
+        "distributions": 0.0,
+        "income": 0.0,
+        "calls": 0.0,
+        "payout": 0.0,
+        "net": 0.0,
+    }
+
+
+def test_month_zero_with_a_custom_book_shows_the_books_own_values():
+    """su-app-06/07's book-carrying dashboard promise extends to month 0: a
+    player who entered a custom book must see THAT book's starting values,
+    not the world default's."""
+    book = default_opening_book()
+    book.liquid["equity"] = book.liquid["equity"] + 1.0
+    book.cash = book.cash - 1.0
+    v = _view(revealed=0, book=book)
+    assert validate_cio_view(v) == []
+    equity = next(c for c in v["allocation"]["classes"] if c["id"] == "equity")
+    default_equity = next(
+        c for c in _view(revealed=0)["allocation"]["classes"] if c["id"] == "equity"
+    )
+    assert equity["currentPct"] != default_equity["currentPct"]
+
+
+def test_revealed_one_or_two_still_refuses_no_closed_quarter():
+    """Mid-quarter (unreachable through the UI's quarterly rhythm, but not
+    through direct calls) still has nothing closed — the guard month 0 now
+    bypasses must stay in place for 1 and 2."""
+    for revealed in (1, 2):
+        with pytest.raises(ValueError, match="no closed quarter"):
+            _view(revealed=revealed)
 
 
 def test_benchmark_is_the_twin():
@@ -457,7 +625,10 @@ def test_allocation_guards_zero_total_instead_of_raising():
     active = PlayResult(
         quarters=[zeroed], final_value=0.0, forced_sale_quarters=0, total_forced_sales=0.0
     )
-    alloc = _allocation(active, {"equity": 0.0}, "true", 1, {})
+    # su-app-07 Ruling G added `cash_target` between `targets` and `plane`:
+    # the policy cash the targets are normalised against. START_CASH here
+    # keeps this test on exactly the basis it always ran on.
+    alloc = _allocation(active, {"equity": 0.0}, START_CASH, "true", 1, {})
     equity = next(c for c in alloc["classes"] if c["id"] == "equity")
     assert equity["currentPct"] is None
 
@@ -471,7 +642,7 @@ def test_view_is_byte_deterministic():
 def test_golden_views_validate_on_every_preset():
     for preset in ("stagflation", "goldilocks"):
         for plane in ("reported", "true"):
-            for revealed in (12, 60, 120):
+            for revealed in (0, 12, 60, 120):
                 errors = validate_cio_view(_view(plane, revealed, preset=preset))
                 assert errors == [], (preset, plane, revealed, errors)
 

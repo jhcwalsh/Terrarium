@@ -187,6 +187,207 @@ SU single-user product slice. Newest first. Step 2's entries live in their own
 
 ### Added
 
+- **app-open-01 — the CIO front door, book-entry bands, the declared-stress
+  picker, and the $10bn display denomination, plus the whole-branch review
+  round's fix pass.** Five controller commits landed the feature; a sixth
+  pass (this entry's second half) reviewed the whole branch and fixed what
+  it found.
+
+  - **The decision-stop defect and its root cause.** Advancing past a
+    decision window from the overlay/cockpit view could leave the lever
+    unreachable, and footer chrome could overprint the panel beneath it.
+    Root cause: a stale 3-row grid template left over from a layout that
+    predated the cockpit's extra rail row, so the decision panel and footer
+    fought the same track. Fixed by re-deriving the grid from the rows the
+    cockpit actually renders (`1edb059`).
+  - **Book entry gained real reporting bands.** The entry screen's default
+    reporting band is now +/-10% OF the sleeve's own target allocation
+    (`default_band`, `src/ah/port/book.py`) rather than a flat points-wide
+    band, private asset classes (`pe`/`pc`/`re`) joined the allocation
+    table alongside the liquid sleeves, and every sleeve label is spelled
+    out in full rather than abbreviated (`3e927de`).
+  - **The "choose your decade" picker shows only the declared-stress
+    generation** (`bootstrap-stratified`) — toy-engine and plain-bootstrap
+    worlds stay in the store but are hidden from the opening list
+    (`app/src/lib/worlds.ts`, `7e2a53f`). That commit's own dedupe was
+    built on a false premise (see the review-round fix below).
+  - **The CIO dashboard is the front door.** A session now opens straight
+    into the dashboard, populated with the opening book's STARTING values,
+    with the "Plan growth" and "Asset allocation" panels sitting side by
+    side. Getting there needed a month-0 endpoint fix: `build_cio_view`
+    used to 409 at `revealed_months == 0` ("no closed quarter yet"), which
+    made the front door impossible to open before a player had advanced at
+    least one quarter; it now serves the entered opening book directly at
+    month 0. The plan-growth chart's timeframe caption is derived from the
+    ACTUAL plotted window and how much of it is inherited pre-history,
+    never a hardcoded "past 3 years" — the ER-13 honesty marker ("INHERITED
+    DECADE (SIMULATED)") travels with it rather than inventing a second
+    wording (`a8675e7`).
+  - **The $10bn display denomination.** Scored points remain the truth
+    server-side and in every stored/leaderboard figure; the client
+    re-denominates them for display only, as though the institution were a
+    $10bn book (1 scored point = $100m, `app/src/lib/money.ts`'s `usd()`).
+    Decision windows in `DecisionWindow.tsx` show each lever's dollar
+    impact beside its points (`67f1ff2`).
+  - **`280c2d7` merges `su-app-07-targets-and-ranges` into this branch** —
+    the policy-targets/reporting-bands work (see that entry above) landed
+    first and `default_band`/`OpeningBook.ranges` are what item 2's bands
+    build on; the merge is recorded here because every fix in this entry's
+    second half sits downstream of it.
+
+  **The whole-branch review round (2026-08-16), six fixes, none reopening
+  a settled ruling:**
+
+  - **One dollar language.** The CIO dashboard had TWO dollar scales on
+    screen at once: the plan-total headline already rendered through
+    `usd()` (the $10bn book), while roughly twenty other call sites — the
+    liquidity tiles, tier rows, cashflow rows, private tiles, the quarterly
+    table, vintage tooltips — still rendered through a local `money()`
+    helper carrying the OLD $1m-per-point scale and a unicode minus sign.
+    Every site in `CioDashboard.tsx` now routes through `usd()`; the local
+    helper is gone. The served `meta.unitLabel` ("$m", `src/ah/cioview.py`'s
+    `UNIT_LABEL` — untouched, still served byte-stable) is no longer echoed
+    as a caption; the client shows its own denomination note, "USD, $10bn
+    book" (`DENOMINATION_NOTE`, `money.ts`), instead. Every negative money
+    figure now prints the ASCII `-`, never the unicode `−`.
+  - **World 702 fenced, not deduped.** The picker's Map-based dedupe (keyed
+    on `world_id`, `7e2a53f`) was unreachable: the `/worlds` document lists
+    each world_id once, so there was never a same-world_id collision to
+    dedupe. The real duplicate a player saw was two DIFFERENT world_ids —
+    702 (The Lost Decade at 18-month blocks) and 703 (the 2026-08-15
+    declaration, 6-month blocks) — sharing the display title "The Lost
+    Decade." `worlds.ts` now names `HIDDEN_WORLD_IDS = [702]` and fences it
+    out of `selectShownWorlds`; 703 and the Long Squeeze show, one button
+    each. Owner ruling: worlds on retired methodology are hidden, never
+    deleted.
+  - **Headline precision.** `usd()` renders the bn branch to two decimals
+    ($10m granularity, e.g. `$11.57bn`) instead of one. Fixed alongside it:
+    a LOW boundary bug where the unit was chosen BEFORE rounding, so a
+    value like 9.9999 points ($999.99m) printed `$1000m` instead of rolling
+    over to `$1.00bn` — the bn/m branch is now chosen after rounding to the
+    bn branch's own precision.
+  - **The vanished no-ranges test arm, restored.** `app-open-01` delta 1
+    (su-app-07) made `/book/default` serve a book with its own +/-10% band
+    per sleeve already attached, so `test_ranges_do_not_move_a_single_number`
+    — which claims to compare "the same book... differing only in whether
+    it declares ranges" — had quietly stopped covering that: both arms it
+    played had *some* range (the served default's vs. `_TIGHT`'s), so "no
+    ranges reaches the engine" was untested. The plain arm now overrides
+    `ranges` back to `None` explicitly (the same construction
+    `TestBandReport` already uses on the read side); the `_TIGHT` arm is
+    unchanged.
+  - **`default_band`'s degenerate-band floor.** A small enough positive
+    target's ten-percent half-width rounds down to a flat `0.0` (0.4 * 0.10
+    = 0.04), producing `lo == hi` — a band no weight can ever sit strictly
+    inside or outside of. The half-width now floors to a minimum of 0.1
+    allocation points for any positive target, and the high edge clamps to
+    100.0 so a target near the ceiling (e.g. 95) doesn't band past what any
+    weight could reach.
+  - **CHANGELOG** — this entry.
+
+- **su-app-07 — policy targets and reporting ranges, separating the
+  institution's SAA from its opening values.** `OpeningBook` gains two
+  optional fields, `targets: {sleeve -> points} | None` and
+  `ranges: {sleeve -> [lo, hi]} | None`, at `state_version = "opening-book-0.2"`
+  (`src/ah/port/book.py`); a `0.1` document still validates and still means
+  what it meant, and `validate_book` now returns `list[str]` of warnings
+  rather than raising, so a target sitting outside its own range is allowed
+  and recorded rather than refused. `effective_targets()` is the single
+  resolver of the fallback (`targets` if entered, else the book's own values)
+  and every caller goes through it or the one `serve.py` helper that mirrors
+  it for the two sites that don't route through `simulate_play` — the cap
+  door, `validate_plan`, and the pacing multiplier all agree on the same
+  number by construction.
+
+  **The separation is real, not cosmetic: the commitment programme now paces
+  off the policy target, not the drifted opening actual.** Before this WP one
+  number did both jobs — an institution three points overweight equity had no
+  way to say "our SAA is 35, we are actually at 33, keep committing to 35."
+  It now can, and the decade that results is measurably different from one
+  where target and value are equal (`tests/test_book_override.py`), because
+  `_policy_private_weight`/`_pacing_multiplier`/`plan_commitments` all read
+  the target through `effective_targets()`, with `cash` threaded alongside it
+  so a book with `cash != START_CASH` doesn't skew the denominator.
+
+  **Ranges report; they do not rebalance.** Nothing in this WP changes a
+  number the engine produces. `PlayQuarter` already carried everything a
+  breach needs (`liquid_values`, `private_true`, `private_reported`, the two
+  `nav_*` fields, `cash`), so breach computation is a read-layer addition
+  only — `src/ah/play.py` is untouched — served as `band_report` per sleeve,
+  per plane (`reported`/`true`), on `GET /sessions/{sid}` using the existing
+  `AlertLevel` vocabulary (`ok`/`watch`/`breach`). A dedicated inertness test
+  with *tight, off-centre* bands (not the wide `[0, 100]` no-op bands an
+  earlier draft used, which would have passed for the wrong reason — the
+  su-app-06 lesson repeating) proves a session plays out bit-identically with
+  and without `ranges` set. The entry screen (`app/src/BookEntry.tsx`) gains a
+  target input and a lo/hi pair per sleeve, with implied weight and drift
+  shown beside each target as it's typed; the play surface gains a POLICY
+  BANDS panel that renders the served `alert` as-is, labelled "REPORTING
+  ONLY" — client-side alert computation was deliberately not added anywhere.
+  **Nobody reading a future breach report should mistake it for risk
+  control: no band ever triggers a trade.**
+
+  **The design spec's §2 claim that targets-absent means "every existing
+  session is byte-identical" is corrected in place, not repeated.** It's true
+  for the derived default book, whose emitted `targets` equal its own values
+  (`default_opening_book`, so an untouched pre-fill round-trips to the same
+  digest and stays ranked). It's false for a legacy session carrying a
+  *custom* book: that book's pacing now follows its own entered values
+  instead of the world default, which is a behaviour change, not a no-op.
+  Ruled acceptable — custom books have been practice-only since su-app-06, so
+  no leaderboard row depends on one — but recorded honestly rather than
+  described as no change. A correction note is added at
+  `docs/superpowers/specs/2026-08-16-targets-and-ranges-design.md`, section 2,
+  in place; the spec itself is left as the record it is.
+
+  **Deliberately deferred, all three recorded rather than fixed:**
+  - **Rebalancing to target**, band-triggered or otherwise. It would change
+    every decade's outcome and invalidate leaderboard comparability across the
+    change — a release event needing a `TOY_ENGINE_VERSION` bump and a
+    play-alpha bump, and the owner's call, not a line item in this WP.
+  - **The CIO dashboard does not consume the entered ranges, and the gap it
+    already had widened.** `src/ah/cioview.py` was touched only to make
+    `targetPct` follow the book (the same displayed-vs-applied defect class
+    as su-app-06's C1 — the chart was still drawing the *world's* policy
+    while the engine paced off the *book's*). `AssetClass.bandPct`
+    (`app/src/lib/cioView.ts:137`) is untouched: it is a symmetric half-width
+    from a hard-coded table, and an entered `[lo, hi]` is asymmetric, so
+    mapping one onto the other would either lose the asymmetry or draw a band
+    that disagrees with the alert beside it. The consequence, sharper again
+    than "two screens" (final review): `BandPanel` mounts above the view-mode
+    branch in `app/src/Play.tsx:635`, so it renders in BOTH modes — which
+    means **on a book-carrying session in CIO mode a player sees two
+    disagreeing alert flags for the same sleeve at the same time, on one
+    screen**. `CioDashboard`'s flag is computed against a hard-coded symmetric
+    `BAND_PCT` half-width re-centred on the book's target; the `BandPanel`
+    strip directly above it reports against the analyst's own entered
+    `[lo, hi]`. Both are correct about their own source and neither is wrong,
+    but they are not the same statement, and nothing reconciles them. The
+    session document's `band_report` is the authoritative statement of an
+    entered range; the dashboard's band is not.
+  - **`build_prehistory` is the last target-basis holdout**, and it is
+    deliberate. Ruling G re-pointed the CIO plan chart's `targetPct` and its
+    cash addend at the book's `effective_targets()`/`cash`, but
+    `src/ah/cioview.py`'s `build_prehistory` call still receives the WORLD
+    default — so on a book-carrying session the ER-13 inherited decade is
+    simulated against the world's policy while everything from world month 0
+    onward runs the book's. Re-basing it moves the inherited decade's numbers
+    for every book-carrying session, which is a release event and the owner's
+    call, not an incidental cleanup. Marked as a known holdout at the call
+    site.
+  - **`DecisionWindow.tsx` still claims that *hold* rebalances to target.**
+    It does not — `_rebalance` is called only by *derisk* and *leanin*
+    (`src/ah/play.py:675,677`). The copy was wrong before this WP and is
+    still wrong after it; fixing copy was not this design's business to
+    bundle, so it is recorded here instead.
+
+  **One more rough edge, pre-existing shape, recorded as a follow-up:** the
+  entry screen checks the entered targets total to a tolerance of 0.01, while
+  the server's `BOOK_TOLERANCE` is `1e-6` — a total off by, say, 0.005 passes
+  the screen and 422s at the door with no client-side warning. The values
+  total has the same gap already; this WP gave targets parity with it rather
+  than fixing either.
+
 - **The private-markets/inflation note joins the hub allowlist, with a
   committed PDF mirror.** `ah.hub.DOCS` gains `private-markets-inflation` →
   `docs/current/private-markets-and-inflation.md`, so ER-14's supporting

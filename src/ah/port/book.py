@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from ah.core.digest import canonical_json
 from ah.port.cohort import ClosedEndCohort
 
-BOOK_STATE_VERSION = "opening-book-0.1"
+BOOK_STATE_VERSION = "opening-book-0.2"
 PLAN_STATE_VERSION = "commitment-plan-0.1"
 
 #: Liquid points + private NAV + cash. The default books are 98 + 2 cash.
@@ -36,6 +36,61 @@ BOOK_TOLERANCE = 1e-6
 RUNG_TOLERANCE = 1e-9
 
 PRIVATE_SLEEVES: tuple[str, ...] = ("pe", "pc", "re")
+
+#: app-open-01 delta 1 (owner-dictated 2026-08-16): the default reporting
+#: band is +/-10% OF the sleeve's own target allocation — relative, not a
+#: flat points-wide band — so a 40-point target defaults to 36-44 and a
+#: 5-point target to 4.5-5.5.
+DEFAULT_BAND_FRACTION = 0.10
+
+
+#: app-open-01 review round fix 5: the minimum half-width for any POSITIVE
+#: target, in allocation points. Without a floor, a small enough target's
+#: ten-percent half-width rounds down to a flat 0.0 (0.4 * 0.10 = 0.04,
+#: which rounds to 0.0) and the band degenerates to ``lo == hi`` — an
+#: interval no weight can ever sit strictly inside or outside of, which
+#: breaks every band-status caller (``_alert_level`` chief among them,
+#: `serve.py`) that assumes ``lo < hi``. 0.1 is one allocation point's own
+#: display precision, so it never shows a floor finer than every other
+#: figure on the book already carries.
+MIN_BAND_HALF_WIDTH = 0.1
+
+
+def default_band(target: float) -> tuple[float, float]:
+    """The default +/-``DEFAULT_BAND_FRACTION`` reporting band for one sleeve.
+
+    Rounding rule: the half-width is rounded to ONE DECIMAL PLACE of
+    allocation points FIRST, and ``lo``/``hi`` are then computed from that
+    rounded half-width — not rounded independently after subtracting/adding
+    the raw fraction. That order means ``round(hi - lo, 1)`` recovers the
+    exact half-width this function used (immune to the float dust
+    ``target - target * 0.1`` can otherwise leave on the low edge), and two
+    sleeves entered at the same target always get an identically-shaped
+    band — UNLESS the high edge was capped (see below), in which case
+    ``hi - lo`` is narrower than the half-width actually used on the low
+    side. One decimal place matches the precision every other allocation
+    figure on the book already carries (``START_TARGETS``, a book's own
+    ``liquid``/rung points), so the served default cannot show a raw digit
+    the analyst never typed.
+
+    FLOOR (app-open-01 review round fix 5): for a target greater than zero,
+    the half-width is floored to ``MIN_BAND_HALF_WIDTH`` BEFORE rounding, so
+    ``lo < hi`` always holds — see ``MIN_BAND_HALF_WIDTH``'s own docstring
+    for why an unfloored band can degenerate. A target of exactly zero (or
+    below, though a legal book never enters one) is unaffected — there is
+    nothing to band around — and still bands to ``(0.0, 0.0)``.
+
+    CAP: the high edge is clamped to 100.0, the top of the allocation scale,
+    so a target already near the ceiling (e.g. 95) does not band to an edge
+    past what any weight could ever reach.
+    """
+    if target <= 0.0:
+        return (round(target, 1), round(target, 1))
+    half = round(max(target * DEFAULT_BAND_FRACTION, MIN_BAND_HALF_WIDTH), 1)
+    lo = round(target - half, 1)
+    hi = min(round(target + half, 1), 100.0)
+    return (lo, hi)
+
 
 #: Cohort ids the ENGINE mints for itself during play. ``ah.play`` commits one
 #: new vintage per private sleeve per year as ``f"{asset}-v{year}"``, and
@@ -87,10 +142,18 @@ class OpeningBook(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    state_version: Literal["opening-book-0.1"] = BOOK_STATE_VERSION
+    state_version: Literal["opening-book-0.1", "opening-book-0.2"] = BOOK_STATE_VERSION
     liquid: dict[str, float]
     private: dict[str, list[dict[str, Any]]]
     cash: float
+    #: The institution's POLICY targets (su-app-07), distinct from the VALUES
+    #: above. ``None`` (the 0.1 shape) means "no targets entered" — a book
+    #: paces against its own opening weights; see ``effective_targets()``.
+    targets: dict[str, float] | None = None
+    #: Reporting bands per sleeve, ``{sleeve: (lo, hi)}``. ``None`` means "no
+    #: bands entered". A target outside its own band is legal (accepted, not
+    #: refused) — ``validate_book`` returns it as a warning string instead.
+    ranges: dict[str, tuple[float, float]] | None = None
 
     @field_validator("liquid")
     @classmethod
@@ -115,16 +178,17 @@ class OpeningBook(BaseModel):
         return [ClosedEndCohort.from_document(doc) for doc in self.private[sleeve]]
 
     def target_nav(self) -> dict[str, float]:
-        """Per-sleeve opening private NAV.
+        """Per-sleeve opening private NAV — what the analyst actually HOLDS.
 
-        This is the basis a commitment cap is measured against once an
-        analyst has entered a book (su-app-06 I1): the book IS the
-        institution, so ``2 x target x _ANNUAL_COMMITMENT_RATE`` has to be
-        measured against the sleeve the analyst actually holds, not against
-        ``START_TARGETS``. All three enforcement points — ``validate_plan``
-        at kickoff, the decision door in ``ah.serve``, and
-        ``simulate_play``'s own check — read the cap from here, so a plan
-        legal at kickoff cannot be refused at the window it is committed in.
+        su-app-06 (I1) measured the commitment cap against this, because the
+        book IS the institution and ``START_TARGETS`` is not. su-app-07 moved
+        the cap one step further on, to ``effective_targets()``: an
+        institution paces against the allocation it is aiming at, and a book
+        that holds 20 points of pe against a 30-point policy target must be
+        allowed to commit toward the 30. This method is still the fallback
+        that ``effective_targets()`` builds its private half from when no
+        targets were entered, and is still the opening NAV every value
+        surface reads — it is no longer the cap basis.
         """
         return {
             sleeve: sum(float(rung["value"]["nav_true"]) for rung in rungs)
@@ -136,14 +200,34 @@ class OpeningBook(BaseModel):
             float(rung["value"]["nav_true"]) for rungs in self.private.values() for rung in rungs
         )
 
+    def effective_targets(self) -> dict[str, float]:
+        """The policy targets this book paces against: the entered `targets`
+        when present, else the book's own opening values.
 
-def validate_book(book: OpeningBook, liquid_sleeves: tuple[str, ...]) -> None:
+        Always a FRESH dict. ``simulate_play`` binds its local ``targets`` to
+        this return value (su-app-07 task 2), so handing back ``self.targets``
+        by reference would let a later in-place edit anywhere downstream
+        silently rewrite the stored book's own policy.
+        """
+        if self.targets is not None:
+            return dict(self.targets)
+        return {**self.liquid, **self.target_nav()}
+
+
+def validate_book(book: OpeningBook, liquid_sleeves: tuple[str, ...]) -> list[str]:
     """Refuse a book that cannot be played, naming the rule that failed.
 
     ``liquid_sleeves`` is the world's own set — in ``simulate_play`` it is
     ``tuple(a for a in paths.asset_order if a not in PRIVATE_ASSETS)``. A
     generated world has no ``reits``; entering one would create a sleeve the
     tape has no returns for.
+
+    Returns a list of warning strings (empty when clean) rather than raising
+    for a target outside its own reporting range — that combination is
+    accepted (su-app-07's deliberate choice) and ``pyproject.toml`` sets
+    ``filterwarnings = ["error"]``, so ``warnings.warn`` would invert the
+    very requirement this implements by raising inside the suite that tests
+    the leniency.
     """
     if set(book.liquid) != set(liquid_sleeves):
         extra = sorted(set(book.liquid) - set(liquid_sleeves))
@@ -195,6 +279,52 @@ def validate_book(book: OpeningBook, liquid_sleeves: tuple[str, ...]) -> None:
     total = sum(book.liquid.values()) + book.cash + book.private_nav()
     if abs(total - BOOK_TOTAL) > BOOK_TOLERANCE:
         raise BookError(f"book totals {total:g}, must total {BOOK_TOTAL:g}")
+
+    full_sleeves = set(liquid_sleeves) | set(PRIVATE_SLEEVES)
+
+    if book.targets is not None:
+        if set(book.targets) != full_sleeves:
+            extra = sorted(set(book.targets) - full_sleeves)
+            missing = sorted(full_sleeves - set(book.targets))
+            raise BookError(
+                f"book's targets do not match this world: unexpected {extra}, missing {missing}"
+            )
+        for sleeve, value in book.targets.items():
+            if value < 0.0:
+                raise BookError(f"target '{sleeve}' is negative: {value}")
+        target_total = sum(book.targets.values()) + book.cash
+        if abs(target_total - BOOK_TOTAL) > BOOK_TOLERANCE:
+            raise BookError(f"book's targets total {target_total:g}, must total {BOOK_TOTAL:g}")
+
+    warnings: list[str] = []
+    if book.ranges is not None:
+        unknown = sorted(set(book.ranges) - full_sleeves)
+        if unknown:
+            raise BookError(f"book's ranges name sleeves this world does not have: {unknown}")
+        for sleeve, band in book.ranges.items():
+            lo, hi = band
+            if not (0.0 <= lo < hi <= 100.0):
+                raise BookError(
+                    f"range for '{sleeve}' is not a valid band: [{lo:g}, {hi:g}] "
+                    "(need 0 <= lo < hi <= 100)"
+                )
+        # a target outside its own range is ACCEPTED — surfaced as a warning
+        # rather than refused. Checked against `effective_targets()`, not
+        # `book.targets` directly, so a book with no entered targets (paced
+        # against its own opening weights) is held to the same declared
+        # bands: effective_targets() is the single place this resolves, so
+        # every consumer — including this one — reads through it rather than
+        # re-deriving the fallback.
+        effective = book.effective_targets()
+        for sleeve, band in book.ranges.items():
+            lo, hi = band
+            value = effective.get(sleeve)
+            if value is not None and not (lo <= value <= hi):
+                warnings.append(
+                    f"target '{sleeve}' = {value:g} is outside its declared range [{lo:g}, {hi:g}]"
+                )
+
+    return warnings
 
 
 def validate_plan(plan: CommitmentPlan, targets: dict[str, float]) -> None:

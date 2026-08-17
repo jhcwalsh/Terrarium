@@ -54,6 +54,18 @@ describe("DecisionWindow (E1)", () => {
     expect(labels).toEqual(["Hold course", "De-risk", "Lean in", "Secondary sale"]);
   });
 
+  it("shows each lever's dollar impact next to its points (app-open-01 item 2)", () => {
+    // No new data — the fixed 10pt rebalance size the copy already states,
+    // rendered through the same usd() as everywhere else in the app.
+    render(<DecisionWindow open month={11} year={1} onCommit={() => {}} />);
+    const badges = [...host!.querySelectorAll(".action-card .k")].map((el) => el.textContent);
+    expect(badges[0]).toBe("NO TRADE"); // hold: no rebalance, no dollar figure
+    // two-decimal bn precision is app-open-01 review round fix 3
+    expect(badges[1]).toBe("10PTS / $1.00bn → BONDS/PC"); // derisk
+    expect(badges[2]).toBe("10PTS / $1.00bn → EQ/PE"); // leanin
+    expect(badges[3]).toBe("−18% DISCOUNT"); // secondary: a rate, stays a percentage
+  });
+
   it("sends ONLY the sleeves the player touched, so the rest stay exactly on plan", () => {
     /**
      * Audit F4. The pre-fill is the plan as at the last CLOSED quarter, while

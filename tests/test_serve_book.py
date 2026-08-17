@@ -15,7 +15,9 @@ from typing import ClassVar
 
 import pytest
 
+from ah.cioview import WATCH_FRACTION
 from ah.core.institution import decision_months
+from ah.serve import _alert_level
 
 # reuse this module's established app/client fixtures — see tests/test_serve.py.
 # Import ONLY the fixture names (plus the plain `_play_through` helper), never
@@ -34,11 +36,91 @@ def _shifted_book(default_book: dict, amount: float = 15.0) -> dict:
     return book
 
 
+def _retargeted_book(default_book: dict, **moves: float) -> dict:
+    """The served default book with its POLICY targets moved and its VALUES
+    left exactly as served (su-app-07). Nothing the institution holds changes."""
+    return {**default_book, "targets": {**default_book["targets"], **moves}}
+
+
 def _replanned(default_plan: dict, sleeve: str, value: float) -> dict:
     """The served default plan with one sleeve flattened to `value` everywhere."""
     plan = {**default_plan, "points": {k: list(v) for k, v in default_plan["points"].items()}}
     plan["points"][sleeve] = [value] * len(plan["points"][sleeve])
     return plan
+
+
+#: A band no realized weight can leave — used to READ the served weights back
+#: before placing a real band relative to them (su-app-07 task 3).
+_WIDE: tuple[float, float] = (0.0, 100.0)
+
+#: TIGHT, OFF-CENTRE bands — one per sleeve of the toy world, each at most two
+#: points wide and each placed AWAY from that sleeve's own `START_TARGETS`
+#: value (33/12/5/5/8/20/8/7). This is the book the inertness test plays.
+#:
+#: `_WIDE` will not do there, and the first version of that test was wrong to
+#: use it. The most plausible way a range could leak into the engine is as a
+#: rebalance or clamp bound, and `[0, 100]` is a no-op clamp on every
+#: reachable weight — the test would have stayed green straight through
+#: exactly the defect it exists to catch. Every band below EXCLUDES its
+#: sleeve's own policy target, so a bound derived from one would have to move
+#: that sleeve on the very first rebalance, in the first quarter.
+#:
+#: A target outside its own declared range is legal — `validate_book` returns
+#: a warning string rather than raising (su-app-07's deliberate choice) —
+#: which is what makes this book postable at all. The test asserts the 201
+#: rather than assuming it.
+_TIGHT: dict[str, tuple[float, float]] = {
+    "equity": (30.0, 32.0),
+    "bonds": (13.0, 15.0),
+    "hy": (2.0, 3.0),
+    "commodities": (6.0, 7.0),
+    "reits": (9.0, 10.0),
+    "pe": (5.0, 7.0),
+    "pc": (10.0, 11.0),
+    "re": (3.0, 4.0),
+}
+
+
+def _banded_book(default_book: dict, ranges: dict[str, tuple[float, float]]) -> dict:
+    """The served default book with reporting bands declared and NOTHING else
+    touched — same values, same policy targets, same cash (su-app-07 task 3).
+    A range is a read-layer declaration; it must not move a number."""
+    return {**default_book, "ranges": {k: list(v) for k, v in ranges.items()}}
+
+
+def _banded_session(
+    client,
+    rid: str,
+    default: dict,
+    ranges: dict[str, tuple[float, float]],
+    to_month: int = 24,
+    basis: str = "reported",
+) -> dict:
+    """Open a session on the default book plus `ranges`, reveal to `to_month`,
+    and return the session document."""
+    body = {
+        "run_id": rid,
+        "basis": basis,
+        "book": _banded_book(default["book"], ranges),
+        "plan": default["plan"],
+    }
+    r = client.post("/sessions", json=body)
+    assert r.status_code == 201, r.text
+    sid, months = r.json()["session_id"], r.json()["months"]
+    _reveal_mid_decade(client, sid, months, to_month)
+    return client.get(f"/sessions/{sid}").json()
+
+
+def _all_sleeves(default: dict) -> list[str]:
+    return [*default["liquid_sleeves"], "pe", "pc", "re"]
+
+
+def _weights(doc: dict, plane: str) -> dict[str, float]:
+    return {s["sleeve"]: s[plane]["weight"] for s in doc["band_report"]["sleeves"]}
+
+
+def _entry(doc: dict, sleeve: str) -> dict:
+    return next(s for s in doc["band_report"]["sleeves"] if s["sleeve"] == sleeve)
 
 
 def _reveal_mid_decade(client, sid: str, months: int, to_month: int) -> None:
@@ -59,10 +141,25 @@ class TestDefaultBookEndpoint:
         r = client.get(f"/book/default?run_id={rid}")
         assert r.status_code == 200
         body = r.json()
-        assert body["book"]["state_version"] == "opening-book-0.1"
+        # su-app-07 Ruling D: default_opening_book now populates `targets`,
+        # at the new state_version ("opening-book-0.2").
+        assert body["book"]["state_version"] == "opening-book-0.2"
         assert body["plan"]["state_version"] == "commitment-plan-0.1"
         assert set(body["book"]["liquid"]) == set(body["liquid_sleeves"])
         assert len(body["book_digest"]) == 64
+
+    def test_the_private_sleeves_are_present_in_the_served_book(self, service):
+        # app-open-01 delta 2: the entry screen's merged targets/bands table
+        # reads the private sleeves off `book.private` (values) and
+        # `book.targets`/`book.ranges` (policy) — this pins that all three
+        # structures really do name pe/pc/re, which is the whole premise a
+        # merged table relies on rather than a second server change.
+        client, _db, rid = service
+        body = client.get(f"/book/default?run_id={rid}").json()
+        private = {"pe", "pc", "re"}
+        assert private <= set(body["book"]["private"])
+        assert private <= set(body["book"]["targets"])
+        assert private <= set(body["book"]["ranges"])
 
     def test_an_unknown_run_is_404(self, service):
         client, _db, _rid = service
@@ -521,10 +618,16 @@ class TestTheStoredPlanReachesTheEngine:
 
 
 class TestTheTwoCapsAgree:
-    """I1 — ``validate_plan`` caps a plan entry against the ENTERED book's
-    per-sleeve NAV (``_plan_targets``); ``validate_commitments`` at the
-    decision door capped against ``START_TARGETS``. With C1 in place the
-    server would fill in a number it then refuses itself."""
+    """I1 — ``validate_plan`` caps a plan entry against the ENTERED book;
+    ``validate_commitments`` at the decision door capped against
+    ``START_TARGETS``. With C1 in place the server would fill in a number it
+    then refuses itself.
+
+    su-app-07 moved the basis both of them read from the book's opening NAV
+    to the book's POLICY targets, so the book below now declares the
+    allocation it holds instead of leaving the world default in place. The
+    property under test is unchanged: the cap comes from the book the
+    analyst entered, never from ``START_TARGETS``."""
 
     def test_a_plan_legal_under_the_entered_book_plays_through_its_window(self, service):
         client, _db, rid = service
@@ -532,15 +635,17 @@ class TestTheTwoCapsAgree:
         book = dict(default["book"])
         book["liquid"] = dict(default["book"]["liquid"])
         book["private"] = {k: [dict(r) for r in v] for k, v in default["book"]["private"].items()}
-        # move 10 points of NAV from equity into the pe ladder's first rung:
-        # the book still totals 100, and pe's target NAV is now ~30, so the
-        # plan cap is 2 x 30 x 0.18 = 10.8 rather than START_TARGETS' 7.2.
+        # move 10 points from equity into the pe ladder's first rung, in BOTH
+        # the values and the policy targets: this institution is at its
+        # target weights and holds 30 points of pe, so the plan cap is
+        # 2 x 30 x 0.18 = 10.8 rather than START_TARGETS' 7.2.
         book["liquid"]["equity"] -= 10.0
+        book["targets"] = {**default["book"]["targets"], "equity": 23.0, "pe": 30.0}
         rung = dict(book["private"]["pe"][0])
         rung["value"] = {**rung["value"], "nav_true": rung["value"]["nav_true"] + 10.0}
         book["private"]["pe"][0] = rung
 
-        plan = _replanned(default["plan"], "pe", 9.0)  # legal at 30 NAV, illegal at 20
+        plan = _replanned(default["plan"], "pe", 9.0)  # legal at a 30 target, illegal at 20
         created = client.post("/sessions", json={"run_id": rid, "book": book, "plan": plan})
         assert created.status_code == 201, created.text
         sid = created.json()["session_id"]
@@ -549,6 +654,66 @@ class TestTheTwoCapsAgree:
         r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
         assert r.status_code == 200, r.text
         assert r.json()["decisions"]["11"]["commitments"]["pe"] == pytest.approx(9.0)
+
+    def test_a_policy_target_carries_the_cap_through_all_three_enforcement_points(self, service):
+        """su-app-07 task 2. The book HOLDS 20 points of pe (old cap 7.20) and
+        DECLARES a 30-point pe target (new cap 10.80). One number, 9.0, sits
+        between them, so each of the three gates has to be reading the target:
+
+        * ``validate_plan`` at ``POST /sessions`` — a 201, not a 422;
+        * the decision door at ``POST /sessions/{sid}/decisions`` — the server
+          fills 9.0 in from the stored plan and must not then refuse it;
+        * ``simulate_play``'s own ``_validate_commit_decisions`` — that same
+          request marks the session to market, so a 200 here is the simulator
+          accepting the commitment, not merely the door doing so.
+        """
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(default["book"], equity=23.0, pe=30.0)
+        plan = _replanned(default["plan"], "pe", 9.0)
+
+        created = client.post("/sessions", json={"run_id": rid, "book": book, "plan": plan})
+        assert created.status_code == 201, created.text
+        sid = created.json()["session_id"]
+
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
+        assert r.status_code == 200, r.text
+        assert r.json()["decisions"]["11"]["commitments"]["pe"] == pytest.approx(9.0)
+
+        # and the commitment quarter actually closes rather than 500ing.
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 23}).status_code == 200
+        doc = client.get(f"/sessions/{sid}")
+        assert doc.status_code == 200, doc.text
+        assert doc.json()["value"] is not None
+
+    def test_a_plan_over_the_policy_target_is_refused_at_the_kickoff_door(self, service):
+        """The bound is re-based, not removed: 11.0 is over the 10.80 the
+        30-point pe target allows."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(default["book"], equity=23.0, pe=30.0)
+        r = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": book, "plan": _replanned(default["plan"], "pe", 11.0)},
+        )
+        assert r.status_code == 422
+        assert "declared bound" in r.json()["detail"]
+
+    def test_a_commit_over_the_policy_target_is_422_at_the_decision_door(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(default["book"], equity=23.0, pe=30.0)
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": 11, "action": "hold", "commitments": {"pe": 11.0}},
+        )
+        assert r.status_code == 422, r.text
+        assert "declared bound" in r.json()["detail"]
 
     def test_the_door_still_refuses_a_number_over_the_entered_books_own_cap(self, service):
         """Reconciling the caps must not remove the bound — only re-base it."""
@@ -564,3 +729,403 @@ class TestTheTwoCapsAgree:
         )
         assert r.status_code == 422
         assert "declared bound" in r.json()["detail"]
+
+
+class TestBandReport:
+    """su-app-07 task 3: per-sleeve band status on the session document.
+
+    A READ layer. Every band here is placed relative to a weight the server
+    itself served back under a band no weight can leave (``_WIDE``), so the
+    thing under test is the CLASSIFICATION of a known weight, not the weight
+    — and every state asserted is one a player can actually be in: a real
+    band around a real policy target, with the institution drifting inside
+    it, at its edge, or out of it.
+    """
+
+    #: Real decisions, so the decade is not the degenerate hold-course twin.
+    _ACTIONS: ClassVar[dict[int, str]] = {11: "derisk", 23: "leanin"}
+
+    def test_the_key_is_present_and_null_for_a_session_with_no_book(self, service):
+        client, _db, rid = service
+        sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert "band_report" in doc, "the key is always on the document, never conditional"
+        assert doc["band_report"] is None
+
+    def test_the_key_is_null_for_a_book_that_declares_no_ranges(self, service):
+        # app-open-01: the SERVED default now carries a +/-10% band per
+        # sleeve (delta 1), so "declares no ranges" is no longer the
+        # untouched default — it has to be entered explicitly, as a book
+        # that overrides the default's `ranges` back to `None`.
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = {**default["book"], "ranges": None}
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert doc["band_report"] is None
+
+    def test_the_untouched_default_book_now_reports_its_own_default_bands(self, service):
+        # the other half of the test above: app-open-01 delta 1 means the
+        # UNTOUCHED default book (posted verbatim, never demoted from
+        # ranked) reports a band for every sleeve it named a target for.
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        assert default["book"]["ranges"] is not None
+        r = client.post(
+            "/sessions",
+            json={
+                "run_id": rid,
+                "ranked": True,
+                "book": default["book"],
+                "plan": default["plan"],
+            },
+        )
+        assert r.status_code == 201
+        assert r.json()["ranked"] is True, "the untouched default must stay ranked-eligible"
+        sid = r.json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        report = doc["band_report"]
+        assert report is not None
+        reported = {s["sleeve"]: (s["lo"], s["hi"]) for s in report["sleeves"]}
+        expected = {k: tuple(v) for k, v in default["book"]["ranges"].items()}
+        assert reported == expected
+
+    def test_the_key_is_present_and_null_before_the_first_quarter_closes(self, service):
+        """The nulled-key list runs BEFORE the early return, so a banded
+        session serves the key from month 0 rather than growing it at 3."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _banded_book(default["book"], {"equity": _WIDE})
+        sid = client.post(
+            "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
+        ).json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 2}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        assert "band_report" in doc
+        assert doc["band_report"] is None
+
+    def test_a_sleeve_with_no_range_is_absent_from_the_report_entirely(self, service):
+        """Absent, not present-with-nulls: the app never has to tell "no band
+        declared" from "band declared and unmet"."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = _banded_session(client, rid, default, {"equity": _WIDE, "pe": _WIDE})
+        assert [s["sleeve"] for s in doc["band_report"]["sleeves"]] == ["equity", "pe"]
+
+    def test_the_sleeves_are_listed_in_the_worlds_own_order(self, service):
+        """Liquid in the engine's ``asset_order``, then pe/pc/re — regardless
+        of the order the analyst happened to type the ranges in."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        scrambled = {s: _WIDE for s in reversed(_all_sleeves(default))}
+        doc = _banded_session(client, rid, default, scrambled)
+        assert [s["sleeve"] for s in doc["band_report"]["sleeves"]] == [
+            "equity",
+            "bonds",
+            "hy",
+            "commodities",
+            "reits",
+            "pe",
+            "pc",
+            "re",
+        ]
+
+    def test_a_sleeve_comfortably_inside_its_band_reports_ok(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"equity": _WIDE})
+        w = _weights(probe, "true")["equity"]
+        target = default["book"]["targets"]["equity"]
+        # twenty points of room on the near edge: the weight is nowhere close
+        lo = max(0.0, min(w, target) - 20.0)
+        hi = min(100.0, max(w, target) + 20.0)
+
+        doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
+        entry = _entry(doc, "equity")
+        assert entry["true"]["weight"] == pytest.approx(w)
+        assert entry["true"]["alert"] == "ok"
+
+    def test_a_sleeve_outside_its_band_reports_breach(self, service):
+        """A band that CONTAINS the declared policy target and excludes the
+        realized weight — the breach an allocator would actually report, not
+        a band nobody would enter."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"equity": _WIDE})
+        w = _weights(probe, "true")["equity"]
+        target = default["book"]["targets"]["equity"]
+        assert w != pytest.approx(target), "the drifted weight must differ from the target"
+        edge = (w + target) / 2.0
+        lo, hi = (edge, target + 5.0) if w < target else (target - 5.0, edge)
+        assert lo <= target <= hi, "the target itself stays inside its own band"
+        assert not lo <= w <= hi
+
+        doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
+        assert _entry(doc, "equity")["true"]["alert"] == "breach"
+
+    def test_a_sleeve_within_the_alert_threshold_of_an_edge_reports_watch(self, service):
+        """Amber: inside the band, but 90% of the way out to the near edge —
+        past ``WATCH_FRACTION`` (0.75) and short of the edge itself. Widening
+        that same band puts the identical weight back at ``ok``, so the
+        threshold is the thing doing the work."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"equity": _WIDE})
+        w = _weights(probe, "true")["equity"]
+        target = default["book"]["targets"]["equity"]
+        assert w != pytest.approx(target)
+        room = abs(w - target) / 0.9  # the weight sits 0.9 of the way out
+        # `validate_book` refuses lo < 0, so an unclamped near edge would turn
+        # a drift this test does not control into a 422 at the door instead of
+        # a clean failure on the level it is actually about. Clamped — but the
+        # clamp is NOT silent: flooring the near edge would enlarge `room` and
+        # quietly turn the expected `watch` into an `ok`, so the pre-clamp
+        # value is asserted non-negative and this test fails on its own
+        # subject if a future tape ever pushes it under.
+        if w < target:
+            assert target - room >= 0.0, (
+                f"equity drifted far enough ({w:g} vs target {target:g}) that the "
+                "watch edge falls below zero; this test needs room beneath the "
+                "target, not a clamp that would silently relabel watch as ok"
+            )
+        lo, hi = (
+            (max(0.0, target - room), target + 5.0)
+            if w < target
+            else (max(0.0, target - 5.0), target + room)
+        )
+        assert lo <= w <= hi
+
+        doc = _banded_session(client, rid, default, {"equity": (lo, hi)})
+        assert doc["band_report"]["watch_fraction"] == WATCH_FRACTION
+        assert _entry(doc, "equity")["true"]["alert"] == "watch"
+
+        # the same weight, twice the room: 0.45 of the way out is `ok`.
+        wide = (
+            (max(0.0, target - 2.0 * room), target + 5.0)
+            if w < target
+            else (max(0.0, target - 5.0), target + 2.0 * room)
+        )
+        relaxed = _banded_session(client, rid, default, {"equity": wide})
+        assert _entry(relaxed, "equity")["true"]["weight"] == pytest.approx(w)
+        assert _entry(relaxed, "equity")["true"]["alert"] == "ok"
+
+    def test_both_planes_are_reported_and_a_private_sleeve_can_disagree(self, service):
+        """Appraisal smoothing is the whole reason both planes are served: a
+        private sleeve can be outside its band on the engine's true state and
+        inside it on the marks the committee actually sees."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        probe = _banded_session(client, rid, default, {"pe": _WIDE})
+        w_true = _weights(probe, "true")["pe"]
+        w_rep = _weights(probe, "reported")["pe"]
+        assert w_true != pytest.approx(w_rep)
+
+        edge = (w_true + w_rep) / 2.0
+        band = (edge, 100.0) if w_true < w_rep else (0.0, edge)
+        doc = _banded_session(client, rid, default, {"pe": band})
+        entry = _entry(doc, "pe")
+        assert entry["true"]["alert"] == "breach"
+        assert entry["reported"]["alert"] != "breach"
+        assert entry["true"]["weight"] != pytest.approx(entry["reported"]["weight"])
+
+    # the session's `basis` enum is "reported" | "actual"; "actual" is the
+    # engine's TRUE plane, which is the name the band report serves it under.
+    @pytest.mark.parametrize(("basis", "plane"), [("reported", "reported"), ("actual", "true")])
+    def test_the_served_weights_and_cash_close_on_one_hundred(self, service, basis, plane):
+        """The units answer, at the served layer: weights are points out of
+        100 against THAT PLANE'S NAV, so every sleeve plus the cash account
+        accounts for the whole book. (``tests/test_cioview.py::
+        test_per_asset_values_close_against_the_book`` pins the same identity
+        one layer down, to 1e-9, on both planes.)"""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = _banded_session(
+            client, rid, default, {s: _WIDE for s in _all_sleeves(default)}, basis=basis
+        )
+        served = sum(_weights(doc, plane).values())
+        # `doc["value"]` is the NAV on the session's own basis — the same
+        # denominator the report divided by.
+        cash_pct = doc["cash"] / doc["value"] * 100.0
+        assert served + cash_pct == pytest.approx(100.0, abs=1e-3)
+
+    def test_ranges_do_not_move_a_single_number(self, service):
+        """THE load-bearing test of this task. The same book, the same plan
+        and the same decisions, played twice — differing only in whether the
+        book declares reporting ranges. If a range can reach ``simulate_play``
+        at all, the two decades separate here.
+
+        Two arms, and this is exactly what each one now is (app-open-01
+        review round fix 4 — a prior version of this test compared the
+        WRONG two things and passed anyway, see below):
+
+          * ``plain`` — ``ranges`` explicitly overridden back to ``None`` on
+            the served default book: no bands declared AT ALL, the
+            ``OpeningBook.ranges`` docstring's own "no bands entered" state.
+            This is the arm that vanished. app-open-01 delta 1 made
+            ``/book/default`` serve a book with its own +/-10% band per
+            sleeve already attached (``default_opening_book``), so simply
+            replaying ``default["book"]`` unmodified — what this test used
+            to do — no longer means "no ranges": it means "the DEFAULT
+            ranges", and the comparison below was quietly testing "do
+            default bands and ``_TIGHT`` bands move the same number" (both
+            arms had *some* range), never "does declaring a range move a
+            number relative to none at all". The explicit override here is
+            what makes ``ranges=None`` real again — the same construction
+            ``TestBandReport`` already uses to pin the read side of the same
+            fact (``test_the_key_is_null_for_a_book_that_declares_no_ranges``).
+          * ``banded`` — ``_TIGHT``: two points wide and deliberately placed
+            off the sleeve's own policy target. A wide band would not do — a
+            leak that surfaced as a rebalance or clamp bound would be a
+            no-op under ``[0, 100]`` and this test would have certified the
+            defect. Under ``_TIGHT`` every sleeve's target sits OUTSIDE its
+            band, so any bound derived from a range has to move a weight in
+            quarter 1. Unweakened by this fix.
+        """
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        assert set(_TIGHT) == set(_all_sleeves(default)), (
+            "_TIGHT must cover every sleeve of this world, or the uncovered "
+            "ones are not testing anything"
+        )
+        for sleeve, (lo, hi) in _TIGHT.items():
+            target = default["book"]["targets"][sleeve]
+            assert not lo <= target <= hi, (
+                f"{sleeve}'s band [{lo}, {hi}] contains its target {target} — a "
+                "leaked bound would be satisfied already and the test would not bite"
+            )
+        # the genuinely rangeless arm: the served default already carries its
+        # own +/-10% band per sleeve (app-open-01 delta 1), so "no ranges"
+        # has to be entered explicitly by overriding it back to None.
+        plain_book = {**default["book"], "ranges": None}
+        assert plain_book["ranges"] is None, "the plain book really does declare no ranges"
+        banded = _banded_book(default["book"], _TIGHT)
+        assert banded["ranges"], "the banded book really does declare ranges"
+
+        plain_sid = _play_through(client, rid, self._ACTIONS, book=plain_book, plan=default["plan"])
+        banded_sid = _play_through(client, rid, self._ACTIONS, book=banded, plan=default["plan"])
+
+        plain = client.get(f"/sessions/{plain_sid}/outcome").json()
+        with_bands = client.get(f"/sessions/{banded_sid}/outcome").json()
+        assert plain.pop("session_id") != with_bands.pop("session_id")
+
+        # the decade first, named explicitly, then the whole verdict
+        assert with_bands["series"] == plain["series"]
+        assert with_bands["window_contributions"] == plain["window_contributions"]
+        assert with_bands == plain
+
+    def test_a_book_whose_targets_all_sit_outside_their_bands_still_reports(self, service):
+        """The ``_TIGHT`` shape end to end. Every target here is outside its
+        own band — legal (``validate_book`` warns, it does not refuse) and,
+        until the final review, the shape no test ever asserted an ALERT
+        under, which is how the ``_alert_level`` inversion survived.
+
+        The invariant asserted is the one that needs no knowledge of where
+        the weight landed: a weight inside its band is never ``breach``, and
+        a weight outside it always is. The proportional watch/ok split under
+        this shape is pinned exactly in ``TestAlertLevel`` — through HTTP the
+        served weight is rounded to 4dp while the alert is computed on the
+        unrounded one, so an edge-exact assertion here would not be
+        reproducible."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = _banded_session(client, rid, default, _TIGHT)
+        sleeves = doc["band_report"]["sleeves"]
+        assert len(sleeves) == len(_TIGHT)
+        for s in sleeves:
+            for plane in ("true", "reported"):
+                alert = s[plane]["alert"]
+                assert alert in ("ok", "watch", "breach")
+                inside = s["lo"] <= s[plane]["weight"] <= s["hi"]
+                assert (alert == "breach") is not inside, (
+                    f"{s['sleeve']} {plane}: weight {s[plane]['weight']} vs "
+                    f"band [{s['lo']}, {s['hi']}] disagrees with alert {alert!r}"
+                )
+
+
+class TestAlertLevel:
+    """``_alert_level`` directly (su-app-07 task 3, final-review fix).
+
+    Unit-level on purpose. The served weight is rounded to 4 decimals while
+    the alert is computed on the unrounded one, so an assertion about a
+    weight sitting EXACTLY on an edge cannot be driven reliably through HTTP
+    — and the edges are precisely where this function was wrong.
+    """
+
+    _LO, _HI = 10.0, 20.0
+
+    def test_a_target_inside_its_band_is_unchanged_by_the_two_edge_form(self):
+        """The ordinary case must not move: for a target strictly inside,
+        "within (1 - WATCH_FRACTION) of the way to the edge" is algebraically
+        the old ``dist >= WATCH_FRACTION * room``."""
+        lo, hi, target = self._LO, self._HI, 15.0
+        assert _alert_level(15.0, target, lo, hi) == "ok"
+        assert _alert_level(18.0, target, lo, hi) == "ok"  # 0.60 of the way out
+        assert _alert_level(18.75, target, lo, hi) == "watch"  # exactly 0.75
+        assert _alert_level(19.5, target, lo, hi) == "watch"
+        assert _alert_level(11.25, target, lo, hi) == "watch"  # the mirror
+        assert _alert_level(12.0, target, lo, hi) == "ok"
+        assert _alert_level(20.1, target, lo, hi) == "breach"
+        assert _alert_level(9.9, target, lo, hi) == "breach"
+
+    def test_a_target_above_its_own_band_measures_the_edge_being_approached(self):
+        """The defect, pinned. At ``lo=10, hi=20, target=30`` the single-edge
+        form measured every in-band weight's room to ``lo``, so a mid-band
+        15.0 reported ``watch`` and a 20.0 one step from breaching ``hi``
+        reported ``ok``. Both are now the other way round."""
+        lo, hi, target = self._LO, self._HI, 30.0
+        assert _alert_level(15.0, target, lo, hi) == "ok", "mid-band is not an alert"
+        assert _alert_level(19.0, target, lo, hi) == "ok"
+        assert _alert_level(20.0, target, lo, hi) == "watch", "sitting on the edge it will breach"
+        assert _alert_level(20.1, target, lo, hi) == "breach"
+        # the LOWER zone still fires: the old `room > 0.0` guard suppressed
+        # the entire watch zone for this shape, because room was hi - target
+        # for a clamped target... which is where the whole thing went wrong.
+        assert _alert_level(10.0, target, lo, hi) == "watch"
+        assert _alert_level(12.5, target, lo, hi) == "watch"  # exactly 0.25 in
+        assert _alert_level(13.0, target, lo, hi) == "ok"
+
+    def test_a_target_below_its_own_band_is_the_mirror_image(self):
+        lo, hi, target = self._LO, self._HI, 2.0
+        assert _alert_level(15.0, target, lo, hi) == "ok"
+        assert _alert_level(11.0, target, lo, hi) == "ok"
+        assert _alert_level(10.0, target, lo, hi) == "watch", "sitting on the edge it will breach"
+        assert _alert_level(9.9, target, lo, hi) == "breach"
+        # and the upper zone is the live one here
+        assert _alert_level(20.0, target, lo, hi) == "watch"
+        assert _alert_level(17.5, target, lo, hi) == "watch"  # exactly 0.25 in
+        assert _alert_level(17.0, target, lo, hi) == "ok"
+
+    def test_a_weight_on_either_edge_is_watch_not_ok(self):
+        """As close to breaching as an in-band weight can be. True for a
+        target inside its band, on an edge, and outside it — the answer must
+        not depend on where the target sits."""
+        lo, hi = self._LO, self._HI
+        for target in (10.0, 12.0, 15.0, 20.0, 30.0, 2.0):
+            assert _alert_level(lo, target, lo, hi) == "watch", target
+            assert _alert_level(hi, target, lo, hi) == "watch", target
+
+    def test_a_target_exactly_on_an_edge_collapses_only_that_edges_zone(self):
+        """``t == hi`` leaves zero room above, so only a weight exactly on
+        ``hi`` is amber from that side; the lower zone is untouched. The old
+        ``room > 0.0`` guard suppressed BOTH."""
+        lo, hi = self._LO, self._HI
+        assert _alert_level(hi, hi, lo, hi) == "watch"
+        assert _alert_level(19.99, hi, lo, hi) == "ok", "no room above means no proportional zone"
+        assert _alert_level(12.5, hi, lo, hi) == "watch", "the lower zone still works"
+        assert _alert_level(lo, lo, lo, hi) == "watch"
+        assert _alert_level(10.01, lo, lo, hi) == "ok"
+        assert _alert_level(17.5, lo, lo, hi) == "watch"
+
+    def test_breach_is_decided_before_the_target_is_consulted_at_all(self):
+        """Breach detection was correct before this fix and is untouched: it
+        is a pure in/out test on the band, whatever the target does."""
+        lo, hi = self._LO, self._HI
+        for target in (-5.0, 0.0, 15.0, 30.0, 100.0):
+            assert _alert_level(9.999, target, lo, hi) == "breach", target
+            assert _alert_level(20.001, target, lo, hi) == "breach", target
+            assert _alert_level(15.0, target, lo, hi) != "breach", target

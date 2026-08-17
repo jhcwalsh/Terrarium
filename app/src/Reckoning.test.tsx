@@ -26,11 +26,14 @@ afterEach(() => {
 
 describe("annotationLine (E8)", () => {
   it("renders the register's exact shape: Year 4, de-risked: -2.1 points", () => {
+    // app-open-01 item 2 (owner ruling 2026-08-16): the dollar equivalent
+    // (money.ts usd()) now rides alongside the points figure, never
+    // replacing it — the points half of this assertion is unchanged.
     expect(annotationLine({ month: 47, action: "derisk", contribution: -2.1 })).toBe(
-      "Year 4, de-risked: -2.1 points",
+      "Year 4, de-risked: -2.1 points / -$210m",
     );
     expect(annotationLine({ month: 11, action: "hold", contribution: 0 })).toBe(
-      "Year 1, held course: +0.0 points",
+      "Year 1, held course: +0.0 points / $0",
     );
   });
 });

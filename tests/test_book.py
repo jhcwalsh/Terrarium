@@ -11,6 +11,7 @@ about one cohort.
 from __future__ import annotations
 
 import copy
+from typing import ClassVar
 
 import pytest
 
@@ -19,6 +20,7 @@ from ah.port.book import (
     BookError,
     CommitmentPlan,
     OpeningBook,
+    default_band,
     validate_book,
     validate_plan,
 )
@@ -226,6 +228,133 @@ class TestCohortIdsAreThePortfoliosKeys:
         validate_book(book, liquid_sleeves=TOY_LIQUID)
         ids = [r["identity"]["cohort_id"] for rungs in book.private.values() for r in rungs]
         assert len(ids) == len(set(ids))
+
+
+class TestTargetsAndRanges:
+    """su-app-07 Task 1: policy targets and reporting bands are additive to
+    the su-app-06 book contract — a book naming neither must validate and
+    behave exactly as it did before (deletability)."""
+
+    # the book's own weights (liquid + private target NAV): 63 + 35, so with
+    # cash 2.0 this is a valid `targets` document too (totals 100).
+    _TARGETS: ClassVar[dict[str, float]] = {
+        "equity": 33.0,
+        "bonds": 12.0,
+        "hy": 5.0,
+        "commodities": 5.0,
+        "reits": 8.0,
+        "pe": 20.0,
+        "pc": 8.0,
+        "re": 7.0,
+    }
+
+    def test_a_state_version_0_1_document_still_validates(self):
+        # the deletability fence at the contract level: a book with no
+        # targets and no ranges, explicitly stamped at the old version.
+        book = _book(state_version="opening-book-0.1")
+        assert book.targets is None
+        assert book.ranges is None
+        assert validate_book(book, liquid_sleeves=TOY_LIQUID) == []
+
+    def test_effective_targets_falls_back_to_the_books_own_weights(self):
+        book = _book()
+        assert book.targets is None
+        assert book.effective_targets() == {**book.liquid, **book.target_nav()}
+
+    def test_effective_targets_returns_the_entered_targets_when_present(self):
+        book = _book(targets=self._TARGETS)
+        assert book.effective_targets() == self._TARGETS
+
+    def test_targets_that_do_not_sum_with_cash_to_one_hundred_are_refused(self):
+        bad = {**self._TARGETS, "equity": 30.0}  # 95 + cash 2 = 97
+        book = _book(targets=bad)
+        with pytest.raises(BookError, match="targets total 97"):
+            validate_book(book, liquid_sleeves=TOY_LIQUID)
+
+    def test_targets_naming_a_sleeve_outside_the_worlds_set_are_refused(self):
+        bad = {**self._TARGETS, "gold": 0.0}
+        book = _book(targets=bad)
+        with pytest.raises(BookError, match="gold"):
+            validate_book(book, liquid_sleeves=TOY_LIQUID)
+
+    def test_a_negative_target_is_refused(self):
+        bad = {**self._TARGETS, "equity": -1.0}
+        book = _book(targets=bad)
+        with pytest.raises(BookError, match="target 'equity' is negative"):
+            validate_book(book, liquid_sleeves=TOY_LIQUID)
+
+    def test_a_range_with_lo_gte_hi_is_refused(self):
+        book = _book(ranges={"equity": (50.0, 50.0)})
+        with pytest.raises(BookError, match="range"):
+            validate_book(book, liquid_sleeves=TOY_LIQUID)
+
+    def test_a_range_on_an_unknown_sleeve_is_refused(self):
+        book = _book(ranges={"gold": (10.0, 20.0)})
+        with pytest.raises(BookError, match="gold"):
+            validate_book(book, liquid_sleeves=TOY_LIQUID)
+
+    def test_a_target_outside_its_own_range_is_accepted_and_returned_as_a_warning(self):
+        book = _book(targets=self._TARGETS, ranges={"equity": (40.0, 50.0)})
+        warnings = validate_book(book, liquid_sleeves=TOY_LIQUID)  # must not raise
+        assert any("equity" in w for w in warnings)
+
+    def test_a_derived_target_outside_its_range_is_also_warned(self):
+        # no `targets` entered: effective_targets() falls back to the book's
+        # own weights, and a range still applies to that fallback — the
+        # single-source-of-truth point of effective_targets().
+        book = _book(ranges={"equity": (40.0, 50.0)})  # book's own equity is 33.0
+        warnings = validate_book(book, liquid_sleeves=TOY_LIQUID)
+        assert any("equity" in w for w in warnings)
+
+    def test_a_clean_book_returns_no_warnings(self):
+        assert validate_book(_book(), liquid_sleeves=TOY_LIQUID) == []
+
+
+class TestDefaultBand:
+    """app-open-01 delta 1 (owner-dictated 2026-08-16): the default reporting
+    band is +/-10% OF the sleeve's own target allocation, not a flat points-
+    wide band — a 40-point target bands to 36-44, a 5-point target to
+    4.5-5.5. Rounded to one decimal place of allocation points."""
+
+    def test_a_forty_point_target_bands_to_plus_minus_four(self):
+        assert default_band(40.0) == (36.0, 44.0)
+
+    def test_a_five_point_target_bands_to_plus_minus_zero_point_five(self):
+        assert default_band(5.0) == (4.5, 5.5)
+
+    def test_the_half_width_is_ten_percent_of_the_target_not_a_flat_amount(self):
+        # a flat +/-4.0 (the 40-point case's absolute width) would be wrong
+        # for every other target; this pins the band SCALES with the target.
+        assert default_band(20.0) == (18.0, 22.0)
+        assert default_band(7.0) == (6.3, 7.7)
+
+    def test_rounds_to_one_decimal_place_of_allocation_points(self):
+        # 33 * 0.10 = 3.3 exactly; 12 * 0.10 = 1.2 exactly — both already
+        # land on one decimal, so this pins the rounding rule without
+        # depending on float dust to prove it.
+        assert default_band(33.0) == (29.7, 36.3)
+        assert default_band(12.0) == (10.8, 13.2)
+
+    def test_a_zero_target_bands_to_zero_zero(self):
+        assert default_band(0.0) == (0.0, 0.0)
+
+    def test_a_small_positive_target_still_gets_a_valid_lo_less_than_hi_band(self):
+        # app-open-01 review round fix 5: 0.4 * 0.10 = 0.04, which rounds to
+        # a full 0.0 under the plain fraction rule -- lo == hi, a degenerate
+        # band no weight can ever sit strictly inside or outside of. The
+        # half-width floors to a minimum of 0.1 allocation points (one
+        # point's own precision) for any positive target, so the band stays
+        # a real interval.
+        lo, hi = default_band(0.4)
+        assert lo < hi
+        assert (lo, hi) == (0.3, 0.5)
+
+    def test_a_target_near_the_ceiling_has_its_high_edge_capped_at_one_hundred(self):
+        # a 95-point target's raw +/-9.5 band would put hi at 104.5 -- past
+        # the top of the allocation scale, which no weight can ever reach.
+        lo, hi = default_band(95.0)
+        assert hi == 100.0
+        assert lo == 85.5
 
 
 class TestCommitmentPlan:

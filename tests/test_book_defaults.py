@@ -17,7 +17,7 @@ from ah.play import (
     default_opening_book,
 )
 from ah.port.adapter import GEN_START_TARGETS
-from ah.port.book import BOOK_TOTAL, validate_book, validate_plan
+from ah.port.book import BOOK_TOTAL, default_band, validate_book, validate_plan
 
 
 def _liquid_of(targets) -> tuple[str, ...]:
@@ -62,6 +62,25 @@ class TestDefaultBook:
         assert default_opening_book(START_TARGETS).digest() == (
             default_opening_book(START_TARGETS).digest()
         )
+
+    @pytest.mark.parametrize("targets", [START_TARGETS, GEN_START_TARGETS])
+    def test_the_default_book_carries_a_default_band_per_sleeve(self, targets):
+        # app-open-01 delta 1: the derived default now declares a +/-10%
+        # reporting band for every sleeve it names a target for — cash
+        # excepted, since cash carries no target and no band.
+        book = default_opening_book(targets)
+        assert book.ranges is not None
+        assert set(book.ranges) == set(targets)
+        for sleeve, target in targets.items():
+            assert book.ranges[sleeve] == default_band(float(target))
+
+    def test_the_default_bands_still_pass_validation(self):
+        # a book straight off default_opening_book must still validate clean
+        # (no warnings) — every default target sits inside its own default
+        # band by construction.
+        book = default_opening_book(START_TARGETS)
+        liquid = tuple(a for a in START_TARGETS if a not in PRIVATE_ASSETS)
+        assert validate_book(book, liquid_sleeves=liquid) == []
 
 
 class TestDefaultPlan:

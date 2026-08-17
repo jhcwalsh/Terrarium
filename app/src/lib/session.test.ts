@@ -12,9 +12,11 @@ import {
   createSession,
   decide,
   getCioView,
+  planeForBasis,
   renderDetail,
   SessionApiError,
 } from "./session";
+import type { BandReport, Session } from "./session";
 
 function mockFetch(status: number, body: unknown) {
   const fn = vi.fn(async () => ({
@@ -56,6 +58,44 @@ describe("session client", () => {
     expect(err).toBeInstanceOf(SessionApiError);
     expect(err.status).toBe(409);
     expect(err.message).toBe("windows are decided in order");
+  });
+});
+
+describe("planeForBasis (su-app-07)", () => {
+  /**
+   * The two vocabularies do not match: a session's `basis` is
+   * `"reported" | "actual"`; the band report's planes are
+   * `"reported" | "true"`. Carried finding from task 3.
+   */
+  it("maps a session's basis onto the band report's plane name", () => {
+    expect(planeForBasis("actual")).toBe("true");
+    expect(planeForBasis("reported")).toBe("reported");
+  });
+
+  it("does not pass 'actual' through as a plane name", () => {
+    // the failure this exists to catch is the NAIVE equation of the two
+    // vocabularies. `basis` used directly as a key reads `undefined` off the
+    // band report — or falls back to the reported plane and shows a breach
+    // from a plane the player is not on.
+    const basis: Session["basis"] = "actual";
+    expect(planeForBasis(basis)).not.toBe(basis);
+    const report: BandReport = {
+      watch_fraction: 0.75,
+      sleeves: [
+        {
+          sleeve: "equity",
+          target: 41,
+          lo: 30,
+          hi: 40,
+          true: { weight: 44, alert: "breach" },
+          reported: { weight: 38, alert: "watch" },
+        },
+      ],
+    };
+    const row = report.sleeves[0];
+    expect(row[planeForBasis(basis)].alert).toBe("breach");
+    // and the naive read finds nothing at all
+    expect((row as unknown as Record<string, unknown>)[basis]).toBeUndefined();
   });
 });
 
