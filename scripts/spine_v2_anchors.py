@@ -2827,6 +2827,34 @@ def section_l(
     }
 
 
+def judge_parameters(era_threshold_pp: float) -> dict[str, Any]:
+    """Everything a sealed judge needs that is NOT a pass/fail threshold.
+
+    These are definitions, not bars -- the lookahead window, the high-inflation
+    line, the rolling-correlation window, the era line the season classifier
+    splits hot from cold at, and the two label sets. They are emitted here, and
+    sealed alongside the bars, for the same reason the bars are: a judge that
+    carried them as literals could drift from the anchors that were measured
+    with them, and nobody would see it.
+    """
+    return {
+        "k_months": K_MONTHS,
+        "inflation_high_line_pp": PRIMARY_INFLATION_THRESHOLD_PP,
+        "rolling_window_months": ROLLING_CORR_WINDOW_MONTHS,
+        "era_threshold_pp": _f(era_threshold_pp),
+        "contracting_labels": list(CONTRACTING_LABELS),
+        "downturn_labels": ["REC", "CRI"],
+        "crisis_only_labels": ["CRI"],
+        "decade_months": POWER_DECADE_MONTHS,
+        "note": (
+            "contracting_labels is grader_v2's contracting set (the owner's mapping fix); "
+            "downturn_labels is T1's onset union, which is NOT re-anchored under the "
+            "mapping fix and stays REC-or-CRI on both sides; crisis_only_labels drives "
+            "T1's crisis-only DISCLOSURE, which is reported and never judged"
+        ),
+    }
+
+
 def exam_bars_sealed(
     transmission: dict[str, Any],
     pooled_dwells: dict[str, Any],
@@ -3023,6 +3051,7 @@ def main() -> None:
         "l_grader_v2": grader_v2,
         "m_power_under_sealed_bars": power_sealed,
         "exam_bars": bars,
+        "judge_parameters": judge_parameters(hazard.era_threshold_pp),
         "exam_bars_superseded": {
             "open4_derivation": bars_open4,
             "note": (

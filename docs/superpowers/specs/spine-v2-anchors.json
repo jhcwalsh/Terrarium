@@ -3851,6 +3851,26 @@
       "expansion"
     ]
   },
+  "judge_parameters": {
+    "contracting_labels": [
+      "REC",
+      "CRI",
+      "STAG"
+    ],
+    "crisis_only_labels": [
+      "CRI"
+    ],
+    "decade_months": 120,
+    "downturn_labels": [
+      "REC",
+      "CRI"
+    ],
+    "era_threshold_pp": 3.351323828920571,
+    "inflation_high_line_pp": 4.0,
+    "k_months": 12,
+    "note": "contracting_labels is grader_v2's contracting set (the owner's mapping fix); downturn_labels is T1's onset union, which is NOT re-anchored under the mapping fix and stays REC-or-CRI on both sides; crisis_only_labels drives T1's crisis-only DISCLOSURE, which is reported and never judged",
+    "rolling_window_months": 36
+  },
   "k_pooled_decade_dwells": {
     "decade_months": 120,
     "per_grader": {
