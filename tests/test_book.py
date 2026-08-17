@@ -20,6 +20,7 @@ from ah.port.book import (
     BookError,
     CommitmentPlan,
     OpeningBook,
+    default_band,
     validate_book,
     validate_plan,
 )
@@ -307,6 +308,35 @@ class TestTargetsAndRanges:
 
     def test_a_clean_book_returns_no_warnings(self):
         assert validate_book(_book(), liquid_sleeves=TOY_LIQUID) == []
+
+
+class TestDefaultBand:
+    """app-open-01 delta 1 (owner-dictated 2026-08-16): the default reporting
+    band is +/-10% OF the sleeve's own target allocation, not a flat points-
+    wide band — a 40-point target bands to 36-44, a 5-point target to
+    4.5-5.5. Rounded to one decimal place of allocation points."""
+
+    def test_a_forty_point_target_bands_to_plus_minus_four(self):
+        assert default_band(40.0) == (36.0, 44.0)
+
+    def test_a_five_point_target_bands_to_plus_minus_zero_point_five(self):
+        assert default_band(5.0) == (4.5, 5.5)
+
+    def test_the_half_width_is_ten_percent_of_the_target_not_a_flat_amount(self):
+        # a flat +/-4.0 (the 40-point case's absolute width) would be wrong
+        # for every other target; this pins the band SCALES with the target.
+        assert default_band(20.0) == (18.0, 22.0)
+        assert default_band(7.0) == (6.3, 7.7)
+
+    def test_rounds_to_one_decimal_place_of_allocation_points(self):
+        # 33 * 0.10 = 3.3 exactly; 12 * 0.10 = 1.2 exactly — both already
+        # land on one decimal, so this pins the rounding rule without
+        # depending on float dust to prove it.
+        assert default_band(33.0) == (29.7, 36.3)
+        assert default_band(12.0) == (10.8, 13.2)
+
+    def test_a_zero_target_bands_to_zero_zero(self):
+        assert default_band(0.0) == (0.0, 0.0)
 
 
 class TestCommitmentPlan:

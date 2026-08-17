@@ -1602,35 +1602,15 @@ button.commit {
   color: var(--dim);
 }
 
-/* the same three readouts for a private sleeve, which has one target and one
-   band for the whole ladder rather than a row per rung. */
-.policy-strip {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: flex-end;
-  gap: 14px;
-  margin: 0 0 8px;
-  padding: 8px 10px;
-  border: 1px solid var(--hair);
-  border-radius: 8px;
-}
-
-.policy-strip .pcell {
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-}
-
-.policy-strip .pk {
-  font-size: 10px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+/* a private sleeve's held value in the merged table (app-open-01 delta 2) —
+   read-only text, not an input: it is the ladder below summed at nav_true,
+   edited there rather than here. */
+.policy-value {
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
   color: var(--dim);
-}
-
-.policy-strip .pband-inputs {
-  display: flex;
-  gap: 6px;
 }
 
 .book-liquid input,

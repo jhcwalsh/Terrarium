@@ -37,6 +37,32 @@ RUNG_TOLERANCE = 1e-9
 
 PRIVATE_SLEEVES: tuple[str, ...] = ("pe", "pc", "re")
 
+#: app-open-01 delta 1 (owner-dictated 2026-08-16): the default reporting
+#: band is +/-10% OF the sleeve's own target allocation — relative, not a
+#: flat points-wide band — so a 40-point target defaults to 36-44 and a
+#: 5-point target to 4.5-5.5.
+DEFAULT_BAND_FRACTION = 0.10
+
+
+def default_band(target: float) -> tuple[float, float]:
+    """The default +/-``DEFAULT_BAND_FRACTION`` reporting band for one sleeve.
+
+    Rounding rule: the half-width is rounded to ONE DECIMAL PLACE of
+    allocation points FIRST, and ``lo``/``hi`` are then computed from that
+    rounded half-width — not rounded independently after subtracting/adding
+    the raw fraction. That order means ``round(hi - lo, 1)`` always recovers
+    the exact half-width this function used (immune to the float dust
+    ``target - target * 0.1`` can otherwise leave on the low edge), and two
+    sleeves entered at the same target always get an identically-shaped
+    band. One decimal place matches the precision every other allocation
+    figure on the book already carries (``START_TARGETS``, a book's own
+    ``liquid``/rung points), so the served default cannot show a raw digit
+    the analyst never typed.
+    """
+    half = round(target * DEFAULT_BAND_FRACTION, 1)
+    return (round(target - half, 1), round(target + half, 1))
+
+
 #: Cohort ids the ENGINE mints for itself during play. ``ah.play`` commits one
 #: new vintage per private sleeve per year as ``f"{asset}-v{year}"``, and
 #: ``Portfolio.add`` raises on a duplicate key — so an entered rung carrying

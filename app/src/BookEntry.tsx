@@ -32,6 +32,25 @@
  *     already judged on the session document's `band_report` (DN-3 W5). This
  *     screen validates SHAPE only: finite, non-negative, `lo < hi`, and the
  *     targets totalling 100 with cash.
+ *
+ * app-open-01 (owner-dictated 2026-08-16) makes three further changes, all
+ * display/default only — the contract above is otherwise unchanged:
+ *
+ *  1. The served DEFAULT band is now +/-10% of the sleeve's own target
+ *     (`default_band` in `ah/port/book.py`), not empty. This screen still
+ *     never invents a band; it renders whatever `book.ranges` the server
+ *     sent, same as before — an untouched pre-fill still posts the SAME
+ *     document it was served, so ranked eligibility still survives it.
+ *  2. The private sleeves (pe/pc/re) are rows of the SAME targets/bands
+ *     table as the liquid sleeves, not a separate strip above each ladder —
+ *     same columns, same validation. A private row's `value` cell is
+ *     read-only text (the ladder below it, summed at nav_true); it is
+ *     edited on the ladder, not here.
+ *  3. Every sleeve name rendered as visible text uses its full, capitalized
+ *     label (`sleeveLabel`, `./lib/sleeveLabels`) — never the bare code.
+ *     `aria-label`s keep the codes: they are accessibility/test hooks, not
+ *     text the player reads, and the server contract's field names
+ *     (`liquid`/`private`/`targets`/`ranges` keys) are untouched.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -42,6 +61,7 @@ import {
   type Plan,
   type Rung,
 } from "./lib/session";
+import { sleeveLabel } from "./lib/sleeveLabels";
 
 const RUNG_FIELDS = [
   "vintage_year",
@@ -435,12 +455,13 @@ export function BookEntry({
       </p>
 
       <section className="setup book-liquid">
-        <h2>Liquid sleeves</h2>
+        <h2>Targets and bands</h2>
         <p className="book-note">
           <strong>Value</strong> is what you hold today. <strong>Target</strong> is your
           policy allocation, and it is what the commitment programme paces
           against. The <strong>band</strong> is optional and{" "}
-          <strong>reports only</strong> — nothing rebalances to it.
+          <strong>reports only</strong> — nothing rebalances to it. Private sleeves'
+          value is the ladder below it, summed — edit it there, not here.
         </p>
         <div className="policy-grid">
           <div className="policy-head">
@@ -452,35 +473,44 @@ export function BookEntry({
             <span>band lo</span>
             <span>band hi</span>
           </div>
-          {resp.liquid_sleeves.map((sleeve) => (
-            <div key={sleeve} className="policy-row">
-              <span className="policy-name">{sleeve}</span>
-              <input
-                type="number"
-                aria-label={sleeve}
-                value={Number.isFinite(book.liquid[sleeve]) ? book.liquid[sleeve] : ""}
-                onChange={(e) => setLiquid(sleeve, Number(e.target.value))}
-              />
-              <input
-                type="number"
-                aria-label={`${sleeve} target`}
-                value={Number.isFinite(targets[sleeve]) ? targets[sleeve] : ""}
-                onChange={(e) => setTarget(sleeve, Number(e.target.value))}
-              />
-              <span className="policy-wt" data-testid={`target-weight-${sleeve}`}>
-                {fmt1(policyWeight(sleeve))}%
-              </span>
-              <span
-                className={`policy-drift${Math.abs(drift(sleeve)) < 0.05 ? " flat" : ""}`}
-                data-testid={`target-drift-${sleeve}`}
-              >
-                {signed(drift(sleeve))}
-              </span>
-              {bandInputs(sleeve)}
-            </div>
-          ))}
+          {[...resp.liquid_sleeves, ...privateSleeves].map((sleeve) => {
+            const isPrivate = privateSleeves.includes(sleeve);
+            return (
+              <div key={sleeve} className="policy-row">
+                <span className="policy-name">{sleeveLabel(sleeve)}</span>
+                {isPrivate ? (
+                  <span className="policy-value" data-testid={`value-${sleeve}`}>
+                    {fmt1(values[sleeve])}
+                  </span>
+                ) : (
+                  <input
+                    type="number"
+                    aria-label={sleeve}
+                    value={Number.isFinite(book.liquid[sleeve]) ? book.liquid[sleeve] : ""}
+                    onChange={(e) => setLiquid(sleeve, Number(e.target.value))}
+                  />
+                )}
+                <input
+                  type="number"
+                  aria-label={`${sleeve} target`}
+                  value={Number.isFinite(targets[sleeve]) ? targets[sleeve] : ""}
+                  onChange={(e) => setTarget(sleeve, Number(e.target.value))}
+                />
+                <span className="policy-wt" data-testid={`target-weight-${sleeve}`}>
+                  {fmt1(policyWeight(sleeve))}%
+                </span>
+                <span
+                  className={`policy-drift${Math.abs(drift(sleeve)) < 0.05 ? " flat" : ""}`}
+                  data-testid={`target-drift-${sleeve}`}
+                >
+                  {signed(drift(sleeve))}
+                </span>
+                {bandInputs(sleeve)}
+              </div>
+            );
+          })}
           <div className="policy-row">
-            <span className="policy-name">cash</span>
+            <span className="policy-name">{sleeveLabel("cash")}</span>
             <input
               type="number"
               aria-label="cash"
@@ -497,43 +527,10 @@ export function BookEntry({
       {privateSleeves.map((sleeve) => (
         <section key={sleeve} className="book-ladder">
           <div className="book-ladder-head">
-            <h2>{sleeve}</h2>
+            <h2>{sleeveLabel(sleeve)}</h2>
             <button type="button" onClick={() => resetSleeve(sleeve)}>
-              {`Reset ${sleeve}`}
+              {`Reset ${sleeveLabel(sleeve)}`}
             </button>
-          </div>
-          {/* a private sleeve's policy line: ONE target and ONE band for the
-              whole sleeve, not per rung. Its held value is the ladder below
-              summed at nav_true, which is what the drift is measured on. */}
-          <div className="policy-strip">
-            <label className="pcell">
-              <span className="pk">target</span>
-              <input
-                type="number"
-                aria-label={`${sleeve} target`}
-                value={Number.isFinite(targets[sleeve]) ? targets[sleeve] : ""}
-                onChange={(e) => setTarget(sleeve, Number(e.target.value))}
-              />
-            </label>
-            <span className="pcell">
-              <span className="pk">policy wt</span>
-              <span className="policy-wt" data-testid={`target-weight-${sleeve}`}>
-                {fmt1(policyWeight(sleeve))}%
-              </span>
-            </span>
-            <span className="pcell">
-              <span className="pk">drift</span>
-              <span
-                className={`policy-drift${Math.abs(drift(sleeve)) < 0.05 ? " flat" : ""}`}
-                data-testid={`target-drift-${sleeve}`}
-              >
-                {signed(drift(sleeve))}
-              </span>
-            </span>
-            <span className="pcell pband">
-              <span className="pk">band lo / hi</span>
-              <span className="pband-inputs">{bandInputs(sleeve)}</span>
-            </span>
           </div>
           <div className="book-ladder-scroll">
             <table>
@@ -587,7 +584,7 @@ export function BookEntry({
               <tr>
                 <th>year</th>
                 {privateSleeves.map((s) => (
-                  <th key={s}>{s}</th>
+                  <th key={s}>{sleeveLabel(s)}</th>
                 ))}
               </tr>
             </thead>

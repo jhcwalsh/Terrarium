@@ -53,7 +53,7 @@ import numpy as np
 
 from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
-from ah.port.book import CommitmentPlan, OpeningBook
+from ah.port.book import CommitmentPlan, OpeningBook, default_band
 from ah.port.cashflow_tier1 import f_call as tier1_f_call
 from ah.port.cashflow_tier1 import f_dist as tier1_f_dist
 from ah.port.cohort import ClosedEndCohort
@@ -224,9 +224,14 @@ def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningB
         # from this default and posts them back untouched by default. If the
         # served default carried `targets=None`, an untouched pre-fill would
         # digest differently from what was served, and `serve.py` would
-        # demote it to practice-only. `ranges` stays unset — no default bands
-        # are declared yet.
+        # demote it to practice-only.
         targets=dict(t),
+        # app-open-01 delta 1 (owner-dictated 2026-08-16): the default
+        # reporting band is +/-10% of the sleeve's own target, for every
+        # sleeve `targets` names — cash excepted, it carries no target and
+        # no band (BookEntry's own note). `default_band` is the single
+        # source of this arithmetic; nothing here re-derives it.
+        ranges={a: default_band(float(t[a])) for a in t},
     )
 
 

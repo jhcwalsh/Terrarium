@@ -148,6 +148,19 @@ class TestDefaultBookEndpoint:
         assert set(body["book"]["liquid"]) == set(body["liquid_sleeves"])
         assert len(body["book_digest"]) == 64
 
+    def test_the_private_sleeves_are_present_in_the_served_book(self, service):
+        # app-open-01 delta 2: the entry screen's merged targets/bands table
+        # reads the private sleeves off `book.private` (values) and
+        # `book.targets`/`book.ranges` (policy) — this pins that all three
+        # structures really do name pe/pc/re, which is the whole premise a
+        # merged table relies on rather than a second server change.
+        client, _db, rid = service
+        body = client.get(f"/book/default?run_id={rid}").json()
+        private = {"pe", "pc", "re"}
+        assert private <= set(body["book"]["private"])
+        assert private <= set(body["book"]["targets"])
+        assert private <= set(body["book"]["ranges"])
+
     def test_an_unknown_run_is_404(self, service):
         client, _db, _rid = service
         assert client.get("/book/default?run_id=nope").status_code == 404
@@ -741,14 +754,46 @@ class TestBandReport:
         assert doc["band_report"] is None
 
     def test_the_key_is_null_for_a_book_that_declares_no_ranges(self, service):
+        # app-open-01: the SERVED default now carries a +/-10% band per
+        # sleeve (delta 1), so "declares no ranges" is no longer the
+        # untouched default — it has to be entered explicitly, as a book
+        # that overrides the default's `ranges` back to `None`.
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
+        book = {**default["book"], "ranges": None}
         sid = client.post(
-            "/sessions", json={"run_id": rid, "book": default["book"], "plan": default["plan"]}
+            "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
         ).json()["session_id"]
         assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["band_report"] is None
+
+    def test_the_untouched_default_book_now_reports_its_own_default_bands(self, service):
+        # the other half of the test above: app-open-01 delta 1 means the
+        # UNTOUCHED default book (posted verbatim, never demoted from
+        # ranked) reports a band for every sleeve it named a target for.
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        assert default["book"]["ranges"] is not None
+        r = client.post(
+            "/sessions",
+            json={
+                "run_id": rid,
+                "ranked": True,
+                "book": default["book"],
+                "plan": default["plan"],
+            },
+        )
+        assert r.status_code == 201
+        assert r.json()["ranked"] is True, "the untouched default must stay ranked-eligible"
+        sid = r.json()["session_id"]
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        doc = client.get(f"/sessions/{sid}").json()
+        report = doc["band_report"]
+        assert report is not None
+        reported = {s["sleeve"]: (s["lo"], s["hi"]) for s in report["sleeves"]}
+        expected = {k: tuple(v) for k, v in default["book"]["ranges"].items()}
+        assert reported == expected
 
     def test_the_key_is_present_and_null_before_the_first_quarter_closes(self, service):
         """The nulled-key list runs BEFORE the early return, so a banded
