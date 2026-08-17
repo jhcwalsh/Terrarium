@@ -1,0 +1,1305 @@
+{
+  "a_event_chronology": {
+    "definitions": {
+      "cri_only": {
+        "episodes": [
+          {
+            "end": "1970-01",
+            "months": 1,
+            "start": "1970-01"
+          },
+          {
+            "end": "1970-10",
+            "months": 7,
+            "start": "1970-04"
+          },
+          {
+            "end": "1975-03",
+            "months": 13,
+            "start": "1974-03"
+          },
+          {
+            "end": "2001-11",
+            "months": 6,
+            "start": "2001-06"
+          },
+          {
+            "end": "2009-06",
+            "months": 10,
+            "start": "2008-09"
+          },
+          {
+            "end": "2020-03",
+            "months": 1,
+            "start": "2020-03"
+          }
+        ],
+        "label_codes": [
+          "CRI"
+        ],
+        "months_at_risk_b6_population": 789,
+        "months_at_risk_hazard_denominator": 762,
+        "n_onsets_inside_lookahead_of_eligible": 61,
+        "n_onsets_panel": 6,
+        "onset_months": [
+          "1970-01",
+          "1970-04",
+          "1974-03",
+          "2001-06",
+          "2008-09",
+          "2020-03"
+        ],
+        "state_months_total": 38
+      },
+      "rec_plus_cri": {
+        "episodes": [
+          {
+            "end": "1954-11",
+            "months": 16,
+            "start": "1953-08"
+          },
+          {
+            "end": "1956-07",
+            "months": 1,
+            "start": "1956-07"
+          },
+          {
+            "end": "1958-10",
+            "months": 14,
+            "start": "1957-09"
+          },
+          {
+            "end": "1961-05",
+            "months": 13,
+            "start": "1960-05"
+          },
+          {
+            "end": "1967-07",
+            "months": 1,
+            "start": "1967-07"
+          },
+          {
+            "end": "1970-11",
+            "months": 11,
+            "start": "1970-01"
+          },
+          {
+            "end": "1975-03",
+            "months": 16,
+            "start": "1973-12"
+          },
+          {
+            "end": "1980-07",
+            "months": 6,
+            "start": "1980-02"
+          },
+          {
+            "end": "1983-04",
+            "months": 21,
+            "start": "1981-08"
+          },
+          {
+            "end": "1985-07",
+            "months": 1,
+            "start": "1985-07"
+          },
+          {
+            "end": "1991-03",
+            "months": 8,
+            "start": "1990-08"
+          },
+          {
+            "end": "1991-10",
+            "months": 3,
+            "start": "1991-08"
+          },
+          {
+            "end": "2002-05",
+            "months": 16,
+            "start": "2001-02"
+          },
+          {
+            "end": "2003-06",
+            "months": 1,
+            "start": "2003-06"
+          },
+          {
+            "end": "2009-12",
+            "months": 24,
+            "start": "2008-01"
+          },
+          {
+            "end": "2017-02",
+            "months": 24,
+            "start": "2015-03"
+          },
+          {
+            "end": "2020-12",
+            "months": 21,
+            "start": "2019-04"
+          }
+        ],
+        "label_codes": [
+          "REC",
+          "CRI"
+        ],
+        "months_at_risk_b6_population": 789,
+        "months_at_risk_hazard_denominator": 612,
+        "n_onsets_inside_lookahead_of_eligible": 192,
+        "n_onsets_panel": 17,
+        "onset_months": [
+          "1953-08",
+          "1956-07",
+          "1957-09",
+          "1960-05",
+          "1967-07",
+          "1970-01",
+          "1973-12",
+          "1980-02",
+          "1981-08",
+          "1985-07",
+          "1990-08",
+          "1991-08",
+          "2001-02",
+          "2003-06",
+          "2008-01",
+          "2015-03",
+          "2019-04"
+        ],
+        "state_months_total": 197
+      }
+    },
+    "eligible_months_full_lookahead": 789,
+    "k_months": 12,
+    "panel_months": 813,
+    "panel_span": [
+      "1953-04",
+      "2020-12"
+    ]
+  },
+  "b_transmission_lift": {
+    "bootstrap_ci95": {
+      "block_12m": {
+        "cri_only": {
+          "conditional_rate_ci95": {
+            "hi": 0.41951289599102887,
+            "lo": 0.049570883661792756,
+            "median": 0.2159295154185022
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 5.227809512933442,
+            "lo": 1.0411330665424379,
+            "median": 2.8551596356626945
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.13054499366286437,
+            "lo": 0.030418250950570342,
+            "median": 0.07541191381495564
+          }
+        },
+        "rec_plus_cri": {
+          "conditional_rate_ci95": {
+            "hi": 0.7124649859943976,
+            "lo": 0.42735042735042733,
+            "median": 0.5760181618051734
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 3.344157353806588,
+            "lo": 1.7690954133122256,
+            "median": 2.35934995937827
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.3219581749049428,
+            "lo": 0.1634980988593156,
+            "median": 0.24334600760456274
+          }
+        }
+      },
+      "block_24m": {
+        "cri_only": {
+          "conditional_rate_ci95": {
+            "hi": 0.43791844729344703,
+            "lo": 0.028900344597598934,
+            "median": 0.21210551629731028
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 5.045392747118623,
+            "lo": 0.7051593174267592,
+            "median": 2.8163005192569806
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.13434727503168567,
+            "lo": 0.025348542458808618,
+            "median": 0.07604562737642585
+          }
+        },
+        "rec_plus_cri": {
+          "conditional_rate_ci95": {
+            "hi": 0.7094252873563217,
+            "lo": 0.43517512077294684,
+            "median": 0.5779062299293514
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 3.3473622102535145,
+            "lo": 1.7752827491108736,
+            "median": 2.367375452513139
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.32192648922686945,
+            "lo": 0.16856780735107732,
+            "median": 0.2420785804816223
+          }
+        }
+      },
+      "block_36m": {
+        "cri_only": {
+          "conditional_rate_ci95": {
+            "hi": 0.42857142857142855,
+            "lo": 0.019778628806276857,
+            "median": 0.21197193610986714
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 5.131588354930004,
+            "lo": 0.5860466708122959,
+            "median": 2.770910666148504
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.13434727503168567,
+            "lo": 0.025348542458808618,
+            "median": 0.07477820025348543
+          }
+        },
+        "rec_plus_cri": {
+          "conditional_rate_ci95": {
+            "hi": 0.7015227914481644,
+            "lo": 0.4577114427860697,
+            "median": 0.5736638106895144
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 3.3351204643619226,
+            "lo": 1.855774205869812,
+            "median": 2.3580706707600827
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.311787072243346,
+            "lo": 0.17107097591888465,
+            "median": 0.24081115335868186
+          }
+        }
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the eligible months' (tight, downturn-within-12m) pairs; geometric block lengths with the stated mean, wrap-around, 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260816,
+    "k_months": 12,
+    "n_bootstrap": 2000,
+    "point_estimates": {
+      "cri_only": {
+        "conditional_rate": 0.2214765100671141,
+        "eligible_months": 789,
+        "eligible_months_followed_by_onset": 61,
+        "lift": 2.8646715810320167,
+        "tight_months": 149,
+        "tight_months_followed_by_onset": 33,
+        "unconditional_rate": 0.07731305449936629
+      },
+      "rec_plus_cri": {
+        "conditional_rate": 0.5771812080536913,
+        "eligible_months": 789,
+        "eligible_months_followed_by_onset": 192,
+        "lift": 2.3718540268456376,
+        "tight_months": 149,
+        "tight_months_followed_by_onset": 86,
+        "unconditional_rate": 0.24334600760456274
+      }
+    },
+    "primary_block_months": 24,
+    "primary_tight_base_rate": 0.1888466413181242,
+    "primary_tight_definition": "curve_inversion_10y_2y",
+    "tight_definition_sensitivity": {
+      "curve_inversion_10y_2y": {
+        "arms": {
+          "base_rate_matched": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.2214765100671141,
+                "lift": 2.8646715810320167,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.5771812080536913,
+                "lift": 2.3718540268456376,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 149,
+            "tight_share": 0.1888466413181242
+          },
+          "native_cut": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.2214765100671141,
+                "lift": 2.8646715810320167,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.5771812080536913,
+                "lift": 2.3718540268456376,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 149,
+            "tight_share": 0.1888466413181242
+          }
+        },
+        "base_rate_matched_score_threshold": -0.0020585875724174417,
+        "description": "the 10-year Treasury yield sits below the 2-year yield (an inverted yield curve); tightness score = 2y minus 10y. THE PRIMARY DEFINITION: it is the panel-side conditioning the spine pilot sealed in round one (scripts/spine_pilot_seal._b6_onset_rates) and the one round two's matched comparison used.",
+        "eligible_months": 789
+      },
+      "policy_rate_above_trailing_36m": {
+        "arms": {
+          "base_rate_matched": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.1793103448275862,
+                "lift": 2.248728094968909,
+                "unconditional_rate": 0.07973856209150326
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.43448275862068964,
+                "lift": 1.8162803843979647,
+                "unconditional_rate": 0.23921568627450981
+              }
+            },
+            "tight_months": 145,
+            "tight_share": 0.1895424836601307
+          },
+          "native_cut": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.11442786069651742,
+                "lift": 1.4350379251284562,
+                "unconditional_rate": 0.07973856209150326
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.3308457711442786,
+                "lift": 1.3830437974064105,
+                "unconditional_rate": 0.23921568627450981
+              }
+            },
+            "tight_months": 402,
+            "tight_share": 0.5254901960784314
+          }
+        },
+        "base_rate_matched_score_threshold": 1.322435924517674,
+        "description": "the policy rate sits above its own average over the previous 36 months (policy tighter than its recent norm); tightness score = rate minus that average. Sensitivity only; the first 36 panel months cannot evaluate it.",
+        "eligible_months": 765
+      },
+      "real_policy_rate_positive": {
+        "arms": {
+          "base_rate_matched": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.087248322147651,
+                "lift": 1.128506986467158,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.30201342281879195,
+                "lift": 1.2410864093959733,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 149,
+            "tight_share": 0.1888466413181242
+          },
+          "native_cut": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.09124087591240876,
+                "lift": 1.1801483786047624,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.26824817518248173,
+                "lift": 1.102332344890511,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 548,
+            "tight_share": 0.6945500633713562
+          }
+        },
+        "base_rate_matched_score_threshold": 3.051257000550557,
+        "description": "the effective fed funds rate exceeds trailing 12-month CPI inflation (a positive real policy rate); tightness score = the real rate itself. Sensitivity only.",
+        "eligible_months": 789
+      }
+    }
+  },
+  "c_regime_durations": {
+    "era_threshold_pp": 3.351323828920571,
+    "per_quadrant": {
+      "expansion": {
+        "all_spells_including_censored": {
+          "median_months": 6.0,
+          "n_spells": 21,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            3,
+            3,
+            4,
+            4,
+            6,
+            7,
+            8,
+            11,
+            12,
+            13,
+            14,
+            19,
+            24,
+            40,
+            58
+          ]
+        },
+        "censored_spells": [],
+        "iqr_months": [
+          3.0,
+          13.0
+        ],
+        "iqr_quarters": [
+          1.0,
+          4.333333333333333
+        ],
+        "median_months": 6.0,
+        "median_quarters": 2.0,
+        "n_censored_spells": 0,
+        "n_completed_spells": 21,
+        "sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          3,
+          3,
+          3,
+          4,
+          4,
+          6,
+          7,
+          8,
+          11,
+          12,
+          13,
+          14,
+          19,
+          24,
+          40,
+          58
+        ],
+        "sorted_spells_quarters": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          1.0,
+          1.0,
+          1.0,
+          1.3333333333333333,
+          1.3333333333333333,
+          2.0,
+          2.3333333333333335,
+          2.6666666666666665,
+          3.6666666666666665,
+          4.0,
+          4.333333333333333,
+          4.666666666666667,
+          6.333333333333333,
+          8.0,
+          13.333333333333334,
+          19.333333333333332
+        ],
+        "sparse": false
+      },
+      "recession": {
+        "all_spells_including_censored": {
+          "median_months": 5.0,
+          "n_spells": 14,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            4,
+            6,
+            8,
+            12,
+            13,
+            14,
+            21,
+            24
+          ]
+        },
+        "censored_spells": [
+          {
+            "end": "1954-11",
+            "left_censored": true,
+            "months": 8,
+            "right_censored": false,
+            "start": "1954-04"
+          },
+          {
+            "end": "2020-12",
+            "left_censored": false,
+            "months": 21,
+            "right_censored": true,
+            "start": "2019-04"
+          }
+        ],
+        "iqr_months": [
+          1.0,
+          12.25
+        ],
+        "iqr_quarters": [
+          0.3333333333333333,
+          4.083333333333333
+        ],
+        "median_months": 3.0,
+        "median_quarters": 1.0,
+        "n_censored_spells": 2,
+        "n_completed_spells": 12,
+        "sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          4,
+          6,
+          12,
+          13,
+          14,
+          24
+        ],
+        "sorted_spells_quarters": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.6666666666666666,
+          1.3333333333333333,
+          2.0,
+          4.0,
+          4.333333333333333,
+          4.666666666666667,
+          8.0
+        ],
+        "sparse": true
+      },
+      "recovery": {
+        "all_spells_including_censored": {
+          "median_months": 9.0,
+          "n_spells": 22,
+          "sorted_spells_months": [
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            5,
+            5,
+            5,
+            6,
+            6,
+            12,
+            13,
+            14,
+            16,
+            16,
+            18,
+            19,
+            25,
+            39,
+            62,
+            100
+          ]
+        },
+        "censored_spells": [],
+        "iqr_months": [
+          4.25,
+          17.5
+        ],
+        "iqr_quarters": [
+          1.4166666666666667,
+          5.833333333333333
+        ],
+        "median_months": 9.0,
+        "median_quarters": 3.0,
+        "n_censored_spells": 0,
+        "n_completed_spells": 22,
+        "sorted_spells_months": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          4,
+          5,
+          5,
+          5,
+          6,
+          6,
+          12,
+          13,
+          14,
+          16,
+          16,
+          18,
+          19,
+          25,
+          39,
+          62,
+          100
+        ],
+        "sorted_spells_quarters": [
+          0.6666666666666666,
+          0.6666666666666666,
+          1.0,
+          1.0,
+          1.0,
+          1.3333333333333333,
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667,
+          2.0,
+          2.0,
+          4.0,
+          4.333333333333333,
+          4.666666666666667,
+          5.333333333333333,
+          5.333333333333333,
+          6.0,
+          6.333333333333333,
+          8.333333333333334,
+          13.0,
+          20.666666666666668,
+          33.333333333333336
+        ],
+        "sparse": false
+      },
+      "stagflation": {
+        "all_spells_including_censored": {
+          "median_months": 4.0,
+          "n_spells": 12,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            6,
+            8,
+            10,
+            11,
+            16,
+            21
+          ]
+        },
+        "censored_spells": [],
+        "iqr_months": [
+          1.0,
+          10.25
+        ],
+        "iqr_quarters": [
+          0.3333333333333333,
+          3.4166666666666665
+        ],
+        "median_months": 4.0,
+        "median_quarters": 1.3333333333333333,
+        "n_censored_spells": 0,
+        "n_completed_spells": 12,
+        "sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          2,
+          2,
+          6,
+          8,
+          10,
+          11,
+          16,
+          21
+        ],
+        "sorted_spells_quarters": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.6666666666666666,
+          0.6666666666666666,
+          2.0,
+          2.6666666666666665,
+          3.3333333333333335,
+          3.6666666666666665,
+          5.333333333333333,
+          7.0
+        ],
+        "sparse": true
+      }
+    },
+    "pilot_b4_panel_dwell_medians_months": [
+      5.0,
+      4.0,
+      9.0,
+      6.0
+    ],
+    "quadrant_legend": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ],
+    "undefined_quadrant_months": 12,
+    "unit_note": "months is the unit the spine pilot's own B4 anchor is stated in (panel_dwell_medians = [5, 4, 9, 6] MONTHS, docs/superpowers/specs/spine-pilot-prereg.json); quarters = months / 3"
+  },
+  "d_allocation_episode_facts": {
+    "annualisation_note": "ann_mean_arith_pct = 12 x the mean monthly return; ann_mean_geom_pct = (1 + mean monthly return)^12 - 1. Spreads are taken on the ARITHMETIC annualisation because only that one is additive across assets",
+    "asset_sources": {
+      "bonds": "sealed derived series 'govt_tr_10y' applied to the panel's ust_10y level: r_t = 0.01 * (y_{t-1}/12 - 8.5 * (y_t - y_{t-1})). The panel carries no bond total-return factor, only the yield level",
+      "commodities": "panel factor 'commodities' -- AQR equal-weight commodity excess return + the one-month bill, a total return",
+      "equities": "panel factor 'equity_mkt' -- Fama-French Mkt-RF + RF, a total return",
+      "real_assets": null
+    },
+    "inflation_states": {
+      "cpi_yoy_ge_3pct": {
+        "high_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 8.41200576249331,
+            "ann_mean_geom_pct": 8.744030150744585,
+            "ann_vol_pct": 9.808444481210353,
+            "mean_pct": 0.7010004802077758,
+            "months": 368
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 10.459217954118639,
+            "ann_mean_geom_pct": 10.975469724786247,
+            "ann_vol_pct": 15.829314746786615,
+            "mean_pct": 0.8716014961765532,
+            "months": 368
+          },
+          "equities": {
+            "ann_mean_arith_pct": 9.279782608695653,
+            "ann_mean_geom_pct": 9.684826697856064,
+            "ann_vol_pct": 16.366171020008867,
+            "mean_pct": 0.7733152173913044,
+            "months": 368
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 2.047212191625329,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "is_primary": false,
+        "low_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 3.804937551136885,
+            "ann_mean_geom_pct": 3.871999345099142,
+            "ann_vol_pct": 5.7796605710624425,
+            "mean_pct": 0.31707812926140705,
+            "months": 433
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 6.430650824678052,
+            "ann_mean_geom_pct": 6.623613483403745,
+            "ann_vol_pct": 11.42182032603226,
+            "mean_pct": 0.535887568723171,
+            "months": 433
+          },
+          "equities": {
+            "ann_mean_arith_pct": 13.835196304849887,
+            "ann_mean_geom_pct": 14.747111205337383,
+            "ann_vol_pct": 13.875885532360064,
+            "mean_pct": 1.1529330254041572,
+            "months": 433
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 2.6257132735411672,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "stock_bond_correlation": {
+          "high_inflation": 0.26776000715530485,
+          "low_inflation": -0.09682697926086808
+        },
+        "threshold_pp": 3.0
+      },
+      "cpi_yoy_ge_4pct": {
+        "high_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 7.199556518375341,
+            "ann_mean_geom_pct": 7.441943127646922,
+            "ann_vol_pct": 11.156119622652081,
+            "mean_pct": 0.5999630431979451,
+            "months": 225
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 12.071515017325682,
+            "ann_mean_geom_pct": 12.76231595286761,
+            "ann_vol_pct": 17.191480288616432,
+            "mean_pct": 1.00595958477714,
+            "months": 225
+          },
+          "equities": {
+            "ann_mean_arith_pct": 5.527466666666666,
+            "ann_mean_geom_pct": 5.669673277675802,
+            "ann_vol_pct": 17.51806544005087,
+            "mean_pct": 0.46062222222222227,
+            "months": 225
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 4.871958498950341,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "is_primary": true,
+        "low_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 5.422319207648189,
+            "ann_mean_geom_pct": 5.559126788246904,
+            "ann_vol_pct": 6.2091992405362735,
+            "mean_pct": 0.4518599339706824,
+            "months": 576
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 6.800995026567669,
+            "ann_mean_geom_pct": 7.017046867207455,
+            "ann_vol_pct": 11.94246997270275,
+            "mean_pct": 0.5667495855473058,
+            "months": 576
+          },
+          "equities": {
+            "ann_mean_arith_pct": 14.17,
+            "ann_mean_geom_pct": 15.127486643460042,
+            "ann_vol_pct": 13.961069698645401,
+            "mean_pct": 1.1808333333333334,
+            "months": 576
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 1.37867581891948,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "stock_bond_correlation": {
+          "high_inflation": 0.30125403304704923,
+          "low_inflation": -0.01823351575688256
+        },
+        "threshold_pp": 4.0
+      },
+      "cpi_yoy_ge_5pct": {
+        "high_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 6.377965622057896,
+            "ann_mean_geom_pct": 6.567751464705585,
+            "ann_vol_pct": 12.305276768404454,
+            "mean_pct": 0.5314971351714914,
+            "months": 153
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 14.995061708106675,
+            "ann_mean_geom_pct": 16.06979052144748,
+            "ann_vol_pct": 19.07522395349902,
+            "mean_pct": 1.2495884756755562,
+            "months": 153
+          },
+          "equities": {
+            "ann_mean_arith_pct": 7.303529411764706,
+            "ann_mean_geom_pct": 7.553040016855261,
+            "ann_vol_pct": 18.057480178653854,
+            "mean_pct": 0.6086274509803922,
+            "months": 153
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 8.617096086048779,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "is_primary": false,
+        "low_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 5.813776759359492,
+            "ann_mean_geom_pct": 5.971222719485514,
+            "ann_vol_pct": 6.468440267048535,
+            "mean_pct": 0.484481396613291,
+            "months": 648
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 6.696326501328602,
+            "ann_mean_geom_pct": 6.905718075841216,
+            "ann_vol_pct": 11.96125539792874,
+            "mean_pct": 0.5580272084440502,
+            "months": 648
+          },
+          "equities": {
+            "ann_mean_arith_pct": 12.790370370370372,
+            "ann_mean_geom_pct": 13.567463791473756,
+            "ann_vol_pct": 14.280765059480146,
+            "mean_pct": 1.0658641975308643,
+            "months": 648
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 0.8825497419691102,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "stock_bond_correlation": {
+          "high_inflation": 0.3390382145390731,
+          "low_inflation": 0.010927392717242666
+        },
+        "threshold_pp": 5.0
+      }
+    },
+    "named_episodes": {
+      "early_calm_1953_1965": {
+        "available": true,
+        "inflation_kind": "low",
+        "mean_cpi_yoy_pct": 1.3760847939676915,
+        "months_declared": 153,
+        "months_in_panel": 141,
+        "note": "post-war calm, pre-Vietnam build-up",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 2.062365967065313,
+            "ann_mean_geom_pct": 2.0819726166398045,
+            "ann_vol_pct": 3.1630859704091483,
+            "mean_pct": 0.17186383058877608,
+            "months": 141
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 4.714049186397447,
+            "ann_mean_geom_pct": 4.8172467826351095,
+            "ann_vol_pct": 8.92949299664944,
+            "mean_pct": 0.39283743219978723,
+            "months": 141
+          },
+          "equities": {
+            "ann_mean_arith_pct": 14.488510638297871,
+            "ann_mean_geom_pct": 15.490423782510954,
+            "ann_vol_pct": 11.813123921220646,
+            "mean_pct": 1.2073758865248225,
+            "months": 141
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 2.651683219332134,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1953-04",
+          "1965-12"
+        ],
+        "stock_bond_correlation": -0.10465723121362658,
+        "unavailable_reason": null
+      },
+      "great_disinflation_1983_1999": {
+        "available": true,
+        "inflation_kind": "low",
+        "mean_cpi_yoy_pct": 3.2698978479896117,
+        "months_declared": 204,
+        "months_in_panel": 204,
+        "note": "the long disinflation and the 1990s expansion",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 10.048521197268403,
+            "ann_mean_geom_pct": 10.524477478893202,
+            "ann_vol_pct": 8.366622300267517,
+            "mean_pct": 0.8373767664390337,
+            "months": 204
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 7.232360380068803,
+            "ann_mean_geom_pct": 7.476983274153937,
+            "ann_vol_pct": 10.724525149947436,
+            "mean_pct": 0.6026966983390669,
+            "months": 204
+          },
+          "equities": {
+            "ann_mean_arith_pct": 17.498823529411766,
+            "ann_mean_geom_pct": 18.97279107590588,
+            "ann_vol_pct": 14.832647850219583,
+            "mean_pct": 1.458235294117647,
+            "months": 204
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": -2.8161608171996004,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1983-01",
+          "1999-12"
+        ],
+        "stock_bond_correlation": 0.2393612325077186,
+        "unavailable_reason": null
+      },
+      "great_inflation_1977_1982": {
+        "available": true,
+        "inflation_kind": "high",
+        "mean_cpi_yoy_pct": 9.23793131356775,
+        "months_declared": 72,
+        "months_in_panel": 72,
+        "note": "second inflation wave through the Volcker disinflation",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 5.355989251034264,
+            "ann_mean_geom_pct": 5.489445513498659,
+            "ann_vol_pct": 16.253763117536955,
+            "mean_pct": 0.4463324375861886,
+            "months": 72
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 10.035398795387435,
+            "ann_mean_geom_pct": 10.510095310742674,
+            "ann_vol_pct": 14.436334516629955,
+            "mean_pct": 0.8362832329489528,
+            "months": 72
+          },
+          "equities": {
+            "ann_mean_arith_pct": 13.13,
+            "ann_mean_geom_pct": 13.949693133336716,
+            "ann_vol_pct": 16.226348681983133,
+            "mean_pct": 1.0941666666666667,
+            "months": 72
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 4.679409544353171,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1977-01",
+          "1982-12"
+        ],
+        "stock_bond_correlation": 0.3372361207540753,
+        "unavailable_reason": null
+      },
+      "oil_shock_1973_1975": {
+        "available": true,
+        "inflation_kind": "high",
+        "mean_cpi_yoy_pct": 8.79542275689549,
+        "months_declared": 36,
+        "months_in_panel": 36,
+        "note": "first oil shock and the 1973-75 bust",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 2.7747212593336967,
+            "ann_mean_geom_pct": 2.810282100763617,
+            "ann_vol_pct": 6.1445793640336825,
+            "mean_pct": 0.23122677161114139,
+            "months": 36
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 35.09077775899043,
+            "ann_mean_geom_pct": 41.32259206049391,
+            "ann_vol_pct": 30.423354802105983,
+            "mean_pct": 2.924231479915869,
+            "months": 36
+          },
+          "equities": {
+            "ann_mean_arith_pct": -5.033333333333332,
+            "ann_mean_geom_pct": -4.9188253869447145,
+            "ann_vol_pct": 21.177486608368305,
+            "mean_pct": -0.41944444444444434,
+            "months": 36
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 32.31605649965673,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1973-01",
+          "1975-12"
+        ],
+        "stock_bond_correlation": 0.23508300212087427,
+        "unavailable_reason": null
+      },
+      "pandemic_inflation_2021_2022": {
+        "available": false,
+        "inflation_kind": "high",
+        "mean_cpi_yoy_pct": null,
+        "months_declared": 24,
+        "months_in_panel": 0,
+        "note": "the 2021-22 inflation surge -- OUTSIDE the panel (see notes)",
+        "returns": null,
+        "span": [
+          "2021-01",
+          "2022-12"
+        ],
+        "stock_bond_correlation": null,
+        "unavailable_reason": "no month of this episode is inside the panel. The panel is the campaign train+validation span (1953-04..2020-12); 2021-01 onward is the sealed HOLDOUT split (ah.splits.HOLDOUT), which this script does not and must not open."
+      },
+      "post_gfc_calm_2010_2019": {
+        "available": true,
+        "inflation_kind": "low",
+        "mean_cpi_yoy_pct": 1.7727529215810587,
+        "months_declared": 120,
+        "months_in_panel": 120,
+        "note": "post-GFC low-inflation decade",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 3.8882706312608493,
+            "ann_mean_geom_pct": 3.958318346881895,
+            "ann_vol_pct": 5.313950277747573,
+            "mean_pct": 0.32402255260507073,
+            "months": 120
+          },
+          "commodities": {
+            "ann_mean_arith_pct": -1.1647840478202953,
+            "ann_mean_geom_pct": -1.1585858147479366,
+            "ann_vol_pct": 12.934324405905324,
+            "mean_pct": -0.09706533731835794,
+            "months": 120
+          },
+          "equities": {
+            "ann_mean_arith_pct": 13.651000000000005,
+            "ann_mean_geom_pct": 14.538334634646866,
+            "ann_vol_pct": 12.949471287996875,
+            "mean_pct": 1.1375833333333336,
+            "months": 120
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": -5.053054679081145,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "2010-01",
+          "2019-12"
+        ],
+        "stock_bond_correlation": -0.3512045395487797,
+        "unavailable_reason": null
+      }
+    },
+    "population_note": "every statistic below is taken over panel months with a defined trailing 12-month CPI inflation reading, i.e. from the 13th panel month onward -- which also drops the bond series' warm-up month (the sealed govt_tr_10y transform sets r_0 = 0.0, a placeholder, not a return)",
+    "real_assets_note": "NOT AVAILABLE. The catalog registers no monthly REIT or real-asset total-return series: an intake schema exists (ah/data/schemas/nareit_returns.py) but no nareit series is registered in the catalog, and the only real-asset history present (jst.usa_housing_tr) is ANNUAL. Every real-asset field in this file is null by construction, never substituted.",
+    "rolling_stock_bond_correlation": {
+      "by_threshold": {
+        "cpi_yoy_ge_3pct": {
+          "high_inflation": {
+            "mean_correlation": 0.2651141932139629,
+            "share_positive": 0.8583106267029973,
+            "windows": 367
+          },
+          "low_inflation": {
+            "mean_correlation": -0.028253884180077023,
+            "share_positive": 0.47869674185463656,
+            "windows": 399
+          },
+          "threshold_pp": 3.0
+        },
+        "cpi_yoy_ge_4pct": {
+          "high_inflation": {
+            "mean_correlation": 0.30479407214313187,
+            "share_positive": 0.9466666666666667,
+            "windows": 225
+          },
+          "low_inflation": {
+            "mean_correlation": 0.03224573547036783,
+            "share_positive": 0.5415896487985212,
+            "windows": 541
+          },
+          "threshold_pp": 4.0
+        },
+        "cpi_yoy_ge_5pct": {
+          "high_inflation": {
+            "mean_correlation": 0.3169935537068158,
+            "share_positive": 0.9803921568627451,
+            "windows": 153
+          },
+          "low_inflation": {
+            "mean_correlation": 0.06121304307427545,
+            "share_positive": 0.5807504078303426,
+            "windows": 613
+          },
+          "threshold_pp": 5.0
+        }
+      },
+      "classification": "each window is assigned to the inflation state of its FINAL month -- the month the correlation is 'as of'",
+      "first_window_end": "1957-03",
+      "window_months": 36,
+      "windows_defined": 766
+    }
+  },
+  "panel": {
+    "factor_names": [
+      "cape_v",
+      "commodities",
+      "cpi",
+      "equity_mkt",
+      "equity_vol",
+      "funding_spread",
+      "fx_usd",
+      "hml",
+      "hqm_curve",
+      "hy_spread",
+      "ig_spread",
+      "mom",
+      "policy_rate",
+      "smb",
+      "ust_10y",
+      "ust_2y"
+    ],
+    "months": 813,
+    "ruleset_version": "regime_ruleset_v1",
+    "span": [
+      "1953-04",
+      "2020-12"
+    ],
+    "split_note": "campaign train+validation only (ah.splits: train 1871-01..2010-12, validation 2011-01..2020-12). The holdout (2021-01 onward) is not read",
+    "vintage_id": "2026-08-10.1"
+  },
+  "purpose": "Historical anchors measured BEFORE the decade generator's economic engine is rebuilt (spine v2, stage 1). Every number is reproducible by re-running scripts/spine_v2_anchors.py; no number here is a threshold yet.",
+  "schema": "spine-v2-anchors-1",
+  "source_module_sha256": {
+    "src/ah/data/derive.py": "b763fb986f2611fb7c620872a29e1ac2485f158a5464023d1ec25a20cea3b182",
+    "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
+    "src/ah/gen/spine.py": "5e51946c3ab421f0c71cc57b5d4de03d02b79c404a94c5704438772c4ea1a111"
+  }
+}
