@@ -31,6 +31,7 @@ import type {
   MarketSeries,
   VintageRung,
 } from "../lib/cioView";
+import { usd } from "../lib/money";
 
 /* ---------------------------------------------------------------- *
  *  THEME
@@ -428,7 +429,7 @@ interface OuterArc extends AssetClass { a0: number; a1: number; mid: number; c: 
 interface Label extends OuterArc { ax: number; ay: number; ex: number; ey: number; right: boolean; x: number; y: number; }
 
 function AllocationDonut() {
-  const { allocation, plan, meta } = useView();
+  const { allocation, plan } = useView();
   const policy = allocation.alertPolicy;
   const wf = policy && isNum(policy.watchFraction) ? policy.watchFraction : null;
   const W = 560, H = 420, cx = 268, cy = 208;
@@ -520,7 +521,11 @@ function AllocationDonut() {
             </g>
           ))}
 
-          <text x={cx} y={cy - 6} textAnchor="middle" fill={C.ice} style={{ font: `500 25px ${F.mono}` }}>{money(plan.totalValue, meta.unitSuffix)}</text>
+          {/* app-open-01 item 1 (owner ruling 2026-08-16): the CIO's headline
+              value is the $10bn display denomination (money.ts's usd()),
+              not the raw meta.unitLabel figure — plan.totalValue is still
+              the same scored points, only the rendering changed. */}
+          <text x={cx} y={cy - 6} textAnchor="middle" fill={C.ice} style={{ font: `500 25px ${F.mono}` }}>{usd(plan.totalValue)}</text>
           <text x={cx} y={cy + 12} textAnchor="middle" fill={C.faint} style={{ font: `10px ${F.body}`, letterSpacing: "0.16em" }}>TOTAL PLAN</text>
         </svg>
       </div>
@@ -1527,7 +1532,9 @@ export default function CioDashboard({
                 <Panel title="Plan growth" note={`${plan.windowLabel || "five years"} · ${meta.unitLabel}`}
                   right={
                     <div style={{ display: "flex", gap: 16, font: `12px ${F.body}`, color: C.faint }}>
-                      <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.totalValue, meta.unitSuffix)}</b></span>
+                      {/* app-open-01 item 1: same headline figure as the
+                          donut center, same usd() rendering. */}
+                      <span>Now <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{usd(plan.totalValue)}</b></span>
                       {isNum(plan.growthPct) && <span>Growth <b style={{ color: plan.growthPct >= 0 ? C.good : C.warn, font: `13px ${F.mono}` }}>{sgn(plan.growthPct)}%</b></span>}
                       {isNum(plan.netOfFlows) && <span>Net of flows <b style={{ color: C.ice, font: `13px ${F.mono}` }}>{money(plan.netOfFlows, meta.unitSuffix)}</b></span>}
                     </div>

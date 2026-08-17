@@ -27,6 +27,7 @@ import { Reckoning } from "./Reckoning";
 import type { PlayConfig } from "./RankedSetup";
 import type { WorldBundle } from "./lib/bundle";
 import { type CioView, type Plane, validateCioView } from "./lib/cioView";
+import { usd } from "./lib/money";
 import {
   advance,
   complete,
@@ -594,13 +595,19 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
               number as the dashboard's plan total (I-4). `bookLabel` is
               pinned in Play.cio.test.tsx. */}
           <div className="k">{bookLabel(session.basis)}</div>
+          {/* app-open-01 item 1 (owner ruling 2026-08-16): "YOUR BOOK" is a
+              VALUE readout, so it gets the $10bn display denomination
+              outright (money.ts usd()) — session.value itself is untouched,
+              still the scored points the server returns. */}
           <div className={`v ${aheadOfTwin === null ? "" : aheadOfTwin >= 0 ? "pos" : "neg"}`}>
-            {session.value == null ? "100.0" : session.value.toFixed(1)}
+            {usd(session.value ?? 100)}
           </div>
           <div className="s">
             {aheadOfTwin === null
-              ? `started at 100 · ${monthNow}`
-              : `${aheadOfTwin >= 0 ? "+" : "−"}${Math.abs(aheadOfTwin).toFixed(2)} vs hold-course twin`}
+              ? `started at ${usd(100)} · ${monthNow}`
+              : // decision alpha-so-far is the scored truth in points; the
+                // dollar figure rides alongside, never in place of it.
+                `${aheadOfTwin >= 0 ? "+" : "−"}${Math.abs(aheadOfTwin).toFixed(2)} pts vs hold-course twin · ${usd(aheadOfTwin)}`}
           </div>
         </div>
         <div className="stat">

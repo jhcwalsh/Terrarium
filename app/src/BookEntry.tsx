@@ -54,6 +54,7 @@
  */
 
 import { useEffect, useMemo, useState } from "react";
+import { usd } from "./lib/money";
 import {
   getDefaultBook,
   type Book,
@@ -612,17 +613,31 @@ export function BookEntry({
         </div>
       </section>
 
+      {/* app-open-01 item 1 (owner ruling 2026-08-16): every field on this
+          screen is entered in points (the book totals 100), so the running
+          totals stay points-first — the dollar figure rides ALONGSIDE via
+          usd(), not in place of it, the same "keep the scored number, add
+          the visceral one" treatment item 1 specifies for an index/alpha.
+          Replacing the points figure outright here would strip the analyst
+          of the one number every input on the screen can be checked
+          against. */}
       <div className="book-rail">
         <div>
           <span className="k">Total</span>
           <span className="v" data-testid="book-total">
             {Number.isFinite(totalRounded) ? totalRounded : "—"}
+            {Number.isFinite(totalRounded) && (
+              <span className="book-rail-usd"> &middot; {usd(totalRounded)}</span>
+            )}
           </span>
         </div>
         <div>
           <span className="k">Targets + cash</span>
           <span className="v" data-testid="targets-total">
             {Number.isFinite(policyBase) ? Math.round(policyBase * 100) / 100 : "—"}
+            {Number.isFinite(policyBase) && (
+              <span className="book-rail-usd"> &middot; {usd(Math.round(policyBase * 100) / 100)}</span>
+            )}
           </span>
         </div>
       </div>

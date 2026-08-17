@@ -54,6 +54,13 @@ describe("CioDashboard", () => {
     expect(host!.textContent).toMatch(/run fixture-stagflation/);
   });
 
+  it("renders the CIO headline value in the $10bn display denomination (app-open-01 item 1)", () => {
+    // view.plan.totalValue is 62.1323 (fixture) — the underlying scored
+    // points are untouched; only the rendering (money.ts usd()) changed.
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    expect(host!.textContent).toContain("$6.2bn");
+  });
+
   it("switches tabs and renders each", () => {
     render(<CioDashboard view={view} onPlaneChange={() => {}} />);
     for (const label of ["Liquidity", "Private cashflows", "Markets", "Plan"]) {

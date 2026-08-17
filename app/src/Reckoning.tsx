@@ -17,6 +17,7 @@
 
 import { useState } from "react";
 import { AnalysisChart, threeSeries } from "./components/AnalysisChart";
+import { usd } from "./lib/money";
 import type { Outcome } from "./lib/session";
 
 const ACTION_PHRASE: Record<string, string> = {
@@ -30,7 +31,10 @@ export function annotationLine(w: { month: number; action: string; contribution:
   const year = Math.floor((w.month + 1) / 12);
   const phrase = ACTION_PHRASE[w.action] ?? w.action;
   const pts = `${w.contribution >= 0 ? "+" : ""}${w.contribution.toFixed(1)} points`;
-  return `Year ${year}, ${phrase}: ${pts}`;
+  // app-open-01 item 2 (owner ruling 2026-08-16): the per-window
+  // chain-link contribution is the scored truth in points; the dollar
+  // figure (money.ts usd()) rides alongside, never in place of it.
+  return `Year ${year}, ${phrase}: ${pts} / ${usd(w.contribution)}`;
 }
 
 export function Reckoning({
@@ -52,20 +56,28 @@ export function Reckoning({
       <section className="outcome-card">
         <h1>The reckoning</h1>
         <div className="outcome-headline">
+          {/* app-open-01 item 1 (owner ruling 2026-08-16): final book VALUES
+              get the $10bn display denomination outright — final_value and
+              twin_final_value themselves are untouched, still the scored
+              points the server returned. */}
           <div>
             <span className="outcome-label">you</span>
-            <strong>{outcome.final_value.toFixed(2)}</strong>
+            <strong>{usd(outcome.final_value)}</strong>
           </div>
           <div>
             <span className="outcome-label">policy twin</span>
-            <strong>{outcome.twin_final_value.toFixed(2)}</strong>
+            <strong>{usd(outcome.twin_final_value)}</strong>
           </div>
           <div>
             <span className="outcome-label">decision alpha</span>
+            {/* alpha is an index, not a value: points stay the headline
+                figure (the scored truth) and the dollar equivalent rides
+                alongside, never in place of it. */}
             <strong className={outcome.alpha >= 0 ? "ok" : "bad"}>
               {outcome.alpha >= 0 ? "+" : ""}
               {outcome.alpha.toFixed(2)}
             </strong>
+            <span className="outcome-alpha-usd">{usd(outcome.alpha)}</span>
           </div>
         </div>
         <p className="outcome-note">

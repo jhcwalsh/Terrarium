@@ -21,8 +21,14 @@
  */
 
 import { useEffect, useRef, useState } from "react";
+import { usd } from "../lib/money";
 import { ACTIONS, type Action } from "../lib/session";
 
+// app-open-01 item 2 (owner ruling 2026-08-16): each lever's point-impact
+// gains its dollar rendering via the same usd() the rest of the app uses —
+// no new data, just the $10bn display denomination applied to the fixed
+// 10pt rebalance size the copy already states. Percentages (the secondary
+// sale's discount rate) stay percentages, per the ruling.
 const ACTION_COPY: Record<Action, { title: string; detail: string; k: string }> = {
   hold: {
     title: "Hold course",
@@ -32,13 +38,13 @@ const ACTION_COPY: Record<Action, { title: string; detail: string; k: string }> 
   derisk: {
     title: "De-risk",
     detail: "Move 10pts from equities and private equity into bonds and private credit.",
-    k: "10PTS → BONDS/PC",
+    k: `10PTS / ${usd(10)} → BONDS/PC`,
   },
   leanin: {
     title: "Lean in",
     detail:
       "Move 10pts from bonds and private credit into equities and private equity. Conviction has a price either way.",
-    k: "10PTS → EQ/PE",
+    k: `10PTS / ${usd(10)} → EQ/PE`,
   },
   secondary: {
     title: "Secondary sale",

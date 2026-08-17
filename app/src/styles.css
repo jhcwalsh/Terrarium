@@ -1279,6 +1279,16 @@ button.commit {
   font-family: "IBM Plex Mono", monospace;
 }
 
+/* app-open-01 item 1: the dollar equivalent riding alongside decision
+   alpha — points are the scored headline, this is the visceral one. */
+.outcome-alpha-usd {
+  display: block;
+  font-size: 0.85rem;
+  color: var(--dim);
+  font-family: "IBM Plex Mono", monospace;
+  margin-top: 2px;
+}
+
 .outcome-note {
   font-size: 1.062rem;
   color: var(--muted);
@@ -1712,6 +1722,15 @@ button.commit {
   font-family: "IBM Plex Mono", monospace;
   font-size: 24px;
   font-weight: 500;
+}
+
+/* app-open-01 item 1: the $10bn display denomination riding alongside the
+   points total the rest of this screen is entered in — secondary weight,
+   not a second hero number. */
+.book-rail-usd {
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--dim);
 }
 
 .ranked-locked {
