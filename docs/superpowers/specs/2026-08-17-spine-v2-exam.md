@@ -33,7 +33,7 @@ in their own subsections below.
 
 | # | What was missing | What was measured | Effect on the bars |
 |---|---|---|---|
-| **OPEN-1** | No clockwise-fraction measurement on this vintage; the 0.6029411764705882 anchor came from round one's seal, measured by an earlier run of the pipeline. | Recomputed on vintage `2026-08-10.1`, reusing the pilot's own definitions by import (`ah.gen.spine.panel_quadrant`, `ah.gen.spine.CLOCKWISE`; the transition rule of `scripts/spine_pilot_seal._b4_clockwise_fraction`). **0.6029411764705882 on 68 transitions, 41 of them clockwise — bit-identical to the sealed value.** Block-bootstrap 95% interval **[0.5185185185185185, 0.6842285508291275]**. | **O1 changed.** Its bar moves from the point anchor to the interval's **lower edge, 0.5185** — see §2, O1(a) and O1(c). |
+| **OPEN-1** | No clockwise-fraction measurement on this vintage; the 0.6029411764705882 anchor came from round one's seal, measured by an earlier run of the pipeline. | Recomputed on vintage `2026-08-10.1`, reusing the pilot's own definitions by import (`ah.gen.spine.panel_quadrant`, `ah.gen.spine.CLOCKWISE`; the transition rule of `scripts/spine_pilot_seal._b4_clockwise_fraction`). **0.6029411764705882 on 68 transitions, 41 of them clockwise — bit-identical to the sealed value.** Block-bootstrap 95% interval **[0.5185185185185185, 0.6842285508291275]**. | **O1 changed.** Its bar moved from the point anchor to the interval's **lower edge, 0.5185** — and then moved again, to **0.5181**, when the same measurement was re-taken under the pre-seal mapping fix (`grader_v2`, §2). |
 | **OPEN-2** | No sampling interval on the stock–bond correlation gap; A2's 0.15 margin rested on threshold sensitivity plus a halving rule. | Block bootstrap, same machinery and block lengths as the transmission interval. High-minus-low **correlation difference 0.3194875488039316, 95% interval [0.13609378139729844, 0.556828299873221]**. High-minus-low **share-of-windows-positive difference 0.40507701786814543, 95% interval [0.17717364337543898, 0.6231004989665900]**. | **A2(i) changed.** Its margin moves from 0.15 to the measured **lower edge, 0.1361** — see §4, A2(a) and A2(c). **A2(ii) unchanged**; the measurement supports its edges rather than moving them. |
 | **OPEN-3** | No sampling interval on the per-season dwell medians. | Bootstrap over **spells** (the independent units), 10,000 draws: recession 3 months **[1.0, 12.5]**, stagflation 4 **[1.0, 10.5]**, recovery 9 **[5.0, 16.0]**, expansion 6 **[3.0, 12.0]**. | **D1–D4 unchanged** — the ±1 quarter tolerance stands on its play-unit justification. But the check it was asked to pass **failed in all four seasons**: the tolerance is *narrower* than the median's own sampling wobble everywhere. Recorded in §3 and it changes how a D verdict must be read. |
 | **OPEN-4** | No power calculation for the generated side. | Simulation, 2,000 ensembles per grid point, a true engine modelled as one emitting uniformly-drawn contiguous 120-month stretches of the panel. Decades needed for a 90% pass: **T1 5, O1 5, D1 15, D4 10, A1 40, D2 50, A2 400, D3 never.** | **Ensemble size fixed at 50 decades per premise** (§8.1). Two bars came back as bar-design problems rather than sizing problems — **D3 is unpassable by a true engine as written, and A2 is dominated by its low-inflation ceiling** — both flagged for the owner in §8.1. |
@@ -149,6 +149,25 @@ Do the generated worlds turn the same way, or do their seasons arrive shuffled?
 clock** — by two yes/no questions: is the economy expanding, and is inflation hot (above the
 panel's own line, 3.351323828920571 percentage points)?
 
+**The grader is `grader_v2`, re-anchored pre-seal under the mapping fix (owner-ruled
+2026-08-17).** The incumbent classifier answers "is the economy expanding?" by asking whether
+the month's published label is `REC` or `CRI` — and the labelling ruleset's *own* stagflation
+label, `STAG`, is neither, so **a stagflation month has been counting as expanding**. §11.1
+found the quirk and §11.5 caught it biting: the whole of 1975-04 → 1975-12 — industrial
+production down 11% year on year, unemployment up 3.7 points, a 15–25% equity drawdown,
+inflation near 10% — was classified as *expansion*. The owner's ruling puts a stagflation
+month on the **non-expanding** side, per the owner's own definition of the season (growth
+stalling while inflation is high), for transition and ordering purposes. That is the only
+change: `contracting = REC or CRI or STAG` instead of `REC or CRI`, everything else
+identical. It lives in `scripts/spine_v2_grader.py` — the pilot's module and its two frozen
+seals are untouched — and it is hashed into this exam's seal.
+
+On this panel it moves **31 months, every one of them from *expansion* to *stagflation***
+(each `STAG` month is hot by construction: the ruleset fires `STAG` only at or above 4.0 pp
+trailing CPI and the era line is 3.3513 pp). So **D1 and D3 are bit-identical under both
+graders**, and **O1, D2 and D4 are re-anchored** below and in §3, each published old beside
+new (`l_grader_v2`).
+
 | | inflation cool | inflation hot |
 |---|---|---|
 | **expanding** | recovery | expansion |
@@ -158,61 +177,94 @@ The **clockwise** order is recovery → expansion → stagflation → recession 
 **clockwise fraction** is the share of all month-to-month season changes that follow that
 order.
 
-**(a) The bar.** The generated worlds' clockwise fraction must be
+**(a) The bar.** The generated worlds' clockwise fraction, measured under `grader_v2`, must be
 
-> **≥ 0.5185185185185185** (0.5185) — one-sided.
+> **≥ 0.5180669104991394** (0.5181) — one-sided.
 
 That number is the **lower edge of the historical anchor's own 95% interval**, not a
 tolerance chosen around it.
 
-**(b) The historical anchor.** History's clockwise fraction is **0.6029411764705882**, on
-**68 season transitions**, 41 of them clockwise. Sealed in round one as
-`b4.panel_clockwise_fraction` in `docs/superpowers/specs/spine-pilot-prereg.json`, and
-**re-measured on this exam's own panel vintage (`2026-08-10.1`) where it reproduces
-bit-identically** (`e_ordering.clockwise_fraction`, OPEN-1 closed). Its block-bootstrap 95%
-interval is **[0.5185185185185185, 0.6842285508291275]** at the primary 24-month run length,
-moving to [0.5098, 0.6957] at 12 months and [0.5273, 0.6818] at 36 — so, as with T1, the run
-length is not driving it. The binomial standard error is **0.05933493096110905**, the "≈
-0.059" the round-one seal disclosed.
+**(b) The historical anchor — old beside new, re-anchored pre-seal under `grader_v2`
+(mapping fix), owner-ruled 2026-08-17.**
+
+| | incumbent classifier (superseded) | **`grader_v2` (sealed)** |
+|---|---|---|
+| clockwise fraction | 0.6029411764705882 | **0.5972222222222222** |
+| season transitions | 68, 41 clockwise | **72, 43 clockwise** |
+| block-bootstrap 95% interval | [0.5185185185185185, 0.6842285508291275] | **[0.5180669104991394, 0.6764705882352942]** |
+| **the O1 bar (interval's lower edge)** | 0.5185185185185185 | **0.5180669104991394** |
+
+The incumbent figure is round one's sealed `b4.panel_clockwise_fraction`, **re-measured on
+this exam's own panel vintage (`2026-08-10.1`), where it reproduces bit-identically**
+(`e_ordering`, OPEN-1 closed); the binomial standard error is **0.05933493096110905**, the
+"≈ 0.059" the round-one seal disclosed. Its interval moves to [0.5098, 0.6957] at a 12-month
+block and [0.5273, 0.6818] at 36 — so, as with T1, the run length is not driving it.
+
+The mapping fix moves the fraction by **0.0057** — four extra transitions, two of them
+clockwise — and the bar by **0.00045**. Both are small, and that is itself worth saying: 31
+months change cell, but the clock's *direction of travel* barely changes, because the months
+that move go from expansion to stagflation, which is a clockwise step in the same place the
+clock was already turning. **The two intervals are drawn from the same resampling tape** (the
+same seed and the same index draws, since a stationary-block draw depends only on the panel's
+length), so the fake histories are identical and the difference between the two intervals is
+the labelling, not two different sets of random numbers.
 
 **(c) Why the bar sits at the interval's lower edge.** The draft of this document set the bar
 at the point anchor itself and flagged the problem in the same breath: *the anchor is an
 estimate*, so an engine whose true ordering exactly matched history's could still land below
-0.6029 and fail. A bar that a correct engine fails one time in two is not a test of the
-engine. The bar therefore demands what a bar can honestly demand — **consistency with
-history** — and 0.5185 is the point below which the generated fraction is no longer
+the point anchor and fail. A bar that a correct engine fails one time in two is not a test of
+the engine. The bar therefore demands what a bar can honestly demand — **consistency with
+history** — and 0.5181 is the point below which the generated fraction is no longer
 consistent with the historical one.
 
-**This does not reopen round two's false pass, and the margin is thin enough to state
-exactly.** Round two's five seeds measured 0.4574, 0.4820, 0.4831, 0.4886 and **0.5176**.
-All five are still below 0.5185 — the best of them by **0.0009**. The bar that a coin flip
-passed (round one's two-sided ±0.15, lower edge 0.4529) is not what this is; but the owner
-should see that this bar's discriminating power against round two's engine now rests on the
-last decimal place of one seed rather than on a comfortable gap.
+**Round two cannot be compared against this bar, and that is a change from the draft.** Round
+two's five seeds measured clockwise fractions of 0.4574, 0.4820, 0.4831, 0.4886 and 0.5176,
+all below the *incumbent-grader* bar of 0.5185 — the best of them by 0.0009. Those five
+numbers were produced by frozen judge code reading the **incumbent** classifier, so they are
+not measurements of the statistic this bar now judges: under `grader_v2` every one of them
+would have to be recomputed, and round two's ensembles are not being re-run (its verdicts are
+frozen). **So this bar carries no claim about round two either way.** What can still be said
+is what the draft said about the incumbent version and remains true of it: the margin was one
+seed's last decimal place, not a comfortable gap, and the bar a coin flip passed (round one's
+two-sided ±0.15, lower edge 0.4529) is not what this is.
 
 **Two alternatives, both stated before any v2 result exists.** The drafter's own suggestion
-was to absorb *one* standard error rather than the full interval: **≥ 0.6029 − 0.0593 =
-0.5436** (`e_ordering.one_se_below_point`), which is stricter and would fail all five
-round-two seeds with room to spare. And an i.i.d.-over-transitions bootstrap would put the
-edge at **0.4853**, which is looser and *would* let round two's best seed through. The block
-interval was chosen because it is the same kind of object as every other interval in this
-exam; the fact that it comes back **narrower** than the i.i.d. one is not a mistake but a
-measured property — the clockwise indicator's lag-1 autocorrelation across consecutive
-transitions is **−0.342**, i.e. the clock backtracks and then returns, so consecutive
-transitions carry more information kept together than scrambled. If the owner prefers the
-one-SE bar, **now, before any result exists, is the only time that can be decided without it
-being goalpost-moving.**
+was to absorb *one* standard error rather than the full interval: **≥ 0.5972 − 0.0578 =
+0.5394** under `grader_v2` (`l_grader_v2.full_ordering_v2.one_se_below_point`; the incumbent
+figure was 0.5436), which is stricter. And an i.i.d.-over-transitions bootstrap would put the
+edge at **0.4861** (incumbent: 0.4853), which is looser. The block interval was chosen because
+it is the same kind of object as every other interval in this exam; the fact that it comes
+back **narrower** than the i.i.d. one is not a mistake but a measured property — the clockwise
+indicator's lag-1 autocorrelation across consecutive transitions is **−0.377** under
+`grader_v2` (−0.342 under the incumbent), i.e. the clock backtracks and then returns, so
+consecutive transitions carry more information kept together than scrambled. The interval
+also barely moves with the block length: [0.5091, 0.6857] at 12 months and [0.5270, 0.6716]
+at 36. If the owner prefers the one-SE bar, **now, before any result exists, is the only time
+that can be decided without it being goalpost-moving.**
 
 **(d) What a FAIL means in product terms.** A fail means the seasons arrive in a shuffled
 order, so nothing a player learns in one world about what usually follows what transfers to
 the next — the game becomes a slot machine with economic vocabulary.
 
-**Threshold-sensitivity disclosure, added 2026-08-17 (§11.2–11.3).** O1 is the most robust
-of the six classifier-dependent bars. Perturbing either dial by 50 basis points moves the
-historical clockwise fraction only within **0.5556 – 0.6250**, well inside its own 95%
-interval and **above this bar under every one of the eight perturbed arms** (worst arm clears
-by 0.0370). The richer five-input classifier of §11.4 moves it by 0.0064. O1 can therefore
-be quoted without a threshold caveat — which is not true of D1, D2 or D3.
+**Threshold-sensitivity disclosure, added 2026-08-17 (§11.2–11.3), re-taken under
+`grader_v2`.** O1 is the most robust of the six classifier-dependent bars, and the mapping
+fix makes it more so, not less. Perturbing either dial by 50 basis points moves the
+historical clockwise fraction only within **0.5763 – 0.6154** under `grader_v2` (0.5556 –
+0.6250 under the incumbent), **above this bar under every one of the eight perturbed arms**,
+the worst clearing by **0.0582** (incumbent: 0.0370) —
+`i_label_stability.bar_band_check_under_sealed_bars.O1_clockwise_fraction`. The richer
+five-input classifier of §11.4 moves the incumbent fraction by 0.0064. **O1 can therefore be
+quoted without a threshold caveat** — which is not true of D1 or D3, and under `grader_v2` is
+no longer true of D2 either (§3).
+
+**One construct note, since §3 has just re-specified the D bars for exactly this reason.**
+O1's anchor is measured over the whole panel while the judge counts transitions *inside* each
+decade, so the two are not measured on identical windows. Unlike a dwell median, a *fraction*
+is not biased by that: dropping the pairs that would have straddled a decade edge removes
+about one transition per decade at random with respect to direction. The power calculation is
+the evidence rather than the argument — a true engine's decade-measured clockwise fraction
+clears this bar with power **1.000 at five decades** (`m_power_under_sealed_bars.per_bar.O1`),
+which is what a bar whose two sides agree looks like.
 
 ---
 
@@ -281,9 +333,25 @@ panel-wide column is `c_regime_durations` and is retained as the superseded anch
 | season | panel-wide median (superseded) | completed spells | **decade-pooled median (the anchor)** | pooled spells | **the band** |
 |---|---|---|---|---|---|
 | recession (D1) | 3 months | 12 | **2 months** | 893 | **[0, 5] months** |
-| stagflation (D2) | 4 months | 12 | **6 months** | 1085 | **[3, 9] months** |
+| stagflation (D2) | 3 months | 14 | **4 months** | 1268 | **[1, 7] months** |
 | recovery (D3) | 9 months | 22 | **5 months** | 1661 | **[2, 8] months** |
-| expansion (D4) | 6 months | 21 | **6 months** | 1878 | **[3, 9] months** |
+| expansion (D4) | 4 months | 23 | **4 months** | 2123 | **[1, 7] months** |
+
+**All four rows are measured under `grader_v2`** (§2's mapping fix, owner-ruled the same
+day). D1 and D3 are bit-identical under both graders; D2 and D4 are **re-anchored pre-seal
+under `grader_v2`**, and the two are published side by side here:
+
+| season | panel-wide, incumbent | panel-wide, `grader_v2` | decade-pooled, incumbent | **decade-pooled, `grader_v2` (sealed)** | band, incumbent | **band, sealed** |
+|---|---|---|---|---|---|---|
+| stagflation (D2) | 4 m, 12 spells | 3 m, 14 spells | 6 m, 1085 spells | **4 m, 1268 spells** | [3, 9] | **[1, 7]** |
+| expansion (D4) | 6 m, 21 spells | 4 m, 23 spells | 6 m, 1878 spells | **4 m, 2123 spells** | [3, 9] | **[1, 7]** |
+
+The direction is what the fix predicts: 31 months leave *expansion* for *stagflation*, so
+expansion loses its longest stretches to being cut in two (median 6 → 4) and stagflation gains
+spells (12 → 14 panel-wide) while its own median falls, because the months arriving are
+scattered rather than clustered. **The mapping fix also fixes D2's power**: at 50 decades D2
+reads **0.921** under `grader_v2` against **0.692** under the incumbent grader on the same
+pooled construct (§8.1).
 
 **What the re-derivation costs, stated before any result exists.** Two things, both of which
 the owner should see rather than discover afterwards.
@@ -345,17 +413,21 @@ own 120-month windows, against the pooled band
 
 | bar | its band | arm range across the 9 arms | arms whose value falls outside the bar |
 |---|---|---|---|
-| **D1** recession | [0, 5] m | 2 – 13 m | **3 of 8** (every arm pairing a lower growth line with an inflation move, plus inflation −50bp alone) |
-| **D2** stagflation | [3, 9] m | 6 – 9 m | **none** |
+| **O1** ordering | ≥ 0.5181 | 0.5763 – 0.6154 | **none** (worst arm clears by 0.0582) |
+| **D1** recession | [0, 5] m | 2 – 13 m | **3 of 8** (inflation −50bp alone, and both corners pairing an inflation move with growth −50bp) |
+| **D2** stagflation | [1, 7] m | 2 – 14 m | **7 of 8** |
 | **D3** recovery | [2, 8] m | 4 – 14 m | **2 of 8** (inflation +50bp, and that corner with growth −50bp) |
-| **D4** expansion | [3, 9] m | 3 – 6 m | **none** |
+| **D4** expansion | [1, 7] m | 2 – 6 m | **none** |
 
 The §11.3 result on the superseded panel-wide bands (D1 3 of 8, D2 6 of 8, D3 3 of 8, D4
-none) is kept in §11 as the record of what was measured there. On the sealed construct the
-picture improves — **D2 becomes robust** and D3's exposure halves — but D1 and D3 still have
-arms outside their own band, so **the reading stands: a marginal D verdict is not a finding.**
-No band is changed because of this; re-cutting a bar from a sensitivity result is the
-goalpost move pre-registration exists to prevent.
+none) is kept in §11 as the record of what was measured there. On the sealed construct D3's
+exposure halves and D4 joins O1 as robust — but **D2 gets worse, not better: seven of the
+eight perturbed arms put history's own pooled stagflation median outside D2's band**, because
+`grader_v2` routes `STAG` months onto the growth axis and the growth dial's own line is one
+of the two being perturbed. So the reading stands and D2 carries it most heavily: **a
+marginal D verdict is not a finding**, and a D2 verdict of either sign should be quoted with
+this beside it. No band is changed because of this; re-cutting a bar from a sensitivity
+result is the goalpost move pre-registration exists to prevent.
 
 ### D1 — "how long a recession lasts" (contracting, inflation cool)
 
@@ -405,21 +477,20 @@ pessimism rewarded by a bug.
 
 ### D2 — "how long stagflation lasts" (contracting, inflation hot) — first-class, per the owner
 
-**(a) The bar.** Pooled median completed stagflation spell in **[3, 9] months** (the anchor,
-6 months, ± 1 quarter).
+**(a) The bar.** Pooled median completed stagflation spell in **[1, 7] months** (the anchor,
+4 months, ± 1 quarter; the lower edge sits near the one-month floor, so it binds mainly from
+above).
 
-**(b) The historical anchor.** **6 months**, the median of the **1,085 completed stagflation
-spells** in history's own 120-month windows (1.56 per decade), interquartile range 1–11
-months, longest 21 months. *Superseded panel-wide figure:* 4 months from 12 completed spells,
-none censored, the full list being 1, 1, 1, 1, 2, 2, 6, 8, 10, 11, 16, 21 months
-(`c_regime_durations.per_quadrant.stagflation`). Stagflation is the season where the two
-footings disagree most in *direction* — pooling over decades raises it rather than lowering
-it — because its long spells sit in the middle of the record (the 1970s and early 1980s),
-where they are least likely to be cut off by a window edge, while its many one-month spells
-are spread thinly across decades that contain little else.
+**(b) The historical anchor — re-anchored pre-seal under `grader_v2`.** **4 months**, the
+median of the **1,268 completed stagflation spells** in history's own 120-month windows (1.83
+per decade), interquartile range 1–14 months, longest 24 months. Superseded figures, all
+published: 6 months / 1,085 pooled spells under the incumbent grader on the same pooled
+construct, and 4 months / 12 panel-wide completed spells (1, 1, 1, 1, 2, 2, 6, 8, 10, 11, 16,
+21) before the re-derivation. Under `grader_v2` the panel-wide list becomes 14 spells with a
+median of 3 months (`l_grader_v2.panel_wide_anchors.stagflation`).
 
 **(c) Why ±1 quarter.** Smallest play unit, as above. The distribution's middle half runs
-from 1 to 11 months; a bar tighter than a quarter would be testing that spread rather than
+from 1 to 14 months; a bar tighter than a quarter would be testing that spread rather than
 the engine.
 
 **Why this bar is first-class (owner's emphasis, 2026-08-17).** Stagflation — the economy
@@ -476,17 +547,20 @@ opposite of the robust-allocation lesson.
 
 ### D4 — "how long an expansion lasts" (expanding, inflation hot)
 
-**(a) The bar.** Pooled median completed expansion spell in **[3, 9] months** (the anchor,
-6 months, ± 1 quarter).
+**(a) The bar.** Pooled median completed expansion spell in **[1, 7] months** (the anchor,
+4 months, ± 1 quarter).
 
-**(b) The historical anchor.** **6 months**, the median of the **1,878 completed expansion
-spells** in history's own 120-month windows (2.71 per decade), interquartile range 3–13
-months, longest 58 months. *Superseded panel-wide figure:* also 6 months, from 21 completed
-spells (1, 1, 1, 1, 1, 3, 3, 3, 4, 4, 6, 7, 8, 11, 12, 13, 14, 19, 24, 40, 58) — expansion is
-the one season where the two footings agree exactly.
+**(b) The historical anchor — re-anchored pre-seal under `grader_v2`.** **4 months**, the
+median of the **2,123 completed expansion spells** in history's own 120-month windows (3.06
+per decade), interquartile range 1–8 months, longest 48 months. Superseded figures: 6 months
+/ 1,878 pooled spells under the incumbent grader, and 6 months / 21 panel-wide completed
+spells (1, 1, 1, 1, 1, 3, 3, 3, 4, 4, 6, 7, 8, 11, 12, 13, 14, 19, 24, 40, 58) before the
+re-derivation. Expansion is the season the mapping fix cuts into most: 31 of its months leave
+for stagflation, breaking long stretches in two, so the panel-wide list goes to 23 spells with
+a median of 4 months.
 
-**(c) Why ±1 quarter.** Smallest play unit; a skewed distribution whose middle half runs 3 to
-13 months, same reasoning as D3.
+**(c) Why ±1 quarter.** Smallest play unit; a skewed distribution whose middle half runs 1 to
+8 months, same reasoning as D3.
 
 **(d) What a FAIL means in product terms.** A fail means the hot-and-growing season — the one
 where an allocator is most tempted to add risk and most needs to judge how long the party
@@ -917,11 +991,11 @@ to fix rather than compute to buy.
 | tier | code | plain name | the bar | historical anchor |
 |---|---|---|---|---|
 | causal | **T1** | does tightening cause downturns | lift inside **[1.78, 3.35]** | 2.37× (86/149 vs 192/789) |
-| causal | **O1** | the seasons turn the right way round | clockwise fraction **≥ 0.5185** (the anchor's 95% interval's lower edge) | 0.6029 (68 transitions, 95% CI [0.5185, 0.6842]) |
+| causal | **O1** | the seasons turn the right way round | clockwise fraction **≥ 0.5181** (the anchor's 95% interval's lower edge) | 0.5972 (72 transitions, 95% CI [0.5181, 0.6765]) |
 | persistence | **D1** | how long a recession lasts | pooled median **[0, 5] months** (binds from above) | 2 months, 893 decade-pooled spells |
-| persistence | **D2** | how long stagflation lasts | pooled median **[3, 9] months** | 6 months, 1085 decade-pooled spells |
+| persistence | **D2** | how long stagflation lasts | pooled median **[1, 7] months** | 4 months, 1268 decade-pooled spells |
 | persistence | **D3** | how long a recovery lasts | pooled median **[2, 8] months** | 5 months, 1661 decade-pooled spells |
-| persistence | **D4** | how long an expansion lasts | pooled median **[3, 9] months** | 6 months, 1878 decade-pooled spells |
+| persistence | **D4** | how long an expansion lasts | pooled median **[1, 7] months** | 4 months, 2123 decade-pooled spells |
 | allocation | **A1** | does the inflation hedge pay | spread(high) > spread(low) at 4%; inside [−5.05, +32.32] pp | +4.87 pp vs +1.38 pp |
 | allocation | **A2** | stocks and bonds fall together | corr(high) > 0 and exceeds corr(low) by ≥ **0.1361** (the difference's 95% interval's lower edge); ≥ 80% / ≤ 65% of 3-year windows positive | +0.30 vs −0.02, difference 0.3195 (95% CI [0.1361, 0.5568]); 94.7% vs 54.2% |
 | no-regression | **R1** | severity still bites the book | b3 byte-frozen: monotone coverage, ≥ 1/20 breach at 55% | prior seal (round two: PASS) |
@@ -972,6 +1046,16 @@ Recorded verbatim in substance so the provenance of each choice is auditable:
 ---
 
 ## 11. Regime identification robustness (pre-seal, owner-agreed 2026-08-17)
+
+> **Read §11 as the record of a study, not as a statement of the sealed grader.** Everything
+> below was measured on the **incumbent** two-dial classifier, and its central finding —
+> §11.1's `STAG`-is-expanding quirk and §11.5's 1975 cluster — is precisely what the owner's
+> mapping fix then repaired. The sealed grader is `grader_v2` (§2), and the two disclosures
+> that bear on a verdict were re-taken on it: the bar-band check
+> (`i_label_stability.bar_band_check_under_sealed_bars`, reported in §3 and §2) and the
+> ordering fraction's own arms. §11.6's "simplicity wins" verdict is unaffected — it compares
+> the simple classifier against the *richer five-input* one, and `grader_v2` is neither: it is
+> the simple classifier with one mislabelled cell corrected.
 
 Six of this exam's ten bars — **O1** and **D1–D4**, and through its downturn labels **T1**
 — are measured on months that a classifier sorted into four boxes. If the boxes move when

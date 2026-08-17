@@ -120,7 +120,8 @@ if str(_SCRIPTS_DIR) not in sys.path:  # running as a script puts it there alrea
 # re-derivation is that both sides of a D bar are measured identically. So the
 # completed-spell decomposition is imported from the grader module the judges
 # import, rather than written a second time here.
-from spine_v2_grader import INCUMBENT_CONTRACTING_LABELS  # noqa: E402
+from spine_v2_grader import CONTRACTING_LABELS, INCUMBENT_CONTRACTING_LABELS  # noqa: E402
+from spine_v2_grader import clockwise_counts as grader_clockwise_counts  # noqa: E402
 from spine_v2_grader import completed_spells as grader_completed_spells  # noqa: E402
 from spine_v2_grader import season_cells as grader_season_cells  # noqa: E402
 
@@ -2064,6 +2065,7 @@ def section_i(
     starts = _decade_starts(int(cells.size), POWER_DECADE_MONTHS)
     sealed_band_check: dict[str, Any] = {}
     pooled_by_arm: dict[str, list[float]] = {}
+    clockwise_by_arm: dict[str, float] = {}
     for name, d_infl, _d_growth in STABILITY_ARMS:
         arm_labels = per_arm_labels[name]
         arm_cells = grader_season_cells(
@@ -2079,6 +2081,22 @@ def section_i(
             float(np.median(pooled[i])) if pooled[i] else float("nan")
             for i in range(len(QUADRANTS))
         ]
+        arm_total, arm_cw = grader_clockwise_counts(arm_cells)
+        clockwise_by_arm[name] = float(arm_cw) / arm_total if arm_total else float("nan")
+    o1_sealed_min = cast(float, sealed_bars["O1_clockwise_min"])
+    o1_sealed_values = [clockwise_by_arm[name] for name, _, _ in STABILITY_ARMS]
+    sealed_band_check["O1_clockwise_fraction"] = {
+        "bar": o1_sealed_min,
+        "baseline_clockwise_fraction": _f(o1_sealed_values[0]),
+        "arm_min": _f(min(o1_sealed_values)),
+        "arm_max": _f(max(o1_sealed_values)),
+        "arms_outside": [
+            name
+            for name, value in zip([n for n, _, _ in STABILITY_ARMS], o1_sealed_values, strict=True)
+            if not (value >= o1_sealed_min)
+        ],
+        "headroom_at_worst_arm": _f(min(o1_sealed_values) - o1_sealed_min),
+    }
     for i, (code, quadrant) in enumerate(zip(("D1", "D2", "D3", "D4"), QUADRANTS, strict=True)):
         band = sealed_dwell_bands[quadrant]
         values = [pooled_by_arm[name][i] for name, _, _ in STABILITY_ARMS]
@@ -2694,6 +2712,112 @@ def section_k(cells_by_grader: dict[str, np.ndarray]) -> dict[str, Any]:
     }
 
 
+# --------------------------------------------------------------------------- #
+# L -- the grader_v2 mapping fix (owner ruling, 2026-08-17)
+#
+# The incumbent classifier puts a month on the growth axis by asking whether its
+# regime_ruleset_v1 label is REC or CRI. The ruleset's OWN stagflation label,
+# STAG, is neither, so a stagflation month has been counting as EXPANDING -- the
+# quirk section 11.1 found and section 11.5 caught biting on the whole of
+# 1975-04..1975-12. Owner ruling: for transition/ordering purposes a stagflation
+# month sits on the non-expanding side, per the owner's own definition of the
+# season (growth stalling while inflation is high). ``grader_v2`` is that one
+# change and nothing else; it lives in scripts/spine_v2_grader.py because the
+# pilot's module and its two frozen seals must stay untouched.
+#
+# This section re-derives every anchor the change can move and publishes the two
+# side by side. What moves and what does not is a fact about the panel, not an
+# assumption: every STAG month is hot (the ruleset fires STAG only at or above
+# 4.0 pp trailing CPI, the era threshold is 3.3513 pp), so months move from the
+# EXPANSION cell to the STAGFLATION cell and nowhere else -- which leaves the
+# recession and recovery anchors bit-identical and moves stagflation, expansion
+# and the ordering fraction.
+# --------------------------------------------------------------------------- #
+
+
+def section_l(
+    cells_incumbent: np.ndarray,
+    cells_v2: np.ndarray,
+    labels: np.ndarray,
+    ordering_incumbent: dict[str, Any],
+    ordering_v2: dict[str, Any],
+) -> dict[str, Any]:
+    """The mapping fix's effect on every anchor it can reach, old beside new."""
+    defined = cells_incumbent >= 0
+    moved = np.flatnonzero(defined & (cells_incumbent != cells_v2))
+    transfers: dict[str, int] = {}
+    for row in moved:
+        key = f"{QUADRANTS[int(cells_incumbent[row])]} -> {QUADRANTS[int(cells_v2[row])]}"
+        transfers[key] = transfers.get(key, 0) + 1
+
+    old = _classification_anchors(cells_incumbent)
+    new = _classification_anchors(cells_v2)
+    per_quadrant: dict[str, Any] = {}
+    for quadrant in QUADRANTS:
+        o = old["per_quadrant"][quadrant]
+        n = new["per_quadrant"][quadrant]
+        per_quadrant[quadrant] = {
+            "old_panel_wide_median_months": o["median_months"],
+            "new_panel_wide_median_months": n["median_months"],
+            "old_n_completed_spells": o["n_completed_spells"],
+            "new_n_completed_spells": n["n_completed_spells"],
+            "old_months_in_quadrant": o["months_in_quadrant"],
+            "new_months_in_quadrant": n["months_in_quadrant"],
+            "unchanged": bool(o["median_months"] == n["median_months"]),
+            "new_sorted_spells_months": n["sorted_spells_months"],
+        }
+    return {
+        "ruling": (
+            "owner, 2026-08-17: stagflation months sit on the NON-EXPANDING side for "
+            "transition/ordering purposes, per the owner's own definition of the season "
+            "-- growth stalling while inflation is high"
+        ),
+        "grader_module": "scripts/spine_v2_grader.py",
+        "contracting_labels": list(CONTRACTING_LABELS),
+        "incumbent_contracting_labels": list(INCUMBENT_CONTRACTING_LABELS),
+        "stag_months_in_panel": int((labels == "STAG").sum()),
+        "stag_months_classifiable": int(((labels == "STAG") & defined).sum()),
+        "months_moved": int(moved.size),
+        "months_moved_share": _f(float(moved.size) / float(defined.sum())),
+        "transfers": transfers,
+        "t1_note": (
+            "T1 is NOT re-anchored. Its downturn definition is the REC-or-CRI union on "
+            "both sides and its band was measured on that union; the ruling is about the "
+            "clock's transition/ordering axis. A STAG month is therefore contracting for "
+            "the clock and still not a downturn onset for T1. Declared as a limitation"
+        ),
+        "a1_a2_note": (
+            "A1 and A2 are untouched: both split months at the fixed 4% trailing CPI "
+            "line, not at the era threshold or the growth dial, so no classifier change "
+            "can reach them"
+        ),
+        "panel_wide_anchors": per_quadrant,
+        "ordering": {
+            "old_clockwise_fraction": ordering_incumbent["clockwise_fraction"],
+            "new_clockwise_fraction": ordering_v2["clockwise_fraction"],
+            "old_n_transitions": ordering_incumbent["n_transitions"],
+            "new_n_transitions": ordering_v2["n_transitions"],
+            "old_n_clockwise": ordering_incumbent["n_clockwise_transitions"],
+            "new_n_clockwise": ordering_v2["n_clockwise_transitions"],
+            "old_ci95": [
+                ordering_incumbent["ci95_lower_edge"],
+                ordering_incumbent["ci95_upper_edge"],
+            ],
+            "new_ci95": [ordering_v2["ci95_lower_edge"], ordering_v2["ci95_upper_edge"]],
+            "old_O1_bar": ordering_incumbent["ci95_lower_edge"],
+            "new_O1_bar": ordering_v2["ci95_lower_edge"],
+            "paired_bootstrap_note": (
+                "the two intervals are drawn from the SAME resampling tape (the same seed "
+                "and the same index draws, since the draws depend only on the panel's "
+                "length): the identical fake histories are scored under the two "
+                "labellings, so the OLD and NEW intervals are paired and their difference "
+                "is the labelling, not two different sets of random draws"
+            ),
+        },
+        "full_ordering_v2": ordering_v2,
+    }
+
+
 def exam_bars_sealed(
     transmission: dict[str, Any],
     pooled_dwells: dict[str, Any],
@@ -2779,7 +2903,18 @@ def main() -> None:
     )
     power = section_h(source, yoy, cells, bars_open4)
 
-    pooled_dwells = section_k({"incumbent": cells})
+    # grader_v2: the owner's mapping fix. One line of difference from
+    # panel_quadrant -- STAG joins REC/CRI on the contracting side -- and the
+    # assertion below states what that must and must not do on this panel.
+    labels = np.asarray(source.labels)
+    cells_v2 = grader_season_cells(labels, yoy, hazard.era_threshold_pp)
+    assert np.array_equal(
+        cells_v2[(cells >= 0) & (labels != "STAG")], cells[(cells >= 0) & (labels != "STAG")]
+    ), "grader_v2 must differ from the incumbent classifier on STAG months and nowhere else"
+    ordering_v2 = section_e(cells_v2, float(pilot_seal["b4"]["panel_clockwise_fraction"]))
+    grader_v2 = section_l(cells, cells_v2, labels, ordering, ordering_v2)
+
+    pooled_dwells = section_k({"incumbent": cells, "grader_v2": cells_v2})
     # Cross-check, not decoration: section K's decade-pooled medians are the same
     # object section H reports as its true-engine large-n limit, computed by a
     # different route (K pools spell lists window by window; H pools length
@@ -2799,11 +2934,11 @@ def main() -> None:
         transmission,
         pooled_dwells,
         allocation,
-        ordering,
+        ordering_v2,
         correlation_intervals,
-        grader="incumbent",
+        grader="grader_v2",
     )
-    power_sealed = section_h(source, yoy, cells, bars)
+    power_sealed = section_h(source, yoy, cells_v2, bars)
 
     # Sections I and J read two series the factor panel does not carry
     # (fred.USREC and fred.INDPRO for the re-labelling, fred.UNRATE for the
@@ -2824,7 +2959,7 @@ def main() -> None:
             dwell_intervals,
             bars_open4,
             bars,
-            INCUMBENT_CONTRACTING_LABELS,
+            CONTRACTING_LABELS,
         )
         richer = section_j(
             source, yoy, cells, hazard.era_threshold_pp, access, ordering, dwell_intervals
@@ -2869,6 +3004,7 @@ def main() -> None:
         "i_label_stability": stability,
         "j_richer_identification": richer,
         "k_pooled_decade_dwells": pooled_dwells,
+        "l_grader_v2": grader_v2,
         "m_power_under_sealed_bars": power_sealed,
         "exam_bars": bars,
         "exam_bars_superseded": {
@@ -2883,7 +3019,14 @@ def main() -> None:
     }
 
     OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
-    OUT_PATH.write_text(json.dumps(anchors, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    # newline="\n": this file's own bytes are hashed into the v2 seal, and
+    # Python's default text mode writes CRLF on Windows while git stores LF
+    # (.gitattributes, eol=lf) -- so the sealed hash would otherwise depend on
+    # which platform last ran the script. Writing LF explicitly makes the hash
+    # the same everywhere and equal to what a fresh clone checks out.
+    OUT_PATH.write_text(
+        json.dumps(anchors, indent=2, sort_keys=True) + "\n", encoding="utf-8", newline="\n"
+    )
 
     print(f"wrote {OUT_PATH}")
     for name in ("cri_only", "rec_plus_cri"):

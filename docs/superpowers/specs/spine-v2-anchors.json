@@ -1332,15 +1332,15 @@
     "A2_share_high_floor": 0.8,
     "A2_share_low_ceiling": 0.65,
     "D_anchor_medians_months": {
-      "expansion": 6.0,
+      "expansion": 4.0,
       "recession": 2.0,
       "recovery": 5.0,
-      "stagflation": 6.0
+      "stagflation": 4.0
     },
     "D_median_bands_months": {
       "expansion": [
-        3.0,
-        9.0
+        1.0,
+        7.0
       ],
       "recession": [
         0.0,
@@ -1351,19 +1351,19 @@
         8.0
       ],
       "stagflation": [
-        3.0,
-        9.0
+        1.0,
+        7.0
       ]
     },
     "D_statistic": "median of the completed spells POOLED over the whole batch",
     "D_tolerance_months": 3.0,
-    "O1_clockwise_min": 0.5185185185185185,
+    "O1_clockwise_min": 0.5180669104991394,
     "T1_lift_band": [
       1.7752827491108736,
       3.3473622102535145
     ],
     "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
-    "grader": "incumbent"
+    "grader": "grader_v2"
   },
   "exam_bars_superseded": {
     "note": "the bar block as it stood when OPEN-4 measured power against it (h_generated_side_power). Superseded 2026-08-17 by the owner's pre-seal rulings; kept so the OPEN-4 finding stays readable against the bars it was actually measured on. exam_bars is what is sealed",
@@ -3188,15 +3188,23 @@
         "n_arms_outside": 3
       },
       "D2_pooled_dwell_median_stagflation": {
-        "arm_max": 9.0,
-        "arm_min": 6.0,
-        "arms_outside": [],
-        "bar": [
-          3.0,
-          9.0
+        "arm_max": 14.0,
+        "arm_min": 2.0,
+        "arms_outside": [
+          "inflation_line_minus_50bp",
+          "inflation_line_plus_50bp",
+          "growth_line_minus_50bp",
+          "inflation_minus_growth_minus",
+          "inflation_minus_growth_plus",
+          "inflation_plus_growth_minus",
+          "inflation_plus_growth_plus"
         ],
-        "baseline_pooled_median_months": 6.0,
-        "n_arms_outside": 0
+        "bar": [
+          1.0,
+          7.0
+        ],
+        "baseline_pooled_median_months": 4.0,
+        "n_arms_outside": 7
       },
       "D3_pooled_dwell_median_recovery": {
         "arm_max": 14.0,
@@ -3214,14 +3222,22 @@
       },
       "D4_pooled_dwell_median_expansion": {
         "arm_max": 6.0,
-        "arm_min": 3.0,
+        "arm_min": 2.0,
         "arms_outside": [],
         "bar": [
-          3.0,
-          9.0
+          1.0,
+          7.0
         ],
-        "baseline_pooled_median_months": 6.0,
+        "baseline_pooled_median_months": 4.0,
         "n_arms_outside": 0
+      },
+      "O1_clockwise_fraction": {
+        "arm_max": 0.6153846153846154,
+        "arm_min": 0.576271186440678,
+        "arms_outside": [],
+        "bar": 0.5180669104991394,
+        "baseline_clockwise_fraction": 0.5972222222222222,
+        "headroom_at_worst_arm": 0.05820427594153854
       }
     },
     "bar_band_check_under_sealed_bars_note": "bar_band_check compares each arm's PANEL-WIDE median against the pre-ruling panel-wide band -- the comparison section 11 reported and the record of it. This block re-takes the same disclosure on the construct actually sealed: each arm's months re-classified under the sealed grader's contracting set, its completed spells pooled over the panel's own 120-month windows (the sealed D statistic), against the sealed decade-pooled band. Read THIS one for what a 50 bp move of a dial does to the bars that were sealed",
@@ -3836,6 +3852,152 @@
   "k_pooled_decade_dwells": {
     "decade_months": 120,
     "per_grader": {
+      "grader_v2": {
+        "disjoint_windows": {
+          "n_windows": 6,
+          "per_quadrant": {
+            "expansion": {
+              "iqr_months": [
+                1.75,
+                7.25
+              ],
+              "max_months": 48.0,
+              "mean_months": 8.45,
+              "median_months": 4.0,
+              "median_quarters": 1.3333333333333333,
+              "n_spells": 20,
+              "spells_per_window": 3.3333333333333335
+            },
+            "recession": {
+              "iqr_months": [
+                1.0,
+                10.5
+              ],
+              "max_months": 14.0,
+              "mean_months": 5.5,
+              "median_months": 3.0,
+              "median_quarters": 1.0,
+              "n_spells": 10,
+              "spells_per_window": 1.6666666666666667
+            },
+            "recovery": {
+              "iqr_months": [
+                3.0,
+                13.5
+              ],
+              "max_months": 19.0,
+              "mean_months": 7.866666666666666,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 15,
+              "spells_per_window": 2.5
+            },
+            "stagflation": {
+              "iqr_months": [
+                1.0,
+                11.0
+              ],
+              "max_months": 16.0,
+              "mean_months": 5.5,
+              "median_months": 1.5,
+              "median_quarters": 0.5,
+              "n_spells": 12,
+              "spells_per_window": 2.0
+            }
+          },
+          "starts": [
+            0,
+            120,
+            240,
+            360,
+            480,
+            600
+          ]
+        },
+        "overlapping_windows": {
+          "n_windows": 694,
+          "per_quadrant": {
+            "expansion": {
+              "iqr_months": [
+                1.0,
+                8.0
+              ],
+              "max_months": 48.0,
+              "mean_months": 7.891662741403674,
+              "median_months": 4.0,
+              "median_quarters": 1.3333333333333333,
+              "n_spells": 2123,
+              "spells_per_window": 3.059077809798271
+            },
+            "recession": {
+              "iqr_months": [
+                1.0,
+                12.0
+              ],
+              "max_months": 24.0,
+              "mean_months": 6.219484882418813,
+              "median_months": 2.0,
+              "median_quarters": 0.6666666666666666,
+              "n_spells": 893,
+              "spells_per_window": 1.2867435158501441
+            },
+            "recovery": {
+              "iqr_months": [
+                3.0,
+                14.0
+              ],
+              "max_months": 100.0,
+              "mean_months": 11.03130644190247,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 1661,
+              "spells_per_window": 2.393371757925072
+            },
+            "stagflation": {
+              "iqr_months": [
+                1.0,
+                14.0
+              ],
+              "max_months": 24.0,
+              "mean_months": 7.814668769716088,
+              "median_months": 4.0,
+              "median_quarters": 1.3333333333333333,
+              "n_spells": 1268,
+              "spells_per_window": 1.8270893371757926
+            }
+          }
+        },
+        "panel_wide_comparison": {
+          "expansion": {
+            "decade_minus_panel_wide_months": 0.0,
+            "decade_pooled_median_months": 4.0,
+            "panel_wide_max_spell_months": 48.0,
+            "panel_wide_median_months": 4.0,
+            "panel_wide_n_completed_spells": 23
+          },
+          "recession": {
+            "decade_minus_panel_wide_months": -1.0,
+            "decade_pooled_median_months": 2.0,
+            "panel_wide_max_spell_months": 24.0,
+            "panel_wide_median_months": 3.0,
+            "panel_wide_n_completed_spells": 12
+          },
+          "recovery": {
+            "decade_minus_panel_wide_months": -4.0,
+            "decade_pooled_median_months": 5.0,
+            "panel_wide_max_spell_months": 100.0,
+            "panel_wide_median_months": 9.0,
+            "panel_wide_n_completed_spells": 22
+          },
+          "stagflation": {
+            "decade_minus_panel_wide_months": 1.0,
+            "decade_pooled_median_months": 4.0,
+            "panel_wide_max_spell_months": 24.0,
+            "panel_wide_median_months": 3.0,
+            "panel_wide_n_completed_spells": 14
+          }
+        }
+      },
       "incumbent": {
         "disjoint_windows": {
           "n_windows": 6,
@@ -3991,6 +4153,220 @@
     "why_pooling": "a single decade contributes ~1-3 completed spells per season, so a per-decade median measures sampling noise; pooling the whole batch into one distribution makes the median a statement about the engine. At the sealed 50 decades per premise the pooled recovery count is ~120 spells",
     "why_the_same_window_on_both_sides": "a 120-month window drops the spell it opens with and the spell it closes with, and long spells are likelier to touch an edge, so a decade-measured median is systematically shorter than the same season's panel-wide median. Judging the generated side's decade-measured statistic against a panel-measured anchor is a definition mismatch of the same class the spine-02 review found in B6; the exam's remedy there (identical conditioning on both sides, T1) is applied here"
   },
+  "l_grader_v2": {
+    "a1_a2_note": "A1 and A2 are untouched: both split months at the fixed 4% trailing CPI line, not at the era threshold or the growth dial, so no classifier change can reach them",
+    "contracting_labels": [
+      "REC",
+      "CRI",
+      "STAG"
+    ],
+    "full_ordering_v2": {
+      "bar_note": "the O1 bar is cut from ci95_lower_edge: a generated clockwise fraction at or above it is CONSISTENT WITH history, which is what the bar can honestly demand. one_se_below_point is the tighter alternative the exam's drafter named (anchor minus one standard error); both are published so the owner can see the cost of each",
+      "binomial_se": 0.05780088420918413,
+      "bootstrap_ci95": {
+        "block_12m": {
+          "clockwise_fraction_ci95": {
+            "hi": 0.685735607675906,
+            "lo": 0.509090909090909,
+            "median": 0.6
+          },
+          "draws_dropped_no_transition": 0,
+          "draws_used": 2000,
+          "mean_transitions_per_draw": 65.713
+        },
+        "block_24m": {
+          "clockwise_fraction_ci95": {
+            "hi": 0.6764705882352942,
+            "lo": 0.5180669104991394,
+            "median": 0.5949367088607594
+          },
+          "draws_dropped_no_transition": 0,
+          "draws_used": 2000,
+          "mean_transitions_per_draw": 68.492
+        },
+        "block_36m": {
+          "clockwise_fraction_ci95": {
+            "hi": 0.6716417910447762,
+            "lo": 0.5270092460881934,
+            "median": 0.5972222222222222
+          },
+          "draws_dropped_no_transition": 0,
+          "draws_used": 2000,
+          "mean_transitions_per_draw": 69.9375
+        }
+      },
+      "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the panel's month sequence; only genuine consecutive-month pairs are scored, so block joins cannot invent a transition; 2.5/97.5 percentile interval",
+      "bootstrap_seed": 20260817,
+      "ci95_lower_edge": 0.5180669104991394,
+      "ci95_upper_edge": 0.6764705882352942,
+      "clockwise_fraction": 0.5972222222222222,
+      "definition": "over consecutive panel rows where both quadrants are defined and DIFFER, the share of (previous, next) pairs in ah.gen.spine.CLOCKWISE (recovery -> expansion -> stagflation -> recession -> recovery). Quadrants from ah.gen.spine.panel_quadrant, era threshold from ah.gen.spine.fit_hazard; the transition rule is scripts/spine_pilot_seal._b4_clockwise_fraction's",
+      "iid_over_transitions_ci95": {
+        "hi": 0.7083333333333334,
+        "lo": 0.4861111111111111,
+        "median": 0.5972222222222222
+      },
+      "n_bootstrap": 2000,
+      "n_clockwise_transitions": 43,
+      "n_transitions": 72,
+      "one_se_below_point": 0.539421338013038,
+      "pilot_sealed_fraction": 0.6029411764705882,
+      "primary_block_months": 24,
+      "reproduces_pilot_seal_exactly": false,
+      "transition_lag1_autocorrelation": -0.37738037566215327,
+      "width_note": "the block interval is NARROWER than the i.i.d.-over-transitions one, which is unusual and has a measured cause: transition_lag1_autocorrelation is negative, i.e. a counter-clockwise move tends to be followed by a clockwise one (the clock backtracks and returns). Keeping consecutive transitions together therefore carries MORE information per transition than scrambling them. Both intervals are published; the bar is cut from the block one, on the same machinery as every other interval in this file"
+    },
+    "grader_module": "scripts/spine_v2_grader.py",
+    "incumbent_contracting_labels": [
+      "REC",
+      "CRI"
+    ],
+    "months_moved": 31,
+    "months_moved_share": 0.03870162297128589,
+    "ordering": {
+      "new_O1_bar": 0.5180669104991394,
+      "new_ci95": [
+        0.5180669104991394,
+        0.6764705882352942
+      ],
+      "new_clockwise_fraction": 0.5972222222222222,
+      "new_n_clockwise": 43,
+      "new_n_transitions": 72,
+      "old_O1_bar": 0.5185185185185185,
+      "old_ci95": [
+        0.5185185185185185,
+        0.6842285508291275
+      ],
+      "old_clockwise_fraction": 0.6029411764705882,
+      "old_n_clockwise": 41,
+      "old_n_transitions": 68,
+      "paired_bootstrap_note": "the two intervals are drawn from the SAME resampling tape (the same seed and the same index draws, since the draws depend only on the panel's length): the identical fake histories are scored under the two labellings, so the OLD and NEW intervals are paired and their difference is the labelling, not two different sets of random draws"
+    },
+    "panel_wide_anchors": {
+      "expansion": {
+        "new_months_in_quadrant": 203,
+        "new_n_completed_spells": 23,
+        "new_panel_wide_median_months": 4.0,
+        "new_sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          3,
+          3,
+          3,
+          4,
+          4,
+          6,
+          6,
+          6,
+          7,
+          8,
+          13,
+          14,
+          19,
+          24,
+          27,
+          48
+        ],
+        "old_months_in_quadrant": 234,
+        "old_n_completed_spells": 21,
+        "old_panel_wide_median_months": 6.0,
+        "unchanged": false
+      },
+      "recession": {
+        "new_months_in_quadrant": 109,
+        "new_n_completed_spells": 12,
+        "new_panel_wide_median_months": 3.0,
+        "new_sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          4,
+          6,
+          12,
+          13,
+          14,
+          24
+        ],
+        "old_months_in_quadrant": 109,
+        "old_n_completed_spells": 12,
+        "old_panel_wide_median_months": 3.0,
+        "unchanged": true
+      },
+      "recovery": {
+        "new_months_in_quadrant": 378,
+        "new_n_completed_spells": 22,
+        "new_panel_wide_median_months": 9.0,
+        "new_sorted_spells_months": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          4,
+          5,
+          5,
+          5,
+          6,
+          6,
+          12,
+          13,
+          14,
+          16,
+          16,
+          18,
+          19,
+          25,
+          39,
+          62,
+          100
+        ],
+        "old_months_in_quadrant": 378,
+        "old_n_completed_spells": 22,
+        "old_panel_wide_median_months": 9.0,
+        "unchanged": true
+      },
+      "stagflation": {
+        "new_months_in_quadrant": 111,
+        "new_n_completed_spells": 14,
+        "new_panel_wide_median_months": 3.0,
+        "new_sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          4,
+          10,
+          14,
+          14,
+          16,
+          21,
+          24
+        ],
+        "old_months_in_quadrant": 80,
+        "old_n_completed_spells": 12,
+        "old_panel_wide_median_months": 4.0,
+        "unchanged": false
+      }
+    },
+    "ruling": "owner, 2026-08-17: stagflation months sit on the NON-EXPANDING side for transition/ordering purposes, per the owner's own definition of the season -- growth stalling while inflation is high",
+    "stag_months_classifiable": 31,
+    "stag_months_in_panel": 31,
+    "t1_note": "T1 is NOT re-anchored. Its downturn definition is the REC-or-CRI union on both sides and its band was measured on that union; the ruling is about the clock's transition/ordering axis. A STAG month is therefore contracting for the clock and still not a downturn onset for T1. Declared as a limitation",
+    "transfers": {
+      "expansion -> stagflation": 31
+    }
+  },
   "m_power_under_sealed_bars": {
     "bars_judged": {
       "A1_containment_pp": [
@@ -4001,15 +4377,15 @@
       "A2_share_high_floor": 0.8,
       "A2_share_low_ceiling": 0.65,
       "D_anchor_medians_months": {
-        "expansion": 6.0,
+        "expansion": 4.0,
         "recession": 2.0,
         "recovery": 5.0,
-        "stagflation": 6.0
+        "stagflation": 4.0
       },
       "D_median_bands_months": {
         "expansion": [
-          3.0,
-          9.0
+          1.0,
+          7.0
         ],
         "recession": [
           0.0,
@@ -4020,19 +4396,19 @@
           8.0
         ],
         "stagflation": [
-          3.0,
-          9.0
+          1.0,
+          7.0
         ]
       },
       "D_statistic": "median of the completed spells POOLED over the whole batch",
       "D_tolerance_months": 3.0,
-      "O1_clockwise_min": 0.5185185185185185,
+      "O1_clockwise_min": 0.5180669104991394,
       "T1_lift_band": [
         1.7752827491108736,
         3.3473622102535145
       ],
       "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
-      "grader": "incumbent"
+      "grader": "grader_v2"
     },
     "bars_unreachable_on_grid": [],
     "decade_months": 120,
@@ -4261,27 +4637,27 @@
       },
       "D2": {
         "is_headline_bar": true,
-        "max_power_on_grid": 0.916,
-        "min_n_seeds_for_target": 500,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 50,
         "pilot_n_seeds_sufficient": false,
-        "power_at_pilot_n_seeds": 0.5865,
+        "power_at_pilot_n_seeds": 0.8405,
         "power_by_n_seeds": {
-          "10": 0.5085,
-          "100": 0.74,
-          "15": 0.5385,
-          "150": 0.776,
-          "20": 0.5865,
-          "200": 0.797,
-          "25": 0.6225,
-          "30": 0.6305,
-          "300": 0.866,
-          "40": 0.665,
-          "400": 0.8925,
-          "5": 0.448,
-          "50": 0.6915,
-          "500": 0.916,
-          "60": 0.688,
-          "80": 0.711
+          "10": 0.754,
+          "100": 0.9795,
+          "15": 0.81,
+          "150": 0.995,
+          "20": 0.8405,
+          "200": 0.9995,
+          "25": 0.879,
+          "30": 0.868,
+          "300": 1.0,
+          "40": 0.8955,
+          "400": 1.0,
+          "5": 0.6765,
+          "50": 0.9215,
+          "500": 1.0,
+          "60": 0.956,
+          "80": 0.962
         },
         "true_engine_limit_passes": true
       },
@@ -4314,22 +4690,22 @@
       "D4": {
         "is_headline_bar": true,
         "max_power_on_grid": 1.0,
-        "min_n_seeds_for_target": 10,
+        "min_n_seeds_for_target": 5,
         "pilot_n_seeds_sufficient": true,
-        "power_at_pilot_n_seeds": 0.9935,
+        "power_at_pilot_n_seeds": 1.0,
         "power_by_n_seeds": {
-          "10": 0.946,
+          "10": 1.0,
           "100": 1.0,
-          "15": 0.978,
+          "15": 1.0,
           "150": 1.0,
-          "20": 0.9935,
+          "20": 1.0,
           "200": 1.0,
-          "25": 0.9975,
-          "30": 0.999,
+          "25": 1.0,
+          "30": 1.0,
           "300": 1.0,
           "40": 1.0,
           "400": 1.0,
-          "5": 0.858,
+          "5": 0.9995,
           "50": 1.0,
           "500": 1.0,
           "60": 1.0,
@@ -4355,7 +4731,7 @@
           "300": 1.0,
           "40": 1.0,
           "400": 1.0,
-          "5": 0.984,
+          "5": 0.981,
           "50": 1.0,
           "500": 1.0,
           "60": 1.0,
@@ -4392,7 +4768,7 @@
     },
     "pilot_n_seeds": 20,
     "power_seed": 20260820,
-    "recommended_n_seeds": 500,
+    "recommended_n_seeds": 400,
     "seed_grid": [
       5,
       10,
@@ -4422,10 +4798,10 @@
       "A2_share_positive_high": 0.9466666666666667,
       "A2_share_positive_low": 0.6215859478119606,
       "D1_median_months_recession": 2.0,
-      "D2_median_months_stagflation": 6.0,
+      "D2_median_months_stagflation": 4.0,
       "D3_median_months_recovery": 5.0,
-      "D4_median_months_expansion": 6.0,
-      "O1_clockwise_fraction": 0.6143938174207052,
+      "D4_median_months_expansion": 4.0,
+      "O1_clockwise_fraction": 0.6070191293869559,
       "T1_lift": 2.4714235804089193
     },
     "true_engine_model": "each generated decade is a uniformly-drawn contiguous 120-month stretch of the panel, so the engine sits at history's point estimates WITH history's own month-to-month dependence; bars are judged on the pooled statistic over n such decades, POWER_N_ENSEMBLES times"
