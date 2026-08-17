@@ -1,0 +1,341 @@
+{
+  "amendment_procedure": {
+    "entry_keys": [
+      "amendment_id",
+      "date",
+      "type",
+      "rationale",
+      "post_hoc",
+      "paths"
+    ],
+    "machine_check": "tests/test_spine_v2_seal.py recomputes every hash against the working tree and fails unless each mismatch is named by an amendment entry, so the log cannot be skipped by editing quietly",
+    "post_hoc_flagging": "every amendment is post-hoc-flagged in every report from its date forward, the platform's standing convention (ah.eval.prereg)",
+    "rule": "after this commit, no file listed in hashes may change without an entry appended to `amendments` naming its path. Editing a hashed file and re-running this script is NOT an amendment -- it is a re-seal, and it erases the record this file exists to keep",
+    "types": {
+      "documentation": "a hashed document changes without any threshold or judging rule changing",
+      "protocol_change": "how a metric is computed or judged changes (not just its value) -- e.g. a judge, the grader, or the anchor script",
+      "threshold_change": "a sealed pass/fail value changes"
+    }
+  },
+  "amendments": [],
+  "anti_test_record": {
+    "all_monotone": true,
+    "not_swept": "R1 and R2 are byte-frozen and are deliberately NOT re-swept: changing them is the thing a no-regression bar exists to prevent",
+    "obligation": "exam section 6.1: every NEW judge ships with an anti-test sweep run on the judge itself, and a judge whose pass rate does not increase in the effect its bar claims to measure does not get sealed",
+    "per_sweep_monotone": {
+      "A1": true,
+      "A2": true,
+      "D1": true,
+      "D2": true,
+      "D3": true,
+      "D4": true,
+      "O1": true,
+      "T1_closeness": true,
+      "T1_directional": true
+    },
+    "per_sweep_pass_rate": {
+      "A1": [
+        0.0,
+        0.08333333333333333,
+        0.4583333333333333,
+        0.7916666666666666,
+        0.9583333333333334,
+        1.0,
+        1.0
+      ],
+      "A2": [
+        0.0,
+        0.0,
+        0.0,
+        0.20833333333333334,
+        0.9583333333333334,
+        1.0,
+        1.0
+      ],
+      "D1": [
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "D2": [
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "D3": [
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "D4": [
+        0.5,
+        0.5,
+        0.5,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "O1": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "T1_closeness": [
+        0.0,
+        0.16666666666666666,
+        0.875,
+        1.0,
+        1.0,
+        0.9583333333333334,
+        0.0
+      ],
+      "T1_directional": [
+        0.0,
+        0.125,
+        0.4583333333333333,
+        0.75,
+        0.9583333333333334,
+        1.0
+      ]
+    },
+    "readable": "docs/superpowers/specs/spine-v2-antitest-results.md",
+    "results": "docs/superpowers/specs/spine-v2-antitest-results.json",
+    "script": "scripts/spine_v2_antitest.py"
+  },
+  "bar_codes": [
+    "T1",
+    "O1",
+    "D1",
+    "D2",
+    "D3",
+    "D4",
+    "A1",
+    "A2",
+    "R1",
+    "R2"
+  ],
+  "bars": {
+    "A1_containment_pp": [
+      -5.053054679081145,
+      32.31605649965673
+    ],
+    "A2_correlation_margin": 0.13609378139729844,
+    "A2_share_high_floor": 0.8,
+    "A2_share_low_ceiling": null,
+    "A2_share_low_ceiling_dropped_value": 0.65,
+    "D_anchor_medians_months": {
+      "expansion": 4.0,
+      "recession": 2.0,
+      "recovery": 5.0,
+      "stagflation": 4.0
+    },
+    "D_median_bands_months": {
+      "expansion": [
+        1.0,
+        7.0
+      ],
+      "recession": [
+        0.0,
+        5.0
+      ],
+      "recovery": [
+        2.0,
+        8.0
+      ],
+      "stagflation": [
+        1.0,
+        7.0
+      ]
+    },
+    "D_statistic": "median of the completed spells POOLED over the whole batch",
+    "D_tolerance_months": 3.0,
+    "O1_clockwise_min": 0.5180669104991394,
+    "T1_lift_band": [
+      1.7752827491108736,
+      3.3473622102535145
+    ],
+    "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
+    "grader": "grader_v2",
+    "n_seeds": 50
+  },
+  "campaign_record": {
+    "confirmed_omissions": [
+      "no reaction-function bar: B1 v2's construct was found uninformative and no v3 is specified, so the exam does not test whether policy responds to inflation at all (owner-confirmed 2026-08-17)",
+      "no hazard-frequency bar: B5 v2's construct changes once the hazard becomes generation-time, which is the central thing D-SP-6 funds, so that change is graded only through its consequences (owner-confirmed 2026-08-17)"
+    ],
+    "declared_limitations": [
+      "the sealed grader inherits regime_ruleset_v1's industrial-production-only recessions: a month is labelled REC on trailing INDPRO at or below zero alone, and a richer five-input classifier reassigns 37 of the 109 months the sealed one calls recession -- clusters 2015-03..2015-08, 2016-04..2017-02 and 2019-04..2020-02. Not fixable inside this exam, because regime_ruleset_v1 is sealed platform-wide",
+      "T1's downturn union is REC-or-CRI and is NOT re-anchored under grader_v2, so a STAG month is contracting for the clock and is still not a downturn onset for T1",
+      "T1 tests transmission and flesh-alignment together under selection-only compilation; a FAIL does not say which broke",
+      "D3 is much weaker against round two's engine than the draft's version was: round two's failing recovery medians of 2-3 months would now pass or sit on the band's lower edge",
+      "D2 is threshold-fragile under the sealed grader: 7 of 8 perturbed arms put history's own pooled stagflation median outside D2's band",
+      "the D anchors are measured on overlapping 120-month windows, which weights the panel's interior months more than its ends; the disjoint-decade sensitivity is published beside them",
+      "the D bars' power calculation is close to tautological, because the anchor is cut from the same object the power model's true engine emits",
+      "A2 no longer tests a contrast in the share statistic, only in the correlation levels",
+      "A1's containment half is nearly a plumbing assertion under selection-only compilation; the directional half is the real test",
+      "A1 is commodities-minus-bonds, never real-assets-minus-bonds -- no monthly real-asset total-return series exists in the catalog",
+      "no 2021-22 anchor anywhere: the episode lies inside the spent holdout",
+      "ER-14 is untouched by a clean pass on A1 and A2 -- inflation does not reach the private book at all, and this exam measures asset returns",
+      "every season is a HARD label; the agreed response if week-2 fitting proves threshold-unstable is the escalation to soft (weighted) membership"
+    ],
+    "funding_ruling": "governance/decision-register.md D-SP-6, 2026-08-16 (evening): 'go on the engine work, include the allocation tests'. Scope, stage 1 only: the generation-time hazard link, the recovery-duration refit to the historical event chronology, and join-constraint tightening. The flesh stays selection-only. Stage 2 (model-implied conditional means) and any L3 generator are explicitly NOT funded",
+    "n_seeds": 50,
+    "n_seeds_note": "50 decades per premise, owner-ruled 2026-08-17. At that size a true engine clears every retained bar with at least 90% probability (the weakest is D2 at 0.921); the pilot's 20 would have left A1 at 0.83 and D2 at 0.81, so either could have recorded a FAIL from ensemble size alone. R1's b3 grid stays byte-frozen at its own n_seeds = 20",
+    "owner_rulings": [
+      {
+        "date": "2026-08-17",
+        "ruling": "tight policy means an inverted yield curve, applied identically on both sides; the pass band is the block-bootstrap 95% interval for the recession-or-crisis definition; crisis-only must NOT be a bar because its interval contains 1.0 on six events",
+        "where": "T1"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "duration anchors from completed spells only, censored spells disclosed; four season bars, one per quadrant; stagflation is first-class; tolerance +-1 quarter, justified as the game's smallest play unit",
+        "where": "D1-D4"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "the high-inflation line is 4% trailing CPI, with the 3% sensitivity published in the same document including the sign flip",
+        "where": "A1, A2"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "2021-22 is excluded from anchor-setting (it lies in the spent holdout); no monthly real-asset series exists, so A1 is commodities-minus-bonds and real-assets-minus-bonds is null and disclosed",
+        "where": "A1, scope"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "regime identification must be shown robust before the seal -- both dials perturbed 50 bp each way, and a richer five-input identification compared under a decision rule declared in advance",
+        "where": "exam section 11"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "PRE-SEAL 1 of 4: D1-D4 grade the POOLED completed spells of the batch, against the panel's completed-spell distribution measured on the same 120-month window -- pooling fixes the small-sample-per-decade defect, the shared window fixes the censoring mismatch that made D3 unpassable by a correct engine",
+        "where": "D1-D4"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "PRE-SEAL 2 of 4: stagflation months sit on the NON-EXPANDING side for transition/ordering purposes (grader_v2, the mapping fix); O1, D2 and D4 re-anchored under it, D1 and D3 unchanged, T1 not re-anchored",
+        "where": "O1, D2, D4"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "PRE-SEAL 3 of 4: A2's low-inflation share-positive ceiling is DROPPED (it alone demanded ~400 decades on 2.8 points of headroom); A2 keeps the correlation gap >= the measured interval's lower edge, the positive level, and the 80% high-inflation share floor",
+        "where": "A2"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "PRE-SEAL 4 of 4: the industrial-production-only recession dial is declared as a known limitation of the sealed grader, and the two omissions -- no reaction-function bar, no hazard-frequency bar -- are confirmed as intended rather than left as open questions",
+        "where": "exam section 12"
+      },
+      {
+        "date": "2026-08-17",
+        "ruling": "NOT taken: O1's stricter one-standard-error variant. The bar stays at the block-bootstrap interval's lower edge",
+        "where": "O1"
+      }
+    ]
+  },
+  "carried": {
+    "b2": {
+      "join_yoy_max_pp": 2.5,
+      "p95_ratio_max": 1.25,
+      "panel_p95_adjacent_yoy_pp": 0.7433911963542538
+    },
+    "b3": {
+      "coverage_must_be_monotone": true,
+      "grid_private_pct": [
+        15,
+        35,
+        40,
+        55
+      ],
+      "min_breach_seeds_at_55": 1,
+      "n_seeds": 20
+    }
+  },
+  "carried_note": "R1 is spine02's b3 and R2 is spine02's b2, loaded whole from that seal (which carried them verbatim from round one) and judged by the SAME functions round two ran -- scripts/spine_pilot_b3._judge and scripts/spine_pilot_report.judge_b2, imported rather than copied, both hashed below. A change in an R verdict is therefore attributable to the engine and to nothing else, which is the only reason a no-regression bar is worth having",
+  "hashed_files": [
+    "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+    "docs/superpowers/specs/spine-v2-anchors.json",
+    "docs/superpowers/specs/spine-v2-antitest-results.json",
+    "docs/superpowers/specs/spine-pilot-prereg.json",
+    "docs/superpowers/specs/spine02-prereg.json",
+    "scripts/spine_v2_anchors.py",
+    "scripts/spine_v2_antitest.py",
+    "scripts/spine_v2_grader.py",
+    "scripts/spine_v2_report.py",
+    "scripts/spine_v2_seal.py",
+    "scripts/spine_pilot_b3.py",
+    "scripts/spine_pilot_report.py"
+  ],
+  "hashes": {
+    "docs/superpowers/specs/2026-08-17-spine-v2-exam.md": "4fdf7c0ae6afb97764a6633f09f186ddfcc9b740509e64342eba94a38ab6f568",
+    "docs/superpowers/specs/spine-pilot-prereg.json": "9e95f3dddea30d45128c18aecdbaa8871f6770d28efe40941c1d7d3509089c94",
+    "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+    "docs/superpowers/specs/spine-v2-antitest-results.json": "56447abb654f9fd6cda7db90d52a5c941a296d6e438c292aebb5f5277eb44b3f",
+    "docs/superpowers/specs/spine02-prereg.json": "075b57fca6829c3a8f3f5943f6dbbc8d334218daaa94ba5359b72a58e4558aa8",
+    "scripts/spine_pilot_b3.py": "4ead157e2ea88e5505fd228f6636056361d9e5cde91ee2474797fbff46507e97",
+    "scripts/spine_pilot_report.py": "a78411fe2c3a288c6ac773964ee7133b5a9fb6ce15d77b54f143b48d3ae4d8a8",
+    "scripts/spine_v2_anchors.py": "8c2f1343b867ff2adc00f999a73a40a89773b2af2fdabf82c62e2e2f60cab8a1",
+    "scripts/spine_v2_antitest.py": "1acd94bc6c0a47287d157a5fb9c75da7790bdd76b2a268d22c0c08e498e98d3c",
+    "scripts/spine_v2_grader.py": "cd08f39a7c50f217cd85eed64a709cc2aac3beffd1b992e744fd1b2dd5791ae4",
+    "scripts/spine_v2_report.py": "fb6d48af01b9c2524d80ba9dfd713a701d577eb9900ee81db90d60975923cef1",
+    "scripts/spine_v2_seal.py": "4956370f6d3276beb2ace30c2e65e48766d530d8a6a6ad14713536297ad54825"
+  },
+  "parameters": {
+    "contracting_labels": [
+      "REC",
+      "CRI",
+      "STAG"
+    ],
+    "crisis_only_labels": [
+      "CRI"
+    ],
+    "decade_months": 120,
+    "downturn_labels": [
+      "REC",
+      "CRI"
+    ],
+    "era_threshold_pp": 3.351323828920571,
+    "inflation_high_line_pp": 4.0,
+    "k_months": 12,
+    "note": "contracting_labels is grader_v2's contracting set (the owner's mapping fix); downturn_labels is T1's onset union, which is NOT re-anchored under the mapping fix and stays REC-or-CRI on both sides; crisis_only_labels drives T1's crisis-only DISCLOSURE, which is reported and never judged",
+    "rolling_window_months": 36
+  },
+  "prior_rounds": {
+    "prior_verdicts_are_frozen": true,
+    "round_one": {
+      "measured_state_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+      "note": "two commits matter and they are not the same thing: the pre-registration (seal_commit, completed by prereg_commit) and the tree state the round-one gate certified and measured against (measured_state_commit)",
+      "prereg_commit": "c9bd03621424becf24dcb603ac7ef725ff9a53ab",
+      "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
+      "seal_commit": "b97450a74f5e0ed884977a07091408029d8d3b40",
+      "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md"
+    },
+    "round_two": {
+      "note": "R1 and R2 are this round's b3 and b2, carried from here unchanged and judged by the same code, so a flip is attributable to the engine. R2 is expected to flip from FAIL to PASS: join-constraint tightening is inside D-SP-6's funded scope",
+      "prereg_commit": "fef995ff8ebcc8eea76c6b6c08aa991a18bda967",
+      "seal": "docs/superpowers/specs/spine02-prereg.json",
+      "verdicts": "docs/superpowers/specs/2026-08-16-spine02-results.md"
+    }
+  },
+  "purpose": "The spine v2, stage 1 exam's pre-registration: the ten bars' thresholds and the sha256 of the code that judges them, hashed together BEFORE any engine work or any generated ensemble. Specification: docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+  "schema": "spine-v2-prereg-1",
+  "sealed_at_utc": "2026-08-17T14:42:40-07:00 (as of HEAD commit 1ca6ed5bd11b8a5901c8e3786a668643e6dedc7d)"
+}

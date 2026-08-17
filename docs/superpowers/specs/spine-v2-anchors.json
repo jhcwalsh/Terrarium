@@ -1,0 +1,4868 @@
+{
+  "a_event_chronology": {
+    "definitions": {
+      "cri_only": {
+        "episodes": [
+          {
+            "end": "1970-01",
+            "months": 1,
+            "start": "1970-01"
+          },
+          {
+            "end": "1970-10",
+            "months": 7,
+            "start": "1970-04"
+          },
+          {
+            "end": "1975-03",
+            "months": 13,
+            "start": "1974-03"
+          },
+          {
+            "end": "2001-11",
+            "months": 6,
+            "start": "2001-06"
+          },
+          {
+            "end": "2009-06",
+            "months": 10,
+            "start": "2008-09"
+          },
+          {
+            "end": "2020-03",
+            "months": 1,
+            "start": "2020-03"
+          }
+        ],
+        "label_codes": [
+          "CRI"
+        ],
+        "months_at_risk_b6_population": 789,
+        "months_at_risk_hazard_denominator": 762,
+        "n_onsets_inside_lookahead_of_eligible": 61,
+        "n_onsets_panel": 6,
+        "onset_months": [
+          "1970-01",
+          "1970-04",
+          "1974-03",
+          "2001-06",
+          "2008-09",
+          "2020-03"
+        ],
+        "state_months_total": 38
+      },
+      "rec_plus_cri": {
+        "episodes": [
+          {
+            "end": "1954-11",
+            "months": 16,
+            "start": "1953-08"
+          },
+          {
+            "end": "1956-07",
+            "months": 1,
+            "start": "1956-07"
+          },
+          {
+            "end": "1958-10",
+            "months": 14,
+            "start": "1957-09"
+          },
+          {
+            "end": "1961-05",
+            "months": 13,
+            "start": "1960-05"
+          },
+          {
+            "end": "1967-07",
+            "months": 1,
+            "start": "1967-07"
+          },
+          {
+            "end": "1970-11",
+            "months": 11,
+            "start": "1970-01"
+          },
+          {
+            "end": "1975-03",
+            "months": 16,
+            "start": "1973-12"
+          },
+          {
+            "end": "1980-07",
+            "months": 6,
+            "start": "1980-02"
+          },
+          {
+            "end": "1983-04",
+            "months": 21,
+            "start": "1981-08"
+          },
+          {
+            "end": "1985-07",
+            "months": 1,
+            "start": "1985-07"
+          },
+          {
+            "end": "1991-03",
+            "months": 8,
+            "start": "1990-08"
+          },
+          {
+            "end": "1991-10",
+            "months": 3,
+            "start": "1991-08"
+          },
+          {
+            "end": "2002-05",
+            "months": 16,
+            "start": "2001-02"
+          },
+          {
+            "end": "2003-06",
+            "months": 1,
+            "start": "2003-06"
+          },
+          {
+            "end": "2009-12",
+            "months": 24,
+            "start": "2008-01"
+          },
+          {
+            "end": "2017-02",
+            "months": 24,
+            "start": "2015-03"
+          },
+          {
+            "end": "2020-12",
+            "months": 21,
+            "start": "2019-04"
+          }
+        ],
+        "label_codes": [
+          "REC",
+          "CRI"
+        ],
+        "months_at_risk_b6_population": 789,
+        "months_at_risk_hazard_denominator": 612,
+        "n_onsets_inside_lookahead_of_eligible": 192,
+        "n_onsets_panel": 17,
+        "onset_months": [
+          "1953-08",
+          "1956-07",
+          "1957-09",
+          "1960-05",
+          "1967-07",
+          "1970-01",
+          "1973-12",
+          "1980-02",
+          "1981-08",
+          "1985-07",
+          "1990-08",
+          "1991-08",
+          "2001-02",
+          "2003-06",
+          "2008-01",
+          "2015-03",
+          "2019-04"
+        ],
+        "state_months_total": 197
+      }
+    },
+    "eligible_months_full_lookahead": 789,
+    "k_months": 12,
+    "panel_months": 813,
+    "panel_span": [
+      "1953-04",
+      "2020-12"
+    ]
+  },
+  "b_transmission_lift": {
+    "bootstrap_ci95": {
+      "block_12m": {
+        "cri_only": {
+          "conditional_rate_ci95": {
+            "hi": 0.41951289599102887,
+            "lo": 0.049570883661792756,
+            "median": 0.2159295154185022
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 5.227809512933442,
+            "lo": 1.0411330665424379,
+            "median": 2.8551596356626945
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.13054499366286437,
+            "lo": 0.030418250950570342,
+            "median": 0.07541191381495564
+          }
+        },
+        "rec_plus_cri": {
+          "conditional_rate_ci95": {
+            "hi": 0.7124649859943976,
+            "lo": 0.42735042735042733,
+            "median": 0.5760181618051734
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 3.344157353806588,
+            "lo": 1.7690954133122256,
+            "median": 2.35934995937827
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.3219581749049428,
+            "lo": 0.1634980988593156,
+            "median": 0.24334600760456274
+          }
+        }
+      },
+      "block_24m": {
+        "cri_only": {
+          "conditional_rate_ci95": {
+            "hi": 0.43791844729344703,
+            "lo": 0.028900344597598934,
+            "median": 0.21210551629731028
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 5.045392747118623,
+            "lo": 0.7051593174267592,
+            "median": 2.8163005192569806
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.13434727503168567,
+            "lo": 0.025348542458808618,
+            "median": 0.07604562737642585
+          }
+        },
+        "rec_plus_cri": {
+          "conditional_rate_ci95": {
+            "hi": 0.7094252873563217,
+            "lo": 0.43517512077294684,
+            "median": 0.5779062299293514
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 3.3473622102535145,
+            "lo": 1.7752827491108736,
+            "median": 2.367375452513139
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.32192648922686945,
+            "lo": 0.16856780735107732,
+            "median": 0.2420785804816223
+          }
+        }
+      },
+      "block_36m": {
+        "cri_only": {
+          "conditional_rate_ci95": {
+            "hi": 0.42857142857142855,
+            "lo": 0.019778628806276857,
+            "median": 0.21197193610986714
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 5.131588354930004,
+            "lo": 0.5860466708122959,
+            "median": 2.770910666148504
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.13434727503168567,
+            "lo": 0.025348542458808618,
+            "median": 0.07477820025348543
+          }
+        },
+        "rec_plus_cri": {
+          "conditional_rate_ci95": {
+            "hi": 0.7015227914481644,
+            "lo": 0.4577114427860697,
+            "median": 0.5736638106895144
+          },
+          "draws_dropped_no_tight_month": 0,
+          "draws_used": 2000,
+          "lift_ci95": {
+            "hi": 3.3351204643619226,
+            "lo": 1.855774205869812,
+            "median": 2.3580706707600827
+          },
+          "unconditional_rate_ci95": {
+            "hi": 0.311787072243346,
+            "lo": 0.17107097591888465,
+            "median": 0.24081115335868186
+          }
+        }
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the eligible months' (tight, downturn-within-12m) pairs; geometric block lengths with the stated mean, wrap-around, 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260816,
+    "k_months": 12,
+    "n_bootstrap": 2000,
+    "point_estimates": {
+      "cri_only": {
+        "conditional_rate": 0.2214765100671141,
+        "eligible_months": 789,
+        "eligible_months_followed_by_onset": 61,
+        "lift": 2.8646715810320167,
+        "tight_months": 149,
+        "tight_months_followed_by_onset": 33,
+        "unconditional_rate": 0.07731305449936629
+      },
+      "rec_plus_cri": {
+        "conditional_rate": 0.5771812080536913,
+        "eligible_months": 789,
+        "eligible_months_followed_by_onset": 192,
+        "lift": 2.3718540268456376,
+        "tight_months": 149,
+        "tight_months_followed_by_onset": 86,
+        "unconditional_rate": 0.24334600760456274
+      }
+    },
+    "primary_block_months": 24,
+    "primary_tight_base_rate": 0.1888466413181242,
+    "primary_tight_definition": "curve_inversion_10y_2y",
+    "tight_definition_sensitivity": {
+      "curve_inversion_10y_2y": {
+        "arms": {
+          "base_rate_matched": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.2214765100671141,
+                "lift": 2.8646715810320167,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.5771812080536913,
+                "lift": 2.3718540268456376,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 149,
+            "tight_share": 0.1888466413181242
+          },
+          "native_cut": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.2214765100671141,
+                "lift": 2.8646715810320167,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.5771812080536913,
+                "lift": 2.3718540268456376,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 149,
+            "tight_share": 0.1888466413181242
+          }
+        },
+        "base_rate_matched_score_threshold": -0.0020585875724174417,
+        "description": "the 10-year Treasury yield sits below the 2-year yield (an inverted yield curve); tightness score = 2y minus 10y. THE PRIMARY DEFINITION: it is the panel-side conditioning the spine pilot sealed in round one (scripts/spine_pilot_seal._b6_onset_rates) and the one round two's matched comparison used.",
+        "eligible_months": 789
+      },
+      "policy_rate_above_trailing_36m": {
+        "arms": {
+          "base_rate_matched": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.1793103448275862,
+                "lift": 2.248728094968909,
+                "unconditional_rate": 0.07973856209150326
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.43448275862068964,
+                "lift": 1.8162803843979647,
+                "unconditional_rate": 0.23921568627450981
+              }
+            },
+            "tight_months": 145,
+            "tight_share": 0.1895424836601307
+          },
+          "native_cut": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.11442786069651742,
+                "lift": 1.4350379251284562,
+                "unconditional_rate": 0.07973856209150326
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.3308457711442786,
+                "lift": 1.3830437974064105,
+                "unconditional_rate": 0.23921568627450981
+              }
+            },
+            "tight_months": 402,
+            "tight_share": 0.5254901960784314
+          }
+        },
+        "base_rate_matched_score_threshold": 1.322435924517674,
+        "description": "the policy rate sits above its own average over the previous 36 months (policy tighter than its recent norm); tightness score = rate minus that average. Sensitivity only; the first 36 panel months cannot evaluate it.",
+        "eligible_months": 765
+      },
+      "real_policy_rate_positive": {
+        "arms": {
+          "base_rate_matched": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.087248322147651,
+                "lift": 1.128506986467158,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.30201342281879195,
+                "lift": 1.2410864093959733,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 149,
+            "tight_share": 0.1888466413181242
+          },
+          "native_cut": {
+            "definitions": {
+              "cri_only": {
+                "conditional_rate": 0.09124087591240876,
+                "lift": 1.1801483786047624,
+                "unconditional_rate": 0.07731305449936629
+              },
+              "rec_plus_cri": {
+                "conditional_rate": 0.26824817518248173,
+                "lift": 1.102332344890511,
+                "unconditional_rate": 0.24334600760456274
+              }
+            },
+            "tight_months": 548,
+            "tight_share": 0.6945500633713562
+          }
+        },
+        "base_rate_matched_score_threshold": 3.051257000550557,
+        "description": "the effective fed funds rate exceeds trailing 12-month CPI inflation (a positive real policy rate); tightness score = the real rate itself. Sensitivity only.",
+        "eligible_months": 789
+      }
+    }
+  },
+  "c_regime_durations": {
+    "era_threshold_pp": 3.351323828920571,
+    "per_quadrant": {
+      "expansion": {
+        "all_spells_including_censored": {
+          "median_months": 6.0,
+          "n_spells": 21,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            3,
+            3,
+            4,
+            4,
+            6,
+            7,
+            8,
+            11,
+            12,
+            13,
+            14,
+            19,
+            24,
+            40,
+            58
+          ]
+        },
+        "censored_spells": [],
+        "iqr_months": [
+          3.0,
+          13.0
+        ],
+        "iqr_quarters": [
+          1.0,
+          4.333333333333333
+        ],
+        "median_months": 6.0,
+        "median_quarters": 2.0,
+        "n_censored_spells": 0,
+        "n_completed_spells": 21,
+        "sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          3,
+          3,
+          3,
+          4,
+          4,
+          6,
+          7,
+          8,
+          11,
+          12,
+          13,
+          14,
+          19,
+          24,
+          40,
+          58
+        ],
+        "sorted_spells_quarters": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          1.0,
+          1.0,
+          1.0,
+          1.3333333333333333,
+          1.3333333333333333,
+          2.0,
+          2.3333333333333335,
+          2.6666666666666665,
+          3.6666666666666665,
+          4.0,
+          4.333333333333333,
+          4.666666666666667,
+          6.333333333333333,
+          8.0,
+          13.333333333333334,
+          19.333333333333332
+        ],
+        "sparse": false
+      },
+      "recession": {
+        "all_spells_including_censored": {
+          "median_months": 5.0,
+          "n_spells": 14,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            4,
+            6,
+            8,
+            12,
+            13,
+            14,
+            21,
+            24
+          ]
+        },
+        "censored_spells": [
+          {
+            "end": "1954-11",
+            "left_censored": true,
+            "months": 8,
+            "right_censored": false,
+            "start": "1954-04"
+          },
+          {
+            "end": "2020-12",
+            "left_censored": false,
+            "months": 21,
+            "right_censored": true,
+            "start": "2019-04"
+          }
+        ],
+        "iqr_months": [
+          1.0,
+          12.25
+        ],
+        "iqr_quarters": [
+          0.3333333333333333,
+          4.083333333333333
+        ],
+        "median_months": 3.0,
+        "median_quarters": 1.0,
+        "n_censored_spells": 2,
+        "n_completed_spells": 12,
+        "sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          4,
+          6,
+          12,
+          13,
+          14,
+          24
+        ],
+        "sorted_spells_quarters": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.6666666666666666,
+          1.3333333333333333,
+          2.0,
+          4.0,
+          4.333333333333333,
+          4.666666666666667,
+          8.0
+        ],
+        "sparse": true
+      },
+      "recovery": {
+        "all_spells_including_censored": {
+          "median_months": 9.0,
+          "n_spells": 22,
+          "sorted_spells_months": [
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            5,
+            5,
+            5,
+            6,
+            6,
+            12,
+            13,
+            14,
+            16,
+            16,
+            18,
+            19,
+            25,
+            39,
+            62,
+            100
+          ]
+        },
+        "censored_spells": [],
+        "iqr_months": [
+          4.25,
+          17.5
+        ],
+        "iqr_quarters": [
+          1.4166666666666667,
+          5.833333333333333
+        ],
+        "median_months": 9.0,
+        "median_quarters": 3.0,
+        "n_censored_spells": 0,
+        "n_completed_spells": 22,
+        "sorted_spells_months": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          4,
+          5,
+          5,
+          5,
+          6,
+          6,
+          12,
+          13,
+          14,
+          16,
+          16,
+          18,
+          19,
+          25,
+          39,
+          62,
+          100
+        ],
+        "sorted_spells_quarters": [
+          0.6666666666666666,
+          0.6666666666666666,
+          1.0,
+          1.0,
+          1.0,
+          1.3333333333333333,
+          1.6666666666666667,
+          1.6666666666666667,
+          1.6666666666666667,
+          2.0,
+          2.0,
+          4.0,
+          4.333333333333333,
+          4.666666666666667,
+          5.333333333333333,
+          5.333333333333333,
+          6.0,
+          6.333333333333333,
+          8.333333333333334,
+          13.0,
+          20.666666666666668,
+          33.333333333333336
+        ],
+        "sparse": false
+      },
+      "stagflation": {
+        "all_spells_including_censored": {
+          "median_months": 4.0,
+          "n_spells": 12,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            6,
+            8,
+            10,
+            11,
+            16,
+            21
+          ]
+        },
+        "censored_spells": [],
+        "iqr_months": [
+          1.0,
+          10.25
+        ],
+        "iqr_quarters": [
+          0.3333333333333333,
+          3.4166666666666665
+        ],
+        "median_months": 4.0,
+        "median_quarters": 1.3333333333333333,
+        "n_censored_spells": 0,
+        "n_completed_spells": 12,
+        "sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          2,
+          2,
+          6,
+          8,
+          10,
+          11,
+          16,
+          21
+        ],
+        "sorted_spells_quarters": [
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.3333333333333333,
+          0.6666666666666666,
+          0.6666666666666666,
+          2.0,
+          2.6666666666666665,
+          3.3333333333333335,
+          3.6666666666666665,
+          5.333333333333333,
+          7.0
+        ],
+        "sparse": true
+      }
+    },
+    "pilot_b4_panel_dwell_medians_months": [
+      5.0,
+      4.0,
+      9.0,
+      6.0
+    ],
+    "quadrant_legend": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ],
+    "undefined_quadrant_months": 12,
+    "unit_note": "months is the unit the spine pilot's own B4 anchor is stated in (panel_dwell_medians = [5, 4, 9, 6] MONTHS, docs/superpowers/specs/spine-pilot-prereg.json); quarters = months / 3"
+  },
+  "d_allocation_episode_facts": {
+    "annualisation_note": "ann_mean_arith_pct = 12 x the mean monthly return; ann_mean_geom_pct = (1 + mean monthly return)^12 - 1. Spreads are taken on the ARITHMETIC annualisation because only that one is additive across assets",
+    "asset_sources": {
+      "bonds": "sealed derived series 'govt_tr_10y' applied to the panel's ust_10y level: r_t = 0.01 * (y_{t-1}/12 - 8.5 * (y_t - y_{t-1})). The panel carries no bond total-return factor, only the yield level",
+      "commodities": "panel factor 'commodities' -- AQR equal-weight commodity excess return + the one-month bill, a total return",
+      "equities": "panel factor 'equity_mkt' -- Fama-French Mkt-RF + RF, a total return",
+      "real_assets": null
+    },
+    "inflation_states": {
+      "cpi_yoy_ge_3pct": {
+        "high_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 8.41200576249331,
+            "ann_mean_geom_pct": 8.744030150744585,
+            "ann_vol_pct": 9.808444481210353,
+            "mean_pct": 0.7010004802077758,
+            "months": 368
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 10.459217954118639,
+            "ann_mean_geom_pct": 10.975469724786247,
+            "ann_vol_pct": 15.829314746786615,
+            "mean_pct": 0.8716014961765532,
+            "months": 368
+          },
+          "equities": {
+            "ann_mean_arith_pct": 9.279782608695653,
+            "ann_mean_geom_pct": 9.684826697856064,
+            "ann_vol_pct": 16.366171020008867,
+            "mean_pct": 0.7733152173913044,
+            "months": 368
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 2.047212191625329,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "is_primary": false,
+        "low_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 3.804937551136885,
+            "ann_mean_geom_pct": 3.871999345099142,
+            "ann_vol_pct": 5.7796605710624425,
+            "mean_pct": 0.31707812926140705,
+            "months": 433
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 6.430650824678052,
+            "ann_mean_geom_pct": 6.623613483403745,
+            "ann_vol_pct": 11.42182032603226,
+            "mean_pct": 0.535887568723171,
+            "months": 433
+          },
+          "equities": {
+            "ann_mean_arith_pct": 13.835196304849887,
+            "ann_mean_geom_pct": 14.747111205337383,
+            "ann_vol_pct": 13.875885532360064,
+            "mean_pct": 1.1529330254041572,
+            "months": 433
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 2.6257132735411672,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "stock_bond_correlation": {
+          "high_inflation": 0.26776000715530485,
+          "low_inflation": -0.09682697926086808
+        },
+        "threshold_pp": 3.0
+      },
+      "cpi_yoy_ge_4pct": {
+        "high_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 7.199556518375341,
+            "ann_mean_geom_pct": 7.441943127646922,
+            "ann_vol_pct": 11.156119622652081,
+            "mean_pct": 0.5999630431979451,
+            "months": 225
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 12.071515017325682,
+            "ann_mean_geom_pct": 12.76231595286761,
+            "ann_vol_pct": 17.191480288616432,
+            "mean_pct": 1.00595958477714,
+            "months": 225
+          },
+          "equities": {
+            "ann_mean_arith_pct": 5.527466666666666,
+            "ann_mean_geom_pct": 5.669673277675802,
+            "ann_vol_pct": 17.51806544005087,
+            "mean_pct": 0.46062222222222227,
+            "months": 225
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 4.871958498950341,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "is_primary": true,
+        "low_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 5.422319207648189,
+            "ann_mean_geom_pct": 5.559126788246904,
+            "ann_vol_pct": 6.2091992405362735,
+            "mean_pct": 0.4518599339706824,
+            "months": 576
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 6.800995026567669,
+            "ann_mean_geom_pct": 7.017046867207455,
+            "ann_vol_pct": 11.94246997270275,
+            "mean_pct": 0.5667495855473058,
+            "months": 576
+          },
+          "equities": {
+            "ann_mean_arith_pct": 14.17,
+            "ann_mean_geom_pct": 15.127486643460042,
+            "ann_vol_pct": 13.961069698645401,
+            "mean_pct": 1.1808333333333334,
+            "months": 576
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 1.37867581891948,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "stock_bond_correlation": {
+          "high_inflation": 0.30125403304704923,
+          "low_inflation": -0.01823351575688256
+        },
+        "threshold_pp": 4.0
+      },
+      "cpi_yoy_ge_5pct": {
+        "high_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 6.377965622057896,
+            "ann_mean_geom_pct": 6.567751464705585,
+            "ann_vol_pct": 12.305276768404454,
+            "mean_pct": 0.5314971351714914,
+            "months": 153
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 14.995061708106675,
+            "ann_mean_geom_pct": 16.06979052144748,
+            "ann_vol_pct": 19.07522395349902,
+            "mean_pct": 1.2495884756755562,
+            "months": 153
+          },
+          "equities": {
+            "ann_mean_arith_pct": 7.303529411764706,
+            "ann_mean_geom_pct": 7.553040016855261,
+            "ann_vol_pct": 18.057480178653854,
+            "mean_pct": 0.6086274509803922,
+            "months": 153
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 8.617096086048779,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "is_primary": false,
+        "low_inflation": {
+          "bonds": {
+            "ann_mean_arith_pct": 5.813776759359492,
+            "ann_mean_geom_pct": 5.971222719485514,
+            "ann_vol_pct": 6.468440267048535,
+            "mean_pct": 0.484481396613291,
+            "months": 648
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 6.696326501328602,
+            "ann_mean_geom_pct": 6.905718075841216,
+            "ann_vol_pct": 11.96125539792874,
+            "mean_pct": 0.5580272084440502,
+            "months": 648
+          },
+          "equities": {
+            "ann_mean_arith_pct": 12.790370370370372,
+            "ann_mean_geom_pct": 13.567463791473756,
+            "ann_vol_pct": 14.280765059480146,
+            "mean_pct": 1.0658641975308643,
+            "months": 648
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 0.8825497419691102,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "stock_bond_correlation": {
+          "high_inflation": 0.3390382145390731,
+          "low_inflation": 0.010927392717242666
+        },
+        "threshold_pp": 5.0
+      }
+    },
+    "named_episodes": {
+      "early_calm_1953_1965": {
+        "available": true,
+        "inflation_kind": "low",
+        "mean_cpi_yoy_pct": 1.3760847939676915,
+        "months_declared": 153,
+        "months_in_panel": 141,
+        "note": "post-war calm, pre-Vietnam build-up",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 2.062365967065313,
+            "ann_mean_geom_pct": 2.0819726166398045,
+            "ann_vol_pct": 3.1630859704091483,
+            "mean_pct": 0.17186383058877608,
+            "months": 141
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 4.714049186397447,
+            "ann_mean_geom_pct": 4.8172467826351095,
+            "ann_vol_pct": 8.92949299664944,
+            "mean_pct": 0.39283743219978723,
+            "months": 141
+          },
+          "equities": {
+            "ann_mean_arith_pct": 14.488510638297871,
+            "ann_mean_geom_pct": 15.490423782510954,
+            "ann_vol_pct": 11.813123921220646,
+            "mean_pct": 1.2073758865248225,
+            "months": 141
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 2.651683219332134,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1953-04",
+          "1965-12"
+        ],
+        "stock_bond_correlation": -0.10465723121362658,
+        "unavailable_reason": null
+      },
+      "great_disinflation_1983_1999": {
+        "available": true,
+        "inflation_kind": "low",
+        "mean_cpi_yoy_pct": 3.2698978479896117,
+        "months_declared": 204,
+        "months_in_panel": 204,
+        "note": "the long disinflation and the 1990s expansion",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 10.048521197268403,
+            "ann_mean_geom_pct": 10.524477478893202,
+            "ann_vol_pct": 8.366622300267517,
+            "mean_pct": 0.8373767664390337,
+            "months": 204
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 7.232360380068803,
+            "ann_mean_geom_pct": 7.476983274153937,
+            "ann_vol_pct": 10.724525149947436,
+            "mean_pct": 0.6026966983390669,
+            "months": 204
+          },
+          "equities": {
+            "ann_mean_arith_pct": 17.498823529411766,
+            "ann_mean_geom_pct": 18.97279107590588,
+            "ann_vol_pct": 14.832647850219583,
+            "mean_pct": 1.458235294117647,
+            "months": 204
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": -2.8161608171996004,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1983-01",
+          "1999-12"
+        ],
+        "stock_bond_correlation": 0.2393612325077186,
+        "unavailable_reason": null
+      },
+      "great_inflation_1977_1982": {
+        "available": true,
+        "inflation_kind": "high",
+        "mean_cpi_yoy_pct": 9.23793131356775,
+        "months_declared": 72,
+        "months_in_panel": 72,
+        "note": "second inflation wave through the Volcker disinflation",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 5.355989251034264,
+            "ann_mean_geom_pct": 5.489445513498659,
+            "ann_vol_pct": 16.253763117536955,
+            "mean_pct": 0.4463324375861886,
+            "months": 72
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 10.035398795387435,
+            "ann_mean_geom_pct": 10.510095310742674,
+            "ann_vol_pct": 14.436334516629955,
+            "mean_pct": 0.8362832329489528,
+            "months": 72
+          },
+          "equities": {
+            "ann_mean_arith_pct": 13.13,
+            "ann_mean_geom_pct": 13.949693133336716,
+            "ann_vol_pct": 16.226348681983133,
+            "mean_pct": 1.0941666666666667,
+            "months": 72
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 4.679409544353171,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1977-01",
+          "1982-12"
+        ],
+        "stock_bond_correlation": 0.3372361207540753,
+        "unavailable_reason": null
+      },
+      "oil_shock_1973_1975": {
+        "available": true,
+        "inflation_kind": "high",
+        "mean_cpi_yoy_pct": 8.79542275689549,
+        "months_declared": 36,
+        "months_in_panel": 36,
+        "note": "first oil shock and the 1973-75 bust",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 2.7747212593336967,
+            "ann_mean_geom_pct": 2.810282100763617,
+            "ann_vol_pct": 6.1445793640336825,
+            "mean_pct": 0.23122677161114139,
+            "months": 36
+          },
+          "commodities": {
+            "ann_mean_arith_pct": 35.09077775899043,
+            "ann_mean_geom_pct": 41.32259206049391,
+            "ann_vol_pct": 30.423354802105983,
+            "mean_pct": 2.924231479915869,
+            "months": 36
+          },
+          "equities": {
+            "ann_mean_arith_pct": -5.033333333333332,
+            "ann_mean_geom_pct": -4.9188253869447145,
+            "ann_vol_pct": 21.177486608368305,
+            "mean_pct": -0.41944444444444434,
+            "months": 36
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": 32.31605649965673,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "1973-01",
+          "1975-12"
+        ],
+        "stock_bond_correlation": 0.23508300212087427,
+        "unavailable_reason": null
+      },
+      "pandemic_inflation_2021_2022": {
+        "available": false,
+        "inflation_kind": "high",
+        "mean_cpi_yoy_pct": null,
+        "months_declared": 24,
+        "months_in_panel": 0,
+        "note": "the 2021-22 inflation surge -- OUTSIDE the panel (see notes)",
+        "returns": null,
+        "span": [
+          "2021-01",
+          "2022-12"
+        ],
+        "stock_bond_correlation": null,
+        "unavailable_reason": "no month of this episode is inside the panel. The panel is the campaign train+validation span (1953-04..2020-12); 2021-01 onward is the sealed HOLDOUT split (ah.splits.HOLDOUT), which this script does not and must not open."
+      },
+      "post_gfc_calm_2010_2019": {
+        "available": true,
+        "inflation_kind": "low",
+        "mean_cpi_yoy_pct": 1.7727529215810587,
+        "months_declared": 120,
+        "months_in_panel": 120,
+        "note": "post-GFC low-inflation decade",
+        "returns": {
+          "bonds": {
+            "ann_mean_arith_pct": 3.8882706312608493,
+            "ann_mean_geom_pct": 3.958318346881895,
+            "ann_vol_pct": 5.313950277747573,
+            "mean_pct": 0.32402255260507073,
+            "months": 120
+          },
+          "commodities": {
+            "ann_mean_arith_pct": -1.1647840478202953,
+            "ann_mean_geom_pct": -1.1585858147479366,
+            "ann_vol_pct": 12.934324405905324,
+            "mean_pct": -0.09706533731835794,
+            "months": 120
+          },
+          "equities": {
+            "ann_mean_arith_pct": 13.651000000000005,
+            "ann_mean_geom_pct": 14.538334634646866,
+            "ann_vol_pct": 12.949471287996875,
+            "mean_pct": 1.1375833333333336,
+            "months": 120
+          },
+          "real_assets": null,
+          "spreads_ann_arith_pp": {
+            "commodities_minus_bonds": -5.053054679081145,
+            "real_assets_minus_bonds": null
+          }
+        },
+        "span": [
+          "2010-01",
+          "2019-12"
+        ],
+        "stock_bond_correlation": -0.3512045395487797,
+        "unavailable_reason": null
+      }
+    },
+    "population_note": "every statistic below is taken over panel months with a defined trailing 12-month CPI inflation reading, i.e. from the 13th panel month onward -- which also drops the bond series' warm-up month (the sealed govt_tr_10y transform sets r_0 = 0.0, a placeholder, not a return)",
+    "real_assets_note": "NOT AVAILABLE. The catalog registers no monthly REIT or real-asset total-return series: an intake schema exists (ah/data/schemas/nareit_returns.py) but no nareit series is registered in the catalog, and the only real-asset history present (jst.usa_housing_tr) is ANNUAL. Every real-asset field in this file is null by construction, never substituted.",
+    "rolling_stock_bond_correlation": {
+      "by_threshold": {
+        "cpi_yoy_ge_3pct": {
+          "high_inflation": {
+            "mean_correlation": 0.2651141932139629,
+            "share_positive": 0.8583106267029973,
+            "windows": 367
+          },
+          "low_inflation": {
+            "mean_correlation": -0.028253884180077023,
+            "share_positive": 0.47869674185463656,
+            "windows": 399
+          },
+          "threshold_pp": 3.0
+        },
+        "cpi_yoy_ge_4pct": {
+          "high_inflation": {
+            "mean_correlation": 0.30479407214313187,
+            "share_positive": 0.9466666666666667,
+            "windows": 225
+          },
+          "low_inflation": {
+            "mean_correlation": 0.03224573547036783,
+            "share_positive": 0.5415896487985212,
+            "windows": 541
+          },
+          "threshold_pp": 4.0
+        },
+        "cpi_yoy_ge_5pct": {
+          "high_inflation": {
+            "mean_correlation": 0.3169935537068158,
+            "share_positive": 0.9803921568627451,
+            "windows": 153
+          },
+          "low_inflation": {
+            "mean_correlation": 0.06121304307427545,
+            "share_positive": 0.5807504078303426,
+            "windows": 613
+          },
+          "threshold_pp": 5.0
+        }
+      },
+      "classification": "each window is assigned to the inflation state of its FINAL month -- the month the correlation is 'as of'",
+      "first_window_end": "1957-03",
+      "window_months": 36,
+      "windows_defined": 766
+    }
+  },
+  "e_ordering": {
+    "bar_note": "the O1 bar is cut from ci95_lower_edge: a generated clockwise fraction at or above it is CONSISTENT WITH history, which is what the bar can honestly demand. one_se_below_point is the tighter alternative the exam's drafter named (anchor minus one standard error); both are published so the owner can see the cost of each",
+    "binomial_se": 0.05933493096110905,
+    "bootstrap_ci95": {
+      "block_12m": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.6956521739130435,
+          "lo": 0.5097860962566845,
+          "median": 0.6060606060606061
+        },
+        "draws_dropped_no_transition": 0,
+        "draws_used": 2000,
+        "mean_transitions_per_draw": 62.051
+      },
+      "block_24m": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.6842285508291275,
+          "lo": 0.5185185185185185,
+          "median": 0.6027397260273972
+        },
+        "draws_dropped_no_transition": 0,
+        "draws_used": 2000,
+        "mean_transitions_per_draw": 64.726
+      },
+      "block_36m": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.6818181818181818,
+          "lo": 0.5272665847665847,
+          "median": 0.6031746031746031
+        },
+        "draws_dropped_no_transition": 0,
+        "draws_used": 2000,
+        "mean_transitions_per_draw": 66.145
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the panel's month sequence; only genuine consecutive-month pairs are scored, so block joins cannot invent a transition; 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260817,
+    "ci95_lower_edge": 0.5185185185185185,
+    "ci95_upper_edge": 0.6842285508291275,
+    "clockwise_fraction": 0.6029411764705882,
+    "definition": "over consecutive panel rows where both quadrants are defined and DIFFER, the share of (previous, next) pairs in ah.gen.spine.CLOCKWISE (recovery -> expansion -> stagflation -> recession -> recovery). Quadrants from ah.gen.spine.panel_quadrant, era threshold from ah.gen.spine.fit_hazard; the transition rule is scripts/spine_pilot_seal._b4_clockwise_fraction's",
+    "iid_over_transitions_ci95": {
+      "hi": 0.7205882352941176,
+      "lo": 0.4852941176470588,
+      "median": 0.6029411764705882
+    },
+    "n_bootstrap": 2000,
+    "n_clockwise_transitions": 41,
+    "n_transitions": 68,
+    "one_se_below_point": 0.5436062455094791,
+    "pilot_sealed_fraction": 0.6029411764705882,
+    "primary_block_months": 24,
+    "reproduces_pilot_seal_exactly": true,
+    "transition_lag1_autocorrelation": -0.34203896544238627,
+    "width_note": "the block interval is NARROWER than the i.i.d.-over-transitions one, which is unusual and has a measured cause: transition_lag1_autocorrelation is negative, i.e. a counter-clockwise move tends to be followed by a clockwise one (the clock backtracks and returns). Keeping consecutive transitions together therefore carries MORE information per transition than scrambling them. Both intervals are published; the bar is cut from the block one, on the same machinery as every other interval in this file"
+  },
+  "exam_bars": {
+    "A1_containment_pp": [
+      -5.053054679081145,
+      32.31605649965673
+    ],
+    "A2_correlation_margin": 0.13609378139729844,
+    "A2_share_high_floor": 0.8,
+    "A2_share_low_ceiling": null,
+    "A2_share_low_ceiling_dropped_value": 0.65,
+    "D_anchor_medians_months": {
+      "expansion": 4.0,
+      "recession": 2.0,
+      "recovery": 5.0,
+      "stagflation": 4.0
+    },
+    "D_median_bands_months": {
+      "expansion": [
+        1.0,
+        7.0
+      ],
+      "recession": [
+        0.0,
+        5.0
+      ],
+      "recovery": [
+        2.0,
+        8.0
+      ],
+      "stagflation": [
+        1.0,
+        7.0
+      ]
+    },
+    "D_statistic": "median of the completed spells POOLED over the whole batch",
+    "D_tolerance_months": 3.0,
+    "O1_clockwise_min": 0.5180669104991394,
+    "T1_lift_band": [
+      1.7752827491108736,
+      3.3473622102535145
+    ],
+    "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
+    "grader": "grader_v2",
+    "n_seeds": 50
+  },
+  "exam_bars_superseded": {
+    "note": "the bar block as it stood when OPEN-4 measured power against it (h_generated_side_power). Superseded 2026-08-17 by the owner's pre-seal rulings; kept so the OPEN-4 finding stays readable against the bars it was actually measured on. exam_bars is what is sealed",
+    "open4_derivation": {
+      "A1_containment_pp": [
+        -5.053054679081145,
+        32.31605649965673
+      ],
+      "A2_correlation_margin": 0.13609378139729844,
+      "A2_share_high_floor": 0.8,
+      "A2_share_low_ceiling": 0.65,
+      "D_median_bands_months": {
+        "expansion": [
+          3.0,
+          9.0
+        ],
+        "recession": [
+          0.0,
+          6.0
+        ],
+        "recovery": [
+          6.0,
+          12.0
+        ],
+        "stagflation": [
+          1.0,
+          7.0
+        ]
+      },
+      "D_tolerance_months": 3.0,
+      "O1_clockwise_min": 0.5185185185185185,
+      "T1_lift_band": [
+        1.7752827491108736,
+        3.3473622102535145
+      ],
+      "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's completed-spell median +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = e_ordering's 95% interval's LOWER edge; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference"
+    }
+  },
+  "f_correlation_intervals": {
+    "bar_note": "A2(i)'s margin is cut from correlation_level.ci95_lower_edge: the generated high-minus-low correlation difference must exceed the lower edge of the historical interval, i.e. must be CONSISTENT WITH history rather than exceed a point estimate that is itself noisy. The share-of-windows interval is published as the evidence behind A2(ii)'s 80%/65% edges, which are unchanged",
+    "bootstrap_ci95": {
+      "block_12m": {
+        "correlation_difference_ci95": {
+          "hi": 0.5428540727754096,
+          "lo": 0.11953661363734239,
+          "median": 0.32517973034945397
+        },
+        "correlation_high_ci95": {
+          "hi": 0.46717400417221594,
+          "lo": 0.15555817168110775,
+          "median": 0.310673458646607
+        },
+        "correlation_low_ci95": {
+          "hi": 0.10719674791459809,
+          "lo": -0.15237208973899005,
+          "median": -0.015249040332556654
+        },
+        "draws_used_correlation": 2000,
+        "draws_used_share_positive": 2000,
+        "share_positive_difference_ci95": {
+          "hi": 0.5921694662247576,
+          "lo": 0.2283792695892199,
+          "median": 0.4005996972153492
+        },
+        "share_positive_high_ci95": {
+          "hi": 1.0,
+          "lo": 0.8409008563899869,
+          "median": 0.9506375893437298
+        },
+        "share_positive_low_ci95": {
+          "hi": 0.7083564814814813,
+          "lo": 0.36648685918234913,
+          "median": 0.5417038859935046
+        }
+      },
+      "block_24m": {
+        "correlation_difference_ci95": {
+          "hi": 0.556828299873221,
+          "lo": 0.13609378139729844,
+          "median": 0.32473471539895116
+        },
+        "correlation_high_ci95": {
+          "hi": 0.4679594534036976,
+          "lo": 0.17737982046081946,
+          "median": 0.31023947096535665
+        },
+        "correlation_low_ci95": {
+          "hi": 0.1240853084386137,
+          "lo": -0.16203218235346048,
+          "median": -0.01820613041350759
+        },
+        "draws_used_correlation": 2000,
+        "draws_used_share_positive": 2000,
+        "share_positive_difference_ci95": {
+          "hi": 0.62310049896659,
+          "lo": 0.17717364337543898,
+          "median": 0.3951160468473019
+        },
+        "share_positive_high_ci95": {
+          "hi": 1.0,
+          "lo": 0.8136277517141826,
+          "median": 0.953307392996109
+        },
+        "share_positive_low_ci95": {
+          "hi": 0.7674547089811127,
+          "lo": 0.33534783317041383,
+          "median": 0.5433393043545498
+        }
+      },
+      "block_36m": {
+        "correlation_difference_ci95": {
+          "hi": 0.5508506146739962,
+          "lo": 0.12044608900041799,
+          "median": 0.32613608747694567
+        },
+        "correlation_high_ci95": {
+          "hi": 0.4601792140432245,
+          "lo": 0.17083933425009692,
+          "median": 0.3112589516493174
+        },
+        "correlation_low_ci95": {
+          "hi": 0.13872381520221214,
+          "lo": -0.17575077099394656,
+          "median": -0.01877830650278178
+        },
+        "draws_used_correlation": 2000,
+        "draws_used_share_positive": 2000,
+        "share_positive_difference_ci95": {
+          "hi": 0.6322644310036276,
+          "lo": 0.15036495291184282,
+          "median": 0.39199441509545674
+        },
+        "share_positive_high_ci95": {
+          "hi": 1.0,
+          "lo": 0.78492134607726,
+          "median": 0.953873431533006
+        },
+        "share_positive_low_ci95": {
+          "hi": 0.8003786869225302,
+          "lo": 0.3046387412876958,
+          "median": 0.5431548333413343
+        }
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap, the same machinery and the same 12/24/36-month block lengths as b_transmission_lift; the level statistic is resampled over months, the rolling-window statistic over windows (one per month, each carrying its end month's inflation state); 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260818,
+    "correlation_level": {
+      "ci95_lower_edge": 0.13609378139729844,
+      "ci95_upper_edge": 0.556828299873221,
+      "difference": 0.3194875488039316,
+      "high_inflation": 0.30125403304704906,
+      "low_inflation": -0.018233515756882535,
+      "months_high": 225,
+      "months_low": 576
+    },
+    "n_bootstrap": 2000,
+    "primary_block_months": 24,
+    "share_of_rolling_windows_positive": {
+      "ci95_lower_edge": 0.17717364337543898,
+      "ci95_upper_edge": 0.62310049896659,
+      "difference": 0.40507701786814543,
+      "high_inflation": 0.9466666666666667,
+      "low_inflation": 0.5415896487985212,
+      "window_months": 36,
+      "windows_high": 225,
+      "windows_low": 541
+    },
+    "threshold_pp": 4.0
+  },
+  "g_dwell_intervals": {
+    "bootstrap_seed": 20260819,
+    "n_bootstrap": 10000,
+    "per_quadrant": {
+      "expansion": {
+        "bootstrap_median_of_medians_months": 6.0,
+        "ci95_half_width_months": 6.0,
+        "ci95_half_width_quarters": 2.0,
+        "ci95_months": [
+          3.0,
+          12.0
+        ],
+        "ci95_quarters": [
+          1.0,
+          4.0
+        ],
+        "median_months": 6.0,
+        "median_quarters": 2.0,
+        "n_completed_spells": 21,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -3.0,
+        "tolerance_months": 3.0
+      },
+      "recession": {
+        "bootstrap_median_of_medians_months": 3.0,
+        "ci95_half_width_months": 9.5,
+        "ci95_half_width_quarters": 3.1666666666666665,
+        "ci95_months": [
+          1.0,
+          12.5
+        ],
+        "ci95_quarters": [
+          0.3333333333333333,
+          4.166666666666667
+        ],
+        "median_months": 3.0,
+        "median_quarters": 1.0,
+        "n_completed_spells": 12,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -6.5,
+        "tolerance_months": 3.0
+      },
+      "recovery": {
+        "bootstrap_median_of_medians_months": 9.0,
+        "ci95_half_width_months": 7.0,
+        "ci95_half_width_quarters": 2.3333333333333335,
+        "ci95_months": [
+          5.0,
+          16.0
+        ],
+        "ci95_quarters": [
+          1.6666666666666667,
+          5.333333333333333
+        ],
+        "median_months": 9.0,
+        "median_quarters": 3.0,
+        "n_completed_spells": 22,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -4.0,
+        "tolerance_months": 3.0
+      },
+      "stagflation": {
+        "bootstrap_median_of_medians_months": 4.0,
+        "ci95_half_width_months": 6.5,
+        "ci95_half_width_quarters": 2.1666666666666665,
+        "ci95_months": [
+          1.0,
+          10.5
+        ],
+        "ci95_quarters": [
+          0.3333333333333333,
+          3.5
+        ],
+        "median_months": 4.0,
+        "median_quarters": 1.3333333333333333,
+        "n_completed_spells": 12,
+        "tolerance_at_least_as_wide": false,
+        "tolerance_minus_half_width_months": -3.5,
+        "tolerance_months": 3.0
+      }
+    },
+    "resampling_unit": "completed spells (i.i.d.), NOT months",
+    "resampling_unit_note": "a spell's months are one observation of one dwell, not many independent observations of it; resampling months would understate the interval. The completed spells are the units the median is taken over, so they are what is resampled -- with replacement, one draw of the same size as the observed list, 2.5/97.5 percentiles over the draws' medians",
+    "tolerance_note": "tolerance_months = 3.0 is the exam's +-1 quarter dwell tolerance, unchanged by this measurement (its justification is the game's smallest play unit, not sampling noise). tolerance_at_least_as_wide records, per season, whether the tolerance is at least as wide as the median's own 95% sampling wobble"
+  },
+  "h_generated_side_power": {
+    "bars_judged": {
+      "A1_containment_pp": [
+        -5.053054679081145,
+        32.31605649965673
+      ],
+      "A2_correlation_margin": 0.13609378139729844,
+      "A2_share_high_floor": 0.8,
+      "A2_share_low_ceiling": 0.65,
+      "D_median_bands_months": {
+        "expansion": [
+          3.0,
+          9.0
+        ],
+        "recession": [
+          0.0,
+          6.0
+        ],
+        "recovery": [
+          6.0,
+          12.0
+        ],
+        "stagflation": [
+          1.0,
+          7.0
+        ]
+      },
+      "D_tolerance_months": 3.0,
+      "O1_clockwise_min": 0.5185185185185185,
+      "T1_lift_band": [
+        1.7752827491108736,
+        3.3473622102535145
+      ],
+      "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's completed-spell median +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = e_ordering's 95% interval's LOWER edge; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference"
+    },
+    "bars_unreachable_on_grid": [
+      "D3"
+    ],
+    "decade_months": 120,
+    "distinct_decade_starts": 694,
+    "eligibility_note": "inflation-conditioned statistics start at decade month 13 (108 usable months, the decade's own trailing-inflation warm-up); T1 also needs a full 12-month lookahead (96 eligible months); A2(ii)'s rolling windows are computed inside the decade and start at end month 37 (84 windows); D1-D4 drop spells touching either edge of the usable window, the same completed-spell rule the anchors use",
+    "headline_bars": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "A1",
+      "A2"
+    ],
+    "limits_note": "three limits, all of which push the same way -- toward treating the recommended n as an upper bound. (1) The decades overlap (694 distinct starts), so this is a bootstrap whose large-n limit is the panel's own value rather than an independent truth. (2) It inherits history's full between-decade heterogeneity (the 1970s against the 1990s), plausibly wider than a well-behaved engine's. (3) Drawing decade STARTS uniformly weights panel months unevenly: an interior month enters up to 84 decades while the first and last few years of the panel enter far fewer, so a statistic whose extremes sit at the panel's ends shifts. That is why the decade-measured low-inflation share-of-windows-positive (0.62) sits above the panel-wide figure (0.54): the two most negatively-correlated low-inflation stretches, the 1950s-60s and the 2010s, are exactly the down-weighted ones",
+    "n_ensembles": 2000,
+    "per_bar": {
+      "A1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 40,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8295,
+        "power_by_n_seeds": {
+          "10": 0.726,
+          "100": 0.987,
+          "15": 0.767,
+          "150": 0.9955,
+          "20": 0.8295,
+          "200": 0.9995,
+          "25": 0.8555,
+          "30": 0.897,
+          "300": 1.0,
+          "40": 0.9205,
+          "400": 1.0,
+          "5": 0.628,
+          "50": 0.9355,
+          "500": 1.0,
+          "60": 0.953,
+          "80": 0.985
+        },
+        "true_engine_limit_passes": true
+      },
+      "A1_with_containment": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 40,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8295,
+        "power_by_n_seeds": {
+          "10": 0.726,
+          "100": 0.987,
+          "15": 0.767,
+          "150": 0.9955,
+          "20": 0.8295,
+          "200": 0.9995,
+          "25": 0.8555,
+          "30": 0.897,
+          "300": 1.0,
+          "40": 0.9205,
+          "400": 1.0,
+          "5": 0.628,
+          "50": 0.9355,
+          "500": 1.0,
+          "60": 0.953,
+          "80": 0.985
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 0.945,
+        "min_n_seeds_for_target": 400,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.608,
+        "power_by_n_seeds": {
+          "10": 0.5215,
+          "100": 0.7475,
+          "15": 0.553,
+          "150": 0.7915,
+          "20": 0.608,
+          "200": 0.829,
+          "25": 0.64,
+          "30": 0.6415,
+          "300": 0.882,
+          "40": 0.675,
+          "400": 0.9135,
+          "5": 0.4435,
+          "50": 0.689,
+          "500": 0.945,
+          "60": 0.687,
+          "80": 0.727
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2i_level_positive": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 0.999,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.9775,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2i_margin": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.993,
+        "power_by_n_seeds": {
+          "10": 0.9625,
+          "100": 1.0,
+          "15": 0.991,
+          "150": 1.0,
+          "20": 0.993,
+          "200": 1.0,
+          "25": 0.9975,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.875,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2ii_share_high_floor": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.994,
+        "power_by_n_seeds": {
+          "10": 0.9665,
+          "100": 1.0,
+          "15": 0.9865,
+          "150": 1.0,
+          "20": 0.994,
+          "200": 1.0,
+          "25": 0.997,
+          "30": 0.9995,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.8935,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2ii_share_low_ceiling": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 0.945,
+        "min_n_seeds_for_target": 400,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.6135,
+        "power_by_n_seeds": {
+          "10": 0.5515,
+          "100": 0.7475,
+          "15": 0.566,
+          "150": 0.7915,
+          "20": 0.6135,
+          "200": 0.829,
+          "25": 0.643,
+          "30": 0.642,
+          "300": 0.882,
+          "40": 0.675,
+          "400": 0.9135,
+          "5": 0.539,
+          "50": 0.689,
+          "500": 0.945,
+          "60": 0.687,
+          "80": 0.727
+        },
+        "true_engine_limit_passes": true
+      },
+      "D1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 15,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.967,
+        "power_by_n_seeds": {
+          "10": 0.894,
+          "100": 1.0,
+          "15": 0.9505,
+          "150": 1.0,
+          "20": 0.967,
+          "200": 1.0,
+          "25": 0.983,
+          "30": 0.9915,
+          "300": 1.0,
+          "40": 0.997,
+          "400": 1.0,
+          "5": 0.78,
+          "50": 0.998,
+          "500": 1.0,
+          "60": 0.9995,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "D2": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 50,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8075,
+        "power_by_n_seeds": {
+          "10": 0.7355,
+          "100": 0.9705,
+          "15": 0.791,
+          "150": 0.992,
+          "20": 0.8075,
+          "200": 0.997,
+          "25": 0.8595,
+          "30": 0.851,
+          "300": 0.9995,
+          "40": 0.8695,
+          "400": 1.0,
+          "5": 0.6845,
+          "50": 0.9015,
+          "500": 1.0,
+          "60": 0.9255,
+          "80": 0.9545
+        },
+        "true_engine_limit_passes": true
+      },
+      "D3": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 0.359,
+        "min_n_seeds_for_target": null,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.359,
+        "power_by_n_seeds": {
+          "10": 0.3245,
+          "100": 0.2485,
+          "15": 0.353,
+          "150": 0.2115,
+          "20": 0.359,
+          "200": 0.199,
+          "25": 0.353,
+          "30": 0.356,
+          "300": 0.1385,
+          "40": 0.3305,
+          "400": 0.1125,
+          "5": 0.294,
+          "50": 0.328,
+          "500": 0.082,
+          "60": 0.304,
+          "80": 0.2755
+        },
+        "true_engine_limit_passes": false
+      },
+      "D4": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.9935,
+        "power_by_n_seeds": {
+          "10": 0.946,
+          "100": 1.0,
+          "15": 0.978,
+          "150": 1.0,
+          "20": 0.9935,
+          "200": 1.0,
+          "25": 0.9975,
+          "30": 0.999,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.858,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "O1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 0.9985,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.984,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "T1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.9985,
+        "power_by_n_seeds": {
+          "10": 0.9825,
+          "100": 1.0,
+          "15": 0.996,
+          "150": 1.0,
+          "20": 0.9985,
+          "200": 1.0,
+          "25": 0.999,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.916,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      }
+    },
+    "pilot_n_seeds": 20,
+    "power_seed": 20260820,
+    "recommended_n_seeds": 400,
+    "seed_grid": [
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      40,
+      50,
+      60,
+      80,
+      100,
+      150,
+      200,
+      300,
+      400,
+      500
+    ],
+    "target_pass_probability": 0.9,
+    "true_engine_limit_note": "each statistic as a true engine would produce it in the large-n limit -- every 120-month decade of the panel pooled once. Read each against bars_judged: where the limit sits outside a band, the bar cannot be cleared at ANY ensemble size, because the offset is between a panel-wide anchor and the same statistic measured on decades, not between history and an engine",
+    "true_engine_limit_statistics": {
+      "A1_spread_high_pp": 4.87195849895034,
+      "A1_spread_low_pp": 1.774167357438475,
+      "A2_correlation_difference": 0.2823955862757072,
+      "A2_correlation_high": 0.3012540330470492,
+      "A2_correlation_low": 0.01885844677134195,
+      "A2_share_positive_high": 0.9466666666666667,
+      "A2_share_positive_low": 0.6215859478119606,
+      "D1_median_months_recession": 2.0,
+      "D2_median_months_stagflation": 6.0,
+      "D3_median_months_recovery": 5.0,
+      "D4_median_months_expansion": 6.0,
+      "O1_clockwise_fraction": 0.6143938174207052,
+      "T1_lift": 2.4714235804089193
+    },
+    "true_engine_model": "each generated decade is a uniformly-drawn contiguous 120-month stretch of the panel, so the engine sits at history's point estimates WITH history's own month-to-month dependence; bars are judged on the pooled statistic over n such decades, POWER_N_ENSEMBLES times"
+  },
+  "i_label_stability": {
+    "arms": {
+      "baseline": {
+        "anchors": {
+          "clockwise_fraction": 0.6029411764705882,
+          "defined_months": 801,
+          "n_clockwise_transitions": 41,
+          "n_transitions": 68,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 6.0,
+              "months_in_quadrant": 234,
+              "n_completed_spells": 21,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                3,
+                3,
+                3,
+                4,
+                4,
+                6,
+                7,
+                8,
+                11,
+                12,
+                13,
+                14,
+                19,
+                24,
+                40,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 3.0,
+              "months_in_quadrant": 109,
+              "n_completed_spells": 12,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                2,
+                4,
+                6,
+                12,
+                13,
+                14,
+                24
+              ]
+            },
+            "recovery": {
+              "median_months": 9.0,
+              "months_in_quadrant": 378,
+              "n_completed_spells": 22,
+              "sorted_spells_months": [
+                2,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                5,
+                5,
+                6,
+                6,
+                12,
+                13,
+                14,
+                16,
+                16,
+                18,
+                19,
+                25,
+                39,
+                62,
+                100
+              ]
+            },
+            "stagflation": {
+              "median_months": 4.0,
+              "months_in_quadrant": 80,
+              "n_completed_spells": 12,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                6,
+                8,
+                10,
+                11,
+                16,
+                21
+              ]
+            }
+          }
+        },
+        "contracting_months": 197,
+        "contracting_months_change": 0,
+        "growth_line_delta_pp": 0.0,
+        "growth_weak_pp": 0.0,
+        "inflation_line_delta_pp": 0.0,
+        "inflation_line_pp": 3.351323828920571,
+        "months_reassigned_share": 0.0,
+        "months_reassigned_vs_baseline": 0,
+        "t1_disclosure": {
+          "conditional_rate": 0.5771812080536913,
+          "lift": 2.3718540268456376,
+          "n_onsets_panel": 17,
+          "unconditional_rate": 0.24334600760456274
+        }
+      },
+      "growth_line_minus_50bp": {
+        "anchors": {
+          "clockwise_fraction": 0.5970149253731343,
+          "defined_months": 801,
+          "n_clockwise_transitions": 40,
+          "n_transitions": 67,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 6.0,
+              "months_in_quadrant": 235,
+              "n_completed_spells": 21,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                3,
+                3,
+                3,
+                4,
+                4,
+                6,
+                7,
+                8,
+                11,
+                12,
+                13,
+                14,
+                20,
+                24,
+                40,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 3.0,
+              "months_in_quadrant": 102,
+              "n_completed_spells": 12,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                4,
+                6,
+                11,
+                13,
+                14,
+                20
+              ]
+            },
+            "recovery": {
+              "median_months": 8.5,
+              "months_in_quadrant": 385,
+              "n_completed_spells": 22,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                2,
+                3,
+                3,
+                3,
+                4,
+                5,
+                6,
+                6,
+                11,
+                13,
+                14,
+                16,
+                18,
+                20,
+                25,
+                30,
+                40,
+                62,
+                100
+              ]
+            },
+            "stagflation": {
+              "median_months": 6.0,
+              "months_in_quadrant": 79,
+              "n_completed_spells": 11,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                2,
+                2,
+                6,
+                8,
+                10,
+                11,
+                16,
+                21
+              ]
+            }
+          }
+        },
+        "contracting_months": 189,
+        "contracting_months_change": -8,
+        "growth_line_delta_pp": -0.5,
+        "growth_weak_pp": -0.5,
+        "inflation_line_delta_pp": 0.0,
+        "inflation_line_pp": 3.351323828920571,
+        "months_reassigned_share": 0.009987515605493134,
+        "months_reassigned_vs_baseline": 8,
+        "t1_disclosure": {
+          "conditional_rate": 0.5234899328859061,
+          "lift": 2.429609159099882,
+          "n_onsets_panel": 16,
+          "unconditional_rate": 0.21546261089987326
+        }
+      },
+      "growth_line_plus_50bp": {
+        "anchors": {
+          "clockwise_fraction": 0.625,
+          "defined_months": 801,
+          "n_clockwise_transitions": 45,
+          "n_transitions": 72,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 6.5,
+              "months_in_quadrant": 232,
+              "n_completed_spells": 20,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                3,
+                3,
+                3,
+                4,
+                4,
+                6,
+                7,
+                7,
+                11,
+                12,
+                13,
+                14,
+                19,
+                24,
+                40,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 2.0,
+              "months_in_quadrant": 115,
+              "n_completed_spells": 15,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                3,
+                4,
+                6,
+                12,
+                13,
+                14,
+                24
+              ]
+            },
+            "recovery": {
+              "median_months": 6.0,
+              "months_in_quadrant": 372,
+              "n_completed_spells": 24,
+              "sorted_spells_months": [
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                4,
+                5,
+                5,
+                5,
+                6,
+                6,
+                9,
+                12,
+                13,
+                14,
+                16,
+                18,
+                19,
+                25,
+                39,
+                62,
+                99
+              ]
+            },
+            "stagflation": {
+              "median_months": 4.0,
+              "months_in_quadrant": 82,
+              "n_completed_spells": 12,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                6,
+                8,
+                10,
+                11,
+                16,
+                22
+              ]
+            }
+          }
+        },
+        "contracting_months": 205,
+        "contracting_months_change": 8,
+        "growth_line_delta_pp": 0.5,
+        "growth_weak_pp": 0.5,
+        "inflation_line_delta_pp": 0.0,
+        "inflation_line_pp": 3.351323828920571,
+        "months_reassigned_share": 0.009987515605493134,
+        "months_reassigned_vs_baseline": 8,
+        "t1_disclosure": {
+          "conditional_rate": 0.5771812080536913,
+          "lift": 2.2433299170165637,
+          "n_onsets_panel": 19,
+          "unconditional_rate": 0.2572877059569075
+        }
+      },
+      "inflation_line_minus_50bp": {
+        "anchors": {
+          "clockwise_fraction": 0.581081081081081,
+          "defined_months": 801,
+          "n_clockwise_transitions": 43,
+          "n_transitions": 74,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 7.0,
+              "months_in_quadrant": 310,
+              "n_completed_spells": 28,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                4,
+                5,
+                6,
+                7,
+                7,
+                8,
+                9,
+                11,
+                12,
+                12,
+                14,
+                16,
+                17,
+                18,
+                20,
+                25,
+                41,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 8.0,
+              "months_in_quadrant": 99,
+              "n_completed_spells": 8,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                5,
+                11,
+                13,
+                14,
+                24
+              ]
+            },
+            "recovery": {
+              "median_months": 8.0,
+              "months_in_quadrant": 302,
+              "n_completed_spells": 27,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                3,
+                4,
+                4,
+                4,
+                5,
+                8,
+                8,
+                9,
+                10,
+                12,
+                13,
+                13,
+                15,
+                15,
+                18,
+                19,
+                35,
+                36,
+                58
+              ]
+            },
+            "stagflation": {
+              "median_months": 8.5,
+              "months_in_quadrant": 90,
+              "n_completed_spells": 10,
+              "sorted_spells_months": [
+                1,
+                3,
+                5,
+                6,
+                8,
+                9,
+                10,
+                11,
+                16,
+                21
+              ]
+            }
+          }
+        },
+        "contracting_months": 197,
+        "contracting_months_change": 0,
+        "growth_line_delta_pp": 0.0,
+        "growth_weak_pp": 0.0,
+        "inflation_line_delta_pp": -0.5,
+        "inflation_line_pp": 2.851323828920571,
+        "months_reassigned_share": 0.10736579275905118,
+        "months_reassigned_vs_baseline": 86,
+        "t1_disclosure": {
+          "conditional_rate": 0.5771812080536913,
+          "lift": 2.3718540268456376,
+          "n_onsets_panel": 17,
+          "unconditional_rate": 0.24334600760456274
+        }
+      },
+      "inflation_line_plus_50bp": {
+        "anchors": {
+          "clockwise_fraction": 0.5555555555555556,
+          "defined_months": 801,
+          "n_clockwise_transitions": 30,
+          "n_transitions": 54,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 4.0,
+              "months_in_quadrant": 177,
+              "n_completed_spells": 15,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                3,
+                4,
+                10,
+                10,
+                12,
+                12,
+                23,
+                37,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 4.0,
+              "months_in_quadrant": 122,
+              "n_completed_spells": 11,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                3,
+                4,
+                13,
+                14,
+                15,
+                16,
+                24
+              ]
+            },
+            "recovery": {
+              "median_months": 15.0,
+              "months_in_quadrant": 435,
+              "n_completed_spells": 20,
+              "sorted_spells_months": [
+                1,
+                2,
+                3,
+                5,
+                6,
+                6,
+                8,
+                12,
+                13,
+                15,
+                15,
+                16,
+                18,
+                19,
+                20,
+                25,
+                26,
+                41,
+                73,
+                111
+              ]
+            },
+            "stagflation": {
+              "median_months": 9.0,
+              "months_in_quadrant": 67,
+              "n_completed_spells": 7,
+              "sorted_spells_months": [
+                1,
+                6,
+                8,
+                9,
+                11,
+                16,
+                16
+              ]
+            }
+          }
+        },
+        "contracting_months": 197,
+        "contracting_months_change": 0,
+        "growth_line_delta_pp": 0.0,
+        "growth_weak_pp": 0.0,
+        "inflation_line_delta_pp": 0.5,
+        "inflation_line_pp": 3.851323828920571,
+        "months_reassigned_share": 0.08739076154806492,
+        "months_reassigned_vs_baseline": 70,
+        "t1_disclosure": {
+          "conditional_rate": 0.5771812080536913,
+          "lift": 2.3718540268456376,
+          "n_onsets_panel": 17,
+          "unconditional_rate": 0.24334600760456274
+        }
+      },
+      "inflation_minus_growth_minus": {
+        "anchors": {
+          "clockwise_fraction": 0.5833333333333334,
+          "defined_months": 801,
+          "n_clockwise_transitions": 42,
+          "n_transitions": 72,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 7.0,
+              "months_in_quadrant": 311,
+              "n_completed_spells": 27,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                11,
+                12,
+                12,
+                14,
+                16,
+                17,
+                18,
+                25,
+                28,
+                41,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 7.5,
+              "months_in_quadrant": 92,
+              "n_completed_spells": 8,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                5,
+                10,
+                13,
+                14,
+                20
+              ]
+            },
+            "recovery": {
+              "median_months": 9.0,
+              "months_in_quadrant": 309,
+              "n_completed_spells": 27,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                3,
+                4,
+                4,
+                8,
+                9,
+                9,
+                10,
+                12,
+                13,
+                13,
+                13,
+                15,
+                15,
+                18,
+                20,
+                35,
+                37,
+                58
+              ]
+            },
+            "stagflation": {
+              "median_months": 9.0,
+              "months_in_quadrant": 89,
+              "n_completed_spells": 9,
+              "sorted_spells_months": [
+                3,
+                5,
+                6,
+                8,
+                9,
+                10,
+                11,
+                16,
+                21
+              ]
+            }
+          }
+        },
+        "contracting_months": 189,
+        "contracting_months_change": -8,
+        "growth_line_delta_pp": -0.5,
+        "growth_weak_pp": -0.5,
+        "inflation_line_delta_pp": -0.5,
+        "inflation_line_pp": 2.851323828920571,
+        "months_reassigned_share": 0.11735330836454431,
+        "months_reassigned_vs_baseline": 94,
+        "t1_disclosure": {
+          "conditional_rate": 0.5234899328859061,
+          "lift": 2.429609159099882,
+          "n_onsets_panel": 16,
+          "unconditional_rate": 0.21546261089987326
+        }
+      },
+      "inflation_minus_growth_plus": {
+        "anchors": {
+          "clockwise_fraction": 0.5921052631578947,
+          "defined_months": 801,
+          "n_clockwise_transitions": 45,
+          "n_transitions": 76,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 7.0,
+              "months_in_quadrant": 306,
+              "n_completed_spells": 27,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                3,
+                3,
+                4,
+                5,
+                6,
+                6,
+                7,
+                8,
+                9,
+                11,
+                11,
+                12,
+                14,
+                16,
+                17,
+                18,
+                20,
+                25,
+                41,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 4.0,
+              "months_in_quadrant": 103,
+              "n_completed_spells": 10,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                3,
+                5,
+                11,
+                13,
+                14,
+                24
+              ]
+            },
+            "recovery": {
+              "median_months": 6.5,
+              "months_in_quadrant": 298,
+              "n_completed_spells": 28,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                2,
+                2,
+                2,
+                2,
+                2,
+                2,
+                3,
+                4,
+                4,
+                4,
+                5,
+                8,
+                8,
+                8,
+                8,
+                9,
+                13,
+                13,
+                15,
+                15,
+                18,
+                19,
+                35,
+                36,
+                58
+              ]
+            },
+            "stagflation": {
+              "median_months": 8.5,
+              "months_in_quadrant": 94,
+              "n_completed_spells": 10,
+              "sorted_spells_months": [
+                2,
+                4,
+                6,
+                6,
+                8,
+                9,
+                10,
+                11,
+                16,
+                22
+              ]
+            }
+          }
+        },
+        "contracting_months": 205,
+        "contracting_months_change": 8,
+        "growth_line_delta_pp": 0.5,
+        "growth_weak_pp": 0.5,
+        "inflation_line_delta_pp": -0.5,
+        "inflation_line_pp": 2.851323828920571,
+        "months_reassigned_share": 0.11485642946317104,
+        "months_reassigned_vs_baseline": 92,
+        "t1_disclosure": {
+          "conditional_rate": 0.5771812080536913,
+          "lift": 2.2433299170165637,
+          "n_onsets_panel": 19,
+          "unconditional_rate": 0.2572877059569075
+        }
+      },
+      "inflation_plus_growth_minus": {
+        "anchors": {
+          "clockwise_fraction": 0.5576923076923077,
+          "defined_months": 801,
+          "n_clockwise_transitions": 29,
+          "n_transitions": 52,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 4.0,
+              "months_in_quadrant": 177,
+              "n_completed_spells": 15,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                3,
+                4,
+                10,
+                10,
+                12,
+                12,
+                23,
+                37,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 8.5,
+              "months_in_quadrant": 114,
+              "n_completed_spells": 10,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                3,
+                4,
+                13,
+                14,
+                15,
+                15,
+                20
+              ]
+            },
+            "recovery": {
+              "median_months": 15.0,
+              "months_in_quadrant": 443,
+              "n_completed_spells": 19,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                2,
+                3,
+                8,
+                12,
+                13,
+                15,
+                15,
+                16,
+                18,
+                20,
+                20,
+                25,
+                40,
+                42,
+                80,
+                111
+              ]
+            },
+            "stagflation": {
+              "median_months": 9.0,
+              "months_in_quadrant": 67,
+              "n_completed_spells": 7,
+              "sorted_spells_months": [
+                1,
+                6,
+                8,
+                9,
+                11,
+                16,
+                16
+              ]
+            }
+          }
+        },
+        "contracting_months": 189,
+        "contracting_months_change": -8,
+        "growth_line_delta_pp": -0.5,
+        "growth_weak_pp": -0.5,
+        "inflation_line_delta_pp": 0.5,
+        "inflation_line_pp": 3.851323828920571,
+        "months_reassigned_share": 0.09612983770287141,
+        "months_reassigned_vs_baseline": 77,
+        "t1_disclosure": {
+          "conditional_rate": 0.5234899328859061,
+          "lift": 2.429609159099882,
+          "n_onsets_panel": 16,
+          "unconditional_rate": 0.21546261089987326
+        }
+      },
+      "inflation_plus_growth_plus": {
+        "anchors": {
+          "clockwise_fraction": 0.576271186440678,
+          "defined_months": 801,
+          "n_clockwise_transitions": 34,
+          "n_transitions": 59,
+          "per_quadrant": {
+            "expansion": {
+              "median_months": 4.0,
+              "months_in_quadrant": 177,
+              "n_completed_spells": 15,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                2,
+                2,
+                3,
+                4,
+                10,
+                10,
+                12,
+                12,
+                23,
+                37,
+                58
+              ]
+            },
+            "recession": {
+              "median_months": 3.5,
+              "months_in_quadrant": 130,
+              "n_completed_spells": 14,
+              "sorted_spells_months": [
+                1,
+                1,
+                1,
+                1,
+                1,
+                2,
+                3,
+                4,
+                4,
+                13,
+                14,
+                15,
+                17,
+                24
+              ]
+            },
+            "recovery": {
+              "median_months": 12.5,
+              "months_in_quadrant": 427,
+              "n_completed_spells": 22,
+              "sorted_spells_months": [
+                1,
+                1,
+                2,
+                2,
+                3,
+                4,
+                6,
+                6,
+                7,
+                10,
+                12,
+                13,
+                15,
+                16,
+                18,
+                19,
+                20,
+                24,
+                25,
+                41,
+                73,
+                109
+              ]
+            },
+            "stagflation": {
+              "median_months": 9.0,
+              "months_in_quadrant": 67,
+              "n_completed_spells": 7,
+              "sorted_spells_months": [
+                1,
+                6,
+                8,
+                9,
+                11,
+                16,
+                16
+              ]
+            }
+          }
+        },
+        "contracting_months": 205,
+        "contracting_months_change": 8,
+        "growth_line_delta_pp": 0.5,
+        "growth_weak_pp": 0.5,
+        "inflation_line_delta_pp": 0.5,
+        "inflation_line_pp": 3.851323828920571,
+        "months_reassigned_share": 0.09488139825218476,
+        "months_reassigned_vs_baseline": 76,
+        "t1_disclosure": {
+          "conditional_rate": 0.5771812080536913,
+          "lift": 2.2433299170165637,
+          "n_onsets_panel": 19,
+          "unconditional_rate": 0.2572877059569075
+        }
+      }
+    },
+    "bar_band_check": {
+      "D1_dwell_median_recession": {
+        "arm_max": 8.5,
+        "arm_min": 2.0,
+        "arms_outside": [
+          "inflation_line_minus_50bp",
+          "inflation_minus_growth_minus",
+          "inflation_plus_growth_minus"
+        ],
+        "bar": [
+          0.0,
+          6.0
+        ],
+        "n_arms_outside": 3
+      },
+      "D2_dwell_median_stagflation": {
+        "arm_max": 9.0,
+        "arm_min": 4.0,
+        "arms_outside": [
+          "inflation_line_minus_50bp",
+          "inflation_line_plus_50bp",
+          "inflation_minus_growth_minus",
+          "inflation_minus_growth_plus",
+          "inflation_plus_growth_minus",
+          "inflation_plus_growth_plus"
+        ],
+        "bar": [
+          1.0,
+          7.0
+        ],
+        "n_arms_outside": 6
+      },
+      "D3_dwell_median_recovery": {
+        "arm_max": 15.0,
+        "arm_min": 6.0,
+        "arms_outside": [
+          "inflation_line_plus_50bp",
+          "inflation_plus_growth_minus",
+          "inflation_plus_growth_plus"
+        ],
+        "bar": [
+          6.0,
+          12.0
+        ],
+        "n_arms_outside": 3
+      },
+      "D4_dwell_median_expansion": {
+        "arm_max": 7.0,
+        "arm_min": 4.0,
+        "arms_outside": [],
+        "bar": [
+          3.0,
+          9.0
+        ],
+        "n_arms_outside": 0
+      },
+      "O1_clockwise_fraction": {
+        "arm_min": 0.5555555555555556,
+        "arms_outside": [],
+        "bar_minimum": 0.5185185185185185,
+        "headroom_at_worst_arm": 0.03703703703703709
+      }
+    },
+    "bar_band_check_note": "the verdicts above answer the question the owner asked -- is the perturbation spread inside the anchor's own SAMPLING noise. This block answers the different question the exam actually judges with: does the anchor stay inside its own BAR when the dial moves 50 bp. The two can disagree, and here they do, because OPEN-3 established that the dwell intervals are much wider than the +-1 quarter bands. An arm listed under arms_outside is a case where HISTORY ITSELF, re-measured with a 50 bp different line, would fail the bar cut from it",
+    "bar_band_check_under_sealed_bars": {
+      "D1_pooled_dwell_median_recession": {
+        "arm_max": 13.0,
+        "arm_min": 2.0,
+        "arms_outside": [
+          "inflation_line_minus_50bp",
+          "inflation_minus_growth_minus",
+          "inflation_plus_growth_minus"
+        ],
+        "bar": [
+          0.0,
+          5.0
+        ],
+        "baseline_pooled_median_months": 2.0,
+        "n_arms_outside": 3
+      },
+      "D2_pooled_dwell_median_stagflation": {
+        "arm_max": 14.0,
+        "arm_min": 2.0,
+        "arms_outside": [
+          "inflation_line_minus_50bp",
+          "inflation_line_plus_50bp",
+          "growth_line_minus_50bp",
+          "inflation_minus_growth_minus",
+          "inflation_minus_growth_plus",
+          "inflation_plus_growth_minus",
+          "inflation_plus_growth_plus"
+        ],
+        "bar": [
+          1.0,
+          7.0
+        ],
+        "baseline_pooled_median_months": 4.0,
+        "n_arms_outside": 7
+      },
+      "D3_pooled_dwell_median_recovery": {
+        "arm_max": 14.0,
+        "arm_min": 4.0,
+        "arms_outside": [
+          "inflation_line_plus_50bp",
+          "inflation_plus_growth_minus"
+        ],
+        "bar": [
+          2.0,
+          8.0
+        ],
+        "baseline_pooled_median_months": 5.0,
+        "n_arms_outside": 2
+      },
+      "D4_pooled_dwell_median_expansion": {
+        "arm_max": 6.0,
+        "arm_min": 2.0,
+        "arms_outside": [],
+        "bar": [
+          1.0,
+          7.0
+        ],
+        "baseline_pooled_median_months": 4.0,
+        "n_arms_outside": 0
+      },
+      "O1_clockwise_fraction": {
+        "arm_max": 0.6153846153846154,
+        "arm_min": 0.576271186440678,
+        "arms_outside": [],
+        "bar": 0.5180669104991394,
+        "baseline_clockwise_fraction": 0.5972222222222222,
+        "headroom_at_worst_arm": 0.05820427594153854
+      }
+    },
+    "bar_band_check_under_sealed_bars_note": "bar_band_check compares each arm's PANEL-WIDE median against the pre-ruling panel-wide band -- the comparison section 11 reported and the record of it. This block re-takes the same disclosure on the construct actually sealed: each arm's months re-classified under the sealed grader's contracting set, its completed spells pooled over the panel's own 120-month windows (the sealed D statistic), against the sealed decade-pooled band. Read THIS one for what a 50 bp move of a dial does to the bars that were sealed",
+    "dial_scale_disclosure": {
+      "growth_indicator_sd_pp": 5.368325768637362,
+      "growth_months_within_50bp_of_line": 38,
+      "inflation_indicator_sd_pp": 2.8096976616657066,
+      "inflation_months_within_50bp_of_line": 157,
+      "note": "the same 50 basis points is NOT the same fraction of each dial's own spread, and the reader should see that rather than infer symmetry from the number: trailing CPI inflation is a much tighter series than trailing industrial-production growth, so 0.50 pp is a larger move relative to the inflation dial's own scale, and the arms below duly relabel far more months on the inflation dial than on the growth dial. The two perturbations are equal in the units the dials are STATED in, which is what a threshold-sensitivity check can honestly hold fixed; equalising them in standard deviations instead would mean nudging the inflation line by an amount no practitioner would call a threshold choice"
+    },
+    "dials": {
+      "growth": "panel_quadrant's contracting test, 'the month's regime_ruleset_v1 label is REC or CRI'. This dial carries NO threshold of its own: its boundary is regime_ruleset_v1's growth_weak line on trailing INDPRO growth (0.0 %/yr), one layer below the classifier. It is perturbed there and the months are re-labelled through ah.data.derive.label_regime",
+      "inflation": "panel_quadrant's hot test, yoy > era_threshold_pp, where era_threshold_pp = median(panel trailing CPI YoY) + BACKDROP_MARGIN_PP = 3.351323828920571 pp. Perturbed directly"
+    },
+    "obligation": "owner-agreed 2026-08-17 (A): perturb each dial of the two-dial classifier and report each anchor's spread across the perturbations against its own sampling noise",
+    "perturbation_pp": 0.5,
+    "perturbation_rationale": "0.50 pp on EACH dial, in that dial's own units. On the inflation dial that is the platform's own ah.gen.spine.BACKDROP_MARGIN_PP -- the displacement the spine already treats as the smallest meaningful move in an inflation state, since it sits inside both the era threshold itself and spine_quadrant's hot test -- and it is one conventional central-bank move. The growth dial takes the same 50 basis points on trailing INDPRO growth, so neither dial is nudged harder than the other",
+    "relabelling_check": {
+      "note": "the features are rebuilt with ah.gen.bootstrap's own helpers on the same frames build_source uses, and the unperturbed rebuild is asserted equal to source.labels before any threshold moves -- so a difference below is the dial, never a second implementation drifting",
+      "rebuilt_labels_reproduce_panel": true
+    },
+    "stag_branch_note": "one consequence of perturbing growth_weak that a reader should see: the same line gates the ruleset's STAG branch, and panel_quadrant treats STAG as EXPANDING (its contracting test is REC-or-CRI membership, nothing else). So a hot weak-growth month can move between 'recession' and an EXPANDING quadrant rather than into the 'stagflation' cell -- the six-label ruleset's stagflation and the investment clock's stagflation are not the same object",
+    "t1_disclosure_summary": {
+      "lift_max": 2.429609159099882,
+      "lift_min": 2.2433299170165637,
+      "note": "the growth-dial perturbation moves REC labels, and T1's downturn definition is the REC-or-CRI union, so T1's lift moves with it; the tight-policy side (the 10y-below-2y curve test) is untouched by either dial. Point estimates only, per arm, under t1_disclosure -- this is a disclosure that the growth dial reaches beyond the quadrant anchors, not a second T1 measurement. The allocation bars A1 and A2 split months at the fixed 4% CPI line, not at the era threshold, so neither dial reaches them at all"
+    },
+    "transition_count_note": "transition counts are reported as context and carry NO stable/fragile verdict: no sampling interval for a COUNT is measured anywhere in this file on the same footing (section E's block bootstrap drops about one pair in mean_block at block joins by design, so its per-draw transition count is deliberately below the panel's and is not an error bar on it). The O1 bar is cut from the FRACTION, which does carry a verdict above",
+    "transition_counts_by_arm": {
+      "baseline": 68,
+      "growth_line_minus_50bp": 67,
+      "growth_line_plus_50bp": 72,
+      "inflation_line_minus_50bp": 74,
+      "inflation_line_plus_50bp": 54,
+      "inflation_minus_growth_minus": 72,
+      "inflation_minus_growth_plus": 76,
+      "inflation_plus_growth_minus": 52,
+      "inflation_plus_growth_plus": 59
+    },
+    "verdict_rule": "STABLE means every arm's value lies inside the anchor's own 95% sampling interval (section E's block bootstrap for the ordering fraction, section G's spell bootstrap for the dwell medians): a perturbation of this size moves the anchor no further than resampling the same history already moves it. FRAGILE means at least one arm lands outside. spread_vs_interval_width is published beside every verdict for the alternative reading",
+    "verdicts": {
+      "clockwise_fraction": {
+        "all_arms_inside_ci95": true,
+        "arm_max": 0.625,
+        "arm_min": 0.5555555555555556,
+        "perturbation_spread": 0.06944444444444442,
+        "sampling_ci95": [
+          0.5185185185185185,
+          0.6842285508291275
+        ],
+        "sampling_ci95_half_width": 0.08442265795206971,
+        "sampling_ci95_width": 0.165710032310609,
+        "spread_vs_interval_width": 0.41907205904273115,
+        "verdict": "STABLE"
+      },
+      "dwell_median_expansion": {
+        "all_arms_inside_ci95": true,
+        "arm_max": 7.0,
+        "arm_min": 4.0,
+        "perturbation_spread": 3.0,
+        "sampling_ci95": [
+          3.0,
+          12.0
+        ],
+        "sampling_ci95_half_width": 6.0,
+        "sampling_ci95_width": 9.0,
+        "spread_vs_interval_width": 0.3333333333333333,
+        "verdict": "STABLE"
+      },
+      "dwell_median_recession": {
+        "all_arms_inside_ci95": true,
+        "arm_max": 8.5,
+        "arm_min": 2.0,
+        "perturbation_spread": 6.5,
+        "sampling_ci95": [
+          1.0,
+          12.5
+        ],
+        "sampling_ci95_half_width": 9.5,
+        "sampling_ci95_width": 11.5,
+        "spread_vs_interval_width": 0.5652173913043478,
+        "verdict": "STABLE"
+      },
+      "dwell_median_recovery": {
+        "all_arms_inside_ci95": true,
+        "arm_max": 15.0,
+        "arm_min": 6.0,
+        "perturbation_spread": 9.0,
+        "sampling_ci95": [
+          5.0,
+          16.0
+        ],
+        "sampling_ci95_half_width": 7.0,
+        "sampling_ci95_width": 11.0,
+        "spread_vs_interval_width": 0.8181818181818182,
+        "verdict": "STABLE"
+      },
+      "dwell_median_stagflation": {
+        "all_arms_inside_ci95": true,
+        "arm_max": 9.0,
+        "arm_min": 4.0,
+        "perturbation_spread": 5.0,
+        "sampling_ci95": [
+          1.0,
+          10.5
+        ],
+        "sampling_ci95_half_width": 6.5,
+        "sampling_ci95_width": 9.5,
+        "spread_vs_interval_width": 0.5263157894736842,
+        "verdict": "STABLE"
+      }
+    }
+  },
+  "j_richer_identification": {
+    "anchors_richer": {
+      "clockwise_fraction": 0.609375,
+      "defined_months": 801,
+      "n_clockwise_transitions": 39,
+      "n_transitions": 64,
+      "per_quadrant": {
+        "expansion": {
+          "median_months": 6.0,
+          "months_in_quadrant": 225,
+          "n_completed_spells": 21,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            3,
+            3,
+            4,
+            4,
+            6,
+            7,
+            8,
+            10,
+            12,
+            13,
+            14,
+            19,
+            24,
+            40,
+            50
+          ]
+        },
+        "recession": {
+          "median_months": 5.0,
+          "months_in_quadrant": 76,
+          "n_completed_spells": 10,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            2,
+            4,
+            6,
+            6,
+            7,
+            14,
+            16
+          ]
+        },
+        "recovery": {
+          "median_months": 12.0,
+          "months_in_quadrant": 411,
+          "n_completed_spells": 20,
+          "sorted_spells_months": [
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            5,
+            6,
+            8,
+            11,
+            13,
+            14,
+            16,
+            16,
+            25,
+            26,
+            45,
+            47,
+            62,
+            100
+          ]
+        },
+        "stagflation": {
+          "median_months": 3.5,
+          "months_in_quadrant": 89,
+          "n_completed_spells": 12,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            5,
+            8,
+            10,
+            12,
+            21,
+            25
+          ]
+        }
+      }
+    },
+    "anchors_simple": {
+      "clockwise_fraction": 0.6029411764705882,
+      "defined_months": 801,
+      "n_clockwise_transitions": 41,
+      "n_transitions": 68,
+      "per_quadrant": {
+        "expansion": {
+          "median_months": 6.0,
+          "months_in_quadrant": 234,
+          "n_completed_spells": 21,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            3,
+            3,
+            3,
+            4,
+            4,
+            6,
+            7,
+            8,
+            11,
+            12,
+            13,
+            14,
+            19,
+            24,
+            40,
+            58
+          ]
+        },
+        "recession": {
+          "median_months": 3.0,
+          "months_in_quadrant": 109,
+          "n_completed_spells": 12,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            1,
+            2,
+            4,
+            6,
+            12,
+            13,
+            14,
+            24
+          ]
+        },
+        "recovery": {
+          "median_months": 9.0,
+          "months_in_quadrant": 378,
+          "n_completed_spells": 22,
+          "sorted_spells_months": [
+            2,
+            2,
+            3,
+            3,
+            3,
+            4,
+            5,
+            5,
+            5,
+            6,
+            6,
+            12,
+            13,
+            14,
+            16,
+            16,
+            18,
+            19,
+            25,
+            39,
+            62,
+            100
+          ]
+        },
+        "stagflation": {
+          "median_months": 4.0,
+          "months_in_quadrant": 80,
+          "n_completed_spells": 12,
+          "sorted_spells_months": [
+            1,
+            1,
+            1,
+            1,
+            2,
+            2,
+            6,
+            8,
+            10,
+            11,
+            16,
+            21
+          ]
+        }
+      }
+    },
+    "any_anchor_triggers": false,
+    "base_rate_calibration": {
+      "incumbent_contracting_share": 0.23595505617977527,
+      "note": "the threshold for each corroborating voter is the (1 - base rate) quantile of its own indicator over the panel's defined months. This is the same move b_transmission_lift already makes in its base_rate_matched arms, and it is made for the same reason: an indicator that calls more months bad scores differently for reasons that have nothing to do with the indicator. No threshold here was chosen by looking at what it does to an anchor",
+      "per_voter": {
+        "credit": {
+          "agreement_with_incumbent": 0.7365792759051186,
+          "realized_fire_share": 0.23220973782771537,
+          "threshold": 1.1899999999999995
+        },
+        "label": {
+          "agreement_with_incumbent": 1.0,
+          "realized_fire_share": 0.23595505617977527,
+          "threshold": null
+        },
+        "labor": {
+          "agreement_with_incumbent": 0.850187265917603,
+          "realized_fire_share": 0.23595505617977527,
+          "threshold": 0.42359550561797077
+        },
+        "stress": {
+          "agreement_with_incumbent": 0.7378277153558053,
+          "realized_fire_share": 0.23595505617977527,
+          "threshold": 0.10284956280216288
+        }
+      },
+      "vote_count_distribution": {
+        "0": 398,
+        "1": 211,
+        "2": 78,
+        "3": 70,
+        "4": 44
+      }
+    },
+    "combination_rule": "GROWTH AXIS -- four voters, each firing on the months its own indicator calls most contraction-like: (1) the incumbent dial, the month's regime_ruleset_v1 label being REC or CRI; (2) LABOR, the 12-month change in the unemployment rate; (3) CREDIT, the Baa-minus-Aaa spread; (4) MARKET STRESS, the equity drawdown. Voters 2-4 are calibrated to fire on the same share of panel months as voter 1 does, so no voter is louder merely by calling more months bad. Let c be the number of contracting votes: c >= 3 is contracting, c <= 1 is expanding, and c == 2 is settled by voter 1, the incumbent dial. INFLATION AXIS -- unchanged: hot is trailing 12-month CPI inflation above the panel's era threshold. SEASON -- (expanding << 1) | hot, read through ah.gen.spine.QUADRANTS, the same encoding panel_quadrant uses (asserted)",
+    "decision_rule": "the richer classifier replaces the simple one ONLY IF the disagreement changes an anchor by more than that anchor's own sampling noise. Otherwise simplicity wins.",
+    "decision_rule_operationalisation": "'more than that anchor's own sampling noise' is read as: the absolute change between the two classifiers' values exceeds the anchor's 95% interval half-width (section G's for a dwell median, section E's for the ordering fraction) -- the same half-width g_dwell_intervals already publishes. The stricter alternative reading, 'the richer value leaves the interval altogether', is published beside every verdict as richer_inside_sampling_ci95, so the owner can apply either without recomputing",
+    "decisions": {
+      "clockwise_fraction": {
+        "anchor": "clockwise_fraction",
+        "change": 0.006433823529411797,
+        "change_exceeds_half_width": false,
+        "richer": 0.609375,
+        "richer_inside_sampling_ci95": true,
+        "sampling_ci95": [
+          0.5185185185185185,
+          0.6842285508291275
+        ],
+        "sampling_ci95_half_width": 0.08442265795206971,
+        "simple": 0.6029411764705882,
+        "verdict": "SIMPLICITY WINS"
+      },
+      "dwell_median_expansion": {
+        "anchor": "dwell_median_expansion",
+        "change": 0.0,
+        "change_exceeds_half_width": false,
+        "richer": 6.0,
+        "richer_inside_sampling_ci95": true,
+        "sampling_ci95": [
+          3.0,
+          12.0
+        ],
+        "sampling_ci95_half_width": 6.0,
+        "simple": 6.0,
+        "verdict": "SIMPLICITY WINS"
+      },
+      "dwell_median_recession": {
+        "anchor": "dwell_median_recession",
+        "change": 2.0,
+        "change_exceeds_half_width": false,
+        "richer": 5.0,
+        "richer_inside_sampling_ci95": true,
+        "sampling_ci95": [
+          1.0,
+          12.5
+        ],
+        "sampling_ci95_half_width": 9.5,
+        "simple": 3.0,
+        "verdict": "SIMPLICITY WINS"
+      },
+      "dwell_median_recovery": {
+        "anchor": "dwell_median_recovery",
+        "change": 3.0,
+        "change_exceeds_half_width": false,
+        "richer": 12.0,
+        "richer_inside_sampling_ci95": true,
+        "sampling_ci95": [
+          5.0,
+          16.0
+        ],
+        "sampling_ci95_half_width": 7.0,
+        "simple": 9.0,
+        "verdict": "SIMPLICITY WINS"
+      },
+      "dwell_median_stagflation": {
+        "anchor": "dwell_median_stagflation",
+        "change": 0.5,
+        "change_exceeds_half_width": false,
+        "richer": 3.5,
+        "richer_inside_sampling_ci95": true,
+        "sampling_ci95": [
+          1.0,
+          10.5
+        ],
+        "sampling_ci95_half_width": 6.5,
+        "simple": 4.0,
+        "verdict": "SIMPLICITY WINS"
+      }
+    },
+    "disagreement": {
+      "by_decade": {
+        "1950s": {
+          "defined_months": 69,
+          "disagreeing_months": 1,
+          "share": 0.014492753623188406
+        },
+        "1960s": {
+          "defined_months": 120,
+          "disagreeing_months": 8,
+          "share": 0.06666666666666667
+        },
+        "1970s": {
+          "defined_months": 120,
+          "disagreeing_months": 10,
+          "share": 0.08333333333333333
+        },
+        "1980s": {
+          "defined_months": 120,
+          "disagreeing_months": 1,
+          "share": 0.008333333333333333
+        },
+        "1990s": {
+          "defined_months": 120,
+          "disagreeing_months": 0,
+          "share": 0.0
+        },
+        "2000s": {
+          "defined_months": 120,
+          "disagreeing_months": 4,
+          "share": 0.03333333333333333
+        },
+        "2010s": {
+          "defined_months": 120,
+          "disagreeing_months": 26,
+          "share": 0.21666666666666667
+        },
+        "2020s": {
+          "defined_months": 12,
+          "disagreeing_months": 2,
+          "share": 0.16666666666666666
+        }
+      },
+      "by_simple_season": {
+        "expansion": {
+          "disagreeing_months": 10,
+          "months_under_simple": 234,
+          "share": 0.042735042735042736
+        },
+        "recession": {
+          "disagreeing_months": 37,
+          "months_under_simple": 109,
+          "share": 0.3394495412844037
+        },
+        "recovery": {
+          "disagreeing_months": 4,
+          "months_under_simple": 378,
+          "share": 0.010582010582010581
+        },
+        "stagflation": {
+          "disagreeing_months": 1,
+          "months_under_simple": 80,
+          "share": 0.0125
+        }
+      },
+      "cluster_min_months": 3,
+      "clusters": [
+        {
+          "end": "1960-11",
+          "months": 7,
+          "richer_seasons": [
+            "recovery"
+          ],
+          "simple_seasons": [
+            "recession"
+          ],
+          "start": "1960-05"
+        },
+        {
+          "end": "1975-12",
+          "months": 9,
+          "richer_seasons": [
+            "stagflation"
+          ],
+          "simple_seasons": [
+            "expansion"
+          ],
+          "start": "1975-04"
+        },
+        {
+          "end": "2002-09",
+          "months": 4,
+          "richer_seasons": [
+            "recession"
+          ],
+          "simple_seasons": [
+            "recovery"
+          ],
+          "start": "2002-06"
+        },
+        {
+          "end": "2015-08",
+          "months": 6,
+          "richer_seasons": [
+            "recovery"
+          ],
+          "simple_seasons": [
+            "recession"
+          ],
+          "start": "2015-03"
+        },
+        {
+          "end": "2017-02",
+          "months": 11,
+          "richer_seasons": [
+            "recovery"
+          ],
+          "simple_seasons": [
+            "recession"
+          ],
+          "start": "2016-04"
+        },
+        {
+          "end": "2020-02",
+          "months": 11,
+          "richer_seasons": [
+            "recovery"
+          ],
+          "simple_seasons": [
+            "recession"
+          ],
+          "start": "2019-04"
+        }
+      ],
+      "confusion_simple_rows_richer_columns": {
+        "expansion": {
+          "expansion": 224,
+          "recession": 0,
+          "recovery": 0,
+          "stagflation": 10
+        },
+        "recession": {
+          "expansion": 0,
+          "recession": 72,
+          "recovery": 37,
+          "stagflation": 0
+        },
+        "recovery": {
+          "expansion": 0,
+          "recession": 4,
+          "recovery": 374,
+          "stagflation": 0
+        },
+        "stagflation": {
+          "expansion": 1,
+          "recession": 0,
+          "recovery": 0,
+          "stagflation": 79
+        }
+      },
+      "defined_months": 801,
+      "disagreeing_months": 52,
+      "fraction": 0.06491885143570537,
+      "months_in_clusters": 48,
+      "n_clusters": 6
+    },
+    "inflation_axis_note": "the three extra inputs the owner named -- credit conditions, labor direction and market stress -- are all cyclical or financial-conditions indicators; none of them is an inflation indicator, so all three enter the GROWTH axis. The richer classifier is therefore richer on one axis and identical on the other, and the disagreement map below is entirely a map of growth-direction disagreement",
+    "inputs_considered_and_rejected": {
+      "bis.credit_gap_us": "REJECTED as the credit input, and the reason is availability, not preference: the series is QUARTERLY and begins 1957-10, fifty-four months after the panel starts. Using it would mean forward-filling a quarterly series into a monthly classifier AND leaving a four-and-a-half-year hole at the panel's head. The monthly ig_spread carries the same dimension over the whole span, so it is used instead and this substitution is stated rather than made silently",
+      "hy_spread": "NOT used, because on this panel it carries no information ig_spread does not: fred.HY_OAS's licensed history begins 2023-08 and lies entirely inside the holdout, so every panel month of hy_spread is the spliced Baa-minus-Aaa proxy. ig_spread is the same quantity without the proxy flag",
+      "second_inflation_input": "NONE EXISTS over the whole panel. The only other monthly inflation series in the campaign vintage is fred.CPI_CORE, which begins 1957-01 -- forty-five months after the panel starts. A classifier whose rule changes part-way through the panel is worse than one with a single input, so the inflation axis keeps its single input and THIS IS THE DIMENSION THIS COMPARISON DOES NOT ENRICH. Nothing is substituted for it"
+    },
+    "inputs_used": {
+      "credit": "the panel's own 'ig_spread' factor -- Baa minus Aaa, in percentage points, monthly across the whole panel; a wider spread is contraction-like",
+      "labor": "fred.UNRATE (monthly, 1948-01 onward in this vintage), 12-month change in the unemployment rate, in percentage points; rising unemployment is contraction-like. The series starts more than five years before the panel does, so the lookback exists for every panel month and no month is dropped",
+      "stress": "the equity drawdown from the running peak of the panel's equity_mkt cumulative index, computed by ah.gen.bootstrap._drawdown_fraction -- the platform's OWN drawdown feature, the same one regime_ruleset_v1's crisis branch reads; a deeper drawdown is contraction-like"
+    },
+    "obligation": "owner-agreed 2026-08-17 (B): build a second classification of the SAME four seasons from more inputs, map where it disagrees, re-derive the affected anchors, and apply the pre-declared decision rule",
+    "recommended_sealed_grader": "the SIMPLE two-dial classifier",
+    "taxonomy": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ]
+  },
+  "judge_parameters": {
+    "contracting_labels": [
+      "REC",
+      "CRI",
+      "STAG"
+    ],
+    "crisis_only_labels": [
+      "CRI"
+    ],
+    "decade_months": 120,
+    "downturn_labels": [
+      "REC",
+      "CRI"
+    ],
+    "era_threshold_pp": 3.351323828920571,
+    "inflation_high_line_pp": 4.0,
+    "k_months": 12,
+    "note": "contracting_labels is grader_v2's contracting set (the owner's mapping fix); downturn_labels is T1's onset union, which is NOT re-anchored under the mapping fix and stays REC-or-CRI on both sides; crisis_only_labels drives T1's crisis-only DISCLOSURE, which is reported and never judged",
+    "rolling_window_months": 36
+  },
+  "k_pooled_decade_dwells": {
+    "decade_months": 120,
+    "per_grader": {
+      "grader_v2": {
+        "disjoint_windows": {
+          "n_windows": 6,
+          "per_quadrant": {
+            "expansion": {
+              "iqr_months": [
+                1.75,
+                7.25
+              ],
+              "max_months": 48.0,
+              "mean_months": 8.45,
+              "median_months": 4.0,
+              "median_quarters": 1.3333333333333333,
+              "n_spells": 20,
+              "spells_per_window": 3.3333333333333335
+            },
+            "recession": {
+              "iqr_months": [
+                1.0,
+                10.5
+              ],
+              "max_months": 14.0,
+              "mean_months": 5.5,
+              "median_months": 3.0,
+              "median_quarters": 1.0,
+              "n_spells": 10,
+              "spells_per_window": 1.6666666666666667
+            },
+            "recovery": {
+              "iqr_months": [
+                3.0,
+                13.5
+              ],
+              "max_months": 19.0,
+              "mean_months": 7.866666666666666,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 15,
+              "spells_per_window": 2.5
+            },
+            "stagflation": {
+              "iqr_months": [
+                1.0,
+                11.0
+              ],
+              "max_months": 16.0,
+              "mean_months": 5.5,
+              "median_months": 1.5,
+              "median_quarters": 0.5,
+              "n_spells": 12,
+              "spells_per_window": 2.0
+            }
+          },
+          "starts": [
+            0,
+            120,
+            240,
+            360,
+            480,
+            600
+          ]
+        },
+        "overlapping_windows": {
+          "n_windows": 694,
+          "per_quadrant": {
+            "expansion": {
+              "iqr_months": [
+                1.0,
+                8.0
+              ],
+              "max_months": 48.0,
+              "mean_months": 7.891662741403674,
+              "median_months": 4.0,
+              "median_quarters": 1.3333333333333333,
+              "n_spells": 2123,
+              "spells_per_window": 3.059077809798271
+            },
+            "recession": {
+              "iqr_months": [
+                1.0,
+                12.0
+              ],
+              "max_months": 24.0,
+              "mean_months": 6.219484882418813,
+              "median_months": 2.0,
+              "median_quarters": 0.6666666666666666,
+              "n_spells": 893,
+              "spells_per_window": 1.2867435158501441
+            },
+            "recovery": {
+              "iqr_months": [
+                3.0,
+                14.0
+              ],
+              "max_months": 100.0,
+              "mean_months": 11.03130644190247,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 1661,
+              "spells_per_window": 2.393371757925072
+            },
+            "stagflation": {
+              "iqr_months": [
+                1.0,
+                14.0
+              ],
+              "max_months": 24.0,
+              "mean_months": 7.814668769716088,
+              "median_months": 4.0,
+              "median_quarters": 1.3333333333333333,
+              "n_spells": 1268,
+              "spells_per_window": 1.8270893371757926
+            }
+          }
+        },
+        "panel_wide_comparison": {
+          "expansion": {
+            "decade_minus_panel_wide_months": 0.0,
+            "decade_pooled_median_months": 4.0,
+            "panel_wide_max_spell_months": 48.0,
+            "panel_wide_median_months": 4.0,
+            "panel_wide_n_completed_spells": 23
+          },
+          "recession": {
+            "decade_minus_panel_wide_months": -1.0,
+            "decade_pooled_median_months": 2.0,
+            "panel_wide_max_spell_months": 24.0,
+            "panel_wide_median_months": 3.0,
+            "panel_wide_n_completed_spells": 12
+          },
+          "recovery": {
+            "decade_minus_panel_wide_months": -4.0,
+            "decade_pooled_median_months": 5.0,
+            "panel_wide_max_spell_months": 100.0,
+            "panel_wide_median_months": 9.0,
+            "panel_wide_n_completed_spells": 22
+          },
+          "stagflation": {
+            "decade_minus_panel_wide_months": 1.0,
+            "decade_pooled_median_months": 4.0,
+            "panel_wide_max_spell_months": 24.0,
+            "panel_wide_median_months": 3.0,
+            "panel_wide_n_completed_spells": 14
+          }
+        }
+      },
+      "incumbent": {
+        "disjoint_windows": {
+          "n_windows": 6,
+          "per_quadrant": {
+            "expansion": {
+              "iqr_months": [
+                3.0,
+                11.75
+              ],
+              "max_months": 58.0,
+              "mean_months": 11.11111111111111,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 18,
+              "spells_per_window": 3.0
+            },
+            "recession": {
+              "iqr_months": [
+                1.0,
+                10.5
+              ],
+              "max_months": 14.0,
+              "mean_months": 5.5,
+              "median_months": 3.0,
+              "median_quarters": 1.0,
+              "n_spells": 10,
+              "spells_per_window": 1.6666666666666667
+            },
+            "recovery": {
+              "iqr_months": [
+                3.0,
+                13.5
+              ],
+              "max_months": 19.0,
+              "mean_months": 7.866666666666666,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 15,
+              "spells_per_window": 2.5
+            },
+            "stagflation": {
+              "iqr_months": [
+                1.0,
+                7.5
+              ],
+              "max_months": 11.0,
+              "mean_months": 4.3,
+              "median_months": 2.0,
+              "median_quarters": 0.6666666666666666,
+              "n_spells": 10,
+              "spells_per_window": 1.6666666666666667
+            }
+          },
+          "starts": [
+            0,
+            120,
+            240,
+            360,
+            480,
+            600
+          ]
+        },
+        "overlapping_windows": {
+          "n_windows": 694,
+          "per_quadrant": {
+            "expansion": {
+              "iqr_months": [
+                3.0,
+                13.0
+              ],
+              "max_months": 58.0,
+              "mean_months": 9.559105431309904,
+              "median_months": 6.0,
+              "median_quarters": 2.0,
+              "n_spells": 1878,
+              "spells_per_window": 2.7060518731988474
+            },
+            "recession": {
+              "iqr_months": [
+                1.0,
+                12.0
+              ],
+              "max_months": 24.0,
+              "mean_months": 6.219484882418813,
+              "median_months": 2.0,
+              "median_quarters": 0.6666666666666666,
+              "n_spells": 893,
+              "spells_per_window": 1.2867435158501441
+            },
+            "recovery": {
+              "iqr_months": [
+                3.0,
+                14.0
+              ],
+              "max_months": 100.0,
+              "mean_months": 11.03130644190247,
+              "median_months": 5.0,
+              "median_quarters": 1.6666666666666667,
+              "n_spells": 1661,
+              "spells_per_window": 2.393371757925072
+            },
+            "stagflation": {
+              "iqr_months": [
+                1.0,
+                11.0
+              ],
+              "max_months": 21.0,
+              "mean_months": 6.776958525345622,
+              "median_months": 6.0,
+              "median_quarters": 2.0,
+              "n_spells": 1085,
+              "spells_per_window": 1.563400576368876
+            }
+          }
+        },
+        "panel_wide_comparison": {
+          "expansion": {
+            "decade_minus_panel_wide_months": 0.0,
+            "decade_pooled_median_months": 6.0,
+            "panel_wide_max_spell_months": 58.0,
+            "panel_wide_median_months": 6.0,
+            "panel_wide_n_completed_spells": 21
+          },
+          "recession": {
+            "decade_minus_panel_wide_months": -1.0,
+            "decade_pooled_median_months": 2.0,
+            "panel_wide_max_spell_months": 24.0,
+            "panel_wide_median_months": 3.0,
+            "panel_wide_n_completed_spells": 12
+          },
+          "recovery": {
+            "decade_minus_panel_wide_months": -4.0,
+            "decade_pooled_median_months": 5.0,
+            "panel_wide_max_spell_months": 100.0,
+            "panel_wide_median_months": 9.0,
+            "panel_wide_n_completed_spells": 22
+          },
+          "stagflation": {
+            "decade_minus_panel_wide_months": 2.0,
+            "decade_pooled_median_months": 6.0,
+            "panel_wide_max_spell_months": 21.0,
+            "panel_wide_median_months": 4.0,
+            "panel_wide_n_completed_spells": 12
+          }
+        }
+      }
+    },
+    "primary": "overlapping_windows",
+    "rule": "pool the COMPLETED spells of every 120-month window (12-month trailing-inflation warm-up dropped, then a spell that opens or closes the window is dropped as censored) and take the median of the pooled multiset. The window rule, the warm-up and the censoring are identical to what the sealed judge applies to a generated decade -- that identity is the point of the section",
+    "usable_months_per_decade": 108,
+    "warmup_months": 12,
+    "weighting_disclosure": "overlapping windows weight the panel's months unevenly -- an interior month falls inside up to 109 windows, the first and last few years inside far fewer. disjoint_windows is the sensitivity check that uses every month exactly once; it rests on a handful of decades, so it is a check and not the anchor",
+    "why_pooling": "a single decade contributes ~1-3 completed spells per season, so a per-decade median measures sampling noise; pooling the whole batch into one distribution makes the median a statement about the engine. At the sealed 50 decades per premise the pooled recovery count is ~120 spells",
+    "why_the_same_window_on_both_sides": "a 120-month window drops the spell it opens with and the spell it closes with, and long spells are likelier to touch an edge, so a decade-measured median is systematically shorter than the same season's panel-wide median. Judging the generated side's decade-measured statistic against a panel-measured anchor is a definition mismatch of the same class the spine-02 review found in B6; the exam's remedy there (identical conditioning on both sides, T1) is applied here"
+  },
+  "l_grader_v2": {
+    "a1_a2_note": "A1 and A2 are untouched: both split months at the fixed 4% trailing CPI line, not at the era threshold or the growth dial, so no classifier change can reach them",
+    "contracting_labels": [
+      "REC",
+      "CRI",
+      "STAG"
+    ],
+    "full_ordering_v2": {
+      "bar_note": "the O1 bar is cut from ci95_lower_edge: a generated clockwise fraction at or above it is CONSISTENT WITH history, which is what the bar can honestly demand. one_se_below_point is the tighter alternative the exam's drafter named (anchor minus one standard error); both are published so the owner can see the cost of each",
+      "binomial_se": 0.05780088420918413,
+      "bootstrap_ci95": {
+        "block_12m": {
+          "clockwise_fraction_ci95": {
+            "hi": 0.685735607675906,
+            "lo": 0.509090909090909,
+            "median": 0.6
+          },
+          "draws_dropped_no_transition": 0,
+          "draws_used": 2000,
+          "mean_transitions_per_draw": 65.713
+        },
+        "block_24m": {
+          "clockwise_fraction_ci95": {
+            "hi": 0.6764705882352942,
+            "lo": 0.5180669104991394,
+            "median": 0.5949367088607594
+          },
+          "draws_dropped_no_transition": 0,
+          "draws_used": 2000,
+          "mean_transitions_per_draw": 68.492
+        },
+        "block_36m": {
+          "clockwise_fraction_ci95": {
+            "hi": 0.6716417910447762,
+            "lo": 0.5270092460881934,
+            "median": 0.5972222222222222
+          },
+          "draws_dropped_no_transition": 0,
+          "draws_used": 2000,
+          "mean_transitions_per_draw": 69.9375
+        }
+      },
+      "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the panel's month sequence; only genuine consecutive-month pairs are scored, so block joins cannot invent a transition; 2.5/97.5 percentile interval",
+      "bootstrap_seed": 20260817,
+      "ci95_lower_edge": 0.5180669104991394,
+      "ci95_upper_edge": 0.6764705882352942,
+      "clockwise_fraction": 0.5972222222222222,
+      "definition": "over consecutive panel rows where both quadrants are defined and DIFFER, the share of (previous, next) pairs in ah.gen.spine.CLOCKWISE (recovery -> expansion -> stagflation -> recession -> recovery). Quadrants from ah.gen.spine.panel_quadrant, era threshold from ah.gen.spine.fit_hazard; the transition rule is scripts/spine_pilot_seal._b4_clockwise_fraction's",
+      "iid_over_transitions_ci95": {
+        "hi": 0.7083333333333334,
+        "lo": 0.4861111111111111,
+        "median": 0.5972222222222222
+      },
+      "n_bootstrap": 2000,
+      "n_clockwise_transitions": 43,
+      "n_transitions": 72,
+      "one_se_below_point": 0.539421338013038,
+      "pilot_sealed_fraction": 0.6029411764705882,
+      "primary_block_months": 24,
+      "reproduces_pilot_seal_exactly": false,
+      "transition_lag1_autocorrelation": -0.37738037566215327,
+      "width_note": "the block interval is NARROWER than the i.i.d.-over-transitions one, which is unusual and has a measured cause: transition_lag1_autocorrelation is negative, i.e. a counter-clockwise move tends to be followed by a clockwise one (the clock backtracks and returns). Keeping consecutive transitions together therefore carries MORE information per transition than scrambling them. Both intervals are published; the bar is cut from the block one, on the same machinery as every other interval in this file"
+    },
+    "grader_module": "scripts/spine_v2_grader.py",
+    "incumbent_contracting_labels": [
+      "REC",
+      "CRI"
+    ],
+    "months_moved": 31,
+    "months_moved_share": 0.03870162297128589,
+    "ordering": {
+      "new_O1_bar": 0.5180669104991394,
+      "new_ci95": [
+        0.5180669104991394,
+        0.6764705882352942
+      ],
+      "new_clockwise_fraction": 0.5972222222222222,
+      "new_n_clockwise": 43,
+      "new_n_transitions": 72,
+      "old_O1_bar": 0.5185185185185185,
+      "old_ci95": [
+        0.5185185185185185,
+        0.6842285508291275
+      ],
+      "old_clockwise_fraction": 0.6029411764705882,
+      "old_n_clockwise": 41,
+      "old_n_transitions": 68,
+      "paired_bootstrap_note": "the two intervals are drawn from the SAME resampling tape (the same seed and the same index draws, since the draws depend only on the panel's length): the identical fake histories are scored under the two labellings, so the OLD and NEW intervals are paired and their difference is the labelling, not two different sets of random draws"
+    },
+    "panel_wide_anchors": {
+      "expansion": {
+        "new_months_in_quadrant": 203,
+        "new_n_completed_spells": 23,
+        "new_panel_wide_median_months": 4.0,
+        "new_sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          3,
+          3,
+          3,
+          4,
+          4,
+          6,
+          6,
+          6,
+          7,
+          8,
+          13,
+          14,
+          19,
+          24,
+          27,
+          48
+        ],
+        "old_months_in_quadrant": 234,
+        "old_n_completed_spells": 21,
+        "old_panel_wide_median_months": 6.0,
+        "unchanged": false
+      },
+      "recession": {
+        "new_months_in_quadrant": 109,
+        "new_n_completed_spells": 12,
+        "new_panel_wide_median_months": 3.0,
+        "new_sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          4,
+          6,
+          12,
+          13,
+          14,
+          24
+        ],
+        "old_months_in_quadrant": 109,
+        "old_n_completed_spells": 12,
+        "old_panel_wide_median_months": 3.0,
+        "unchanged": true
+      },
+      "recovery": {
+        "new_months_in_quadrant": 378,
+        "new_n_completed_spells": 22,
+        "new_panel_wide_median_months": 9.0,
+        "new_sorted_spells_months": [
+          2,
+          2,
+          3,
+          3,
+          3,
+          4,
+          5,
+          5,
+          5,
+          6,
+          6,
+          12,
+          13,
+          14,
+          16,
+          16,
+          18,
+          19,
+          25,
+          39,
+          62,
+          100
+        ],
+        "old_months_in_quadrant": 378,
+        "old_n_completed_spells": 22,
+        "old_panel_wide_median_months": 9.0,
+        "unchanged": true
+      },
+      "stagflation": {
+        "new_months_in_quadrant": 111,
+        "new_n_completed_spells": 14,
+        "new_panel_wide_median_months": 3.0,
+        "new_sorted_spells_months": [
+          1,
+          1,
+          1,
+          1,
+          1,
+          1,
+          2,
+          4,
+          10,
+          14,
+          14,
+          16,
+          21,
+          24
+        ],
+        "old_months_in_quadrant": 80,
+        "old_n_completed_spells": 12,
+        "old_panel_wide_median_months": 4.0,
+        "unchanged": false
+      }
+    },
+    "ruling": "owner, 2026-08-17: stagflation months sit on the NON-EXPANDING side for transition/ordering purposes, per the owner's own definition of the season -- growth stalling while inflation is high",
+    "stag_months_classifiable": 31,
+    "stag_months_in_panel": 31,
+    "t1_note": "T1 is NOT re-anchored. Its downturn definition is the REC-or-CRI union on both sides and its band was measured on that union; the ruling is about the clock's transition/ordering axis. A STAG month is therefore contracting for the clock and still not a downturn onset for T1. Declared as a limitation",
+    "transfers": {
+      "expansion -> stagflation": 31
+    }
+  },
+  "m_power_under_sealed_bars": {
+    "bars_judged": {
+      "A1_containment_pp": [
+        -5.053054679081145,
+        32.31605649965673
+      ],
+      "A2_correlation_margin": 0.13609378139729844,
+      "A2_share_high_floor": 0.8,
+      "A2_share_low_ceiling": null,
+      "A2_share_low_ceiling_dropped_value": 0.65,
+      "D_anchor_medians_months": {
+        "expansion": 4.0,
+        "recession": 2.0,
+        "recovery": 5.0,
+        "stagflation": 4.0
+      },
+      "D_median_bands_months": {
+        "expansion": [
+          1.0,
+          7.0
+        ],
+        "recession": [
+          0.0,
+          5.0
+        ],
+        "recovery": [
+          2.0,
+          8.0
+        ],
+        "stagflation": [
+          1.0,
+          7.0
+        ]
+      },
+      "D_statistic": "median of the completed spells POOLED over the whole batch",
+      "D_tolerance_months": 3.0,
+      "O1_clockwise_min": 0.5180669104991394,
+      "T1_lift_band": [
+        1.7752827491108736,
+        3.3473622102535145
+      ],
+      "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
+      "grader": "grader_v2",
+      "n_seeds": 50
+    },
+    "bars_unreachable_on_grid": [],
+    "decade_months": 120,
+    "distinct_decade_starts": 694,
+    "eligibility_note": "inflation-conditioned statistics start at decade month 13 (108 usable months, the decade's own trailing-inflation warm-up); T1 also needs a full 12-month lookahead (96 eligible months); A2(ii)'s rolling windows are computed inside the decade and start at end month 37 (84 windows); D1-D4 drop spells touching either edge of the usable window, the same completed-spell rule the anchors use",
+    "headline_bars": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "A1",
+      "A2"
+    ],
+    "limits_note": "three limits, all of which push the same way -- toward treating the recommended n as an upper bound. (1) The decades overlap (694 distinct starts), so this is a bootstrap whose large-n limit is the panel's own value rather than an independent truth. (2) It inherits history's full between-decade heterogeneity (the 1970s against the 1990s), plausibly wider than a well-behaved engine's. (3) Drawing decade STARTS uniformly weights panel months unevenly: an interior month enters up to 84 decades while the first and last few years of the panel enter far fewer, so a statistic whose extremes sit at the panel's ends shifts. That is why the decade-measured low-inflation share-of-windows-positive (0.62) sits above the panel-wide figure (0.54): the two most negatively-correlated low-inflation stretches, the 1950s-60s and the 2010s, are exactly the down-weighted ones",
+    "n_ensembles": 2000,
+    "per_bar": {
+      "A1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 40,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8295,
+        "power_by_n_seeds": {
+          "10": 0.726,
+          "100": 0.987,
+          "15": 0.767,
+          "150": 0.9955,
+          "20": 0.8295,
+          "200": 0.9995,
+          "25": 0.8555,
+          "30": 0.897,
+          "300": 1.0,
+          "40": 0.9205,
+          "400": 1.0,
+          "5": 0.628,
+          "50": 0.9355,
+          "500": 1.0,
+          "60": 0.953,
+          "80": 0.985
+        },
+        "true_engine_limit_passes": true
+      },
+      "A1_with_containment": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 40,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8295,
+        "power_by_n_seeds": {
+          "10": 0.726,
+          "100": 0.987,
+          "15": 0.767,
+          "150": 0.9955,
+          "20": 0.8295,
+          "200": 0.9995,
+          "25": 0.8555,
+          "30": 0.897,
+          "300": 1.0,
+          "40": 0.9205,
+          "400": 1.0,
+          "5": 0.628,
+          "50": 0.9355,
+          "500": 1.0,
+          "60": 0.953,
+          "80": 0.985
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.987,
+        "power_by_n_seeds": {
+          "10": 0.9305,
+          "100": 1.0,
+          "15": 0.978,
+          "150": 1.0,
+          "20": 0.987,
+          "200": 1.0,
+          "25": 0.9945,
+          "30": 0.9995,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.7925,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2i_level_positive": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 0.999,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.9775,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2i_margin": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.993,
+        "power_by_n_seeds": {
+          "10": 0.9625,
+          "100": 1.0,
+          "15": 0.991,
+          "150": 1.0,
+          "20": 0.993,
+          "200": 1.0,
+          "25": 0.9975,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.875,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2ii_share_high_floor": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.994,
+        "power_by_n_seeds": {
+          "10": 0.9665,
+          "100": 1.0,
+          "15": 0.9865,
+          "150": 1.0,
+          "20": 0.994,
+          "200": 1.0,
+          "25": 0.997,
+          "30": 0.9995,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.8935,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "A2ii_share_low_ceiling": {
+        "is_headline_bar": false,
+        "max_power_on_grid": 0.945,
+        "min_n_seeds_for_target": 400,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.6135,
+        "power_by_n_seeds": {
+          "10": 0.5515,
+          "100": 0.7475,
+          "15": 0.566,
+          "150": 0.7915,
+          "20": 0.6135,
+          "200": 0.829,
+          "25": 0.643,
+          "30": 0.642,
+          "300": 0.882,
+          "40": 0.675,
+          "400": 0.9135,
+          "5": 0.539,
+          "50": 0.689,
+          "500": 0.945,
+          "60": 0.687,
+          "80": 0.727
+        },
+        "true_engine_limit_passes": true
+      },
+      "D1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 15,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.934,
+        "power_by_n_seeds": {
+          "10": 0.868,
+          "100": 0.9995,
+          "15": 0.9085,
+          "150": 1.0,
+          "20": 0.934,
+          "200": 1.0,
+          "25": 0.9645,
+          "30": 0.9665,
+          "300": 1.0,
+          "40": 0.9865,
+          "400": 1.0,
+          "5": 0.7465,
+          "50": 0.993,
+          "500": 1.0,
+          "60": 0.997,
+          "80": 0.9995
+        },
+        "true_engine_limit_passes": true
+      },
+      "D2": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 50,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.8405,
+        "power_by_n_seeds": {
+          "10": 0.754,
+          "100": 0.9795,
+          "15": 0.81,
+          "150": 0.995,
+          "20": 0.8405,
+          "200": 0.9995,
+          "25": 0.879,
+          "30": 0.868,
+          "300": 1.0,
+          "40": 0.8955,
+          "400": 1.0,
+          "5": 0.6765,
+          "50": 0.9215,
+          "500": 1.0,
+          "60": 0.956,
+          "80": 0.962
+        },
+        "true_engine_limit_passes": true
+      },
+      "D3": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 25,
+        "pilot_n_seeds_sufficient": false,
+        "power_at_pilot_n_seeds": 0.894,
+        "power_by_n_seeds": {
+          "10": 0.819,
+          "100": 0.9995,
+          "15": 0.866,
+          "150": 1.0,
+          "20": 0.894,
+          "200": 1.0,
+          "25": 0.9345,
+          "30": 0.952,
+          "300": 1.0,
+          "40": 0.9745,
+          "400": 1.0,
+          "5": 0.728,
+          "50": 0.9865,
+          "500": 1.0,
+          "60": 0.9925,
+          "80": 0.9955
+        },
+        "true_engine_limit_passes": true
+      },
+      "D4": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 1.0,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.9995,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "O1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 1.0,
+        "power_by_n_seeds": {
+          "10": 0.9985,
+          "100": 1.0,
+          "15": 1.0,
+          "150": 1.0,
+          "20": 1.0,
+          "200": 1.0,
+          "25": 1.0,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.981,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      },
+      "T1": {
+        "is_headline_bar": true,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 5,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.9985,
+        "power_by_n_seeds": {
+          "10": 0.9825,
+          "100": 1.0,
+          "15": 0.996,
+          "150": 1.0,
+          "20": 0.9985,
+          "200": 1.0,
+          "25": 0.999,
+          "30": 1.0,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.916,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
+        },
+        "true_engine_limit_passes": true
+      }
+    },
+    "pilot_n_seeds": 20,
+    "power_seed": 20260820,
+    "recommended_n_seeds": 50,
+    "seed_grid": [
+      5,
+      10,
+      15,
+      20,
+      25,
+      30,
+      40,
+      50,
+      60,
+      80,
+      100,
+      150,
+      200,
+      300,
+      400,
+      500
+    ],
+    "target_pass_probability": 0.9,
+    "true_engine_limit_note": "each statistic as a true engine would produce it in the large-n limit -- every 120-month decade of the panel pooled once. Read each against bars_judged: where the limit sits outside a band, the bar cannot be cleared at ANY ensemble size, because the offset is between a panel-wide anchor and the same statistic measured on decades, not between history and an engine",
+    "true_engine_limit_statistics": {
+      "A1_spread_high_pp": 4.87195849895034,
+      "A1_spread_low_pp": 1.774167357438475,
+      "A2_correlation_difference": 0.2823955862757072,
+      "A2_correlation_high": 0.3012540330470492,
+      "A2_correlation_low": 0.01885844677134195,
+      "A2_share_positive_high": 0.9466666666666667,
+      "A2_share_positive_low": 0.6215859478119606,
+      "D1_median_months_recession": 2.0,
+      "D2_median_months_stagflation": 4.0,
+      "D3_median_months_recovery": 5.0,
+      "D4_median_months_expansion": 4.0,
+      "O1_clockwise_fraction": 0.6070191293869559,
+      "T1_lift": 2.4714235804089193
+    },
+    "true_engine_model": "each generated decade is a uniformly-drawn contiguous 120-month stretch of the panel, so the engine sits at history's point estimates WITH history's own month-to-month dependence; bars are judged on the pooled statistic over n such decades, POWER_N_ENSEMBLES times"
+  },
+  "panel": {
+    "factor_names": [
+      "cape_v",
+      "commodities",
+      "cpi",
+      "equity_mkt",
+      "equity_vol",
+      "funding_spread",
+      "fx_usd",
+      "hml",
+      "hqm_curve",
+      "hy_spread",
+      "ig_spread",
+      "mom",
+      "policy_rate",
+      "smb",
+      "ust_10y",
+      "ust_2y"
+    ],
+    "months": 813,
+    "ruleset_version": "regime_ruleset_v1",
+    "span": [
+      "1953-04",
+      "2020-12"
+    ],
+    "split_note": "campaign train+validation only (ah.splits: train 1871-01..2010-12, validation 2011-01..2020-12). The holdout (2021-01 onward) is not read",
+    "vintage_id": "2026-08-10.1"
+  },
+  "purpose": "Historical anchors measured BEFORE the decade generator's economic engine is rebuilt (spine v2, stage 1). Every number is reproducible by re-running scripts/spine_v2_anchors.py. Sections A-D are measurement only; sections E-H close the exam's four OPEN items and DO carry the two thresholds the exam cuts from them (O1's minimum and A2's margin), each stated as the lower edge of the historical interval beside it.",
+  "schema": "spine-v2-anchors-4",
+  "source_module_sha256": {
+    "src/ah/data/derive.py": "b763fb986f2611fb7c620872a29e1ac2485f158a5464023d1ec25a20cea3b182",
+    "src/ah/gen/bootstrap.py": "bc26222a402f6c6cf47f93c115bdad982d5805d14061210c24b1f6d4355b94c1",
+    "src/ah/gen/spine.py": "5e51946c3ab421f0c71cc57b5d4de03d02b79c404a94c5704438772c4ea1a111"
+  }
+}
