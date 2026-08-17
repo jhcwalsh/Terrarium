@@ -280,12 +280,10 @@ table), `app/src/styles.css`.
   rule: year k's commitment escalates with the plan's EXPECTED growth, so
   the programme keeps pace with a growing book instead of shrinking
   relative to it.
-- **The rate must have one source.** First locate an existing declared
-  expected-growth number (the CIO plan chart's forecast is flat/frozen, so
-  there may be none). If none exists, STOP and ask the owner for the
-  annual rate before implementing — do not invent one silently; it becomes
-  a declared display-policy constant next to its kin, applied as
-  `base * (1+g)^k` per window-year k.
+- **The rate: 6%/yr, owner-ruled 2026-08-16** ("go, expected growth 6%").
+  A declared constant next to its display-policy kin (e.g.
+  `EXPECTED_PLAN_GROWTH = 0.06`, single source, comment citing the ruling),
+  applied as `base * (1+g)^k` per window-year k.
 - The engine's pacing contract is untouched (`CommitmentPlan`'s per-year
   shape already carries a non-flat schedule without a contract change —
   its own docstring says so). The entered-plan path, validation, and
