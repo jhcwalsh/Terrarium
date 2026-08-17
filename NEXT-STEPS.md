@@ -57,6 +57,18 @@ the trainer on the plain stress compiler (memo Path A — unblocked, and the
 
 ## Standing owner questions
 
+- **Default plan vs edited book (app-open-02 branch review, I2)** — the
+  served default commitment plan is built from WORLD targets; a player who
+  lowers a private target ~21%+ would breach the commitment cap in later
+  (6%-escalated) plan years. Shipped remedy: client pre-flights the exact
+  server rule and blocks Play with a named fix. Open ruling: should the
+  default plan RESCALE to the book's own edited targets instead?
+- **Spine v2 exam rulings** (asked 2026-08-16 with measured numbers):
+  which tight-policy definition anchors the transmission bar (inverted
+  curve recommended); completed-vs-all spells for the dwell bar
+  (completed-only recommended); 4% vs 3% high-inflation line (4%
+  recommended, 3% sensitivity published). The exam seals after these.
+
 - **D-SP series (spine pilot, all proposed-never-taken):** D-SP-1 the
   severity table's sealed values (kept-for-pilot; its inflation condition
   duplicates the quadrant hot bit — revisit here); D-SP-2 the hazard's state
