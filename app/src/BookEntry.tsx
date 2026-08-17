@@ -64,6 +64,22 @@
  * Rebuilding counts as an edit like any other — it changes the book's
  * digest, so ranked eligibility is lost exactly as a hand-edited rung would
  * lose it; this file does not touch that machinery.
+ *
+ * Task 8 (owner-dictated 2026-08-16), "so they can move on easily": the
+ * screen was one long scroll; it becomes three TABS — Targets and bands /
+ * Historical vintages / Cashflow projections — with a single "Play" control
+ * at the top of the tab bar. Tabs are display-only (`role="tab"`/
+ * `role="tabpanel"`, `hidden` on the inactive panels): all three stay
+ * mounted, so typed input, the derived book and shape faults survive any tab
+ * round-trip, and a fault raised on a hidden tab still blocks Play. Play
+ * replaces the old bottom "Continue" button one-for-one — same gating (`!
+ * ready`), same `onReady(book, plan, isDefault)` call, same navigation
+ * consequence in the caller — there is no second, divergent commit control.
+ * The fault list moves with it, next to Play, and is rendered in exactly one
+ * place. This pass also drops the visible word "sleeve" from the screen
+ * ("Asset class" column head, "Private asset classes'" note) — aria-labels
+ * and the `liquid`/`private` contract keys are untouched, same judgment as
+ * app-open-01 delta 3.
  */
 
 import { useEffect, useMemo, useState } from "react";
@@ -93,6 +109,14 @@ type RungField = (typeof RUNG_FIELDS)[number];
 function deepClone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
 }
+
+/** task 8: the three tabs, in the owner's order — default is the first. */
+type TabId = "targets" | "vintages" | "cashflow";
+const TABS: { id: TabId; label: string }[] = [
+  { id: "targets", label: "Targets and bands" },
+  { id: "vintages", label: "Historical vintages" },
+  { id: "cashflow", label: "Cashflow projections" },
+];
 
 function rungField(rung: Rung, field: RungField): number {
   if (field === "vintage_year") return rung.identity.vintage_year;
@@ -307,6 +331,10 @@ export function BookEntry({
    * field on a single ladder's refusal. */
   const [ladderError, setLadderError] = useState<Record<string, string | null>>({});
   const [rebuilding, setRebuilding] = useState<string | null>(null);
+  /** task 8: display-only — which panel is showing. All three stay mounted
+   * regardless (see the file header), so this never gates what state exists,
+   * only what is visible. */
+  const [activeTab, setActiveTab] = useState<TabId>("targets");
 
   useEffect(() => {
     let cancelled = false;
@@ -515,18 +543,58 @@ export function BookEntry({
         actually holds — everything else stays on the plan.
       </p>
 
+      <div className="book-topbar">
+        <div className="book-tabs" role="tablist">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              role="tab"
+              id={`book-tab-${t.id}`}
+              aria-controls={`book-panel-${t.id}`}
+              aria-selected={activeTab === t.id}
+              className={`book-tab${activeTab === t.id ? " active" : ""}`}
+              onClick={() => setActiveTab(t.id)}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+        <div className="book-topbar-actions">
+          {shapeFaults.length > 0 && (
+            <p className="book-note error" data-testid="shape-faults">
+              {shapeFaults.join("; ")}
+            </p>
+          )}
+          <button
+            type="button"
+            className="book-play"
+            disabled={!ready}
+            onClick={() => onReady(book, plan, isDefault)}
+          >
+            Play
+          </button>
+        </div>
+      </div>
+
+      <div
+        role="tabpanel"
+        id="book-panel-targets"
+        aria-labelledby="book-tab-targets"
+        hidden={activeTab !== "targets"}
+      >
       <section className="setup book-liquid">
         <h2>Targets and bands</h2>
         <p className="book-note">
           <strong>Value</strong> is what you hold today. <strong>Target</strong> is your
           policy allocation, and it is what the commitment programme paces
           against. The <strong>band</strong> is optional and{" "}
-          <strong>reports only</strong> — nothing rebalances to it. Private sleeves'
-          value is the ladder below it, summed — edit it there, not here.
+          <strong>reports only</strong> — nothing rebalances to it. Private asset
+          classes' value is the ladder below it, summed — edit it there, not here.
         </p>
         <div className="policy-grid">
           <div className="policy-head">
-            <span>sleeve</span>
+            <span>Asset class</span>
             <span>value</span>
             <span>target</span>
             <span>policy wt</span>
@@ -584,7 +652,14 @@ export function BookEntry({
           </div>
         </div>
       </section>
+      </div>
 
+      <div
+        role="tabpanel"
+        id="book-panel-vintages"
+        aria-labelledby="book-tab-vintages"
+        hidden={activeTab !== "vintages"}
+      >
       {privateSleeves.map((sleeve) => (
         <section key={sleeve} className="book-ladder">
           <div className="book-ladder-head">
@@ -656,7 +731,14 @@ export function BookEntry({
           </div>
         </section>
       ))}
+      </div>
 
+      <div
+        role="tabpanel"
+        id="book-panel-cashflow"
+        aria-labelledby="book-tab-cashflow"
+        hidden={activeTab !== "cashflow"}
+      >
       <section className="book-plan">
         <div className="book-ladder-head">
           <h2>Commitment plan</h2>
@@ -697,6 +779,7 @@ export function BookEntry({
           </table>
         </div>
       </section>
+      </div>
 
       {/* app-open-01 item 1 (owner ruling 2026-08-16): every field on this
           screen is entered in points (the book totals 100), so the running
@@ -727,21 +810,12 @@ export function BookEntry({
         </div>
       </div>
 
-      {shapeFaults.length > 0 && (
-        <p className="book-note error" data-testid="shape-faults">
-          {shapeFaults.join("; ")}
-        </p>
-      )}
-
       <p className="book-note" data-testid="ranked-note">
         {isDefault
           ? "Ranked is available — this is the default book."
           : "Practice only — you have edited the book."}
       </p>
 
-      <button disabled={!ready} onClick={() => onReady(book, plan, isDefault)}>
-        Continue
-      </button>
       <button onClick={onCancel}>back</button>
     </main>
   );

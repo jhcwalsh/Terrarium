@@ -234,7 +234,7 @@ describe("BookEntry", () => {
     const equity = byLabel<HTMLInputElement>("equity");
     setValue(equity, "50");
     expect(byTestId("book-total").textContent).toContain("109");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
   });
 
   it("renders only the sleeves the world carries", async () => {
@@ -295,7 +295,7 @@ describe("BookEntry", () => {
     stubFetch();
     const onReady = vi.fn();
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
-    act(() => findButton(/continue/i).click());
+    act(() => findButton(/play/i).click());
     expect(onReady).toHaveBeenCalledTimes(1);
     expect(onReady.mock.calls[0][2]).toBe(true);
   });
@@ -340,7 +340,7 @@ describe("BookEntry", () => {
     setValue(byLabel<HTMLInputElement>("hy"), "-1");
     setValue(byLabel<HTMLInputElement>("bonds"), "18");
     expect(byTestId("book-total").textContent).toContain("100");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/negative/i);
   });
 
@@ -352,7 +352,7 @@ describe("BookEntry", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("pe rung 0 unfunded"), "3");
     expect(byTestId("book-total").textContent).toContain("100");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/paid_in \+ unfunded/);
   });
 
@@ -362,7 +362,7 @@ describe("BookEntry", () => {
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
-    expect(findButton(/continue/i).disabled).toBe(false);
+    expect(findButton(/play/i).disabled).toBe(false);
   });
 
   it("hands back isDefault=false once the book has been edited", async () => {
@@ -379,7 +379,7 @@ describe("BookEntry", () => {
     const bonds = byLabel<HTMLInputElement>("bonds");
     setValue(bonds, "11");
     expect(byTestId("book-total").textContent).toContain("100");
-    act(() => findButton(/continue/i).click());
+    act(() => findButton(/play/i).click());
     expect(onReady).toHaveBeenCalledTimes(1);
     expect(onReady.mock.calls[0][2]).toBe(false);
   });
@@ -425,7 +425,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     const onReady = vi.fn();
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
-    act(() => findButton(/continue/i).click());
+    act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][2]).toBe(true);
     const posted = onReady.mock.calls[0][0];
     expect(posted.targets).toEqual(DEFAULT_RESPONSE.book.targets);
@@ -452,13 +452,13 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity range lo"), "40");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "40");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/lo below hi/i);
     // and the other half: a WELL-FORMED band does not block, so this is not
     // "any band blocks" passing for the wrong reason.
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45");
     expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
-    expect(findButton(/continue/i).disabled).toBe(false);
+    expect(findButton(/play/i).disabled).toBe(false);
   });
 
   it("a band entered on one side only blocks the commit", async () => {
@@ -468,7 +468,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("pe range hi"), "");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/both lo and hi/i);
   });
 
@@ -479,7 +479,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     setValue(byLabel<HTMLInputElement>("equity range lo"), "30");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45");
     expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
-    act(() => findButton(/continue/i).click());
+    act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][0].ranges).toEqual({
       ...DEFAULT_RESPONSE.book.ranges,
       equity: [30, 45],
@@ -499,7 +499,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     setValue(byLabel<HTMLInputElement>("equity range lo"), "36.9");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45.1");
     expect(byTestId("ranked-note").textContent).toMatch(/ranked is available/i);
-    act(() => findButton(/continue/i).click());
+    act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][0].ranges).toEqual(DEFAULT_RESPONSE.book.ranges);
     expect(onReady.mock.calls[0][2]).toBe(true);
   });
@@ -515,7 +515,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     setValue(byLabel<HTMLInputElement>("equity range lo"), "");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "");
     expect(byTestId("ranked-note").textContent).toMatch(/practice only/i);
-    act(() => findButton(/continue/i).click());
+    act(() => findButton(/play/i).click());
     const { equity: _equity, ...rest } = DEFAULT_RESPONSE.book.ranges as Record<
       string,
       [number, number]
@@ -657,7 +657,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity target"), "45");
     expect(byTestId("book-total").textContent).toContain("100");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/targets do not total 100/i);
   });
 
@@ -668,7 +668,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity target"), "-1");
     setValue(byLabel<HTMLInputElement>("bonds target"), "54");
-    expect(findButton(/continue/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/target is negative/i);
     expect(byTestId("shape-faults").textContent).not.toMatch(/targets do not total 100/i);
   });
@@ -800,5 +800,112 @@ describe("BookEntry — rebuild a private ladder to a new value", () => {
     await flush();
     expect(host!.querySelector('[data-testid="ladder-error-pe"]')).toBeNull();
     expect(byTestId("value-pe").textContent).toBe("12.0");
+  });
+});
+
+/**
+ * Task 8 (owner-dictated 2026-08-16): the screen becomes three tabs — Targets
+ * and bands / Historical vintages / Cashflow projections — with a single
+ * "Play" control at the top replacing the old bottom "Continue" button. Tabs
+ * are display-only: all three panels stay mounted so typed state, the
+ * derived book and faults survive a tab round-trip, and a fault raised on a
+ * hidden tab still blocks Play and is still readable next to it.
+ */
+describe("BookEntry — tabs and Play (task 8)", () => {
+  function tab(label: RegExp): HTMLButtonElement {
+    const btn = [...host!.querySelectorAll('[role="tab"]')].find((b) =>
+      label.test(b.textContent ?? ""),
+    );
+    if (!btn) throw new Error(`no tab matching ${label}`);
+    return btn as HTMLButtonElement;
+  }
+
+  function panelFor(label: RegExp): HTMLElement {
+    const controls = tab(label).getAttribute("aria-controls");
+    if (!controls) throw new Error("tab has no aria-controls");
+    const panel = host!.querySelector<HTMLElement>(`#${controls}`);
+    if (!panel) throw new Error(`no panel #${controls}`);
+    return panel;
+  }
+
+  it("defaults to Targets and bands; the other two panels are hidden", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    expect(tab(/targets and bands/i).getAttribute("aria-selected")).toBe("true");
+    expect(panelFor(/targets and bands/i).hidden).toBe(false);
+    expect(panelFor(/historical vintages/i).hidden).toBe(true);
+    expect(panelFor(/cashflow projections/i).hidden).toBe(true);
+    // and the asset-class table itself is the thing shown
+    expect(host!.querySelector(".policy-grid")).not.toBeNull();
+  });
+
+  it("switching to Historical vintages shows the ladders and hides the others; typed edits survive the round-trip", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rung 0 nav_true"), "25");
+    setValue(byLabel<HTMLInputElement>("equity range lo"), "30");
+    act(() => tab(/historical vintages/i).click());
+    expect(tab(/historical vintages/i).getAttribute("aria-selected")).toBe("true");
+    expect(panelFor(/historical vintages/i).hidden).toBe(false);
+    expect(panelFor(/targets and bands/i).hidden).toBe(true);
+    expect(panelFor(/cashflow projections/i).hidden).toBe(true);
+    expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("25");
+    // and back — the edits made while another tab was showing survive too
+    act(() => tab(/targets and bands/i).click());
+    expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("25");
+    expect(byLabel<HTMLInputElement>("equity range lo").value).toBe("30");
+  });
+
+  it("switching to Cashflow projections shows the commitment plan and hides the others", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    act(() => tab(/cashflow projections/i).click());
+    expect(panelFor(/cashflow projections/i).hidden).toBe(false);
+    expect(panelFor(/targets and bands/i).hidden).toBe(true);
+    expect(panelFor(/historical vintages/i).hidden).toBe(true);
+    expect(host!.querySelector('[aria-label="pe plan year 0"]')).not.toBeNull();
+  });
+
+  it("a fault raised on the hidden vintages tab still blocks Play while Targets is shown, and reads next to Play", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    act(() => tab(/historical vintages/i).click());
+    setValue(byLabel<HTMLInputElement>("pe rung 0 unfunded"), "3");
+    act(() => tab(/targets and bands/i).click());
+    expect(panelFor(/targets and bands/i).hidden).toBe(false);
+    const play = findButton(/play/i);
+    expect(play.disabled).toBe(true);
+    const faults = byTestId("shape-faults");
+    expect(faults.textContent).toMatch(/paid_in \+ unfunded/);
+    // "adjacent to the top bar" — the fault text and Play share one container
+    expect(play.parentElement).toBe(faults.parentElement);
+  });
+
+  it("there is exactly one commit control now, and it is not named Continue", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const buttons = [...host!.querySelectorAll("button")];
+    expect(buttons.some((b) => /^continue$/i.test((b.textContent ?? "").trim()))).toBe(
+      false,
+    );
+    expect(buttons.filter((b) => /^play$/i.test((b.textContent ?? "").trim())).length).toBe(
+      1,
+    );
+  });
+
+  it("renders the column head as Asset class, not sleeve", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const head = host!.querySelector(".policy-head")!;
+    expect(head.textContent).toMatch(/Asset class/);
+    expect(head.textContent ?? "").not.toMatch(/\bsleeve\b/i);
+  });
+
+  it("renames the private-value note to Private asset classes", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const note = host!.querySelector(".book-liquid .book-note")!;
+    expect(note.textContent).toMatch(/Private asset classes' value/);
+    expect(note.textContent ?? "").not.toMatch(/Private sleeves'/);
   });
 });

@@ -1577,6 +1577,69 @@ button.commit {
   flex-direction: column;
 }
 
+/* -- task 8: the tab bar + Play, sitting under the h1/tagline -------------- */
+.book-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+  margin: 1.1rem 0 1.3rem;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--hair);
+}
+
+.book-tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.book-tab {
+  appearance: none;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  color: var(--dim);
+  font-size: 13px;
+  letter-spacing: 0.03em;
+  padding: 8px 4px;
+  margin-bottom: -9px;
+  cursor: pointer;
+}
+
+.book-tab + .book-tab {
+  margin-left: 14px;
+}
+
+/* deliberately no separate :hover rule here: the base `button:hover` rule
+   (jade) already wins on specificity and reads fine against the underline
+   treatment below — one hover language for every button on the screen. */
+.book-tab.active {
+  color: var(--ice);
+  border-bottom-color: var(--clay);
+}
+
+.book-topbar-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+/* the fault list rendered next to Play — this screen's only shape-fault
+   surface (task 8: never two divergent renderings, one list, one place). */
+.book-topbar-actions .book-note.error {
+  margin: 0;
+  max-width: 420px;
+}
+
+.book-play {
+  font-weight: 600;
+  padding: 0.4rem 1.1rem;
+  border-color: var(--clay);
+}
+
 /* -- su-app-07: values, policy targets and reporting bands side by side ---- */
 .policy-grid {
   display: grid;
