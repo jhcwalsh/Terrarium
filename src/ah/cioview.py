@@ -72,7 +72,11 @@ CLASS_LABEL: dict[str, str] = {
     "re": "Real estate",
     "cash": "Cash",
 }
-#: Band half-widths in points, a declared display-policy input (O-5 kin).
+#: Band half-widths in points, the NO-BOOK fallback (app-open-02 task 2):
+#: display policy for a session with no opening book at all, or a book whose
+#: ``ranges`` is silent on a given sleeve. A book that DOES declare a range
+#: for a sleeve always wins — its ``lo``/``hi`` travel straight through to
+#: ``bandLoPct``/``bandHiPct`` instead (``_allocation`` below).
 BAND_PCT: dict[str, float] = {
     "equity": 5.0,
     "bonds": 3.0,
@@ -373,6 +377,7 @@ def build_cio_view(
             # come from the reported tape, listed marks from the true tape.
             {**frozen.returns, **frozen.reported} if plane == "reported" else frozen.returns,
             pre.market_paths if pre is not None else None,
+            opening_book.ranges if opening_book is not None else None,
         ),
         "performance": {
             "periods": list(PERIODS),
@@ -402,6 +407,7 @@ def _allocation(
     n_q: int,
     tape: Mapping[str, np.ndarray],
     pre_market_paths: Mapping[str, Sequence[float]] | None = None,
+    book_ranges: Mapping[str, tuple[float, float]] | None = None,
 ) -> dict[str, Any]:
     """``cash_target`` is the policy cash the targets are normalised against —
     the entered book's own ``cash`` when there is one, else ``START_CASH``
@@ -412,7 +418,17 @@ def _allocation(
     ``n_q == 0`` (app-open-01, cio-05: the month-0 CIO view) has no closed
     quarter to read — ``active.quarters[-1]`` would silently be the FURTHEST
     forecast quarter, not "now". Reads ``active.opening`` instead, which is
-    exactly what "now" means before anything has run."""
+    exactly what "now" means before anything has run.
+
+    ``book_ranges`` (app-open-02 task 2) is ``OpeningBook.ranges`` — absolute
+    allocation POINTS on the SAME scale as ``targets``, so a named sleeve's
+    ``lo``/``hi`` converts to percent exactly like ``targetPct`` does
+    (``points / target_total * 100``), not as a symmetric half-width. A
+    sleeve the book is silent on (``book_ranges`` is ``None``, or carries no
+    entry for this sleeve) falls back to the OLD shape: ``BAND_PCT[cid]``
+    half-width around this class's own ``targetPct``. Cash never carries a
+    band either way — it has no target to band around (BookEntry says so
+    on-screen)."""
     target_total = sum(targets.values()) + cash_target
     if n_q > 0:
         last = active.quarters[n_q - 1]
@@ -433,18 +449,37 @@ def _allocation(
             return private[cid]
         return liquid_now[cid]
 
+    def band_of(cid: str, target_pct: float) -> tuple[float | None, float | None]:
+        # Cash carries no target band at all — no BookEntry input to fall
+        # back to either (su-app-07 Ruling G kin: the denominator is
+        # meaningful for cash, a reporting band is not).
+        if cid == "cash":
+            return None, None
+        book_band = (book_ranges or {}).get(cid)
+        if book_band is not None:
+            lo_points, hi_points = book_band
+            return (
+                round(lo_points / target_total * 100.0, 4),
+                round(hi_points / target_total * 100.0, 4),
+            )
+        half = BAND_PCT[cid]
+        return round(target_pct - half, 4), round(target_pct + half, 4)
+
     ids = [*targets.keys(), "cash"]
     ordered = [cid for gid, _ in GOALS for cid in ids if GOAL_OF[cid] == gid]
     classes = []
     for cid in ordered:
         points = cash_target if cid == "cash" else targets[cid]
+        target_pct = round(points / target_total * 100.0, 4)
+        lo, hi = band_of(cid, target_pct)
         classes.append(
             {
                 "id": cid,
                 "label": CLASS_LABEL[cid],
                 "goalId": GOAL_OF[cid],
-                "targetPct": round(points / target_total * 100.0, 4),
-                "bandPct": BAND_PCT[cid],
+                "targetPct": target_pct,
+                "bandLoPct": lo,
+                "bandHiPct": hi,
                 "currentPct": (round(value_of(cid) / total * 100.0, 4) if total > 0 else None),
                 "value": round(value_of(cid), 4),
                 "returns": _class_returns(tape, cid, n_q, pre_market_paths),
@@ -827,8 +862,14 @@ def validate_cio_view(v: dict[str, Any]) -> list[str]:
             e.append(f"class {c['id']} references unknown goal {c['goalId']}")
         if c.get("returns") is not None and len(c["returns"]) != len(periods):
             e.append(f"class {c['id']} has {len(c['returns'])} returns, expected {len(periods)}")
-        if c["bandPct"] < 0:
-            e.append(f"class {c['id']} has a negative band")
+        lo, hi = c.get("bandLoPct"), c.get("bandHiPct")
+        if c["id"] == "cash":
+            if lo is not None or hi is not None:
+                e.append(f"class {c['id']} carries a band but cash has none")
+        elif lo is None or hi is None:
+            e.append(f"class {c['id']} is missing bandLoPct/bandHiPct")
+        elif not (0.0 <= lo < hi <= 100.0):
+            e.append(f"class {c['id']} band [{lo}, {hi}] must satisfy 0 <= lo < hi <= 100")
 
     ap = alloc.get("alertPolicy")
     wf = ap.get("watchFraction") if ap else None

@@ -11,6 +11,7 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import CioDashboard, {
+  alertLevel,
   planWindowLabel,
   planWindowMonths,
   planWindowSlice,
@@ -518,5 +519,72 @@ describe("CioDashboard", () => {
         false,
       );
     });
+  });
+});
+
+describe("alertLevel — app-open-02 task 2's asymmetric [lo, hi] port", () => {
+  const policy = { watchFraction: 0.75 };
+
+  it("serve.py's own worked example: lo=10, hi=20, target=30 (outside its own band), weight 15.0 is NOT watch", () => {
+    // The old symmetric-band rule inverted on this exact shape (picked the
+    // wrong edge to measure room against once the target sat outside the
+    // band at all) — this is the probe serve.py's _alert_level docstring
+    // records finding it backwards on. weight=15.0 sits mid-band, nowhere
+    // near either edge, so it must read "ok".
+    expect(alertLevel(15.0, 30, 10, 20, policy, undefined)).toBe("ok");
+  });
+
+  it("a weight exactly on the edge the target is approaching (hi=20) is watch, not ok", () => {
+    // Same lo/hi/target as the worked example: clamped target t = hi = 20
+    // (30 clamped into [10, 20]), so the upper watch zone collapses to the
+    // edge itself (serve.py docstring's t == hi degenerate case) and 20.0
+    // — sitting exactly on it — is watch.
+    expect(alertLevel(20.0, 30, 10, 20, policy, undefined)).toBe("watch");
+  });
+
+  it("breach is unaffected by target position — outside [lo, hi] is always breach", () => {
+    expect(alertLevel(21.0, 30, 10, 20, policy, undefined)).toBe("breach");
+    expect(alertLevel(9.0, 30, 10, 20, policy, undefined)).toBe("breach");
+  });
+
+  it("an ordinary in-band case (target inside its own band) matches the old symmetric shape", () => {
+    // lo=95, hi=105 around a target of 100 (a +/-5 band): 25% watch fraction
+    // means the outer 1.25 points on each side are amber, same numbers the
+    // old |dev| >= watchFraction * band rule produced.
+    expect(alertLevel(100.0, 100, 95, 105, policy, undefined)).toBe("ok");
+    expect(alertLevel(103.9, 100, 95, 105, policy, undefined)).toBe("watch");
+    expect(alertLevel(104.5, 100, 95, 105, policy, undefined)).toBe("watch");
+    expect(alertLevel(106.0, 100, 95, 105, policy, undefined)).toBe("breach");
+  });
+
+  it("the served alert word wins over the computed rule, unchanged precedence", () => {
+    expect(alertLevel(15.0, 30, 10, 20, policy, "breach")).toBe("breach");
+  });
+
+  it("no watchFraction on the policy: only breach can fire, never watch", () => {
+    expect(alertLevel(20.0, 30, 10, 20, undefined, undefined)).toBe("ok");
+  });
+
+  it("a degenerate lo >= hi band is treated as no band at all (ok)", () => {
+    expect(alertLevel(15.0, 15, 20, 20, policy, undefined)).toBe("ok");
+  });
+});
+
+describe("CioDashboard — allocation table Band column (app-open-02 task 2)", () => {
+  it("renders the class's own lo-hi band with an en dash, one decimal each", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    // the reported fixture's equity class: bandLoPct 28.0, bandHiPct 38.0
+    expect(host!.textContent).toContain("28.0–38.0");
+  });
+
+  it("renders an em dash for cash, which carries no band", () => {
+    render(<CioDashboard view={view} onPlaneChange={() => {}} />);
+    const rows = [...host!.querySelectorAll("tr")];
+    const cashRow = rows.find((r) => (r.textContent ?? "").includes("Cash"));
+    expect(cashRow).toBeTruthy();
+    // Band column is the 6th <td> in a class row (Asset class, Weight v
+    // target bar, !, Wt, Tgt, Band, Dev, ...periods) — cell index 5.
+    const cells = [...cashRow!.querySelectorAll("td")];
+    expect(cells[5]?.textContent).toBe("—");
   });
 });

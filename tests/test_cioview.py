@@ -8,7 +8,7 @@ from typing import Any
 
 import pytest
 
-from ah.cioview import _frozen_paths, build_cio_view, validate_cio_view
+from ah.cioview import BAND_PCT, _frozen_paths, build_cio_view, validate_cio_view
 from ah.core.engine import run_path
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
@@ -127,7 +127,8 @@ def _minimal_view() -> dict[str, Any]:
                     "label": "Equity",
                     "goalId": "growth",
                     "targetPct": 100.0,
-                    "bandPct": 5.0,
+                    "bandLoPct": 95.0,
+                    "bandHiPct": 100.0,
                     "currentPct": 100.0,
                     "value": 100.0,
                     "returns": [1.0],
@@ -195,6 +196,31 @@ def test_validator_catches_plane_not_available():
     v["meta"]["plane"] = "true"
     v["meta"]["planesAvailable"] = ["reported"]
     assert any("planesAvailable" in e for e in validate_cio_view(v))
+
+
+def test_validator_rejects_lo_hi_out_of_order():
+    v = _minimal_view()
+    v["allocation"]["classes"][0]["bandLoPct"] = 50.0
+    v["allocation"]["classes"][0]["bandHiPct"] = 50.0
+    errors = validate_cio_view(v)
+    assert any("band" in e for e in errors)
+
+
+def test_validator_rejects_lo_greater_than_hi():
+    v = _minimal_view()
+    v["allocation"]["classes"][0]["bandLoPct"] = 60.0
+    v["allocation"]["classes"][0]["bandHiPct"] = 40.0
+    errors = validate_cio_view(v)
+    assert any("band" in e for e in errors)
+
+
+def test_validator_rejects_a_band_on_a_cash_class():
+    v = _minimal_view()
+    v["allocation"]["classes"][0]["id"] = "cash"
+    v["allocation"]["classes"][0]["bandLoPct"] = 0.0
+    v["allocation"]["classes"][0]["bandHiPct"] = 10.0
+    errors = validate_cio_view(v)
+    assert any("cash" in e and "band" in e for e in errors)
 
 
 def _view(
@@ -281,6 +307,75 @@ def test_a_book_with_no_entered_targets_still_targets_its_own_values():
     classes = {c["id"]: c for c in _view(book=untargeted)["allocation"]["classes"]}
     assert classes["equity"]["targetPct"] == pytest.approx(29.0)
     assert classes["bonds"]["targetPct"] == pytest.approx(16.0)
+
+
+def test_bands_follow_the_books_own_asymmetric_range():
+    """app-open-02 task 2: the book's own ``ranges`` (absolute allocation
+    POINTS, same scale as ``targets``) travel straight through to
+    ``bandLoPct``/``bandHiPct``, converted exactly like ``targetPct`` — a
+    ``points / target_total * 100`` scaling, NOT a symmetric half-width. An
+    entered range need not be centred on the target at all (serve.py's
+    ``_alert_level`` docstring: the target may legally sit outside its own
+    band), so an asymmetric range must show up asymmetric on the wire."""
+    book = default_opening_book(START_TARGETS)
+    custom = book.model_copy(deep=True)
+    # deliberately asymmetric around the 33.0 target, and NOT containing it
+    # on one side check below (lo=20 hi=45 still contains 33 — asymmetry is
+    # the point here, not out-of-band; that shape is exercised in serve.py's
+    # own tests for _alert_level).
+    custom.ranges = {**(book.ranges or {}), "equity": (20.0, 45.0)}
+
+    v = _view(book=custom)
+    equity = next(c for c in v["allocation"]["classes"] if c["id"] == "equity")
+    # target_total is exactly 100.0 for the default book (98 points of
+    # targets + 2.0 cash), so points convert to percent 1:1 here.
+    assert equity["bandLoPct"] == pytest.approx(20.0)
+    assert equity["bandHiPct"] == pytest.approx(45.0)
+    assert validate_cio_view(v) == []
+
+
+def test_bands_fall_back_to_band_pct_around_target_with_no_book():
+    """No opening book at all -> the OLD behaviour shape: a symmetric
+    half-width from the module-level ``BAND_PCT`` dict, around whatever
+    ``targetPct`` this view computed."""
+    v = _view()
+    classes = {c["id"]: c for c in v["allocation"]["classes"]}
+    for cid, half in BAND_PCT.items():
+        if cid == "cash":
+            continue
+        c = classes[cid]
+        assert c["bandLoPct"] == pytest.approx(c["targetPct"] - half)
+        assert c["bandHiPct"] == pytest.approx(c["targetPct"] + half)
+
+
+def test_bands_fall_back_when_the_book_has_no_range_for_a_named_sleeve():
+    """A book can carry ``ranges`` for some sleeves and not others (or none
+    at all) — a sleeve the book is silent on still gets the BAND_PCT
+    fallback around its own (book-derived) targetPct, not a missing field."""
+    book = default_opening_book(START_TARGETS)
+    partial = book.model_copy(deep=True)
+    partial.ranges = {"equity": (20.0, 45.0)}  # every other sleeve is silent
+
+    v = _view(book=partial)
+    classes = {c["id"]: c for c in v["allocation"]["classes"]}
+    assert classes["equity"]["bandLoPct"] == pytest.approx(20.0)
+    assert classes["equity"]["bandHiPct"] == pytest.approx(45.0)
+    bonds = classes["bonds"]
+    assert bonds["bandLoPct"] == pytest.approx(bonds["targetPct"] - BAND_PCT["bonds"])
+    assert bonds["bandHiPct"] == pytest.approx(bonds["targetPct"] + BAND_PCT["bonds"])
+    assert validate_cio_view(v) == []
+
+
+def test_cash_band_is_always_none():
+    """Cash carries no target band (BookEntry says so on-screen) — true with
+    no book, with a book carrying no cash range (the book model has no
+    concept of one), and regardless of the BAND_PCT fallback that used to
+    apply to cash too."""
+    for book in (None, default_opening_book(START_TARGETS)):
+        v = _view(book=book)
+        cash = next(c for c in v["allocation"]["classes"] if c["id"] == "cash")
+        assert cash["bandLoPct"] is None
+        assert cash["bandHiPct"] is None
 
 
 def test_view_validates_clean_on_both_planes():
