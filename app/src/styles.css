@@ -509,6 +509,34 @@ button.t {
   color: var(--clay);
 }
 
+/* app-open-02: the same band cells, compact, inside an OPEN decision window —
+   above the four action cards, so the levers are chosen with the bands in
+   view. Smaller cells than the between-window panel: this strip shares its
+   room with the actions and (on a plan-carrying session) the commit lever
+   below it. */
+.band-strip {
+  margin: 0 0 11px;
+  gap: 6px 8px;
+}
+
+.band-strip .band-cell {
+  flex-basis: 130px;
+  padding: 4px 8px;
+}
+
+.band-strip .band-name {
+  font-size: 12.5px;
+}
+
+.band-strip .band-weight {
+  font-size: 15px;
+}
+
+.band-strip .band-range,
+.band-strip .band-badge {
+  font-size: 10px;
+}
+
 /* main grid: asset classes left, the wire (and the decision) right */
 .vgrid {
   flex: 1;

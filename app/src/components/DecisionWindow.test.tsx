@@ -10,6 +10,8 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { DecisionWindow } from "./DecisionWindow";
+import type { AlertLevel } from "../lib/cioView";
+import type { BandSleeve } from "../lib/session";
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
@@ -213,5 +215,157 @@ describe("DecisionWindow (E1)", () => {
     expect(host!.querySelectorAll('input[type="radio"]').length).toBe(0);
     expect(host!.querySelectorAll(".action-card.inert").length).toBe(4);
     expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * app-open-02: the band strip that opens above the four action cards while a
+ * decision window is OPEN, so "which band am I about to fix or break" is
+ * visible at the moment of the decision — not only between windows
+ * (BandPanel, Play.tsx). Built on the same `BandSleeve` shape and the same
+ * discipline: the served `alert` word is printed verbatim, never
+ * re-derived (DN-3 W5).
+ */
+function bandSleeve(
+  sleeve: string,
+  opts: {
+    target?: number;
+    lo?: number;
+    hi?: number;
+    weight: number;
+    alert: AlertLevel;
+  },
+): BandSleeve {
+  return {
+    sleeve,
+    target: opts.target ?? 35,
+    lo: opts.lo ?? 30,
+    hi: opts.hi ?? 40,
+    true: { weight: opts.weight, alert: opts.alert },
+    reported: { weight: opts.weight, alert: opts.alert },
+  };
+}
+
+describe("DecisionWindow band strip (app-open-02)", () => {
+  it("open + report present: rows in server order, alert words verbatim, ranges as lo–hi", () => {
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        basis="reported"
+        bandReport={{
+          watch_fraction: 0.5,
+          sleeves: [
+            bandSleeve("re", { lo: 5, hi: 15, weight: 8, alert: "watch" }),
+            bandSleeve("equity", { lo: 30, hi: 40, weight: 44.4, alert: "breach" }),
+          ],
+        }}
+      />,
+    );
+    const strip = host!.querySelector(".band-strip")!;
+    expect(strip).not.toBeNull();
+    const rows = [...strip.querySelectorAll(".band-cell")];
+    // SERVER order: re, then equity — not alphabetical, not sorted by severity
+    expect(rows.map((r) => r.getAttribute("data-sleeve"))).toEqual(["re", "equity"]);
+    expect(rows[0].querySelector(".band-badge")!.textContent).toBe("watch");
+    expect(rows[1].querySelector(".band-badge")!.textContent).toBe("breach");
+    expect(rows[0].querySelector(".band-weight")!.textContent).toBe("8.0");
+    expect(rows[1].querySelector(".band-weight")!.textContent).toBe("44.4");
+    expect(rows[0].textContent).toContain("5.0–15.0");
+    expect(rows[1].textContent).toContain("30.0–40.0");
+    // display names, present (ASSET_LABELS lookup, same as BandPanel)
+    expect(rows[0].querySelector(".band-name")!.textContent).toBe("Real estate");
+    expect(rows[1].querySelector(".band-name")!.textContent).toBe("Equities");
+    // the strip sits ABOVE the action cards
+    const container = host!.querySelector(".decision-window")!;
+    const children = [...container.children];
+    expect(children.indexOf(strip)).toBeLessThan(
+      children.findIndex((el) => el.className.includes("actions")),
+    );
+  });
+
+  it("open=false: no strip, even with a report present", () => {
+    render(
+      <DecisionWindow
+        open={false}
+        month={23}
+        year={2}
+        nextYear={2}
+        onCommit={() => {}}
+        basis="reported"
+        bandReport={{
+          watch_fraction: 0.5,
+          sleeves: [bandSleeve("equity", { weight: 44, alert: "breach" })],
+        }}
+      />,
+    );
+    expect(host!.querySelector(".band-strip")).toBeNull();
+  });
+
+  it("report null: no strip, no crash, window otherwise unchanged", () => {
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        basis="reported"
+        bandReport={null}
+      />,
+    );
+    expect(host!.querySelector(".band-strip")).toBeNull();
+    // the window is otherwise unchanged — the four levers and commit are there
+    expect(host!.querySelectorAll('input[type="radio"]').length).toBe(4);
+    expect(host!.querySelector("button.commit")).not.toBeNull();
+  });
+
+  it("report with an empty sleeve list: no strip", () => {
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        basis="reported"
+        bandReport={{ watch_fraction: 0, sleeves: [] }}
+      />,
+    );
+    expect(host!.querySelector(".band-strip")).toBeNull();
+  });
+
+  it("reads the plane matching the session's basis, via planeForBasis — never the reported one on an actual-basis session", () => {
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        basis="actual"
+        bandReport={{
+          watch_fraction: 0.5,
+          sleeves: [
+            {
+              sleeve: "equity",
+              target: 35,
+              lo: 30,
+              hi: 40,
+              true: { weight: 44.4, alert: "breach" },
+              reported: { weight: 33.3, alert: "ok" },
+            },
+          ],
+        }}
+      />,
+    );
+    const row = host!.querySelector(".band-strip .band-cell")!;
+    expect(row.querySelector(".band-badge")!.textContent).toBe("breach");
+    expect(row.textContent).toContain("44.4");
+    expect(row.textContent).not.toContain("33.3");
+  });
+
+  it("without a bandReport prop at all, no crash and no strip (default undefined, as every pre-existing test above passes it)", () => {
+    render(<DecisionWindow open month={11} year={1} onCommit={() => {}} />);
+    expect(host!.querySelector(".band-strip")).toBeNull();
   });
 });
