@@ -130,6 +130,11 @@ _SPREAD_REFERENCE_BPS = 400.0
 _ANNUAL_COMMITMENT_RATE = 0.18
 _COMMITMENT_QUARTERS = 4  # commit once a year
 
+#: owner-ruled 2026-08-16 (D-SP-6 session): the default commitment schedule
+#: escalates with the plan's expected growth so the programme keeps pace with
+#: a growing book instead of shrinking relative to it.
+EXPECTED_PLAN_GROWTH = 0.06
+
 #: DN-5 §2.1 (sp-01): the POLICY twin flexes its pacing —
 #: ``target = base_pace * g(w_policy - w_reported)`` with ``g`` clipped to
 #: this band. Never zero (a twin that cuts to nothing reproduces 2009's
@@ -238,7 +243,8 @@ def default_opening_book(targets: Mapping[str, float] | None = None) -> OpeningB
 def default_commitment_plan(
     targets: Mapping[str, float] | None = None, windows: int = 9
 ) -> CommitmentPlan:
-    """The kickoff plan: the FIXED-rule pace, flat across the decade.
+    """The kickoff plan: the FIXED-rule pace, escalated at the plan's own
+    expected growth.
 
     ONE ENTRY PER DECISION WINDOW, not per calendar year. A 120-month decade
     has nine windows (months 11, 23, ... 107) and the engine fires exactly
@@ -248,17 +254,28 @@ def default_commitment_plan(
     vintage year k+1. Callers with a non-decade horizon pass
     ``windows=len(decision_months(months))``.
 
-    Flat because the policy flex is a function of the realized reported
-    private weight, which at kickoff cannot be known without simulating the
-    tape — and simulating it here would leak it. ``serve.py`` already uses
-    ``pacing_rule="fixed"`` for exactly this pre-quarter-0 case.
+    The base pace uses the FIXED rule (not the POLICY flex) because the flex
+    is a function of the realized reported private weight, which at kickoff
+    cannot be known without simulating the tape — and simulating it here
+    would leak it. ``serve.py`` already uses ``pacing_rule="fixed"`` for
+    exactly this pre-quarter-0 case.
 
-    A non-flat schedule derived from the current portfolio is wanted and is
-    explicitly later work; ``CommitmentPlan``'s per-year shape already carries
-    one without a contract change.
+    Window k's pace is ``base * (1 + EXPECTED_PLAN_GROWTH) ** k`` —
+    :data:`EXPECTED_PLAN_GROWTH` is an EXPECTATION constant declared once at
+    module level, not a quantity derived from the tape, so this still does
+    not leak. History: the plan was FLAT (every window equal to ``base``)
+    until 2026-08-16, when the owner ruled that the default should escalate
+    in line with the plan's own expected growth instead of shrinking relative
+    to a growing book (D-SP-6 session) — ``CommitmentPlan``'s per-year shape
+    already carried a non-flat schedule without needing a contract change.
     """
     base = plan_commitments(0.0, targets, pacing_rule="fixed")
-    return CommitmentPlan(points={a: [base[a]] * windows for a in PRIVATE_ASSETS})
+    return CommitmentPlan(
+        points={
+            a: [base[a] * (1.0 + EXPECTED_PLAN_GROWTH) ** k for k in range(windows)]
+            for a in PRIVATE_ASSETS
+        }
+    )
 
 
 def validate_commitments(

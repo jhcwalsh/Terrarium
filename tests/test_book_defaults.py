@@ -10,11 +10,13 @@ from __future__ import annotations
 import pytest
 
 from ah.play import (
+    EXPECTED_PLAN_GROWTH,
     PRIVATE_ASSETS,
     START_CASH,
     START_TARGETS,
     default_commitment_plan,
     default_opening_book,
+    plan_commitments,
 )
 from ah.port.adapter import GEN_START_TARGETS
 from ah.port.book import BOOK_TOTAL, default_band, validate_book, validate_plan
@@ -94,12 +96,26 @@ class TestDefaultPlan:
         for sleeve in PRIVATE_ASSETS:
             assert len(plan.points[sleeve]) == len(decision_months(120)) == 9
 
-    def test_the_default_plan_is_flat_at_the_fixed_rule_pace(self):
+    def test_the_default_plan_escalates_at_the_owner_ruled_growth_rate(self):
+        # INVERTED 2026-08-16 (owner-ruled, D-SP-6 session; app-open-02 task
+        # 11): the default plan used to be flat across all nine windows
+        # (`len(set(pace)) == 1`, `pace[0] == target * 0.18`) — see
+        # `default_commitment_plan`'s docstring for why, and for the history
+        # this test now pins instead. The rule is now window k = the FIXED-
+        # rule base times (1 + EXPECTED_PLAN_GROWTH) ** k, so the programme
+        # keeps pace with the plan's own expected growth instead of shrinking
+        # relative to it. `base` is derived from the same
+        # `plan_commitments(..., pacing_rule="fixed")` call
+        # `default_commitment_plan` itself makes — not a re-derived magic
+        # float.
         plan = default_commitment_plan(START_TARGETS)
+        base = plan_commitments(0.0, START_TARGETS, pacing_rule="fixed")
         for sleeve in PRIVATE_ASSETS:
             pace = plan.points[sleeve]
-            assert len(set(pace)) == 1  # flat: the kickoff default, section 10
-            assert pace[0] == pytest.approx(START_TARGETS[sleeve] * 0.18)
+            assert pace[0] == pytest.approx(base[sleeve])  # k=0: no escalation yet
+            for k, points in enumerate(pace):
+                assert points == pytest.approx(base[sleeve] * (1.0 + EXPECTED_PLAN_GROWTH) ** k)
+            assert len(set(pace)) == len(pace)  # flat retired: every window differs
 
     def test_the_default_plan_is_inside_the_declared_bound(self):
         validate_plan(default_commitment_plan(START_TARGETS), dict(START_TARGETS))
