@@ -10,9 +10,19 @@
  * JSX — the same split FanChart.tsx / FanChart.test.ts already uses.
  */
 
+import { act } from "react";
+import { createRoot, type Root } from "react-dom/client";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { bundleUrlFor, fetchWorlds, WorldPicker, WorldsFormatError, type WorldsDoc } from "./worlds";
+import {
+  bundleUrlFor,
+  fetchWorlds,
+  selectShownWorlds,
+  SHOWN_GENERATOR_IDS,
+  WorldPicker,
+  WorldsFormatError,
+  type WorldsDoc,
+} from "./worlds";
 
 function mockFetch(status: number, body: unknown) {
   const fn = vi.fn(async () => ({
@@ -96,15 +106,117 @@ describe("bundleUrlFor", () => {
   });
 });
 
+/**
+ * app-open-01 (owner ruling, 2026-08-16): the opening picker shows only the
+ * declared-stress generation (`bootstrap-stratified`) — toy-engine
+ * ("The Long Stagflation") and plain-bootstrap ("Nineteen Seventy-Four")
+ * worlds stay in the store but are hidden here. This payload spans all
+ * three generations, plus the reported symptom: "The Lost Decade"
+ * (`world_id: "lost-decade"`) appearing as two separate entries because two
+ * runs exist for it.
+ */
+const MULTI_GEN_DOC: WorldsDoc = {
+  worlds: [
+    {
+      world_id: "toy-1979",
+      title: "The Long Stagflation",
+      generator_id: "toy-v0",
+      runs: [{ run_id: "toy-r1", seed: 1, created_at: "2026-01-01T00:00:00Z" }],
+    },
+    {
+      world_id: "plain-1974",
+      title: "Nineteen Seventy-Four",
+      generator_id: "bootstrap-v1",
+      runs: [{ run_id: "plain-r1", seed: 2, created_at: "2026-01-02T00:00:00Z" }],
+    },
+    {
+      world_id: "squeeze",
+      title: "The Long Squeeze",
+      generator_id: "bootstrap-stratified",
+      runs: [{ run_id: "squeeze-r1", seed: 3, created_at: "2026-01-03T00:00:00Z" }],
+    },
+    {
+      world_id: "lost-decade",
+      title: "The Lost Decade",
+      generator_id: "bootstrap-stratified",
+      runs: [{ run_id: "lost-r-old", seed: 4, created_at: "2026-01-04T00:00:00Z" }],
+    },
+    {
+      world_id: "lost-decade",
+      title: "The Lost Decade",
+      generator_id: "bootstrap-stratified",
+      runs: [{ run_id: "lost-r-new", seed: 5, created_at: "2026-01-05T00:00:00Z" }],
+    },
+  ],
+};
+
+describe("selectShownWorlds", () => {
+  it("keeps only SHOWN_GENERATOR_IDS worlds", () => {
+    const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
+    expect(shown.every((w) => SHOWN_GENERATOR_IDS.includes(w.generator_id ?? ""))).toBe(true);
+    expect(shown.some((w) => w.world_id === "toy-1979")).toBe(false);
+    expect(shown.some((w) => w.world_id === "plain-1974")).toBe(false);
+  });
+
+  it("collapses a duplicated world_id, keeping the entry with the newest run", () => {
+    const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
+    const lost = shown.filter((w) => w.world_id === "lost-decade");
+    expect(lost).toHaveLength(1);
+    expect(lost[0].runs.map((r) => r.run_id)).toEqual(["lost-r-new"]);
+  });
+
+  it("returns one entry per world_id, squeeze plus the deduped lost-decade", () => {
+    const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
+    expect(shown.map((w) => w.world_id).sort()).toEqual(["lost-decade", "squeeze"]);
+  });
+});
+
 describe("WorldPicker", () => {
-  it("lists each run as a title + seed button, newest-first order preserved", () => {
-    const html = renderToStaticMarkup(WorldPicker({ doc: DOC, onOpen: () => {} }));
+  it("renders only the declared-stress worlds, one button per world_id", () => {
+    const html = renderToStaticMarkup(WorldPicker({ doc: MULTI_GEN_DOC, onOpen: () => {} }));
     expect(html).toContain("Choose your decade");
-    expect(html).toContain("Stagflation 1979");
-    expect(html).toContain("seed 43");
-    expect(html).toContain("seed 42");
-    // a titleless world falls back to its world_id
-    expect(html).toContain("w2");
+    expect(html).toContain("The Long Squeeze");
+    expect(html).toContain("The Lost Decade");
+    expect(html).not.toContain("The Long Stagflation");
+    expect(html).not.toContain("Nineteen Seventy-Four");
+    // one <li> for squeeze, one for the deduped lost-decade — not two.
+    expect((html.match(/<li/g) ?? []).length).toBe(2);
+  });
+
+  it("wires the kept lost-decade button to its newest run — same load path as before", () => {
+    let opened: string | null = null;
+    let root: Root | null = null;
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    try {
+      root = createRoot(host);
+      act(() => {
+        root!.render(WorldPicker({ doc: MULTI_GEN_DOC, onOpen: (url) => (opened = url) }));
+      });
+      const buttons = [...host.querySelectorAll("button")];
+      const lostButton = buttons.find((b) => b.textContent?.includes("The Lost Decade"))!;
+      act(() => lostButton.click());
+      expect(opened).toBe(bundleUrlFor("lost-r-new"));
+    } finally {
+      act(() => root?.unmount());
+      host.remove();
+    }
+  });
+
+  it("falls back to world_id when a shown world has no title", () => {
+    const doc: WorldsDoc = {
+      worlds: [
+        {
+          world_id: "w9",
+          title: null,
+          generator_id: "bootstrap-stratified",
+          runs: [{ run_id: "r9", seed: 9, created_at: "2026-01-01T00:00:00Z" }],
+        },
+      ],
+    };
+    const html = renderToStaticMarkup(WorldPicker({ doc, onOpen: () => {} }));
+    expect(html).toContain("w9");
+    expect(html).toContain("seed 9");
   });
 
   it("renders nothing for a null doc — the fallback path when /worlds fails", () => {
@@ -113,5 +225,19 @@ describe("WorldPicker", () => {
 
   it("renders nothing when the store has no worlds", () => {
     expect(renderToStaticMarkup(WorldPicker({ doc: { worlds: [] }, onOpen: () => {} }))).toBe("");
+  });
+
+  it("renders nothing when no world matches SHOWN_GENERATOR_IDS", () => {
+    const doc: WorldsDoc = {
+      worlds: [
+        {
+          world_id: "toy-1979",
+          title: "The Long Stagflation",
+          generator_id: "toy-v0",
+          runs: [{ run_id: "toy-r1", seed: 1, created_at: "2026-01-01T00:00:00Z" }],
+        },
+      ],
+    };
+    expect(renderToStaticMarkup(WorldPicker({ doc, onOpen: () => {} }))).toBe("");
   });
 });

@@ -69,6 +69,57 @@ function isWorldsDoc(x: unknown): x is WorldsDoc {
   return Array.isArray(d.worlds) && d.worlds.every(isWorldEntry);
 }
 
+/**
+ * app-open-01 (owner ruling, 2026-08-16): the opening "Choose your decade"
+ * list showed three generations of worlds at once — toy-engine
+ * ("The Long Stagflation" family, `generator_id: "toy-v0"`), plain bootstrap
+ * ("Nineteen Seventy-Four" family, `"bootstrap-v1"`), and declared-stress
+ * ("The Long Squeeze", "The Lost Decade", `"bootstrap-stratified"` — the
+ * stress-scenario compiler's dispatcher id, see `ah/gen/stress.py`). The
+ * owner wants only the declared-stress generation shown here. This is a
+ * DISPLAY filter only: the server keeps listing every world (`/worlds`,
+ * `src/ah/serve.py::list_worlds`, deliberately unfiltered), the stores keep
+ * every world, and `fetchWorlds`/`WorldsDoc` are untouched — re-admitting a
+ * generation later is adding its id to this list.
+ */
+export const SHOWN_GENERATOR_IDS: readonly string[] = ["bootstrap-stratified"];
+
+/** The latest `created_at` among a world's runs. Doesn't assume the caller's
+ * `runs` array is sorted (the server's is; a hand-built payload need not
+ * be) — takes the max explicitly. */
+function newestCreatedAt(world: WorldEntry): string {
+  let max = "";
+  for (const run of world.runs) if (run.created_at > max) max = run.created_at;
+  return max;
+}
+
+/** The single newest run for a world, by `created_at`. */
+function newestRun(world: WorldEntry): WorldRun | null {
+  let best: WorldRun | null = null;
+  for (const run of world.runs) {
+    if (best === null || run.created_at > best.created_at) best = run;
+  }
+  return best;
+}
+
+/** The worlds this picker renders: `SHOWN_GENERATOR_IDS` only, collapsed to
+ * one entry per `world_id` (the reported symptom — "The Lost Decade"
+ * appearing twice — is two runs for the same world; keep the entry whose
+ * newest run is the most recent). Worlds with no runs are dropped, since
+ * there is nothing for their button to open. */
+export function selectShownWorlds(worlds: WorldEntry[]): WorldEntry[] {
+  const byWorldId = new Map<string, WorldEntry>();
+  for (const world of worlds) {
+    if (!world.generator_id || !SHOWN_GENERATOR_IDS.includes(world.generator_id)) continue;
+    if (world.runs.length === 0) continue;
+    const existing = byWorldId.get(world.world_id);
+    if (!existing || newestCreatedAt(world) > newestCreatedAt(existing)) {
+      byWorldId.set(world.world_id, world);
+    }
+  }
+  return Array.from(byWorldId.values());
+}
+
 /** Fetches and shape-checks the decade picker's data. Throws
  * `WorldsFormatError` on a non-ok response or a malformed document —
  * callers treat both as "no list", never as a fatal error. */
@@ -86,10 +137,13 @@ export function bundleUrlFor(runId: string): string {
   return `/runs/${runId}/bundle`;
 }
 
-/** The "Choose your decade" list: each world's runs as load buttons.
- * Renders nothing when there is no doc — `fetchWorlds` failed, hasn't
- * resolved yet, or the store has no worlds — so the landing view falls back
- * to exactly the picker/URL flow that already existed. */
+/** The "Choose your decade" list: one load button per shown world
+ * (`selectShownWorlds` — declared-stress only, deduped by `world_id`),
+ * wired to that world's newest run. Renders nothing when there is no doc or
+ * nothing survives the filter — `fetchWorlds` failed, hasn't resolved yet,
+ * the store has no worlds, or none of them are declared-stress — so the
+ * landing view falls back to exactly the picker/URL flow that already
+ * existed. */
 export function WorldPicker({
   doc,
   onOpen,
@@ -97,27 +151,28 @@ export function WorldPicker({
   doc: WorldsDoc | null;
   onOpen: (url: string) => void;
 }): ReactElement | null {
-  if (!doc || doc.worlds.length === 0) return null;
+  if (!doc) return null;
+  const shown = selectShownWorlds(doc.worlds);
+  if (shown.length === 0) return null;
   return createElement(
     "section",
     { className: "world-picker" },
     createElement("h2", null, "Choose your decade"),
-    ...doc.worlds.map((world) =>
-      createElement(
-        "ul",
-        { key: world.world_id },
-        ...world.runs.map((run) =>
+    createElement(
+      "ul",
+      null,
+      ...shown.map((world) => {
+        const run = newestRun(world)!; // selectShownWorlds already dropped worlds with no runs
+        return createElement(
+          "li",
+          { key: world.world_id },
           createElement(
-            "li",
-            { key: run.run_id },
-            createElement(
-              "button",
-              { onClick: () => onOpen(bundleUrlFor(run.run_id)) },
-              `${world.title ?? world.world_id} — seed ${run.seed}`,
-            ),
+            "button",
+            { onClick: () => onOpen(bundleUrlFor(run.run_id)) },
+            `${world.title ?? world.world_id} — seed ${run.seed}`,
           ),
-        ),
-      ),
+        );
+      }),
     ),
   );
 }
