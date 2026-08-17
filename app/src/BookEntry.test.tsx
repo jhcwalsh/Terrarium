@@ -921,3 +921,77 @@ describe("BookEntry — tabs and Play (task 8)", () => {
     expect(note.textContent ?? "").not.toMatch(/Private sleeves'/);
   });
 });
+
+/**
+ * Task 10 (owner-dictated 2026-08-16): each private ladder's section on the
+ * Historical vintages tab gets a VintageChart above its table
+ * (components/VintageChart.tsx — its own geometry is pinned in
+ * VintageChart.test.tsx). This is the integration half: BookEntry passes
+ * `book.private[sleeve]` — the LIVE typed state — as the `rungs` prop, not
+ * a snapshot, so a hand-edited rung input has to move the chart on the very
+ * next render. A component that captured the prop once (or memoized it
+ * away) would pass every VintageChart.test.tsx test while failing only
+ * this one.
+ */
+describe("BookEntry — the vintage chart tracks live rung edits (task 10)", () => {
+  function openVintagesTab() {
+    const t = [...host!.querySelectorAll('[role="tab"]')].find((b) =>
+      /historical vintages/i.test(b.textContent ?? ""),
+    ) as HTMLButtonElement;
+    act(() => t.click());
+  }
+
+  it("renders a chart above each sleeve's ladder table, one per private sleeve", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    openVintagesTab();
+    const sections = [...host!.querySelectorAll(".book-ladder")];
+    expect(sections.length).toBe(3); // pe, pc, re
+    sections.forEach((section) => {
+      const chart = section.querySelector('[data-testid="vintage-chart"]');
+      expect(chart).not.toBeNull();
+      // the chart sits ABOVE the table within the same section (task
+      // requirement: "above each sleeve's table (inside the same section)")
+      const table = section.querySelector("table");
+      expect(table).not.toBeNull();
+      expect(
+        chart!.compareDocumentPosition(table!) & Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+    });
+  });
+
+  it("editing a rung's NAV input moves that vintage's chart marker", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    openVintagesTab();
+    // pe is the first private sleeve served (fixture insertion order), so
+    // its ladder section is the first .book-ladder on the tab.
+    const peSection = host!.querySelectorAll(".book-ladder")[0];
+    const marker = () => peSection.querySelector('[data-testid="vintage-nav-0"]')!;
+    const before = marker().getAttribute("cy");
+    expect(before).not.toBeNull();
+
+    // The fixture's single pe rung has nav_true=20 against paid_in+unfunded
+    // of only 4, so nav_true is already the term that SETS the chart's own
+    // scale (maxVal = 1.05 * nav_true) — increasing it further keeps its
+    // own y ratio invariant (nav/maxVal stays 1/1.05), which would make this
+    // assertion pass by accident for the WRONG reason on a single-rung
+    // ladder. Editing it down BELOW paid_in+unfunded (here, to 1) hands the
+    // scale to the fixed paid_in+unfunded=4 term instead, so the marker's
+    // position actually has to move — the real bite-proof for "moves with
+    // the live prop", not an artifact of self-scaling.
+    setValue(byLabel<HTMLInputElement>("pe rung 0 nav_true"), "1");
+
+    const after = marker().getAttribute("cy");
+    expect(after).not.toBeNull();
+    expect(after).not.toBe(before);
+
+    // and the OTHER sleeve's chart is untouched by pe's edit
+    const pcSection = host!.querySelectorAll(".book-ladder")[1];
+    const pcBefore = pcSection.querySelector('[data-testid="vintage-nav-0"]')!.getAttribute("cy");
+    setValue(byLabel<HTMLInputElement>("pe rung 0 nav_true"), "60");
+    expect(
+      pcSection.querySelector('[data-testid="vintage-nav-0"]')!.getAttribute("cy"),
+    ).toBe(pcBefore);
+  });
+});

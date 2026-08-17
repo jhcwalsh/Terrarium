@@ -94,6 +94,7 @@ import {
   type Rung,
 } from "./lib/session";
 import { sleeveLabel } from "./lib/sleeveLabels";
+import { VintageChart } from "./components/VintageChart";
 
 const RUNG_FIELDS = [
   "vintage_year",
@@ -693,6 +694,11 @@ export function BookEntry({
               {ladderError[sleeve]}
             </p>
           )}
+          {/* task 10 (owner-dictated 2026-08-16): the rung array passed here
+              IS the live typed state, book.private[sleeve] — not a copy, not
+              memoized — so editing a rung input below moves this chart on
+              the very next render. */}
+          <VintageChart rungs={book.private[sleeve]} />
           <div className="book-ladder-scroll">
             <table>
               <thead>
