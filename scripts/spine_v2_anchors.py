@@ -1455,6 +1455,11 @@ def section_h(
     dwell_bands = cast(dict[str, list[float]], bars["D_median_bands_months"])
     a1_containment = cast(list[float], bars["A1_containment_pp"])
     a2_margin = cast(float, bars["A2_correlation_margin"])
+    # ``None`` means the condition is not part of the bar (owner ruling
+    # 2026-08-17 dropped A2's low-inflation ceiling). It is still COMPUTED and
+    # reported below as a diagnostic against the value it used to be judged at,
+    # so dropping it hides nothing.
+    a2_ceiling = bars.get("A2_share_low_ceiling")
 
     n = int(source.n_rows)
     names = list(source.factor_names)
@@ -1597,7 +1602,11 @@ def section_h(
             "A2": (corr_high > 0.0)
             & ((corr_high - corr_low) >= a2_margin)
             & (share_high >= A2_SHARE_HIGH_FLOOR)
-            & (share_low <= A2_SHARE_LOW_CEILING),
+            & (
+                np.ones_like(share_low, dtype=bool)
+                if a2_ceiling is None
+                else (share_low <= float(a2_ceiling))
+            ),
             # A2's four conditions separately, so a low A2 power can be read
             # rather than guessed at. Diagnostics, not bars.
             "A2i_level_positive": corr_high > 0.0,
@@ -2866,7 +2875,14 @@ def exam_bars_sealed(
         "A1_containment_pp": [_f(min(spreads)), _f(max(spreads))],
         "A2_correlation_margin": correlation_intervals["correlation_level"]["ci95_lower_edge"],
         "A2_share_high_floor": A2_SHARE_HIGH_FLOOR,
-        "A2_share_low_ceiling": A2_SHARE_LOW_CEILING,
+        # DROPPED by owner ruling 2026-08-17: the low-inflation share-positive
+        # ceiling was the only condition in the whole exam that demanded ~400
+        # decades, and its headroom against a decade-measured statistic was 2.8
+        # points. ``null`` means "not judged"; the statistic is still computed
+        # and reported beside every A2 verdict, against the value below.
+        "A2_share_low_ceiling": None,
+        "A2_share_low_ceiling_dropped_value": A2_SHARE_LOW_CEILING,
+        "n_seeds": SEALED_N_SEEDS,
         "derivation_note": (
             "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for "
             "the recession-or-crisis lift; D_median_bands_months = each season's "

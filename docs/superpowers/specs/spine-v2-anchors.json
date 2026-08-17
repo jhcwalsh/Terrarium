@@ -1330,7 +1330,8 @@
     ],
     "A2_correlation_margin": 0.13609378139729844,
     "A2_share_high_floor": 0.8,
-    "A2_share_low_ceiling": 0.65,
+    "A2_share_low_ceiling": null,
+    "A2_share_low_ceiling_dropped_value": 0.65,
     "D_anchor_medians_months": {
       "expansion": 4.0,
       "recession": 2.0,
@@ -1363,7 +1364,8 @@
       3.3473622102535145
     ],
     "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
-    "grader": "grader_v2"
+    "grader": "grader_v2",
+    "n_seeds": 50
   },
   "exam_bars_superseded": {
     "note": "the bar block as it stood when OPEN-4 measured power against it (h_generated_side_power). Superseded 2026-08-17 by the owner's pre-seal rulings; kept so the OPEN-4 finding stays readable against the bars it was actually measured on. exam_bars is what is sealed",
@@ -4375,7 +4377,8 @@
       ],
       "A2_correlation_margin": 0.13609378139729844,
       "A2_share_high_floor": 0.8,
-      "A2_share_low_ceiling": 0.65,
+      "A2_share_low_ceiling": null,
+      "A2_share_low_ceiling_dropped_value": 0.65,
       "D_anchor_medians_months": {
         "expansion": 4.0,
         "recession": 2.0,
@@ -4408,7 +4411,8 @@
         3.3473622102535145
       ],
       "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
-      "grader": "grader_v2"
+      "grader": "grader_v2",
+      "n_seeds": 50
     },
     "bars_unreachable_on_grid": [],
     "decade_months": 120,
@@ -4481,27 +4485,27 @@
       },
       "A2": {
         "is_headline_bar": true,
-        "max_power_on_grid": 0.945,
-        "min_n_seeds_for_target": 400,
-        "pilot_n_seeds_sufficient": false,
-        "power_at_pilot_n_seeds": 0.608,
+        "max_power_on_grid": 1.0,
+        "min_n_seeds_for_target": 10,
+        "pilot_n_seeds_sufficient": true,
+        "power_at_pilot_n_seeds": 0.987,
         "power_by_n_seeds": {
-          "10": 0.5215,
-          "100": 0.7475,
-          "15": 0.553,
-          "150": 0.7915,
-          "20": 0.608,
-          "200": 0.829,
-          "25": 0.64,
-          "30": 0.6415,
-          "300": 0.882,
-          "40": 0.675,
-          "400": 0.9135,
-          "5": 0.4435,
-          "50": 0.689,
-          "500": 0.945,
-          "60": 0.687,
-          "80": 0.727
+          "10": 0.9305,
+          "100": 1.0,
+          "15": 0.978,
+          "150": 1.0,
+          "20": 0.987,
+          "200": 1.0,
+          "25": 0.9945,
+          "30": 0.9995,
+          "300": 1.0,
+          "40": 1.0,
+          "400": 1.0,
+          "5": 0.7925,
+          "50": 1.0,
+          "500": 1.0,
+          "60": 1.0,
+          "80": 1.0
         },
         "true_engine_limit_passes": true
       },
@@ -4768,7 +4772,7 @@
     },
     "pilot_n_seeds": 20,
     "power_seed": 20260820,
-    "recommended_n_seeds": 400,
+    "recommended_n_seeds": 50,
     "seed_grid": [
       5,
       10,

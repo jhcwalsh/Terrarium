@@ -685,14 +685,37 @@ is what removes the diversification an allocator is counting on. A **rolling 36-
 is that correlation computed inside every three-year window, each window assigned to the
 inflation state of its **final month** — the month the correlation is "as of".
 
-**(a) The bar.** Both conditions must hold, at the 4% line:
+**(a) The bar.** Three conditions must hold, at the 4% line:
 - **A2(i) — level and margin.** The correlation over high-inflation months must be
   **positive**, and must exceed the correlation over low-inflation months by at least
   **0.13609378139729844** (0.1361) — the **lower edge of the historical difference's own 95%
   interval**, not a tolerance chosen around it.
 - **A2(ii) — how common the flip is.** At least **80%** of 36-month windows ending in a
-  high-inflation month must show a positive stock–bond correlation, and **no more than 65%**
-  of windows ending in a low-inflation month.
+  high-inflation month must show a positive stock–bond correlation.
+
+**The low-inflation ceiling is DROPPED (owner ruling, 2026-08-17, pre-seal).** The draft's
+A2(ii) carried a second edge — no more than **65%** of windows ending in a low-inflation
+month may be positive — and OPEN-4 found it was the **only condition in the entire exam that
+demanded ~400 decades**, on 2.8 points of headroom against a decade-measured statistic
+(0.6216 against a 65% ceiling cut from the 0.5416 panel-wide figure). Part of that gap is a
+property of the power model rather than of any engine — drawing decade starts uniformly
+down-weights the panel's first and last few years, which are exactly its two most
+negatively-correlated low-inflation stretches — but the thin headroom is not. The owner's
+ruling drops the condition rather than raising the number, on the grounds that a ceiling
+moved after seeing what it costs is a bar chosen for its power rather than for its meaning.
+
+Three consequences, all stated before results exist:
+1. **The statistic is still computed and printed beside every A2 verdict**, against the 65%
+   value it would have been judged at (`A2_share_low_ceiling_dropped_value`). Dropping the
+   condition hides nothing; it stops it deciding a verdict.
+2. **A2 loses its "and the flip is specific to high inflation" half.** What remains is
+   "correlations are positive and materially higher in high inflation" — the margin condition
+   already carries the contrast, since it compares the two states directly, but the
+   *share*-based contrast is gone. An engine whose windows are positive nearly all the time,
+   in every inflation state, would now pass A2 on the margin alone if its levels differed by
+   0.1361. The low-inflation share is the number to read when checking for that.
+3. **A2's power at the sealed batch size goes from 0.689 to 1.000** (§8.1), and the exam no
+   longer contains a bar that cannot be cleared with the compute it is being run with.
 
 **(b) The historical anchors.** From
 `d_allocation_episode_facts.inflation_states.cpi_yoy_ge_4pct.stock_bond_correlation` and
@@ -708,9 +731,10 @@ History's level gap is **0.3195** (+0.30125 minus −0.01823). The rolling-windo
 sharpest in the whole measurement: **95% of three-year windows ending in high inflation show
 a positive stock–bond correlation, against 54% — a coin flip — in low inflation.**
 
-**(c) Where the 0.1361 margin and the 80%/65% edges come from.** The margin is now a
-**measured sampling interval** (OPEN-2 closed); the two share edges remain cut from the
-published threshold sensitivity, which the measurement supports rather than moves.
+**(c) Where the 0.1361 margin and the 80% floor come from.** The margin is a **measured
+sampling interval** (OPEN-2 closed); the share floor is cut from the published threshold
+sensitivity, which the measurement supports rather than moves. (The 65% ceiling's derivation
+is kept below as the record of a dropped condition, not as a live bar.)
 
 **The margin.** History's high-minus-low correlation difference is
 **0.3194875488039316**, and its block-bootstrap 95% interval — the same Politis–Romano
@@ -724,25 +748,28 @@ which came from halving the historical gap — a reasonable guess at the samplin
 the measurement shows was a little optimistic. The correction goes the honest way and is made
 here, before any result exists, exactly as the draft undertook to do.
 
-**The two share edges are unchanged, and the same measurement supports them.** The
-high-minus-low difference in share-of-windows-positive is **0.40507701786814543** with a 95%
-interval of **[0.17717364337543898, 0.6231004989665900]**. The 80% floor and 65% ceiling
-together demand a difference of at least **15 percentage points** — *below* that interval's
-lower edge of 17.7 — so the pair of absolute edges asks for less than the measured interval
-would, and neither needs to move.
+**The share measurement, and what dropping the ceiling costs it.** The high-minus-low
+difference in share-of-windows-positive is **0.40507701786814543** with a 95% interval of
+**[0.17717364337543898, 0.6231004989665900]**. As a *pair*, the 80% floor and the 65% ceiling
+demanded a difference of at least **15 percentage points** — below that interval's lower edge
+of 17.7 — so the pair asked for less than the measurement would have supported. With the
+ceiling dropped, **the share half of A2 no longer tests a difference at all**: it tests only
+that high-inflation windows are positive at least 80% of the time. The difference is still
+tested, by the margin condition, on the correlation levels rather than on the shares.
 
-**⚠ But OPEN-4 found the 65% ceiling is the binding condition and has little headroom —
-owner decision needed before the seal.** Split into its four conditions, A2 needs 5 generated
-decades for "correlation positive", 10 for the margin and 10 for the ≥ 80% high-inflation
-share; the **≤ 65% low-inflation share needs 400**, and drags the whole bar there. The reason
-is that a true engine's low-inflation share **measured on decades** is **0.6216** — 2.8 points
-under the ceiling — against the **0.5416** panel-wide figure the ceiling was cut from. Part of
-that shift is a property of the power model rather than of any engine (drawing decade starts
-uniformly down-weights the panel's first and last few years, which are exactly its two most
-negatively-correlated low-inflation stretches, the 1950s–60s and the 2010s), so the 400 is
-soft. What is not soft: **the ceiling has far less room against a decade-measured statistic
-than against the panel-wide one it was derived from.** Raising it is a live option and is the
-owner's call, taken now.
+**⚠ RESOLVED — this is what the ceiling was dropped for.** Split into its four original
+conditions, A2 needed 5 generated decades for "correlation positive", 10 for the margin and
+10 for the ≥ 80% high-inflation share; the **≤ 65% low-inflation share needed 400**, and
+dragged the whole bar there. The reason is that a true engine's low-inflation share
+**measured on decades** is **0.6216** — 2.8 points under the ceiling — against the **0.5416**
+panel-wide figure the ceiling was cut from. Part of that shift is a property of the power
+model rather than of any engine (drawing decade starts uniformly down-weights the panel's
+first and last few years, which are exactly its two most negatively-correlated low-inflation
+stretches, the 1950s–60s and the 2010s), so the 400 is soft. What is not soft: the ceiling
+had far less room against a decade-measured statistic than against the panel-wide one it was
+derived from. The owner's ruling of 2026-08-17 **drops the condition**; the alternative,
+raising the number after seeing what it costs, is the move pre-registration exists to
+prevent.
 
 **The threshold sensitivity the two share edges rest on:**
 
@@ -759,10 +786,10 @@ owner's call, taken now.
   transmission ("present but weak", 1.14× against history's 2.37×) — because 0.1361 is a
   little under half history's own 0.3195 gap.
 - **The 80% floor** sits 5.8 points below the *lowest* share history shows at any line
-  (85.8%, at 3%); **the 65% ceiling** sits 6.9 points above the *highest* low-inflation share
-  (58.1%, at 5%). Both edges therefore clear the entire published threshold range by 6–7
-  points, so neither is an artefact of the 4% choice. Read the ⚠ above for what happens to
-  the ceiling's headroom once the statistic is measured on decades rather than panel-wide.
+  (85.8%, at 3%), so it clears the entire published threshold range and is not an artefact of
+  the 4% choice. *(The dropped 65% ceiling sat 6.9 points above the highest low-inflation
+  share, 58.1% at 5%, on the same reasoning — recorded because a dropped bar's derivation is
+  part of the record.)*
 
 **(d) What a FAIL means in product terms.** A fail means bonds keep diversifying equities
 even when inflation is high — so the generated worlds never take away the protection a
@@ -920,15 +947,14 @@ Stated plainly so the exam's scope cannot be over-read from its passing.
 
 ## 8. Process — what happens after the owner approves
 
-1. **Approval.** The owner approves this document, or amends it. Amendments made now cost
-   nothing; amendments made after the seal go through the machine-checked log. **Three
-   decisions are waiting on this step and all three are cheap now and expensive later:** O1's
-   bar (interval edge, as written, or the stricter one-SE variant — §2), D3's band (which a
-   correct engine cannot clear as written — §3), and A2's 65% ceiling (2.8 points of headroom
-   against a decade-measured statistic — §4). **§11's threshold-sensitivity result belongs
-   with them**: it changes no bar, but it shows that D1, D2 and D3 each sit outside their own
-   band when the inflation line moves half a percentage point, which bears on what the owner
-   decides about D3 in particular.
+1. ~~Approval~~ — **done, 2026-08-17: the owner ruled "Seal it"**, with four pre-seal
+   changes taken first, each recorded where it lands: the pooled-spells re-derivation of
+   D1–D4 (§3), the `grader_v2` mapping fix with O1/D2/D4 re-anchored under it (§2, §3), A2's
+   underpowered low-inflation ceiling dropped (§4), and this document's declared limitations
+   and confirmed omissions written down (§12). The one decision left open at the draft that
+   was NOT taken is O1's stricter one-SE variant: the bar stays at the interval's lower edge.
+   Amendments from here go through the machine-checked log in
+   `docs/superpowers/specs/spine-v2-prereg.json`, never by editing this file.
 2. ~~The OPEN items are closed~~ — **done, 2026-08-17.** See the table at the top for what was
    measured and what moved: O1's bar and A2's margin now sit at the lower edge of their
    anchors' own 95% intervals, the dwell tolerance stands but its reading changed, and the
@@ -959,30 +985,50 @@ the decade's own 12-month inflation warm-up, T1's further 12-month lookahead (th
 months of §2), A2's rolling windows computed **inside** the decade (84 of them), and D1–D4's
 completed-spell rule applied to the decade's own edges.
 
-| bar | power at the pilot's 20 seeds | decades needed for 90% |
-|---|---|---|
-| **T1** | 0.999 | **5** |
-| **O1** | 1.000 | **5** |
-| **D4** | 0.994 | **10** |
-| **D1** | 0.967 | **15** |
-| **A1** | 0.830 | **40** |
-| **D2** | 0.807 | **50** |
-| **A2** | 0.608 | **400** — see §4's ⚠ |
-| **D3** | 0.359 | **never** — see §3's ⚠ |
+**The table, as measured against the bars that are actually sealed**
+(`m_power_under_sealed_bars`; the pre-ruling table is kept below for the record):
 
-**The ruling.** The exam runs at **`n_seeds` = 50 decades per premise**, which clears every
-bar that a correct engine can clear — T1, O1, D1, D2, D4 and A1 — at 90% or better. **The
-pilot's 20 is not enough**: it leaves A1 at 0.83 and D2 at 0.81, so either could record a
-FAIL from ensemble size alone. A2's 400 and D3's impossibility are **not sizing problems and
-are not bought with compute**; they are the two bar-design questions §8 step 1 puts to the
-owner, and 50 is the right size whichever way those go.
+| bar | **power at the sealed 50 decades** | decades needed for 90% | pre-ruling: power at 20 | pre-ruling: decades for 90% |
+|---|---|---|---|---|
+| **T1** | **1.000** | 5 | 0.999 | 5 |
+| **O1** | **1.000** | 5 | 1.000 | 5 |
+| **D4** | **1.000** | 5 | 0.994 | 10 |
+| **A2** | **1.000** | 10 | 0.608 | 400 |
+| **D1** | **0.993** | 15 | 0.967 | 15 |
+| **D3** | **0.987** | 25 | 0.359 | **never** |
+| **A1** | **0.936** | 40 | 0.830 | 40 |
+| **D2** | **0.921** | 50 | 0.807 | 50 |
+
+**The ruling: `n_seeds` = 50 decades per premise, and every retained bar clears 90% at it.**
+The three columns to read together are the first two: at 50 decades a true engine clears the
+weakest bar (D2) with 0.921 and everything else by more. **The pilot's 20 is not enough** —
+it leaves A1 at 0.83 and D2 at 0.81, so either could record a FAIL from ensemble size alone.
+
+The two bars that could not be bought with compute were fixed as bars, not as sample sizes:
+**D3** went from *never* to 25 decades when both sides of the comparison were put on the same
+120-month window (§3), and **A2** went from 400 decades to 10 when its underpowered
+low-inflation ceiling was dropped (§4). The dropped ceiling is still measured, and still needs
+400 decades to clear at 90% — which is why it is a disclosure and not a bar.
+
+*(Both columns are computed by the same machinery on the same seed; the pre-ruling column is
+`h_generated_side_power`, judged against `exam_bars_superseded.open4_derivation`, and it is
+retained unchanged so the OPEN-4 finding stays readable against the bars it was measured on.)*
 
 **The compute implication, in one sentence.** Fifty decades per premise is 2.5× the pilot's
 ensemble and the compiler is selection-only, so the decade generation itself is cheap — but
 R1's b3 arm multiplies by its four allocation grid points and stays byte-frozen at its own
 `n_seeds` = 20, so the incremental cost lands on the eight new judges rather than on the
-carried ones, and the one number that would have made the exam expensive (A2's 400) is a bar
+carried ones, and the one number that would have made the exam expensive (A2's 400) was a bar
 to fix rather than compute to buy.
+
+**One honest limit on what this table proves, for D1–D4 specifically.** The power model's
+true engine emits real 120-month stretches of the panel, and the pooled re-derivation cuts the
+D anchors from exactly that object — so a D bar's power calculation is now close to
+tautological by construction, and a high number there says only that the statistic is *stable*
+at 50 decades, not that the bar is discriminating. What the number does still rule out is the
+failure it was built to find: a bar whose own true value sits outside its own band. The
+discriminating power of the D bars is a separate question, and §3 states plainly what it
+costs on D3.
 
 ---
 
@@ -997,7 +1043,7 @@ to fix rather than compute to buy.
 | persistence | **D3** | how long a recovery lasts | pooled median **[2, 8] months** | 5 months, 1661 decade-pooled spells |
 | persistence | **D4** | how long an expansion lasts | pooled median **[1, 7] months** | 4 months, 2123 decade-pooled spells |
 | allocation | **A1** | does the inflation hedge pay | spread(high) > spread(low) at 4%; inside [−5.05, +32.32] pp | +4.87 pp vs +1.38 pp |
-| allocation | **A2** | stocks and bonds fall together | corr(high) > 0 and exceeds corr(low) by ≥ **0.1361** (the difference's 95% interval's lower edge); ≥ 80% / ≤ 65% of 3-year windows positive | +0.30 vs −0.02, difference 0.3195 (95% CI [0.1361, 0.5568]); 94.7% vs 54.2% |
+| allocation | **A2** | stocks and bonds fall together | corr(high) > 0 and exceeds corr(low) by ≥ **0.1361** (the difference's 95% interval's lower edge); ≥ **80%** of 3-year windows positive in high inflation (the low-inflation ceiling is dropped) | +0.30 vs −0.02, difference 0.3195 (95% CI [0.1361, 0.5568]); 94.7% high, 54.2% low (disclosure) |
 | no-regression | **R1** | severity still bites the book | b3 byte-frozen: monotone coverage, ≥ 1/20 breach at 55% | prior seal (round two: PASS) |
 | no-regression | **R2** | eras don't teleport at the seams | b2 byte-frozen: join jump ≤ 2.5 pp, p95 ≤ 0.9292 pp | panel p95 0.7434 pp (round two: FAIL) |
 
@@ -1007,10 +1053,11 @@ this table is a field in `docs/superpowers/specs/spine-v2-anchors.json` under `e
 derived there from the measurement it is cut from rather than restated — so this table, that
 file and the judges cannot disagree about a number.
 
-**D3's ⚠ is resolved** by the owner's pooled-spells re-derivation of D1–D4 (§3), ruled
-2026-08-17 before the seal and before any result exists, with what it costs recorded beside
-it. **A2**'s 65% low-inflation ceiling still carries its ⚠: 2.8 points of headroom against a
-decade-measured statistic and 400 decades to clear at 90% (§4).
+**Both ⚠ items are resolved**, by owner rulings taken on 2026-08-17 before the seal and
+before any result exists, each with what it costs recorded beside the bar: **D3** by the
+pooled-spells re-derivation of D1–D4 (§3), and **A2** by dropping the underpowered
+low-inflation ceiling (§4). At the sealed batch size of **50 decades per premise**, every
+retained bar clears 90% power for a true engine (§8.1).
 
 ---
 
