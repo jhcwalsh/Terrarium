@@ -1,0 +1,427 @@
+{
+  "amendment_procedure": {
+    "entry_keys": [
+      "amendment_id",
+      "date",
+      "type",
+      "rationale",
+      "post_hoc",
+      "paths"
+    ],
+    "machine_check": "tests/test_stage2_seal.py recomputes every hash against the working tree and fails unless each mismatch is named by an amendment entry, so the log cannot be skipped by editing quietly",
+    "post_hoc_flagging": "every amendment is post-hoc-flagged in every report from its date forward, the platform's standing convention (ah.eval.prereg)",
+    "rule": "after this commit, no file listed in hashes may change without an entry appended to `amendments` naming its path. Editing a hashed file and re-running this script is NOT an amendment -- it is a re-seal, and it erases the record this file exists to keep",
+    "types": {
+      "documentation": "a hashed document changes without any threshold or judging rule changing",
+      "protocol_change": "how a metric is computed or judged changes (not just its value) -- e.g. a judge, the grader, or the anchor script",
+      "threshold_change": "a sealed pass/fail value changes"
+    }
+  },
+  "amendments": [],
+  "anti_test_record": {
+    "all_controls_hold": true,
+    "all_monotone": true,
+    "controls_are_not_sweeps": "a control's pass rate is REQUIRED to behave in a particular way rather than to be monotone -- the noise-shrink attack must make the pass rate FALL, and fall on the upper side -- so controls are gated on their own booleans and excluded from the monotonicity gate. Both gates block this script",
+    "not_swept": "the ten carried v2 bars are byte-frozen and are deliberately NOT re-swept: changing them is the thing a carried bar exists to prevent, and each was anti-tested before the v2 seal",
+    "obligation": "exam section 6.1: every NEW judge ships with an anti-test sweep run on the judge itself, and a judge whose pass rate does not increase in the effect its bar claims to measure does not get sealed. The stage-2 design document adds four per-bar obligations on top of it, sections 3.1 and 3.2",
+    "per_control_holds": {
+      "P1_null_engine": true,
+      "P1_retro": true,
+      "P1_scramble": true,
+      "P2_noise_shrink": true,
+      "P2_retro": true
+    },
+    "per_sweep_monotone": {
+      "P1_coupling": true,
+      "P1_coupling_lag_sensitivity": true,
+      "P2_closeness": true,
+      "P2_loadings": true
+    },
+    "per_sweep_pass_rate": {
+      "P1_coupling": [
+        0.16666666666666666,
+        0.5416666666666666,
+        0.9583333333333334,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "P1_coupling_lag_sensitivity": [
+        1.0,
+        1.0
+      ],
+      "P2_closeness": [
+        0.0,
+        0.0,
+        0.4583333333333333,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "P2_loadings": [
+        0.0,
+        0.0,
+        0.0,
+        0.625,
+        1.0,
+        1.0
+      ]
+    },
+    "readable": "docs/superpowers/specs/stage2-antitest-results.md",
+    "results": "docs/superpowers/specs/stage2-antitest-results.json",
+    "script": "scripts/stage2_antitest.py"
+  },
+  "bar_codes": {
+    "carried_byte_frozen": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "A1",
+      "A2",
+      "R1",
+      "R2"
+    ],
+    "new": [
+      "P1",
+      "P2"
+    ]
+  },
+  "bars": {
+    "P1_both_move_types_required": true,
+    "P1_candidate_set": {
+      "growth_flip": {
+        "construct__windowed_disjoint": 0.083083427489,
+        "construct__windowed_overlapping": 0.069084093309,
+        "label_dial_arm__baseline": 0.069084093309,
+        "label_dial_arm__growth_line_minus_50bp": 0.082821645762,
+        "label_dial_arm__growth_line_plus_50bp": 0.071545603903,
+        "label_dial_arm__inflation_line_minus_50bp": 0.040330202948,
+        "label_dial_arm__inflation_line_plus_50bp": 0.050933036617,
+        "label_dial_arm__inflation_minus_growth_minus": 0.05716937897,
+        "label_dial_arm__inflation_minus_growth_plus": 0.050053956771,
+        "label_dial_arm__inflation_plus_growth_minus": 0.072114154076,
+        "label_dial_arm__inflation_plus_growth_plus": 0.048862494991
+      },
+      "inflation_crossing": {
+        "construct__windowed_disjoint": 0.064501937518,
+        "construct__windowed_overlapping": 0.062546712278,
+        "label_dial_arm__baseline": 0.062546712278,
+        "label_dial_arm__growth_line_minus_50bp": 0.052921292421,
+        "label_dial_arm__growth_line_plus_50bp": 0.078600590406,
+        "label_dial_arm__inflation_line_minus_50bp": 0.031445706759,
+        "label_dial_arm__inflation_line_plus_50bp": 0.064207831412,
+        "label_dial_arm__inflation_minus_growth_minus": 0.031666889423,
+        "label_dial_arm__inflation_minus_growth_plus": 0.046466933119,
+        "label_dial_arm__inflation_plus_growth_minus": 0.063630017164,
+        "label_dial_arm__inflation_plus_growth_plus": 0.073635795437
+      }
+    },
+    "P1_candidate_tolerance_fraction": 0.5,
+    "P1_departure_min": {
+      "growth_flip": 0.040330202948,
+      "inflation_crossing": 0.031445706759
+    },
+    "P1_departure_min_source": {
+      "growth_flip": "label_dial_arm__inflation_line_minus_50bp",
+      "inflation_crossing": "label_dial_arm__inflation_line_minus_50bp"
+    },
+    "P2_economic_share_band": [
+      0.391706974667,
+      0.673370849738
+    ],
+    "P2_summary": "strict_economic_share",
+    "grader": "grader_v2",
+    "n_seeds": 50
+  },
+  "campaign_record": {
+    "coordinator_rulings": [
+      {
+        "cheap_veto_disclosed": true,
+        "date": "2026-08-18",
+        "id": "SQ1",
+        "reasoning": "the two are compatible because symmetrising windows HISTORY, not the engine: the generated statistic is bit-identical under both constructs, so adopting the symmetric one as primary costs nothing that O1's frozen floor protects. The symmetric floor (0.515672) is published beside every O1 reading as a disclosure and never judged, because it is cut from 2000 draws and carries about 0.003 of tape noise on margins of 0.001-0.006, and because re-cutting a sealed threshold is a different act from anchoring a new bar",
+        "ruling": "the v2 O1 bar carries BYTE-FROZEN (comparability with the closed campaign); the stage-2 PRIMARY ordering/phase measurement is the windowed-overlapping symmetric construct (the only one that leaves the judged object unchanged -- the first-pass agent's own recommendation)",
+        "where": "O1 (disclosure), P1 (construct)"
+      },
+      {
+        "cheap_veto_disclosed": true,
+        "date": "2026-08-18",
+        "id": "SQ6",
+        "reasoning": "the strict share is primary because it is the function the engine is scored by -- that identity is P2's fourth anti-test obligation and it outranks elegance. The realised R2 of the same fit has a bootstrap interval of [-0.2203, 0.5616] that spans zero at every block length, so making it a second bar would mean judging the engine by a statistic whose own interval cannot exclude zero",
+        "ruling": "P2 seals on the STRICT ECONOMIC-SHARE summary; the realised-R2 non-robustness is a declared limitation, not a second bar",
+        "where": "P2"
+      },
+      {
+        "cheap_veto_disclosed": true,
+        "date": "2026-08-18",
+        "id": "SQ7",
+        "reasoning": "the candidate threshold moves by a factor of 2.05x and 2.50x under a conventional 50 bp move of a classifier dial, and the inflation-crossing departure escalates at 1.35 of its own standard error, so no single candidate is privileged by the measurement. The minimum keeps every recorded engine failing -- by 0.026 at the closest cell -- so softening does not make the bar vacuous. What it costs is measured and declared: P1's size against an engine whose dials are independent by construction is 0.090 at the sealed thresholds against 0.013 at the recommended construct's own candidate",
+        "ruling": "P1 seals at the MINIMUM defensible threshold across the published candidate set (all candidates and the 2-2.5x dial-sensitivity range published beside it; a bar that asks 'is there ANY unambiguous phase coupling' is the economic question, every recorded engine fails even this softest bar, and demanding more would risk failing a correct engine given the anchor's own uncertainty)",
+        "where": "P1"
+      },
+      {
+        "cheap_veto_disclosed": true,
+        "date": "2026-08-18",
+        "id": "SQ8",
+        "reasoning": "a generated batch is fifty independent decades with no time axis between them, so the only scramble it admits is a shift inside each decade. Shifting one 813-month panel is a different operation on a different object and gives a different number. Every candidate in the sealed set is cut from the within-window null; this script asserts that excluding the superseded panel-wide candidates moves no sealed number",
+        "ruling": "the WITHIN-WINDOW scramble is the null on BOTH sides (like-for-like); recompute P1's thresholds under it (the +9%/+8% corrected candidates) before taking the SQ7 minimum",
+        "where": "P1"
+      },
+      {
+        "cheap_veto_disclosed": true,
+        "date": "2026-08-18",
+        "id": "SQ9",
+        "reasoning": "M3 selects ten months and says in the same breath that the panel does not pin it -- only 57% of bootstrap draws select within three months of ten, and the classifier-cycle arm selects two. Sealing 'ten' would seal the half of the measurement that is not solid; sealing the rule and the grid seals the half that is",
+        "ruling": "the coupling lag is chosen by a SEALED SELECTION RULE (maximum likelihood on the declared 25-lag grid, profile published in the fit report), not a fixed value; the bootstrap lag-dispersion is a declared limitation",
+        "where": "the coupled fit, not a bar"
+      },
+      {
+        "cheap_veto_disclosed": true,
+        "date": "2026-08-18",
+        "id": "floors",
+        "reasoning": "the rule is adopted as binding on every stage-2 floor. Applying it is not the same as re-cutting everything: P1's thresholds carry no tape at all (both halves are exhaustively enumerated) and P2's band resolves margins 485x larger than the O1-class one the count was measured against, so its 2000-draw tape meets the rule on the arithmetic while its tape noise remains UNMEASURED and declared. See floor_resolution",
+        "ruling": "every sealed floor computed at 640,000 draws (the measured requirement: tape noise 0.000148 <= one-fifth of the smallest 0.000761 margin)",
+        "where": "P1, P2, and any O1-class floor cut in stage 2"
+      }
+    ],
+    "declared_limitations": [
+      "L1 -- P1's SIZE is 0.090 at the sealed thresholds: against a synthetic engine whose dials are independent by construction, P1 returns a PASS in 9% of 300 batches of fifty decades, against 1.3% at the recommended construct's own candidate and 0.3% at the strictest published one. The judge is centred on the null (mean departure within one standard error of zero), so this is the bar's size and not a defect -- but a single PASS on P1 is evidence of SOME phase coupling at about the strength of one conventional significance test, not proof of it",
+      "L2 -- P1's thresholds are pinned only to a factor of 2.05x and 2.50x by a 50 bp move of a classifier threshold dial (the platform's own BACKDROP_MARGIN_PP), and the inflation-crossing departure escalates at 1.35 of its own standard error under the campaign's sealed stability rule",
+      "L3 -- the escalation path for a COUNTING statistic does not exist. The sealed rule is 'refit with soft labels and report both', which is written for fitted coefficients; a clockwise fraction is a count and there is no agreed soft-label version of one. Nothing was invented, so L2 stands unresolved",
+      "L4 -- P1 asks for a fraction of a departure history can only just establish: on the uncensored construct history's own growth-flip departure has a 95% interval of [-0.000283, 0.233050], which does not exclude zero, and on the sealed construct it clears zero by 0.0066 at the lower edge and fails to at 12-month blocks",
+      "L5 -- the engine-null substitution error is +0.012638 at worst (ml_link, growth flips), a fifth of a candidate threshold, and 0.0016 in the median across the ten judged cells. The sealed judge therefore computes the batch's OWN null rather than inheriting history's",
+      "L6 -- the M4 asterisk: P2 is kept on the pre-declared strict share and would be DROPPED on the realised-R2 summary of the identical fit, whose bootstrap interval [-0.2203, 0.5616] spans zero at every block length. The artifact records verdict_robust_to_the_summary = false. The reason the R2 is rejected is an estimator pathology (an R2 is ill-behaved under a GLS fit at rho = 0.98), and that reasoning is the author's and should be checked rather than accepted",
+      "L7 -- the strict share is NOT an explained-variance figure. It sums squared component standard deviations, which treats the components as uncorrelated; on history the rule-implied rate and the inflation gap correlate at 0.705 and the total sum of squares is 1.78x the slope's own variance. The number that answers 'how much of the curve does this equation explain' is the realised R2, 0.2464",
+      "L8 -- the ten-month coupling lag is not pinned: only 57% of bootstrap draws select within three months of it and the classifier-cycle arm selects two. SQ9 seals the selection rule rather than the value, and whatever the fit picks must be published with the profile beside it",
+      "L9 -- P2's tape noise has NOT been measured. Its band is cut from 2000 draws and the adopted floor rule is met by arithmetic rather than by measurement; the anchors' section 6.5 prices the measurement at hours",
+      "L10 -- P2's power is sampling adequacy only. The power calculation places HISTORY's own components inside history's interval; whether a coupled engine produces components of that size is week 1's question",
+      "L11 -- history is the most favourable engine there is, and both power figures use it as the true engine while resampling the same 813 months the thresholds are cut from. They see sampling noise and NOT estimation error, so they are upper bounds: a power of 1.000 says the bar is reachable, not that it will be reached",
+      "L12 -- the v2 exam's own declared limitations are inherited whole, including the industrial-production-only recession dial, T1's un-re-anchored downturn union, and the absence of any 2021-22 anchor (the episode lies inside the spent holdout)",
+      "L13 -- nothing here reaches the private book. ER-14 stands: inflation does not reach private markets at all. A clean pass on both new bars leaves the translation layer's blindness exactly where it was"
+    ],
+    "floor_resolution": {
+      "P1": {
+        "has_a_tape": false,
+        "meets_the_rule": true,
+        "tape_noise": 0.0,
+        "why": "P1's thresholds are half a departure and both halves are EXHAUSTIVELY ENUMERATED rather than sampled -- the measured clockwise fraction is a count and the within-window null scores every admissible shift -- so there is no bootstrap anywhere in the anchor and no tape to be noisy"
+      },
+      "P2": {
+        "draws": 2000,
+        "has_a_tape": true,
+        "meets_the_rule": null,
+        "required_tape_noise_under_the_same_rule": 0.0738468155608,
+        "smallest_margin_the_band_must_resolve": 0.36923407780399997,
+        "tape_noise_measured": false,
+        "why": "the requirement scales with the margin the floor has to resolve, and P2's smallest margin is the distance from its lower edge to the closer recorded engine -- roughly 485x the O1-class margin the 640,000 was measured against. The tape noise itself is NOT measured: the anchors' section 6.5 prices it at hours because the share refits an AR(1) profile on every draw. This is a BOUND, it is declared as one, and it is stop-question 2"
+      },
+      "applies_to": "every floor cut in stage 2. It binds on any O1-class clockwise-fraction floor -- including the symmetric O1 floor this exam publishes as a disclosure, if it is ever promoted to a bar",
+      "o1_class_measured_tape_noise_at_that_count": 0.00014801959,
+      "o1_class_required_tape_noise": 0.00015223608,
+      "o1_class_smallest_margin": 0.000761180398,
+      "required_draws_for_an_o1_class_floor": 640000,
+      "rule": "PRE-DECLARED: the tape noise -- the standard deviation of the floor across independent bootstrap tapes -- must be at most one fifth of the smallest margin the floor has to resolve. At one fifth a two-sd excursion is still under half the margin, so no recorded verdict can flip on the draw"
+    },
+    "funding_ruling": "governance/decision-register.md D-SP-9, 2026-08-17: stage 2 funded -- one coupled monthly system over growth, inflation, policy and the curve, fitted jointly on the campaign panel by the machinery already in the repo. The flesh, R1 selection-only and the severity discipline are unchanged; the ten existing bars carry byte-frozen; the two new bars are sealed BEFORE the fit. Stage 3 (model-implied conditional means for ASSET returns) is named, not proposed, and would require amending R1",
+    "n_seeds": 50,
+    "n_seeds_note": "50 decades per premise, carried unchanged from the v2 seal. Both new bars' power was measured at that size on a true engine and both cleared in 2000 of 2000 replicates, so the batch size is not the binding constraint on either -- the anchor's own width is",
+    "not_sealed_by_this": "any statement about a coupled engine. No stage-2 fit exists: M3 establishes the growth -> inflation channel IN HISTORY and the power calculation uses HISTORY as the true engine. Whether a fitted coupled system reproduces either is week 1's question and this seal cannot touch it",
+    "p1_size_disclosure": {
+      "measured_by": "scripts/stage2_antitest._p1_null_engine",
+      "reading": "the false-positive rate against a synthetic engine whose two dials are independent by construction, at the sealed batch size. This is the price of ruling SQ7 and it is the number to argue with if the ruling is to be vetoed -- the alternative threshold pair is already inside bars.P1_candidate_set, so the change would be an amendment naming two numbers rather than a re-derivation",
+      "size_at_every_published_candidate": {
+        "construct__windowed_disjoint": 0.0033333333333333335,
+        "construct__windowed_overlapping": 0.013333333333333334,
+        "label_dial_arm__baseline": 0.013333333333333334,
+        "label_dial_arm__growth_line_minus_50bp": 0.0033333333333333335,
+        "label_dial_arm__growth_line_plus_50bp": 0.006666666666666667,
+        "label_dial_arm__inflation_line_minus_50bp": 0.09,
+        "label_dial_arm__inflation_line_plus_50bp": 0.02666666666666667,
+        "label_dial_arm__inflation_minus_growth_minus": 0.04666666666666667,
+        "label_dial_arm__inflation_minus_growth_plus": 0.06,
+        "label_dial_arm__inflation_plus_growth_minus": 0.01,
+        "label_dial_arm__inflation_plus_growth_plus": 0.013333333333333334
+      },
+      "size_at_the_sealed_thresholds": 0.09
+    },
+    "standing_caveat": "nothing built on this generator line is a convincing model of history, the holdout is spent, and no appeal to held-out data is available to any result stage 2 produces"
+  },
+  "carried_note": "the ten v2 bars are loaded whole from spine-v2-prereg.json and judged by the SAME functions the v2 campaign ran -- scripts/spine_v2_report's judges, and through them spine_pilot_b3._judge and spine_pilot_report.judge_b2 for R1 and R2 -- imported rather than copied, every one of them hashed below or inside the v2 seal that is hashed below. A change in one of those ten verdicts is therefore attributable to the engine and to nothing else, which is the only reason a carried bar is worth having",
+  "carried_v2": {
+    "bar_codes": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "A1",
+      "A2",
+      "R1",
+      "R2"
+    ],
+    "bars": {
+      "A1_containment_pp": [
+        -5.053054679081145,
+        32.31605649965673
+      ],
+      "A2_correlation_margin": 0.13609378139729844,
+      "A2_share_high_floor": 0.8,
+      "A2_share_low_ceiling": null,
+      "A2_share_low_ceiling_dropped_value": 0.65,
+      "D_anchor_medians_months": {
+        "expansion": 4.0,
+        "recession": 2.0,
+        "recovery": 5.0,
+        "stagflation": 4.0
+      },
+      "D_median_bands_months": {
+        "expansion": [
+          1.0,
+          7.0
+        ],
+        "recession": [
+          0.0,
+          5.0
+        ],
+        "recovery": [
+          2.0,
+          8.0
+        ],
+        "stagflation": [
+          1.0,
+          7.0
+        ]
+      },
+      "D_statistic": "median of the completed spells POOLED over the whole batch",
+      "D_tolerance_months": 3.0,
+      "O1_clockwise_min": 0.5180669104991394,
+      "T1_lift_band": [
+        1.7752827491108736,
+        3.3473622102535145
+      ],
+      "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
+      "grader": "grader_v2",
+      "n_seeds": 50
+    },
+    "carried": {
+      "b2": {
+        "join_yoy_max_pp": 2.5,
+        "p95_ratio_max": 1.25,
+        "panel_p95_adjacent_yoy_pp": 0.7433911963542538
+      },
+      "b3": {
+        "coverage_must_be_monotone": true,
+        "grid_private_pct": [
+          15,
+          35,
+          40,
+          55
+        ],
+        "min_breach_seeds_at_55": 1,
+        "n_seeds": 20
+      }
+    },
+    "parameters": {
+      "contracting_labels": [
+        "REC",
+        "CRI",
+        "STAG"
+      ],
+      "crisis_only_labels": [
+        "CRI"
+      ],
+      "decade_months": 120,
+      "downturn_labels": [
+        "REC",
+        "CRI"
+      ],
+      "era_threshold_pp": 3.351323828920571,
+      "inflation_high_line_pp": 4.0,
+      "k_months": 12,
+      "note": "contracting_labels is grader_v2's contracting set (the owner's mapping fix); downturn_labels is T1's onset union, which is NOT re-anchored under the mapping fix and stays REC-or-CRI on both sides; crisis_only_labels drives T1's crisis-only DISCLOSURE, which is reported and never judged",
+      "rolling_window_months": 36
+    }
+  },
+  "hashed_files": [
+    "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+    "docs/superpowers/specs/stage2-anchors.json",
+    "docs/superpowers/specs/stage2-antitest-results.json",
+    "docs/superpowers/specs/spine-v2-prereg.json",
+    "docs/superpowers/specs/spine-v2-anchors.json",
+    "scripts/stage2_anchors.py",
+    "scripts/stage2_antitest.py",
+    "scripts/stage2_report.py",
+    "scripts/stage2_seal.py",
+    "scripts/spine_v2_grader.py",
+    "scripts/spine_v2_report.py"
+  ],
+  "hashes": {
+    "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md": "0fdbcb7b29575931014e578470d3e36881541fdb39a06a37c319ea1f42f1de53",
+    "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+    "docs/superpowers/specs/spine-v2-prereg.json": "81ef5c7f5c895ecfa234a50cd68420c4d437751972a4b1beaecabef04f0a707f",
+    "docs/superpowers/specs/stage2-anchors.json": "58a1f7b23d5b675bc3fad6673c220985daee00c48451f72c22f20a622c8759a8",
+    "docs/superpowers/specs/stage2-antitest-results.json": "96432694505f8522881ce134aa513a108bed0eebf9c2de64d2a1850d1576fbd1",
+    "scripts/spine_v2_grader.py": "cd08f39a7c50f217cd85eed64a709cc2aac3beffd1b992e744fd1b2dd5791ae4",
+    "scripts/spine_v2_report.py": "fb6d48af01b9c2524d80ba9dfd713a701d577eb9900ee81db90d60975923cef1",
+    "scripts/stage2_anchors.py": "4949fa214fde89f6830ca32efe5c73b90fce1d4725b5fc2bd367a9b6eb6df360",
+    "scripts/stage2_antitest.py": "ade03b45b3caacc3459e1964d83663f19244acaa70475669e9af15399c31cc14",
+    "scripts/stage2_report.py": "8e4d2084f7419807679d4f22f1e343da29a139c7e84e357dbee022f2582fe94d",
+    "scripts/stage2_seal.py": "074faeaaf76d48c6f090ea72c48b6f91dcb8ba8136be423d237f45599f552846"
+  },
+  "parameters": {
+    "contracting_labels": [
+      "REC",
+      "CRI",
+      "STAG"
+    ],
+    "decade_months": 120,
+    "decade_scramble_guard_months": 24,
+    "era_threshold_pp": 3.351323828920571,
+    "o1_symmetric_floor": 0.515671717177,
+    "p2_arm": "rho_refitted",
+    "p2_block_months": 24,
+    "p2_economic_components": [
+      "policy_rule",
+      "inflation_gap",
+      "season_term"
+    ],
+    "p2_exogenous_components": [
+      "u_hat"
+    ],
+    "phase_construct": "windowed_overlapping",
+    "phase_null": "within_window",
+    "yoy_warmup_months": 12
+  },
+  "prior_rounds": {
+    "prior_verdicts_are_frozen": true,
+    "round_one": {
+      "measured_state_commit": "233b70d30157e2e06e80e447f410c03afc5d1f68",
+      "prereg_commit": "c9bd03621424becf24dcb603ac7ef725ff9a53ab",
+      "seal": "docs/superpowers/specs/spine-pilot-prereg.json",
+      "seal_commit": "b97450a74f5e0ed884977a07091408029d8d3b40",
+      "verdicts": "docs/superpowers/specs/2026-08-15-spine-pilot-results.md"
+    },
+    "round_two": {
+      "prereg_commit": "fef995ff8ebcc8eea76c6b6c08aa991a18bda967",
+      "seal": "docs/superpowers/specs/spine02-prereg.json",
+      "verdicts": "docs/superpowers/specs/2026-08-16-spine02-results.md"
+    },
+    "spine_v2": {
+      "amendments": [
+        "AM-SPV2-2026-08-17-001"
+      ],
+      "exam": "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+      "note": "the campaign CLOSED at its second frontier. Its ten bars are carried here byte-frozen, and its own seal is hashed below -- so a stage-2 verdict cannot quietly rest on a moved v2 threshold",
+      "seal": "docs/superpowers/specs/spine-v2-prereg.json",
+      "verdicts": "docs/superpowers/specs/2026-08-17-spine-v2-results.md"
+    }
+  },
+  "purpose": "The stage-2 exam's pre-registration: the two NEW bars' thresholds, the ten carried v2 bars loaded byte-frozen, and the sha256 of the code that judges them -- hashed together BEFORE the coupled fit is written and before any stage-2 batch is simulated. Specification: docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+  "schema": "stage2-prereg-1",
+  "sealed_at_utc": "2026-08-18T01:39:46-07:00 (as of HEAD commit 3b54a5814be3d5f3515cdfa4fc7e4d478b45134d)"
+}

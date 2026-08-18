@@ -1,0 +1,573 @@
+{
+  "all_controls_hold": true,
+  "all_monotone": true,
+  "broken_controls": [],
+  "controls": {
+    "P1_null_engine": {
+      "bar": "P1",
+      "holds": true,
+      "n_replicates": 300,
+      "obligation": "at zero coupling the dials are independent by construction and P1 must return a FAIL; if it does not, the judge is broken",
+      "reading_a_the_judge_is_centred_on_the_null": {
+        "growth_flip": {
+          "mean_as_a_fraction_of_the_threshold": -0.0019813342784146155,
+          "mean_departure": -7.990761355629058e-05,
+          "sd_across_batches": 0.030799713275912757,
+          "standard_error": 0.001778222275081152,
+          "threshold": 0.040330202948,
+          "within_one_standard_error_of_zero": true
+        },
+        "inflation_crossing": {
+          "mean_as_a_fraction_of_the_threshold": -0.0034894623534478526,
+          "mean_departure": -0.00010972860991309119,
+          "sd_across_batches": 0.03151821576397913,
+          "standard_error": 0.0018197050355710056,
+          "threshold": 0.031445706759,
+          "within_one_standard_error_of_zero": true
+        }
+      },
+      "reading_b_the_size_of_the_bar": {
+        "note": "the false-positive rate against an engine whose dials are independent by construction, at the sealed batch size of 50 decades. Sealing at the SOFTEST candidate (ruling SQ7) buys reach against a correct engine and pays for it here; the number at the recommended construct's own candidate is published beside it so the trade is visible",
+        "size_at_every_published_candidate": {
+          "construct__windowed_disjoint": 0.0033333333333333335,
+          "construct__windowed_overlapping": 0.013333333333333334,
+          "label_dial_arm__baseline": 0.013333333333333334,
+          "label_dial_arm__growth_line_minus_50bp": 0.0033333333333333335,
+          "label_dial_arm__growth_line_plus_50bp": 0.006666666666666667,
+          "label_dial_arm__inflation_line_minus_50bp": 0.09,
+          "label_dial_arm__inflation_line_plus_50bp": 0.02666666666666667,
+          "label_dial_arm__inflation_minus_growth_minus": 0.04666666666666667,
+          "label_dial_arm__inflation_minus_growth_plus": 0.06,
+          "label_dial_arm__inflation_plus_growth_minus": 0.01,
+          "label_dial_arm__inflation_plus_growth_plus": 0.013333333333333334
+        },
+        "size_at_the_sealed_thresholds": 0.09
+      },
+      "requirement": "reading (a): the measured departure at zero coupling is within its own Monte Carlo standard error of zero, on both move types. Reading (b) -- that the null engine never passes -- is arithmetically unreachable for a counting statistic at a finite batch size (it is the bar's SIZE, and no bar in this exam was ever asked for zero size), so it is measured and disclosed rather than required",
+      "shape": "control -- a rate, measured at its own replicate count"
+    },
+    "P1_retro": {
+      "bar": "P1",
+      "holds": true,
+      "note": "judged against each engine's OWN within-decade null on the censored construct it actually ships -- the anchors' section 5.3 measurement, not the earlier section 2.8 one that substituted history's null and read 0.010 margins",
+      "obligation": "judge every engine on the record with the new judge; all must fail. A new bar that passes an engine already established as uncoupled is void",
+      "per_engine_arm": {
+        "feedback__premise_accepted": {
+          "departure_against_own_null": {
+            "growth_flip": 0.003562416263,
+            "inflation_crossing": 0.008818218227
+          },
+          "passes": false,
+          "shortfall": {
+            "growth_flip": 0.036767786685,
+            "inflation_crossing": 0.022627488532
+          }
+        },
+        "feedback__unconditional": {
+          "departure_against_own_null": {
+            "growth_flip": 0.008931142576,
+            "inflation_crossing": 0.036226435201
+          },
+          "passes": false,
+          "shortfall": {
+            "growth_flip": 0.031399060372,
+            "inflation_crossing": -0.004780728442000004
+          }
+        },
+        "ml_link__unconditional": {
+          "departure_against_own_null": {
+            "growth_flip": 0.010642351049,
+            "inflation_crossing": 0.034001532511
+          },
+          "passes": false,
+          "shortfall": {
+            "growth_flip": 0.029687851899,
+            "inflation_crossing": -0.0025558257520000016
+          }
+        },
+        "ols_feedback__unconditional": {
+          "departure_against_own_null": {
+            "growth_flip": 0.008889588341,
+            "inflation_crossing": 0.030661313371
+          },
+          "passes": false,
+          "shortfall": {
+            "growth_flip": 0.031440614607,
+            "inflation_crossing": 0.000784393387999998
+          }
+        },
+        "week2__unconditional": {
+          "departure_against_own_null": {
+            "growth_flip": 0.022516117628,
+            "inflation_crossing": 0.036150634208
+          },
+          "passes": false,
+          "shortfall": {
+            "growth_flip": 0.01781408532,
+            "inflation_crossing": -0.0047049274490000015
+          }
+        }
+      },
+      "requirement": "no recorded engine passes",
+      "thresholds": {
+        "growth_flip": 0.040330202948,
+        "inflation_crossing": 0.031445706759
+      }
+    },
+    "P1_scramble": {
+      "bar": "P1",
+      "bar_size_for_comparison": "P1_null_engine.reading_b_the_size_of_the_bar.size_at_the_sealed_thresholds -- what a scrambled batch's pass rate should fall TO, since a scrambled batch is an uncoupled batch and an uncoupled batch's pass rate is the bar's size",
+      "holds": true,
+      "n_replicates": 300,
+      "note": "both construction choices in this control were got wrong first and each moved the answer by more than the residual it was measuring -- one shift for the whole batch left a mean departure of 0.054 and a 58% pass rate, and a guarded per-decade shift left +0.019 / +0.023 and 23%. Both artifacts are the shift SET, not the judge; the docstring on _scramble records why",
+      "obligation": "phase-scramble a generated batch that PASSES and confirm the statistic falls back to the null -- proof the bar measures alignment and not some other property of the batch",
+      "pass_rate_after": 0.12333333333333334,
+      "pass_rate_before": 1.0,
+      "per_move_type": {
+        "growth_flip": {
+          "collapsed": true,
+          "mean_departure_after": -0.00102375670764473,
+          "mean_departure_before": 0.2903669197895824,
+          "residual_as_a_fraction_of_the_pre_scramble_departure": -0.0035257346408007033,
+          "standard_error_after": 0.0020653862383625105,
+          "threshold": 0.040330202948
+        },
+        "inflation_crossing": {
+          "collapsed": true,
+          "mean_departure_after": -0.0007185086010647738,
+          "mean_departure_before": 0.28492495209083707,
+          "residual_as_a_fraction_of_the_pre_scramble_departure": -0.0025217468522578034,
+          "standard_error_after": 0.0021331241311098653,
+          "threshold": 0.031445706759
+        }
+      },
+      "requirement": "the coupled batch passes; after the scramble the mean departure is below the sealed threshold on both move types and is at most one tenth of its pre-scramble value; and the pass rate falls. NOT 'to exactly zero': a scrambled batch is an uncoupled batch, so what its pass rate must fall to is the bar's own size, and demanding third-decimal agreement would be demanding the control prove something the obligation never claimed",
+      "scramble": "an INDEPENDENT shift per decade, drawn uniformly over the full circle. The sealed guard belongs to the NULL and is deliberately not applied here",
+      "shape": "control -- its pass rate is REQUIRED to fall, so it is not a monotone sweep"
+    },
+    "P2_noise_shrink": {
+      "bar": "P2",
+      "grid_residual_sd_pp": [
+        0.747992998622,
+        0.6,
+        0.5,
+        0.35,
+        0.2,
+        0.1
+      ],
+      "holds": true,
+      "note": "an engine that removes the surprise the product needs scores a HIGHER economic share, which is why the bar is two-sided and why this control, not the loading sweep, is the one that proves the upper edge is load-bearing",
+      "obligation": "hold the loadings and scale the residual innovation down until the share exceeds the band's upper edge; the judge must return FAIL, and it must fail on the UPPER side. This is the specific gaming route a one-sided share bar would leave open and the design document requires it demonstrated closed",
+      "requirement": "pass rate 0.0 at the smallest residual, and every failure there is from ABOVE",
+      "rows": [
+        {
+          "fails_above_the_band_rate": 0.0,
+          "mean_economic_share": 0.5402690978758731,
+          "pass_rate": 1.0,
+          "residual_sd_pp": 0.747992998622
+        },
+        {
+          "fails_above_the_band_rate": 0.125,
+          "mean_economic_share": 0.649296649548024,
+          "pass_rate": 0.875,
+          "residual_sd_pp": 0.6
+        },
+        {
+          "fails_above_the_band_rate": 1.0,
+          "mean_economic_share": 0.7227210785076958,
+          "pass_rate": 0.0,
+          "residual_sd_pp": 0.5
+        },
+        {
+          "fails_above_the_band_rate": 1.0,
+          "mean_economic_share": 0.8320716835426548,
+          "pass_rate": 0.0,
+          "residual_sd_pp": 0.35
+        },
+        {
+          "fails_above_the_band_rate": 1.0,
+          "mean_economic_share": 0.9163521740430637,
+          "pass_rate": 0.0,
+          "residual_sd_pp": 0.2
+        },
+        {
+          "fails_above_the_band_rate": 1.0,
+          "mean_economic_share": 0.9579023682227895,
+          "pass_rate": 0.0,
+          "residual_sd_pp": 0.1
+        }
+      ],
+      "shape": "control -- its pass rate is REQUIRED to fall, so it is not a monotone sweep"
+    },
+    "P2_retro": {
+      "bar": "P2",
+      "holds": true,
+      "note": "each engine's share is recomputed by the sealed judge from its committed component standard deviations and must reproduce the share the anchors recorded for it -- which is what makes 'one decomposition function, called on both sides' a check rather than a claim",
+      "obligation": "week 2 (0.0%) and week 3 (2.2%) must both be judged and both must fail BELOW the band. If either passes, the bar is not measuring what the finding found",
+      "per_engine_arm": {
+        "feedback__premise_accepted": {
+          "component_sd_pp": {
+            "season_term": 0.095368228379,
+            "u_hat": 0.148625032509
+          },
+          "failure_side": "below",
+          "passes": false,
+          "reproduces_the_recorded_share": true,
+          "residual_stationary_sd_pp": 0.731444845753,
+          "share_recorded_by_the_anchors": 0.016063515097,
+          "share_through_the_sealed_judge": 0.016063515096920573
+        },
+        "feedback__unconditional": {
+          "component_sd_pp": {
+            "season_term": 0.113170199114,
+            "u_hat": 0.148625032509
+          },
+          "failure_side": "below",
+          "passes": false,
+          "reproduces_the_recorded_share": true,
+          "residual_stationary_sd_pp": 0.731444845753,
+          "share_recorded_by_the_anchors": 0.022472896863,
+          "share_through_the_sealed_judge": 0.022472896863360188
+        },
+        "week2__premise_accepted": {
+          "component_sd_pp": {
+            "season_term": 0.0,
+            "u_hat": 0.535801285624
+          },
+          "failure_side": "below",
+          "passes": false,
+          "reproduces_the_recorded_share": true,
+          "residual_stationary_sd_pp": 0.650389434237,
+          "share_recorded_by_the_anchors": 0.0,
+          "share_through_the_sealed_judge": 0.0
+        },
+        "week2__unconditional": {
+          "component_sd_pp": {
+            "season_term": 0.0,
+            "u_hat": 0.535801285624
+          },
+          "failure_side": "below",
+          "passes": false,
+          "reproduces_the_recorded_share": true,
+          "residual_stationary_sd_pp": 0.650389434237,
+          "share_recorded_by_the_anchors": 0.0,
+          "share_through_the_sealed_judge": 0.0
+        }
+      },
+      "requirement": "no recorded engine passes, and every failure is from below",
+      "same_definition_proof": true
+    }
+  },
+  "decade_months": 120,
+  "n_decades_per_batch": 50,
+  "n_replicates": 24,
+  "non_monotone_sweeps": [],
+  "not_swept": "the ten carried v2 bars are byte-frozen and are deliberately NOT re-swept: changing them is the thing a carried bar exists to prevent, and each was anti-tested before the v2 seal",
+  "obligation": "exam section 6.1, carried into the stage-2 delta: before a judge is sealed, sweep the model property the judge claims to measure and confirm the judge's pass rate increases in it; plus the four per-bar obligations the stage-2 design document adds for P1 and for P2",
+  "rule": "P1's bar is one-sided from below, so its sweep runs the coupling from absent to total and the pass rate must not fall. P2's bar is TWO-SIDED, so its loading sweep is evaluated over the sub-range where the share is still inside the band -- the design document's own wording -- and a separate closeness sweep, half the batches above the anchor and half below, carries the two-sided claim. The noise-shrink attack is a CONTROL and not a sweep: its pass rate is required to FALL, and to fall on the upper side, so it is excluded from the monotonicity gate and carries its own required boolean",
+  "schema": "stage2-antitest-1",
+  "seeds": {
+    "P1_coupling": 20260831,
+    "P1_scramble": 20260832,
+    "P2_closeness": 20260835,
+    "P2_loadings": 20260833,
+    "P2_noise_shrink": 20260834
+  },
+  "sweeps": {
+    "P1_coupling": {
+      "bar": "P1",
+      "departure_is_non_decreasing": {
+        "growth_flip": true,
+        "inflation_crossing": true
+      },
+      "effect": "the fraction of a decade over which the inflation dial is a lagged copy of the growth axis rather than an independent process (10-month lag)",
+      "grid": [
+        0.0,
+        0.15,
+        0.3,
+        0.5,
+        0.7,
+        0.85,
+        1.0
+      ],
+      "mean_departure_by_move_type": {
+        "growth_flip": [
+          0.005817502471835348,
+          0.04270811402041271,
+          0.08571010115368156,
+          0.13178739273407367,
+          0.20396871286611018,
+          0.25431656140677933,
+          0.2906132564355672
+        ],
+        "inflation_crossing": [
+          0.004269541939562443,
+          0.03893092841301838,
+          0.07277672207925802,
+          0.1113228699958636,
+          0.18107374919271324,
+          0.2339961080939894,
+          0.2850030610906013
+        ]
+      },
+      "mean_statistic": [
+        -0.035052705295329466,
+        0.0015498926596963457,
+        0.03976799460315856,
+        0.07987716323686361,
+        0.14962804243371325,
+        0.20244018921399376,
+        0.24976166577848016
+      ],
+      "monotone_non_decreasing": true,
+      "note": "the design document requires the SATURATION point reported, because both prior campaigns found bars that rise and then fall in their own mechanism's strength. Here the departure keeps rising past the point the pass rate saturates, so the bar is not on a plateau it could slide off",
+      "pass_rate": [
+        0.16666666666666666,
+        0.5416666666666666,
+        0.9583333333333334,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "saturates_at": 0.5,
+      "shape": "one-sided sweep of the effect itself",
+      "statistic": "binding margin: min over move types of (departure - threshold)"
+    },
+    "P1_coupling_lag_sensitivity": {
+      "bar": "P1",
+      "effect": "the same coupling sweep at seven and thirteen months instead of ten -- M3 measures ten and says the panel does not pin it, so the judge's response must not depend on which lag inside the hump the engine happens to use",
+      "grid": [
+        "lag_7m",
+        "lag_13m"
+      ],
+      "mean_statistic": [
+        0.365008029381856,
+        0.0599774936209083
+      ],
+      "monotone_non_decreasing": true,
+      "pass_rate": [
+        1.0,
+        1.0
+      ],
+      "per_lag": {
+        "lag_13m": {
+          "grid": [
+            0.0,
+            0.3,
+            0.7,
+            1.0
+          ],
+          "mean_statistic": [
+            -0.035052705295329466,
+            -0.008593766381784754,
+            0.021232469420084055,
+            0.0599774936209083
+          ],
+          "monotone_non_decreasing": true,
+          "pass_rate": [
+            0.16666666666666666,
+            0.4166666666666667,
+            0.875,
+            1.0
+          ]
+        },
+        "lag_7m": {
+          "grid": [
+            0.0,
+            0.3,
+            0.7,
+            1.0
+          ],
+          "mean_statistic": [
+            -0.035052705295329466,
+            0.07910216631372001,
+            0.23192654307481345,
+            0.365008029381856
+          ],
+          "monotone_non_decreasing": true,
+          "pass_rate": [
+            0.16666666666666666,
+            1.0,
+            1.0,
+            1.0
+          ]
+        }
+      },
+      "shape": "one-sided sweep of the effect itself",
+      "statistic": "binding margin at full coupling"
+    },
+    "P2_closeness": {
+      "anchor_share": 0.558666923174,
+      "bar": "P2",
+      "effect": "closeness of the generated economic share to history's 0.5587, half the batches that far above it and half that far below",
+      "grid": [
+        0.35,
+        0.25,
+        0.15,
+        0.08,
+        0.03,
+        0.0
+      ],
+      "grid_miss_months": [
+        0.35,
+        0.25,
+        0.15,
+        0.08,
+        0.03,
+        0.0
+      ],
+      "mean_statistic": [
+        0.5558909410632051,
+        0.556833725391373,
+        0.5588899632246486,
+        0.5532062210629095,
+        0.5651211105503475,
+        0.5539065699903434
+      ],
+      "monotone_non_decreasing": true,
+      "note": "the v2 D-bar pattern, applied to a two-sided share: a judge that is not maximised at the anchor fails this, which is the B1 v2 defect translated to a two-sided bar. The grid is ordered largest-miss-first, so a correct judge's rates are non-decreasing",
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.4583333333333333,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "shape": "two-sided closeness sweep",
+      "statistic": "strict economic share of the generated slope's variance"
+    },
+    "P2_loadings": {
+      "above_history_disclosure": {
+        "band": [
+          0.391706974667,
+          0.673370849738
+        ],
+        "grid": [
+          1.2,
+          1.5,
+          2.0
+        ],
+        "mean_economic_share": [
+          0.6365892787599354,
+          0.7290405060352129,
+          0.8252379992618971
+        ],
+        "note": "outside the one-sided sweep's declared range (absent -> history's own level). The pass rate falls here because the share crosses the band's UPPER edge, which is the two-sided bar working as intended",
+        "pass_rate": [
+          0.9166666666666666,
+          0.0,
+          0.0
+        ]
+      },
+      "band": [
+        0.391706974667,
+        0.673370849738
+      ],
+      "bar": "P2",
+      "effect": "the scale on the three economic curve loadings, from none to history's own level -- the endogenous loadings c_i, c_x and lam_u swept together",
+      "grid": [
+        0.0,
+        0.25,
+        0.5,
+        0.75,
+        0.9,
+        1.0
+      ],
+      "grid_points_inside_or_below_the_band": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "mean_economic_share": [
+        0.0,
+        0.07067688266331637,
+        0.23205801756890376,
+        0.4009066849240348,
+        0.4845951439521928,
+        0.5476724107784857
+      ],
+      "mean_statistic": [
+        0.0,
+        0.07067688266331637,
+        0.23205801756890376,
+        0.4009066849240348,
+        0.4845951439521928,
+        0.5476724107784857
+      ],
+      "monotone_non_decreasing": true,
+      "note": "the obligation is stated as 'the measured economic share must rise monotonically and the pass rate must be non-decreasing OVER THE RANGE WHERE THE SHARE IS INSIDE THE BAND', because the bar is two-sided and a raw sweep would correctly fall once the share leaves the band from above. Both halves are checked separately and both are recorded",
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.625,
+        1.0,
+        1.0
+      ],
+      "pass_rate_over_that_range": [
+        0.0,
+        0.0,
+        0.0,
+        0.625,
+        1.0,
+        1.0
+      ],
+      "saturates_at": 0.9,
+      "shape": "one-sided sweep, evaluated over the sub-range the design document names",
+      "share_is_non_decreasing": true,
+      "statistic": "strict economic share of the generated slope's variance"
+    }
+  },
+  "thresholds_judged_against": {
+    "P1_both_move_types_required": true,
+    "P1_candidate_set": {
+      "growth_flip": {
+        "construct__windowed_disjoint": 0.083083427489,
+        "construct__windowed_overlapping": 0.069084093309,
+        "label_dial_arm__baseline": 0.069084093309,
+        "label_dial_arm__growth_line_minus_50bp": 0.082821645762,
+        "label_dial_arm__growth_line_plus_50bp": 0.071545603903,
+        "label_dial_arm__inflation_line_minus_50bp": 0.040330202948,
+        "label_dial_arm__inflation_line_plus_50bp": 0.050933036617,
+        "label_dial_arm__inflation_minus_growth_minus": 0.05716937897,
+        "label_dial_arm__inflation_minus_growth_plus": 0.050053956771,
+        "label_dial_arm__inflation_plus_growth_minus": 0.072114154076,
+        "label_dial_arm__inflation_plus_growth_plus": 0.048862494991
+      },
+      "inflation_crossing": {
+        "construct__windowed_disjoint": 0.064501937518,
+        "construct__windowed_overlapping": 0.062546712278,
+        "label_dial_arm__baseline": 0.062546712278,
+        "label_dial_arm__growth_line_minus_50bp": 0.052921292421,
+        "label_dial_arm__growth_line_plus_50bp": 0.078600590406,
+        "label_dial_arm__inflation_line_minus_50bp": 0.031445706759,
+        "label_dial_arm__inflation_line_plus_50bp": 0.064207831412,
+        "label_dial_arm__inflation_minus_growth_minus": 0.031666889423,
+        "label_dial_arm__inflation_minus_growth_plus": 0.046466933119,
+        "label_dial_arm__inflation_plus_growth_minus": 0.063630017164,
+        "label_dial_arm__inflation_plus_growth_plus": 0.073635795437
+      }
+    },
+    "P1_candidate_tolerance_fraction": 0.5,
+    "P1_departure_min": {
+      "growth_flip": 0.040330202948,
+      "inflation_crossing": 0.031445706759
+    },
+    "P1_departure_min_source": {
+      "growth_flip": "label_dial_arm__inflation_line_minus_50bp",
+      "inflation_crossing": "label_dial_arm__inflation_line_minus_50bp"
+    },
+    "P2_economic_share_band": [
+      0.391706974667,
+      0.673370849738
+    ],
+    "P2_summary": "strict_economic_share",
+    "grader": "grader_v2",
+    "n_seeds": 50
+  }
+}

@@ -1,0 +1,4388 @@
+{
+  "campaign_vintage_id": "2026-08-10.1",
+  "decision": "D-SP-9 (stage 2 funded, owner ruling 2026-08-17)",
+  "floor_noise_and_the_draw_count": {
+    "binding_construct": "windowed_overlapping",
+    "binding_construct_note": "the WINDOWED floor is the noisier of the two and therefore sets the requirement. That is not an accident: it is a weighted fraction over re-used months, so it takes near-continuous values, while the unweighted floor is a ratio of small counts",
+    "block_months": 24,
+    "extrapolation_that_does_not_settle_it": {
+      "uncensored_both_sides": {
+        "fitted_log_log_slope": -0.524403152771,
+        "required_draws_by_the_fitted_law": 536000,
+        "required_draws_by_the_square_root_law": 568000,
+        "slope_expected_by_theory": -0.5
+      },
+      "windowed_overlapping": {
+        "fitted_log_log_slope": -0.550926140581,
+        "required_draws_by_the_fitted_law": 554000,
+        "required_draws_by_the_square_root_law": 606000,
+        "slope_expected_by_theory": -0.5
+      }
+    },
+    "ladder": {
+      "uncensored_both_sides": {
+        "draws_2000": {
+          "distinct_floor_values": [
+            0.516640625,
+            0.517227011494,
+            0.519212962963,
+            0.519224683544,
+            0.520547945205,
+            0.520833333333,
+            0.521119424883,
+            0.521723821188,
+            0.522388059701,
+            0.523076923077,
+            0.52380952381,
+            0.526315789474
+          ],
+          "draws": 2000,
+          "mean_floor": 0.521010008639,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.002742681372,
+          "tape_noise_sd_ci95": [
+            0.001805906426,
+            0.004165388084
+          ],
+          "tape_range": 0.009675164474
+        },
+        "draws_32000": {
+          "distinct_floor_values": [
+            0.518987341772,
+            0.520547945205,
+            0.520833333333,
+            0.521119424883,
+            0.521126760563,
+            0.521739130435
+          ],
+          "draws": 32000,
+          "mean_floor": 0.520731929995,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.416666666667,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.000640812599,
+          "tape_noise_sd_ci95": [
+            0.000421940223,
+            0.000973220291
+          ],
+          "tape_range": 0.002751788663
+        },
+        "draws_8000": {
+          "distinct_floor_values": [
+            0.517857142857,
+            0.518518518519,
+            0.519987012987,
+            0.52,
+            0.520534246575,
+            0.520547945205,
+            0.521723821188,
+            0.521739130435,
+            0.522388059701
+          ],
+          "draws": 8000,
+          "mean_floor": 0.520717186954,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.25,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.001495150086,
+          "tape_noise_sd_ci95": [
+            0.000984474965,
+            0.002270726894
+          ],
+          "tape_range": 0.004530916844
+        }
+      },
+      "windowed_overlapping": {
+        "draws_128000": {
+          "distinct_floor_values": [
+            0.516259107337,
+            0.516420201183,
+            0.516420229077,
+            0.516618238571,
+            0.516621655988,
+            0.516671651512,
+            0.516822932507,
+            0.516845796329,
+            0.516849107211,
+            0.516961785517,
+            0.517224060795,
+            0.517227813208
+          ],
+          "draws": 128000,
+          "mean_floor": 0.516745214936,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.00030457112,
+          "tape_noise_sd_ci95": [
+            0.000200543508,
+            0.00046256081
+          ],
+          "tape_range": 0.000968705871
+        },
+        "draws_2000": {
+          "distinct_floor_values": [
+            0.510124196123,
+            0.514318979077,
+            0.515858411892,
+            0.51641368178,
+            0.51673141456,
+            0.517116221828,
+            0.517311467423,
+            0.518090128349,
+            0.518449902341,
+            0.518946946159,
+            0.520656327503,
+            0.521228507724
+          ],
+          "draws": 2000,
+          "mean_floor": 0.51710384873,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.002930947595,
+          "tape_noise_sd_ci95": [
+            0.001929869488,
+            0.004451313344
+          ],
+          "tape_range": 0.011104311601
+        },
+        "draws_32000": {
+          "distinct_floor_values": [
+            0.514683753541,
+            0.516176333161,
+            0.516230481686,
+            0.516705246447,
+            0.516732045166,
+            0.516764976675,
+            0.516866534542,
+            0.516947807033,
+            0.517004904309,
+            0.517031468809,
+            0.517087343334,
+            0.517563095362
+          ],
+          "draws": 32000,
+          "mean_floor": 0.516649499172,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.000721207656,
+          "tape_noise_sd_ci95": [
+            0.000474875993,
+            0.001095318548
+          ],
+          "tape_range": 0.00287934182
+        },
+        "draws_512000": {
+          "distinct_floor_values": [
+            0.516330584491,
+            0.516356803879,
+            0.516467378939,
+            0.516522985582,
+            0.516620266732,
+            0.516633030531,
+            0.51663947295,
+            0.516653863441,
+            0.516685802752,
+            0.51669997839,
+            0.516705140357,
+            0.516875947045
+          ],
+          "draws": 512000,
+          "mean_floor": 0.516599271257,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.000155435594,
+          "tape_noise_sd_ci95": [
+            0.00010234588,
+            0.00023606445
+          ],
+          "tape_range": 0.000545362554
+        },
+        "draws_640000": {
+          "distinct_floor_values": [
+            0.51637276441,
+            0.516429682702,
+            0.516462337608,
+            0.516535407032,
+            0.516544109768,
+            0.516589241566,
+            0.51660810396,
+            0.516627736245,
+            0.516655855262,
+            0.516676234053,
+            0.516704454139,
+            0.516937038786
+          ],
+          "draws": 640000,
+          "mean_floor": 0.516595247128,
+          "meets_the_rule": true,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.00014801959,
+          "tape_noise_sd_ci95": [
+            9.7462845e-05,
+            0.000224801555
+          ],
+          "tape_range": 0.000564274376
+        },
+        "draws_8000": {
+          "distinct_floor_values": [
+            0.513479878017,
+            0.514348107304,
+            0.514382815381,
+            0.516108202635,
+            0.516663511051,
+            0.516853816438,
+            0.51687310594,
+            0.518253638438,
+            0.518511204468,
+            0.518839414919,
+            0.518920248452,
+            0.519359577242
+          ],
+          "draws": 8000,
+          "mean_floor": 0.516882793357,
+          "meets_the_rule": false,
+          "modal_share_of_tapes": 0.083333333333,
+          "n_tapes": 12,
+          "tape_noise_sd": 0.001989708834,
+          "tape_noise_sd_ci95": [
+            0.001310114987,
+            0.003021827309
+          ],
+          "tape_range": 0.005879699225
+        }
+      }
+    },
+    "ladder_rule": "quadruple the draw count until the measured noise meets the rule; if the top rung still misses, refine at the count the law fitted on the rungs so far implies, floored at 1.25x the last rung and rounded up to a multiple of 20000. The answer is the smallest rung that MEETS the rule, measured on its own tapes",
+    "largest_draw_count_that_still_missed": 512000,
+    "margins_measured_in_this_run": {
+      "feedback__premise_accepted__sealed": 0.026722036997,
+      "feedback__premise_accepted__uncensored_both_sides": 0.013613895953,
+      "feedback__premise_accepted__windowed_disjoint": 0.019282568964,
+      "feedback__premise_accepted__windowed_overlapping": 0.024326843675,
+      "feedback__unconditional__sealed": 0.006302204617,
+      "feedback__unconditional__uncensored_both_sides": 0.004150918047,
+      "feedback__unconditional__windowed_disjoint": 0.001137263416,
+      "feedback__unconditional__windowed_overlapping": 0.003907011295,
+      "ml_link__premise_accepted__sealed": 0.02149626578,
+      "ml_link__premise_accepted__uncensored_both_sides": 0.005229043684,
+      "ml_link__premise_accepted__windowed_disjoint": 0.014056797747,
+      "ml_link__premise_accepted__windowed_overlapping": 0.019101072458,
+      "ml_link__unconditional__sealed": 0.003503803703,
+      "ml_link__unconditional__uncensored_both_sides": 0.006508713509,
+      "ml_link__unconditional__windowed_disjoint": 0.00393566433,
+      "ml_link__unconditional__windowed_overlapping": 0.001108610381,
+      "ols_feedback__premise_accepted__sealed": 0.010964637772,
+      "ols_feedback__premise_accepted__uncensored_both_sides": 0.001225108225,
+      "ols_feedback__premise_accepted__windowed_disjoint": 0.003525169739,
+      "ols_feedback__premise_accepted__windowed_overlapping": 0.00856944445,
+      "ols_feedback__unconditional__sealed": 0.013268446008,
+      "ols_feedback__unconditional__uncensored_both_sides": 0.006427690953,
+      "ols_feedback__unconditional__windowed_disjoint": 0.005828977975,
+      "ols_feedback__unconditional__windowed_overlapping": 0.010873252686,
+      "week2__premise_accepted__sealed": 0.01735969692,
+      "week2__premise_accepted__uncensored_both_sides": 0.002411255411,
+      "week2__premise_accepted__windowed_disjoint": 0.009920228887,
+      "week2__premise_accepted__windowed_overlapping": 0.014964503598,
+      "week2__unconditional__sealed": 0.00315637372,
+      "week2__unconditional__uncensored_both_sides": 0.002820004557,
+      "week2__unconditional__windowed_disjoint": 0.004283094313,
+      "week2__unconditional__windowed_overlapping": 0.000761180398
+    },
+    "noise_margin_fraction": 0.2,
+    "question": "stop-question 2: how many bootstrap draws should a sealed floor be cut from? At 2000 draws two honest tapes of the identical statistic differ in the third decimal, and the margins the floor decides are the same size",
+    "reading": "this is a resolution requirement, not a claim that a floor cut from 2000 draws is wrong. It says what draw count makes a floor reproducible to better than a fifth of the smallest distance it has to measure, so that a re-derivation on another tape cannot move a verdict",
+    "refinement_rungs_taken": [
+      640000
+    ],
+    "required_draws": 640000,
+    "required_tape_noise": 0.00015223608,
+    "rule": "PRE-DECLARED: the tape noise -- the standard deviation of the floor across independent bootstrap tapes -- must be at most one fifth of the smallest margin the floor has to resolve. At one fifth a two-sd excursion is still under half the margin, so no recorded verdict can flip on the draw",
+    "smallest_margin": 0.000761180398,
+    "smallest_margin_cell": "week2__unconditional__windowed_overlapping",
+    "tape_seed_base": 20260825,
+    "tape_seed_stride": 10007,
+    "tapes_per_draw_count": 12,
+    "verification": {
+      "distinct_floor_values": [
+        0.51637276441,
+        0.516429682702,
+        0.516462337608,
+        0.516535407032,
+        0.516544109768,
+        0.516589241566,
+        0.51660810396,
+        0.516627736245,
+        0.516655855262,
+        0.516676234053,
+        0.516704454139,
+        0.516937038786
+      ],
+      "draws": 640000,
+      "mean_floor": 0.516595247128,
+      "meets_the_rule": true,
+      "modal_share_of_tapes": 0.083333333333,
+      "n_tapes": 12,
+      "tape_noise_sd": 0.00014801959,
+      "tape_noise_sd_ci95": [
+        9.7462845e-05,
+        0.000224801555
+      ],
+      "tape_range": 0.000564274376
+    },
+    "what_this_costs": "a clockwise-fraction floor is cheap -- the draws are index arithmetic and nothing is refitted. A floor cut from a FITTED statistic is not: M4's share refits an AR(1) profile on every draw, which is about two hundred times the work per draw, so the same rule applied to M4's interval would be hours rather than minutes. The rule is stated for O1-class floors and the cost of extending it elsewhere should be priced before it is promised",
+    "why_the_count_is_measured_and_not_extrapolated": "the two floors behave differently and only one of them obeys a power law. The UNWEIGHTED floor -- the sealed O1 statistic -- is a count over about seventy transitions, so it lives on a lattice of ratios of small integers: distinct_floor_values shows twelve tapes collapsing onto six values by 32,000 draws, and its noise then falls faster than any power of the draw count because one lattice point takes the whole tail. The WINDOWED floor is a weighted fraction over re-used months, is effectively continuous, and does follow a power law -- with a fitted exponent near -0.56 rather than the textbook -0.50. Neither behaviour is safe to extrapolate two orders of magnitude, so the count is measured"
+  },
+  "generated_side_scrambled_null": {
+    "any_recorded_engine_passes_p1_against_its_own_null": false,
+    "guard_months": 24,
+    "history_overall_null_panel_wide": 0.488400937272,
+    "history_overall_null_within_window": 0.477280887547,
+    "judged_overall_null_by_engine": {
+      "feedback__premise_accepted": 0.483060989026,
+      "feedback__unconditional": 0.487890077148,
+      "ml_link__unconditional": 0.489388978297,
+      "ols_feedback__unconditional": 0.485434851929,
+      "week2__unconditional": 0.486132582792
+    },
+    "method": "each recorded batch is re-simulated from the committed engine (bit for bit, checked against week 3's transition counts and against the sealed O1 value), and its inflation dial is circularly shifted against its growth axis INSIDE each decade -- the only scramble a batch of independent decades admits. Every admissible shift is enumerated, so this needs no seed",
+    "per_engine_arm": {
+      "feedback__premise_accepted": {
+        "constructs": {
+          "internal_uncensored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.506373117034,
+            "overall_own_null": 0.483038573181,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.480613098898,
+              "guard_36m": 0.484575165485
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.012612860289,
+                "departure_against_substituted_null": 0.017307111621,
+                "generated_clockwise_fraction": 0.517391304348,
+                "null_substitution_error": 0.004694251332,
+                "own_null": 0.504778444059,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.035143634957,
+                "departure_against_substituted_null": 0.037856902048,
+                "generated_clockwise_fraction": 0.537837837838,
+                "null_substitution_error": 0.00271326709,
+                "own_null": 0.502694202881,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          },
+          "judged_censored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.491344873502,
+            "overall_own_null": 0.483060989026,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.479764722642,
+              "guard_36m": 0.48476006616
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.003562416263,
+                "departure_against_substituted_null": 0.006991278971,
+                "generated_clockwise_fraction": 0.507075471698,
+                "null_substitution_error": 0.003428862708,
+                "own_null": 0.503513055435,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.008818218227,
+                "departure_against_substituted_null": 0.013352397543,
+                "generated_clockwise_fraction": 0.513333333333,
+                "null_substitution_error": 0.004534179316,
+                "own_null": 0.504515115106,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          }
+        },
+        "n_decades": 50,
+        "reproduces_committed_counts": true,
+        "reproduces_sealed_o1_value": true
+      },
+      "feedback__unconditional": {
+        "constructs": {
+          "internal_uncensored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.524137931034,
+            "overall_own_null": 0.485894957297,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.483013958245,
+              "guard_36m": 0.487706263296
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.035364156577,
+                "departure_against_substituted_null": 0.036086020039,
+                "generated_clockwise_fraction": 0.536170212766,
+                "null_substitution_error": 0.000721863461,
+                "own_null": 0.500806056189,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.0456166891,
+                "departure_against_substituted_null": 0.047711371902,
+                "generated_clockwise_fraction": 0.547692307692,
+                "null_substitution_error": 0.002094682802,
+                "own_null": 0.502075618592,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          },
+          "judged_censored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.511764705882,
+            "overall_own_null": 0.487890077148,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.48578409383,
+              "guard_36m": 0.489427598829
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.008931142576,
+                "departure_against_substituted_null": 0.016662218756,
+                "generated_clockwise_fraction": 0.516746411483,
+                "null_substitution_error": 0.007731076179,
+                "own_null": 0.507815268907,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.036226435201,
+                "departure_against_substituted_null": 0.036861169473,
+                "generated_clockwise_fraction": 0.536842105263,
+                "null_substitution_error": 0.000634734272,
+                "own_null": 0.500615670062,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          }
+        },
+        "n_decades": 50,
+        "reproduces_committed_counts": true,
+        "reproduces_sealed_o1_value": true
+      },
+      "ml_link__unconditional": {
+        "constructs": {
+          "internal_uncensored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.526495726496,
+            "overall_own_null": 0.487281434914,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.483706737661,
+              "guard_36m": 0.48720936155
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.036426324026,
+                "departure_against_substituted_null": 0.041582473939,
+                "generated_clockwise_fraction": 0.541666666667,
+                "null_substitution_error": 0.005156149914,
+                "own_null": 0.505240342641,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.043582597758,
+                "departure_against_substituted_null": 0.046031334148,
+                "generated_clockwise_fraction": 0.546012269939,
+                "null_substitution_error": 0.002448736391,
+                "own_null": 0.502429672181,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          },
+          "judged_censored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.514563106796,
+            "overall_own_null": 0.489388978297,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.486490499101,
+              "guard_36m": 0.488870496644
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.010642351049,
+                "departure_against_substituted_null": 0.023280293254,
+                "generated_clockwise_fraction": 0.523364485981,
+                "null_substitution_error": 0.012637942205,
+                "own_null": 0.512722134932,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.034001532511,
+                "departure_against_substituted_null": 0.034984099175,
+                "generated_clockwise_fraction": 0.534965034965,
+                "null_substitution_error": 0.000982566664,
+                "own_null": 0.500963502454,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          }
+        },
+        "n_decades": 50,
+        "reproduces_committed_counts": true,
+        "reproduces_sealed_o1_value": true
+      },
+      "ols_feedback__unconditional": {
+        "constructs": {
+          "internal_uncensored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.513559322034,
+            "overall_own_null": 0.485999948551,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.482836006177,
+              "guard_36m": 0.489584212062
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.026992255626,
+                "departure_against_substituted_null": 0.026446419518,
+                "generated_clockwise_fraction": 0.526530612245,
+                "null_substitution_error": -0.000545836109,
+                "own_null": 0.499538356619,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.034278494931,
+                "departure_against_substituted_null": 0.037056101247,
+                "generated_clockwise_fraction": 0.537037037037,
+                "null_substitution_error": 0.002777606316,
+                "own_null": 0.502758542106,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          },
+          "judged_censored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.504798464491,
+            "overall_own_null": 0.485434851929,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.483107450946,
+              "guard_36m": 0.488665644424
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.008889588341,
+                "departure_against_substituted_null": 0.009006716364,
+                "generated_clockwise_fraction": 0.509090909091,
+                "null_substitution_error": 0.000117128022,
+                "own_null": 0.500201320749,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.030661313371,
+                "departure_against_substituted_null": 0.031709205055,
+                "generated_clockwise_fraction": 0.531690140845,
+                "null_substitution_error": 0.001047891684,
+                "own_null": 0.501028827474,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          }
+        },
+        "n_decades": 50,
+        "reproduces_committed_counts": true,
+        "reproduces_sealed_o1_value": true
+      },
+      "week2__unconditional": {
+        "constructs": {
+          "internal_uncensored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.522807017544,
+            "overall_own_null": 0.48683335297,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.484465493001,
+              "guard_36m": 0.487463352562
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.040898719201,
+                "departure_against_substituted_null": 0.042138029495,
+                "generated_clockwise_fraction": 0.542222222222,
+                "null_substitution_error": 0.001239310294,
+                "own_null": 0.501323503021,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.038957079864,
+                "departure_against_substituted_null": 0.041557525748,
+                "generated_clockwise_fraction": 0.541538461538,
+                "null_substitution_error": 0.002600445885,
+                "own_null": 0.502581381675,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          },
+          "judged_censored": {
+            "n_shifts": 73,
+            "overall_clockwise_fraction": 0.514910536779,
+            "overall_own_null": 0.486132582792,
+            "overall_own_null_guard_sensitivity": {
+              "guard_12m": 0.484856519527,
+              "guard_36m": 0.486031685576
+            },
+            "per_move": {
+              "growth_flip": {
+                "candidate_threshold": 0.069084093309,
+                "departure_against_own_null": 0.022516117628,
+                "departure_against_substituted_null": 0.02466828252,
+                "generated_clockwise_fraction": 0.524752475248,
+                "null_substitution_error": 0.002152164892,
+                "own_null": 0.502236357619,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.500084192727
+              },
+              "inflation_crossing": {
+                "candidate_threshold": 0.062546712278,
+                "departure_against_own_null": 0.036150634208,
+                "departure_against_substituted_null": 0.036861169473,
+                "generated_clockwise_fraction": 0.536842105263,
+                "null_substitution_error": 0.000710535265,
+                "own_null": 0.500691471055,
+                "passes_against_own_null": false,
+                "substituted_history_panel_wide_null": 0.49998093579
+              }
+            }
+          }
+        },
+        "n_decades": 50,
+        "reproduces_committed_counts": true,
+        "reproduces_sealed_o1_value": true
+      }
+    },
+    "question": "stop-question 5: P1's null is the BATCH's own phase scramble, and every number on the record substituted history's. Is the substitution sound?",
+    "reading": "the substitution is sound per MOVE TYPE -- every generated null sits close to a coin flip, as the structural argument says it must -- and the retro anti-test survives it: no recorded engine clears a candidate threshold when it is judged against its own null. What the substitution does NOT survive is the OVERALL statistic, where diagonals pull every null below 0.500, and it is not the same number on the two sides",
+    "sealed_at_utc": "2026-08-17T14:42:40-07:00 (as of HEAD commit 1ca6ed5bd11b8a5901c8e3786a668643e6dedc7d)",
+    "seed": 20260821,
+    "seed_note": "week 3's verification seed, re-used deliberately: a different seed would be a different batch and would not be the recorded engine's null",
+    "why_the_guard_is_smaller_than_history_s": "history's panel-wide guard is 60 months on 813; inside a 120-month decade min(k, 120-k) >= 60 admits exactly ONE shift, so the guard must come down. 24 months is more than twice the ten-month lag M3 measures for this channel and still leaves 73 of the 119 shifts",
+    "worst_null_substitution_error": 0.012637942205
+  },
+  "m3_growth_to_inflation_coupling": {
+    "block_bootstrap": {
+      "block_12m": {
+        "excludes_zero_lag_held": true,
+        "excludes_zero_lag_reselected": true,
+        "lam_x_ci95_lag_held": {
+          "hi": 0.011272844495,
+          "lo": 0.002204678655,
+          "median": 0.006103278333,
+          "sd": 0.002309744364
+        },
+        "lam_x_ci95_lag_reselected": {
+          "hi": 0.011947381589,
+          "lo": 0.003600567457,
+          "median": 0.00695635743,
+          "sd": 0.002183559262
+        },
+        "selected_lag_median_across_draws": 9.0,
+        "share_of_draws_selecting_within_3_months": 0.5725
+      },
+      "block_24m": {
+        "excludes_zero_lag_held": true,
+        "excludes_zero_lag_reselected": true,
+        "lam_x_ci95_lag_held": {
+          "hi": 0.011721379895,
+          "lo": 0.001667390354,
+          "median": 0.006024758485,
+          "sd": 0.002648840009
+        },
+        "lam_x_ci95_lag_reselected": {
+          "hi": 0.012665334344,
+          "lo": 0.003089907012,
+          "median": 0.006841204597,
+          "sd": 0.002466116787
+        },
+        "selected_lag_median_across_draws": 8.0,
+        "share_of_draws_selecting_within_3_months": 0.569
+      },
+      "block_36m": {
+        "excludes_zero_lag_held": true,
+        "excludes_zero_lag_reselected": true,
+        "lam_x_ci95_lag_held": {
+          "hi": 0.012060265933,
+          "lo": 0.001144721304,
+          "median": 0.006036376449,
+          "sd": 0.002826240905
+        },
+        "lam_x_ci95_lag_reselected": {
+          "hi": 0.012841710708,
+          "lo": 0.002849333098,
+          "median": 0.006918248831,
+          "sd": 0.002631858193
+        },
+        "selected_lag_median_across_draws": 8.0,
+        "share_of_draws_selecting_within_3_months": 0.5615
+      }
+    },
+    "bootstrap_seed": 20260823,
+    "cells_reference": {
+      "n_defined_cells": 801,
+      "note": "carried so the reader can see this section reads the same panel the phase section does; the coupling test itself does not use the cells"
+    },
+    "chi2_df1_check": {
+      "matches_the_textbook_percentiles": true,
+      "p_at_3_841459": 0.05,
+      "p_at_6_634897": 0.01
+    },
+    "cycle_input_sensitivity": {
+      "note": "the same equation with the classifier's own growth axis (grader_v2's contracting labels) in place of fred.USREC. The primary is USREC because it is the contract L1 consumes; this arm exists so a reader can see whether the channel is a property of the economy or of the labeller",
+      "point_estimate": {
+        "intercept": 0.000143301943,
+        "lam_x": 0.005020829136,
+        "loglik": 1973.713541536987,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 1.916869597696,
+        "lr_statistic": 36.49258695644,
+        "n_rows": 788.0,
+        "persistence_a": 0.998610581948,
+        "residual_autocorrelation_lag1": 0.184234316955,
+        "residual_sd": 0.019768784033,
+        "standard_error_lam_x": 0.000823102472,
+        "t_ratio": 6.09988343659
+      },
+      "same_sign_as_primary": true,
+      "selected_lag_months": 2
+    },
+    "equation": "x_{t+1} = a x_t + lam_x (c_{t-m} - cbar) + e_t, the design document's inflation line at dt = one month, where x is the inflation gap (trailing 12-month CPI minus L1's trend) and c is the cycle input, +1 expanding and -1 contracting, from fred.USREC -- the WP2.6 contract L1 already consumes",
+    "gate": {
+      "condition_i_selection_aware_rejection": true,
+      "condition_ii_bootstrap_excludes_zero_everywhere": true,
+      "condition_iii_sign_is_positive": true,
+      "coupling_established_on_the_panel": true,
+      "reading": "a KEEP means only that the channel P1 tests for is present in history at 95%, which is the floor for the bar being askable at all. It is NOT a statement that the engine can reach the bar -- that is the power calculation below -- and it is not a verdict on any engine",
+      "rule": "P1 is DROPPED unless (i) the likelihood ratio rejects at 95% under the SELECTION-AWARE null, (ii) the block-bootstrap 95% interval for lam_x excludes zero at every block length on both arms, and (iii) lam_x is POSITIVE, the sign the mechanism requires. Pre-declared before the number was read; the precedent for dropping rather than narrowing is A2's low-inflation ceiling",
+      "verdict": "P1_KEPT"
+    },
+    "lag_grid_months": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      9,
+      10,
+      11,
+      12,
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      19,
+      20,
+      21,
+      22,
+      23,
+      24
+    ],
+    "lag_profile": {
+      "0": {
+        "intercept": 0.000289471407,
+        "lam_x": 0.003661834069,
+        "loglik": 1960.722142678882,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.330297087947,
+        "lr_statistic": 10.50978924023,
+        "n_rows": 788.0,
+        "persistence_a": 0.997101756176,
+        "residual_autocorrelation_lag1": 0.210913927749,
+        "residual_sd": 0.02009740448,
+        "standard_error_lam_x": 0.00112792507,
+        "t_ratio": 3.246522454842
+      },
+      "1": {
+        "intercept": 8.5813008e-05,
+        "lam_x": 0.005437670733,
+        "loglik": 1967.290175560084,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 1.785851228961,
+        "lr_statistic": 23.645855002634,
+        "n_rows": 788.0,
+        "persistence_a": 0.99920400813,
+        "residual_autocorrelation_lag1": 0.2069641496,
+        "residual_sd": 0.019930587447,
+        "standard_error_lam_x": 0.001111981375,
+        "t_ratio": 4.890073570038
+      },
+      "10": {
+        "intercept": 0.000511093975,
+        "lam_x": 0.006326376583,
+        "loglik": 1972.868709699528,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.312718484495,
+        "lr_statistic": 34.802923281521,
+        "n_rows": 788.0,
+        "persistence_a": 0.994814070132,
+        "residual_autocorrelation_lag1": 0.197637190103,
+        "residual_sd": 0.019789989939,
+        "standard_error_lam_x": 0.001062582187,
+        "t_ratio": 5.953776244487
+      },
+      "11": {
+        "intercept": 0.000627303965,
+        "lam_x": 0.004987524393,
+        "loglik": 1966.343809505848,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.202205993781,
+        "lr_statistic": 21.753122894162,
+        "n_rows": 788.0,
+        "persistence_a": 0.993614499284,
+        "residual_autocorrelation_lag1": 0.200328498461,
+        "residual_sd": 0.019954537906,
+        "standard_error_lam_x": 0.001064016552,
+        "t_ratio": 4.687450006369
+      },
+      "12": {
+        "intercept": 0.000689278918,
+        "lam_x": 0.004325749669,
+        "loglik": 1963.715539001701,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.160968767689,
+        "lr_statistic": 16.496581885867,
+        "n_rows": 788.0,
+        "persistence_a": 0.992974766447,
+        "residual_autocorrelation_lag1": 0.215195729576,
+        "residual_sd": 0.020021204764,
+        "standard_error_lam_x": 0.001061489624,
+        "t_ratio": 4.075169056444
+      },
+      "13": {
+        "intercept": 0.0007471532,
+        "lam_x": 0.002729417926,
+        "loglik": 1958.76338898077,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.0945152511,
+        "lr_statistic": 6.592281844005,
+        "n_rows": 788.0,
+        "persistence_a": 0.992377362546,
+        "residual_autocorrelation_lag1": 0.218207924931,
+        "residual_sd": 0.020147423303,
+        "standard_error_lam_x": 0.001062848818,
+        "t_ratio": 2.568020851617
+      },
+      "14": {
+        "intercept": 0.000764887652,
+        "lam_x": 0.002441705519,
+        "loglik": 1958.1263633716,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.083363221502,
+        "lr_statistic": 5.318230625666,
+        "n_rows": 788.0,
+        "persistence_a": 0.992194299693,
+        "residual_autocorrelation_lag1": 0.224602118166,
+        "residual_sd": 0.020163717229,
+        "standard_error_lam_x": 0.001059021565,
+        "t_ratio": 2.30562398295
+      },
+      "15": {
+        "intercept": 0.000779044243,
+        "lam_x": 0.001854749531,
+        "loglik": 1957.012240579975,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.062752029715,
+        "lr_statistic": 3.089985042414,
+        "n_rows": 788.0,
+        "persistence_a": 0.992048169106,
+        "residual_autocorrelation_lag1": 0.224491112442,
+        "residual_sd": 0.020192246094,
+        "standard_error_lam_x": 0.001056110773,
+        "t_ratio": 1.756207377277
+      },
+      "16": {
+        "intercept": 0.000787188134,
+        "lam_x": 0.00215023713,
+        "loglik": 1957.561759863632,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.072667399657,
+        "lr_statistic": 4.189023609729,
+        "n_rows": 788.0,
+        "persistence_a": 0.991964104265,
+        "residual_autocorrelation_lag1": 0.224634942887,
+        "residual_sd": 0.020178169748,
+        "standard_error_lam_x": 0.001051188977,
+        "t_ratio": 2.0455286133
+      },
+      "17": {
+        "intercept": 0.000800413928,
+        "lam_x": 0.002667308465,
+        "loglik": 1958.719652912444,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.089464387657,
+        "lr_statistic": 6.504809707354,
+        "n_rows": 788.0,
+        "persistence_a": 0.991827581785,
+        "residual_autocorrelation_lag1": 0.223471049699,
+        "residual_sd": 0.020148541569,
+        "standard_error_lam_x": 0.001045652431,
+        "t_ratio": 2.550855699675
+      },
+      "18": {
+        "intercept": 0.000818471647,
+        "lam_x": 0.002939574317,
+        "loglik": 1959.449624042763,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.097290369448,
+        "lr_statistic": 7.964751967992,
+        "n_rows": 788.0,
+        "persistence_a": 0.991641182028,
+        "residual_autocorrelation_lag1": 0.219157342232,
+        "residual_sd": 0.020129885422,
+        "standard_error_lam_x": 0.001040946139,
+        "t_ratio": 2.823944685021
+      },
+      "19": {
+        "intercept": 0.000851746991,
+        "lam_x": 0.003809550465,
+        "loglik": 1962.223878847735,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.122218262341,
+        "lr_statistic": 13.513261577936,
+        "n_rows": 788.0,
+        "persistence_a": 0.991297699225,
+        "residual_autocorrelation_lag1": 0.22336491547,
+        "residual_sd": 0.020059140193,
+        "standard_error_lam_x": 0.001033849568,
+        "t_ratio": 3.684820870866
+      },
+      "2": {
+        "intercept": 0.000143773862,
+        "lam_x": 0.005379266941,
+        "loglik": 1967.216689656755,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 1.008581906009,
+        "lr_statistic": 23.498883195976,
+        "n_rows": 788.0,
+        "persistence_a": 0.998605710597,
+        "residual_autocorrelation_lag1": 0.199208083935,
+        "residual_sd": 0.019932446184,
+        "standard_error_lam_x": 0.001103524436,
+        "t_ratio": 4.87462421952
+      },
+      "20": {
+        "intercept": 0.000857694053,
+        "lam_x": 0.002904846678,
+        "loglik": 1959.404215157597,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.093381966597,
+        "lr_statistic": 7.87393419766,
+        "n_rows": 788.0,
+        "persistence_a": 0.991236311029,
+        "residual_autocorrelation_lag1": 0.222360776967,
+        "residual_sd": 0.02013104545,
+        "standard_error_lam_x": 0.001034593631,
+        "t_ratio": 2.807717533005
+      },
+      "21": {
+        "intercept": 0.000839142159,
+        "lam_x": 0.001814549005,
+        "loglik": 1956.996320649055,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.059635348976,
+        "lr_statistic": 3.058145180575,
+        "n_rows": 788.0,
+        "persistence_a": 0.991427811873,
+        "residual_autocorrelation_lag1": 0.226647046099,
+        "residual_sd": 0.020192654041,
+        "standard_error_lam_x": 0.001038595493,
+        "t_ratio": 1.747118120994
+      },
+      "22": {
+        "intercept": 0.000811207353,
+        "lam_x": 0.000816726778,
+        "loglik": 1955.776200387256,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.027776161707,
+        "lr_statistic": 0.617904656978,
+        "n_rows": 788.0,
+        "persistence_a": 0.99171616728,
+        "residual_autocorrelation_lag1": 0.228246992854,
+        "residual_sd": 0.020223944079,
+        "standard_error_lam_x": 0.001040780624,
+        "t_ratio": 0.784725194989
+      },
+      "23": {
+        "intercept": 0.000817217445,
+        "lam_x": 0.0009616843,
+        "loglik": 1955.895466899385,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.032462920401,
+        "lr_statistic": 0.856437681235,
+        "n_rows": 788.0,
+        "persistence_a": 0.991654128455,
+        "residual_autocorrelation_lag1": 0.230168878949,
+        "residual_sd": 0.020220883348,
+        "standard_error_lam_x": 0.001040866207,
+        "t_ratio": 0.923926911297
+      },
+      "24": {
+        "intercept": 0.000790574495,
+        "lam_x": 0.000186219091,
+        "loglik": 1955.483286673205,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.006500273293,
+        "lr_statistic": 0.032077228876,
+        "n_rows": 788.0,
+        "persistence_a": 0.991929148759,
+        "residual_autocorrelation_lag1": 0.229659364854,
+        "residual_sd": 0.020231463079,
+        "standard_error_lam_x": 0.001041716735,
+        "t_ratio": 0.178761734875
+      },
+      "3": {
+        "intercept": 0.000231363385,
+        "lam_x": 0.005038891398,
+        "loglik": 1965.905104079014,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.57311959643,
+        "lr_statistic": 20.875712040493,
+        "n_rows": 788.0,
+        "persistence_a": 0.997701572852,
+        "residual_autocorrelation_lag1": 0.19833866886,
+        "residual_sd": 0.019965650344,
+        "standard_error_lam_x": 0.001097640051,
+        "t_ratio": 4.590659199935
+      },
+      "4": {
+        "intercept": 0.000251614579,
+        "lam_x": 0.005280398547,
+        "loglik": 1967.086062738608,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.550518789453,
+        "lr_statistic": 23.237629359681,
+        "n_rows": 788.0,
+        "persistence_a": 0.997492531075,
+        "residual_autocorrelation_lag1": 0.199676959938,
+        "residual_sd": 0.019935750664,
+        "standard_error_lam_x": 0.001089405181,
+        "t_ratio": 4.847047396149
+      },
+      "5": {
+        "intercept": 0.000291891502,
+        "lam_x": 0.00537474768,
+        "loglik": 1967.651762286192,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.480658717791,
+        "lr_statistic": 24.369028454849,
+        "n_rows": 788.0,
+        "persistence_a": 0.997076774892,
+        "residual_autocorrelation_lag1": 0.196796848821,
+        "residual_sd": 0.019921444067,
+        "standard_error_lam_x": 0.0010824328,
+        "t_ratio": 4.965433123519
+      },
+      "6": {
+        "intercept": 0.000319353709,
+        "lam_x": 0.005658217347,
+        "loglik": 1969.137387629842,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.461277218395,
+        "lr_statistic": 27.340279142149,
+        "n_rows": 788.0,
+        "persistence_a": 0.996793297853,
+        "residual_autocorrelation_lag1": 0.195788290136,
+        "residual_sd": 0.019883921325,
+        "standard_error_lam_x": 0.001074802073,
+        "t_ratio": 5.264427274464
+      },
+      "7": {
+        "intercept": 0.000367639051,
+        "lam_x": 0.005766817194,
+        "loglik": 1969.816346300376,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.406887502101,
+        "lr_statistic": 28.698196483217,
+        "n_rows": 788.0,
+        "persistence_a": 0.996294875232,
+        "residual_autocorrelation_lag1": 0.195804506745,
+        "residual_sd": 0.019866796266,
+        "standard_error_lam_x": 0.001068737421,
+        "t_ratio": 5.395915852875
+      },
+      "8": {
+        "intercept": 0.000431776196,
+        "lam_x": 0.005598714614,
+        "loglik": 1968.968015288744,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.331887973056,
+        "lr_statistic": 27.001534459952,
+        "n_rows": 788.0,
+        "persistence_a": 0.995632823284,
+        "residual_autocorrelation_lag1": 0.190534325352,
+        "residual_sd": 0.019888195625,
+        "standard_error_lam_x": 0.001070265168,
+        "t_ratio": 5.231147179554
+      },
+      "9": {
+        "intercept": 0.000443138259,
+        "lam_x": 0.006314773426,
+        "loglik": 1972.687598048642,
+        "loglik_no_coupling": 1955.467248058767,
+        "long_run_gap_at_full_expansion_pp": 0.360971304271,
+        "lr_statistic": 34.44069997975,
+        "n_rows": 788.0,
+        "persistence_a": 0.995515539056,
+        "residual_autocorrelation_lag1": 0.192368427039,
+        "residual_sd": 0.019794538936,
+        "standard_error_lam_x": 0.001066319656,
+        "t_ratio": 5.922026652857
+      }
+    },
+    "model_class": "the spec's own: one row of the coupled monthly system, estimated on the historical panel where both sides are observed. Least squares is the Gaussian ML for it, so the no-coupling restriction lam_x = 0 is nested exactly and the test is a likelihood ratio rather than an argument",
+    "n_bootstrap": 2000,
+    "nominal_chi2_p_value": 3.648e-09,
+    "nominal_p_value_is_not_the_test": "the inflation gap is built from a TRAILING 12-month rate, so consecutive months share eleven of their twelve price changes and the residual carries a moving-average structure by construction. A chi-square off a likelihood ratio assumes independent innovations and will overstate the evidence; the measured lag-1 residual autocorrelation is in point_estimate. The gate therefore rests on the shift null and the block bootstrap, both of which carry the dependence, and the nominal value is reported only for scale",
+    "point_estimate": {
+      "intercept": 0.000511093975,
+      "lam_x": 0.006326376583,
+      "loglik": 1972.868709699528,
+      "loglik_no_coupling": 1955.467248058767,
+      "long_run_gap_at_full_expansion_pp": 0.312718484495,
+      "lr_statistic": 34.802923281521,
+      "n_rows": 788.0,
+      "persistence_a": 0.994814070132,
+      "residual_autocorrelation_lag1": 0.197637190103,
+      "residual_sd": 0.019789989939,
+      "standard_error_lam_x": 0.001062582187,
+      "t_ratio": 5.953776244487
+    },
+    "question": "does history establish the growth -> inflation channel at all? P1 asks an engine for half of history's phase relation, and a bar cannot demand of the engine a fact history cannot establish",
+    "sample": {
+      "months_with_trailing_inflation": 801,
+      "panel_months": 813,
+      "rows_in_the_common_sample": 788,
+      "why_one_common_sample": "every lag is fitted on the SAME months -- the sample opens at the longest lag in the grid -- because selecting a lag by likelihood across samples of different lengths is not a comparison. It costs the twenty-four rows the longest lag cannot reach",
+      "why_the_warmup_is_dropped": "build_panel fills the first twelve months' inflation with the trend, which sets the gap to exactly zero; twelve manufactured zeros at the head of a persistence regression would read as persistence"
+    },
+    "selected_lag_months": 10,
+    "selection_aware_null": {
+      "guard_months": 60,
+      "max_lr_null_percentiles": {
+        "max": 20.589434948173,
+        "p50": 6.070494250333,
+        "p95": 13.026242544739,
+        "p99": 20.589434948173
+      },
+      "method": "circular shift of the cycle input against the inflation gap, every admissible shift enumerated (no seed), the whole 25-lag grid refitted on each shifted pair and its BEST likelihood ratio kept. That maximum's distribution is what a 25-lag search finds on two unrelated series, so the comparison prices the search as well as the coefficient",
+      "n_shifts": 694,
+      "observed_max_lr": 34.802923281521,
+      "p_value_at_the_selected_lag_only": 0.001438848921,
+      "p_value_selection_aware": 0.001438848921,
+      "rejects_at_95": true
+    },
+    "selection_rule": "the lag with the highest likelihood on the stated grid, at constant parameter count -- the same discipline that chose the curve's nine-month lead, with the whole profile published above"
+  },
+  "m3_power_at_the_sealed_batch_size": {
+    "decade_scramble_guard_months": 24,
+    "limits": "the stretches come from the same 813 months the threshold is cut from, so this cannot see the ANCHOR's own estimation error -- that is section 2.9 and it is the larger risk. Overlapping stretches are positively correlated, which widens a replicate's spread relative to independent decades and makes the pass rate if anything conservative",
+    "n_decades": 50,
+    "n_replicates": 2000,
+    "n_shifts_in_the_own_null": 73,
+    "p1_per_move_type": {
+      "growth_flip": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.661973461137,
+          "lo": 0.59437751004,
+          "median": 0.627192982456,
+          "sd": 0.017117197275
+        },
+        "departure_ci95_against_own_null": {
+          "hi": 0.175202742887,
+          "lo": 0.105344818124,
+          "median": 0.138646292981,
+          "sd": 0.017847177345
+        },
+        "history_panel_wide_null": 0.500084192727,
+        "mean_clockwise_fraction": 0.626873083751,
+        "mean_departure_against_own_null": 0.138795148254,
+        "mean_own_within_window_null": 0.488077935498,
+        "power_against_own_null": 1.0,
+        "power_against_panel_wide_null": 1.0,
+        "threshold_against_own_null": 0.069084093309,
+        "threshold_against_panel_wide_null": 0.063166061616
+      },
+      "inflation_crossing": {
+        "clockwise_fraction_ci95": {
+          "hi": 0.635965371064,
+          "lo": 0.596076470588,
+          "median": 0.615702479339,
+          "sd": 0.009958366753
+        },
+        "departure_ci95_against_own_null": {
+          "hi": 0.147446106349,
+          "lo": 0.104163078601,
+          "median": 0.124731294826,
+          "sd": 0.010844881085
+        },
+        "history_panel_wide_null": 0.49998093579,
+        "mean_clockwise_fraction": 0.615795004104,
+        "mean_departure_against_own_null": 0.125135890961,
+        "mean_own_within_window_null": 0.490659113144,
+        "power_against_own_null": 1.0,
+        "power_against_panel_wide_null": 1.0,
+        "threshold_against_own_null": 0.062546712278,
+        "threshold_against_panel_wide_null": 0.057916645568
+      }
+    },
+    "p1_power_both_move_types_against_own_null": 1.0,
+    "p1_power_both_move_types_against_panel_wide_null": 1.0,
+    "p2_power": {
+      "history_interval_used": [
+        0.391706974667,
+        0.673370849738
+      ],
+      "limit": "these components are history's own, so this measures sampling adequacy at 50 decades and nothing else. Whether a coupled engine produces components of this size is week 1's question, not this one",
+      "n_decades": 50,
+      "n_replicates": 2000,
+      "note": "the residual is held at the fitted stationary sd because that is how the generated side is scored -- there the residual sd IS a model parameter and only the economic components are measured on the batch",
+      "power": 1.0,
+      "seed_shared_with": "the P1 power calculation, deliberately: one tape, one set of drawn stretches, so the two pass rates are not two different resamplings",
+      "share_ci95": {
+        "hi": 0.60729814725,
+        "lo": 0.485805915772,
+        "median": 0.554885070792,
+        "sd": 0.031319911689
+      },
+      "share_mean": 0.55337639425,
+      "windows_available": 690
+    },
+    "question": "the exam's standing rule: is a bar a CORRECT engine can clear? Measured at 50 decades, the sealed batch size, on a true engine",
+    "seed": 20260824,
+    "true_engine": "history itself, emitting real 120-month stretches drawn with replacement from the campaign panel and judged exactly as a generated batch is -- first twelve months of each stretch censored, the rest pooled. It is the most favourable engine that exists, so these pass rates are an UPPER BOUND on any real engine's",
+    "verdict": "P1 is REACHABLE by a correct engine at this batch size"
+  },
+  "m4_curve_endogeneity": {
+    "bootstrap_ci95": {
+      "block_12m": {
+        "covariance_aware_share_ci95": {
+          "hi": 1.176320767075,
+          "lo": 0.439132233101,
+          "median": 0.75784628002,
+          "sd": 0.187653608241
+        },
+        "r_squared_realised_ci95": {
+          "hi": 0.523102487439,
+          "lo": -0.095400089378,
+          "median": 0.29152322311,
+          "sd": 0.158749214129
+        },
+        "rho_pinned_at_point_estimate": {
+          "economic_share_ci95": {
+            "hi": 0.619541636218,
+            "lo": 0.437072374963,
+            "median": 0.537800256389,
+            "sd": 0.045966834703
+          }
+        },
+        "rho_refitted": {
+          "economic_share_ci95": {
+            "hi": 0.658172267215,
+            "lo": 0.429367456948,
+            "median": 0.552633455455,
+            "sd": 0.059967322161
+          },
+          "rho_ci95": {
+            "hi": 0.98736738802,
+            "lo": 0.967416389102,
+            "median": 0.97962410477,
+            "sd": 0.005318644834
+          },
+          "rho_median": 0.97962410477
+        }
+      },
+      "block_24m": {
+        "covariance_aware_share_ci95": {
+          "hi": 1.359216758178,
+          "lo": 0.425720770956,
+          "median": 0.814544766176,
+          "sd": 0.241433409537
+        },
+        "r_squared_realised_ci95": {
+          "hi": 0.561580158846,
+          "lo": -0.220286000887,
+          "median": 0.277371397621,
+          "sd": 0.205036202372
+        },
+        "rho_pinned_at_point_estimate": {
+          "economic_share_ci95": {
+            "hi": 0.628412984813,
+            "lo": 0.43476692951,
+            "median": 0.543230336271,
+            "sd": 0.048250053174
+          }
+        },
+        "rho_refitted": {
+          "economic_share_ci95": {
+            "hi": 0.673370849738,
+            "lo": 0.391706974667,
+            "median": 0.559531310536,
+            "sd": 0.071601960688
+          },
+          "rho_ci95": {
+            "hi": 0.988115171981,
+            "lo": 0.966037641133,
+            "median": 0.979856444835,
+            "sd": 0.005729972373
+          },
+          "rho_median": 0.979856444835
+        }
+      },
+      "block_36m": {
+        "covariance_aware_share_ci95": {
+          "hi": 1.45081099676,
+          "lo": 0.410668768123,
+          "median": 0.817966390417,
+          "sd": 0.26490845211
+        },
+        "r_squared_realised_ci95": {
+          "hi": 0.603683375452,
+          "lo": -0.290315548033,
+          "median": 0.281408080236,
+          "sd": 0.23374092071
+        },
+        "rho_pinned_at_point_estimate": {
+          "economic_share_ci95": {
+            "hi": 0.628627864654,
+            "lo": 0.41660156515,
+            "median": 0.544067291177,
+            "sd": 0.050079092377
+          }
+        },
+        "rho_refitted": {
+          "economic_share_ci95": {
+            "hi": 0.684051306131,
+            "lo": 0.381866829111,
+            "median": 0.560228570819,
+            "sd": 0.076917453739
+          },
+          "rho_ci95": {
+            "hi": 0.98867011965,
+            "lo": 0.964861525135,
+            "median": 0.979741950723,
+            "sd": 0.006149926868
+          },
+          "rho_median": 0.979741950723
+        }
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the fitted sample's month sequence, the same machinery and the same three block lengths every v2 interval uses. Each draw is refitted; a draw's contiguous stretches are treated as independent AR(1) blocks, so a splice join cannot invent persistence. 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260821,
+    "coefficient_centers": [
+      4.870325522229,
+      0.094394815478,
+      0.281829419036,
+      2.094318696445,
+      0.557653866183
+    ],
+    "coefficient_labels": [
+      "intercept",
+      "c_i_policy_rule",
+      "c_x_inflation_gap",
+      "C",
+      "E",
+      "K"
+    ],
+    "covariance_caveat": "the strict share sums squared component standard deviations, which assumes the components are uncorrelated. They are on the generated side, by construction; they are NOT on history, where the rule-implied rate and the inflation gap share the inflation trend by definition (their correlation is reported in point_estimate). So history's total_sum_of_squares exceeds the slope's own variance, and covariance_aware_share -- the variance of the summed economic terms over the variance of the slope -- is published beside it. The strict share is the primary because it is the SAME function the engine is scored by, which is P2's fourth anti-test obligation; the covariance-aware number is the disclosure that the two sides' components are not equally independent",
+    "equation": "slope_t = c0 + c_i (i_rule_t - ibar) + c_x (x_t - xbar) + season_term(g_t, age_t) + e_t, with e_t AR(1); exact Gaussian maximum likelihood, the first observation of every contiguous block entering through its own stationary law",
+    "n_bootstrap": 2000,
+    "p2_acceptance": {
+      "alternative_summaries": {
+        "block_12m__covariance_aware_share_ci95": {
+          "ci95": [
+            0.439132233101,
+            1.176320767075
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.423068718004,
+            "feedback__unconditional": 0.416659336237,
+            "week2__premise_accepted": 0.439132233101,
+            "week2__unconditional": 0.439132233101
+          }
+        },
+        "block_12m__r_squared_realised_ci95": {
+          "ci95": [
+            -0.095400089378,
+            0.523102487439
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": true,
+            "feedback__unconditional": true,
+            "week2__premise_accepted": true,
+            "week2__unconditional": true
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": -0.111463604475,
+            "feedback__unconditional": -0.117872986242,
+            "week2__premise_accepted": -0.095400089378,
+            "week2__unconditional": -0.095400089378
+          }
+        },
+        "block_24m__covariance_aware_share_ci95": {
+          "ci95": [
+            0.425720770956,
+            1.359216758178
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.409657255859,
+            "feedback__unconditional": 0.403247874092,
+            "week2__premise_accepted": 0.425720770956,
+            "week2__unconditional": 0.425720770956
+          }
+        },
+        "block_24m__r_squared_realised_ci95": {
+          "ci95": [
+            -0.220286000887,
+            0.561580158846
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": true,
+            "feedback__unconditional": true,
+            "week2__premise_accepted": true,
+            "week2__unconditional": true
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": -0.236349515984,
+            "feedback__unconditional": -0.242758897751,
+            "week2__premise_accepted": -0.220286000887,
+            "week2__unconditional": -0.220286000887
+          }
+        },
+        "block_36m__covariance_aware_share_ci95": {
+          "ci95": [
+            0.410668768123,
+            1.45081099676
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.394605253026,
+            "feedback__unconditional": 0.38819587126,
+            "week2__premise_accepted": 0.410668768123,
+            "week2__unconditional": 0.410668768123
+          }
+        },
+        "block_36m__r_squared_realised_ci95": {
+          "ci95": [
+            -0.290315548033,
+            0.603683375452
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": true,
+            "feedback__unconditional": true,
+            "week2__premise_accepted": true,
+            "week2__unconditional": true
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": -0.30637906313,
+            "feedback__unconditional": -0.312788444896,
+            "week2__premise_accepted": -0.290315548033,
+            "week2__unconditional": -0.290315548033
+          }
+        }
+      },
+      "any_recorded_engine_inside_any_alternative_summary": true,
+      "any_recorded_engine_inside_any_arm": false,
+      "engine_strict_economic_shares": {
+        "feedback__premise_accepted": 0.016063515097,
+        "feedback__unconditional": 0.022472896863,
+        "week2__premise_accepted": 0.0,
+        "week2__unconditional": 0.0
+      },
+      "per_arm": {
+        "block_12m__rho_pinned_at_point_estimate": {
+          "ci95": [
+            0.437072374963,
+            0.619541636218
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.421008859867,
+            "feedback__unconditional": 0.4145994781,
+            "week2__premise_accepted": 0.437072374963,
+            "week2__unconditional": 0.437072374963
+          }
+        },
+        "block_12m__rho_refitted": {
+          "ci95": [
+            0.429367456948,
+            0.658172267215
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.413303941851,
+            "feedback__unconditional": 0.406894560085,
+            "week2__premise_accepted": 0.429367456948,
+            "week2__unconditional": 0.429367456948
+          }
+        },
+        "block_24m__rho_pinned_at_point_estimate": {
+          "ci95": [
+            0.43476692951,
+            0.628412984813
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.418703414413,
+            "feedback__unconditional": 0.412294032647,
+            "week2__premise_accepted": 0.43476692951,
+            "week2__unconditional": 0.43476692951
+          }
+        },
+        "block_24m__rho_refitted": {
+          "ci95": [
+            0.391706974667,
+            0.673370849738
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.37564345957,
+            "feedback__unconditional": 0.369234077804,
+            "week2__premise_accepted": 0.391706974667,
+            "week2__unconditional": 0.391706974667
+          }
+        },
+        "block_36m__rho_pinned_at_point_estimate": {
+          "ci95": [
+            0.41660156515,
+            0.628627864654
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.400538050053,
+            "feedback__unconditional": 0.394128668287,
+            "week2__premise_accepted": 0.41660156515,
+            "week2__unconditional": 0.41660156515
+          }
+        },
+        "block_36m__rho_refitted": {
+          "ci95": [
+            0.381866829111,
+            0.684051306131
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.365803314014,
+            "feedback__unconditional": 0.359393932248,
+            "week2__premise_accepted": 0.381866829111,
+            "week2__unconditional": 0.381866829111
+          }
+        }
+      },
+      "primary_interval": [
+        0.391706974667,
+        0.673370849738
+      ],
+      "reading": "P2 survives only if EVERY arm puts both recorded engines outside history's interval. One arm placing an engine inside is enough to drop the bar: the rule is a floor on how informative the anchor is, and it is not negotiated after the number is seen",
+      "rule": "P2 is DROPPED if history's interval is so wide that the engines already on the record sit inside it. Pre-declared in 2026-08-17-stage2-coupled-system-design.md section 3.3, on the A2 low-inflation-ceiling precedent; applied here without adjustment",
+      "verdict": "P2_KEPT",
+      "verdict_robust_to_the_summary": false
+    },
+    "phi_c": 0.093014789081,
+    "phi_pi": 0.624609790015,
+    "point_estimate": {
+      "beta": [
+        0.602573166833,
+        -0.240319668577,
+        0.492034580114,
+        -0.079260146498,
+        -0.038446024211,
+        0.026812281313
+      ],
+      "correlation_policy_rule_inflation_gap": 0.705159446214,
+      "covariance_aware_share": 0.871939389681,
+      "economic_share": 0.558666923174,
+      "innovation_sd_pp": 0.14530767769,
+      "loglik": 410.921798885662,
+      "r_squared_realised": 0.246374417074,
+      "residual_realised_sd_pp": 0.73319726384,
+      "residual_stationary_sd_pp": 0.747992998622,
+      "rho": 0.980949399223,
+      "slope_sd_pp": 0.844584329429,
+      "strict": {
+        "component_is_economic": {
+          "inflation_gap": true,
+          "policy_rule": true,
+          "season_term": true
+        },
+        "component_sd_pp": {
+          "inflation_gap": 0.078326489103,
+          "policy_rule": 0.83618954205,
+          "season_term": 0.053794025741
+        },
+        "economic_share": 0.558666923174,
+        "economic_sum_of_squares": 0.708241786335,
+        "exogenous_sum_of_squares": 0.0,
+        "naive_explained_share": 0.558666923174,
+        "residual_share": 0.441333076826,
+        "residual_stationary_sd_pp": 0.747992998622,
+        "residual_sum_of_squares": 0.559493525988,
+        "total_sum_of_squares": 1.267735312323
+      },
+      "strict_share_on_realised_residual": 0.568494468186,
+      "sum_of_squares_over_slope_variance": 1.77722555437
+    },
+    "primary_block_months": 24,
+    "question": "how much of the yield curve's movement is made of the economy the engine simulates, measured on history the way the engine will be measured",
+    "recorded_engine_shares": {
+      "feedback__premise_accepted": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.095368228379,
+          "u_hat": 0.148625032509
+        },
+        "economic_share": 0.016063515097,
+        "economic_sum_of_squares": 0.009095098984,
+        "exogenous_sum_of_squares": 0.022089400288,
+        "naive_explained_share": 0.055077209795,
+        "residual_share": 0.944922790205,
+        "residual_stationary_sd_pp": 0.731444845753,
+        "residual_sum_of_squares": 0.535011562379,
+        "total_sum_of_squares": 0.566196061651
+      },
+      "feedback__unconditional": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.113170199114,
+          "u_hat": 0.148625032509
+        },
+        "economic_share": 0.022472896863,
+        "economic_sum_of_squares": 0.012807493968,
+        "exogenous_sum_of_squares": 0.022089400288,
+        "naive_explained_share": 0.06123245558,
+        "residual_share": 0.93876754442,
+        "residual_stationary_sd_pp": 0.731444845753,
+        "residual_sum_of_squares": 0.535011562379,
+        "total_sum_of_squares": 0.569908456634
+      },
+      "week2__premise_accepted": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.0,
+          "u_hat": 0.535801285624
+        },
+        "economic_share": 0.0,
+        "economic_sum_of_squares": 0.0,
+        "exogenous_sum_of_squares": 0.287083017676,
+        "naive_explained_share": 0.404291352601,
+        "residual_share": 0.595708647399,
+        "residual_stationary_sd_pp": 0.650389434237,
+        "residual_sum_of_squares": 0.423006416167,
+        "total_sum_of_squares": 0.710089433843
+      },
+      "week2__unconditional": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.0,
+          "u_hat": 0.535801285624
+        },
+        "economic_share": 0.0,
+        "economic_sum_of_squares": 0.0,
+        "exogenous_sum_of_squares": 0.287083017676,
+        "naive_explained_share": 0.404291352601,
+        "residual_share": 0.595708647399,
+        "residual_stationary_sd_pp": 0.650389434237,
+        "residual_sum_of_squares": 0.423006416167,
+        "total_sum_of_squares": 0.710089433843
+      }
+    },
+    "regressor_substitution": "i_rule is the Taylor rule's IMPLIED policy rate -- r* + pi* + phi_pi (pi - pi*) + phi_c c -- not the observed rate and not its residual. Week 2 and week 3 both regressed the curve on u_hat, the observed rate MINUS that anchor. On history u_hat carries real economic content the rule missed; in simulation it is a stand-alone mean-reverting process with no inputs, so a bar anchored on it would compare two different objects",
+    "same_equation_on_the_observed_deviation": {
+      "beta": [
+        0.696139390662,
+        -0.179108108471,
+        -1.290082915181,
+        -0.132918077131,
+        -0.063865375644,
+        0.06806284989
+      ],
+      "correlation_policy_rule_inflation_gap": 0.211005122724,
+      "covariance_aware_share": 0.132769619644,
+      "economic_share": 0.165447235443,
+      "innovation_sd_pp": 0.179120623006,
+      "loglik": 242.011742281302,
+      "note": "the identical design with u_hat in column 1 instead of the rule-implied rate. Reported so the substitution's cost is visible rather than argued",
+      "r_squared_realised": 0.376957038146,
+      "residual_realised_sd_pp": 0.66665634418,
+      "residual_stationary_sd_pp": 0.657844843532,
+      "rho": 0.962216932561,
+      "slope_sd_pp": 0.844584329429,
+      "strict": {
+        "component_is_economic": {
+          "inflation_gap": true,
+          "policy_rule": true,
+          "season_term": true
+        },
+        "component_sd_pp": {
+          "inflation_gap": 0.205366999559,
+          "policy_rule": 0.178973181439,
+          "season_term": 0.10763900682
+        },
+        "economic_share": 0.165447235443,
+        "economic_sum_of_squares": 0.085793159972,
+        "exogenous_sum_of_squares": 0.0,
+        "naive_explained_share": 0.165447235443,
+        "residual_share": 0.834552764557,
+        "residual_stationary_sd_pp": 0.657844843532,
+        "residual_sum_of_squares": 0.432759838161,
+        "total_sum_of_squares": 0.518552998133
+      },
+      "strict_share_on_realised_residual": 0.161805549476,
+      "sum_of_squares_over_slope_variance": 0.726954302384
+    },
+    "sample": {
+      "months": 809,
+      "opens_at_panel_row": 4,
+      "why": "week 3's curve block drops the panel's first, left-truncated growth spell so that a month's spell age means the same thing in the hazard and the curve blocks; the same rule is applied here so the two fits' samples are identical"
+    },
+    "single_block_identity_check": {
+      "max_abs_beta_difference": 0.0,
+      "max_abs_loglik_difference": 0.0,
+      "max_abs_sigma_difference": 0.0,
+      "reduces_to_week3_profile": true,
+      "rho_grid": [
+        -0.5,
+        0.0,
+        0.5,
+        0.9,
+        0.99
+      ]
+    },
+    "u_hat_rebuild_max_abs_diff": 0.0
+  },
+  "m5_label_dial_stability": {
+    "any_escalated": true,
+    "arms": {
+      "baseline": {
+        "growth_line_delta_pp": 0.0,
+        "inflation_line_delta_pp": 0.0,
+        "m4_beta": [
+          0.602573166833,
+          -0.240319668577,
+          0.492034580114,
+          -0.079260146498,
+          -0.038446024211,
+          0.026812281313
+        ],
+        "m4_economic_share": 0.558666923174,
+        "m4_r_squared_realised": 0.246374417074,
+        "m4_rho": 0.980949399223,
+        "m4_season_component_sd_pp": 0.053794025741,
+        "m4_share_moves_by_sd": 0.0,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.069084093309,
+            "clockwise_fraction": 0.62641631596,
+            "departure": 0.138168186617,
+            "departure_moves_by_sd": 0.0,
+            "within_window_null": 0.488248129343
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.062546712278,
+            "clockwise_fraction": 0.615814226925,
+            "departure": 0.125093424557,
+            "departure_moves_by_sd": 0.0,
+            "within_window_null": 0.490720802369
+          }
+        }
+      },
+      "growth_line_minus_50bp": {
+        "growth_line_delta_pp": -0.5,
+        "inflation_line_delta_pp": 0.0,
+        "m4_beta": [
+          0.605871592484,
+          -0.241577604278,
+          0.515130066926,
+          -0.045627617089,
+          -0.014795355359,
+          0.019204519735
+        ],
+        "m4_economic_share": 0.559534728505,
+        "m4_r_squared_realised": 0.237948693819,
+        "m4_rho": 0.980912526709,
+        "m4_season_component_sd_pp": 0.023656953243,
+        "m4_share_moves_by_sd": 0.012119854294,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.082821645762,
+            "clockwise_fraction": 0.649557522124,
+            "departure": 0.165643291525,
+            "departure_moves_by_sd": 0.458768751785,
+            "within_window_null": 0.483914230599
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.052921292421,
+            "clockwise_fraction": 0.597036192647,
+            "departure": 0.105842584842,
+            "departure_moves_by_sd": -0.417001817833,
+            "within_window_null": 0.491193607805
+          }
+        }
+      },
+      "growth_line_plus_50bp": {
+        "growth_line_delta_pp": 0.5,
+        "inflation_line_delta_pp": 0.0,
+        "m4_beta": [
+          0.602136369389,
+          -0.238332441688,
+          0.468479865297,
+          -0.05949079832,
+          -0.030658640877,
+          0.044302472733
+        ],
+        "m4_economic_share": 0.555967547416,
+        "m4_r_squared_realised": 0.251753810287,
+        "m4_rho": 0.980894994701,
+        "m4_season_component_sd_pp": 0.063659078556,
+        "m4_share_moves_by_sd": -0.037699746386,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.071545603903,
+            "clockwise_fraction": 0.633342267489,
+            "departure": 0.143091207805,
+            "departure_moves_by_sd": 0.082202717445,
+            "within_window_null": 0.490251059683
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.078600590406,
+            "clockwise_fraction": 0.647266313933,
+            "departure": 0.157201180812,
+            "departure_moves_by_sd": 0.695501750783,
+            "within_window_null": 0.49006513312
+          }
+        }
+      },
+      "inflation_line_minus_50bp": {
+        "growth_line_delta_pp": 0.0,
+        "inflation_line_delta_pp": -0.5,
+        "m4_beta": [
+          0.602573166833,
+          -0.240319668577,
+          0.492034580114,
+          -0.079260146498,
+          -0.038446024211,
+          0.026812281313
+        ],
+        "m4_economic_share": 0.558666923174,
+        "m4_r_squared_realised": 0.246374417074,
+        "m4_rho": 0.980949399223,
+        "m4_season_component_sd_pp": 0.053794025741,
+        "m4_share_moves_by_sd": 0.0,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.040330202948,
+            "clockwise_fraction": 0.577386468953,
+            "departure": 0.080660405897,
+            "departure_moves_by_sd": -0.960242840483,
+            "within_window_null": 0.496726063056
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.031445706759,
+            "clockwise_fraction": 0.560969812218,
+            "departure": 0.062891413518,
+            "departure_moves_by_sd": -1.347388065201,
+            "within_window_null": 0.4980783987
+          }
+        }
+      },
+      "inflation_line_plus_50bp": {
+        "growth_line_delta_pp": 0.0,
+        "inflation_line_delta_pp": 0.5,
+        "m4_beta": [
+          0.602573166833,
+          -0.240319668577,
+          0.492034580114,
+          -0.079260146498,
+          -0.038446024211,
+          0.026812281313
+        ],
+        "m4_economic_share": 0.558666923174,
+        "m4_r_squared_realised": 0.246374417074,
+        "m4_rho": 0.980949399223,
+        "m4_season_component_sd_pp": 0.053794025741,
+        "m4_share_moves_by_sd": 0.0,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.050933036617,
+            "clockwise_fraction": 0.584025559105,
+            "departure": 0.101866073235,
+            "departure_moves_by_sd": -0.606158749885,
+            "within_window_null": 0.482159485871
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.064207831412,
+            "clockwise_fraction": 0.608695652174,
+            "departure": 0.128415662823,
+            "departure_moves_by_sd": 0.071964621649,
+            "within_window_null": 0.480279989351
+          }
+        }
+      },
+      "inflation_minus_growth_minus": {
+        "growth_line_delta_pp": -0.5,
+        "inflation_line_delta_pp": -0.5,
+        "m4_beta": [
+          0.605871592484,
+          -0.241577604278,
+          0.515130066926,
+          -0.045627617089,
+          -0.014795355359,
+          0.019204519735
+        ],
+        "m4_economic_share": 0.559534728505,
+        "m4_r_squared_realised": 0.237948693819,
+        "m4_rho": 0.980912526709,
+        "m4_season_component_sd_pp": 0.023656953243,
+        "m4_share_moves_by_sd": 0.012119854294,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.05716937897,
+            "clockwise_fraction": 0.609300304216,
+            "departure": 0.114338757941,
+            "departure_moves_by_sd": -0.397894649957,
+            "within_window_null": 0.494961546275
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.031666889423,
+            "clockwise_fraction": 0.560969812218,
+            "departure": 0.063333778846,
+            "departure_moves_by_sd": -1.337805774315,
+            "within_window_null": 0.497636033372
+          }
+        }
+      },
+      "inflation_minus_growth_plus": {
+        "growth_line_delta_pp": 0.5,
+        "inflation_line_delta_pp": -0.5,
+        "m4_beta": [
+          0.602136369389,
+          -0.238332441688,
+          0.468479865297,
+          -0.05949079832,
+          -0.030658640877,
+          0.044302472733
+        ],
+        "m4_economic_share": 0.555967547416,
+        "m4_r_squared_realised": 0.251753810287,
+        "m4_rho": 0.980894994701,
+        "m4_season_component_sd_pp": 0.063659078556,
+        "m4_share_moves_by_sd": -0.037699746386,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.050053956771,
+            "clockwise_fraction": 0.597544338336,
+            "departure": 0.100107913543,
+            "departure_moves_by_sd": -0.635515825313,
+            "within_window_null": 0.497436424793
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.046466933119,
+            "clockwise_fraction": 0.591034310043,
+            "departure": 0.092933866239,
+            "departure_moves_by_sd": -0.69662386048,
+            "within_window_null": 0.498100443804
+          }
+        }
+      },
+      "inflation_plus_growth_minus": {
+        "growth_line_delta_pp": -0.5,
+        "inflation_line_delta_pp": 0.5,
+        "m4_beta": [
+          0.605871592484,
+          -0.241577604278,
+          0.515130066926,
+          -0.045627617089,
+          -0.014795355359,
+          0.019204519735
+        ],
+        "m4_economic_share": 0.559534728505,
+        "m4_r_squared_realised": 0.237948693819,
+        "m4_rho": 0.980912526709,
+        "m4_season_component_sd_pp": 0.023656953243,
+        "m4_share_moves_by_sd": 0.012119854294,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.072114154076,
+            "clockwise_fraction": 0.62032816773,
+            "departure": 0.144228308152,
+            "departure_moves_by_sd": 0.101189582414,
+            "within_window_null": 0.476099859578
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.063630017164,
+            "clockwise_fraction": 0.608695652174,
+            "departure": 0.127260034327,
+            "departure_moves_by_sd": 0.046931989787,
+            "within_window_null": 0.481435617847
+          }
+        }
+      },
+      "inflation_plus_growth_plus": {
+        "growth_line_delta_pp": 0.5,
+        "inflation_line_delta_pp": 0.5,
+        "m4_beta": [
+          0.602136369389,
+          -0.238332441688,
+          0.468479865297,
+          -0.05949079832,
+          -0.030658640877,
+          0.044302472733
+        ],
+        "m4_economic_share": 0.555967547416,
+        "m4_r_squared_realised": 0.251753810287,
+        "m4_rho": 0.980894994701,
+        "m4_season_component_sd_pp": 0.063659078556,
+        "m4_share_moves_by_sd": -0.037699746386,
+        "p1_per_move": {
+          "growth_flip": {
+            "candidate_p1_threshold": 0.048862494991,
+            "clockwise_fraction": 0.581593194122,
+            "departure": 0.097724989982,
+            "departure_moves_by_sd": -0.675304967936,
+            "within_window_null": 0.48386820414
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.073635795437,
+            "clockwise_fraction": 0.625,
+            "departure": 0.147271590875,
+            "departure_moves_by_sd": 0.480412065567,
+            "within_window_null": 0.477728409125
+          }
+        }
+      }
+    },
+    "dependency_on_m3": "none for the M4 half: M5 anchors P2 and M3 gates P1, so the two are independent. The P1 half of this section is only meaningful if M3 keeps P1 -- which it does -- and would be moot, not wrong, if it had not",
+    "grid": "spine_v2_anchors.STABILITY_ARMS, imported unchanged: the baseline, each dial moved 0.5 pp each way on its own, and the four joint corners. A positive inflation delta raises the hot line (fewer hot months); a positive growth delta raises the contraction line (more contracting months)",
+    "inflation_dial_cannot_reach_m4": {
+      "checked": true,
+      "why": "M4's regressors are the rule-implied policy rate and the inflation gap. The cycle input inside the rule is 1 - 2*USREC, the WP2.6 contract, not the classifier's growth axis, and the era line appears nowhere in the equation. So only the GROWTH dial can reach M4, and only through the season block -- the smallest of its three economic components",
+      "worst_absolute_move_on_inflation_only_arms": 0.0
+    },
+    "per_statistic": {
+      "m4_economic_share": {
+        "baseline_bootstrap_sd": 0.071601960688,
+        "baseline_value": 0.558666923174,
+        "escalated": false,
+        "range_across_arms": [
+          0.555967547416,
+          0.559534728505
+        ],
+        "worst_arm": "growth_line_plus_50bp",
+        "worst_arm_moves_by_sd": -0.037699746386
+      },
+      "p1_departure_growth_flip": {
+        "baseline_bootstrap_sd": 0.059888788852,
+        "baseline_value": 0.138168186617,
+        "candidate_threshold_range_across_arms": [
+          0.040330202948,
+          0.082821645762
+        ],
+        "escalated": false,
+        "range_across_arms": [
+          0.080660405897,
+          0.165643291525
+        ],
+        "worst_arm": "inflation_line_minus_50bp",
+        "worst_arm_moves_by_sd": -0.960242840483
+      },
+      "p1_departure_inflation_crossing": {
+        "baseline_bootstrap_sd": 0.046164882,
+        "baseline_value": 0.125093424557,
+        "candidate_threshold_range_across_arms": [
+          0.031445706759,
+          0.078600590406
+        ],
+        "escalated": true,
+        "range_across_arms": [
+          0.062891413518,
+          0.157201180812
+        ],
+        "worst_arm": "inflation_line_minus_50bp",
+        "worst_arm_moves_by_sd": -1.347388065201
+      }
+    },
+    "question": "M5, from the design document's section 3.3: how stable is the decomposition -- and, added here because it is anchored on the same labels, the phase departure -- under the classifier's two threshold dials",
+    "verdict_rule": "the campaign's, unchanged: a statistic that moves by more than one of its own standard errors across the arms is UNSTABLE and escalates. The yardstick is each statistic's own block-bootstrap sd at the primary block length"
+  },
+  "p1_phase_anchor": {
+    "bootstrap_seed": 20260822,
+    "constructs": {
+      "uncensored_both_sides": {
+        "bootstrap_ci95": {
+          "block_12m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1659,
+              "mean_weighted_transitions_per_draw": 1.828
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.741935483871,
+                "lo": 0.483870967742,
+                "median": 0.617647058824,
+                "sd": 0.066812425236
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 30.87
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.72736013986,
+                "lo": 0.514285714286,
+                "median": 0.611111111111,
+                "sd": 0.054345729416
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 33.0175
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.68966731423,
+                "lo": 0.507692307692,
+                "median": 0.59649122807,
+                "sd": 0.045850532098
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 65.7155
+            }
+          },
+          "block_24m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1730,
+              "mean_weighted_transitions_per_draw": 1.9075
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.733333333333,
+                "lo": 0.5,
+                "median": 0.617647058824,
+                "sd": 0.056686943605
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 32.539
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.705882352941,
+                "lo": 0.53125,
+                "median": 0.611111111111,
+                "sd": 0.043882919652
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 34.5355
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.677981234867,
+                "lo": 0.519987012987,
+                "median": 0.597014925373,
+                "sd": 0.039904869132
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 68.982
+            }
+          },
+          "block_36m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1744,
+              "mean_weighted_transitions_per_draw": 1.8675
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.727272727273,
+                "lo": 0.51724137931,
+                "median": 0.617647058824,
+                "sd": 0.052051478102
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 32.776
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.692307692308,
+                "lo": 0.542857142857,
+                "median": 0.611111111111,
+                "sd": 0.037894631609
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 34.8495
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.666772151899,
+                "lo": 0.528551587302,
+                "median": 0.596774193548,
+                "sd": 0.036614121779
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 69.493
+            }
+          }
+        },
+        "clockwise_fractions": {
+          "diagonal": {
+            "clockwise_fraction": 0.0,
+            "weighted_clockwise": 0.0,
+            "weighted_transitions": 2.0
+          },
+          "growth_flip": {
+            "clockwise_fraction": 0.617647058824,
+            "weighted_clockwise": 21.0,
+            "weighted_transitions": 34.0
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.611111111111,
+            "weighted_clockwise": 22.0,
+            "weighted_transitions": 36.0
+          },
+          "overall": {
+            "clockwise_fraction": 0.597222222222,
+            "weighted_clockwise": 43.0,
+            "weighted_transitions": 72.0
+          }
+        },
+        "departures_and_candidate_thresholds": {
+          "diagonal": {
+            "departure": null
+          },
+          "growth_flip": {
+            "candidate_p1_threshold": 0.058681931963,
+            "departure": 0.117363863926,
+            "departure_ci95_from_the_fraction_interval": [
+              -0.000283194897,
+              0.233050138436
+            ],
+            "measured_clockwise_fraction": 0.617647058824,
+            "scrambled_null": 0.500283194897
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.055489480435,
+            "departure": 0.11097896087,
+            "departure_ci95_from_the_fraction_interval": [
+              0.031117849758,
+              0.2057502027
+            ],
+            "measured_clockwise_fraction": 0.611111111111,
+            "scrambled_null": 0.500132150242
+          },
+          "overall": {
+            "candidate_p1_threshold": null,
+            "departure": 0.108781969232,
+            "departure_ci95_from_the_fraction_interval": [
+              0.031546759997,
+              0.189540981876
+            ],
+            "measured_clockwise_fraction": 0.597222222222,
+            "scrambled_null": 0.48844025299
+          }
+        },
+        "description": "history read as one 813-month run, which is what every anchor on the record was measured on. Its symmetric partner on the generated side is the simulator's INTERNAL season index -- the object the week-3 o1_decomposition scored, and the one that reads 0.5241 overall",
+        "name": "uncensored_both_sides",
+        "scrambled_null": {
+          "guard_months": 60,
+          "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+          "n_shifts": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": null,
+                "lo": null,
+                "median": null,
+                "sd": null
+              },
+              "across_shift_sd": null,
+              "null_clockwise_fraction": null,
+              "standard_error_of_the_mean": null
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.586642156863,
+                "lo": 0.419128787879,
+                "median": 0.5,
+                "sd": 0.041976627805
+              },
+              "across_shift_sd": 0.041946374376,
+              "null_clockwise_fraction": 0.500283194897,
+              "standard_error_of_the_mean": 0.001592262597
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.576503759398,
+                "lo": 0.416666666667,
+                "median": 0.5,
+                "sd": 0.040726333138
+              },
+              "across_shift_sd": 0.040696980822,
+              "null_clockwise_fraction": 0.500132150242,
+              "standard_error_of_the_mean": 0.001544836266
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.56338028169,
+                "lo": 0.412584033613,
+                "median": 0.486111111111,
+                "sd": 0.040427510044
+              },
+              "across_shift_sd": 0.040398373096,
+              "null_clockwise_fraction": 0.48844025299,
+              "standard_error_of_the_mean": 0.001533501272
+            }
+          }
+        },
+        "scrambled_null_guard_sensitivity": {
+          "guard_0m": {
+            "guard_months": 0,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 812,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null,
+                  "sd": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.588235294118,
+                  "lo": 0.416666666667,
+                  "median": 0.5,
+                  "sd": 0.042815279189
+                },
+                "across_shift_sd": 0.042788906979,
+                "null_clockwise_fraction": 0.499997178545,
+                "standard_error_of_the_mean": 0.001501596261
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.583333333333,
+                  "lo": 0.416666666667,
+                  "median": 0.5,
+                  "sd": 0.041505369216
+                },
+                "across_shift_sd": 0.041479803849,
+                "null_clockwise_fraction": 0.49989006307,
+                "standard_error_of_the_mean": 0.001455655747
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.569444444444,
+                  "lo": 0.41095890411,
+                  "median": 0.486111111111,
+                  "sd": 0.041191995312
+                },
+                "across_shift_sd": 0.041166622969,
+                "null_clockwise_fraction": 0.487986578237,
+                "standard_error_of_the_mean": 0.001444665253
+              }
+            }
+          },
+          "guard_120m": {
+            "guard_months": 120,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 574,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null,
+                  "sd": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.588235294118,
+                  "lo": 0.416666666667,
+                  "median": 0.5,
+                  "sd": 0.044487670954
+                },
+                "across_shift_sd": 0.044448901735,
+                "null_clockwise_fraction": 0.501138822002,
+                "standard_error_of_the_mean": 0.001855261313
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.583333333333,
+                  "lo": 0.416666666667,
+                  "median": 0.5,
+                  "sd": 0.043127481708
+                },
+                "across_shift_sd": 0.043089897839,
+                "null_clockwise_fraction": 0.501132327937,
+                "standard_error_of_the_mean": 0.001798537586
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.569444444444,
+                  "lo": 0.409265869188,
+                  "median": 0.486111111111,
+                  "sd": 0.042769990424
+                },
+                "across_shift_sd": 0.042732718094,
+                "null_clockwise_fraction": 0.488766878085,
+                "standard_error_of_the_mean": 0.001783629192
+              }
+            }
+          }
+        }
+      },
+      "windowed_disjoint": {
+        "bootstrap_ci95": {
+          "block_12m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1538,
+              "mean_weighted_transitions_per_draw": 1.4445
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.764705882353,
+                "lo": 0.458333333333,
+                "median": 0.615384615385,
+                "sd": 0.078291379763
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 24.458
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.75,
+                "lo": 0.5,
+                "median": 0.611111111111,
+                "sd": 0.063172468238
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 26.167
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.705882352941,
+                "lo": 0.491803278689,
+                "median": 0.59649122807,
+                "sd": 0.053057146528
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 52.0695
+            }
+          },
+          "block_24m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1582,
+              "mean_weighted_transitions_per_draw": 1.4955
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.75,
+                "lo": 0.5,
+                "median": 0.617647058824,
+                "sd": 0.065720021353
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 25.7885
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.727272727273,
+                "lo": 0.518518518519,
+                "median": 0.611111111111,
+                "sd": 0.051950158264
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 27.168
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.690944055944,
+                "lo": 0.510627442466,
+                "median": 0.596774193548,
+                "sd": 0.045990944431
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 54.452
+            }
+          },
+          "block_36m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1587,
+              "mean_weighted_transitions_per_draw": 1.4605
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.75,
+                "lo": 0.5,
+                "median": 0.619047619048,
+                "sd": 0.062023170998
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 25.8685
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.714285714286,
+                "lo": 0.526253132832,
+                "median": 0.610433604336,
+                "sd": 0.046651605599
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 27.567
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.68293699187,
+                "lo": 0.513496188496,
+                "median": 0.595744680851,
+                "sd": 0.043312240122
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 54.896
+            }
+          }
+        },
+        "clockwise_fractions": {
+          "diagonal": {
+            "clockwise_fraction": 0.0,
+            "weighted_clockwise": 0.0,
+            "weighted_transitions": 2.0
+          },
+          "growth_flip": {
+            "clockwise_fraction": 0.666666666667,
+            "weighted_clockwise": 18.0,
+            "weighted_transitions": 27.0
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.617647058824,
+            "weighted_clockwise": 21.0,
+            "weighted_transitions": 34.0
+          },
+          "overall": {
+            "clockwise_fraction": 0.619047619048,
+            "weighted_clockwise": 39.0,
+            "weighted_transitions": 63.0
+          }
+        },
+        "departures_and_candidate_thresholds": {
+          "diagonal": {
+            "departure": null
+          },
+          "growth_flip": {
+            "candidate_p1_threshold": 0.081852799486,
+            "departure": 0.163705598972,
+            "departure_ci95_from_the_fraction_interval": [
+              -0.002961067695,
+              0.247038932305
+            ],
+            "measured_clockwise_fraction": 0.666666666667,
+            "scrambled_null": 0.502961067695
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.058144552971,
+            "departure": 0.116289105941,
+            "departure_ci95_from_the_fraction_interval": [
+              0.017160565636,
+              0.225914774391
+            ],
+            "measured_clockwise_fraction": 0.617647058824,
+            "scrambled_null": 0.501357952882
+          },
+          "overall": {
+            "candidate_p1_threshold": null,
+            "departure": 0.128424238423,
+            "departure_ci95_from_the_fraction_interval": [
+              0.020004061842,
+              0.20032067532
+            ],
+            "measured_clockwise_fraction": 0.619047619048,
+            "scrambled_null": 0.490623380624
+          }
+        },
+        "description": "the same windowing over NON-overlapping decades, so every month is used at most once. The sensitivity check on the overlapping version's uneven month weighting; it rests on a handful of decades and is a check, not an anchor",
+        "name": "windowed_disjoint",
+        "scrambled_null": {
+          "guard_months": 60,
+          "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+          "n_shifts": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": null,
+                "lo": null,
+                "median": null,
+                "sd": null
+              },
+              "across_shift_sd": null,
+              "null_clockwise_fraction": null,
+              "standard_error_of_the_mean": null
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.592592592593,
+                "lo": 0.4,
+                "median": 0.5,
+                "sd": 0.051739405989
+              },
+              "across_shift_sd": 0.051702116322,
+              "null_clockwise_fraction": 0.502961067695,
+              "standard_error_of_the_mean": 0.001962585497
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.608190993789,
+                "lo": 0.4,
+                "median": 0.5,
+                "sd": 0.053065125101
+              },
+              "across_shift_sd": 0.053026879961,
+              "null_clockwise_fraction": 0.501357952882,
+              "standard_error_of_the_mean": 0.002012872837
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.586642156863,
+                "lo": 0.396332140534,
+                "median": 0.491228070175,
+                "sd": 0.049371308177
+              },
+              "across_shift_sd": 0.049335725248,
+              "null_clockwise_fraction": 0.490623380624,
+              "standard_error_of_the_mean": 0.00187275852
+            }
+          }
+        },
+        "scrambled_null_guard_sensitivity": {
+          "guard_0m": {
+            "guard_months": 0,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 812,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null,
+                  "sd": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.607142857143,
+                  "lo": 0.4,
+                  "median": 0.5,
+                  "sd": 0.052176736957
+                },
+                "across_shift_sd": 0.052144598527,
+                "null_clockwise_fraction": 0.503929149138,
+                "standard_error_of_the_mean": 0.00182991667
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.605178571429,
+                  "lo": 0.4,
+                  "median": 0.5,
+                  "sd": 0.052380682814
+                },
+                "across_shift_sd": 0.052348418762,
+                "null_clockwise_fraction": 0.500752375389,
+                "standard_error_of_the_mean": 0.001837069358
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.587301587302,
+                  "lo": 0.396626984127,
+                  "median": 0.490909090909,
+                  "sd": 0.049284964184
+                },
+                "across_shift_sd": 0.04925460695,
+                "null_clockwise_fraction": 0.49056261809,
+                "standard_error_of_the_mean": 0.001728497848
+              }
+            }
+          },
+          "guard_120m": {
+            "guard_months": 120,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 574,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null,
+                  "sd": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.604821428571,
+                  "lo": 0.392857142857,
+                  "median": 0.5,
+                  "sd": 0.054068914082
+                },
+                "across_shift_sd": 0.054021795193,
+                "null_clockwise_fraction": 0.500140969913,
+                "standard_error_of_the_mean": 0.002254826166
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.608695652174,
+                  "lo": 0.4,
+                  "median": 0.5,
+                  "sd": 0.054621266764
+                },
+                "across_shift_sd": 0.054573666523,
+                "null_clockwise_fraction": 0.502719054184,
+                "standard_error_of_the_mean": 0.00227786083
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.589285714286,
+                  "lo": 0.391004445679,
+                  "median": 0.491068580542,
+                  "sd": 0.051516516697
+                },
+                "across_shift_sd": 0.051471622121,
+                "null_clockwise_fraction": 0.48928139157,
+                "standard_error_of_the_mean": 0.002148383998
+              }
+            }
+          }
+        }
+      },
+      "windowed_overlapping": {
+        "bootstrap_ci95": {
+          "block_12m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1651,
+              "mean_weighted_transitions_per_draw": 166.424
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.754043125049,
+                "lo": 0.472513048187,
+                "median": 0.617201732681,
+                "sd": 0.071432625685
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 2822.594
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.734928288951,
+                "lo": 0.503929491768,
+                "median": 0.611740103872,
+                "sd": 0.057374275537
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3018.023
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.692629567311,
+                "lo": 0.500316013156,
+                "median": 0.598119172696,
+                "sd": 0.048415627278
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 6007.041
+            }
+          },
+          "block_24m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1723,
+              "mean_weighted_transitions_per_draw": 173.538
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.738643426445,
+                "lo": 0.506665569454,
+                "median": 0.617641396181,
+                "sd": 0.059888788852
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 2975.7405
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.705656313023,
+                "lo": 0.526274859765,
+                "median": 0.611866287513,
+                "sd": 0.046164882
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3154.3815
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.681284649074,
+                "lo": 0.515671717177,
+                "median": 0.597667874458,
+                "sd": 0.041924397566
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 6303.66
+            }
+          },
+          "block_36m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "draws_used": 1739,
+              "mean_weighted_transitions_per_draw": 170.7035
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.732087687924,
+                "lo": 0.510969853211,
+                "median": 0.617733426816,
+                "sd": 0.055245820017
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3001.8425
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.697531639739,
+                "lo": 0.536917649713,
+                "median": 0.610726625015,
+                "sd": 0.039540491306
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3186.0185
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.672984180377,
+                "lo": 0.521590618592,
+                "median": 0.597547908035,
+                "sd": 0.03866710162
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 6358.5645
+            }
+          }
+        },
+        "clockwise_fractions": {
+          "diagonal": {
+            "clockwise_fraction": 0.0,
+            "weighted_clockwise": 0.0,
+            "weighted_transitions": 148.0
+          },
+          "growth_flip": {
+            "clockwise_fraction": 0.62641631596,
+            "weighted_clockwise": 1935.0,
+            "weighted_transitions": 3089.0
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.615814226925,
+            "weighted_clockwise": 2095.0,
+            "weighted_transitions": 3402.0
+          },
+          "overall": {
+            "clockwise_fraction": 0.607019129387,
+            "weighted_clockwise": 4030.0,
+            "weighted_transitions": 6639.0
+          }
+        },
+        "departures_and_candidate_thresholds": {
+          "diagonal": {
+            "departure": null
+          },
+          "growth_flip": {
+            "candidate_p1_threshold": 0.063166061616,
+            "departure": 0.126332123233,
+            "departure_ci95_from_the_fraction_interval": [
+              0.006581376726,
+              0.238559233717
+            ],
+            "measured_clockwise_fraction": 0.62641631596,
+            "scrambled_null": 0.500084192727
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.057916645568,
+            "departure": 0.115833291135,
+            "departure_ci95_from_the_fraction_interval": [
+              0.026293923975,
+              0.205675377232
+            ],
+            "measured_clockwise_fraction": 0.615814226925,
+            "scrambled_null": 0.49998093579
+          },
+          "overall": {
+            "candidate_p1_threshold": null,
+            "departure": 0.118618192115,
+            "departure_ci95_from_the_fraction_interval": [
+              0.027270779905,
+              0.192883711802
+            ],
+            "measured_clockwise_fraction": 0.607019129387,
+            "scrambled_null": 0.488400937272
+          }
+        },
+        "description": "history put through the generated side's own machine: every 120-month window, each losing its first 12 months to the trailing-inflation warm-up, transitions pooled. One window per start row, so every month the panel has is used. This is section K's primary window rule, applied to the ordering statistic instead of to dwell lengths",
+        "name": "windowed_overlapping",
+        "scrambled_null": {
+          "guard_months": 60,
+          "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+          "n_shifts": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": null,
+                "lo": null,
+                "median": null,
+                "sd": null
+              },
+              "across_shift_sd": null,
+              "null_clockwise_fraction": null,
+              "standard_error_of_the_mean": null
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.593177633205,
+                "lo": 0.421525805106,
+                "median": 0.500958466454,
+                "sd": 0.041901962952
+              },
+              "across_shift_sd": 0.041871763335,
+              "null_clockwise_fraction": 0.500084192727,
+              "standard_error_of_the_mean": 0.001589430401
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.583304077812,
+                "lo": 0.424292477923,
+                "median": 0.500464914127,
+                "sd": 0.0396549103
+              },
+              "across_shift_sd": 0.039626330181,
+              "null_clockwise_fraction": 0.49998093579,
+              "standard_error_of_the_mean": 0.001504194924
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.570468112745,
+                "lo": 0.41455482676,
+                "median": 0.48689399645,
+                "sd": 0.039742057236
+              },
+              "across_shift_sd": 0.039713414308,
+              "null_clockwise_fraction": 0.488400937272,
+              "standard_error_of_the_mean": 0.001507500592
+            }
+          }
+        },
+        "scrambled_null_guard_sensitivity": {
+          "guard_0m": {
+            "guard_months": 0,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 812,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null,
+                  "sd": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.599963255896,
+                  "lo": 0.418043455447,
+                  "median": 0.498858642766,
+                  "sd": 0.043744429119
+                },
+                "across_shift_sd": 0.043717484596,
+                "null_clockwise_fraction": 0.499679504589,
+                "standard_error_of_the_mean": 0.001534182947
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.591959177213,
+                  "lo": 0.421416681855,
+                  "median": 0.5,
+                  "sd": 0.040965108368
+                },
+                "across_shift_sd": 0.040939875777,
+                "null_clockwise_fraction": 0.499930647454,
+                "standard_error_of_the_mean": 0.001436707986
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.575020766102,
+                  "lo": 0.412903761597,
+                  "median": 0.486506954888,
+                  "sd": 0.04138071515
+                },
+                "across_shift_sd": 0.041355226565,
+                "null_clockwise_fraction": 0.488012550915,
+                "standard_error_of_the_mean": 0.001451283942
+              }
+            }
+          },
+          "guard_120m": {
+            "guard_months": 120,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 574,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null,
+                  "sd": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.599824256262,
+                  "lo": 0.421525805106,
+                  "median": 0.501778022008,
+                  "sd": 0.043838197453
+                },
+                "across_shift_sd": 0.043799994224,
+                "null_clockwise_fraction": 0.501618473453,
+                "standard_error_of_the_mean": 0.001828176437
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.590011065383,
+                  "lo": 0.421901700338,
+                  "median": 0.502776357167,
+                  "sd": 0.041580894858
+                },
+                "across_shift_sd": 0.041544658777,
+                "null_clockwise_fraction": 0.501291258017,
+                "standard_error_of_the_mean": 0.001734040554
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.572690739182,
+                  "lo": 0.413625795622,
+                  "median": 0.48893612456,
+                  "sd": 0.041543049207
+                },
+                "across_shift_sd": 0.041506846108,
+                "null_clockwise_fraction": 0.489235720384,
+                "standard_error_of_the_mean": 0.001732462284
+              }
+            }
+          }
+        }
+      }
+    },
+    "decade_months": 120,
+    "engines_on_the_record": {
+      "null_substitution_disclosure": "each engine's departure is taken against HISTORY's phase-scrambled null, not its own. Measuring the generated side's own null needs the batches re-simulated and is a prerequisite for SEALING P1, not for anchoring it",
+      "p1_anti_test_3": {
+        "any_recorded_engine_passes_under_any_construct": false,
+        "holds": true,
+        "requirement": "every engine on the record must FAIL the candidate P1 bar; a new bar that passes an engine known to be uncoupled is void"
+      },
+      "per_engine_arm": {
+        "feedback__premise_accepted": {
+          "internal_path_o1_value": 0.506373117034,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.506373117034,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.491344873502,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.491344873502,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.017108109451,
+                  "generated_clockwise_fraction": 0.517391304348,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.037705687596,
+                  "generated_clockwise_fraction": 0.537837837838,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.014430236653,
+                  "generated_clockwise_fraction": 0.517391304348,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.036479884956,
+                  "generated_clockwise_fraction": 0.537837837838,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.017307111621,
+                  "generated_clockwise_fraction": 0.517391304348,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.037856902048,
+                  "generated_clockwise_fraction": 0.537837837838,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.491344873502
+        },
+        "feedback__unconditional": {
+          "internal_path_o1_value": 0.524137931034,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.524137931034,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": true,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.511764705882,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.511764705882,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.035887017869,
+                  "generated_clockwise_fraction": 0.536170212766,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.04756015745,
+                  "generated_clockwise_fraction": 0.547692307692,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.033209145071,
+                  "generated_clockwise_fraction": 0.536170212766,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.04633435481,
+                  "generated_clockwise_fraction": 0.547692307692,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.036086020039,
+                  "generated_clockwise_fraction": 0.536170212766,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.047711371902,
+                  "generated_clockwise_fraction": 0.547692307692,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.511764705882
+        },
+        "ml_link__premise_accepted": {
+          "internal_path_o1_value": 0.514757969303,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.514757969303,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.496570644719,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.496570644719,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.02638347177,
+                  "generated_clockwise_fraction": 0.526666666667,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.049591606664,
+                  "generated_clockwise_fraction": 0.549723756906,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.023705598972,
+                  "generated_clockwise_fraction": 0.526666666667,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.048365804024,
+                  "generated_clockwise_fraction": 0.549723756906,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.02658247394,
+                  "generated_clockwise_fraction": 0.526666666667,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.049742821116,
+                  "generated_clockwise_fraction": 0.549723756906,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.496570644719
+        },
+        "ml_link__unconditional": {
+          "internal_path_o1_value": 0.526495726496,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.526495726496,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": true,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514563106796,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514563106796,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.04138347177,
+                  "generated_clockwise_fraction": 0.541666666667,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.045880119697,
+                  "generated_clockwise_fraction": 0.546012269939,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.038705598972,
+                  "generated_clockwise_fraction": 0.541666666667,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.044654317057,
+                  "generated_clockwise_fraction": 0.546012269939,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.04158247394,
+                  "generated_clockwise_fraction": 0.541666666667,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.046031334149,
+                  "generated_clockwise_fraction": 0.546012269939,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.514563106796
+        },
+        "ols_feedback__premise_accepted": {
+          "internal_path_o1_value": 0.521212121212,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.521212121212,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.507102272727,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.507102272727,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.030019835406,
+                  "generated_clockwise_fraction": 0.530303030303,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.055423405314,
+                  "generated_clockwise_fraction": 0.555555555556,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.027341962608,
+                  "generated_clockwise_fraction": 0.530303030303,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.054197602674,
+                  "generated_clockwise_fraction": 0.555555555556,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.030218837576,
+                  "generated_clockwise_fraction": 0.530303030303,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.055574619766,
+                  "generated_clockwise_fraction": 0.555555555556,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.507102272727
+        },
+        "ols_feedback__unconditional": {
+          "internal_path_o1_value": 0.513559322034,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.513559322034,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.504798464491,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.504798464491,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.026247417348,
+                  "generated_clockwise_fraction": 0.526530612245,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.036904886795,
+                  "generated_clockwise_fraction": 0.537037037037,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.02356954455,
+                  "generated_clockwise_fraction": 0.526530612245,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.035679084155,
+                  "generated_clockwise_fraction": 0.537037037037,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.026446419518,
+                  "generated_clockwise_fraction": 0.526530612245,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.037056101247,
+                  "generated_clockwise_fraction": 0.537037037037,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.504798464491
+        },
+        "week2__premise_accepted": {
+          "internal_path_o1_value": 0.517575757576,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.517575757576,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.500707213579,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.500707213579,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.030468513531,
+                  "generated_clockwise_fraction": 0.530751708428,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.04944292058,
+                  "generated_clockwise_fraction": 0.549575070822,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.027790640733,
+                  "generated_clockwise_fraction": 0.530751708428,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.04821711794,
+                  "generated_clockwise_fraction": 0.549575070822,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.030667515701,
+                  "generated_clockwise_fraction": 0.530751708428,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.049594135032,
+                  "generated_clockwise_fraction": 0.549575070822,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.500707213579
+        },
+        "week2__unconditional": {
+          "internal_path_o1_value": 0.522807017544,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.522807017544,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": true,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514910536779,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514910536779,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.041939027325,
+                  "generated_clockwise_fraction": 0.542222222222,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.041406311296,
+                  "generated_clockwise_fraction": 0.541538461538,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.039261154527,
+                  "generated_clockwise_fraction": 0.542222222222,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.040180508656,
+                  "generated_clockwise_fraction": 0.541538461538,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.042138029495,
+                  "generated_clockwise_fraction": 0.542222222222,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.041557525748,
+                  "generated_clockwise_fraction": 0.541538461538,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.514910536779
+        }
+      }
+    },
+    "era_threshold_pp": 3.351323828921,
+    "grader": "grader_v2 (scripts/spine_v2_grader.py), the sealed classifier",
+    "n_bootstrap": 2000,
+    "overlapping_weight_identity_check": {
+      "literal_window_clockwise": 4030,
+      "literal_window_transitions": 6639,
+      "n_windows": 694,
+      "weighted_shortcut_matches": true
+    },
+    "p1_tolerance_fraction_of_history": 0.5,
+    "panel_months": 813,
+    "primary_block_months": 24,
+    "question": "history's clockwise fraction by move type -- P1's anchor -- re-derived under windowing treatments applied SYMMETRICALLY to both sides, as the verdict-integrity review's finding C1 requires before P1's threshold is cut",
+    "reproduces_sealed_ordering_anchor": true,
+    "sealed_ordering_anchor": {
+      "clockwise_fraction": 0.597222222222,
+      "n_clockwise_transitions": 43,
+      "n_transitions": 72,
+      "o1_floor": 0.518066910499
+    },
+    "sealed_tape_provenance_check": {
+      "monte_carlo_resolution_between_the_two_tapes": 0.001920102488,
+      "o1_floor_on_this_module_s_tape": 0.519987012987,
+      "o1_floor_recomputed_on_the_sealed_tape": 0.518066910499,
+      "reproduces_sealed_floor_exactly": true,
+      "sealed_o1_floor": 0.518066910499,
+      "sealed_ordering_bootstrap_seed": 20260817,
+      "why_this_matters": "the same statistic, the same construct, two different bootstrap tapes at 2000 draws. Their difference is the resolution any floor cut this way has, and O1's recorded margins are the same size -- so a floor quoted to four decimals is quoting its tape as much as its data"
+    },
+    "warmup_months": 12,
+    "why": "the sealed O1 judge censors the first 12 months of every generated decade (10% of them) and the historical side loses one warm-up in 813 months (1.5%). Every phase anchor on the record was measured on the uncensored panel. 2026-08-17-spine-v2-results.md section 8.1 rules that a stage-2 seal must re-derive the anchor with both sides losing the same fraction of their months before P1's threshold is cut",
+    "within_window_null_constructs": {
+      "recommendation": "cut P1's threshold from the within-window null, because it is the operation both sides can perform on the object each of them actually has. The panel-wide numbers are kept beside it so the size of the choice is visible",
+      "why": "P1's null is the BATCH's own scramble, and a batch of independent decades admits only a shift inside a decade. The panel-wide null shifts one 813-month series, which is a different operation on a different object",
+      "windowed_disjoint": {
+        "candidate_p1_threshold": {
+          "diagonal": null,
+          "growth_flip": 0.083083427489,
+          "inflation_crossing": 0.064501937518,
+          "overall": null
+        },
+        "departure": {
+          "diagonal": 0.0,
+          "growth_flip": 0.166166854979,
+          "inflation_crossing": 0.129003875036,
+          "overall": 0.136864966929
+        },
+        "measured_clockwise_fraction": {
+          "diagonal": 0.0,
+          "growth_flip": 0.666666666667,
+          "inflation_crossing": 0.617647058824,
+          "overall": 0.619047619048
+        },
+        "n_windows": 6,
+        "window_rule": "disjoint",
+        "within_window_null": {
+          "censored": true,
+          "guard_months": 24,
+          "method": "circular shift of the hot/cool dial WITHIN each window, the same shift in every window, every admissible shift enumerated. This is the only scramble a batch of independent decades admits, and it is not the same operation as shifting one long panel",
+          "n_shifts": 73,
+          "n_windows": 6,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "across_shift_sd": 0.0,
+              "null_clockwise_fraction": 0.0
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.574384236453,
+                "lo": 0.417032967033,
+                "median": 0.5,
+                "sd": 0.044299422011
+              },
+              "across_shift_sd": 0.043994955021,
+              "null_clockwise_fraction": 0.500499811688
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.550474383302,
+                "lo": 0.424908424908,
+                "median": 0.5,
+                "sd": 0.038701791684
+              },
+              "across_shift_sd": 0.038435796836,
+              "null_clockwise_fraction": 0.488643183787
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.546041055718,
+                "lo": 0.404411764706,
+                "median": 0.484375,
+                "sd": 0.041029588549
+              },
+              "across_shift_sd": 0.040747594908,
+              "null_clockwise_fraction": 0.482182652118
+            }
+          }
+        },
+        "within_window_null_guard_sensitivity": {
+          "guard_12m": {
+            "censored": true,
+            "guard_months": 12,
+            "method": "circular shift of the hot/cool dial WITHIN each window, the same shift in every window, every admissible shift enumerated. This is the only scramble a batch of independent decades admits, and it is not the same operation as shifting one long panel",
+            "n_shifts": 97,
+            "n_windows": 6,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": 0.0,
+                  "lo": 0.0,
+                  "median": 0.0,
+                  "sd": 0.0
+                },
+                "across_shift_sd": 0.0,
+                "null_clockwise_fraction": 0.0
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.590038314176,
+                  "lo": 0.423076923077,
+                  "median": 0.5,
+                  "sd": 0.045045301418
+                },
+                "across_shift_sd": 0.044812507605,
+                "null_clockwise_fraction": 0.498149291887
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.558823529412,
+                  "lo": 0.428571428571,
+                  "median": 0.486486486486,
+                  "sd": 0.037962988193
+                },
+                "across_shift_sd": 0.037766795726,
+                "null_clockwise_fraction": 0.487798130697
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.552688172043,
+                  "lo": 0.407386363636,
+                  "median": 0.48275862069,
+                  "sd": 0.040709943116
+                },
+                "across_shift_sd": 0.040499554405,
+                "null_clockwise_fraction": 0.480654719768
+              }
+            }
+          },
+          "guard_36m": {
+            "censored": true,
+            "guard_months": 36,
+            "method": "circular shift of the hot/cool dial WITHIN each window, the same shift in every window, every admissible shift enumerated. This is the only scramble a batch of independent decades admits, and it is not the same operation as shifting one long panel",
+            "n_shifts": 49,
+            "n_windows": 6,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": 0.0,
+                  "lo": 0.0,
+                  "median": 0.0,
+                  "sd": 0.0
+                },
+                "across_shift_sd": 0.0,
+                "null_clockwise_fraction": 0.0
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.583251231527,
+                  "lo": 0.398901098901,
+                  "median": 0.5,
+                  "sd": 0.050310858538
+                },
+                "across_shift_sd": 0.049794836091,
+                "null_clockwise_fraction": 0.504057080876
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.545454545455,
+                  "lo": 0.413919413919,
+                  "median": 0.5,
+                  "sd": 0.041015021984
+                },
+                "across_shift_sd": 0.040594343971,
+                "null_clockwise_fraction": 0.487168584042
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.54780058651,
+                  "lo": 0.398897058824,
+                  "median": 0.492537313433,
+                  "sd": 0.04594401648
+                },
+                "across_shift_sd": 0.045472783342,
+                "null_clockwise_fraction": 0.483389366574
+              }
+            }
+          }
+        }
+      },
+      "windowed_overlapping": {
+        "candidate_p1_threshold": {
+          "diagonal": null,
+          "growth_flip": 0.069084093309,
+          "inflation_crossing": 0.062546712278,
+          "overall": null
+        },
+        "departure": {
+          "diagonal": 0.0,
+          "growth_flip": 0.138168186617,
+          "inflation_crossing": 0.125093424557,
+          "overall": 0.12973824184
+        },
+        "measured_clockwise_fraction": {
+          "diagonal": 0.0,
+          "growth_flip": 0.62641631596,
+          "inflation_crossing": 0.615814226925,
+          "overall": 0.607019129387
+        },
+        "n_windows": 694,
+        "window_rule": "overlapping",
+        "within_window_null": {
+          "censored": true,
+          "guard_months": 24,
+          "method": "circular shift of the hot/cool dial WITHIN each window, the same shift in every window, every admissible shift enumerated. This is the only scramble a batch of independent decades admits, and it is not the same operation as shifting one long panel",
+          "n_shifts": 73,
+          "n_windows": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0,
+                "sd": 0.0
+              },
+              "across_shift_sd": 0.0,
+              "null_clockwise_fraction": 0.0
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.530870642529,
+                "lo": 0.426096742977,
+                "median": 0.496027963139,
+                "sd": 0.030167972217
+              },
+              "across_shift_sd": 0.029960629745,
+              "null_clockwise_fraction": 0.488248129343
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.526296519677,
+                "lo": 0.438750554109,
+                "median": 0.498091603053,
+                "sd": 0.025536285732
+              },
+              "across_shift_sd": 0.025360776534,
+              "null_clockwise_fraction": 0.490720802369
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.518618066902,
+                "lo": 0.422805495797,
+                "median": 0.4828076158,
+                "sd": 0.028775847088
+              },
+              "across_shift_sd": 0.0285780726,
+              "null_clockwise_fraction": 0.477280887547
+            }
+          }
+        },
+        "within_window_null_guard_sensitivity": {
+          "guard_12m": {
+            "censored": true,
+            "guard_months": 12,
+            "method": "circular shift of the hot/cool dial WITHIN each window, the same shift in every window, every admissible shift enumerated. This is the only scramble a batch of independent decades admits, and it is not the same operation as shifting one long panel",
+            "n_shifts": 97,
+            "n_windows": 694,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": 0.0,
+                  "lo": 0.0,
+                  "median": 0.0,
+                  "sd": 0.0
+                },
+                "across_shift_sd": 0.0,
+                "null_clockwise_fraction": 0.0
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.531994810345,
+                  "lo": 0.417827123608,
+                  "median": 0.483585029547,
+                  "sd": 0.033990489017
+                },
+                "across_shift_sd": 0.033814826399,
+                "null_clockwise_fraction": 0.483394316755
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.528569415877,
+                  "lo": 0.429533724435,
+                  "median": 0.485841199334,
+                  "sd": 0.029181728198
+                },
+                "across_shift_sd": 0.029030917223,
+                "null_clockwise_fraction": 0.485851901534
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.527637127704,
+                  "lo": 0.416019332513,
+                  "median": 0.472297393534,
+                  "sd": 0.031873116815
+                },
+                "across_shift_sd": 0.031708396762,
+                "null_clockwise_fraction": 0.472757194423
+              }
+            }
+          },
+          "guard_36m": {
+            "censored": true,
+            "guard_months": 36,
+            "method": "circular shift of the hot/cool dial WITHIN each window, the same shift in every window, every admissible shift enumerated. This is the only scramble a batch of independent decades admits, and it is not the same operation as shifting one long panel",
+            "n_shifts": 49,
+            "n_windows": 694,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": 0.0,
+                  "lo": 0.0,
+                  "median": 0.0,
+                  "sd": 0.0
+                },
+                "across_shift_sd": 0.0,
+                "null_clockwise_fraction": 0.0
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.531569661873,
+                  "lo": 0.422452963415,
+                  "median": 0.498724489796,
+                  "sd": 0.031964552319
+                },
+                "across_shift_sd": 0.03163670209,
+                "null_clockwise_fraction": 0.4901111481
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.52749006965,
+                  "lo": 0.435163074343,
+                  "median": 0.50134264232,
+                  "sd": 0.027020879893
+                },
+                "across_shift_sd": 0.026743735337,
+                "null_clockwise_fraction": 0.492316849114
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.525274174845,
+                  "lo": 0.421378435034,
+                  "median": 0.487588909856,
+                  "sd": 0.030056637765
+                },
+                "across_shift_sd": 0.029748356408,
+                "null_clockwise_fraction": 0.480019091782
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "produced_by": "scripts/stage2_anchors.py",
+  "purpose": "the stage-2 pre-seal measurements, each capable of killing the bar it anchors: M4 (history's curve decomposition on the rule-implied policy rate, P2's anchor and its pre-declared drop rule), the windowing-symmetric phase re-derivation (P1's anchor, demanded by the verdict-integrity review's C1), M3 (the growth -> inflation coupling as a GATE on P1, plus the power calculation at 50 decades), M5 (both anchors under the classifier's two threshold dials), the generated side's own phase-scrambled null, and the draw count a sealed floor needs. NOT a seal: no threshold here is binding until it is entered through the amendment log with its judge code hashed in",
+  "recommended_construct": {
+    "candidate_p1_thresholds": {
+      "uncensored_both_sides": {
+        "growth_flip": 0.058681931963,
+        "inflation_crossing": 0.055489480435
+      },
+      "windowed_disjoint": {
+        "growth_flip": 0.081852799486,
+        "inflation_crossing": 0.058144552971
+      },
+      "windowed_overlapping": {
+        "growth_flip": 0.063166061616,
+        "inflation_crossing": 0.057916645568
+      }
+    },
+    "measured_effect_of_symmetrising": {
+      "diagonal": {
+        "uncensored": 0.0,
+        "windowed_disjoint": 0.0,
+        "windowed_minus_uncensored": null,
+        "windowed_overlapping": 0.0
+      },
+      "growth_flip": {
+        "uncensored": 0.617647058824,
+        "windowed_disjoint": 0.666666666667,
+        "windowed_minus_uncensored": 0.008769257136,
+        "windowed_overlapping": 0.62641631596
+      },
+      "inflation_crossing": {
+        "uncensored": 0.611111111111,
+        "windowed_disjoint": 0.617647058824,
+        "windowed_minus_uncensored": 0.004703115814,
+        "windowed_overlapping": 0.615814226925
+      },
+      "overall": {
+        "uncensored": 0.597222222222,
+        "windowed_disjoint": 0.619047619048,
+        "windowed_minus_uncensored": 0.009796907165,
+        "windowed_overlapping": 0.607019129387
+      }
+    },
+    "o1_floor_under_each_construct": {
+      "uncensored_both_sides": 0.519987012987,
+      "windowed_disjoint": 0.510627442466,
+      "windowed_overlapping": 0.515671717177
+    },
+    "recommendation": "windowed_overlapping",
+    "sealed_o1_floor": 0.518066910499,
+    "why": "the censoring is a property of what the engine EMITS, not of how it is judged: a generated decade genuinely has no trailing inflation for its first twelve months, and the alternative -- scoring the simulator's internal season index -- judges an object the sealed pipeline never produces and the product never shows. Putting history through the same windowing machine is the same remedy PRE-SEAL RULING 1 applied to D1-D4 and section K applied to the dwell anchors, and it is the only one of the two symmetric constructs that leaves the judged object unchanged"
+  },
+  "schema": "stage2-anchors-0.2",
+  "sealed_input_integrity": {
+    "decade_months_matches_sealed": true,
+    "input_sha256": {
+      "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+      "docs/superpowers/specs/spine-v2-feedback-params.json": "4599ca2d82916c54f7dd9c34b2e52afb33027bdf3c0e5845dbaa983c00dc1f78",
+      "docs/superpowers/specs/spine-v2-prereg.json": "81ef5c7f5c895ecfa234a50cd68420c4d437751972a4b1beaecabef04f0a707f"
+    },
+    "note": "all three inputs are opened read-only. The first two are inside the v2 seal's hash list; running this module cannot change them, and their hashes are recorded so a later reader can prove which versions were measured",
+    "sealed_at_utc": "2026-08-17T14:42:40-07:00 (as of HEAD commit 1ca6ed5bd11b8a5901c8e3786a668643e6dedc7d)",
+    "warmup_months_matches_sealed": true
+  },
+  "status": "MEASURED, NOT SEALED"
+}

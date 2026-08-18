@@ -4,6 +4,135 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## stage2-01 — THE STAGE-2 SEAL (2026-08-18)
+
+**The stage-2 exam is sealed, before the coupled fit is written and before any stage-2
+batch is simulated.** `docs/superpowers/specs/stage2-prereg.json` hashes the two new bars'
+thresholds together with the code that judges them, the ten carried v2 bars loaded whole,
+the anti-test evidence, and the exam document itself
+(`docs/superpowers/specs/2026-08-18-stage2-exam-delta.md`). After this commit none of it
+can change except through the machine-checked amendment log, enforced by
+`tests/test_stage2_seal.py`.
+
+**The two new bars.** **`P1`** (phase coupling) asks that *both* move types depart from the
+batch's **own** within-decade phase-scrambled null by at least **0.040330** (growth flips)
+and **0.031446** (inflation crossings). **`P2`** (curve endogeneity) asks that the strict
+economic share of the generated slope's variance land inside **[0.391707, 0.673371]**,
+two-sided — the upper edge is load-bearing, because a share can be bought by shrinking the
+noise the product needs.
+
+**The ten v2 bars carry byte-frozen.** `scripts/stage2_report.py` imports
+`scripts/spine_v2_report.py`'s own judges and hands them the v2 seal loaded whole; R1 and
+R2 reach round one's and round two's functions through it. Nothing is re-implemented, so a
+change in one of those ten verdicts is attributable to the engine and to nothing else.
+
+**Six coordinator rulings, recorded verbatim with their reasoning, all cheap-veto
+disclosed.** `O1` carries byte-frozen while the stage-2 *primary* ordering measurement is
+the windowed-overlapping symmetric construct — compatible because symmetrising windows
+**history**, not the engine, so the symmetric floor (0.515672) is published beside every
+`O1` reading and never judged (SQ1). `P2` seals on the strict share, with the realised-R²
+non-robustness a declared limitation rather than a second bar (SQ6). `P1` seals at the
+**minimum** of the published candidate set (SQ7), cut from the **within-window** null on
+both sides (SQ8). The coupling lag is a sealed **selection rule** — maximum likelihood on
+the declared 25-lag grid — rather than a value, because the panel does not pin ten months
+(SQ9). And the 640,000-draw floor rule is adopted as binding.
+
+**The anti-tests: four sweeps, all monotone; five controls, all hold** — including the two
+named gaming routes. An uncoupled engine is centred on the null; a passing batch that is
+phase-scrambled collapses from 0.290 to −0.001 and from 1.000 to 0.123; every recorded
+engine fails `P1` on its own null; shrinking the residual from 0.748 to 0.500 takes the
+share to 0.723 and the judge fails it **on the upper side** 12 times out of 12; and week 2
+and week 3 both fail `P2` below the band, re-scored **through the sealed judge** from their
+committed component standard deviations.
+
+**What the softest threshold costs, measured: `P1`'s size is 9.0%.** Against a synthetic
+engine whose two dials are independent by construction, `P1` returns a PASS in 9% of 300
+batches of fifty decades — against 1.3% at the recommended construct's own candidate. The
+judge is not broken (centred on the null to 0.2% of the threshold); this is the bar's size
+and it is the price of ruling SQ7. It is L1 in a thirteen-entry limitations register and
+the first stop-question, and the alternative threshold pair is already inside the sealed
+candidate set, so a veto is an amendment naming two numbers.
+
+**Honest about the floors ruling.** Neither sealed floor was re-cut at 640,000 draws and
+the seal says so in checkable terms: `P1`'s thresholds carry **no tape at all** (both
+halves are exhaustively enumerated), and `P2`'s band is a 2000-draw bootstrap whose
+smallest margin is 0.369 against an O1-class 0.00076 — so the rule is met by arithmetic
+while its tape noise stays **unmeasured**, recorded as `meets_the_rule: null` rather than
+as a yes.
+
+Nothing sealed was edited; `stage2-anchors.json` and `scripts/stage2_anchors.py` are
+untouched and re-run byte-identical. `src/` and `schemas/` untouched.
+
+## stage2-01 — the pre-seal measurements, second pass (2026-08-17)
+
+**M3, M5, the generated side's own scrambled null and the floor-noise sizing**, all in
+`scripts/stage2_anchors.py`. **M3 is a GATE and it PASSES: P1 is KEPT** — history's inflation
+follows the cycle with a ten-month lag, `lam_x` = **+0.006326** (t 5.95), and no circular
+shift of the cycle out of 694 reaches the observed likelihood ratio (selection-aware
+p = **0.00144**); the block bootstrap excludes zero at all three block lengths on both the
+held-lag and re-selected-lag arms. **M3's power calculation**, with history itself as the
+true engine emitting 50 real 120-month stretches, clears P1 and P2 in **2000 of 2000**
+replicates, so neither bar is a design defect. **M5** leaves M4 untouched (0.038 of its own
+sampling error at worst; the inflation dial provably cannot reach it) but finds **P1's
+candidate thresholds pinned only to a factor of two by a 50 bp dial move**, with the
+inflation-crossing departure escalating at 1.35 sd. **The generated side's own null**,
+measured on five re-simulated batches that reproduce week 3's counts bit-for-bit, closes
+stop-question 5: engine overall nulls 0.483–0.489 against history's 0.4884, per-move
+substitution error 0.0016 median / 0.0126 worst, and no recorded engine passes P1 on its own
+null. **A correction to the first pass:** P1's null must be the *within-window* scramble a
+batch of decades admits, not the panel-wide one, which raises the candidate thresholds to
+**0.069084** and **0.062547**. **Floor noise (stop-question 2): 640,000 draws**, measured on
+a ladder rather than extrapolated — the unweighted O1 floor is lattice-valued and obeys no
+power law — against the 2000 every floor on the record was cut from. Nothing sealed touched;
+nothing sealed changed; two byte-identical re-runs verified.
+
+## stage2-01 — the pre-seal measurements (2026-08-17)
+
+**Two measurements D-SP-9 owes before either new bar can be sealed, each capable of killing
+the bar it anchors.** `scripts/stage2_anchors.py` (new, deterministic, three byte-identical
+re-runs verified) writes `docs/superpowers/specs/stage2-anchors.json`; the plain-language
+record with every derivation is `docs/superpowers/specs/2026-08-17-stage2-anchors.md`.
+**Nothing is sealed** — every threshold is a candidate until it goes through the amendment
+log with its judge code hashed in. No sealed file was edited; `src/` and `schemas/`
+untouched.
+
+**M4 — history's curve decomposition on the rule-implied policy rate (P2's anchor).** The
+regressor substitution the design document names as decisive: the Taylor rule's *implied*
+rate replaces the observed policy deviation, because the simulator has no observed rate.
+History's strict economic share is **0.558667** (809 months, exact AR(1) ML, `rho` 0.980949,
+realised R² 0.246374), block-bootstrap 95% interval **[0.3917, 0.6734]** at 24-month blocks.
+The engines on the record score **0.000000** (week 2) and **0.022473** (week 3) through the
+same function — reproducing the design document's 0.0% and 2.2% exactly, which discharges
+P2's same-definition anti-test obligation in advance. Under the **pre-declared** drop rule
+(§3.3, on the A2-ceiling precedent) **P2 is KEPT**: both engines sit 0.36–0.41 below the
+lower edge on all six arms. Disclosed rather than buried: the realised-R² summary of the
+same fit has a bootstrap interval of `[-0.22, 0.56]` and would have dropped the bar; that
+is an R²-under-GLS pathology at `rho` = 0.98, it is recorded in the artifact as
+`verdict_robust_to_the_summary = false`, and it is stop-question 6.
+
+**The windowing-symmetric phase anchor (P1's re-derivation, demanded by the verdict's §8.1
+finding C1).** Both symmetric constructs measured, with block-bootstrap intervals and an
+*exhaustive* (seedless) phase-scramble null at three guard bands. **Symmetrising moves
+history's clockwise fractions UP, not down** — 0.626416 / 0.615814 by move type against the
+recorded 0.617647 / 0.611111 — so the censoring asymmetry was working in the engine's
+favour, and on the point estimates a symmetric comparison makes O1's shortfall larger.
+Candidate P1 thresholds under the recommended construct (history windowed into 120-month
+decades with the same 12-month warm-up drop, overlapping windows — section K's precedent):
+**0.063166** on growth flips, **0.057917** on inflation crossings. All four recorded engines
+fail both, so P1's retro-anti-test holds. The per-move independence null is confirmed at
+≈ 0.500 by measurement; the **overall** null is **0.4884**, not 0.500, because diagonal
+moves are never clockwise.
+
+**Two results the record did not have.** The uncensored construct re-run on the sealed
+`e_ordering` tape reproduces O1's sealed floor `0.5180669104991394` **bit-for-bit**, which
+separates construct from draw — and the same statistic on a different tape gives 0.519987,
+so **two honest bootstraps of the identical quantity at 2000 draws differ by 0.0019** while
+O1's margins run 0.0011–0.0063. And §8.1's explicitly unmeasured question is answered: under
+the recommended symmetric construct O1's floor would be 0.515672 and week 3's engine still
+**fails**, by 0.0039 rather than 0.0063; under the other symmetric construct (uncensored
+both sides) it clears. Six stop-questions are recorded, including whether O1 should be
+re-cut at all.
+
 ## spine-02 (2026-08-16)
 
 **The measurement re-run (round two).** Two wiring fixes landed under spine-02's own
