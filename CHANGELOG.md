@@ -4,6 +4,29 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## stage2-01 — the pre-seal measurements, second pass (2026-08-17)
+
+**M3, M5, the generated side's own scrambled null and the floor-noise sizing**, all in
+`scripts/stage2_anchors.py`. **M3 is a GATE and it PASSES: P1 is KEPT** — history's inflation
+follows the cycle with a ten-month lag, `lam_x` = **+0.006326** (t 5.95), and no circular
+shift of the cycle out of 694 reaches the observed likelihood ratio (selection-aware
+p = **0.00144**); the block bootstrap excludes zero at all three block lengths on both the
+held-lag and re-selected-lag arms. **M3's power calculation**, with history itself as the
+true engine emitting 50 real 120-month stretches, clears P1 and P2 in **2000 of 2000**
+replicates, so neither bar is a design defect. **M5** leaves M4 untouched (0.038 of its own
+sampling error at worst; the inflation dial provably cannot reach it) but finds **P1's
+candidate thresholds pinned only to a factor of two by a 50 bp dial move**, with the
+inflation-crossing departure escalating at 1.35 sd. **The generated side's own null**,
+measured on five re-simulated batches that reproduce week 3's counts bit-for-bit, closes
+stop-question 5: engine overall nulls 0.483–0.489 against history's 0.4884, per-move
+substitution error 0.0016 median / 0.0126 worst, and no recorded engine passes P1 on its own
+null. **A correction to the first pass:** P1's null must be the *within-window* scramble a
+batch of decades admits, not the panel-wide one, which raises the candidate thresholds to
+**0.069084** and **0.062547**. **Floor noise (stop-question 2): 640,000 draws**, measured on
+a ladder rather than extrapolated — the unweighted O1 floor is lattice-valued and obeys no
+power law — against the 2000 every floor on the record was cut from. Nothing sealed touched;
+nothing sealed changed; two byte-identical re-runs verified.
+
 ## stage2-01 — the pre-seal measurements (2026-08-17)
 
 **Two measurements D-SP-9 owes before either new bar can be sealed, each capable of killing
