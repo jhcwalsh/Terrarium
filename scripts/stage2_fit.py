@@ -1777,13 +1777,16 @@ def anchor_agreement(
             f"{beta_drift:.3e}, rho drift {rho_drift:.3e}, share drift {share_drift:.3e}, "
             f"hazard drift {hazard_drift:.3e}"
         )
+    # reported as formatted strings, not floats: every one of these is smaller
+    # than the artifact's own twelve-digit rounding, so storing them as numbers
+    # would print a row of zeros and hide the size of the agreement
     return {
         "m3_selected_lag_matches": lag_matches,
-        "m3_lam_x_max_abs_drift": _f(lam_drift),
-        "m4_curve_beta_max_abs_drift": _f(beta_drift),
-        "m4_rho_abs_drift": _f(rho_drift),
-        "m4_history_strict_share_abs_drift": _f(share_drift),
-        "week3_hazard_coefficients_max_abs_drift": _f(hazard_drift),
+        "m3_lam_x_max_abs_drift": f"{lam_drift:.3e}",
+        "m4_curve_beta_max_abs_drift": f"{beta_drift:.3e}",
+        "m4_rho_abs_drift": f"{rho_drift:.3e}",
+        "m4_history_strict_share_abs_drift": f"{share_drift:.3e}",
+        "week3_hazard_coefficients_max_abs_drift": f"{hazard_drift:.3e}",
         "tolerance": ANCHOR_TOLERANCE,
         "tolerance_note": (
             "both artifacts round to twelve decimals, so an exact refit of the identical "

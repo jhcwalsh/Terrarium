@@ -1,14 +1,14 @@
 {
   "anchor_agreement": {
     "all_identities_hold": true,
-    "m3_lam_x_max_abs_drift": 0.0,
+    "m3_lam_x_max_abs_drift": "1.209e-14",
     "m3_selected_lag_matches": true,
-    "m4_curve_beta_max_abs_drift": 0.0,
-    "m4_history_strict_share_abs_drift": 0.0,
-    "m4_rho_abs_drift": 0.0,
+    "m4_curve_beta_max_abs_drift": "4.841e-13",
+    "m4_history_strict_share_abs_drift": "2.811e-13",
+    "m4_rho_abs_drift": "1.277e-14",
     "tolerance": 1e-11,
     "tolerance_note": "both artifacts round to twelve decimals, so an exact refit of the identical equation agrees to a few units in the thirteenth. The tolerance is one order looser than that rounding and eleven orders tighter than anything that could move a verdict",
-    "week3_hazard_coefficients_max_abs_drift": 0.0,
+    "week3_hazard_coefficients_max_abs_drift": "4.385e-13",
     "why_it_matters": "the inflation block IS M3's equation and the curve block IS M4's, so the engine's own fit and the sealed anchors are the same numbers. A drift here would mean the bar and the engine were cut from different objects"
   },
   "attribution": {
