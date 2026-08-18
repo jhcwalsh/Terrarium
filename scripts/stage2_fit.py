@@ -2062,8 +2062,13 @@ def main() -> int:
         ),
     }
 
+    # newline="\n" so the file on disk IS the file git stores -- stage2_anchors.py's
+    # own convention, and it is what makes "byte-identical on a re-run" a claim a
+    # reader can check with sha256 rather than one that depends on the platform.
     PARAMS_PATH.write_text(
-        json.dumps(_round(payload), indent=2, sort_keys=True) + "\n", encoding="utf-8"
+        json.dumps(_round(payload), indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+        newline="\n",
     )
     print(f"status: {status}")
     print(f"wrote {PARAMS_PATH.relative_to(_REPO_ROOT)}")
