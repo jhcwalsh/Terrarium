@@ -4,6 +4,53 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## stage2-01 — the pre-seal measurements (2026-08-17)
+
+**Two measurements D-SP-9 owes before either new bar can be sealed, each capable of killing
+the bar it anchors.** `scripts/stage2_anchors.py` (new, deterministic, three byte-identical
+re-runs verified) writes `docs/superpowers/specs/stage2-anchors.json`; the plain-language
+record with every derivation is `docs/superpowers/specs/2026-08-17-stage2-anchors.md`.
+**Nothing is sealed** — every threshold is a candidate until it goes through the amendment
+log with its judge code hashed in. No sealed file was edited; `src/` and `schemas/`
+untouched.
+
+**M4 — history's curve decomposition on the rule-implied policy rate (P2's anchor).** The
+regressor substitution the design document names as decisive: the Taylor rule's *implied*
+rate replaces the observed policy deviation, because the simulator has no observed rate.
+History's strict economic share is **0.558667** (809 months, exact AR(1) ML, `rho` 0.980949,
+realised R² 0.246374), block-bootstrap 95% interval **[0.3917, 0.6734]** at 24-month blocks.
+The engines on the record score **0.000000** (week 2) and **0.022473** (week 3) through the
+same function — reproducing the design document's 0.0% and 2.2% exactly, which discharges
+P2's same-definition anti-test obligation in advance. Under the **pre-declared** drop rule
+(§3.3, on the A2-ceiling precedent) **P2 is KEPT**: both engines sit 0.36–0.41 below the
+lower edge on all six arms. Disclosed rather than buried: the realised-R² summary of the
+same fit has a bootstrap interval of `[-0.22, 0.56]` and would have dropped the bar; that
+is an R²-under-GLS pathology at `rho` = 0.98, it is recorded in the artifact as
+`verdict_robust_to_the_summary = false`, and it is stop-question 6.
+
+**The windowing-symmetric phase anchor (P1's re-derivation, demanded by the verdict's §8.1
+finding C1).** Both symmetric constructs measured, with block-bootstrap intervals and an
+*exhaustive* (seedless) phase-scramble null at three guard bands. **Symmetrising moves
+history's clockwise fractions UP, not down** — 0.626416 / 0.615814 by move type against the
+recorded 0.617647 / 0.611111 — so the censoring asymmetry was working in the engine's
+favour, and on the point estimates a symmetric comparison makes O1's shortfall larger.
+Candidate P1 thresholds under the recommended construct (history windowed into 120-month
+decades with the same 12-month warm-up drop, overlapping windows — section K's precedent):
+**0.063166** on growth flips, **0.057917** on inflation crossings. All four recorded engines
+fail both, so P1's retro-anti-test holds. The per-move independence null is confirmed at
+≈ 0.500 by measurement; the **overall** null is **0.4884**, not 0.500, because diagonal
+moves are never clockwise.
+
+**Two results the record did not have.** The uncensored construct re-run on the sealed
+`e_ordering` tape reproduces O1's sealed floor `0.5180669104991394` **bit-for-bit**, which
+separates construct from draw — and the same statistic on a different tape gives 0.519987,
+so **two honest bootstraps of the identical quantity at 2000 draws differ by 0.0019** while
+O1's margins run 0.0011–0.0063. And §8.1's explicitly unmeasured question is answered: under
+the recommended symmetric construct O1's floor would be 0.515672 and week 3's engine still
+**fails**, by 0.0039 rather than 0.0063; under the other symmetric construct (uncensored
+both sides) it clears. Six stop-questions are recorded, including whether O1 should be
+re-cut at all.
+
 ## spine-02 (2026-08-16)
 
 **The measurement re-run (round two).** Two wiring fixes landed under spine-02's own

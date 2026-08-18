@@ -1,0 +1,2297 @@
+{
+  "campaign_vintage_id": "2026-08-10.1",
+  "decision": "D-SP-9 (stage 2 funded, owner ruling 2026-08-17)",
+  "m4_curve_endogeneity": {
+    "bootstrap_ci95": {
+      "block_12m": {
+        "covariance_aware_share_ci95": {
+          "hi": 1.176320767075,
+          "lo": 0.439132233101,
+          "median": 0.75784628002
+        },
+        "r_squared_realised_ci95": {
+          "hi": 0.523102487439,
+          "lo": -0.095400089378,
+          "median": 0.29152322311
+        },
+        "rho_pinned_at_point_estimate": {
+          "economic_share_ci95": {
+            "hi": 0.619541636218,
+            "lo": 0.437072374963,
+            "median": 0.537800256389
+          }
+        },
+        "rho_refitted": {
+          "economic_share_ci95": {
+            "hi": 0.658172267215,
+            "lo": 0.429367456948,
+            "median": 0.552633455455
+          },
+          "rho_ci95": {
+            "hi": 0.98736738802,
+            "lo": 0.967416389102,
+            "median": 0.97962410477
+          },
+          "rho_median": 0.97962410477
+        }
+      },
+      "block_24m": {
+        "covariance_aware_share_ci95": {
+          "hi": 1.359216758178,
+          "lo": 0.425720770956,
+          "median": 0.814544766176
+        },
+        "r_squared_realised_ci95": {
+          "hi": 0.561580158846,
+          "lo": -0.220286000887,
+          "median": 0.277371397621
+        },
+        "rho_pinned_at_point_estimate": {
+          "economic_share_ci95": {
+            "hi": 0.628412984813,
+            "lo": 0.43476692951,
+            "median": 0.543230336271
+          }
+        },
+        "rho_refitted": {
+          "economic_share_ci95": {
+            "hi": 0.673370849738,
+            "lo": 0.391706974667,
+            "median": 0.559531310536
+          },
+          "rho_ci95": {
+            "hi": 0.988115171981,
+            "lo": 0.966037641133,
+            "median": 0.979856444835
+          },
+          "rho_median": 0.979856444835
+        }
+      },
+      "block_36m": {
+        "covariance_aware_share_ci95": {
+          "hi": 1.45081099676,
+          "lo": 0.410668768123,
+          "median": 0.817966390417
+        },
+        "r_squared_realised_ci95": {
+          "hi": 0.603683375452,
+          "lo": -0.290315548033,
+          "median": 0.281408080236
+        },
+        "rho_pinned_at_point_estimate": {
+          "economic_share_ci95": {
+            "hi": 0.628627864654,
+            "lo": 0.41660156515,
+            "median": 0.544067291177
+          }
+        },
+        "rho_refitted": {
+          "economic_share_ci95": {
+            "hi": 0.684051306131,
+            "lo": 0.381866829111,
+            "median": 0.560228570819
+          },
+          "rho_ci95": {
+            "hi": 0.98867011965,
+            "lo": 0.964861525135,
+            "median": 0.979741950723
+          },
+          "rho_median": 0.979741950723
+        }
+      }
+    },
+    "bootstrap_method": "stationary (Politis-Romano) block bootstrap over the fitted sample's month sequence, the same machinery and the same three block lengths every v2 interval uses. Each draw is refitted; a draw's contiguous stretches are treated as independent AR(1) blocks, so a splice join cannot invent persistence. 2.5/97.5 percentile interval",
+    "bootstrap_seed": 20260821,
+    "coefficient_centers": [
+      4.870325522229,
+      0.094394815478,
+      0.281829419036,
+      2.094318696445,
+      0.557653866183
+    ],
+    "coefficient_labels": [
+      "intercept",
+      "c_i_policy_rule",
+      "c_x_inflation_gap",
+      "C",
+      "E",
+      "K"
+    ],
+    "covariance_caveat": "the strict share sums squared component standard deviations, which assumes the components are uncorrelated. They are on the generated side, by construction; they are NOT on history, where the rule-implied rate and the inflation gap share the inflation trend by definition (their correlation is reported in point_estimate). So history's total_sum_of_squares exceeds the slope's own variance, and covariance_aware_share -- the variance of the summed economic terms over the variance of the slope -- is published beside it. The strict share is the primary because it is the SAME function the engine is scored by, which is P2's fourth anti-test obligation; the covariance-aware number is the disclosure that the two sides' components are not equally independent",
+    "equation": "slope_t = c0 + c_i (i_rule_t - ibar) + c_x (x_t - xbar) + season_term(g_t, age_t) + e_t, with e_t AR(1); exact Gaussian maximum likelihood, the first observation of every contiguous block entering through its own stationary law",
+    "n_bootstrap": 2000,
+    "p2_acceptance": {
+      "alternative_summaries": {
+        "block_12m__covariance_aware_share_ci95": {
+          "ci95": [
+            0.439132233101,
+            1.176320767075
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.423068718004,
+            "feedback__unconditional": 0.416659336237,
+            "week2__premise_accepted": 0.439132233101,
+            "week2__unconditional": 0.439132233101
+          }
+        },
+        "block_12m__r_squared_realised_ci95": {
+          "ci95": [
+            -0.095400089378,
+            0.523102487439
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": true,
+            "feedback__unconditional": true,
+            "week2__premise_accepted": true,
+            "week2__unconditional": true
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": -0.111463604475,
+            "feedback__unconditional": -0.117872986242,
+            "week2__premise_accepted": -0.095400089378,
+            "week2__unconditional": -0.095400089378
+          }
+        },
+        "block_24m__covariance_aware_share_ci95": {
+          "ci95": [
+            0.425720770956,
+            1.359216758178
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.409657255859,
+            "feedback__unconditional": 0.403247874092,
+            "week2__premise_accepted": 0.425720770956,
+            "week2__unconditional": 0.425720770956
+          }
+        },
+        "block_24m__r_squared_realised_ci95": {
+          "ci95": [
+            -0.220286000887,
+            0.561580158846
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": true,
+            "feedback__unconditional": true,
+            "week2__premise_accepted": true,
+            "week2__unconditional": true
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": -0.236349515984,
+            "feedback__unconditional": -0.242758897751,
+            "week2__premise_accepted": -0.220286000887,
+            "week2__unconditional": -0.220286000887
+          }
+        },
+        "block_36m__covariance_aware_share_ci95": {
+          "ci95": [
+            0.410668768123,
+            1.45081099676
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.394605253026,
+            "feedback__unconditional": 0.38819587126,
+            "week2__premise_accepted": 0.410668768123,
+            "week2__unconditional": 0.410668768123
+          }
+        },
+        "block_36m__r_squared_realised_ci95": {
+          "ci95": [
+            -0.290315548033,
+            0.603683375452
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": true,
+            "feedback__unconditional": true,
+            "week2__premise_accepted": true,
+            "week2__unconditional": true
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": -0.30637906313,
+            "feedback__unconditional": -0.312788444896,
+            "week2__premise_accepted": -0.290315548033,
+            "week2__unconditional": -0.290315548033
+          }
+        }
+      },
+      "any_recorded_engine_inside_any_alternative_summary": true,
+      "any_recorded_engine_inside_any_arm": false,
+      "engine_strict_economic_shares": {
+        "feedback__premise_accepted": 0.016063515097,
+        "feedback__unconditional": 0.022472896863,
+        "week2__premise_accepted": 0.0,
+        "week2__unconditional": 0.0
+      },
+      "per_arm": {
+        "block_12m__rho_pinned_at_point_estimate": {
+          "ci95": [
+            0.437072374963,
+            0.619541636218
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.421008859867,
+            "feedback__unconditional": 0.4145994781,
+            "week2__premise_accepted": 0.437072374963,
+            "week2__unconditional": 0.437072374963
+          }
+        },
+        "block_12m__rho_refitted": {
+          "ci95": [
+            0.429367456948,
+            0.658172267215
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.413303941851,
+            "feedback__unconditional": 0.406894560085,
+            "week2__premise_accepted": 0.429367456948,
+            "week2__unconditional": 0.429367456948
+          }
+        },
+        "block_24m__rho_pinned_at_point_estimate": {
+          "ci95": [
+            0.43476692951,
+            0.628412984813
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.418703414413,
+            "feedback__unconditional": 0.412294032647,
+            "week2__premise_accepted": 0.43476692951,
+            "week2__unconditional": 0.43476692951
+          }
+        },
+        "block_24m__rho_refitted": {
+          "ci95": [
+            0.391706974667,
+            0.673370849738
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.37564345957,
+            "feedback__unconditional": 0.369234077804,
+            "week2__premise_accepted": 0.391706974667,
+            "week2__unconditional": 0.391706974667
+          }
+        },
+        "block_36m__rho_pinned_at_point_estimate": {
+          "ci95": [
+            0.41660156515,
+            0.628627864654
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.400538050053,
+            "feedback__unconditional": 0.394128668287,
+            "week2__premise_accepted": 0.41660156515,
+            "week2__unconditional": 0.41660156515
+          }
+        },
+        "block_36m__rho_refitted": {
+          "ci95": [
+            0.381866829111,
+            0.684051306131
+          ],
+          "engines_inside_interval": {
+            "feedback__premise_accepted": false,
+            "feedback__unconditional": false,
+            "week2__premise_accepted": false,
+            "week2__unconditional": false
+          },
+          "margin_below_lower_edge": {
+            "feedback__premise_accepted": 0.365803314014,
+            "feedback__unconditional": 0.359393932248,
+            "week2__premise_accepted": 0.381866829111,
+            "week2__unconditional": 0.381866829111
+          }
+        }
+      },
+      "primary_interval": [
+        0.391706974667,
+        0.673370849738
+      ],
+      "reading": "P2 survives only if EVERY arm puts both recorded engines outside history's interval. One arm placing an engine inside is enough to drop the bar: the rule is a floor on how informative the anchor is, and it is not negotiated after the number is seen",
+      "rule": "P2 is DROPPED if history's interval is so wide that the engines already on the record sit inside it. Pre-declared in 2026-08-17-stage2-coupled-system-design.md section 3.3, on the A2 low-inflation-ceiling precedent; applied here without adjustment",
+      "verdict": "P2_KEPT",
+      "verdict_robust_to_the_summary": false
+    },
+    "phi_c": 0.093014789081,
+    "phi_pi": 0.624609790015,
+    "point_estimate": {
+      "beta": [
+        0.602573166833,
+        -0.240319668577,
+        0.492034580114,
+        -0.079260146498,
+        -0.038446024211,
+        0.026812281313
+      ],
+      "correlation_policy_rule_inflation_gap": 0.705159446214,
+      "covariance_aware_share": 0.871939389681,
+      "economic_share": 0.558666923174,
+      "innovation_sd_pp": 0.14530767769,
+      "loglik": 410.921798885662,
+      "r_squared_realised": 0.246374417074,
+      "residual_realised_sd_pp": 0.73319726384,
+      "residual_stationary_sd_pp": 0.747992998622,
+      "rho": 0.980949399223,
+      "slope_sd_pp": 0.844584329429,
+      "strict": {
+        "component_is_economic": {
+          "inflation_gap": true,
+          "policy_rule": true,
+          "season_term": true
+        },
+        "component_sd_pp": {
+          "inflation_gap": 0.078326489103,
+          "policy_rule": 0.83618954205,
+          "season_term": 0.053794025741
+        },
+        "economic_share": 0.558666923174,
+        "economic_sum_of_squares": 0.708241786335,
+        "exogenous_sum_of_squares": 0.0,
+        "naive_explained_share": 0.558666923174,
+        "residual_share": 0.441333076826,
+        "residual_stationary_sd_pp": 0.747992998622,
+        "residual_sum_of_squares": 0.559493525988,
+        "total_sum_of_squares": 1.267735312323
+      },
+      "strict_share_on_realised_residual": 0.568494468186,
+      "sum_of_squares_over_slope_variance": 1.77722555437
+    },
+    "primary_block_months": 24,
+    "question": "how much of the yield curve's movement is made of the economy the engine simulates, measured on history the way the engine will be measured",
+    "recorded_engine_shares": {
+      "feedback__premise_accepted": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.095368228379,
+          "u_hat": 0.148625032509
+        },
+        "economic_share": 0.016063515097,
+        "economic_sum_of_squares": 0.009095098984,
+        "exogenous_sum_of_squares": 0.022089400288,
+        "naive_explained_share": 0.055077209795,
+        "residual_share": 0.944922790205,
+        "residual_stationary_sd_pp": 0.731444845753,
+        "residual_sum_of_squares": 0.535011562379,
+        "total_sum_of_squares": 0.566196061651
+      },
+      "feedback__unconditional": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.113170199114,
+          "u_hat": 0.148625032509
+        },
+        "economic_share": 0.022472896863,
+        "economic_sum_of_squares": 0.012807493968,
+        "exogenous_sum_of_squares": 0.022089400288,
+        "naive_explained_share": 0.06123245558,
+        "residual_share": 0.93876754442,
+        "residual_stationary_sd_pp": 0.731444845753,
+        "residual_sum_of_squares": 0.535011562379,
+        "total_sum_of_squares": 0.569908456634
+      },
+      "week2__premise_accepted": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.0,
+          "u_hat": 0.535801285624
+        },
+        "economic_share": 0.0,
+        "economic_sum_of_squares": 0.0,
+        "exogenous_sum_of_squares": 0.287083017676,
+        "naive_explained_share": 0.404291352601,
+        "residual_share": 0.595708647399,
+        "residual_stationary_sd_pp": 0.650389434237,
+        "residual_sum_of_squares": 0.423006416167,
+        "total_sum_of_squares": 0.710089433843
+      },
+      "week2__unconditional": {
+        "component_is_economic": {
+          "season_term": true,
+          "u_hat": false
+        },
+        "component_sd_pp": {
+          "season_term": 0.0,
+          "u_hat": 0.535801285624
+        },
+        "economic_share": 0.0,
+        "economic_sum_of_squares": 0.0,
+        "exogenous_sum_of_squares": 0.287083017676,
+        "naive_explained_share": 0.404291352601,
+        "residual_share": 0.595708647399,
+        "residual_stationary_sd_pp": 0.650389434237,
+        "residual_sum_of_squares": 0.423006416167,
+        "total_sum_of_squares": 0.710089433843
+      }
+    },
+    "regressor_substitution": "i_rule is the Taylor rule's IMPLIED policy rate -- r* + pi* + phi_pi (pi - pi*) + phi_c c -- not the observed rate and not its residual. Week 2 and week 3 both regressed the curve on u_hat, the observed rate MINUS that anchor. On history u_hat carries real economic content the rule missed; in simulation it is a stand-alone mean-reverting process with no inputs, so a bar anchored on it would compare two different objects",
+    "same_equation_on_the_observed_deviation": {
+      "beta": [
+        0.696139390662,
+        -0.179108108471,
+        -1.290082915181,
+        -0.132918077131,
+        -0.063865375644,
+        0.06806284989
+      ],
+      "correlation_policy_rule_inflation_gap": 0.211005122724,
+      "covariance_aware_share": 0.132769619644,
+      "economic_share": 0.165447235443,
+      "innovation_sd_pp": 0.179120623006,
+      "loglik": 242.011742281302,
+      "note": "the identical design with u_hat in column 1 instead of the rule-implied rate. Reported so the substitution's cost is visible rather than argued",
+      "r_squared_realised": 0.376957038146,
+      "residual_realised_sd_pp": 0.66665634418,
+      "residual_stationary_sd_pp": 0.657844843532,
+      "rho": 0.962216932561,
+      "slope_sd_pp": 0.844584329429,
+      "strict": {
+        "component_is_economic": {
+          "inflation_gap": true,
+          "policy_rule": true,
+          "season_term": true
+        },
+        "component_sd_pp": {
+          "inflation_gap": 0.205366999559,
+          "policy_rule": 0.178973181439,
+          "season_term": 0.10763900682
+        },
+        "economic_share": 0.165447235443,
+        "economic_sum_of_squares": 0.085793159972,
+        "exogenous_sum_of_squares": 0.0,
+        "naive_explained_share": 0.165447235443,
+        "residual_share": 0.834552764557,
+        "residual_stationary_sd_pp": 0.657844843532,
+        "residual_sum_of_squares": 0.432759838161,
+        "total_sum_of_squares": 0.518552998133
+      },
+      "strict_share_on_realised_residual": 0.161805549476,
+      "sum_of_squares_over_slope_variance": 0.726954302384
+    },
+    "sample": {
+      "months": 809,
+      "opens_at_panel_row": 4,
+      "why": "week 3's curve block drops the panel's first, left-truncated growth spell so that a month's spell age means the same thing in the hazard and the curve blocks; the same rule is applied here so the two fits' samples are identical"
+    },
+    "single_block_identity_check": {
+      "max_abs_beta_difference": 0.0,
+      "max_abs_loglik_difference": 0.0,
+      "max_abs_sigma_difference": 0.0,
+      "reduces_to_week3_profile": true,
+      "rho_grid": [
+        -0.5,
+        0.0,
+        0.5,
+        0.9,
+        0.99
+      ]
+    },
+    "u_hat_rebuild_max_abs_diff": 0.0
+  },
+  "p1_phase_anchor": {
+    "bootstrap_seed": 20260822,
+    "constructs": {
+      "uncensored_both_sides": {
+        "bootstrap_ci95": {
+          "block_12m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1659,
+              "mean_weighted_transitions_per_draw": 1.828
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.741935483871,
+                "lo": 0.483870967742,
+                "median": 0.617647058824
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 30.87
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.72736013986,
+                "lo": 0.514285714286,
+                "median": 0.611111111111
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 33.0175
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.68966731423,
+                "lo": 0.507692307692,
+                "median": 0.59649122807
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 65.7155
+            }
+          },
+          "block_24m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1730,
+              "mean_weighted_transitions_per_draw": 1.9075
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.733333333333,
+                "lo": 0.5,
+                "median": 0.617647058824
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 32.539
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.705882352941,
+                "lo": 0.53125,
+                "median": 0.611111111111
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 34.5355
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.677981234867,
+                "lo": 0.519987012987,
+                "median": 0.597014925373
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 68.982
+            }
+          },
+          "block_36m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1744,
+              "mean_weighted_transitions_per_draw": 1.8675
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.727272727273,
+                "lo": 0.51724137931,
+                "median": 0.617647058824
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 32.776
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.692307692308,
+                "lo": 0.542857142857,
+                "median": 0.611111111111
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 34.8495
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.666772151899,
+                "lo": 0.528551587302,
+                "median": 0.596774193548
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 69.493
+            }
+          }
+        },
+        "clockwise_fractions": {
+          "diagonal": {
+            "clockwise_fraction": 0.0,
+            "weighted_clockwise": 0.0,
+            "weighted_transitions": 2.0
+          },
+          "growth_flip": {
+            "clockwise_fraction": 0.617647058824,
+            "weighted_clockwise": 21.0,
+            "weighted_transitions": 34.0
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.611111111111,
+            "weighted_clockwise": 22.0,
+            "weighted_transitions": 36.0
+          },
+          "overall": {
+            "clockwise_fraction": 0.597222222222,
+            "weighted_clockwise": 43.0,
+            "weighted_transitions": 72.0
+          }
+        },
+        "departures_and_candidate_thresholds": {
+          "diagonal": {
+            "departure": null
+          },
+          "growth_flip": {
+            "candidate_p1_threshold": 0.058681931963,
+            "departure": 0.117363863926,
+            "departure_ci95_from_the_fraction_interval": [
+              -0.000283194897,
+              0.233050138436
+            ],
+            "measured_clockwise_fraction": 0.617647058824,
+            "scrambled_null": 0.500283194897
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.055489480435,
+            "departure": 0.11097896087,
+            "departure_ci95_from_the_fraction_interval": [
+              0.031117849758,
+              0.2057502027
+            ],
+            "measured_clockwise_fraction": 0.611111111111,
+            "scrambled_null": 0.500132150242
+          },
+          "overall": {
+            "candidate_p1_threshold": null,
+            "departure": 0.108781969232,
+            "departure_ci95_from_the_fraction_interval": [
+              0.031546759997,
+              0.189540981876
+            ],
+            "measured_clockwise_fraction": 0.597222222222,
+            "scrambled_null": 0.48844025299
+          }
+        },
+        "description": "history read as one 813-month run, which is what every anchor on the record was measured on. Its symmetric partner on the generated side is the simulator's INTERNAL season index -- the object the week-3 o1_decomposition scored, and the one that reads 0.5241 overall",
+        "name": "uncensored_both_sides",
+        "scrambled_null": {
+          "guard_months": 60,
+          "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+          "n_shifts": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": null,
+                "lo": null,
+                "median": null
+              },
+              "across_shift_sd": null,
+              "null_clockwise_fraction": null,
+              "standard_error_of_the_mean": null
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.586642156863,
+                "lo": 0.419128787879,
+                "median": 0.5
+              },
+              "across_shift_sd": 0.041946374376,
+              "null_clockwise_fraction": 0.500283194897,
+              "standard_error_of_the_mean": 0.001592262597
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.576503759398,
+                "lo": 0.416666666667,
+                "median": 0.5
+              },
+              "across_shift_sd": 0.040696980822,
+              "null_clockwise_fraction": 0.500132150242,
+              "standard_error_of_the_mean": 0.001544836266
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.56338028169,
+                "lo": 0.412584033613,
+                "median": 0.486111111111
+              },
+              "across_shift_sd": 0.040398373096,
+              "null_clockwise_fraction": 0.48844025299,
+              "standard_error_of_the_mean": 0.001533501272
+            }
+          }
+        },
+        "scrambled_null_guard_sensitivity": {
+          "guard_0m": {
+            "guard_months": 0,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 812,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.588235294118,
+                  "lo": 0.416666666667,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.042788906979,
+                "null_clockwise_fraction": 0.499997178545,
+                "standard_error_of_the_mean": 0.001501596261
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.583333333333,
+                  "lo": 0.416666666667,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.041479803849,
+                "null_clockwise_fraction": 0.49989006307,
+                "standard_error_of_the_mean": 0.001455655747
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.569444444444,
+                  "lo": 0.41095890411,
+                  "median": 0.486111111111
+                },
+                "across_shift_sd": 0.041166622969,
+                "null_clockwise_fraction": 0.487986578237,
+                "standard_error_of_the_mean": 0.001444665253
+              }
+            }
+          },
+          "guard_120m": {
+            "guard_months": 120,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 574,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.588235294118,
+                  "lo": 0.416666666667,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.044448901735,
+                "null_clockwise_fraction": 0.501138822002,
+                "standard_error_of_the_mean": 0.001855261313
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.583333333333,
+                  "lo": 0.416666666667,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.043089897839,
+                "null_clockwise_fraction": 0.501132327937,
+                "standard_error_of_the_mean": 0.001798537586
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.569444444444,
+                  "lo": 0.409265869188,
+                  "median": 0.486111111111
+                },
+                "across_shift_sd": 0.042732718094,
+                "null_clockwise_fraction": 0.488766878085,
+                "standard_error_of_the_mean": 0.001783629192
+              }
+            }
+          }
+        }
+      },
+      "windowed_disjoint": {
+        "bootstrap_ci95": {
+          "block_12m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1538,
+              "mean_weighted_transitions_per_draw": 1.4445
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.764705882353,
+                "lo": 0.458333333333,
+                "median": 0.615384615385
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 24.458
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.75,
+                "lo": 0.5,
+                "median": 0.611111111111
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 26.167
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.705882352941,
+                "lo": 0.491803278689,
+                "median": 0.59649122807
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 52.0695
+            }
+          },
+          "block_24m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1582,
+              "mean_weighted_transitions_per_draw": 1.4955
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.75,
+                "lo": 0.5,
+                "median": 0.617647058824
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 25.7885
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.727272727273,
+                "lo": 0.518518518519,
+                "median": 0.611111111111
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 27.168
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.690944055944,
+                "lo": 0.510627442466,
+                "median": 0.596774193548
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 54.452
+            }
+          },
+          "block_36m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1587,
+              "mean_weighted_transitions_per_draw": 1.4605
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.75,
+                "lo": 0.5,
+                "median": 0.619047619048
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 25.8685
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.714285714286,
+                "lo": 0.526253132832,
+                "median": 0.610433604336
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 27.567
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.68293699187,
+                "lo": 0.513496188496,
+                "median": 0.595744680851
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 54.896
+            }
+          }
+        },
+        "clockwise_fractions": {
+          "diagonal": {
+            "clockwise_fraction": 0.0,
+            "weighted_clockwise": 0.0,
+            "weighted_transitions": 2.0
+          },
+          "growth_flip": {
+            "clockwise_fraction": 0.666666666667,
+            "weighted_clockwise": 18.0,
+            "weighted_transitions": 27.0
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.617647058824,
+            "weighted_clockwise": 21.0,
+            "weighted_transitions": 34.0
+          },
+          "overall": {
+            "clockwise_fraction": 0.619047619048,
+            "weighted_clockwise": 39.0,
+            "weighted_transitions": 63.0
+          }
+        },
+        "departures_and_candidate_thresholds": {
+          "diagonal": {
+            "departure": null
+          },
+          "growth_flip": {
+            "candidate_p1_threshold": 0.081852799486,
+            "departure": 0.163705598972,
+            "departure_ci95_from_the_fraction_interval": [
+              -0.002961067695,
+              0.247038932305
+            ],
+            "measured_clockwise_fraction": 0.666666666667,
+            "scrambled_null": 0.502961067695
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.058144552971,
+            "departure": 0.116289105941,
+            "departure_ci95_from_the_fraction_interval": [
+              0.017160565636,
+              0.225914774391
+            ],
+            "measured_clockwise_fraction": 0.617647058824,
+            "scrambled_null": 0.501357952882
+          },
+          "overall": {
+            "candidate_p1_threshold": null,
+            "departure": 0.128424238423,
+            "departure_ci95_from_the_fraction_interval": [
+              0.020004061842,
+              0.20032067532
+            ],
+            "measured_clockwise_fraction": 0.619047619048,
+            "scrambled_null": 0.490623380624
+          }
+        },
+        "description": "the same windowing over NON-overlapping decades, so every month is used at most once. The sensitivity check on the overlapping version's uneven month weighting; it rests on a handful of decades and is a check, not an anchor",
+        "name": "windowed_disjoint",
+        "scrambled_null": {
+          "guard_months": 60,
+          "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+          "n_shifts": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": null,
+                "lo": null,
+                "median": null
+              },
+              "across_shift_sd": null,
+              "null_clockwise_fraction": null,
+              "standard_error_of_the_mean": null
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.592592592593,
+                "lo": 0.4,
+                "median": 0.5
+              },
+              "across_shift_sd": 0.051702116322,
+              "null_clockwise_fraction": 0.502961067695,
+              "standard_error_of_the_mean": 0.001962585497
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.608190993789,
+                "lo": 0.4,
+                "median": 0.5
+              },
+              "across_shift_sd": 0.053026879961,
+              "null_clockwise_fraction": 0.501357952882,
+              "standard_error_of_the_mean": 0.002012872837
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.586642156863,
+                "lo": 0.396332140534,
+                "median": 0.491228070175
+              },
+              "across_shift_sd": 0.049335725248,
+              "null_clockwise_fraction": 0.490623380624,
+              "standard_error_of_the_mean": 0.00187275852
+            }
+          }
+        },
+        "scrambled_null_guard_sensitivity": {
+          "guard_0m": {
+            "guard_months": 0,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 812,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.607142857143,
+                  "lo": 0.4,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.052144598527,
+                "null_clockwise_fraction": 0.503929149138,
+                "standard_error_of_the_mean": 0.00182991667
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.605178571429,
+                  "lo": 0.4,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.052348418762,
+                "null_clockwise_fraction": 0.500752375389,
+                "standard_error_of_the_mean": 0.001837069358
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.587301587302,
+                  "lo": 0.396626984127,
+                  "median": 0.490909090909
+                },
+                "across_shift_sd": 0.04925460695,
+                "null_clockwise_fraction": 0.49056261809,
+                "standard_error_of_the_mean": 0.001728497848
+              }
+            }
+          },
+          "guard_120m": {
+            "guard_months": 120,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 574,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.604821428571,
+                  "lo": 0.392857142857,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.054021795193,
+                "null_clockwise_fraction": 0.500140969913,
+                "standard_error_of_the_mean": 0.002254826166
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.608695652174,
+                  "lo": 0.4,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.054573666523,
+                "null_clockwise_fraction": 0.502719054184,
+                "standard_error_of_the_mean": 0.00227786083
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.589285714286,
+                  "lo": 0.391004445679,
+                  "median": 0.491068580542
+                },
+                "across_shift_sd": 0.051471622121,
+                "null_clockwise_fraction": 0.48928139157,
+                "standard_error_of_the_mean": 0.002148383998
+              }
+            }
+          }
+        }
+      },
+      "windowed_overlapping": {
+        "bootstrap_ci95": {
+          "block_12m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1651,
+              "mean_weighted_transitions_per_draw": 166.424
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.754043125049,
+                "lo": 0.472513048187,
+                "median": 0.617201732681
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 2822.594
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.734928288951,
+                "lo": 0.503929491768,
+                "median": 0.611740103872
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3018.023
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.692629567311,
+                "lo": 0.500316013156,
+                "median": 0.598119172696
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 6007.041
+            }
+          },
+          "block_24m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1723,
+              "mean_weighted_transitions_per_draw": 173.538
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.738643426445,
+                "lo": 0.506665569454,
+                "median": 0.617641396181
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 2975.7405
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.705656313023,
+                "lo": 0.526274859765,
+                "median": 0.611866287513
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3154.3815
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.681284649074,
+                "lo": 0.515671717177,
+                "median": 0.597667874458
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 6303.66
+            }
+          },
+          "block_36m": {
+            "diagonal": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.0,
+                "lo": 0.0,
+                "median": 0.0
+              },
+              "draws_used": 1739,
+              "mean_weighted_transitions_per_draw": 170.7035
+            },
+            "growth_flip": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.732087687924,
+                "lo": 0.510969853211,
+                "median": 0.617733426816
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3001.8425
+            },
+            "inflation_crossing": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.697531639739,
+                "lo": 0.536917649713,
+                "median": 0.610726625015
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 3186.0185
+            },
+            "overall": {
+              "clockwise_fraction_ci95": {
+                "hi": 0.672984180377,
+                "lo": 0.521590618592,
+                "median": 0.597547908035
+              },
+              "draws_used": 2000,
+              "mean_weighted_transitions_per_draw": 6358.5645
+            }
+          }
+        },
+        "clockwise_fractions": {
+          "diagonal": {
+            "clockwise_fraction": 0.0,
+            "weighted_clockwise": 0.0,
+            "weighted_transitions": 148.0
+          },
+          "growth_flip": {
+            "clockwise_fraction": 0.62641631596,
+            "weighted_clockwise": 1935.0,
+            "weighted_transitions": 3089.0
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.615814226925,
+            "weighted_clockwise": 2095.0,
+            "weighted_transitions": 3402.0
+          },
+          "overall": {
+            "clockwise_fraction": 0.607019129387,
+            "weighted_clockwise": 4030.0,
+            "weighted_transitions": 6639.0
+          }
+        },
+        "departures_and_candidate_thresholds": {
+          "diagonal": {
+            "departure": null
+          },
+          "growth_flip": {
+            "candidate_p1_threshold": 0.063166061616,
+            "departure": 0.126332123233,
+            "departure_ci95_from_the_fraction_interval": [
+              0.006581376726,
+              0.238559233717
+            ],
+            "measured_clockwise_fraction": 0.62641631596,
+            "scrambled_null": 0.500084192727
+          },
+          "inflation_crossing": {
+            "candidate_p1_threshold": 0.057916645568,
+            "departure": 0.115833291135,
+            "departure_ci95_from_the_fraction_interval": [
+              0.026293923975,
+              0.205675377232
+            ],
+            "measured_clockwise_fraction": 0.615814226925,
+            "scrambled_null": 0.49998093579
+          },
+          "overall": {
+            "candidate_p1_threshold": null,
+            "departure": 0.118618192115,
+            "departure_ci95_from_the_fraction_interval": [
+              0.027270779905,
+              0.192883711802
+            ],
+            "measured_clockwise_fraction": 0.607019129387,
+            "scrambled_null": 0.488400937272
+          }
+        },
+        "description": "history put through the generated side's own machine: every 120-month window, each losing its first 12 months to the trailing-inflation warm-up, transitions pooled. One window per start row, so every month the panel has is used. This is section K's primary window rule, applied to the ordering statistic instead of to dwell lengths",
+        "name": "windowed_overlapping",
+        "scrambled_null": {
+          "guard_months": 60,
+          "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+          "n_shifts": 694,
+          "per_move_type": {
+            "diagonal": {
+              "across_shift_ci95": {
+                "hi": null,
+                "lo": null,
+                "median": null
+              },
+              "across_shift_sd": null,
+              "null_clockwise_fraction": null,
+              "standard_error_of_the_mean": null
+            },
+            "growth_flip": {
+              "across_shift_ci95": {
+                "hi": 0.593177633205,
+                "lo": 0.421525805106,
+                "median": 0.500958466454
+              },
+              "across_shift_sd": 0.041871763335,
+              "null_clockwise_fraction": 0.500084192727,
+              "standard_error_of_the_mean": 0.001589430401
+            },
+            "inflation_crossing": {
+              "across_shift_ci95": {
+                "hi": 0.583304077812,
+                "lo": 0.424292477923,
+                "median": 0.500464914127
+              },
+              "across_shift_sd": 0.039626330181,
+              "null_clockwise_fraction": 0.49998093579,
+              "standard_error_of_the_mean": 0.001504194924
+            },
+            "overall": {
+              "across_shift_ci95": {
+                "hi": 0.570468112745,
+                "lo": 0.41455482676,
+                "median": 0.48689399645
+              },
+              "across_shift_sd": 0.039713414308,
+              "null_clockwise_fraction": 0.488400937272,
+              "standard_error_of_the_mean": 0.001507500592
+            }
+          }
+        },
+        "scrambled_null_guard_sensitivity": {
+          "guard_0m": {
+            "guard_months": 0,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 812,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.599963255896,
+                  "lo": 0.418043455447,
+                  "median": 0.498858642766
+                },
+                "across_shift_sd": 0.043717484596,
+                "null_clockwise_fraction": 0.499679504589,
+                "standard_error_of_the_mean": 0.001534182947
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.591959177213,
+                  "lo": 0.421416681855,
+                  "median": 0.5
+                },
+                "across_shift_sd": 0.040939875777,
+                "null_clockwise_fraction": 0.499930647454,
+                "standard_error_of_the_mean": 0.001436707986
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.575020766102,
+                  "lo": 0.412903761597,
+                  "median": 0.486506954888
+                },
+                "across_shift_sd": 0.041355226565,
+                "null_clockwise_fraction": 0.488012550915,
+                "standard_error_of_the_mean": 0.001451283942
+              }
+            }
+          },
+          "guard_120m": {
+            "guard_months": 120,
+            "method": "exhaustive circular shift of the hot/cool dial against the growth axis; every shift of at least guard_months in either direction is scored and the null is their mean. No seed: the enumeration is complete",
+            "n_shifts": 574,
+            "per_move_type": {
+              "diagonal": {
+                "across_shift_ci95": {
+                  "hi": null,
+                  "lo": null,
+                  "median": null
+                },
+                "across_shift_sd": null,
+                "null_clockwise_fraction": null,
+                "standard_error_of_the_mean": null
+              },
+              "growth_flip": {
+                "across_shift_ci95": {
+                  "hi": 0.599824256262,
+                  "lo": 0.421525805106,
+                  "median": 0.501778022008
+                },
+                "across_shift_sd": 0.043799994224,
+                "null_clockwise_fraction": 0.501618473453,
+                "standard_error_of_the_mean": 0.001828176437
+              },
+              "inflation_crossing": {
+                "across_shift_ci95": {
+                  "hi": 0.590011065383,
+                  "lo": 0.421901700338,
+                  "median": 0.502776357167
+                },
+                "across_shift_sd": 0.041544658777,
+                "null_clockwise_fraction": 0.501291258017,
+                "standard_error_of_the_mean": 0.001734040554
+              },
+              "overall": {
+                "across_shift_ci95": {
+                  "hi": 0.572690739182,
+                  "lo": 0.413625795622,
+                  "median": 0.48893612456
+                },
+                "across_shift_sd": 0.041506846108,
+                "null_clockwise_fraction": 0.489235720384,
+                "standard_error_of_the_mean": 0.001732462284
+              }
+            }
+          }
+        }
+      }
+    },
+    "decade_months": 120,
+    "engines_on_the_record": {
+      "null_substitution_disclosure": "each engine's departure is taken against HISTORY's phase-scrambled null, not its own. Measuring the generated side's own null needs the batches re-simulated and is a prerequisite for SEALING P1, not for anchoring it",
+      "p1_anti_test_3": {
+        "any_recorded_engine_passes_under_any_construct": false,
+        "holds": true,
+        "requirement": "every engine on the record must FAIL the candidate P1 bar; a new bar that passes an engine known to be uncoupled is void"
+      },
+      "per_engine_arm": {
+        "feedback__premise_accepted": {
+          "internal_path_o1_value": 0.506373117034,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.506373117034,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.491344873502,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.491344873502,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.017108109451,
+                  "generated_clockwise_fraction": 0.517391304348,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.037705687596,
+                  "generated_clockwise_fraction": 0.537837837838,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.014430236653,
+                  "generated_clockwise_fraction": 0.517391304348,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.036479884956,
+                  "generated_clockwise_fraction": 0.537837837838,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.017307111621,
+                  "generated_clockwise_fraction": 0.517391304348,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.037856902048,
+                  "generated_clockwise_fraction": 0.537837837838,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.491344873502
+        },
+        "feedback__unconditional": {
+          "internal_path_o1_value": 0.524137931034,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.524137931034,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": true,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.511764705882,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.511764705882,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.035887017869,
+                  "generated_clockwise_fraction": 0.536170212766,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.04756015745,
+                  "generated_clockwise_fraction": 0.547692307692,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.033209145071,
+                  "generated_clockwise_fraction": 0.536170212766,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.04633435481,
+                  "generated_clockwise_fraction": 0.547692307692,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.036086020039,
+                  "generated_clockwise_fraction": 0.536170212766,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.047711371902,
+                  "generated_clockwise_fraction": 0.547692307692,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.511764705882
+        },
+        "ml_link__premise_accepted": {
+          "internal_path_o1_value": 0.514757969303,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.514757969303,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.496570644719,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.496570644719,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.02638347177,
+                  "generated_clockwise_fraction": 0.526666666667,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.049591606664,
+                  "generated_clockwise_fraction": 0.549723756906,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.023705598972,
+                  "generated_clockwise_fraction": 0.526666666667,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.048365804024,
+                  "generated_clockwise_fraction": 0.549723756906,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.02658247394,
+                  "generated_clockwise_fraction": 0.526666666667,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.049742821116,
+                  "generated_clockwise_fraction": 0.549723756906,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.496570644719
+        },
+        "ml_link__unconditional": {
+          "internal_path_o1_value": 0.526495726496,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.526495726496,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": true,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514563106796,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514563106796,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.04138347177,
+                  "generated_clockwise_fraction": 0.541666666667,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.045880119697,
+                  "generated_clockwise_fraction": 0.546012269939,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.038705598972,
+                  "generated_clockwise_fraction": 0.541666666667,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.044654317057,
+                  "generated_clockwise_fraction": 0.546012269939,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.04158247394,
+                  "generated_clockwise_fraction": 0.541666666667,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.046031334149,
+                  "generated_clockwise_fraction": 0.546012269939,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.514563106796
+        },
+        "ols_feedback__premise_accepted": {
+          "internal_path_o1_value": 0.521212121212,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.521212121212,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.507102272727,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.507102272727,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.030019835406,
+                  "generated_clockwise_fraction": 0.530303030303,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.055423405314,
+                  "generated_clockwise_fraction": 0.555555555556,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.027341962608,
+                  "generated_clockwise_fraction": 0.530303030303,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.054197602674,
+                  "generated_clockwise_fraction": 0.555555555556,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.030218837576,
+                  "generated_clockwise_fraction": 0.530303030303,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.055574619766,
+                  "generated_clockwise_fraction": 0.555555555556,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.507102272727
+        },
+        "ols_feedback__unconditional": {
+          "internal_path_o1_value": 0.513559322034,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.513559322034,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.504798464491,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.504798464491,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.026247417348,
+                  "generated_clockwise_fraction": 0.526530612245,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.036904886795,
+                  "generated_clockwise_fraction": 0.537037037037,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.02356954455,
+                  "generated_clockwise_fraction": 0.526530612245,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.035679084155,
+                  "generated_clockwise_fraction": 0.537037037037,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.026446419518,
+                  "generated_clockwise_fraction": 0.526530612245,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.037056101247,
+                  "generated_clockwise_fraction": 0.537037037037,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.504798464491
+        },
+        "week2__premise_accepted": {
+          "internal_path_o1_value": 0.517575757576,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": false,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.517575757576,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.500707213579,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.500707213579,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.030468513531,
+                  "generated_clockwise_fraction": 0.530751708428,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.04944292058,
+                  "generated_clockwise_fraction": 0.549575070822,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.027790640733,
+                  "generated_clockwise_fraction": 0.530751708428,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.04821711794,
+                  "generated_clockwise_fraction": 0.549575070822,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.030667515701,
+                  "generated_clockwise_fraction": 0.530751708428,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.049594135032,
+                  "generated_clockwise_fraction": 0.549575070822,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.500707213579
+        },
+        "week2__unconditional": {
+          "internal_path_o1_value": 0.522807017544,
+          "o1_under_each_history_construct": {
+            "uncensored_both_sides": {
+              "clears": true,
+              "generated_construct": "simulator's internal season index (uncensored)",
+              "generated_value": 0.522807017544,
+              "history_floor": 0.519987012987
+            },
+            "windowed_disjoint": {
+              "clears": true,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514910536779,
+              "history_floor": 0.510627442466
+            },
+            "windowed_overlapping": {
+              "clears": false,
+              "generated_construct": "the sealed judge's censored decades (unchanged)",
+              "generated_value": 0.514910536779,
+              "history_floor": 0.515671717177
+            }
+          },
+          "p1_retro_anti_test": {
+            "uncensored_both_sides": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.058681931963,
+                  "departure": 0.041939027325,
+                  "generated_clockwise_fraction": 0.542222222222,
+                  "history_null_used": 0.500283194897,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.055489480435,
+                  "departure": 0.041406311296,
+                  "generated_clockwise_fraction": 0.541538461538,
+                  "history_null_used": 0.500132150242,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_disjoint": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.081852799486,
+                  "departure": 0.039261154527,
+                  "generated_clockwise_fraction": 0.542222222222,
+                  "history_null_used": 0.502961067695,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.058144552971,
+                  "departure": 0.040180508656,
+                  "generated_clockwise_fraction": 0.541538461538,
+                  "history_null_used": 0.501357952882,
+                  "passes": false
+                }
+              }
+            },
+            "windowed_overlapping": {
+              "passes_both_move_types": false,
+              "per_move": {
+                "growth_flip": {
+                  "candidate_threshold": 0.063166061616,
+                  "departure": 0.042138029495,
+                  "generated_clockwise_fraction": 0.542222222222,
+                  "history_null_used": 0.500084192727,
+                  "passes": false
+                },
+                "inflation_crossing": {
+                  "candidate_threshold": 0.057916645568,
+                  "departure": 0.041557525748,
+                  "generated_clockwise_fraction": 0.541538461538,
+                  "history_null_used": 0.49998093579,
+                  "passes": false
+                }
+              }
+            }
+          },
+          "sealed_o1_pass": false,
+          "sealed_o1_threshold": 0.518066910499,
+          "sealed_o1_value": 0.514910536779
+        }
+      }
+    },
+    "era_threshold_pp": 3.351323828921,
+    "grader": "grader_v2 (scripts/spine_v2_grader.py), the sealed classifier",
+    "n_bootstrap": 2000,
+    "overlapping_weight_identity_check": {
+      "literal_window_clockwise": 4030,
+      "literal_window_transitions": 6639,
+      "n_windows": 694,
+      "weighted_shortcut_matches": true
+    },
+    "p1_tolerance_fraction_of_history": 0.5,
+    "panel_months": 813,
+    "primary_block_months": 24,
+    "question": "history's clockwise fraction by move type -- P1's anchor -- re-derived under windowing treatments applied SYMMETRICALLY to both sides, as the verdict-integrity review's finding C1 requires before P1's threshold is cut",
+    "reproduces_sealed_ordering_anchor": true,
+    "sealed_ordering_anchor": {
+      "clockwise_fraction": 0.597222222222,
+      "n_clockwise_transitions": 43,
+      "n_transitions": 72,
+      "o1_floor": 0.518066910499
+    },
+    "sealed_tape_provenance_check": {
+      "monte_carlo_resolution_between_the_two_tapes": 0.001920102488,
+      "o1_floor_on_this_module_s_tape": 0.519987012987,
+      "o1_floor_recomputed_on_the_sealed_tape": 0.518066910499,
+      "reproduces_sealed_floor_exactly": true,
+      "sealed_o1_floor": 0.518066910499,
+      "sealed_ordering_bootstrap_seed": 20260817,
+      "why_this_matters": "the same statistic, the same construct, two different bootstrap tapes at 2000 draws. Their difference is the resolution any floor cut this way has, and O1's recorded margins are the same size -- so a floor quoted to four decimals is quoting its tape as much as its data"
+    },
+    "warmup_months": 12,
+    "why": "the sealed O1 judge censors the first 12 months of every generated decade (10% of them) and the historical side loses one warm-up in 813 months (1.5%). Every phase anchor on the record was measured on the uncensored panel. 2026-08-17-spine-v2-results.md section 8.1 rules that a stage-2 seal must re-derive the anchor with both sides losing the same fraction of their months before P1's threshold is cut"
+  },
+  "produced_by": "scripts/stage2_anchors.py",
+  "purpose": "the two stage-2 pre-seal measurements that can kill the bars they anchor: M4 (history's curve decomposition on the rule-implied policy rate, P2's anchor and its pre-declared drop rule) and the windowing-symmetric phase re-derivation (P1's anchor, demanded by the verdict-integrity review's C1). NOT a seal: no threshold here is binding until it is entered through the amendment log with its judge code hashed in",
+  "recommended_construct": {
+    "candidate_p1_thresholds": {
+      "uncensored_both_sides": {
+        "growth_flip": 0.058681931963,
+        "inflation_crossing": 0.055489480435
+      },
+      "windowed_disjoint": {
+        "growth_flip": 0.081852799486,
+        "inflation_crossing": 0.058144552971
+      },
+      "windowed_overlapping": {
+        "growth_flip": 0.063166061616,
+        "inflation_crossing": 0.057916645568
+      }
+    },
+    "measured_effect_of_symmetrising": {
+      "diagonal": {
+        "uncensored": 0.0,
+        "windowed_disjoint": 0.0,
+        "windowed_minus_uncensored": null,
+        "windowed_overlapping": 0.0
+      },
+      "growth_flip": {
+        "uncensored": 0.617647058824,
+        "windowed_disjoint": 0.666666666667,
+        "windowed_minus_uncensored": 0.008769257136,
+        "windowed_overlapping": 0.62641631596
+      },
+      "inflation_crossing": {
+        "uncensored": 0.611111111111,
+        "windowed_disjoint": 0.617647058824,
+        "windowed_minus_uncensored": 0.004703115814,
+        "windowed_overlapping": 0.615814226925
+      },
+      "overall": {
+        "uncensored": 0.597222222222,
+        "windowed_disjoint": 0.619047619048,
+        "windowed_minus_uncensored": 0.009796907165,
+        "windowed_overlapping": 0.607019129387
+      }
+    },
+    "o1_floor_under_each_construct": {
+      "uncensored_both_sides": 0.519987012987,
+      "windowed_disjoint": 0.510627442466,
+      "windowed_overlapping": 0.515671717177
+    },
+    "recommendation": "windowed_overlapping",
+    "sealed_o1_floor": 0.518066910499,
+    "why": "the censoring is a property of what the engine EMITS, not of how it is judged: a generated decade genuinely has no trailing inflation for its first twelve months, and the alternative -- scoring the simulator's internal season index -- judges an object the sealed pipeline never produces and the product never shows. Putting history through the same windowing machine is the same remedy PRE-SEAL RULING 1 applied to D1-D4 and section K applied to the dwell anchors, and it is the only one of the two symmetric constructs that leaves the judged object unchanged"
+  },
+  "schema": "stage2-anchors-0.1",
+  "sealed_input_integrity": {
+    "decade_months_matches_sealed": true,
+    "input_sha256": {
+      "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+      "docs/superpowers/specs/spine-v2-feedback-params.json": "4599ca2d82916c54f7dd9c34b2e52afb33027bdf3c0e5845dbaa983c00dc1f78",
+      "docs/superpowers/specs/spine-v2-prereg.json": "81ef5c7f5c895ecfa234a50cd68420c4d437751972a4b1beaecabef04f0a707f"
+    },
+    "note": "all three inputs are opened read-only. The first two are inside the v2 seal's hash list; running this module cannot change them, and their hashes are recorded so a later reader can prove which versions were measured",
+    "sealed_at_utc": "2026-08-17T14:42:40-07:00 (as of HEAD commit 1ca6ed5bd11b8a5901c8e3786a668643e6dedc7d)",
+    "warmup_months_matches_sealed": true
+  },
+  "status": "MEASURED, NOT SEALED"
+}
