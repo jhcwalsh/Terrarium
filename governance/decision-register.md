@@ -451,3 +451,19 @@ Owner ruling ("All three") after the certified reach-fix record (8efa5f7):
    beats the seed-luck coin flip both prior rounds recorded.
 The rulers change only forward: no retroactive re-grading; every new bar
 anchored, justified, and anti-tested before any measurement.
+
+## D-ER14-1 - RULED 2026-08-18: FUND THE ER-14 CLOSE-OUT (inflation into private assets), BATCHED WITH F5
+
+Owner ruling ("Go" on the sequenced proposal): the release event that makes
+private assets feel inflation is funded - real estate via income
+pass-through vs rate-pressured valuations, private credit via floating
+coupons vs the loss cycle, private equity via nominal growth vs multiple
+compression. Coefficients ship DECLARED and literature-anchored, ratified
+by the owner before sealing, with the measured-external upgrade path
+recorded (C1/C2 lineage). Acceptance = the inverted defect: PE must differ
+materially across declared inflation; RE must move the right way. Batched
+with F5 (calibration drift) so one reseal covers both. Release mechanics
+acknowledged: TOY_ENGINE_VERSION and play-alpha bumps, digest
+invalidation, bundle rebuilds, battery re-run, leaderboard fencing.
+Sequence: mechanism design + coefficient proposal for owner ratification
+FIRST; nothing sealed before the ratification.
