@@ -1,0 +1,959 @@
+{
+ "adopted_design": {
+  "anticipate": true,
+  "block_months_override": null,
+  "break_on_divergence": true,
+  "era_relaxed_joins": false,
+  "match_horizon": 6,
+  "name": "path-match+break+anticipate",
+  "note": "path-matched entries + a mid-block break when the next month's quadrant is not the spine's + an anticipating re-entry when the era filter leaves that break unjoinable. Era-safe joins, the forced-re-entry rule, the declared block length, the severity strata and premise refusal are all unchanged"
+ },
+ "after": {
+  "R1": {
+   "arm": "declared premise",
+   "bar": "R1",
+   "breach_count": 8,
+   "breach_n": 20,
+   "breach_pass": true,
+   "breach_threshold": 1,
+   "coverage_medians": [
+    0.121899557621,
+    0.378455104508,
+    0.473005741239,
+    0.922470628872
+   ],
+   "depth_band_disclosure": [
+    -0.426,
+    -0.375
+   ],
+   "depth_pass_disclosure": false,
+   "judge_overall_including_depth": false,
+   "ladder": {
+    "month_tapes": {
+     "all_distinct": true,
+     "distinct": 20,
+     "n": 20
+    },
+    "seeds": [
+     199002,
+     206921,
+     214840,
+     222759,
+     230678,
+     238597,
+     246516,
+     254435,
+     262354,
+     270273,
+     278192,
+     286111,
+     294030,
+     301949,
+     309868,
+     317787,
+     325706,
+     333625,
+     341544,
+     349463
+    ],
+    "spines": {
+     "all_distinct": true,
+     "distinct": 20,
+     "n": 20
+    },
+    "stride": 7919
+   },
+   "median_depth_disclosure": -0.54771956588,
+   "monotone_pass": true,
+   "pass": true
+  },
+  "bars": {
+   "A1": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": false,
+    "inflation_line_pp": 4.0,
+    "months_high": 1826,
+    "months_low": 3574,
+    "pass": false,
+    "spread_high_pp": -1.896205394809,
+    "spread_low_pp": 5.614061771019,
+    "value_difference_pp": -7.510267165828
+   },
+   "A1_on_the_drawn_months_inflation": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": false,
+    "inflation_line_pp": 4.0,
+    "months_high": 947,
+    "months_low": 4453,
+    "pass": false,
+    "spread_high_pp": -2.027134224103,
+    "spread_low_pp": 4.159416534679,
+    "value_difference_pp": -6.186550758782
+   },
+   "A2": {
+    "bar": "A2",
+    "correlation_difference": 0.228566603709,
+    "correlation_high": 0.077492754707,
+    "correlation_low": -0.151073849001,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": true,
+    "pass": false,
+    "share_high_floor": 0.8,
+    "share_high_pass": false,
+    "share_positive_high": 0.656666666667,
+    "share_positive_low_disclosure": 0.471481481481,
+    "windows_high": 1500,
+    "windows_low": 2700
+   },
+   "A2_on_the_drawn_months_inflation": {
+    "bar": "A2",
+    "correlation_difference": 0.508771596359,
+    "correlation_high": 0.332695687034,
+    "correlation_low": -0.176075909326,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": true,
+    "pass": true,
+    "share_high_floor": 0.8,
+    "share_high_pass": true,
+    "share_positive_high": 0.936708860759,
+    "share_positive_low_disclosure": 0.445161290323,
+    "windows_high": 790,
+    "windows_low": 3410
+   },
+   "R2": {
+    "bar": "R2",
+    "join_bound_pp": 2.5,
+    "max_join_jump_pp": 2.499732934516,
+    "n_joins": 1162,
+    "ok_join": true,
+    "ok_p95": false,
+    "p95_adjacent_yoy_pp": 1.102315315118,
+    "p95_bound_pp": 0.929238995443,
+    "pass": false
+   }
+  },
+  "design": "path-match+break+anticipate",
+  "dial": {
+   "agreement": 0.778333333333,
+   "agreement_expected_if_the_two_dials_were_independent": 0.605083813443,
+   "era_line_the_grader_splits_on_pp": 3.351323828921,
+   "era_line_the_pools_condition_on_pp": 3.351323828921,
+   "inflation_line_pp": 4.0,
+   "mean_drawn_inflation_when_the_spine_says_high_pp": 3.845954139108,
+   "mean_drawn_inflation_when_the_spine_says_low_pp": 2.249001996915,
+   "months": 5400,
+   "months_in_the_batch": 6000,
+   "quadrant_selected_months": 1212,
+   "reading": "the two dials agree on this share of judged months. Where they disagree, A1 and A2 are reading real months whose own inflation is on the other side of the line from the dial the bar conditions on",
+   "share_high_on_the_months_drawn": 0.17537037037,
+   "share_high_on_the_spine_dial": 0.338148148148,
+   "share_of_months_selected_for_their_quadrant": 0.202
+  },
+  "premise_accepted_disclosure": {
+   "A1": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": true,
+    "inflation_line_pp": 4.0,
+    "months_high": 3616,
+    "months_low": 1784,
+    "pass": true,
+    "spread_high_pp": -3.108688278035,
+    "spread_low_pp": -4.880122465484,
+    "value_difference_pp": 1.771434187449
+   },
+   "A1_on_the_drawn_months_inflation": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": true,
+    "inflation_line_pp": 4.0,
+    "months_high": 1423,
+    "months_low": 3977,
+    "pass": true,
+    "spread_high_pp": -0.174479812787,
+    "spread_low_pp": -4.953198521047,
+    "value_difference_pp": 4.778718708261
+   },
+   "A2": {
+    "bar": "A2",
+    "correlation_difference": 0.232270191063,
+    "correlation_high": 0.006650601629,
+    "correlation_low": -0.225619589434,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": true,
+    "pass": false,
+    "share_high_floor": 0.8,
+    "share_high_pass": false,
+    "share_positive_high": 0.502237136465,
+    "share_positive_low_disclosure": 0.3069828722,
+    "windows_high": 2682,
+    "windows_low": 1518
+   },
+   "A2_on_the_drawn_months_inflation": {
+    "bar": "A2",
+    "correlation_difference": 0.580625817983,
+    "correlation_high": 0.308953035354,
+    "correlation_low": -0.271672782629,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": true,
+    "pass": true,
+    "share_high_floor": 0.8,
+    "share_high_pass": true,
+    "share_positive_high": 0.867799811143,
+    "share_positive_low_disclosure": 0.284622731614,
+    "windows_high": 1059,
+    "windows_low": 3141
+   },
+   "R2": {
+    "bar": "R2",
+    "join_bound_pp": 2.5,
+    "max_join_jump_pp": 10.709529527635,
+    "n_joins": 1035,
+    "ok_join": false,
+    "ok_p95": false,
+    "p95_adjacent_yoy_pp": 1.210230305583,
+    "p95_bound_pp": 0.929238995443,
+    "pass": false
+   }
+  },
+  "r2_diagnostics": {
+   "bound_pp": 2.5,
+   "forced_reentries_stamped": 0,
+   "max_jump_at_a_forced_reentry_pp": null,
+   "max_jump_at_an_ordinary_join_pp": 2.499732934516,
+   "max_jump_pp": 2.499732934516,
+   "n_forced_reentry_seams": 0,
+   "n_seams": 1162,
+   "reading": "an ordinary join is filtered on the era bucket AND on |dYoY| <= the bound, so it cannot exceed it; a forced re-entry at the panel's last row draws unfiltered when no candidate matches, and that is the only seam that can",
+   "unfiltered_reentries_stamped": 0
+  },
+  "r2_p95_by_pair_kind": {
+   "after": {
+    "adjacent_pairs": 5950,
+    "p95_all": 1.102315315118,
+    "p95_contiguous_pairs_only": 0.695621047608,
+    "p95_seam_pairs_only": 1.91429343187,
+    "seam_pairs": 1162,
+    "seam_share": 0.195294117647
+   },
+   "before": {
+    "adjacent_pairs": 5950,
+    "p95_all": 0.883035257076,
+    "p95_contiguous_pairs_only": 0.742234048315,
+    "p95_seam_pairs_only": 1.814840000394,
+    "seam_pairs": 444,
+    "seam_share": 0.074621848739
+   }
+  },
+  "reach": {
+   "conditioning_reach": 0.776333333333,
+   "distinct_panel_rows_visited": 639,
+   "months_in_the_batch": 6000,
+   "months_selected_for_their_quadrant": 1212,
+   "months_whose_drawn_row_carries_the_spine_s_quadrant": 4658,
+   "share_of_months_selected_for_their_quadrant": 0.202
+  },
+  "reach_stamp": {
+   "anticipating_moves": 314,
+   "block_months_override": null,
+   "break_on_divergence": true,
+   "design": "path-match+break+anticipate",
+   "divergence_breaks": 1658,
+   "match_horizon": 6,
+   "unresolved_divergences": 1342,
+   "unresolved_divergences_blocked_by_the_era_filter": 1083
+  }
+ },
+ "batches": {
+  "A1_A2_R2": {
+   "arm": "unconditional",
+   "n_decades": 50,
+   "seed": 20260821
+  },
+  "R1": {
+   "arm": "declared premise",
+   "n_rungs": 20
+  }
+ },
+ "before": {
+  "R1": {
+   "bar": "R1",
+   "breach_count": 4,
+   "breach_n": 20,
+   "breach_pass": true,
+   "breach_threshold": 1,
+   "coverage_medians": [
+    0.098064894961,
+    0.291854867753,
+    0.361632454215,
+    0.667990783224
+   ],
+   "depth_band_disclosure": [
+    -0.426,
+    -0.375
+   ],
+   "depth_pass_disclosure": true,
+   "judge_overall_including_depth": true,
+   "median_depth_disclosure": -0.376590584108,
+   "monotone_pass": true,
+   "pass": true
+  },
+  "R1_note": "quoted from the committed week-C artifact: R1's ladder is the pre-fix arm's own and was not recompiled here",
+  "bars": {
+   "A1": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": true,
+    "inflation_line_pp": 4.0,
+    "months_high": 1826,
+    "months_low": 3574,
+    "pass": true,
+    "spread_high_pp": 2.142367937923,
+    "spread_low_pp": 1.764312722254,
+    "value_difference_pp": 0.378055215669
+   },
+   "A1_on_the_drawn_months_inflation": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": true,
+    "inflation_line_pp": 4.0,
+    "months_high": 1172,
+    "months_low": 4228,
+    "pass": true,
+    "spread_high_pp": 6.065115936876,
+    "spread_low_pp": 0.735407201032,
+    "value_difference_pp": 5.329708735843
+   },
+   "A2": {
+    "bar": "A2",
+    "correlation_difference": 0.060911208541,
+    "correlation_high": -0.017742671153,
+    "correlation_low": -0.078653879694,
+    "level_positive": false,
+    "margin": 0.136093781397,
+    "margin_pass": false,
+    "pass": false,
+    "share_high_floor": 0.8,
+    "share_high_pass": false,
+    "share_positive_high": 0.476,
+    "share_positive_low_disclosure": 0.468148148148,
+    "windows_high": 1500,
+    "windows_low": 2700
+   },
+   "A2_on_the_drawn_months_inflation": {
+    "bar": "A2",
+    "correlation_difference": 0.348323439257,
+    "correlation_high": 0.176478725447,
+    "correlation_low": -0.17184471381,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": true,
+    "pass": true,
+    "share_high_floor": 0.8,
+    "share_high_pass": true,
+    "share_positive_high": 0.928499496475,
+    "share_positive_low_disclosure": 0.329279700655,
+    "windows_high": 993,
+    "windows_low": 3207
+   },
+   "R2": {
+    "bar": "R2",
+    "join_bound_pp": 2.5,
+    "max_join_jump_pp": 4.132499999786,
+    "n_joins": 444,
+    "ok_join": false,
+    "ok_p95": true,
+    "p95_adjacent_yoy_pp": 0.883035257076,
+    "p95_bound_pp": 0.929238995443,
+    "pass": false
+   }
+  },
+  "design": "baseline",
+  "dial": {
+   "agreement": 0.605925925926,
+   "agreement_expected_if_the_two_dials_were_independent": 0.591596159122,
+   "era_line_the_grader_splits_on_pp": 3.351323828921,
+   "era_line_the_pools_condition_on_pp": 3.351323828921,
+   "inflation_line_pp": 4.0,
+   "mean_drawn_inflation_when_the_spine_says_high_pp": 3.224842333401,
+   "mean_drawn_inflation_when_the_spine_says_low_pp": 3.025038592897,
+   "months": 5400,
+   "months_in_the_batch": 6000,
+   "quadrant_selected_months": 494,
+   "reading": "the two dials agree on this share of judged months. Where they disagree, A1 and A2 are reading real months whose own inflation is on the other side of the line from the dial the bar conditions on",
+   "share_high_on_the_months_drawn": 0.217037037037,
+   "share_high_on_the_spine_dial": 0.338148148148,
+   "share_of_months_selected_for_their_quadrant": 0.082333333333
+  },
+  "reach": {
+   "conditioning_reach": 0.4785,
+   "distinct_panel_rows_visited": 721,
+   "months_in_the_batch": 6000,
+   "months_selected_for_their_quadrant": 494,
+   "months_whose_drawn_row_carries_the_spine_s_quadrant": 2871,
+   "share_of_months_selected_for_their_quadrant": 0.082333333333
+  },
+  "reproduces_the_committed_weekc_reading": {
+   "A1": {
+    "max_abs_drift_vs_committed": 0.0,
+    "pass_matches": true
+   },
+   "A2": {
+    "max_abs_drift_vs_committed": 0.0,
+    "pass_matches": true
+   },
+   "R2": {
+    "max_abs_drift_vs_committed": 0.0,
+    "pass_matches": true
+   }
+  }
+ },
+ "charter": "governance/decision-register.md D-SP-10 (owner ruling 2026-08-18)",
+ "engine": "docs/superpowers/specs/stage2-fitted-params.json (FROZEN INPUT -- nothing refitted)",
+ "frontier": [
+  {
+   "A1_difference_pp": 0.378055215669,
+   "A1_pass": true,
+   "A2_correlation_high": -0.017742671153,
+   "A2_gap": 0.060911208541,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.476,
+   "R2_max_join_jump_pp": 4.132499999786,
+   "R2_p95_pp": 0.883035257076,
+   "R2_pass": false,
+   "anticipating_moves": null,
+   "arm": "baseline (pre-fix)",
+   "conditioning_reach": 0.4785,
+   "design": "baseline",
+   "dial_agreement": 0.605925925926,
+   "dial_agreement_if_independent": 0.591596159122,
+   "distinct_panel_rows_visited": 721,
+   "forced_reentries": 1,
+   "seams": 444,
+   "share_selected_for_their_quadrant": 0.082333333333,
+   "unfiltered_reentries": 1,
+   "unresolved_blocked_by_the_era_filter": null,
+   "unresolved_divergences": null
+  },
+  {
+   "A1_difference_pp": -1.327950353112,
+   "A1_pass": false,
+   "A2_correlation_high": -0.046912638882,
+   "A2_gap": 0.094658900602,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.432,
+   "R2_max_join_jump_pp": 2.480125016536,
+   "R2_p95_pp": 0.975656705284,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(a) short blocks, 3m",
+   "conditioning_reach": 0.517833333333,
+   "design": "short-blocks(3)",
+   "dial_agreement": 0.604444444444,
+   "dial_agreement_if_independent": 0.598429903978,
+   "distinct_panel_rows_visited": 638,
+   "forced_reentries": 0,
+   "seams": 901,
+   "share_selected_for_their_quadrant": 0.1585,
+   "unfiltered_reentries": 0,
+   "unresolved_blocked_by_the_era_filter": 0,
+   "unresolved_divergences": 0
+  },
+  {
+   "A1_difference_pp": 3.931358741951,
+   "A1_pass": true,
+   "A2_correlation_high": 0.034073545054,
+   "A2_gap": 0.099150282494,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.504666666667,
+   "R2_max_join_jump_pp": 9.442316233972,
+   "R2_p95_pp": 1.206625657195,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(a) short blocks, 2m",
+   "conditioning_reach": 0.561166666667,
+   "design": "short-blocks(2)",
+   "dial_agreement": 0.62537037037,
+   "dial_agreement_if_independent": 0.576190260631,
+   "distinct_panel_rows_visited": 709,
+   "forced_reentries": 3,
+   "seams": 1410,
+   "share_selected_for_their_quadrant": 0.243333333333,
+   "unfiltered_reentries": 3,
+   "unresolved_blocked_by_the_era_filter": 0,
+   "unresolved_divergences": 0
+  },
+  {
+   "A1_difference_pp": -1.92421331328,
+   "A1_pass": false,
+   "A2_correlation_high": 0.058613321423,
+   "A2_gap": 0.108307405573,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.64,
+   "R2_max_join_jump_pp": 9.399784106248,
+   "R2_p95_pp": 0.900199687354,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(b) path match, h=6",
+   "conditioning_reach": 0.5495,
+   "design": "path-match",
+   "dial_agreement": 0.641666666667,
+   "dial_agreement_if_independent": 0.590337311385,
+   "distinct_panel_rows_visited": 687,
+   "forced_reentries": 5,
+   "seams": 495,
+   "share_selected_for_their_quadrant": 0.090833333333,
+   "unfiltered_reentries": 2,
+   "unresolved_blocked_by_the_era_filter": 0,
+   "unresolved_divergences": 0
+  },
+  {
+   "A1_difference_pp": 2.968771189794,
+   "A1_pass": true,
+   "A2_correlation_high": 0.035209895701,
+   "A2_gap": 0.005831970422,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.602666666667,
+   "R2_max_join_jump_pp": 9.399784106248,
+   "R2_p95_pp": 0.857568449425,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(b) path match, h=12",
+   "conditioning_reach": 0.587333333333,
+   "design": "path-match",
+   "dial_agreement": 0.651296296296,
+   "dial_agreement_if_independent": 0.589138408779,
+   "distinct_panel_rows_visited": 694,
+   "forced_reentries": 3,
+   "seams": 512,
+   "share_selected_for_their_quadrant": 0.093666666667,
+   "unfiltered_reentries": 2,
+   "unresolved_blocked_by_the_era_filter": 0,
+   "unresolved_divergences": 0
+  },
+  {
+   "A1_difference_pp": -2.968829908797,
+   "A1_pass": false,
+   "A2_correlation_high": 0.065862744845,
+   "A2_gap": 0.183961139196,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.554666666667,
+   "R2_max_join_jump_pp": 2.480125016536,
+   "R2_p95_pp": 1.142644775182,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(c) divergence break",
+   "conditioning_reach": 0.695666666667,
+   "design": "divergence-break",
+   "dial_agreement": 0.694814814815,
+   "dial_agreement_if_independent": 0.611378052126,
+   "distinct_panel_rows_visited": 645,
+   "forced_reentries": 0,
+   "seams": 993,
+   "share_selected_for_their_quadrant": 0.173833333333,
+   "unfiltered_reentries": 0,
+   "unresolved_blocked_by_the_era_filter": 1619,
+   "unresolved_divergences": 1826
+  },
+  {
+   "A1_difference_pp": -6.012778942172,
+   "A1_pass": false,
+   "A2_correlation_high": 0.031437462216,
+   "A2_gap": 0.162539689601,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.610666666667,
+   "R2_max_join_jump_pp": 8.779503939243,
+   "R2_p95_pp": 0.967637111248,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(b)+(c), h=6",
+   "conditioning_reach": 0.688166666667,
+   "design": "path-match+divergence-break",
+   "dial_agreement": 0.708333333333,
+   "dial_agreement_if_independent": 0.606642386831,
+   "distinct_panel_rows_visited": 640,
+   "forced_reentries": 3,
+   "seams": 781,
+   "share_selected_for_their_quadrant": 0.1385,
+   "unfiltered_reentries": 2,
+   "unresolved_blocked_by_the_era_filter": 1643,
+   "unresolved_divergences": 1871
+  },
+  {
+   "A1_difference_pp": -1.402557057281,
+   "A1_pass": false,
+   "A2_correlation_high": 0.036800164469,
+   "A2_gap": 0.037385548988,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.638666666667,
+   "R2_max_join_jump_pp": 8.779503939243,
+   "R2_p95_pp": 0.967637111248,
+   "R2_pass": false,
+   "anticipating_moves": 0,
+   "arm": "(b)+(c), h=12",
+   "conditioning_reach": 0.714166666667,
+   "design": "path-match+divergence-break",
+   "dial_agreement": 0.710185185185,
+   "dial_agreement_if_independent": 0.590936762689,
+   "distinct_panel_rows_visited": 656,
+   "forced_reentries": 1,
+   "seams": 743,
+   "share_selected_for_their_quadrant": 0.132166666667,
+   "unfiltered_reentries": 1,
+   "unresolved_blocked_by_the_era_filter": 1520,
+   "unresolved_divergences": 1715
+  },
+  {
+   "A1_difference_pp": -7.510267165828,
+   "A1_pass": false,
+   "A2_correlation_high": 0.077492754707,
+   "A2_gap": 0.228566603709,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.656666666667,
+   "R2_max_join_jump_pp": 2.499732934516,
+   "R2_p95_pp": 1.102315315118,
+   "R2_pass": false,
+   "anticipating_moves": 314,
+   "arm": "(d) +anticipate, h=6 [ADOPTED]",
+   "conditioning_reach": 0.776333333333,
+   "design": "path-match+break+anticipate",
+   "dial_agreement": 0.778333333333,
+   "dial_agreement_if_independent": 0.605083813443,
+   "distinct_panel_rows_visited": 639,
+   "forced_reentries": 0,
+   "seams": 1162,
+   "share_selected_for_their_quadrant": 0.202,
+   "unfiltered_reentries": 0,
+   "unresolved_blocked_by_the_era_filter": 1083,
+   "unresolved_divergences": 1342
+  },
+  {
+   "A1_difference_pp": -5.699887054411,
+   "A1_pass": false,
+   "A2_correlation_high": -0.006356381401,
+   "A2_gap": 0.067347138669,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.591333333333,
+   "R2_max_join_jump_pp": 5.319508981895,
+   "R2_p95_pp": 1.17803645797,
+   "R2_pass": false,
+   "anticipating_moves": 670,
+   "arm": "(d) +anticipate, h=12",
+   "conditioning_reach": 0.765666666667,
+   "design": "path-match+break+anticipate",
+   "dial_agreement": 0.763148148148,
+   "dial_agreement_if_independent": 0.603884910837,
+   "distinct_panel_rows_visited": 553,
+   "forced_reentries": 1,
+   "seams": 1388,
+   "share_selected_for_their_quadrant": 0.239666666667,
+   "unfiltered_reentries": 1,
+   "unresolved_blocked_by_the_era_filter": 1149,
+   "unresolved_divergences": 1406
+  },
+  {
+   "A1_difference_pp": -0.797056136927,
+   "A1_pass": false,
+   "A2_correlation_high": -0.057830669659,
+   "A2_gap": -0.084959139888,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.554,
+   "R2_max_join_jump_pp": 2.489681308125,
+   "R2_p95_pp": 1.337643510204,
+   "R2_pass": false,
+   "anticipating_moves": 1053,
+   "arm": "(d) +anticipate, h=24",
+   "conditioning_reach": 0.709166666667,
+   "design": "path-match+break+anticipate",
+   "dial_agreement": 0.727407407407,
+   "dial_agreement_if_independent": 0.602266392318,
+   "distinct_panel_rows_visited": 546,
+   "forced_reentries": 0,
+   "seams": 1590,
+   "share_selected_for_their_quadrant": 0.273333333333,
+   "unfiltered_reentries": 0,
+   "unresolved_blocked_by_the_era_filter": 1512,
+   "unresolved_divergences": 1745
+  },
+  {
+   "A1_difference_pp": -15.379121278219,
+   "A1_pass": false,
+   "A2_correlation_high": -0.125309215215,
+   "A2_gap": 0.055873268441,
+   "A2_pass": false,
+   "A2_share_positive_high": 0.505333333333,
+   "R2_max_join_jump_pp": 2.494567414595,
+   "R2_p95_pp": 1.309494286641,
+   "R2_pass": false,
+   "anticipating_moves": 174,
+   "arm": "(e) era-relaxed [DISCLOSURE]",
+   "conditioning_reach": 0.824666666667,
+   "design": "era-relaxed(disclosure)",
+   "dial_agreement": 0.784259259259,
+   "dial_agreement_if_independent": 0.609279972565,
+   "distinct_panel_rows_visited": 590,
+   "forced_reentries": 0,
+   "seams": 1222,
+   "share_selected_for_their_quadrant": 0.212,
+   "unfiltered_reentries": 0,
+   "unresolved_blocked_by_the_era_filter": 753,
+   "unresolved_divergences": 1052
+  }
+ ],
+ "frozen_engine_agreement": {
+  "artifact": "docs/superpowers/specs/stage2-fitted-params.json",
+  "holds": true,
+  "max_abs_drift": 0.0,
+  "max_abs_drift_at": "curve.K",
+  "n_numbers_checked": 42,
+  "note": "week A's parameters are FROZEN INPUT. This rebuild runs week A's own deterministic estimator and checks every coefficient against the committed artifact; nothing in week C fits, tunes or scales a parameter",
+  "tolerance": 1e-11
+ },
+ "purpose": "D-SP-10: the conditioning-reach fix to the stage-2 compiler, and the full sealed 12-bar exam re-run on it. The exam does not move -- the engine does",
+ "schema": "stage2-reach-results-1",
+ "seal": "docs/superpowers/specs/stage2-prereg.json",
+ "seed_dispersion_disclosure": {
+  "after": {
+   "A1_difference_pp_mean": -0.974800566398,
+   "A1_difference_pp_positive_of_6": 4,
+   "A1_difference_pp_sd": 3.866342110522,
+   "A2_correlation_high_positive_of_6": 6,
+   "conditioning_reach_mean": 0.778194444444,
+   "seeds": [
+    {
+     "A1_difference_pp": -7.510267165828,
+     "A2_correlation_high": 0.077492754707,
+     "A2_share_positive_high": 0.656666666667,
+     "R2_max_join_jump_pp": 2.499732934516,
+     "R2_p95_pp": 1.102315315118,
+     "conditioning_reach": 0.776333333333,
+     "sealed_seed": true,
+     "seed": 20260821
+    },
+    {
+     "A1_difference_pp": 0.63675889914,
+     "A2_correlation_high": 0.142879404168,
+     "A2_share_positive_high": 0.495126705653,
+     "R2_max_join_jump_pp": 13.043588910875,
+     "R2_p95_pp": 1.180188049412,
+     "conditioning_reach": 0.822166666667,
+     "sealed_seed": false,
+     "seed": 20260822
+    },
+    {
+     "A1_difference_pp": 1.993315638981,
+     "A2_correlation_high": 0.095900435506,
+     "A2_share_positive_high": 0.635790800252,
+     "R2_max_join_jump_pp": 9.344144846966,
+     "R2_p95_pp": 1.169696039004,
+     "conditioning_reach": 0.759,
+     "sealed_seed": false,
+     "seed": 20260823
+    },
+    {
+     "A1_difference_pp": 0.027788336486,
+     "A2_correlation_high": 0.080446695485,
+     "A2_share_positive_high": 0.619422572178,
+     "R2_max_join_jump_pp": 2.494033282839,
+     "R2_p95_pp": 1.143833358602,
+     "conditioning_reach": 0.805166666667,
+     "sealed_seed": false,
+     "seed": 20260824
+    },
+    {
+     "A1_difference_pp": 2.597310390439,
+     "A2_correlation_high": 0.089504827619,
+     "A2_share_positive_high": 0.588607594937,
+     "R2_max_join_jump_pp": 4.551972999904,
+     "R2_p95_pp": 1.038606936494,
+     "conditioning_reach": 0.772833333333,
+     "sealed_seed": false,
+     "seed": 20260825
+    },
+    {
+     "A1_difference_pp": -3.593709497605,
+     "A2_correlation_high": 0.10453994872,
+     "A2_share_positive_high": 0.477871148459,
+     "R2_max_join_jump_pp": 2.475963358316,
+     "R2_p95_pp": 1.056901928856,
+     "conditioning_reach": 0.733666666667,
+     "sealed_seed": false,
+     "seed": 20260826
+    }
+   ]
+  },
+  "before": {
+   "A1_difference_pp_mean": -2.2668988346,
+   "A1_difference_pp_positive_of_6": 2,
+   "A1_difference_pp_sd": 3.093123805519,
+   "A2_correlation_high_positive_of_6": 4,
+   "conditioning_reach_mean": 0.465916666667,
+   "seeds": [
+    {
+     "A1_difference_pp": 0.378055215669,
+     "A2_correlation_high": -0.017742671153,
+     "A2_share_positive_high": 0.476,
+     "R2_max_join_jump_pp": 4.132499999786,
+     "R2_p95_pp": 0.883035257076,
+     "conditioning_reach": 0.4785,
+     "sealed_seed": true,
+     "seed": 20260821
+    },
+    {
+     "A1_difference_pp": -4.903779652763,
+     "A2_correlation_high": 0.016608105476,
+     "A2_share_positive_high": 0.530214424951,
+     "R2_max_join_jump_pp": 10.975656842943,
+     "R2_p95_pp": 0.857568449425,
+     "conditioning_reach": 0.437,
+     "sealed_seed": false,
+     "seed": 20260822
+    },
+    {
+     "A1_difference_pp": -4.604066675687,
+     "A2_correlation_high": -0.00448110122,
+     "A2_share_positive_high": 0.596093257719,
+     "R2_max_join_jump_pp": 12.547218516994,
+     "R2_p95_pp": 0.846247005808,
+     "conditioning_reach": 0.459166666667,
+     "sealed_seed": false,
+     "seed": 20260823
+    },
+    {
+     "A1_difference_pp": 1.463475495199,
+     "A2_correlation_high": 0.059902034489,
+     "A2_share_positive_high": 0.533464566929,
+     "R2_max_join_jump_pp": 7.028799102982,
+     "R2_p95_pp": 0.877303425935,
+     "conditioning_reach": 0.471333333333,
+     "sealed_seed": false,
+     "seed": 20260824
+    },
+    {
+     "A1_difference_pp": -5.568337939307,
+     "A2_correlation_high": 0.079362169699,
+     "A2_share_positive_high": 0.466244725738,
+     "R2_max_join_jump_pp": 9.590375457662,
+     "R2_p95_pp": 0.94508963256,
+     "conditioning_reach": 0.5245,
+     "sealed_seed": false,
+     "seed": 20260825
+    },
+    {
+     "A1_difference_pp": -0.366739450714,
+     "A2_correlation_high": 0.005478553803,
+     "A2_share_positive_high": 0.525490196078,
+     "R2_max_join_jump_pp": 6.051503566236,
+     "R2_p95_pp": 0.807569085693,
+     "conditioning_reach": 0.425,
+     "sealed_seed": false,
+     "seed": 20260826
+    }
+   ]
+  }
+ },
+ "spec": "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+ "spine_identity_after_the_fix": {
+  "bars": [
+   {
+    "abs_drift": 0.0,
+    "bar": "T1",
+    "pass": true,
+    "week_a": 2.239246798804,
+    "week_a_pass": true,
+    "week_c_reread": 2.239246798804
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "O1",
+    "pass": true,
+    "week_a": 0.560824742268,
+    "week_a_pass": true,
+    "week_c_reread": 0.560824742268
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D1",
+    "pass": true,
+    "week_a": 2.0,
+    "week_a_pass": true,
+    "week_c_reread": 2.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D2",
+    "pass": true,
+    "week_a": 4.0,
+    "week_a_pass": true,
+    "week_c_reread": 4.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D3",
+    "pass": true,
+    "week_a": 4.0,
+    "week_a_pass": true,
+    "week_c_reread": 4.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D4",
+    "pass": true,
+    "week_a": 3.0,
+    "week_a_pass": true,
+    "week_c_reread": 3.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "P1",
+    "pass": true,
+    "week_a": 0.042073930959,
+    "week_a_pass": true,
+    "week_c_reread": 0.042073930959
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "P2",
+    "pass": false,
+    "week_a": 0.770682653481,
+    "week_a_pass": false,
+    "week_c_reread": 0.770682653481
+   }
+  ],
+  "holds": true,
+  "max_abs_drift": 0.0
+ },
+ "src_untouched": true,
+ "standing_caveat": "nothing built on this generator line is a convincing model of history, the holdout is spent, and no appeal to held-out data is available",
+ "world": "src/ah/presets/spine_pilot.json"
+}
