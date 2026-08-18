@@ -396,6 +396,13 @@ REACH_ANTICIPATE = "path-match+break+anticipate"
 #: adopted**: it prices the constraint D-SP-10 preserved, and relaxing an
 #: era-safe join is an owner ruling, not a campaign's choice.
 REACH_ERA_RELAXED = "era-relaxed(disclosure)"
+#: (f) D-SP-11 ruler 2 -- (d) plus the CONDITIONAL ERA-CROSSING RULE. The owner
+#: ruling of 2026-08-18: *a seam may cross the inflation line ONLY in a month
+#: where the spine's own inflation path crosses it.* This is the faithfulness
+#: reading of the era filter rather than a relaxation of it -- see
+#: :func:`_era_crossing_licence` for the exact month-window semantics and why
+#: the window is zero months wide.
+REACH_ERA_CONDITIONAL = "path-match+break+anticipate+era-conditional-crossing"
 
 #: The look-ahead used by the path-matching arms, in months. Six is the world's
 #: own declared mean block length -- the horizon over which an entry is expected
@@ -418,6 +425,7 @@ class ReachDesign:
     block_months_override: float | None = None
     anticipate: bool = False
     era_relaxed_joins: bool = False
+    era_conditional_crossing: bool = False
 
     @property
     def is_baseline(self) -> bool:
@@ -427,6 +435,7 @@ class ReachDesign:
             and self.block_months_override is None
             and not self.anticipate
             and not self.era_relaxed_joins
+            and not self.era_conditional_crossing
         )
 
 
@@ -467,12 +476,27 @@ def reach_design(name: str, *, match_horizon: int | None = None, block_months: f
             anticipate=True,
             era_relaxed_joins=True,
         )
+    if name == REACH_ERA_CONDITIONAL:
+        return ReachDesign(
+            name,
+            match_horizon=horizon,
+            break_on_divergence=True,
+            block_months_override=block_months,
+            anticipate=True,
+            era_conditional_crossing=True,
+        )
     raise ValueError(f"unknown reach design {name!r}")
 
 
 #: The design D-SP-10 adopts. See ``docs/superpowers/specs/2026-08-18-stage2-reach-results.md``
 #: for the frontier the four arms trace and why this is the point on it.
 ADOPTED_REACH = reach_design(REACH_ANTICIPATE)
+
+#: The design D-SP-11 ruler 2 adds on top of it: the adopted D-SP-10 engine plus
+#: the conditional era-crossing rule, and nothing else. Measured in
+#: ``scripts/stage2_rulers_run.py``; ``ADOPTED_REACH`` is left exactly where
+#: D-SP-10 put it so every artifact that quotes it still reproduces.
+ERA_CONDITIONAL_REACH = reach_design(REACH_ERA_CONDITIONAL)
 
 
 def _path_prefix_pick(
@@ -551,6 +575,49 @@ def _path_agreement_pick(
     return int(best[rng.integers(0, best.size)])
 
 
+def _era_crossing_licence(
+    design: ReachDesign, spine_hot_row: np.ndarray, m: int
+) -> tuple[int, int] | None:
+    """D-SP-11 ruler 2: is a bucket-changing seam licensed at month ``m``?
+
+    **The rule, stated exactly.** A seam drawn for month ``m`` may land on a row
+    whose era bucket differs from the row the block is standing on (month
+    ``m - 1``) **only if the spine's own inflation path crosses the era line
+    between ``m - 1`` and ``m``, and only in the direction the spine crosses.**
+    The return value is that direction as ``(bucket_required_of_the_row_left,
+    bucket_required_of_the_row_entered)``; ``None`` means no crossing is
+    licensed and the platform's era filter applies unchanged.
+
+    **The month-window semantics, and why the window is ZERO months wide.** The
+    licence is evaluated at the month being drawn, against the month the block
+    is standing on -- the same two months the join itself connects. No
+    tolerance, no lag, no look-ahead: a seam that crosses the line one month
+    early or one month late is a seam that crosses the line at a month the
+    world's story does not, which is exactly the incoherence the era filter
+    exists against. A +/- k window was available and is NOT taken: it would need
+    a tolerance nobody has anchored, and the charter's words are "in a month
+    where the spine itself crosses it".
+
+    **Why the direction clause is not decoration.** Without it, "the spine
+    crossed this month" would license a crossing in *either* direction, so a
+    compiler could answer the story going hot by taking the flesh cool. The
+    clause demands that the row left carries the spine's OLD bucket and the row
+    entered carries its NEW one, so a licensed seam is a seam that crosses with
+    the story and never against it.
+
+    **The licence ADDS candidates and never removes one.** Every candidate the
+    platform's era filter would have admitted is still admitted; the licence
+    only widens the admissible set at a crossing month. So the rule cannot lower
+    conditioning reach, cannot empty a pool, and cannot turn a joinable month
+    into a refusal -- which is what makes it a faithfulness test rather than a
+    relaxation with a nicer name.
+    """
+    if not design.era_conditional_crossing or m < 1:
+        return None
+    was, now = int(spine_hot_row[m - 1]), int(spine_hot_row[m])
+    return None if was == now else (was, now)
+
+
 def _join_filter(
     candidates: np.ndarray,
     era_bucket: np.ndarray,
@@ -559,18 +626,29 @@ def _join_filter(
     bound: float,
     *,
     era_relaxed: bool,
+    crossing_licence: tuple[int, int] | None = None,
 ) -> np.ndarray:
     """The spine's two join filters, as the platform applies them.
 
     ``era_relaxed`` drops the era-bucket half and keeps the declared level bound.
     It exists to PRICE the constraint (the disclosure arm) and is never adopted:
     the era bucket is the sealed compiler's own rule and D-SP-10 preserved it.
+
+    ``crossing_licence`` is D-SP-11 ruler 2 (:func:`_era_crossing_licence`): a
+    ``(was, now)`` pair widens the era half to admit rows in bucket ``now`` when
+    the row being left sits in bucket ``was``. The **declared level bound is
+    never widened by it** -- a licensed crossing still has to move trailing
+    inflation by no more than ``join_yoy_max_pp``, so the licence changes which
+    side of the line a seam may land on and not how far it may jump.
     """
     if candidates.size == 0:
         return candidates
     ok = np.abs(yoy[candidates] - yoy[previous]) <= float(bound)
     if not era_relaxed:
-        ok &= era_bucket[candidates] == era_bucket[previous]
+        same = era_bucket[candidates] == era_bucket[previous]
+        if crossing_licence is not None and int(era_bucket[previous]) == crossing_licence[0]:
+            same = same | (era_bucket[candidates] == crossing_licence[1])
+        ok &= same
     return candidates[ok]
 
 
@@ -584,6 +662,7 @@ def _anticipating_entry(
     seg: Any,
     pct: float,
     rng: np.random.Generator,
+    crossing_licence: tuple[int, int] | None = None,
 ) -> int | None:
     """A month to move to when the spine's quadrant is unreachable this month.
 
@@ -624,6 +703,7 @@ def _anticipating_entry(
         previous,
         args.spine.join_yoy_max_pp,
         era_relaxed=design.era_relaxed_joins,
+        crossing_licence=crossing_licence,
     )
     if candidates.size == 0:
         return None
@@ -669,6 +749,9 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
     unresolved_divergences = 0
     breaks_blocked_by_the_era_filter = 0
     anticipating_moves = 0
+    # D-SP-11 ruler 2's own counters
+    era_crossing_licences_offered = 0
+    era_crossing_seams = 0
 
     horizon = int(design.match_horizon)
     # the spine's quadrant for every month of every decade, precomputed: the
@@ -680,6 +763,10 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
             spine_q[p, m] = spine_quadrant(
                 sp.states[p, m], int(sp.labels[p, m]), mu_pi=float(sp.mu_pi[p])
             )
+    # the spine's own era bit, month by month: the quadrant's low bit IS
+    # ``yoy > era_threshold_pp`` under the stage-2 projection (module docstring),
+    # which is the same predicate the panel's era bucket is cut from
+    spine_hot = spine_q & 1
 
     for p in range(n_paths):
         rng = np.random.Generator(np.random.PCG64(int(seed) + LAYER_OFFSETS["blocks"]).jumped(p))
@@ -721,6 +808,9 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
                 continue
 
             previous = int(index[p, m - 1])
+            licence = _era_crossing_licence(design, spine_hot[p], m)
+            if licence is not None and int(era_bucket[previous]) == licence[0]:
+                era_crossing_licences_offered += 1
 
             if previous + 1 >= n:
                 # the panel-edge rule, byte-unchanged (owner ruling 2026-08-16)
@@ -733,12 +823,15 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
                     previous,
                     spine.join_yoy_max_pp,
                     era_relaxed=design.era_relaxed_joins,
+                    crossing_licence=licence,
                 )
                 if filtered.size:
                     index[p, m] = _path_prefix_pick(filtered, cells, spine_q[p], m, horizon, rng)
                 else:
                     unfiltered_reentries += 1
                     index[p, m] = _path_prefix_pick(pool, cells, spine_q[p], m, horizon, rng)
+                if int(era_bucket[int(index[p, m])]) != int(era_bucket[previous]):
+                    era_crossing_seams += 1
                 continue
 
             advanced = previous + 1
@@ -770,9 +863,12 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
                 previous,
                 spine.join_yoy_max_pp,
                 era_relaxed=design.era_relaxed_joins,
+                crossing_licence=licence,
             )
             if candidates.size:
                 index[p, m] = _path_prefix_pick(candidates, cells, spine_q[p], m, horizon, rng)
+                if int(era_bucket[int(index[p, m])]) != int(era_bucket[previous]):
+                    era_crossing_seams += 1
                 continue
 
             if diverged:
@@ -784,11 +880,13 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
                     breaks_blocked_by_the_era_filter += 1
             if diverged and design.anticipate:
                 moved = _anticipating_entry(
-                    args, design, pools, previous, m, spine_q[p], seg, pct, rng
+                    args, design, pools, previous, m, spine_q[p], seg, pct, rng, licence
                 )
                 if moved is not None:
                     anticipating_moves += 1
                     index[p, m] = moved
+                    if int(era_bucket[moved]) != int(era_bucket[previous]):
+                        era_crossing_seams += 1
                     continue
             index[p, m] = advanced
 
@@ -804,6 +902,9 @@ def _reach_draw(args: Any, design: ReachDesign) -> tuple[np.ndarray, dict[str, A
         "unresolved_divergences": unresolved_divergences,
         "unresolved_divergences_blocked_by_the_era_filter": breaks_blocked_by_the_era_filter,
         "anticipating_moves": anticipating_moves,
+        # D-SP-11 ruler 2
+        "era_crossing_licences_offered": era_crossing_licences_offered,
+        "era_crossing_seams": era_crossing_seams,
     }
     return index, corrections
 
@@ -893,7 +994,7 @@ class _Stage2SpineFactory(SpineBootstrap):
             return super()._draw(args)
         index, corrections = _reach_draw(args, design)
         if _ACTIVE_RUN is not None:
-            _ACTIVE_RUN.reach[int(args.seed)] = {
+            stamp = {
                 "design": design.name,
                 "match_horizon": int(design.match_horizon),
                 "break_on_divergence": bool(design.break_on_divergence),
@@ -905,6 +1006,18 @@ class _Stage2SpineFactory(SpineBootstrap):
                 ),
                 "anticipating_moves": int(corrections["anticipating_moves"]),
             }
+            if design.era_conditional_crossing:
+                # D-SP-11 ruler 2's counters are emitted ONLY on the arm that
+                # has the rule, so every D-SP-10 artifact -- which never sets it
+                # -- still regenerates byte-identically. A record that moves
+                # because a later campaign added a key is a record that stopped
+                # being a record.
+                stamp["era_conditional_crossing"] = True
+                stamp["era_crossing_licences_offered"] = int(
+                    corrections["era_crossing_licences_offered"]
+                )
+                stamp["era_crossing_seams"] = int(corrections["era_crossing_seams"])
+            _ACTIVE_RUN.reach[int(args.seed)] = stamp
         return index, corrections
 
 
