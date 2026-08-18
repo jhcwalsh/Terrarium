@@ -282,7 +282,13 @@ def _condition(
     }
 
 
-def judge_s1(rows: np.ndarray, yoy: np.ndarray, sealed: Mapping[str, Any]) -> dict[str, Any]:
+def judge_s1(
+    rows: np.ndarray,
+    yoy: np.ndarray,
+    sealed: Mapping[str, Any],
+    *,
+    with_disclosures: bool = True,
+) -> dict[str, Any]:
     """``S1`` -- can you find the seams, and does the texture inside a block hold?
 
     Two halves, each judged at each declared quantile, **all four conditions
@@ -302,6 +308,11 @@ def judge_s1(rows: np.ndarray, yoy: np.ndarray, sealed: Mapping[str, Any]) -> di
     transitions to resolve is reported, flagged, and excluded -- a world with no
     seams at all passes the seam half **vacuously**, which is correct: there is
     nothing to find.
+
+    ``with_disclosures=False`` drops the KS detectability block and the
+    self-referential comparison. It changes **no verdict, no condition and no
+    band** -- it exists so an anti-test sweep of a few hundred replicates does not
+    pay for two bootstrap null distributions it never reads.
     """
     anchor = panel_adjacent_jumps(yoy)
     split = transition_jumps(rows, yoy)
@@ -352,7 +363,9 @@ def judge_s1(rows: np.ndarray, yoy: np.ndarray, sealed: Mapping[str, Any]) -> di
             "digest": anchor_digest(anchor),
         },
         "raw_disclosure": raw_disclosure,
-        "detectability_disclosure": seam_detectability(rows, yoy, sealed),
+        "detectability_disclosure": (
+            seam_detectability(rows, yoy, sealed) if with_disclosures else None
+        ),
         "reading_note": (
             "S1 judges the SHAPE of a world's month-transitions and is blind to how many of "
             "them are seams -- that is R2's question and R2 keeps answering it. A seam FAIL "
