@@ -420,3 +420,17 @@ pre-obligations - the M4 historical decomposition for P2 (drop P2 if
 history is too noisy to band, per the A2-ceiling precedent) and the
 windowing-symmetric re-derivation of the phase anchor (the O1-censoring
 caveat). Asset-return conditional means (stage 3) remain unfunded.
+
+## D-SP-10 - RULED 2026-08-18: FUND THE CONDITIONING-REACH FIX
+
+Owner ruling ("Let us do that fix") on the stage-2 week-C headline finding:
+the compiler conditions the flesh on the spine only at block starts (494 of
+6,000 months, 8.2%), so the decade's declared inflation story and the drawn
+months' actual behaviour agree barely above chance (60.6% vs 59.2%) - the
+measured form of the original glued-decades incoherence. Funded: extend
+conditioning to reach every month (design owned by the campaign; era-safe
+joins and severity discipline preserved; R1 selection-only stands), then
+re-run the FULL sealed 12-bar exam unchanged - the exam does not move, the
+engine does. Expected sensitive bars: A2 and R2 (the failures), D1-D4/A1/R1
+re-confirmed. Composed in scripts/ like week C; src/ promotion remains a
+separate release event after a pass.
