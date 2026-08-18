@@ -1,0 +1,4309 @@
+{
+  "amendment": {
+    "id": "AM-SPV2-2026-08-17-001",
+    "judged_on_premise_accepted_batch": [
+      "D1",
+      "D2",
+      "D3",
+      "D4"
+    ],
+    "judged_on_unconditional_batch": [
+      "T1",
+      "O1"
+    ],
+    "post_hoc": true
+  },
+  "engine": {
+    "covariate_standardisation": {
+      "mean": [
+        0.708608937107,
+        -1.065891335424,
+        1.358188787191,
+        0.0
+      ],
+      "sd": [
+        0.842693768935,
+        6.193884378266,
+        2.655126775134,
+        1.0
+      ]
+    },
+    "curve_lag_months": 9,
+    "inflation_residual_ar1_rho": 0.992067235938,
+    "inflation_residual_innovation_sd": 0.020083908479,
+    "initial_expanding_rate": 0.725343320849,
+    "season_cycle": [
+      0.376146788991,
+      -0.279279279279,
+      1.0,
+      1.0
+    ],
+    "stag_spell_rate": 0.777777777778,
+    "valuation_drawdown_threshold": -0.323365525588
+  },
+  "fit": {
+    "curve": {
+      "centers": {
+        "contracting": 0.281829419036,
+        "contraction_age": 0.557653866183,
+        "expansion_age": 2.094318696445
+      },
+      "coefficients": {
+        "contracting": -0.137661765098,
+        "contraction_age": 0.067321213672,
+        "expansion_age": -0.062288079578,
+        "intercept": 0.701445670723,
+        "u_hat_loading": -0.148625032509
+      },
+      "fitted_from_month_index": 4,
+      "loglik": 234.115327167953,
+      "n_months": 809,
+      "r_squared": 0.222256787988,
+      "residual_ar1_rho": 0.968949545605,
+      "residual_ar1_rho_se": 0.008462673323,
+      "residual_innovation_sd": 0.180855973512,
+      "residual_innovation_sd_se": 0.004496279493,
+      "standard_errors": {
+        "contracting": 0.053878551786,
+        "contraction_age": 0.024632950898,
+        "expansion_age": 0.019306237773,
+        "intercept": 0.197339168369,
+        "u_hat_loading": 0.027382242763
+      },
+      "t_ratios": {
+        "contracting": -2.55503833223,
+        "contraction_age": 2.732973972591,
+        "expansion_age": -3.226318887792,
+        "intercept": 3.554518226258,
+        "u_hat_loading": -5.427788870188
+      }
+    },
+    "curve_ols_disclosure_not_a_verdict": {
+      "cannot_supply_a_verdict": true,
+      "coefficients": {
+        "contracting": -1.301722801593,
+        "contraction_age": 0.337535627803,
+        "expansion_age": -0.20417682261,
+        "intercept": 0.709432095247,
+        "u_hat_loading": -0.541888554449
+      },
+      "estimator": "week 2's own: OLS in levels plus an AR(1) matched to the residual's lag-1 autocorrelation and innovation sd, applied to the SAME five-column design so the two estimators are compared on one model",
+      "r_squared": 0.490448065727,
+      "residual_ar1_rho": 0.90425671864,
+      "residual_innovation_sd": 0.257405657217,
+      "standard_errors": {
+        "contracting": 0.122652814467,
+        "contraction_age": 0.045870173743,
+        "expansion_age": 0.023164774234,
+        "intercept": 0.021262256539,
+        "u_hat_loading": 0.02131151172
+      },
+      "standard_errors_understated": "plain OLS errors; they ignore the residual autocorrelation that is the whole reason exact ML disagrees, so they are for side-by-side reading of the coefficient vectors and not for inference"
+    },
+    "curve_restricted_no_feedback": {
+      "coefficients": {
+        "contracting": 0.0,
+        "contraction_age": 0.0,
+        "expansion_age": 0.0,
+        "intercept": 0.708403099367,
+        "u_hat_loading": -0.153085400634
+      },
+      "loglik": 228.001714402475,
+      "r_squared": 0.198142491215,
+      "residual_ar1_rho": 0.969421392947,
+      "residual_innovation_sd": 0.182226181653,
+      "standard_errors": {
+        "contracting": 0.0,
+        "contraction_age": 0.0,
+        "expansion_age": 0.0,
+        "intercept": 0.20175963712,
+        "u_hat_loading": 0.027522005124
+      }
+    },
+    "hazard": {
+      "coefficients": {
+        "cov_contracting[credit_gap]": 0.668914559519,
+        "cov_contracting[curve_slope]": 1.190431613451,
+        "cov_contracting[drawdown_state]": -1.793130811305,
+        "cov_contracting[pi_gap]": 0.63070539888,
+        "cov_expanding[credit_gap]": 0.202595936354,
+        "cov_expanding[curve_slope]": -1.488804908804,
+        "cov_expanding[drawdown_state]": 1.994911202669,
+        "cov_expanding[pi_gap]": 0.338781196262,
+        "intercept[expansion]": -3.451516574169,
+        "intercept[recession]": -0.818048799628,
+        "intercept[recovery]": -4.502257266668,
+        "intercept[stagflation]": -2.158180788557,
+        "log_dwell[expansion]": -0.182106942447,
+        "log_dwell[recession]": -0.43033569509,
+        "log_dwell[recovery]": 0.100843792034,
+        "log_dwell[stagflation]": -0.049412937902
+      },
+      "loglik": -118.84012073861,
+      "n_at_risk_months": 792.0,
+      "n_growth_axis_flips": 35.0,
+      "standard_errors": {
+        "cov_contracting[credit_gap]": 0.333603233228,
+        "cov_contracting[curve_slope]": 0.391842530204,
+        "cov_contracting[drawdown_state]": 0.839209890144,
+        "cov_contracting[pi_gap]": 0.339728826164,
+        "cov_expanding[credit_gap]": 0.324899234788,
+        "cov_expanding[curve_slope]": 0.504121046203,
+        "cov_expanding[drawdown_state]": 1.298564362572,
+        "cov_expanding[pi_gap]": 0.363573512676,
+        "intercept[expansion]": 0.678966051027,
+        "intercept[recession]": 0.690805353765,
+        "intercept[recovery]": 1.023223483385,
+        "intercept[stagflation]": 0.965792845596,
+        "log_dwell[expansion]": 0.289922786141,
+        "log_dwell[recession]": 0.35226454621,
+        "log_dwell[recovery]": 0.303350769437,
+        "log_dwell[stagflation]": 0.434798943205
+      },
+      "t_ratios": {
+        "cov_contracting[credit_gap]": 2.005120133421,
+        "cov_contracting[curve_slope]": 3.038035745716,
+        "cov_contracting[drawdown_state]": -2.136689322139,
+        "cov_contracting[pi_gap]": 1.85649656522,
+        "cov_expanding[credit_gap]": 0.623565446333,
+        "cov_expanding[curve_slope]": -2.953268704052,
+        "cov_expanding[drawdown_state]": 1.53624360884,
+        "cov_expanding[pi_gap]": 0.931809343778,
+        "intercept[expansion]": -5.083489180277,
+        "intercept[recession]": -1.184195801566,
+        "intercept[recovery]": -4.400072261606,
+        "intercept[stagflation]": -2.234620807555,
+        "log_dwell[expansion]": -0.62812221444,
+        "log_dwell[recession]": -1.221626472831,
+        "log_dwell[recovery]": 0.332432952852,
+        "log_dwell[stagflation]": -0.113645487585
+      }
+    },
+    "hazard_block_identical_to_week_2": {
+      "identical_to_the_committed_rounding": true,
+      "max_absolute_difference": 0.0,
+      "week_2_artifact": "docs/superpowers/specs/spine-v2-fitted-params.json",
+      "why_it_must_hold": "the joint log-likelihood is L_hazard(beta) + L_curve(c, rho, sigma) and the season path is OBSERVED on the panel, so no curve parameter appears in the hazard block; adding the feedback cannot move a hazard coefficient"
+    },
+    "joint_loglik": 115.275206429343,
+    "likelihood_ratio_no_season_feedback": {
+      "degrees_of_freedom": 3,
+      "p_value": 0.006643964101,
+      "restriction": "c_C = c_E = c_K = 0 (week 2's curve, nested exactly)",
+      "statistic": 12.227225530954
+    },
+    "week_2_curve_link_for_reference": {
+      "intercept": 0.708608937107,
+      "r_squared": 0.404266670185,
+      "residual_ar1_rho": 0.947188362872,
+      "residual_innovation_sd": 0.208565406092,
+      "residual_sd": 0.650422762921,
+      "u_hat_loading": -0.535801285624,
+      "u_mean_historical": -0.213934753955,
+      "u_sd_historical": 0.2727207245
+    }
+  },
+  "label_stability": {
+    "any_escalated": true,
+    "arms": {
+      "baseline": {
+        "curve_loglik": 234.115327167953,
+        "hazard_loglik": -118.84012073861,
+        "moves_by_se": {
+          "contracting": 0.0,
+          "contraction_age": 0.0,
+          "cov_expanding[curve_slope]": 0.0,
+          "expansion_age": 0.0
+        },
+        "standard_errors": {
+          "contracting": 0.053878551786,
+          "contraction_age": 0.024632950898,
+          "cov_expanding[curve_slope]": 0.504121046203,
+          "expansion_age": 0.019306237773
+        },
+        "values": {
+          "contracting": -0.137661765098,
+          "contraction_age": 0.067321213672,
+          "cov_expanding[curve_slope]": -1.488804908804,
+          "expansion_age": -0.062288079578
+        }
+      },
+      "borderline_downweighted": {
+        "curve_loglik": 211.767686157982,
+        "hazard_loglik": -101.556882781062,
+        "moves_by_se": {
+          "contracting": -0.974445678939,
+          "contraction_age": 0.85476767884,
+          "cov_expanding[curve_slope]": 0.316305498623,
+          "expansion_age": -1.285265215008
+        },
+        "standard_errors": {
+          "contracting": 0.060972332559,
+          "contraction_age": 0.027602354705,
+          "cov_expanding[curve_slope]": 0.517952789448,
+          "expansion_age": 0.023362103384
+        },
+        "values": {
+          "contracting": -0.190163487073,
+          "contraction_age": 0.088376663933,
+          "cov_expanding[curve_slope]": -1.329348649918,
+          "expansion_age": -0.08710171542
+        }
+      },
+      "both_minus_50bp": {
+        "curve_loglik": 231.05003919006,
+        "hazard_loglik": -103.637200722462,
+        "moves_by_se": {
+          "contracting": 0.525449818843,
+          "contraction_age": -0.309994414569,
+          "cov_expanding[curve_slope]": -0.103347509085,
+          "expansion_age": 1.074058250034
+        },
+        "standard_errors": {
+          "contracting": 0.061836180461,
+          "contraction_age": 0.026753157582,
+          "cov_expanding[curve_slope]": 0.509871762574,
+          "expansion_age": 0.020667274446
+        },
+        "values": {
+          "contracting": -0.109351289822,
+          "contraction_age": 0.059685136479,
+          "cov_expanding[curve_slope]": -1.540904563207,
+          "expansion_age": -0.041552055621
+        }
+      },
+      "both_plus_50bp": {
+        "curve_loglik": 237.501683982994,
+        "hazard_loglik": -132.596029165626,
+        "moves_by_se": {
+          "contracting": 0.626008877424,
+          "contraction_age": 0.904612462744,
+          "cov_expanding[curve_slope]": 0.891773047404,
+          "expansion_age": 0.49784635018
+        },
+        "standard_errors": {
+          "contracting": 0.046419275522,
+          "contraction_age": 0.022850306446,
+          "cov_expanding[curve_slope]": 0.423088242491,
+          "expansion_age": 0.018082659976
+        },
+        "values": {
+          "contracting": -0.103933313377,
+          "contraction_age": 0.089604488048,
+          "cov_expanding[curve_slope]": -1.039243347172,
+          "expansion_age": -0.052676539567
+        }
+      },
+      "growth_line_minus_50bp": {
+        "curve_loglik": 231.05003919006,
+        "hazard_loglik": -102.98269138917,
+        "moves_by_se": {
+          "contracting": 0.525449818843,
+          "contraction_age": -0.309994414569,
+          "cov_expanding[curve_slope]": -0.054548151047,
+          "expansion_age": 1.074058250034
+        },
+        "standard_errors": {
+          "contracting": 0.061836180461,
+          "contraction_age": 0.026753157582,
+          "cov_expanding[curve_slope]": 0.491635931489,
+          "expansion_age": 0.020667274446
+        },
+        "values": {
+          "contracting": -0.109351289822,
+          "contraction_age": 0.059685136479,
+          "cov_expanding[curve_slope]": -1.516303779778,
+          "expansion_age": -0.041552055621
+        }
+      },
+      "growth_line_plus_50bp": {
+        "curve_loglik": 237.501683982994,
+        "hazard_loglik": -132.180049903013,
+        "moves_by_se": {
+          "contracting": 0.626008877424,
+          "contraction_age": 0.904612462744,
+          "cov_expanding[curve_slope]": 0.994237704531,
+          "expansion_age": 0.49784635018
+        },
+        "standard_errors": {
+          "contracting": 0.046419275522,
+          "contraction_age": 0.022850306446,
+          "cov_expanding[curve_slope]": 0.394278161513,
+          "expansion_age": 0.018082659976
+        },
+        "values": {
+          "contracting": -0.103933313377,
+          "contraction_age": 0.089604488048,
+          "cov_expanding[curve_slope]": -0.987588757022,
+          "expansion_age": -0.052676539567
+        }
+      },
+      "inflation_line_minus_50bp": {
+        "curve_loglik": 234.115327167953,
+        "hazard_loglik": -119.73051659289,
+        "moves_by_se": {
+          "contracting": 0.0,
+          "contraction_age": 0.0,
+          "cov_expanding[curve_slope]": 0.012781123352,
+          "expansion_age": 0.0
+        },
+        "standard_errors": {
+          "contracting": 0.053878551786,
+          "contraction_age": 0.024632950898,
+          "cov_expanding[curve_slope]": 0.507087144533,
+          "expansion_age": 0.019306237773
+        },
+        "values": {
+          "contracting": -0.137661765098,
+          "contraction_age": 0.067321213672,
+          "cov_expanding[curve_slope]": -1.482361675528,
+          "expansion_age": -0.062288079578
+        }
+      },
+      "inflation_line_plus_50bp": {
+        "curve_loglik": 234.115327167953,
+        "hazard_loglik": -118.659672849537,
+        "moves_by_se": {
+          "contracting": 0.0,
+          "contraction_age": 0.0,
+          "cov_expanding[curve_slope]": 0.126760796382,
+          "expansion_age": 0.0
+        },
+        "standard_errors": {
+          "contracting": 0.053878551786,
+          "contraction_age": 0.024632950898,
+          "cov_expanding[curve_slope]": 0.516673389748,
+          "expansion_age": 0.019306237773
+        },
+        "values": {
+          "contracting": -0.137661765098,
+          "contraction_age": 0.067321213672,
+          "cov_expanding[curve_slope]": -1.424902123515,
+          "expansion_age": -0.062288079578
+        }
+      },
+      "inflation_minus_growth_plus": {
+        "curve_loglik": 237.501683982994,
+        "hazard_loglik": -134.42446801794,
+        "moves_by_se": {
+          "contracting": 0.626008877424,
+          "contraction_age": 0.904612462744,
+          "cov_expanding[curve_slope]": 0.970573721942,
+          "expansion_age": 0.49784635018
+        },
+        "standard_errors": {
+          "contracting": 0.046419275522,
+          "contraction_age": 0.022850306446,
+          "cov_expanding[curve_slope]": 0.412631287644,
+          "expansion_age": 0.018082659976
+        },
+        "values": {
+          "contracting": -0.103933313377,
+          "contraction_age": 0.089604488048,
+          "cov_expanding[curve_slope]": -0.999518268682,
+          "expansion_age": -0.052676539567
+        }
+      },
+      "inflation_plus_growth_minus": {
+        "curve_loglik": 231.05003919006,
+        "hazard_loglik": -103.973096120936,
+        "moves_by_se": {
+          "contracting": 0.525449818843,
+          "contraction_age": -0.309994414569,
+          "cov_expanding[curve_slope]": -1.044216879702,
+          "expansion_age": 1.074058250034
+        },
+        "standard_errors": {
+          "contracting": 0.061836180461,
+          "contraction_age": 0.026753157582,
+          "cov_expanding[curve_slope]": 0.616915218856,
+          "expansion_age": 0.020667274446
+        },
+        "values": {
+          "contracting": -0.109351289822,
+          "contraction_age": 0.059685136479,
+          "cov_expanding[curve_slope]": -2.015216614662,
+          "expansion_age": -0.041552055621
+        }
+      },
+      "soft_labels_escalation": {
+        "curve_loglik": 155.911260649756,
+        "hazard_loglik": -68.631963906973,
+        "moves_by_se": {
+          "contracting": -1.346693876556,
+          "contraction_age": 1.636771514323,
+          "cov_expanding[curve_slope]": 0.813838943075,
+          "expansion_age": -2.155394282266
+        },
+        "standard_errors": {
+          "contracting": 0.076951431337,
+          "contraction_age": 0.034369766194,
+          "cov_expanding[curve_slope]": 0.618497743352,
+          "expansion_age": 0.02963362617
+        },
+        "values": {
+          "contracting": -0.210219680866,
+          "contraction_age": 0.107639726015,
+          "cov_expanding[curve_slope]": -1.078531569381,
+          "expansion_age": -0.103900634085
+        }
+      }
+    },
+    "escalation_rule": "the sealed escalation path: if a tracked statistic moves by more than its own standard error across arms, refit with soft labels (each month weighted by classification confidence) and report both",
+    "per_statistic": {
+      "contracting": {
+        "baseline_standard_error": 0.053878551786,
+        "baseline_value": -0.137661765098,
+        "borderline_downweighted_moves_by_se": -0.974445678939,
+        "escalated": false,
+        "range_across_arms": [
+          -0.210219680866,
+          -0.103933313377
+        ],
+        "soft_labels_moves_by_se": -1.346693876556,
+        "verdict": "STABLE -- every arm moves it by less than one of its own standard errors",
+        "worst_threshold_arm": "growth_line_plus_50bp",
+        "worst_threshold_arm_moves_by_se": 0.626008877424
+      },
+      "contraction_age": {
+        "baseline_standard_error": 0.024632950898,
+        "baseline_value": 0.067321213672,
+        "borderline_downweighted_moves_by_se": 0.85476767884,
+        "escalated": false,
+        "range_across_arms": [
+          0.059685136479,
+          0.107639726015
+        ],
+        "soft_labels_moves_by_se": 1.636771514323,
+        "verdict": "STABLE -- every arm moves it by less than one of its own standard errors",
+        "worst_threshold_arm": "growth_line_plus_50bp",
+        "worst_threshold_arm_moves_by_se": 0.904612462744
+      },
+      "cov_expanding[curve_slope]": {
+        "baseline_standard_error": 0.504121046203,
+        "baseline_value": -1.488804908804,
+        "borderline_downweighted_moves_by_se": 0.316305498623,
+        "escalated": true,
+        "range_across_arms": [
+          -2.015216614662,
+          -0.987588757022
+        ],
+        "soft_labels_moves_by_se": 0.813838943075,
+        "verdict": "UNSTABLE -- escalated to soft labels, both reported",
+        "worst_threshold_arm": "inflation_plus_growth_minus",
+        "worst_threshold_arm_moves_by_se": -1.044216879702
+      },
+      "expansion_age": {
+        "baseline_standard_error": 0.019306237773,
+        "baseline_value": -0.062288079578,
+        "borderline_downweighted_moves_by_se": -1.285265215008,
+        "escalated": true,
+        "range_across_arms": [
+          -0.103900634085,
+          -0.041552055621
+        ],
+        "soft_labels_moves_by_se": -2.155394282266,
+        "verdict": "UNSTABLE -- escalated to soft labels, both reported",
+        "worst_threshold_arm": "growth_line_minus_50bp",
+        "worst_threshold_arm_moves_by_se": 1.074058250034
+      }
+    },
+    "statistics": [
+      "cov_expanding[curve_slope]",
+      "contracting",
+      "expansion_age",
+      "contraction_age"
+    ]
+  },
+  "model": {
+    "covariates": [
+      "curve_slope",
+      "credit_gap",
+      "pi_gap",
+      "drawdown_state"
+    ],
+    "curve_at_risk_rule": "the panel's first growth-axis spell is dropped: its start is unobserved so its age is unknown, the same left truncation the hazard block already applies, so a month's age means the same thing in both blocks",
+    "curve_estimator": "exact Gaussian AR(1) maximum likelihood: the first observation enters through its own stationary law, beta and sigma are closed-form at each rho by the Prais-Winsten transform, and rho is found by a coarse scan plus golden section -- deterministic, no random start",
+    "curve_form": "slope_t = c0 + c_u*u_hat_t + c_C*(C_t - Cbar) + c_E*(E_t - Ebar) + c_K*(K_t - Kbar) + e_t, e_t = rho*e_{t-1} + eta_t, eta ~ N(0, sigma^2); C = 1[contracting], E = log(growth-spell age) on expanding months, K = log(growth-spell age) on contracting months; C, E, K centred on their own sample means so the season term has mean zero on the panel",
+    "curve_lag_months": 9,
+    "curve_parameter_labels": [
+      "intercept",
+      "u_hat_loading",
+      "contracting",
+      "expansion_age",
+      "contraction_age"
+    ],
+    "hazard_form": "unchanged from week 2: logit h_t = a_[season] + b_[season]*log(dwell_t) + z_t' g_[growth axis]",
+    "joint_likelihood": "L(beta, c, rho, sigma) = L_hazard(beta) + L_curve(c, rho, sigma), maximised as one object; it block-diagonalises because BOTH paths are observed on the panel (the season enters the curve block as a regressor and the slope enters the hazard block as a regressor), so the cross-block information is exactly zero and the joint maximum is attained blockwise",
+    "opening_age_rule": "a simulated decade's opening growth-spell age is drawn from history's own empirical distribution of age at a randomly chosen month, conditioned on the opening axis -- length-biased exactly as a random calendar month is",
+    "state_space": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ]
+  },
+  "panel": {
+    "climate_artifact_sha256": "5d48def735ad98346e9316c613db1fc743df84ab8143085013870ccbd7066e6b",
+    "curve": {
+      "inverted_share": 0.183271832718,
+      "slope_ar1": 0.975532651517,
+      "slope_mean_pp": 0.708608937107,
+      "slope_sd_pp": 0.842693768935
+    },
+    "era_threshold_pp": 3.351323828921,
+    "panel_months": 813,
+    "panel_span": [
+      "1953-04-01",
+      "2020-12-01"
+    ],
+    "pi_star_tracks_observed_cpi": {
+      "correlation": 0.999798006841,
+      "residual_sd_pp": 0.159700810719
+    },
+    "pi_target": 2.0,
+    "regimes_artifact_sha256": "59763881331993417df5eba0752b3be6eafaabb6d85a713f65ea7c950e478a26",
+    "theta_bar": {
+      "phi_c": 0.093014789081,
+      "phi_pi": 0.624609790015,
+      "psi": 0.693781497687,
+      "s_m_pi": 0.029454557091
+    },
+    "valuation_drawdown_calibration": {
+      "agreement_with_equity_dummy": 0.940959409594,
+      "equity_drawdown_threshold": -0.2,
+      "equity_dummy_rate": 0.116851168512,
+      "v_drawdown_threshold": -0.323365525588,
+      "v_dummy_rate": 0.116851168512
+    },
+    "vintage_id": "2026-08-10.1"
+  },
+  "primary_engine": {
+    "declared_before_any_bar_was_read": true,
+    "name": "feedback",
+    "why": "the exact-ML joint fit is the estimator the joint likelihood names. The OLS arm is an estimator-sensitivity disclosure and cannot supply a verdict, however it reads -- reporting whichever of two estimators passes would be tuning past a conflict"
+  },
+  "purpose": "spine v2 week 3: a season-state term added to the curve process and fitted jointly with the season-transition hazard by maximum likelihood, and the sealed in-model verification re-run under AM-SPV2-2026-08-17-001. A1/A2/R1/R2 need the flesh and are week 4.",
+  "schema": "spine-v2-feedback-params-1",
+  "seal": "docs/superpowers/specs/spine-v2-prereg.json",
+  "seal_files_untouched": [
+    "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+    "docs/superpowers/specs/spine-pilot-prereg.json",
+    "docs/superpowers/specs/spine-v2-anchors.json",
+    "docs/superpowers/specs/spine-v2-antitest-results.json",
+    "docs/superpowers/specs/spine02-prereg.json",
+    "scripts/spine_pilot_b3.py",
+    "scripts/spine_pilot_report.py",
+    "scripts/spine_v2_anchors.py",
+    "scripts/spine_v2_antitest.py",
+    "scripts/spine_v2_grader.py",
+    "scripts/spine_v2_report.py",
+    "scripts/spine_v2_seal.py"
+  ],
+  "spec": "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+  "status": "FRONTIER",
+  "verification": {
+    "amended_summary": {
+      "all_six_pass": false,
+      "amendment": "AM-SPV2-2026-08-17-001",
+      "rows": [
+        {
+          "arm": "unconditional",
+          "bar": "T1",
+          "measured": 1.913081211618,
+          "pass": true,
+          "sealed_band": [
+            1.775282749111,
+            3.347362210254
+          ]
+        },
+        {
+          "arm": "unconditional",
+          "bar": "O1",
+          "measured": 0.511764705882,
+          "pass": false,
+          "sealed_band": [
+            0.518066910499,
+            null
+          ]
+        },
+        {
+          "arm": "premise_accepted",
+          "bar": "D1",
+          "measured": 2.0,
+          "pass": true,
+          "sealed_band": [
+            0.0,
+            5.0
+          ]
+        },
+        {
+          "arm": "premise_accepted",
+          "bar": "D2",
+          "measured": 3.0,
+          "pass": true,
+          "sealed_band": [
+            1.0,
+            7.0
+          ]
+        },
+        {
+          "arm": "premise_accepted",
+          "bar": "D3",
+          "measured": 4.0,
+          "pass": true,
+          "sealed_band": [
+            2.0,
+            8.0
+          ]
+        },
+        {
+          "arm": "premise_accepted",
+          "bar": "D4",
+          "measured": 3.0,
+          "pass": true,
+          "sealed_band": [
+            1.0,
+            7.0
+          ]
+        }
+      ]
+    },
+    "bars_deferred_to_week_4": [
+      "A1",
+      "A2",
+      "R1",
+      "R2"
+    ],
+    "bars_measured": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4"
+    ],
+    "engines": {
+      "feedback": {
+        "amended_verdict": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": false,
+          "T1": true
+        },
+        "premise_accepted": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.243286573146,
+                  "mean_slope_pp": 0.470000059391,
+                  "months": 2495
+                },
+                "expanding": {
+                  "inverted_share": 0.172895863053,
+                  "mean_slope_pp": 0.598312131221,
+                  "months": 3505
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.155276107162,
+                  "mean_slope_pp": 0.663925113354,
+                  "months": 1829
+                },
+                "recession": {
+                  "inverted_share": 0.242374278648,
+                  "mean_slope_pp": 0.454746440824,
+                  "months": 1213
+                },
+                "recovery": {
+                  "inverted_share": 0.192124105012,
+                  "mean_slope_pp": 0.526709419811,
+                  "months": 1676
+                },
+                "stagflation": {
+                  "inverted_share": 0.244149765991,
+                  "mean_slope_pp": 0.484432695368,
+                  "months": 1282
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.731444845753,
+            "season_term_range_on_generated_pp": [
+              -0.138861007961,
+              0.299184623696
+            ],
+            "season_term_sd_on_generated_pp": 0.095368228379,
+            "season_term_sd_on_history_pp": 0.102945724923,
+            "season_term_sd_over_residual_sd": 0.1303833487,
+            "u_hat_contribution_sd_pp": 0.148625032509
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 93.0,
+                "mean_log_age": 2.036682192807,
+                "mean_spell_months": 9.37969924812,
+                "median_spell_months": 5.0,
+                "months": 2495,
+                "n_spells": 266
+              },
+              "expanding": {
+                "max_spell_months": 77.0,
+                "mean_log_age": 2.125940967147,
+                "mean_spell_months": 12.653429602888,
+                "median_spell_months": 8.0,
+                "months": 3505,
+                "n_spells": 277
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.57125,
+            "share_of_tight_months_that_are_expanding": 0.474183350896,
+            "tight_months": 949
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.038238702202,
+                  "transitions": 33
+                },
+                "growth_flip": {
+                  "clockwise": 238,
+                  "clockwise_fraction": 0.517391304348,
+                  "share_of_all_transitions": 0.53302433372,
+                  "transitions": 460
+                },
+                "inflation_crossing": {
+                  "clockwise": 199,
+                  "clockwise_fraction": 0.537837837838,
+                  "share_of_all_transitions": 0.428736964079,
+                  "transitions": 370
+                }
+              },
+              "clockwise": 437,
+              "clockwise_fraction": 0.506373117034,
+              "transitions": 863
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "arrival": 145,
+            "attempts": 708,
+            "backdrop:inflation_above_trend": 496,
+            "recovery:slow": 17
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.427818756586,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.197708333333,
+                "tight_months": 949,
+                "unconditional_rate": 0.349791666667
+              },
+              "measured": 1.223067320793,
+              "pass": false,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 369,
+                "n_transitions": 751
+              },
+              "measured": 0.491344873502,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 135,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 2.7
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 212,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 4.24
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 138,
+                "quartiles_months": [
+                  1.25,
+                  9.0
+                ],
+                "spells_per_decade": 2.76
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 216,
+                "quartiles_months": [
+                  1.0,
+                  8.0
+                ],
+                "spells_per_decade": 4.32
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 135,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 2.7,
+              "value": 2.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 212,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 4.24,
+              "value": 3.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 138,
+              "pass": true,
+              "quartiles_months": [
+                1.25,
+                9.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.76,
+              "value": 4.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 216,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                8.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 4.32,
+              "value": 3.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 369,
+              "n_decades": 50,
+              "n_transitions": 751,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.491344873502
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.427818756586,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": false,
+              "tight_base_rate": 0.197708333333,
+              "tight_months": 949,
+              "unconditional_rate": 0.349791666667,
+              "value": 1.223067320793
+            }
+          }
+        },
+        "unconditional": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.283516483516,
+                  "mean_slope_pp": 0.42774759802,
+                  "months": 1820
+                },
+                "expanding": {
+                  "inverted_share": 0.132057416268,
+                  "mean_slope_pp": 0.845400924546,
+                  "months": 4180
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.099191770757,
+                  "mean_slope_pp": 0.917194610943,
+                  "months": 1361
+                },
+                "recession": {
+                  "inverted_share": 0.286555446516,
+                  "mean_slope_pp": 0.441420627522,
+                  "months": 1019
+                },
+                "recovery": {
+                  "inverted_share": 0.147924796027,
+                  "mean_slope_pp": 0.810739268928,
+                  "months": 2819
+                },
+                "stagflation": {
+                  "inverted_share": 0.279650436954,
+                  "mean_slope_pp": 0.41035331954,
+                  "months": 801
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.731444845753,
+            "season_term_range_on_generated_pp": [
+              -0.166497376827,
+              0.299184623696
+            ],
+            "season_term_sd_on_generated_pp": 0.113170199114,
+            "season_term_sd_on_history_pp": 0.102945724923,
+            "season_term_sd_over_residual_sd": 0.154721439041,
+            "u_hat_contribution_sd_pp": 0.148625032509
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 93.0,
+                "mean_log_age": 2.215806754628,
+                "mean_spell_months": 12.727272727273,
+                "median_spell_months": 8.0,
+                "months": 1820,
+                "n_spells": 143
+              },
+              "expanding": {
+                "max_spell_months": 120.0,
+                "mean_log_age": 2.86375571678,
+                "mean_spell_months": 25.802469135802,
+                "median_spell_months": 16.0,
+                "months": 4180,
+                "n_spells": 162
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.686458333333,
+            "share_of_tight_months_that_are_expanding": 0.489260143198,
+            "tight_months": 838
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.034482758621,
+                  "transitions": 20
+                },
+                "growth_flip": {
+                  "clockwise": 126,
+                  "clockwise_fraction": 0.536170212766,
+                  "share_of_all_transitions": 0.405172413793,
+                  "transitions": 235
+                },
+                "inflation_crossing": {
+                  "clockwise": 178,
+                  "clockwise_fraction": 0.547692307692,
+                  "share_of_all_transitions": 0.560344827586,
+                  "transitions": 325
+                }
+              },
+              "clockwise": 304,
+              "clockwise_fraction": 0.524137931034,
+              "transitions": 580
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "attempts": 50
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.403341288783,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.174583333333,
+                "tight_months": 838,
+                "unconditional_rate": 0.210833333333
+              },
+              "measured": 1.913081211618,
+              "pass": true,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 261,
+                "n_transitions": 510
+              },
+              "measured": 0.511764705882,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 83,
+                "quartiles_months": [
+                  1.0,
+                  6.5
+                ],
+                "spells_per_decade": 1.66
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 104,
+                "quartiles_months": [
+                  2.0,
+                  10.0
+                ],
+                "spells_per_decade": 2.08
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 119,
+                "quartiles_months": [
+                  1.0,
+                  10.5
+                ],
+                "spells_per_decade": 2.38
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 155,
+                "quartiles_months": [
+                  1.0,
+                  7.0
+                ],
+                "spells_per_decade": 3.1
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 83,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.5
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 1.66,
+              "value": 3.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 104,
+              "pass": true,
+              "quartiles_months": [
+                2.0,
+                10.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 2.08,
+              "value": 4.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 119,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                10.5
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.38,
+              "value": 3.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 155,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                7.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 3.1,
+              "value": 2.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 261,
+              "n_decades": 50,
+              "n_transitions": 510,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.511764705882
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.403341288783,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": true,
+              "tight_base_rate": 0.174583333333,
+              "tight_months": 838,
+              "unconditional_rate": 0.210833333333,
+              "value": 1.913081211618
+            }
+          }
+        }
+      },
+      "ml_link": {
+        "amended_verdict": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": false,
+          "T1": true
+        },
+        "premise_accepted": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.31530196369,
+                  "mean_slope_pp": 0.32732259131,
+                  "months": 2699
+                },
+                "expanding": {
+                  "inverted_share": 0.19388064223,
+                  "mean_slope_pp": 0.587897990078,
+                  "months": 3301
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.16937745373,
+                  "mean_slope_pp": 0.663454404699,
+                  "months": 1783
+                },
+                "recession": {
+                  "inverted_share": 0.305371596762,
+                  "mean_slope_pp": 0.317713678396,
+                  "months": 1359
+                },
+                "recovery": {
+                  "inverted_share": 0.222661396574,
+                  "mean_slope_pp": 0.499151555777,
+                  "months": 1518
+                },
+                "stagflation": {
+                  "inverted_share": 0.325373134328,
+                  "mean_slope_pp": 0.337067750003,
+                  "months": 1340
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.742561794275,
+            "season_term_range_on_generated_pp": [
+              -0.0,
+              -0.0
+            ],
+            "season_term_sd_on_generated_pp": 0.0,
+            "season_term_sd_on_history_pp": 0.0,
+            "season_term_sd_over_residual_sd": 0.0,
+            "u_hat_contribution_sd_pp": 0.153085400634
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 93.0,
+                "mean_log_age": 2.136503213705,
+                "mean_spell_months": 10.340996168582,
+                "median_spell_months": 5.0,
+                "months": 2699,
+                "n_spells": 261
+              },
+              "expanding": {
+                "max_spell_months": 64.0,
+                "mean_log_age": 2.061243883443,
+                "mean_spell_months": 12.047445255474,
+                "median_spell_months": 8.0,
+                "months": 3301,
+                "n_spells": 274
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.525416666667,
+            "share_of_tight_months_that_are_expanding": 0.398799313894,
+            "tight_months": 1166
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.04132231405,
+                  "transitions": 35
+                },
+                "growth_flip": {
+                  "clockwise": 237,
+                  "clockwise_fraction": 0.526666666667,
+                  "share_of_all_transitions": 0.531286894923,
+                  "transitions": 450
+                },
+                "inflation_crossing": {
+                  "clockwise": 199,
+                  "clockwise_fraction": 0.549723756906,
+                  "share_of_all_transitions": 0.427390791027,
+                  "transitions": 362
+                }
+              },
+              "clockwise": 436,
+              "clockwise_fraction": 0.514757969303,
+              "transitions": 847
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "arrival": 137,
+            "attempts": 668,
+            "backdrop:inflation_above_trend": 467,
+            "recovery:slow": 14
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.402229845626,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.242916666667,
+                "tight_months": 1166,
+                "unconditional_rate": 0.339166666667
+              },
+              "measured": 1.18593566278,
+              "pass": false,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 362,
+                "n_transitions": 729
+              },
+              "measured": 0.496570644719,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 140,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 2.8
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 210,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 4.2
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 128,
+                "quartiles_months": [
+                  1.75,
+                  8.0
+                ],
+                "spells_per_decade": 2.56
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 201,
+                "quartiles_months": [
+                  1.0,
+                  8.0
+                ],
+                "spells_per_decade": 4.02
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 140,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 2.8,
+              "value": 2.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 210,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 4.2,
+              "value": 3.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 128,
+              "pass": true,
+              "quartiles_months": [
+                1.75,
+                8.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.56,
+              "value": 3.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 201,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                8.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 4.02,
+              "value": 4.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 362,
+              "n_decades": 50,
+              "n_transitions": 729,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.496570644719
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.402229845626,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": false,
+              "tight_base_rate": 0.242916666667,
+              "tight_months": 1166,
+              "unconditional_rate": 0.339166666667,
+              "value": 1.18593566278
+            }
+          }
+        },
+        "unconditional": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.343428880476,
+                  "mean_slope_pp": 0.308986977855,
+                  "months": 1849
+                },
+                "expanding": {
+                  "inverted_share": 0.114189351963,
+                  "mean_slope_pp": 0.909611036901,
+                  "months": 4151
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.090841399851,
+                  "mean_slope_pp": 0.982888440633,
+                  "months": 1343
+                },
+                "recession": {
+                  "inverted_share": 0.344660194175,
+                  "mean_slope_pp": 0.334414134452,
+                  "months": 1030
+                },
+                "recovery": {
+                  "inverted_share": 0.125356125356,
+                  "mean_slope_pp": 0.874564187467,
+                  "months": 2808
+                },
+                "stagflation": {
+                  "inverted_share": 0.34188034188,
+                  "mean_slope_pp": 0.277008990925,
+                  "months": 819
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.742561794275,
+            "season_term_range_on_generated_pp": [
+              0.0,
+              0.0
+            ],
+            "season_term_sd_on_generated_pp": 0.0,
+            "season_term_sd_on_history_pp": 0.0,
+            "season_term_sd_over_residual_sd": 0.0,
+            "u_hat_contribution_sd_pp": 0.153085400634
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 93.0,
+                "mean_log_age": 2.287260324335,
+                "mean_spell_months": 12.93006993007,
+                "median_spell_months": 7.0,
+                "months": 1849,
+                "n_spells": 143
+              },
+              "expanding": {
+                "max_spell_months": 120.0,
+                "mean_log_age": 2.893872984462,
+                "mean_spell_months": 25.006024096386,
+                "median_spell_months": 12.0,
+                "months": 4151,
+                "n_spells": 166
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.679583333333,
+            "share_of_tight_months_that_are_expanding": 0.393629124005,
+            "tight_months": 879
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.032478632479,
+                  "transitions": 19
+                },
+                "growth_flip": {
+                  "clockwise": 130,
+                  "clockwise_fraction": 0.541666666667,
+                  "share_of_all_transitions": 0.410256410256,
+                  "transitions": 240
+                },
+                "inflation_crossing": {
+                  "clockwise": 178,
+                  "clockwise_fraction": 0.546012269939,
+                  "share_of_all_transitions": 0.557264957265,
+                  "transitions": 326
+                }
+              },
+              "clockwise": 308,
+              "clockwise_fraction": 0.526495726496,
+              "transitions": 585
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "attempts": 50
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.389078498294,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.183125,
+                "tight_months": 879,
+                "unconditional_rate": 0.204166666667
+              },
+              "measured": 1.905690603887,
+              "pass": true,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 265,
+                "n_transitions": 515
+              },
+              "measured": 0.514563106796,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 81,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 1.62
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 109,
+                "quartiles_months": [
+                  2.0,
+                  9.0
+                ],
+                "spells_per_decade": 2.18
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 118,
+                "quartiles_months": [
+                  1.0,
+                  10.0
+                ],
+                "spells_per_decade": 2.36
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 159,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 3.18
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 81,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 1.62,
+              "value": 3.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 109,
+              "pass": true,
+              "quartiles_months": [
+                2.0,
+                9.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 2.18,
+              "value": 4.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 118,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                10.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.36,
+              "value": 3.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 159,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 3.18,
+              "value": 2.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 265,
+              "n_decades": 50,
+              "n_transitions": 515,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.514563106796
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.389078498294,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": true,
+              "tight_base_rate": 0.183125,
+              "tight_months": 879,
+              "unconditional_rate": 0.204166666667,
+              "value": 1.905690603887
+            }
+          }
+        }
+      },
+      "ols_feedback": {
+        "amended_verdict": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": false,
+          "T1": true
+        },
+        "premise_accepted": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.309349418354,
+                  "mean_slope_pp": 0.417816704143,
+                  "months": 2321
+                },
+                "expanding": {
+                  "inverted_share": 0.160913291655,
+                  "mean_slope_pp": 0.751349069113,
+                  "months": 3679
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.111570247934,
+                  "mean_slope_pp": 0.874567278465,
+                  "months": 1936
+                },
+                "recession": {
+                  "inverted_share": 0.281310211946,
+                  "mean_slope_pp": 0.505650310839,
+                  "months": 1038
+                },
+                "recovery": {
+                  "inverted_share": 0.215720022949,
+                  "mean_slope_pp": 0.614487076396,
+                  "months": 1743
+                },
+                "stagflation": {
+                  "inverted_share": 0.332034294622,
+                  "mean_slope_pp": 0.34675568797,
+                  "months": 1283
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.602838784314,
+            "season_term_range_on_generated_pp": [
+              -0.69547573152,
+              0.680838429497
+            ],
+            "season_term_sd_on_generated_pp": 0.299426304357,
+            "season_term_sd_on_history_pp": 0.244760327749,
+            "season_term_sd_over_residual_sd": 0.496693829508,
+            "u_hat_contribution_sd_pp": 0.541888554449
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 59.0,
+                "mean_log_age": 1.91283045563,
+                "mean_spell_months": 8.825095057034,
+                "median_spell_months": 5.0,
+                "months": 2321,
+                "n_spells": 263
+              },
+              "expanding": {
+                "max_spell_months": 72.0,
+                "mean_log_age": 2.172809028798,
+                "mean_spell_months": 13.186379928315,
+                "median_spell_months": 8.0,
+                "months": 3679,
+                "n_spells": 279
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.59,
+            "share_of_tight_months_that_are_expanding": 0.441372735939,
+            "tight_months": 1049
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.036363636364,
+                  "transitions": 30
+                },
+                "growth_flip": {
+                  "clockwise": 245,
+                  "clockwise_fraction": 0.530303030303,
+                  "share_of_all_transitions": 0.56,
+                  "transitions": 462
+                },
+                "inflation_crossing": {
+                  "clockwise": 185,
+                  "clockwise_fraction": 0.555555555556,
+                  "share_of_all_transitions": 0.403636363636,
+                  "transitions": 333
+                }
+              },
+              "clockwise": 430,
+              "clockwise_fraction": 0.521212121212,
+              "transitions": 825
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "arrival": 112,
+            "attempts": 591,
+            "backdrop:inflation_above_trend": 417,
+            "recovery:slow": 12
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.443279313632,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.218541666667,
+                "tight_months": 1049,
+                "unconditional_rate": 0.328958333333
+              },
+              "measured": 1.347524195968,
+              "pass": false,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 357,
+                "n_transitions": 704
+              },
+              "measured": 0.507102272727,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 130,
+                "quartiles_months": [
+                  1.0,
+                  7.0
+                ],
+                "spells_per_decade": 2.6
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 204,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 4.08
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 119,
+                "quartiles_months": [
+                  1.0,
+                  8.5
+                ],
+                "spells_per_decade": 2.38
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 201,
+                "quartiles_months": [
+                  2.0,
+                  8.0
+                ],
+                "spells_per_decade": 4.02
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 130,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                7.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 2.6,
+              "value": 3.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 204,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 4.08,
+              "value": 3.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 119,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                8.5
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.38,
+              "value": 4.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 201,
+              "pass": true,
+              "quartiles_months": [
+                2.0,
+                8.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 4.02,
+              "value": 4.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 357,
+              "n_decades": 50,
+              "n_transitions": 704,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.507102272727
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.443279313632,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": false,
+              "tight_base_rate": 0.218541666667,
+              "tight_months": 1049,
+              "unconditional_rate": 0.328958333333,
+              "value": 1.347524195968
+            }
+          }
+        },
+        "unconditional": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.311990686845,
+                  "mean_slope_pp": 0.433961992766,
+                  "months": 1718
+                },
+                "expanding": {
+                  "inverted_share": 0.142223260159,
+                  "mean_slope_pp": 0.941893341698,
+                  "months": 4282
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.088450292398,
+                  "mean_slope_pp": 1.084951829115,
+                  "months": 1368
+                },
+                "recession": {
+                  "inverted_share": 0.274891774892,
+                  "mean_slope_pp": 0.528892883184,
+                  "months": 924
+                },
+                "recovery": {
+                  "inverted_share": 0.167467398765,
+                  "mean_slope_pp": 0.874733420358,
+                  "months": 2914
+                },
+                "stagflation": {
+                  "inverted_share": 0.35516372796,
+                  "mean_slope_pp": 0.323488261346,
+                  "months": 794
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.602838784314,
+            "season_term_range_on_generated_pp": [
+              -0.69547573152,
+              0.68651143073
+            ],
+            "season_term_sd_on_generated_pp": 0.278734521863,
+            "season_term_sd_on_history_pp": 0.244760327749,
+            "season_term_sd_over_residual_sd": 0.4623699223,
+            "u_hat_contribution_sd_pp": 0.541888554449
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 60.0,
+                "mean_log_age": 2.105098442256,
+                "mean_spell_months": 11.608108108108,
+                "median_spell_months": 6.5,
+                "months": 1718,
+                "n_spells": 148
+              },
+              "expanding": {
+                "max_spell_months": 120.0,
+                "mean_log_age": 2.856823788146,
+                "mean_spell_months": 25.488095238095,
+                "median_spell_months": 16.0,
+                "months": 4282,
+                "n_spells": 168
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.707291666667,
+            "share_of_tight_months_that_are_expanding": 0.527331189711,
+            "tight_months": 933
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.035593220339,
+                  "transitions": 21
+                },
+                "growth_flip": {
+                  "clockwise": 129,
+                  "clockwise_fraction": 0.526530612245,
+                  "share_of_all_transitions": 0.415254237288,
+                  "transitions": 245
+                },
+                "inflation_crossing": {
+                  "clockwise": 174,
+                  "clockwise_fraction": 0.537037037037,
+                  "share_of_all_transitions": 0.549152542373,
+                  "transitions": 324
+                }
+              },
+              "clockwise": 303,
+              "clockwise_fraction": 0.513559322034,
+              "transitions": 590
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "attempts": 50
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.425509110397,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.194375,
+                "tight_months": 933,
+                "unconditional_rate": 0.231458333333
+              },
+              "measured": 1.838383195233,
+              "pass": true,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 263,
+                "n_transitions": 521
+              },
+              "measured": 0.504798464491,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 91,
+                "quartiles_months": [
+                  1.0,
+                  6.5
+                ],
+                "spells_per_decade": 1.82
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 104,
+                "quartiles_months": [
+                  2.0,
+                  8.0
+                ],
+                "spells_per_decade": 2.08
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 123,
+                "quartiles_months": [
+                  1.0,
+                  13.0
+                ],
+                "spells_per_decade": 2.46
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 156,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 3.12
+              },
+              "measured": 2.5,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 91,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.5
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 1.82,
+              "value": 2.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 104,
+              "pass": true,
+              "quartiles_months": [
+                2.0,
+                8.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 2.08,
+              "value": 4.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 123,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                13.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.46,
+              "value": 3.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 156,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 3.12,
+              "value": 2.5
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 263,
+              "n_decades": 50,
+              "n_transitions": 521,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.504798464491
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.425509110397,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": true,
+              "tight_base_rate": 0.194375,
+              "tight_months": 933,
+              "unconditional_rate": 0.231458333333,
+              "value": 1.838383195233
+            }
+          }
+        }
+      },
+      "week2": {
+        "amended_verdict": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": false,
+          "T1": false
+        },
+        "premise_accepted": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.36003051106,
+                  "mean_slope_pp": 0.309054371427,
+                  "months": 2622
+                },
+                "expanding": {
+                  "inverted_share": 0.209295441089,
+                  "mean_slope_pp": 0.591506084101,
+                  "months": 3378
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.186470588235,
+                  "mean_slope_pp": 0.63758626266,
+                  "months": 1700
+                },
+                "recession": {
+                  "inverted_share": 0.375915378356,
+                  "mean_slope_pp": 0.29605364021,
+                  "months": 1229
+                },
+                "recovery": {
+                  "inverted_share": 0.23241954708,
+                  "mean_slope_pp": 0.544821755406,
+                  "months": 1678
+                },
+                "stagflation": {
+                  "inverted_share": 0.346015793252,
+                  "mean_slope_pp": 0.320524506865,
+                  "months": 1393
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.650389434237,
+            "season_term_range_on_generated_pp": [
+              0.0,
+              0.0
+            ],
+            "season_term_sd_on_generated_pp": 0.0,
+            "season_term_sd_on_history_pp": 0.0,
+            "season_term_sd_over_residual_sd": 0.0,
+            "u_hat_contribution_sd_pp": 0.535801285624
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 68.0,
+                "mean_log_age": 2.079243982098,
+                "mean_spell_months": 10.282352941176,
+                "median_spell_months": 5.0,
+                "months": 2622,
+                "n_spells": 255
+              },
+              "expanding": {
+                "max_spell_months": 71.0,
+                "mean_log_age": 2.118643103855,
+                "mean_spell_months": 12.651685393258,
+                "median_spell_months": 8.0,
+                "months": 3378,
+                "n_spells": 267
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.533333333333,
+            "share_of_tight_months_that_are_expanding": 0.407604562738,
+            "tight_months": 1315
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.04,
+                  "transitions": 33
+                },
+                "growth_flip": {
+                  "clockwise": 233,
+                  "clockwise_fraction": 0.530751708428,
+                  "share_of_all_transitions": 0.532121212121,
+                  "transitions": 439
+                },
+                "inflation_crossing": {
+                  "clockwise": 194,
+                  "clockwise_fraction": 0.549575070822,
+                  "share_of_all_transitions": 0.427878787879,
+                  "transitions": 353
+                }
+              },
+              "clockwise": 427,
+              "clockwise_fraction": 0.517575757576,
+              "transitions": 825
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "arrival": 143,
+            "attempts": 687,
+            "backdrop:inflation_above_trend": 481,
+            "recovery:slow": 13
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.394676806084,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.273958333333,
+                "tight_months": 1315,
+                "unconditional_rate": 0.320833333333
+              },
+              "measured": 1.230161473507,
+              "pass": false,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 354,
+                "n_transitions": 707
+              },
+              "measured": 0.500707213579,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 134,
+                "quartiles_months": [
+                  1.0,
+                  6.75
+                ],
+                "spells_per_decade": 2.68
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 205,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 4.1
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 120,
+                "quartiles_months": [
+                  1.0,
+                  9.0
+                ],
+                "spells_per_decade": 2.4
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 198,
+                "quartiles_months": [
+                  2.0,
+                  7.0
+                ],
+                "spells_per_decade": 3.96
+              },
+              "measured": 4.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 134,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.75
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 2.68,
+              "value": 2.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 205,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 4.1,
+              "value": 3.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 120,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                9.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.4,
+              "value": 3.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 198,
+              "pass": true,
+              "quartiles_months": [
+                2.0,
+                7.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 3.96,
+              "value": 4.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 354,
+              "n_decades": 50,
+              "n_transitions": 707,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.500707213579
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.394676806084,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": false,
+              "tight_base_rate": 0.273958333333,
+              "tight_months": 1315,
+              "unconditional_rate": 0.320833333333,
+              "value": 1.230161473507
+            }
+          }
+        },
+        "unconditional": {
+          "curve_by_season": {
+            "generated_batch": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.400224215247,
+                  "mean_slope_pp": 0.263188060589,
+                  "months": 1784
+                },
+                "expanding": {
+                  "inverted_share": 0.125474383302,
+                  "mean_slope_pp": 1.025750536779,
+                  "months": 4216
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.120464441219,
+                  "mean_slope_pp": 1.097126622011,
+                  "months": 1378
+                },
+                "recession": {
+                  "inverted_share": 0.39,
+                  "mean_slope_pp": 0.30072381351,
+                  "months": 1000
+                },
+                "recovery": {
+                  "inverted_share": 0.127906976744,
+                  "mean_slope_pp": 0.991093649728,
+                  "months": 2838
+                },
+                "stagflation": {
+                  "inverted_share": 0.413265306122,
+                  "mean_slope_pp": 0.21531082472,
+                  "months": 784
+                }
+              }
+            },
+            "historical_panel": {
+              "by_growth_axis": {
+                "contracting": {
+                  "inverted_share": 0.15350877193,
+                  "mean_slope_pp": 0.728697574,
+                  "months": 228
+                },
+                "expanding": {
+                  "inverted_share": 0.194871794872,
+                  "mean_slope_pp": 0.700779519651,
+                  "months": 585
+                }
+              },
+              "by_season": {
+                "expansion": {
+                  "inverted_share": 0.389162561576,
+                  "mean_slope_pp": 0.350430821086,
+                  "months": 203
+                },
+                "recession": {
+                  "inverted_share": 0.02752293578,
+                  "mean_slope_pp": 1.057211634416,
+                  "months": 109
+                },
+                "recovery": {
+                  "inverted_share": 0.092592592593,
+                  "mean_slope_pp": 0.891509900965,
+                  "months": 378
+                },
+                "stagflation": {
+                  "inverted_share": 0.288288288288,
+                  "mean_slope_pp": 0.404790977824,
+                  "months": 111
+                }
+              }
+            }
+          },
+          "curve_variance_decomposition": {
+            "reading": "u_hat is simulated with unit stationary variance, so its contribution's sd IS the absolute loading. Set the season term's sd beside the residual's: that ratio is the ceiling on how far a correctly-signed, significant feedback can reorganise the generated curve",
+            "residual_stationary_sd_pp": 0.650389434237,
+            "season_term_range_on_generated_pp": [
+              0.0,
+              0.0
+            ],
+            "season_term_sd_on_generated_pp": 0.0,
+            "season_term_sd_on_history_pp": 0.0,
+            "season_term_sd_over_residual_sd": 0.0,
+            "u_hat_contribution_sd_pp": 0.535801285624
+          },
+          "growth_spell_lengths": {
+            "generated_batch": {
+              "contracting": {
+                "max_spell_months": 120.0,
+                "mean_log_age": 2.396539616075,
+                "mean_spell_months": 13.021897810219,
+                "median_spell_months": 6.0,
+                "months": 1784,
+                "n_spells": 137
+              },
+              "expanding": {
+                "max_spell_months": 120.0,
+                "mean_log_age": 2.911630647532,
+                "mean_spell_months": 26.683544303797,
+                "median_spell_months": 15.5,
+                "months": 4216,
+                "n_spells": 158
+              }
+            },
+            "historical_panel": {
+              "contracting": {
+                "max_spell_months": 24.0,
+                "mean_log_age": 1.978692884835,
+                "mean_spell_months": 12.0,
+                "median_spell_months": 14.0,
+                "months": 228,
+                "n_spells": 19
+              },
+              "expanding": {
+                "max_spell_months": 111.0,
+                "mean_log_age": 2.901678426076,
+                "mean_spell_months": 30.789473684211,
+                "median_spell_months": 25.0,
+                "months": 585,
+                "n_spells": 19
+              }
+            },
+            "reading": "compare mean_log_age: it is exactly what the fitted expansion-age and contraction-age loadings multiply, so a shortfall there is a ceiling on how much of the season term can ever reach a generated curve"
+          },
+          "inverted_month_composition": {
+            "months": 4800,
+            "share_of_all_months_that_are_expanding": 0.689583333333,
+            "share_of_tight_months_that_are_expanding": 0.404785643071,
+            "tight_months": 1003
+          },
+          "o1_decomposition": {
+            "generated_batch": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.035087719298,
+                  "transitions": 20
+                },
+                "growth_flip": {
+                  "clockwise": 122,
+                  "clockwise_fraction": 0.542222222222,
+                  "share_of_all_transitions": 0.394736842105,
+                  "transitions": 225
+                },
+                "inflation_crossing": {
+                  "clockwise": 176,
+                  "clockwise_fraction": 0.541538461538,
+                  "share_of_all_transitions": 0.570175438596,
+                  "transitions": 325
+                }
+              },
+              "clockwise": 298,
+              "clockwise_fraction": 0.522807017544,
+              "transitions": 570
+            },
+            "historical_panel": {
+              "by_move": {
+                "diagonal": {
+                  "clockwise": 0,
+                  "clockwise_fraction": 0.0,
+                  "share_of_all_transitions": 0.027777777778,
+                  "transitions": 2
+                },
+                "growth_flip": {
+                  "clockwise": 21,
+                  "clockwise_fraction": 0.617647058824,
+                  "share_of_all_transitions": 0.472222222222,
+                  "transitions": 34
+                },
+                "inflation_crossing": {
+                  "clockwise": 22,
+                  "clockwise_fraction": 0.611111111111,
+                  "share_of_all_transitions": 0.5,
+                  "transitions": 36
+                }
+              },
+              "clockwise": 43,
+              "clockwise_fraction": 0.597222222222,
+              "transitions": 72
+            },
+            "reading": "a growth flip is clockwise iff inflation is hot when it happens, and an inflation crossing is clockwise iff it happens on the matching growth axis. So O1 measures the PHASE between the growth dial and the inflation dial. Compare the per-move clockwise fractions: a shortfall concentrated in growth flips says downturns do not begin hot, which is a growth->inflation channel and NOT the season->curve channel this module fits"
+          },
+          "premise_acceptance": {
+            "attempts": 50
+          },
+          "readings": [
+            {
+              "bar": "T1",
+              "detail": {
+                "conditional_rate": 0.36889332004,
+                "eligible_months": 4800,
+                "tight_base_rate": 0.208958333333,
+                "tight_months": 1003,
+                "unconditional_rate": 0.209166666667
+              },
+              "measured": 1.763633402581,
+              "pass": false,
+              "sealed_band": [
+                1.775282749111,
+                3.347362210254
+              ]
+            },
+            {
+              "bar": "O1",
+              "detail": {
+                "n_clockwise": 259,
+                "n_transitions": 503
+              },
+              "measured": 0.514910536779,
+              "pass": false,
+              "sealed_band": [
+                0.518066910499,
+                null
+              ]
+            },
+            {
+              "bar": "D1",
+              "detail": {
+                "n_pooled_spells": 89,
+                "quartiles_months": [
+                  1.0,
+                  6.0
+                ],
+                "spells_per_decade": 1.78
+              },
+              "measured": 2.0,
+              "pass": true,
+              "sealed_band": [
+                0.0,
+                5.0
+              ]
+            },
+            {
+              "bar": "D2",
+              "detail": {
+                "n_pooled_spells": 98,
+                "quartiles_months": [
+                  1.0,
+                  8.0
+                ],
+                "spells_per_decade": 1.96
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            },
+            {
+              "bar": "D3",
+              "detail": {
+                "n_pooled_spells": 120,
+                "quartiles_months": [
+                  1.0,
+                  11.0
+                ],
+                "spells_per_decade": 2.4
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                2.0,
+                8.0
+              ]
+            },
+            {
+              "bar": "D4",
+              "detail": {
+                "n_pooled_spells": 151,
+                "quartiles_months": [
+                  1.0,
+                  7.0
+                ],
+                "spells_per_decade": 3.02
+              },
+              "measured": 3.0,
+              "pass": true,
+              "sealed_band": [
+                1.0,
+                7.0
+              ]
+            }
+          ],
+          "verdicts_full": {
+            "D1": {
+              "anchor_months": 2.0,
+              "band": [
+                0.0,
+                5.0
+              ],
+              "bar": "D1",
+              "n_decades": 50,
+              "n_pooled_spells": 89,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                6.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recession",
+              "spells_per_decade": 1.78,
+              "value": 2.0
+            },
+            "D2": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D2",
+              "n_decades": 50,
+              "n_pooled_spells": 98,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                8.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "stagflation",
+              "spells_per_decade": 1.96,
+              "value": 3.0
+            },
+            "D3": {
+              "anchor_months": 5.0,
+              "band": [
+                2.0,
+                8.0
+              ],
+              "bar": "D3",
+              "n_decades": 50,
+              "n_pooled_spells": 120,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                11.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "recovery",
+              "spells_per_decade": 2.4,
+              "value": 3.0
+            },
+            "D4": {
+              "anchor_months": 4.0,
+              "band": [
+                1.0,
+                7.0
+              ],
+              "bar": "D4",
+              "n_decades": 50,
+              "n_pooled_spells": 151,
+              "pass": true,
+              "quartiles_months": [
+                1.0,
+                7.0
+              ],
+              "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+              "season": "expansion",
+              "spells_per_decade": 3.02,
+              "value": 3.0
+            },
+            "O1": {
+              "bar": "O1",
+              "n_clockwise": 259,
+              "n_decades": 50,
+              "n_transitions": 503,
+              "pass": false,
+              "threshold": 0.518066910499,
+              "value": 0.514910536779
+            },
+            "T1": {
+              "band": [
+                1.775282749111,
+                3.347362210254
+              ],
+              "bar": "T1",
+              "conditional_rate": 0.36889332004,
+              "crisis_only_disclosure": {
+                "conditional_rate": 0.0,
+                "judged": false,
+                "lift": null,
+                "unconditional_rate": 0.0
+              },
+              "eligible_months": 4800,
+              "n_decades": 50,
+              "pass": false,
+              "tight_base_rate": 0.208958333333,
+              "tight_months": 1003,
+              "unconditional_rate": 0.209166666667,
+              "value": 1.763633402581
+            }
+          }
+        }
+      }
+    },
+    "feedback_frontier": {
+      "multipliers": [
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "rows": [
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 4.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.514563106796,
+          "O1_pass": false,
+          "T1_lift": 1.913439635535,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.0,
+            "contraction_age": 0.0,
+            "expansion_age": -0.0
+          },
+          "feedback_multiplier": 0.0,
+          "share_of_tight_months_that_are_expanding": 0.397494305239
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 4.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.515564202335,
+          "O1_pass": false,
+          "T1_lift": 1.947772127898,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.068830882549,
+            "contraction_age": 0.033660606836,
+            "expansion_age": -0.031144039789
+          },
+          "feedback_multiplier": 0.5,
+          "share_of_tight_months_that_are_expanding": 0.445229681979
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 4.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.511764705882,
+          "O1_pass": false,
+          "T1_lift": 1.913081211618,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.137661765098,
+            "contraction_age": 0.067321213672,
+            "expansion_age": -0.062288079578
+          },
+          "feedback_multiplier": 1.0,
+          "share_of_tight_months_that_are_expanding": 0.489260143198
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 4.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.509727626459,
+          "O1_pass": false,
+          "T1_lift": 1.900901530505,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.206492647647,
+            "contraction_age": 0.100981820507,
+            "expansion_age": -0.093432119367
+          },
+          "feedback_multiplier": 1.5,
+          "share_of_tight_months_that_are_expanding": 0.512195121951
+        },
+        {
+          "D1_recession_median": 2.5,
+          "D2_stagflation_median": 4.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.508704061896,
+          "O1_pass": false,
+          "T1_lift": 1.844958958075,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.275323530196,
+            "contraction_age": 0.134642427343,
+            "expansion_age": -0.124576159156
+          },
+          "feedback_multiplier": 2.0,
+          "share_of_tight_months_that_are_expanding": 0.557251908397
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.509328358209,
+          "O1_pass": false,
+          "T1_lift": 1.782760091294,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.412985295294,
+            "contraction_age": 0.201963641015,
+            "expansion_age": -0.186864238734
+          },
+          "feedback_multiplier": 3.0,
+          "share_of_tight_months_that_are_expanding": 0.646437994723
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.48643761302,
+          "O1_pass": false,
+          "T1_lift": 1.774699661703,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.550647060391,
+            "contraction_age": 0.269284854687,
+            "expansion_age": -0.249152318312
+          },
+          "feedback_multiplier": 4.0,
+          "share_of_tight_months_that_are_expanding": 0.741935483871
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.477797513321,
+          "O1_pass": false,
+          "T1_lift": 1.881243553853,
+          "T1_pass": true,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "coefficients": {
+            "contracting": -0.825970590587,
+            "contraction_age": 0.40392728203,
+            "expansion_age": -0.373728477469
+          },
+          "feedback_multiplier": 6.0,
+          "share_of_tight_months_that_are_expanding": 0.837575757576
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 4.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.495145631068,
+          "O1_pass": false,
+          "T1_lift": 1.187509257292,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 672,
+          "coefficients": {
+            "contracting": -0.0,
+            "contraction_age": 0.0,
+            "expansion_age": -0.0
+          },
+          "feedback_multiplier": 0.0,
+          "share_of_tight_months_that_are_expanding": 0.39965095986
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.496042216359,
+          "O1_pass": false,
+          "T1_lift": 1.193245778612,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 672,
+          "coefficients": {
+            "contracting": -0.068830882549,
+            "contraction_age": 0.033660606836,
+            "expansion_age": -0.031144039789
+          },
+          "feedback_multiplier": 0.5,
+          "share_of_tight_months_that_are_expanding": 0.423414634146
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 4.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.491344873502,
+          "O1_pass": false,
+          "T1_lift": 1.223067320793,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 708,
+          "coefficients": {
+            "contracting": -0.137661765098,
+            "contraction_age": 0.067321213672,
+            "expansion_age": -0.062288079578
+          },
+          "feedback_multiplier": 1.0,
+          "share_of_tight_months_that_are_expanding": 0.474183350896
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.495276653171,
+          "O1_pass": false,
+          "T1_lift": 1.329476210993,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 686,
+          "coefficients": {
+            "contracting": -0.206492647647,
+            "contraction_age": 0.100981820507,
+            "expansion_age": -0.093432119367
+          },
+          "feedback_multiplier": 1.5,
+          "share_of_tight_months_that_are_expanding": 0.521645021645
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.494579945799,
+          "O1_pass": false,
+          "T1_lift": 1.392693972347,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 686,
+          "coefficients": {
+            "contracting": -0.275323530196,
+            "contraction_age": 0.134642427343,
+            "expansion_age": -0.124576159156
+          },
+          "feedback_multiplier": 2.0,
+          "share_of_tight_months_that_are_expanding": 0.573951434879
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.502097902098,
+          "O1_pass": false,
+          "T1_lift": 1.453611209709,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 672,
+          "coefficients": {
+            "contracting": -0.412985295294,
+            "contraction_age": 0.201963641015,
+            "expansion_age": -0.186864238734
+          },
+          "feedback_multiplier": 3.0,
+          "share_of_tight_months_that_are_expanding": 0.643018018018
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 4.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.507670850767,
+          "O1_pass": false,
+          "T1_lift": 1.47679563638,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 708,
+          "coefficients": {
+            "contracting": -0.550647060391,
+            "contraction_age": 0.269284854687,
+            "expansion_age": -0.249152318312
+          },
+          "feedback_multiplier": 4.0,
+          "share_of_tight_months_that_are_expanding": 0.689352360044
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 4.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.480056980057,
+          "O1_pass": false,
+          "T1_lift": 1.70468617889,
+          "T1_pass": false,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 666,
+          "coefficients": {
+            "contracting": -0.825970590587,
+            "contraction_age": 0.40392728203,
+            "expansion_age": -0.373728477469
+          },
+          "feedback_multiplier": 6.0,
+          "share_of_tight_months_that_are_expanding": 0.843853820598
+        }
+      ],
+      "what_moves": "ONLY the three fitted season loadings, scaled together; the hazard, the L1 link, the AR(1) residual and every seed are held, so a row is a counterfactual about feedback strength and nothing else",
+      "what_x0_is": "the primary engine with the three loadings zeroed, keeping the UNRESTRICTED fit's intercept, u_hat loading and residual AR(1). It is NOT ml_link, which refits those under the restriction -- the two are reported side by side and the gap between them is the nuisance parameters, not a feedback effect"
+    },
+    "headline_diagnostic": {
+      "feedback": {
+        "premise_accepted": 0.474183350896,
+        "unconditional": 0.489260143198
+      },
+      "history": 0.765100671141,
+      "history_base_rate": 0.736375158428,
+      "ml_link": {
+        "premise_accepted": 0.398799313894,
+        "unconditional": 0.393629124005
+      },
+      "ols_feedback": {
+        "premise_accepted": 0.441372735939,
+        "unconditional": 0.527331189711
+      },
+      "statistic": "share of inverted-curve months that are EXPANDING",
+      "week2": {
+        "premise_accepted": 0.407604562738,
+        "unconditional": 0.404785643071
+      }
+    },
+    "inverted_month_composition_history": {
+      "months": 789,
+      "share_of_all_months_that_are_expanding": 0.736375158428,
+      "share_of_tight_months_that_are_expanding": 0.765100671141,
+      "tight_months": 149
+    },
+    "months_per_decade": 120,
+    "n_decades": 50,
+    "premise": {
+      "arrives_quarter": 8,
+      "backdrop": "inflation_above_trend",
+      "recovery": "slow",
+      "shock": "supply"
+    },
+    "seed": 20260821,
+    "streams": {
+      "attempt_ladder_disjoint_from_platform_ladder": true,
+      "n_streams_checked": 520,
+      "n_streams_checked_with_openage": 320,
+      "openage_disjoint_from_every_other_layer": true,
+      "openage_offset": 1298743,
+      "per_decade_streams_distinct": true,
+      "platform_seed_stride": 7919,
+      "spine2_attempt_stride": 32452843,
+      "spine_attempt_stride": 104395301
+    }
+  },
+  "week_2_record": "docs/superpowers/specs/spine-v2-fitted-params.json"
+}

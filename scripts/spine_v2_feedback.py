@@ -190,6 +190,7 @@ from spine_v2_fit import (  # noqa: E402
     DECADE_MONTHS,
     DEFAULT_N_DECADES,
     EXPANDING,
+    HOT,
     LAYER_OFFSETS,
     MAX_ATTEMPTS_PER_DECADE,
     PARAM_LABELS,
@@ -228,7 +229,7 @@ from spine_v2_report import load_sealed  # noqa: E402
 
 from ah.gen.climate.model import PARAM_NAMES  # noqa: E402
 from ah.gen.climate.simulate import simulate_decades  # noqa: E402
-from ah.gen.spine import QUADRANTS  # noqa: E402
+from ah.gen.spine import CLOCKWISE, QUADRANTS  # noqa: E402
 from ah.gen.systems import _pinned_layers  # noqa: E402
 
 _REPO_ROOT = _SCRIPTS_DIR.parent
@@ -1044,6 +1045,195 @@ def composition_generated(decades: list[SimulatedDecade], sealed: dict[str, Any]
     }
 
 
+def growth_spell_lengths(joint: JointFit, decades: list[SimulatedDecade]) -> dict[str, Any]:
+    """Growth-axis spell lengths, history beside the generated batch.
+
+    The season term is a function of ``log(age)``, so it can only express itself
+    over the ages the simulator actually visits. If the generated engine's
+    expansions are a fraction of history's length, a coefficient fitted on
+    history's long expansions arrives at generation time with nothing to act on
+    -- and that would be a fact about the CHAIN's flip rate, not about the curve
+    equation. Measured here rather than inferred, and the statistic that matters
+    is the mean of ``log(age)`` per axis: that is literally what the fitted
+    loading multiplies.
+    """
+
+    def _rows(blocks: list[np.ndarray]) -> dict[str, Any]:
+        out: dict[str, Any] = {}
+        for axis, want in (("expanding", True), ("contracting", False)):
+            spells: list[int] = []
+            log_ages: list[float] = []
+            for block in blocks:
+                age = spell_age(block)
+                log_ages.extend(
+                    float(np.log(max(int(a), 1)))
+                    for a, e in zip(age, block, strict=True)
+                    if bool(e) == want
+                )
+                run = 0
+                for t in range(block.size):
+                    if bool(block[t]) == want:
+                        run += 1
+                    elif run:
+                        spells.append(run)
+                        run = 0
+                if run:
+                    spells.append(run)
+            arr = np.asarray(spells, dtype=np.float64)
+            out[axis] = {
+                "n_spells": int(arr.size),
+                "months": len(log_ages),
+                "mean_spell_months": float(arr.mean()) if arr.size else float("nan"),
+                "median_spell_months": float(np.median(arr)) if arr.size else float("nan"),
+                "max_spell_months": float(arr.max()) if arr.size else float("nan"),
+                "mean_log_age": float(np.mean(log_ages)) if log_ages else float("nan"),
+            }
+        return out
+
+    return {
+        "historical_panel": _rows([np.asarray(joint.expanding, dtype=bool)]),
+        "generated_batch": _rows(
+            [np.array([EXPANDING[int(s)] for s in d.season], dtype=bool) for d in decades]
+        ),
+        "reading": (
+            "compare mean_log_age: it is exactly what the fitted expansion-age and "
+            "contraction-age loadings multiply, so a shortfall there is a ceiling on how "
+            "much of the season term can ever reach a generated curve"
+        ),
+    }
+
+
+def o1_decomposition(joint: JointFit, decades: list[SimulatedDecade]) -> dict[str, Any]:
+    """Where O1's clockwise fraction comes from, split by the axis that moved.
+
+    The clock is ``recovery -> expansion -> stagflation -> recession -> recovery``
+    and it ALTERNATES axes: two of its four steps are inflation crossings
+    (recovery->expansion, stagflation->recession) and two are growth flips
+    (expansion->stagflation, recession->recovery). So a growth flip is clockwise
+    if and only if it happens while inflation is HOT, and an inflation crossing is
+    clockwise if and only if it happens while the economy is EXPANDING for the
+    upward crossing and CONTRACTING for the downward one.
+
+    That makes O1 a test of the PHASE between the two dials, not of either dial
+    alone -- and this splits the fraction by move type on both sides so a
+    shortfall can be attributed to one of them instead of to "the ordering".
+    """
+
+    def _rows(cells: np.ndarray) -> dict[str, Any]:
+        arr = np.asarray(cells, dtype=np.int64)
+        counts = {"growth_flip": [0, 0], "inflation_crossing": [0, 0], "diagonal": [0, 0]}
+        for t in range(1, arr.size):
+            a, b = int(arr[t - 1]), int(arr[t])
+            if a < 0 or b < 0 or a == b:
+                continue
+            dg = EXPANDING[a] != EXPANDING[b]
+            dh = HOT[a] != HOT[b]
+            kind = "diagonal" if (dg and dh) else ("growth_flip" if dg else "inflation_crossing")
+            counts[kind][0] += 1
+            if (a, b) in CLOCKWISE:
+                counts[kind][1] += 1
+        total = sum(v[0] for v in counts.values())
+        clockwise = sum(v[1] for v in counts.values())
+        return {
+            "transitions": total,
+            "clockwise": clockwise,
+            "clockwise_fraction": float(clockwise / total) if total else float("nan"),
+            "by_move": {
+                kind: {
+                    "transitions": v[0],
+                    "clockwise": v[1],
+                    "clockwise_fraction": float(v[1] / v[0]) if v[0] else float("nan"),
+                    "share_of_all_transitions": float(v[0] / total) if total else float("nan"),
+                }
+                for kind, v in counts.items()
+            },
+        }
+
+    per = [_rows(d.season) for d in decades]
+    pooled: dict[str, Any] = {
+        "transitions": sum(r["transitions"] for r in per),
+        "clockwise": sum(r["clockwise"] for r in per),
+        "by_move": {},
+    }
+    pooled["clockwise_fraction"] = (
+        float(pooled["clockwise"] / pooled["transitions"])
+        if pooled["transitions"]
+        else float("nan")
+    )
+    for kind in ("growth_flip", "inflation_crossing", "diagonal"):
+        n = sum(r["by_move"][kind]["transitions"] for r in per)
+        c = sum(r["by_move"][kind]["clockwise"] for r in per)
+        pooled["by_move"][kind] = {
+            "transitions": n,
+            "clockwise": c,
+            "clockwise_fraction": float(c / n) if n else float("nan"),
+            "share_of_all_transitions": (
+                float(n / pooled["transitions"]) if pooled["transitions"] else float("nan")
+            ),
+        }
+    return {
+        "historical_panel": _rows(joint.cells),
+        "generated_batch": pooled,
+        "reading": (
+            "a growth flip is clockwise iff inflation is hot when it happens, and an "
+            "inflation crossing is clockwise iff it happens on the matching growth axis. So "
+            "O1 measures the PHASE between the growth dial and the inflation dial. Compare "
+            "the per-move clockwise fractions: a shortfall concentrated in growth flips says "
+            "downturns do not begin hot, which is a growth->inflation channel and NOT the "
+            "season->curve channel this module fits"
+        ),
+    }
+
+
+def curve_variance_decomposition(
+    curve: CurveModel, joint: JointFit, decades: list[SimulatedDecade]
+) -> dict[str, Any]:
+    """How much of the curve the season term can actually move.
+
+    The question the frontier turns on: the feedback is fitted, significant and
+    signed correctly, so why does the generated curve only travel part of the way
+    to history's season-conditional shape? The answer is a ratio of standard
+    deviations, and it is measured on both sides -- the season term against the
+    AR(1) residual it has to compete with. A term worth a fifth of a residual
+    standard deviation cannot reorganise a curve however right its sign is.
+    """
+    hist_term = np.array(
+        [
+            curve.season_term(bool(e), int(a))
+            for e, a in zip(
+                joint.expanding[joint.fitted_from :], joint.age[joint.fitted_from :], strict=True
+            )
+        ]
+    )
+    sim_terms: list[float] = []
+    for d in decades:
+        exp_arr = np.array([EXPANDING[int(s)] for s in d.season], dtype=bool)
+        age = spell_age(exp_arr)
+        sim_terms.extend(
+            curve.season_term(bool(e), int(a)) for e, a in zip(exp_arr, age, strict=True)
+        )
+    residual_stationary_sd = float(
+        curve.innovation_sd / math.sqrt(max(1.0 - curve.rho * curve.rho, 1e-12))
+    )
+    sim_sd = float(np.std(sim_terms))
+    return {
+        "season_term_sd_on_history_pp": float(np.std(hist_term)),
+        "season_term_sd_on_generated_pp": sim_sd,
+        "season_term_range_on_generated_pp": [float(np.min(sim_terms)), float(np.max(sim_terms))],
+        "u_hat_contribution_sd_pp": abs(float(curve.u_hat_loading)),
+        "residual_stationary_sd_pp": residual_stationary_sd,
+        "season_term_sd_over_residual_sd": (
+            sim_sd / residual_stationary_sd if residual_stationary_sd else float("nan")
+        ),
+        "reading": (
+            "u_hat is simulated with unit stationary variance, so its contribution's sd IS "
+            "the absolute loading. Set the season term's sd beside the residual's: that "
+            "ratio is the ceiling on how far a correctly-signed, significant feedback can "
+            "reorganise the generated curve"
+        ),
+    }
+
+
 def curve_by_season(
     panel: Panel, joint: JointFit, decades: list[SimulatedDecade]
 ) -> dict[str, Any]:
@@ -1200,6 +1390,91 @@ def _perturbed_labels(panel: Panel, growth_delta_pp: float) -> np.ndarray:
 
 
 # --------------------------------------------------------------------------- #
+# the frontier over FEEDBACK strength
+# --------------------------------------------------------------------------- #
+
+#: Multipliers applied to the three FITTED season coefficients together. 1.0 is
+#: the fit and 0.0 switches the feedback off. The rest map the trade-off the
+#: campaign's frontier discipline requires when a bar cannot be reached -- every
+#: row is a COUNTERFACTUAL and none of them is a fitted value.
+#:
+#: **What x0.0 is, and what it is NOT.** It is the primary engine with its three
+#: season loadings set to zero, so it keeps the UNRESTRICTED fit's intercept,
+#: ``u_hat`` loading and residual AR(1). It is therefore NOT bit-identical to
+#: ``ml_link``, which refits those three under the restriction; the two are
+#: reported side by side rather than conflated, and the gap between them is the
+#: nuisance-parameter difference, not a feedback effect. What x0.0 does buy is
+#: the sweep's own baseline on a held tape: every other row differs from it in
+#: the three loadings and in nothing else.
+FEEDBACK_MULTIPLIERS: tuple[float, ...] = (0.0, 0.5, 1.0, 1.5, 2.0, 3.0, 4.0, 6.0)
+
+
+def scale_feedback(curve: CurveModel, multiplier: float) -> CurveModel:
+    """The same curve with all three season loadings scaled, and nothing else."""
+    return replace(
+        curve,
+        contracting=curve.contracting * float(multiplier),
+        expansion_age=curve.expansion_age * float(multiplier),
+        contraction_age=curve.contraction_age * float(multiplier),
+    )
+
+
+def feedback_frontier(
+    engine: FittedEngine,
+    curve: CurveModel,
+    climate: Any,
+    sealed: dict[str, Any],
+    *,
+    n_decades: int,
+    premise: Any | None,
+    arm: str,
+) -> list[dict[str, Any]]:
+    """T1, O1 and the four dwell medians across the feedback frontier.
+
+    Week 2 mapped its frontier along transmission strength and found T1 and O1 in
+    direct opposition. This maps the new axis: how much season-to-curve feedback
+    the engine carries. Only the three season loadings move; the hazard, the L1
+    link, the residual and every seed are held.
+    """
+    rows: list[dict[str, Any]] = []
+    for multiplier in FEEDBACK_MULTIPLIERS:
+        scaled = scale_feedback(curve, multiplier)
+        decades, tally = simulate_batch_feedback(
+            engine, scaled, climate, n_decades=n_decades, seed=VERIFY_SEED, premise=premise
+        )
+        verdicts = judge_batch(decades, sealed)
+        composition = composition_generated(decades, sealed)
+        rows.append(
+            {
+                "arm": arm,
+                "feedback_multiplier": float(multiplier),
+                "coefficients": {
+                    "contracting": scaled.contracting,
+                    "expansion_age": scaled.expansion_age,
+                    "contraction_age": scaled.contraction_age,
+                },
+                "T1_lift": float(verdicts["T1"]["value"]),
+                "T1_pass": bool(verdicts["T1"]["pass"]),
+                "O1_clockwise": float(verdicts["O1"]["value"]),
+                "O1_pass": bool(verdicts["O1"]["pass"]),
+                "D1_recession_median": float(verdicts["D1"]["value"]),
+                "D2_stagflation_median": float(verdicts["D2"]["value"]),
+                "D3_recovery_median": float(verdicts["D3"]["value"]),
+                "D4_expansion_median": float(verdicts["D4"]["value"]),
+                "D_all_pass": bool(all(verdicts[c]["pass"] for c in ("D1", "D2", "D3", "D4"))),
+                "all_six_pass": bool(
+                    all(verdicts[c]["pass"] for c in UNCONDITIONAL_BARS + PREMISE_BARS)
+                ),
+                "share_of_tight_months_that_are_expanding": composition[
+                    "share_of_tight_months_that_are_expanding"
+                ],
+                "attempts": int(tally.get("attempts", n_decades)),
+            }
+        )
+    return rows
+
+
+# --------------------------------------------------------------------------- #
 # assembly
 # --------------------------------------------------------------------------- #
 
@@ -1237,6 +1512,9 @@ def _engine_rows(
             "verdicts_full": verdicts_p,
             "inverted_month_composition": composition_generated(accepted, sealed),
             "curve_by_season": curve_by_season(panel, joint, accepted),
+            "growth_spell_lengths": growth_spell_lengths(joint, accepted),
+            "curve_variance_decomposition": curve_variance_decomposition(curve, joint, accepted),
+            "o1_decomposition": o1_decomposition(joint, accepted),
         },
         "unconditional": {
             "premise_acceptance": tally_u,
@@ -1244,6 +1522,11 @@ def _engine_rows(
             "verdicts_full": verdicts_u,
             "inverted_month_composition": composition_generated(unconditional, sealed),
             "curve_by_season": curve_by_season(panel, joint, unconditional),
+            "growth_spell_lengths": growth_spell_lengths(joint, unconditional),
+            "curve_variance_decomposition": curve_variance_decomposition(
+                curve, joint, unconditional
+            ),
+            "o1_decomposition": o1_decomposition(joint, unconditional),
         },
         "amended_verdict": {
             **{code: bool(verdicts_u[code]["pass"]) for code in UNCONDITIONAL_BARS},
@@ -1343,6 +1626,23 @@ def main() -> int:
     summary = _amended_summary(engines[PRIMARY_ENGINE])
     stability = label_stability_joint(panel, joint)
     history_composition = composition_history(panel, joint, sealed)
+    frontier_rows = feedback_frontier(
+        engine,
+        curves[PRIMARY_ENGINE],
+        climate,
+        sealed,
+        n_decades=n_decades,
+        premise=None,
+        arm="unconditional",
+    ) + feedback_frontier(
+        engine,
+        curves[PRIMARY_ENGINE],
+        climate,
+        sealed,
+        n_decades=n_decades,
+        premise=premise,
+        arm="premise_accepted",
+    )
 
     lr = joint.lr_statistic
     payload: dict[str, Any] = {
@@ -1509,6 +1809,22 @@ def main() -> int:
             "bars_deferred_to_week_4": ["A1", "A2", "R1", "R2"],
             "amended_summary": summary,
             "engines": engines,
+            "feedback_frontier": {
+                "multipliers": list(FEEDBACK_MULTIPLIERS),
+                "what_moves": (
+                    "ONLY the three fitted season loadings, scaled together; the hazard, the "
+                    "L1 link, the AR(1) residual and every seed are held, so a row is a "
+                    "counterfactual about feedback strength and nothing else"
+                ),
+                "what_x0_is": (
+                    "the primary engine with the three loadings zeroed, keeping the "
+                    "UNRESTRICTED fit's intercept, u_hat loading and residual AR(1). It is "
+                    "NOT ml_link, which refits those under the restriction -- the two are "
+                    "reported side by side and the gap between them is the nuisance "
+                    "parameters, not a feedback effect"
+                ),
+                "rows": frontier_rows,
+            },
             "inverted_month_composition_history": history_composition,
             "headline_diagnostic": {
                 "statistic": "share of inverted-curve months that are EXPANDING",
@@ -1575,6 +1891,53 @@ def main() -> int:
                 for r in engines[name][arm]["readings"]
             )
             print(f"  {name:9s} {arm:17s} {cells_txt}")
+    print("growth-axis spell lengths (mean months / mean log age):")
+    for side, block in (
+        (
+            "history",
+            engines[PRIMARY_ENGINE]["unconditional"]["growth_spell_lengths"]["historical_panel"],
+        ),
+        (
+            "generated",
+            engines[PRIMARY_ENGINE]["unconditional"]["growth_spell_lengths"]["generated_batch"],
+        ),
+    ):
+        for axis in ("expanding", "contracting"):
+            row = block[axis]
+            print(
+                f"  {side:9s} {axis:12s} n {row['n_spells']:4d}  mean "
+                f"{row['mean_spell_months']:6.2f}  median {row['median_spell_months']:5.1f}  "
+                f"mean log age {row['mean_log_age']:.4f}"
+            )
+    vd = engines[PRIMARY_ENGINE]["unconditional"]["curve_variance_decomposition"]
+    print(
+        "curve variance: season term sd "
+        f"{vd['season_term_sd_on_generated_pp']:.4f} pp (history {vd['season_term_sd_on_history_pp']:.4f})"
+        f"  u_hat contribution sd {vd['u_hat_contribution_sd_pp']:.4f}"
+        f"  residual stationary sd {vd['residual_stationary_sd_pp']:.4f}"
+        f"  ratio {vd['season_term_sd_over_residual_sd']:.4f}"
+    )
+    print("O1 by move type (clockwise fraction, share of transitions):")
+    o1d = engines[PRIMARY_ENGINE]["unconditional"]["o1_decomposition"]
+    for side in ("historical_panel", "generated_batch"):
+        block = o1d[side]
+        parts = "  ".join(
+            f"{kind} {row['clockwise_fraction']:.4f} ({row['share_of_all_transitions']:.3f})"
+            for kind, row in block["by_move"].items()
+        )
+        print(f"  {side:17s} overall {block['clockwise_fraction']:.4f}  {parts}")
+    print("feedback frontier (multiplier | T1 | O1 | D1 D2 D3 D4 | tight-and-expanding):")
+    for row in frontier_rows:
+        print(
+            f"  {row['arm']:17s} x{row['feedback_multiplier']:<4} "
+            f"T1 {row['T1_lift']:.4f} {'P' if row['T1_pass'] else 'F'}  "
+            f"O1 {row['O1_clockwise']:.4f} {'P' if row['O1_pass'] else 'F'}  "
+            f"D {row['D1_recession_median']:.0f} {row['D2_stagflation_median']:.0f} "
+            f"{row['D3_recovery_median']:.0f} {row['D4_expansion_median']:.0f} "
+            f"{'all-D-pass' if row['D_all_pass'] else 'D-FAIL'}  "
+            f"tight-exp {row['share_of_tight_months_that_are_expanding']:.4f}"
+            f"{'  ALL SIX PASS' if row['all_six_pass'] else ''}"
+        )
     print("label stability (joint fit):")
     for key, row in stability["per_statistic"].items():
         print(
