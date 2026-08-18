@@ -370,3 +370,21 @@ digest-eligibility machinery are all intact and green). Un-parking is a new
 owner decision: delete the bypass and restore the book screen's ranked-note
 copy. The rebuilt-ladder ranked-eligibility question (Task 7 flag) is
 mooted while this stands and revives with it.
+
+## D-SP-8 — RULED 2026-08-17: FUND THE CURVE-FEEDBACK MECHANISM (narrow stage-2 scope)
+
+Owner ruling ("1" to the two options presented after the week-2 FRONTIER
+result): the season-to-curve feedback loop is funded — the yield curve
+must respond to the cycle (steepen as seasons contract, invert as
+expansions age), the one mechanism the frontier diagnosis identified as
+jointly blocking the transmission and ordering bars. Scope is THIS
+mechanism only; the full stage-2 program (model-implied conditional means
+for asset returns) remains unfunded. Bounded at roughly a week: model
+term + refit + re-run of the sealed in-model verification.
+
+Carried obligations: the sealed-construct ambiguity (premise-conditioned
+vs unconditional measurement arm for the causal bars) is resolved by
+LOGGED AMENDMENT before any re-measurement, on like-for-like grounds
+argued independently of either arm's current readings; the week-2
+post-hoc specification disclosures stand as disclosures (owner did not
+require a re-seal).
