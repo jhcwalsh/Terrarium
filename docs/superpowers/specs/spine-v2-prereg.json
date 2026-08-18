@@ -69,6 +69,46 @@
       "rationale": "WHICH ARM JUDGES THE CAUSAL BARS T1 AND O1. The sealed record is ambiguous about the batch T1 and O1 are judged on, and the ambiguity is decision-bearing. Section 8.1's power calculation models a true engine as one emitting UNCONDITIONALLY drawn contiguous 120-month stretches of the panel -- no premise selection appears anywhere in it -- while the same section's ruling fixes n_seeds at '50 decades PER PREMISE'. Week 2 measured both arms and they disagree materially, so the reading has to be settled before a verdict rather than after one. \n\nTHE RULING. T1 and O1 are judged on an UNCONDITIONAL 50-decade batch -- the same engine, the same seed, no premise acceptance. Every other bar continues to be judged on the premise-accepted batch: D1-D4 now, and A1/A2/R1/R2 when the flesh exists. \n\nTHE REASONING -- the like-for-like principle, applied a third time. T1's band is the block-bootstrap 95% interval for the recession-or-crisis lift measured over the WHOLE panel (789 eligible months, 149 of them inverted), and O1's floor is the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise). Both anchors are unconditional: they are cut from all of history, with no selection for a supply shock arriving in quarter 8 against an above-trend inflation backdrop. The principle that put both sides of D1-D4 on the same 120-month window (PRE-SEAL RULING 1) and that made round two re-define B6 so its two base rates were comparable is the same principle here: the generated side must carry the conditioning of the side it is compared against. Premise selection does not carry it. It oversamples downturns -- season occupancy in the accepted batch is recession 20.5%, stagflation 23.2%, recovery 28.0%, expansion 28.3%, against history's 13.6/13.9/47.2/25.3 -- and so mechanically distorts the very composition T1 measures: the share of inverted-curve months that sit in expansions rather than inside a downturn already under way. A bar whose anchor is unconditional, judged on a batch selected for downturns, measures the selection and not the engine. \n\nWHAT WAS KNOWN WHEN THIS AMENDMENT WAS MADE, STATED PLAINLY. Both arms had already been measured and published (docs/superpowers/specs/2026-08-17-spine-v2-fit-report.md, sections 6 and 7), and the unconditional arm reads MORE FAVOURABLY on both bars: T1 1.7636 unconditional against 1.2302 premise-accepted, band [1.7752827491108736, 3.3473622102535145]; O1 0.5149 against 0.5007, floor 0.5180669104991394. Both arms FAIL both bars as of this amendment, so nothing is being converted from FAIL to PASS -- but the amended arm does move both readings toward their bands, and that is disclosed here rather than left for a reader to find. \n\nWHY IT IS PRINCIPLED NONETHELESS. The argument is about conditioning symmetry and stands whichever way the readings fall: had the unconditional arm read worse, the anchors would still be unconditional and like-for-like would still select it. The ruling is self-limiting -- it reaches ONLY the two bars whose historical anchors are unconditional, and the premise-accepted batch remains the construct for every bar that is conditional by design -- so it cannot be reached for again to rescue some other bar. No threshold moves, no judge changes, and no file the seal hashes is edited: the exam document is left BYTE-IDENTICAL, exactly as it demands ('An amendment after the seal goes through the machine-checked log, never by editing this file'), so the original ambiguity stays on the record beside its resolution. \n\nPOST-HOC: TRUE. Week-2 results were seen before this amendment was written. Every report from this date forward carries the flag.",
       "type": "protocol_change",
       "where": "T1, O1 -- the measurement arm, not the thresholds"
+    },
+    {
+      "amendment_id": "AM-SPV2-2026-08-17-002",
+      "authority": "the independent verdict-integrity review of the campaign verdict, 2026-08-17 (finding 12 of 12), and the owner's close-out ruling that the correction be logged rather than made by editing the sealed entry",
+      "date": "2026-08-17",
+      "paths": [
+        "docs/superpowers/specs/2026-08-17-spine-v2-exam.md"
+      ],
+      "payload": {
+        "O1_floor_value_unchanged": 0.5180669104991394,
+        "correct_provenance": {
+          "bootstrap_block": "block_24m",
+          "ci95_lower_edge": 0.5180669104991394,
+          "clockwise_fraction": 0.5972222222222222,
+          "n_clockwise_transitions": 43,
+          "n_transitions": 72,
+          "source": "docs/superpowers/specs/spine-v2-anchors.json l_grader_v2.full_ordering_v2"
+        },
+        "corrected_claim": "O1's floor is the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise)",
+        "corrects_entry": "AM-SPV2-2026-08-17-001",
+        "exam_document_left_byte_identical": true,
+        "hashed_files_edited": [],
+        "no_new_path_named": "paths names only the path AM-SPV2-2026-08-17-001 already names, so this entry disables no hash check; that path is separately asserted byte-identical",
+        "prior_entry_left_verbatim": true,
+        "ruling_of_AM_SPV2_2026_08_17_001_unchanged": true,
+        "source_of_finding": "docs/superpowers/specs/2026-08-17-spine-v2-results.md section 8.6",
+        "superseded_anchor_named_in_error": {
+          "O1_bar_value": 0.5185185185185185,
+          "clockwise_fraction": 0.6029411764705882,
+          "n_clockwise_transitions": 41,
+          "n_transitions": 68,
+          "source": "docs/superpowers/specs/spine-v2-anchors.json e_ordering",
+          "superseded_by": "PRE-SEAL RULING 2 (2026-08-17): stagflation sits on the non-expanding side; O1, D2 and D4 re-anchored under grader_v2"
+        },
+        "thresholds_changed": []
+      },
+      "post_hoc": true,
+      "rationale": "PROVENANCE CORRECTION TO AM-SPV2-2026-08-17-001. That entry's rationale states that O1's floor is 'the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise)'. The floor VALUE it quotes (0.5180669104991394) is correct and is the sealed one; the parenthetical names the WRONG anchor. \n\nTHE CORRECT PROVENANCE. The sealed O1 floor is cut from grader_v2's own ordering measurement, spine-v2-anchors.json l_grader_v2.full_ordering_v2: 72 transitions, 43 clockwise, clockwise fraction 0.5972222222222222, stationary block bootstrap (block 24m, 2000 draws, seed 20260817), ci95_lower_edge 0.5180669104991394. The exam's own section 9 table states this correctly ('0.5972 (72 transitions, 95% CI [0.5181, 0.6765])'), as does the campaign verdict's section 1 table. \n\nWHAT 68/41 ACTUALLY IS. The PRE-MAPPING-FIX ordering anchor, spine-v2-anchors.json e_ordering: 68 transitions, 41 clockwise, clockwise fraction 0.6029411764705882, block-24m ci95 lower edge 0.5185185185185185. It was superseded by PRE-SEAL RULING 2 of 2026-08-17 (stagflation months sit on the NON-EXPANDING side; O1, D2 and D4 re-anchored under grader_v2), and the anchors file retains its bar value only under exam_bars_superseded.open4_derivation.O1_clockwise_min. \n\nSCOPE -- WHAT THIS ENTRY DOES NOT DO. It does not change a threshold, it does not change which batch any bar is judged on, and it does not disturb any part of AM-SPV2-2026-08-17-001's ruling, reasoning or disclosure: the arm ruling (T1 and O1 on the unconditional 50-decade batch), the like-for-like argument, and the disclosure that the amended arm read more favourably all stand exactly as logged. The first entry's text is left VERBATIM, because a log that can be edited is not a log. No file is permitted to change by this entry: it names the same single path the first entry names, so that no hashed file's byte check is skipped on its account, and that path is asserted byte-identical by tests/test_spine_v2_seal.py::test_the_amended_exam_document_is_still_byte_identical_to_its_sealed_hash. \n\nWHY IT IS LOGGED AT ALL. A factual error inside a sealed amendment is a defect in the record even when it is immaterial to the ruling, and the correction belongs where a reader of the first entry will find it. Source of the finding: the independent verdict-integrity review of the campaign verdict, 2026-08-17, finding 12 of 12; reconciled in docs/superpowers/specs/2026-08-17-spine-v2-results.md section 8.6. \n\nPOST-HOC: TRUE. Every report from this date forward carries the flag.",
+      "type": "documentation",
+      "where": "AM-SPV2-2026-08-17-001's rationale -- the O1 floor's provenance sentence only"
     }
   ],
   "anti_test_record": {
