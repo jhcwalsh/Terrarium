@@ -7,7 +7,19 @@ mappings `v1.1` (`map-2026.08.2`), play alphas **`port-v4-ladder` /
 deleted). The CIO dashboard line has LANDED (`cio-01`…`cio-04`, the inherited
 decade included). Everything merged and pushed through `7d4b092`.
 
-## The spine line: FUNDED — D-SP-6 (2026-08-16 evening) supersedes the same-day PARK; stage 1 (generation-time hazard link + duration refit + the two allocation bars) is the live research line, alongside the app-open-02 fix list. The record below stands unchanged.
+## The spine line: FUNDED → **CLOSED 2026-08-17** (D-SP-8, at the second frontier). D-SP-6 (2026-08-16 evening) funded stage 1; the campaign ran two weeks, hit two measured frontiers, and was closed. Verdict: `docs/superpowers/specs/2026-08-17-spine-v2-results.md`. The round-1/round-2 record below stands unchanged.
+
+**The spine v2 close, in four lines.** Sealed exam `2026-08-17-spine-v2-exam.md`
++ `spine-v2-prereg.json` (`5d1a282`), one amendment `AM-SPV2-2026-08-17-001`
+(`181c208`). **D1–D4 PASS** everywhere — persistence, the flaw that sank the
+pilot and `hier-flow`, is solved. **T1 QUALIFIED PASS** (1.9131 in band, but
+most of the movement was the estimator, and the clearing arm's curve is 93.9%
+exogenous noise). **O1 FAIL** (0.5118 vs 0.5181) at every feedback strength —
+it measures the growth↔inflation phase and the curve is not that channel.
+**A1/A2/R1/R2 NOT MEASURED** — they need the flesh, and sampler integration was
+never reached. Two named missing mechanisms with measured sizes are on the
+record for a **stage-2 spec, which is pending an owner decision** and is not
+proposed by the close-out.
 
 Two full pre-registered rounds, both merged: the pilot (`f988952`, gate 2770)
 and the owner-authorized wiring-fix re-run **spine-02** (`deac7fc`, gate 2851).

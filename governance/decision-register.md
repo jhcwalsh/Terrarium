@@ -370,3 +370,26 @@ digest-eligibility machinery are all intact and green). Un-parking is a new
 owner decision: delete the bypass and restore the book screen's ranked-note
 copy. The rebuilt-ladder ranked-eligibility question (Task 7 flag) is
 mooted while this stands and revives with it.
+
+## D-SP-8 — RULED 2026-08-17: BUILD THE SEASON-TO-CURVE FEEDBACK, THEN CLOSED
+
+Owner ruling, 2026-08-17: build the season-to-curve feedback week 2's
+frontier identified, refit, re-run the sealed verification, and resolve the
+measurement-arm ambiguity by a logged amendment BEFORE any re-measurement.
+The amendment is `AM-SPV2-2026-08-17-001` (`181c208`), logged in
+`docs/superpowers/specs/spine-v2-prereg.json`'s own `amendments` block:
+T1 and O1 are judged on an unconditional 50-decade batch, no threshold
+changed, no hashed file edited, post-hoc-flagged and disclosed as reading
+more favourably on both bars.
+
+- **CLOSED 2026-08-17 at the second frontier.** Verdict:
+  `docs/superpowers/specs/2026-08-17-spine-v2-results.md`. D1–D4 PASS
+  everywhere; T1 a QUALIFIED PASS (1.9131 in band, but most of the movement
+  is the estimator and the clearing arm's curve is 93.9% exogenous noise);
+  O1 FAIL (0.5118 vs 0.5181) at every feedback strength, because it measures
+  the growth-inflation phase and the curve is not that channel; A1/A2/R1/R2
+  NOT MEASURED — they need the flesh, which was never built. Housekeeping
+  rulings at close: soft labels stay sensitivity-only, the amendment stands
+  with its disclosure, the post-hoc spec choices stand as disclosures. A
+  stage-2 spec (the two named missing mechanisms) is pending an owner
+  decision and is not proposed by the close-out.
