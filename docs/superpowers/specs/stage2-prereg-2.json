@@ -1,0 +1,660 @@
+{
+  "a1r_derivation": {
+    "also_reported_never_the_verdict": "whether the interval excludes zero in EITHER direction -- a precise negative is a verdict and beats a coin flip, which is what the charter funded -- and whether it excludes history's own +3.4932826800308607",
+    "construct": "A1's own statistic and A1's own carried containment band, POOLED across a batch of B sub-batches of 50 decades each. Pooling is the count-weighted identity over the SEALED judge's own per-sub-batch verdicts, which is algebra rather than a re-implementation and is tested against judge_a1 run on the genuinely concatenated batch",
+    "decision_rule": "A1R PASSES when (a) the two-sided 95% interval around the pooled difference lies ENTIRELY ABOVE ZERO, and (b) the pooled high-inflation spread sits inside A1's carried containment band. The interval's standard error is the spread of the sub-batches, which are independent by construction (disjoint seeds, disjoint streams), so it assumes nothing about months inside a decade",
+    "pilot_source": "docs/superpowers/specs/stage2-reach-results.json, seed_dispersion_disclosure.after -- the six-seed disclosure D-SP-10 published, read out of the artifact rather than retyped. That artifact is hashed below",
+    "runtime": "0.71 s per fifty-decade batch on this machine with no institutional twin attached, measured before the plan was written. The adopted size is about six minutes of generation; the cap of 600 sub-batches is about seven",
+    "seeds": {
+      "base_seed": "stage2_fit.STAGE2_VERIFY_SEED (20260821)",
+      "rule": "base + A1R_SEED_STRIDE * k for k = 0 .. B-1",
+      "stride": 15485863,
+      "sub_batch_zero_is_the_sealed_seed": true,
+      "why_this_stride": "a NEW axis needs its own stride. 15,485,863 is prime, coprime with the platform's 7919 and with spine_v2_fit.SPINE2_ATTEMPT_STRIDE, and larger than every layer offset in ah.gen.spine.LAYER_OFFSETS and stage2_fit.STAGE2_LAYER_OFFSETS -- so seed_i + offset_a == seed_j + offset_b is impossible for i != j. Pairwise-distinct tapes are tested. (The seed-stride collision this campaign already paid for once)"
+    }
+  },
+  "a1r_power_plan": {
+    "achieved_power_at_the_adopted_size": 0.9004166077007614,
+    "alpha": 0.05,
+    "cap_binds": false,
+    "cap_sub_batches": 600,
+    "decades_adopted": 25700,
+    "decades_per_sub_batch": 50,
+    "per_margin": {
+      "vs_history": {
+        "adopted_before_the_cap": 25,
+        "capped": false,
+        "delta_pp": 4.4680832464288605,
+        "sub_batches_at_the_point_estimate": 8,
+        "sub_batches_at_the_upper_90pct_bound_on_sd": 25
+      },
+      "vs_zero": {
+        "adopted_before_the_cap": 514,
+        "capped": false,
+        "delta_pp": 0.974800566398,
+        "sub_batches_at_the_point_estimate": 166,
+        "sub_batches_at_the_upper_90pct_bound_on_sd": 514
+      }
+    },
+    "pilot_n_seeds": 6,
+    "pilot_sd_pp": 3.866342110522,
+    "pilot_sd_upper_90pct_bound_pp": 6.812881079694534,
+    "power": 0.9,
+    "sub_batches_adopted": 514,
+    "sub_batches_required": 514,
+    "z_sum": 3.2415155500846553
+  },
+  "amendment_procedure": {
+    "entry_keys": [
+      "amendment_id",
+      "date",
+      "type",
+      "rationale",
+      "post_hoc",
+      "paths"
+    ],
+    "machine_check": "tests/test_stage2_rulers_seal.py recomputes every hash against the working tree and fails unless each mismatch is named by an amendment entry, so the log cannot be skipped by editing quietly",
+    "post_hoc_flagging": "every amendment is post-hoc-flagged in every report from its date forward, the platform's standing convention (ah.eval.prereg)",
+    "rule": "after this commit, no file listed in hashes may change without an entry appended to `amendments` naming its path. Editing a hashed file and re-running this script is NOT an amendment -- it is a re-seal, and it erases the record this file exists to keep",
+    "types": {
+      "documentation": "a hashed document changes without any threshold or judging rule changing",
+      "protocol_change": "how a metric is computed or judged changes (not just its value) -- e.g. the judge, the era rule's implementation, or the anti-test",
+      "threshold_change": "a sealed pass/fail value or band RULE changes"
+    }
+  },
+  "amendments": [],
+  "anti_test_record": {
+    "all_controls_hold": true,
+    "all_monotone": true,
+    "not_blind": "DISCLOSED: D-SP-10's own results document already published this engine's seam and contiguous p95 (1.9143 and 0.6956 against a panel p95 of 0.7434), so S1 was NOT designed blind to the numbers it would read. The band is nonetheless a pure function of the panel and of a sample size -- no generated quantity enters its derivation -- and both endpoints of both sweeps were fixed by the construction (fidelity at 1.0) rather than chosen to land anywhere",
+    "not_swept": "A1R is not swept and cannot be: it is A1's own statistic and A1's own carried containment band read on a larger batch, so there is no new judging rule to anti-test -- what changed is the batch size, and its adequacy is a power calculation rather than a sweep. The twelve sealed bars are byte-frozen and are deliberately not re-swept, the reason a carried bar exists",
+    "obligation": "exam section 6.1, carried into D-SP-11: before a judge is sealed, sweep the property the judge claims to measure and confirm the pass rate increases in it. D-SP-11's charter adds two: a seam-worsening sweep must fail the bar monotonically, and a seam-hiding-by-noise-inflation attack must also fail",
+    "per_control_holds": {
+      "S1_history_identity": true,
+      "S1_noise_inflation_attack": true
+    },
+    "per_sweep_monotone": {
+      "S1_seam_inflation": true,
+      "S1_seam_oversmoothing": true,
+      "S1_texture_roughening": true
+    },
+    "per_sweep_pass_rate": {
+      "S1_seam_inflation": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "S1_seam_oversmoothing": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "S1_texture_roughening": [
+        0.0,
+        0.0,
+        0.4166666666666667,
+        1.0,
+        1.0
+      ]
+    },
+    "reachability": "S1 passes 12 of 12 at the fidelity point of both seam sweeps -- seam jumps drawn from history's own adjacent-jump distribution by construction. A bar no design can clear is not a bar and this is the evidence S1 is not one",
+    "readable": "docs/superpowers/specs/stage2-rulers-antitest-results.md",
+    "results": "docs/superpowers/specs/stage2-rulers-antitest-results.json",
+    "rule": "S1 asks whether a seam is DISTINGUISHABLE from an ordinary historical month-transition, which is a two-sided property, so its pass region is an interval and a single sweep of 'more of the effect' would be non-monotone by construction. Each sweep therefore runs TOWARD fidelity from one side and the pass rate must not fall. The noise-inflation attack is a CONTROL: its pass rate is required to be zero and its failure required to be on the upper side of the texture half, so it is excluded from the monotonicity gate and carries its own boolean",
+    "script": "scripts/stage2_rulers_antitest.py"
+  },
+  "bar_codes": {
+    "carried_and_still_reported": [
+      "P1",
+      "P2",
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4",
+      "A1",
+      "A2",
+      "R1",
+      "R2"
+    ],
+    "new": [
+      "S1",
+      "A1R"
+    ]
+  },
+  "bars": {
+    "A1R_alpha": 0.05,
+    "A1R_decades": 25700,
+    "A1R_history_difference_pp": 3.4932826800308607,
+    "A1R_history_spread_high_pp": 4.871958498950341,
+    "A1R_history_spread_low_pp": 1.37867581891948,
+    "A1R_pilot_mean_pp": -0.974800566398,
+    "A1R_pilot_n_seeds": 6,
+    "A1R_pilot_sd_pp": 3.866342110522,
+    "A1R_power": 0.9,
+    "A1R_seed_stride": 15485863,
+    "A1R_sub_batches": 514,
+    "S1_band_level": 0.95,
+    "S1_both_halves_required": true,
+    "S1_conditions": [
+      "contiguous_q0.5",
+      "contiguous_q0.95",
+      "seam_q0.5",
+      "seam_q0.95"
+    ],
+    "S1_quantiles": [
+      0.5,
+      0.95
+    ]
+  },
+  "carried_records": {
+    "explicitly_not_re_graded": "R2's two halves and A1's sealed single-batch verdict keep their words. S1 does not replace R2 and A1R does not replace A1; all four are reported side by side in every D-SP-11 report",
+    "prior_verdicts_are_frozen": true,
+    "rule": "THE CHARTER'S OWN CONDITION: the rulers change only forward. Every prior verdict stands in the record, every prior threshold keeps its value, and the twelve sealed bars keep being judged by their own code. Both prior pre-registrations are carried here whole and hashed, so a D-SP-11 result can never quietly rest on a moved earlier threshold",
+    "spine_v2": {
+      "amendments": [
+        {
+          "amendment_id": "AM-SPV2-2026-08-17-001",
+          "authority": "owner ruling D-SP-8, 2026-08-17: build the season-to-curve feedback, refit, re-run the sealed verification, and resolve the measurement-arm ambiguity by a logged amendment BEFORE any re-measurement",
+          "date": "2026-08-17",
+          "paths": [
+            "docs/superpowers/specs/2026-08-17-spine-v2-exam.md"
+          ],
+          "payload": {
+            "ambiguity_resolved": "section 8.1's power model draws decade stretches uniformly (unconditional) while its ruling sentence says '50 decades per premise'",
+            "exam_document_left_byte_identical": true,
+            "hashed_files_edited": [],
+            "judged_on_premise_accepted_batch": [
+              "D1",
+              "D2",
+              "D3",
+              "D4",
+              "A1",
+              "A2",
+              "R1",
+              "R2"
+            ],
+            "judged_on_unconditional_batch": [
+              "T1",
+              "O1"
+            ],
+            "like_for_like_precedents": [
+              "PRE-SEAL RULING 1 (2026-08-17): D1-D4 put both sides on the same 120-month window, because a censoring mismatch made D3 unpassable by a correct engine",
+              "round two: B6 re-defined so its conditional and unconditional base rates were measured on comparable populations"
+            ],
+            "n_seeds_unchanged": 50,
+            "readings_known_at_amendment_time": {
+              "O1_floor": 0.5180669104991394,
+              "O1_premise_accepted": 0.500707,
+              "O1_unconditional": 0.514911,
+              "T1_band": [
+                1.7752827491108736,
+                3.3473622102535145
+              ],
+              "T1_premise_accepted": 1.230161,
+              "T1_unconditional": 1.763633,
+              "amended_arm_reads_more_favourably": true,
+              "both_arms_fail_both_bars_at_amendment_time": true
+            },
+            "source_of_readings": "docs/superpowers/specs/2026-08-17-spine-v2-fit-report.md",
+            "thresholds_changed": [],
+            "unconditional_batch_definition": "n_seeds = 50 decades of 120 months from the same engine and the same base seed, with ah.gen.spine._reject_reason's premise acceptance NOT applied"
+          },
+          "post_hoc": true,
+          "rationale": "WHICH ARM JUDGES THE CAUSAL BARS T1 AND O1. The sealed record is ambiguous about the batch T1 and O1 are judged on, and the ambiguity is decision-bearing. Section 8.1's power calculation models a true engine as one emitting UNCONDITIONALLY drawn contiguous 120-month stretches of the panel -- no premise selection appears anywhere in it -- while the same section's ruling fixes n_seeds at '50 decades PER PREMISE'. Week 2 measured both arms and they disagree materially, so the reading has to be settled before a verdict rather than after one. \n\nTHE RULING. T1 and O1 are judged on an UNCONDITIONAL 50-decade batch -- the same engine, the same seed, no premise acceptance. Every other bar continues to be judged on the premise-accepted batch: D1-D4 now, and A1/A2/R1/R2 when the flesh exists. \n\nTHE REASONING -- the like-for-like principle, applied a third time. T1's band is the block-bootstrap 95% interval for the recession-or-crisis lift measured over the WHOLE panel (789 eligible months, 149 of them inverted), and O1's floor is the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise). Both anchors are unconditional: they are cut from all of history, with no selection for a supply shock arriving in quarter 8 against an above-trend inflation backdrop. The principle that put both sides of D1-D4 on the same 120-month window (PRE-SEAL RULING 1) and that made round two re-define B6 so its two base rates were comparable is the same principle here: the generated side must carry the conditioning of the side it is compared against. Premise selection does not carry it. It oversamples downturns -- season occupancy in the accepted batch is recession 20.5%, stagflation 23.2%, recovery 28.0%, expansion 28.3%, against history's 13.6/13.9/47.2/25.3 -- and so mechanically distorts the very composition T1 measures: the share of inverted-curve months that sit in expansions rather than inside a downturn already under way. A bar whose anchor is unconditional, judged on a batch selected for downturns, measures the selection and not the engine. \n\nWHAT WAS KNOWN WHEN THIS AMENDMENT WAS MADE, STATED PLAINLY. Both arms had already been measured and published (docs/superpowers/specs/2026-08-17-spine-v2-fit-report.md, sections 6 and 7), and the unconditional arm reads MORE FAVOURABLY on both bars: T1 1.7636 unconditional against 1.2302 premise-accepted, band [1.7752827491108736, 3.3473622102535145]; O1 0.5149 against 0.5007, floor 0.5180669104991394. Both arms FAIL both bars as of this amendment, so nothing is being converted from FAIL to PASS -- but the amended arm does move both readings toward their bands, and that is disclosed here rather than left for a reader to find. \n\nWHY IT IS PRINCIPLED NONETHELESS. The argument is about conditioning symmetry and stands whichever way the readings fall: had the unconditional arm read worse, the anchors would still be unconditional and like-for-like would still select it. The ruling is self-limiting -- it reaches ONLY the two bars whose historical anchors are unconditional, and the premise-accepted batch remains the construct for every bar that is conditional by design -- so it cannot be reached for again to rescue some other bar. No threshold moves, no judge changes, and no file the seal hashes is edited: the exam document is left BYTE-IDENTICAL, exactly as it demands ('An amendment after the seal goes through the machine-checked log, never by editing this file'), so the original ambiguity stays on the record beside its resolution. \n\nPOST-HOC: TRUE. Week-2 results were seen before this amendment was written. Every report from this date forward carries the flag.",
+          "type": "protocol_change",
+          "where": "T1, O1 -- the measurement arm, not the thresholds"
+        },
+        {
+          "amendment_id": "AM-SPV2-2026-08-17-002",
+          "authority": "the independent verdict-integrity review of the campaign verdict, 2026-08-17 (finding 12 of 12), and the owner's close-out ruling that the correction be logged rather than made by editing the sealed entry",
+          "date": "2026-08-17",
+          "paths": [
+            "docs/superpowers/specs/2026-08-17-spine-v2-exam.md"
+          ],
+          "payload": {
+            "O1_floor_value_unchanged": 0.5180669104991394,
+            "correct_provenance": {
+              "bootstrap_block": "block_24m",
+              "ci95_lower_edge": 0.5180669104991394,
+              "clockwise_fraction": 0.5972222222222222,
+              "n_clockwise_transitions": 43,
+              "n_transitions": 72,
+              "source": "docs/superpowers/specs/spine-v2-anchors.json l_grader_v2.full_ordering_v2"
+            },
+            "corrected_claim": "O1's floor is the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise)",
+            "corrects_entry": "AM-SPV2-2026-08-17-001",
+            "exam_document_left_byte_identical": true,
+            "hashed_files_edited": [],
+            "no_new_path_named": "paths names only the path AM-SPV2-2026-08-17-001 already names, so this entry disables no hash check; that path is separately asserted byte-identical",
+            "prior_entry_left_verbatim": true,
+            "ruling_of_AM_SPV2_2026_08_17_001_unchanged": true,
+            "source_of_finding": "docs/superpowers/specs/2026-08-17-spine-v2-results.md section 8.6",
+            "superseded_anchor_named_in_error": {
+              "O1_bar_value": 0.5185185185185185,
+              "clockwise_fraction": 0.6029411764705882,
+              "n_clockwise_transitions": 41,
+              "n_transitions": 68,
+              "source": "docs/superpowers/specs/spine-v2-anchors.json e_ordering",
+              "superseded_by": "PRE-SEAL RULING 2 (2026-08-17): stagflation sits on the non-expanding side; O1, D2 and D4 re-anchored under grader_v2"
+            },
+            "thresholds_changed": []
+          },
+          "post_hoc": true,
+          "rationale": "PROVENANCE CORRECTION TO AM-SPV2-2026-08-17-001. That entry's rationale states that O1's floor is 'the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise)'. The floor VALUE it quotes (0.5180669104991394) is correct and is the sealed one; the parenthetical names the WRONG anchor. \n\nTHE CORRECT PROVENANCE. The sealed O1 floor is cut from grader_v2's own ordering measurement, spine-v2-anchors.json l_grader_v2.full_ordering_v2: 72 transitions, 43 clockwise, clockwise fraction 0.5972222222222222, stationary block bootstrap (block 24m, 2000 draws, seed 20260817), ci95_lower_edge 0.5180669104991394. The exam's own section 9 table states this correctly ('0.5972 (72 transitions, 95% CI [0.5181, 0.6765])'), as does the campaign verdict's section 1 table. \n\nWHAT 68/41 ACTUALLY IS. The PRE-MAPPING-FIX ordering anchor, spine-v2-anchors.json e_ordering: 68 transitions, 41 clockwise, clockwise fraction 0.6029411764705882, block-24m ci95 lower edge 0.5185185185185185. It was superseded by PRE-SEAL RULING 2 of 2026-08-17 (stagflation months sit on the NON-EXPANDING side; O1, D2 and D4 re-anchored under grader_v2), and the anchors file retains its bar value only under exam_bars_superseded.open4_derivation.O1_clockwise_min. \n\nSCOPE -- WHAT THIS ENTRY DOES NOT DO. It does not change a threshold, it does not change which batch any bar is judged on, and it does not disturb any part of AM-SPV2-2026-08-17-001's ruling, reasoning or disclosure: the arm ruling (T1 and O1 on the unconditional 50-decade batch), the like-for-like argument, and the disclosure that the amended arm read more favourably all stand exactly as logged. The first entry's text is left VERBATIM, because a log that can be edited is not a log. No file is permitted to change by this entry: it names the same single path the first entry names, so that no hashed file's byte check is skipped on its account, and that path is asserted byte-identical by tests/test_spine_v2_seal.py::test_the_amended_exam_document_is_still_byte_identical_to_its_sealed_hash. \n\nWHY IT IS LOGGED AT ALL. A factual error inside a sealed amendment is a defect in the record even when it is immaterial to the ruling, and the correction belongs where a reader of the first entry will find it. Source of the finding: the independent verdict-integrity review of the campaign verdict, 2026-08-17, finding 12 of 12; reconciled in docs/superpowers/specs/2026-08-17-spine-v2-results.md section 8.6. \n\nPOST-HOC: TRUE. Every report from this date forward carries the flag.",
+          "type": "documentation",
+          "where": "AM-SPV2-2026-08-17-001's rationale -- the O1 floor's provenance sentence only"
+        }
+      ],
+      "bar_codes": [
+        "T1",
+        "O1",
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "A1",
+        "A2",
+        "R1",
+        "R2"
+      ],
+      "bars": {
+        "A1_containment_pp": [
+          -5.053054679081145,
+          32.31605649965673
+        ],
+        "A2_correlation_margin": 0.13609378139729844,
+        "A2_share_high_floor": 0.8,
+        "A2_share_low_ceiling": null,
+        "A2_share_low_ceiling_dropped_value": 0.65,
+        "D_anchor_medians_months": {
+          "expansion": 4.0,
+          "recession": 2.0,
+          "recovery": 5.0,
+          "stagflation": 4.0
+        },
+        "D_median_bands_months": {
+          "expansion": [
+            1.0,
+            7.0
+          ],
+          "recession": [
+            0.0,
+            5.0
+          ],
+          "recovery": [
+            2.0,
+            8.0
+          ],
+          "stagflation": [
+            1.0,
+            7.0
+          ]
+        },
+        "D_statistic": "median of the completed spells POOLED over the whole batch",
+        "D_tolerance_months": 3.0,
+        "O1_clockwise_min": 0.5180669104991394,
+        "T1_lift_band": [
+          1.7752827491108736,
+          3.3473622102535145
+        ],
+        "derivation_note": "T1_lift_band = b_transmission_lift's primary 24-month bootstrap interval for the recession-or-crisis lift; D_median_bands_months = each season's DECADE-POOLED completed-spell median (k_pooled_decade_dwells, overlapping windows, this bar block's grader) +- 1 quarter, floored at zero because no spell is shorter than a month; A1_containment_pp = the min and max commodities-minus-bonds spread across the five in-panel episodes; O1_clockwise_min = the ordering interval's LOWER edge measured under this grader; A2_correlation_margin = f_correlation_intervals' 95% interval's LOWER edge for the high-minus-low correlation difference",
+        "grader": "grader_v2",
+        "n_seeds": 50
+      },
+      "hashed_files": [
+        "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+        "docs/superpowers/specs/spine-v2-anchors.json",
+        "docs/superpowers/specs/spine-v2-antitest-results.json",
+        "docs/superpowers/specs/spine-pilot-prereg.json",
+        "docs/superpowers/specs/spine02-prereg.json",
+        "scripts/spine_v2_anchors.py",
+        "scripts/spine_v2_antitest.py",
+        "scripts/spine_v2_grader.py",
+        "scripts/spine_v2_report.py",
+        "scripts/spine_v2_seal.py",
+        "scripts/spine_pilot_b3.py",
+        "scripts/spine_pilot_report.py"
+      ],
+      "hashes": {
+        "docs/superpowers/specs/2026-08-17-spine-v2-exam.md": "4fdf7c0ae6afb97764a6633f09f186ddfcc9b740509e64342eba94a38ab6f568",
+        "docs/superpowers/specs/spine-pilot-prereg.json": "9e95f3dddea30d45128c18aecdbaa8871f6770d28efe40941c1d7d3509089c94",
+        "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+        "docs/superpowers/specs/spine-v2-antitest-results.json": "56447abb654f9fd6cda7db90d52a5c941a296d6e438c292aebb5f5277eb44b3f",
+        "docs/superpowers/specs/spine02-prereg.json": "075b57fca6829c3a8f3f5943f6dbbc8d334218daaa94ba5359b72a58e4558aa8",
+        "scripts/spine_pilot_b3.py": "4ead157e2ea88e5505fd228f6636056361d9e5cde91ee2474797fbff46507e97",
+        "scripts/spine_pilot_report.py": "a78411fe2c3a288c6ac773964ee7133b5a9fb6ce15d77b54f143b48d3ae4d8a8",
+        "scripts/spine_v2_anchors.py": "8c2f1343b867ff2adc00f999a73a40a89773b2af2fdabf82c62e2e2f60cab8a1",
+        "scripts/spine_v2_antitest.py": "1acd94bc6c0a47287d157a5fb9c75da7790bdd76b2a268d22c0c08e498e98d3c",
+        "scripts/spine_v2_grader.py": "cd08f39a7c50f217cd85eed64a709cc2aac3beffd1b992e744fd1b2dd5791ae4",
+        "scripts/spine_v2_report.py": "fb6d48af01b9c2524d80ba9dfd713a701d577eb9900ee81db90d60975923cef1",
+        "scripts/spine_v2_seal.py": "4956370f6d3276beb2ace30c2e65e48766d530d8a6a6ad14713536297ad54825"
+      },
+      "parameters": {
+        "contracting_labels": [
+          "REC",
+          "CRI",
+          "STAG"
+        ],
+        "crisis_only_labels": [
+          "CRI"
+        ],
+        "decade_months": 120,
+        "downturn_labels": [
+          "REC",
+          "CRI"
+        ],
+        "era_threshold_pp": 3.351323828920571,
+        "inflation_high_line_pp": 4.0,
+        "k_months": 12,
+        "note": "contracting_labels is grader_v2's contracting set (the owner's mapping fix); downturn_labels is T1's onset union, which is NOT re-anchored under the mapping fix and stays REC-or-CRI on both sides; crisis_only_labels drives T1's crisis-only DISCLOSURE, which is reported and never judged",
+        "rolling_window_months": 36
+      },
+      "seal": "docs/superpowers/specs/spine-v2-prereg.json",
+      "sealed_at_utc": "2026-08-17T14:42:40-07:00 (as of HEAD commit 1ca6ed5bd11b8a5901c8e3786a668643e6dedc7d)",
+      "verdicts": "docs/superpowers/specs/2026-08-17-spine-v2-results.md"
+    },
+    "stage2": {
+      "amendments": [],
+      "bar_codes": {
+        "carried_byte_frozen": [
+          "T1",
+          "O1",
+          "D1",
+          "D2",
+          "D3",
+          "D4",
+          "A1",
+          "A2",
+          "R1",
+          "R2"
+        ],
+        "new": [
+          "P1",
+          "P2"
+        ]
+      },
+      "bars": {
+        "P1_both_move_types_required": true,
+        "P1_candidate_set": {
+          "growth_flip": {
+            "construct__windowed_disjoint": 0.083083427489,
+            "construct__windowed_overlapping": 0.069084093309,
+            "label_dial_arm__baseline": 0.069084093309,
+            "label_dial_arm__growth_line_minus_50bp": 0.082821645762,
+            "label_dial_arm__growth_line_plus_50bp": 0.071545603903,
+            "label_dial_arm__inflation_line_minus_50bp": 0.040330202948,
+            "label_dial_arm__inflation_line_plus_50bp": 0.050933036617,
+            "label_dial_arm__inflation_minus_growth_minus": 0.05716937897,
+            "label_dial_arm__inflation_minus_growth_plus": 0.050053956771,
+            "label_dial_arm__inflation_plus_growth_minus": 0.072114154076,
+            "label_dial_arm__inflation_plus_growth_plus": 0.048862494991
+          },
+          "inflation_crossing": {
+            "construct__windowed_disjoint": 0.064501937518,
+            "construct__windowed_overlapping": 0.062546712278,
+            "label_dial_arm__baseline": 0.062546712278,
+            "label_dial_arm__growth_line_minus_50bp": 0.052921292421,
+            "label_dial_arm__growth_line_plus_50bp": 0.078600590406,
+            "label_dial_arm__inflation_line_minus_50bp": 0.031445706759,
+            "label_dial_arm__inflation_line_plus_50bp": 0.064207831412,
+            "label_dial_arm__inflation_minus_growth_minus": 0.031666889423,
+            "label_dial_arm__inflation_minus_growth_plus": 0.046466933119,
+            "label_dial_arm__inflation_plus_growth_minus": 0.063630017164,
+            "label_dial_arm__inflation_plus_growth_plus": 0.073635795437
+          }
+        },
+        "P1_candidate_tolerance_fraction": 0.5,
+        "P1_departure_min": {
+          "growth_flip": 0.040330202948,
+          "inflation_crossing": 0.031445706759
+        },
+        "P1_departure_min_source": {
+          "growth_flip": "label_dial_arm__inflation_line_minus_50bp",
+          "inflation_crossing": "label_dial_arm__inflation_line_minus_50bp"
+        },
+        "P2_economic_share_band": [
+          0.391706974667,
+          0.673370849738
+        ],
+        "P2_summary": "strict_economic_share",
+        "grader": "grader_v2",
+        "n_seeds": 50
+      },
+      "hashed_files": [
+        "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+        "docs/superpowers/specs/stage2-anchors.json",
+        "docs/superpowers/specs/stage2-antitest-results.json",
+        "docs/superpowers/specs/spine-v2-prereg.json",
+        "docs/superpowers/specs/spine-v2-anchors.json",
+        "scripts/stage2_anchors.py",
+        "scripts/stage2_antitest.py",
+        "scripts/stage2_report.py",
+        "scripts/stage2_seal.py",
+        "scripts/spine_v2_grader.py",
+        "scripts/spine_v2_report.py"
+      ],
+      "hashes": {
+        "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md": "0fdbcb7b29575931014e578470d3e36881541fdb39a06a37c319ea1f42f1de53",
+        "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+        "docs/superpowers/specs/spine-v2-prereg.json": "81ef5c7f5c895ecfa234a50cd68420c4d437751972a4b1beaecabef04f0a707f",
+        "docs/superpowers/specs/stage2-anchors.json": "58a1f7b23d5b675bc3fad6673c220985daee00c48451f72c22f20a622c8759a8",
+        "docs/superpowers/specs/stage2-antitest-results.json": "96432694505f8522881ce134aa513a108bed0eebf9c2de64d2a1850d1576fbd1",
+        "scripts/spine_v2_grader.py": "cd08f39a7c50f217cd85eed64a709cc2aac3beffd1b992e744fd1b2dd5791ae4",
+        "scripts/spine_v2_report.py": "fb6d48af01b9c2524d80ba9dfd713a701d577eb9900ee81db90d60975923cef1",
+        "scripts/stage2_anchors.py": "4949fa214fde89f6830ca32efe5c73b90fce1d4725b5fc2bd367a9b6eb6df360",
+        "scripts/stage2_antitest.py": "ade03b45b3caacc3459e1964d83663f19244acaa70475669e9af15399c31cc14",
+        "scripts/stage2_report.py": "8e4d2084f7419807679d4f22f1e343da29a139c7e84e357dbee022f2582fe94d",
+        "scripts/stage2_seal.py": "074faeaaf76d48c6f090ea72c48b6f91dcb8ba8136be423d237f45599f552846"
+      },
+      "measured_state_commit": "2a6ddd67f3a2f57000cd90c7ff395325b7d239a3",
+      "parameters": {
+        "contracting_labels": [
+          "REC",
+          "CRI",
+          "STAG"
+        ],
+        "decade_months": 120,
+        "decade_scramble_guard_months": 24,
+        "era_threshold_pp": 3.351323828920571,
+        "o1_symmetric_floor": 0.515671717177,
+        "p2_arm": "rho_refitted",
+        "p2_block_months": 24,
+        "p2_economic_components": [
+          "policy_rule",
+          "inflation_gap",
+          "season_term"
+        ],
+        "p2_exogenous_components": [
+          "u_hat"
+        ],
+        "phase_construct": "windowed_overlapping",
+        "phase_null": "within_window",
+        "yoy_warmup_months": 12
+      },
+      "seal": "docs/superpowers/specs/stage2-prereg.json",
+      "seal_commit": "3b54a5814be3d5f3515cdfa4fc7e4d478b45134d",
+      "sealed_at_utc": "2026-08-18T01:39:46-07:00 (as of HEAD commit 3b54a5814be3d5f3515cdfa4fc7e4d478b45134d)",
+      "verdicts": [
+        "docs/superpowers/specs/2026-08-18-stage2-results.md",
+        "docs/superpowers/specs/2026-08-18-stage2-reach-results.md"
+      ]
+    }
+  },
+  "charter": "D-SP-11, 2026-08-18, 'all three': (1) a NEW seam/texture bar derived for a conditioned compiler, sealed fresh with anti-tests, the old R2 verdict standing in the record forever and reported beside it; (2) the CONDITIONAL era-crossing rule -- a seam may cross the inflation line only in a month where the spine itself crosses it, a faithfulness test and not a relaxation, precise rule sealed before use; (3) the inflation-hedge measurement A1 RE-FOUNDED, batch size computed from a power calculation at the engine's own measured margin, sealed, then re-measured. The rulers change only forward: no retroactive re-grading",
+  "declared_limitations": [
+    "M1 -- S1 was NOT cut blind. D-SP-10's results document had already published this engine's seam and contiguous p95 (1.9143 and 0.6956 against a panel p95 of 0.7434) before the bar was designed. The band is a pure function of the panel and of a sample size and no generated quantity enters its derivation, but a reader should know the designer knew the answer",
+    "M2 -- S1's band is cut at the world's DISTINCT transition count and de-duplication is a judgement call. It removes a repetition artefact that would otherwise shrink the band far below the panel's own resolution; it also makes the bar blind to a world that uses one bad seam five hundred times. R2 sees that world and S1 does not, which is why both are reported",
+    "M3 -- the moving-block bootstrap at 24 months is the campaign's primary block length, not a length fitted to |dYoY|'s own dependence. It is conservative (wider bands, more forgiving) and its adequacy is not measured",
+    "M4 -- the era-crossing licence fires only where the spine crosses, and the spine crosses rarely. The rule can therefore buy only a bounded amount of reach and the residual gap stays what D-SP-10 measured it to be: the era filter, refusing to cross at every OTHER month",
+    "M5 -- A1R's power calculation takes both its effect size and its variance from the same six-seed pilot. The variance is used at its upper 90% chi-square bound precisely because six draws pin it badly, but the EFFECT is used at its point estimate: if the engine's true margin is nearer zero than -0.97, the adopted batch is under-powered and the honest reading is 'cannot distinguish', not 'no effect'",
+    "M6 -- A1R inherits every one of A1's own problems. D-SP-10's third stop-question stands untouched: history's high-inflation months pay +4.87 pp/yr on commodities-minus-bonds while the worst-10% all_down pool's high-inflation months pay -8.52, and A1 is a bar written on the whole panel read on a world drawn from the worst third of it. A precise verdict on a bar whose content is thin is still a verdict about a thin bar",
+    "M7 -- nothing here reaches the private book. ER-14 stands",
+    "M8 -- the standing caveat: nothing built on this generator line is a convincing model of history, the holdout is spent, and no appeal to held-out data is available to any result D-SP-11 produces"
+  ],
+  "era_crossing_rule": {
+    "audit": "scripts/stage2_rulers.py::era_crossing_audit re-derives every bucket-changing seam from the compiled row tape rather than trusting the engine's counters. The one licensed exemption is the panel-edge forced re-entry (owner ruling 2026-08-16), which draws UNFILTERED when nothing matches; it is COUNTED, never waived",
+    "direction_clause": "the row left must carry the spine's OLD bucket and the row entered its NEW one. Without it, 'the spine crossed this month' would license a crossing in either direction and a compiler could answer the story going hot by taking the flesh cool",
+    "implementation": "scripts/stage2_worlds.py::_era_crossing_licence (hashed below)",
+    "month_window_months": 0,
+    "month_window_semantics": "ZERO months wide. The licence is read at the month being drawn against the month the block is standing on -- the same two months the join connects. No tolerance, no lag, no look-ahead: a seam that crosses one month early or late is a seam that crosses at a month the story does not, which is the incoherence the era filter exists against. A +/- k window was available and NOT taken; it would need a tolerance nobody has anchored",
+    "not_relaxed": "the era-relaxed disclosure arm (D-SP-10's arm (e)) remains a disclosure and is NOT adopted. Dropping the era bucket outright is still an owner ruling",
+    "rule": "a seam may land on a row whose era bucket differs from the row the block is standing on ONLY IF the spine's own inflation path crosses the era line between those same two months, AND only into the bucket the spine crosses into",
+    "why_this_is_a_faithfulness_test_and_not_a_relaxation": "the licence only ADDS candidates and never removes one, and it never widens the declared join_yoy_max_pp level bound. So it cannot lower conditioning reach, cannot empty a pool and cannot turn a joinable month into a refusal -- and every crossing it permits is one the world's own story makes"
+  },
+  "hashed_files": [
+    "docs/superpowers/specs/stage2-prereg.json",
+    "docs/superpowers/specs/spine-v2-prereg.json",
+    "docs/superpowers/specs/spine-v2-anchors.json",
+    "docs/superpowers/specs/stage2-reach-results.json",
+    "docs/superpowers/specs/stage2-rulers-antitest-results.json",
+    "scripts/stage2_rulers.py",
+    "scripts/stage2_rulers_antitest.py",
+    "scripts/stage2_rulers_seal.py",
+    "scripts/stage2_worlds.py"
+  ],
+  "hashes": {
+    "docs/superpowers/specs/spine-v2-anchors.json": "5e43614032095b32bfe9d1efb861d4a328a4b79476917de35b029d977c5248ea",
+    "docs/superpowers/specs/spine-v2-prereg.json": "81ef5c7f5c895ecfa234a50cd68420c4d437751972a4b1beaecabef04f0a707f",
+    "docs/superpowers/specs/stage2-prereg.json": "f5b738825e78afabf03deaf60ff3b0e7be4dadbe6e9aae8be71b3b68a3f40cf2",
+    "docs/superpowers/specs/stage2-reach-results.json": "bb78ff37883cd5ee4a5271bceebdd233ae0840de74f9466838684b7cc6d9eb0b",
+    "docs/superpowers/specs/stage2-rulers-antitest-results.json": "f6310f712ef8c39c7e6005dac839cf0471fdf9e9d278f8f3d6f303874ea76ae1",
+    "scripts/stage2_rulers.py": "b7a2266fdd92c92d2065176aa42110b95f033611e2dc0c0abe90b54365f611df",
+    "scripts/stage2_rulers_antitest.py": "4657114158e4428b35479d1c82dbd80c366f48a6fc6a901a4b74a4dd6cc18ff0",
+    "scripts/stage2_rulers_seal.py": "f82d4e504ac97bf8632a90b33d2a70378d30db69af04b5cc45110be46bdf1a98",
+    "scripts/stage2_worlds.py": "72d5b4f70a2debb8665129a15c92ff0ba92cd881c644fbef389f87888ee275e6"
+  },
+  "parameters": {
+    "a1r_alpha": 0.05,
+    "a1r_decades_per_sub_batch": 50,
+    "band_block_months": 24,
+    "band_draws": 2000,
+    "band_level": 0.95,
+    "band_seed": 20260821,
+    "deduplicate_transitions": true,
+    "era_crossing_window_months": 0,
+    "min_tail_count": 5
+  },
+  "purpose": "D-SP-11's pre-registration: the new seam/texture bar S1, the conditional era-crossing rule, and the re-founded A1 -- their rules, their parameters and the sha256 of the code that judges them, hashed together BEFORE the era-rule engine is run and before A1R's ladder is compiled. Charter: governance/decision-register.md D-SP-11 (owner ruling 2026-08-18)",
+  "s1_derivation": {
+    "anchor": "history's own adjacent-month |dYoY| over the campaign panel. Its 95th percentile IS spine_pilot_report.judge_b2's sealed panel_p95_adjacent_yoy_pp, 0.7433911963542538, so S1 stands on the exam's own anchor and does not open a second one",
+    "anchor_digest_sha256": "3e7ce6af9f245648f4e99762da0a90ae4e083dbb70e768ecba9aa2639594b46e",
+    "anchor_n_jumps": 800,
+    "anchor_quantiles": {
+      "0.5": 0.23302321469934606,
+      "0.95": 0.7433911963542538
+    },
+    "band_reference_table": {
+      "100": {
+        "q0.5": [
+          0.13620391014993466,
+          0.3459088675936342
+        ],
+        "q0.95": [
+          0.43020367330555737,
+          0.9859489526264218
+        ]
+      },
+      "1200": {
+        "q0.5": [
+          0.20458287530677216,
+          0.26617592510762117
+        ],
+        "q0.95": [
+          0.6522365736903637,
+          0.807569085692772
+        ]
+      },
+      "200": {
+        "q0.5": [
+          0.1595611875345082,
+          0.3210281144364835
+        ],
+        "q0.95": [
+          0.5414907663555019,
+          0.9681436323967761
+        ]
+      },
+      "2000": {
+        "q0.5": [
+          0.20649950984921173,
+          0.2576404331028792
+        ],
+        "q0.95": [
+          0.6802104117540342,
+          0.7849683754273196
+        ]
+      },
+      "400": {
+        "q0.5": [
+          0.18084198096497114,
+          0.2849002849002802
+        ],
+        "q0.95": [
+          0.6081580066307144,
+          0.8830352570755373
+        ]
+      },
+      "4000": {
+        "q0.5": [
+          0.2145184465626393,
+          0.24830092187604347
+        ],
+        "q0.95": [
+          0.6911044600034,
+          0.7730483770007845
+        ]
+      },
+      "600": {
+        "q0.5": [
+          0.18946742453636034,
+          0.27399277698346713
+        ],
+        "q0.95": [
+          0.6339907381202641,
+          0.8458618538795343
+        ]
+      },
+      "6000": {
+        "q0.5": [
+          0.21970058741642706,
+          0.2450980392156854
+        ],
+        "q0.95": [
+          0.6956210476076752,
+          0.770029043816578
+        ]
+      },
+      "800": {
+        "q0.5": [
+          0.19813132787283835,
+          0.2701404069315627
+        ],
+        "q0.95": [
+          0.646711555186159,
+          0.8126200216340116
+        ]
+      }
+    },
+    "band_rule": "the null-predictive band a sample of n historical transitions would put the quantile in: resample n values from the anchor by MOVING BLOCKS of 24 months, take the quantile, repeat 2000 times, keep the central 95%. Deterministic in the sealed seed",
+    "house_rules": {
+      "band_level_and_draws": "95% at 2000 draws -- P2's own convention, reused rather than a third one invented",
+      "deduplication": "judged on DISTINCT ordered row-pairs. A fifty-decade batch has 5,950 adjacent pairs drawn from 800 distinct historical transitions, so counting re-uses as independent evidence would cut the band below the panel's own resolution and turn the bar into a test of repetition -- the FREQUENCY question R2 already answers. The raw reading is published beside every judged one",
+      "min_tail_count": "a condition is judged only when at least 5 observations sit beyond the quantile -- the standard expected-count rule. Below it a PASS would mean 'too few seams to tell'. A world with no seams passes the seam half VACUOUSLY, which is correct: there is nothing to find",
+      "moving_blocks": "trailing 12-month YoY is a 12-month moving construct, so |dYoY| is strongly serially dependent and an iid bootstrap would report a band far narrower than history's own resolution. Blocks at the campaign's PRIMARY_BLOCK_MONTHS. This is the CONSERVATIVE choice and conservative is the right direction for a band that decides a FAIL",
+      "quantiles": "0.50 and 0.95. The median is the bar's ordinary-month anchor; the 95th is its tail anchor and is NOT a new number -- it is the quantile R2's own sealed bound is cut at. The 99th is excluded (800 anchor pairs means it rests on eight order statistics) and so is the mean (|dYoY| is strongly right-skewed, so its mean re-states the tail)",
+      "two_sided": "all four conditions. Seams that are too big are findable; seams that are unnaturally smooth are findable too, and a compiler that only joins near-identical rows has stopped conditioning. The anti-test demonstrates both edges bite"
+    },
+    "principle": "a seam should be statistically indistinguishable from an ordinary historical month-transition, so the bar asks 'can you FIND the seams?' rather than counting them",
+    "relationship_to_R2": "S1 judges SHAPE and is blind to seam FREQUENCY; R2 keeps judging both together and its verdicts are untouched. This is the separation D-SP-10's first stop-question asked for, offered as a new ruler rather than as a re-cut R2",
+    "statistic": "the empirical quantiles of |change in trailing panel YoY| over the world's DISTINCT ordered adjacent row-pairs, split into seam pairs (the drawn row is not the panel's next row) and contiguous pairs",
+    "why_a_rule_and_not_a_number": "the band is a function of the panel AND of the sample size the world presents, so a fixed number would be a band cut at one arbitrary n. Ruling SQ9's precedent: seal the selection rule when the value is not pinned. Everything that determines the band IS pinned here -- quantiles, level, draws, block length, seed, minimum tail count, de-duplication -- plus the anchor's own digest, so a moved panel is a loud failure"
+  },
+  "schema": "stage2-rulers-prereg-1",
+  "sealed_at_utc": "2026-08-18T11:55:34-07:00 (as of HEAD commit 9b38d30c2d7f5c45a0b974c55205110e2d3eefc0)"
+}
