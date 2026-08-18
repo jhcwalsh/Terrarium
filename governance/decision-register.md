@@ -434,3 +434,20 @@ re-run the FULL sealed 12-bar exam unchanged - the exam does not move, the
 engine does. Expected sensitive bars: A2 and R2 (the failures), D1-D4/A1/R1
 re-confirmed. Composed in scripts/ like week C; src/ promotion remains a
 separate release event after a pass.
+
+## D-SP-11 - RULED 2026-08-18: THE THREE RULER DECISIONS, ALL AS RECOMMENDED
+
+Owner ruling ("All three") after the certified reach-fix record (8efa5f7):
+1. A NEW seam/texture bar derived for a conditioned compiler - within-block
+   texture judged against history plus an explicit seam criterion - sealed
+   fresh with anti-tests; the old R2 verdict stands in the record forever
+   and keeps being reported beside the new bar.
+2. The CONDITIONAL era-crossing rule: a seam may cross the inflation line
+   only in a month where the spine itself crosses it - a faithfulness
+   test, not a relaxation; precise rule sealed before use.
+3. The inflation-hedge measurement (A1) RE-FOUNDED: batch size computed
+   from a power calculation at the engine's own measured margin (not
+   history's), sealed, then re-measured - a precise verdict either way
+   beats the seed-luck coin flip both prior rounds recorded.
+The rulers change only forward: no retroactive re-grading; every new bar
+anchored, justified, and anti-tested before any measurement.
