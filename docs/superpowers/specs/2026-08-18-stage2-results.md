@@ -12,6 +12,29 @@ is a *verdict* document, not a new measurement — every number in it is quoted 
 record and carries its source. **Nothing here re-judges anything, and every PASS/FAIL word
 below is the sealed judge's own.**
 
+> **POST-REVIEW NOTE (2026-08-18) — read §7 before using any characterization below.** An
+> independent verdict-integrity review re-ran both judging entry points, regenerated **both
+> artifacts byte-identically**, recomputed **all eleven sealed hashes clean**, reproduced **all
+> twelve bar readings to the digit**, re-derived the three interpretive claims from the
+> committed artifacts, and found **every PASS/FAIL word in this document correct against the
+> sealed bands — 12 of 12**. It also returned **eleven findings**, all interpretive or omissive.
+>
+> **No verdict value and no PASS/FAIL word changes.** What changes is the *reading* attached to
+> several of them. **§7 supersedes the framing in §1, §2, §2.4, §2.5, §3.1 and §5.2 wherever the
+> two conflict**, and three of its consequences should be known before the body is read at all:
+> (i) the "**exactly 0.0** drift" on the eight re-read bars is a **twelve-decimal rounding
+> artifact** — the measured worst drift is **2.862e−13** (§7.2, the conclusion is untouched);
+> (ii) the coupling's own age signature separates the wrong way in the **1–12 month** bucket, not
+> the 37+ one, and the 37+ bucket separates the **right** way (§7.1); and (iii) the stage-2
+> engine's generation-time covariate **levels** were undisclosed, exactly as they were in v2, and
+> `T1`'s conditioning population has moved from **over**- to **under**-inverted between campaigns
+> (§7.3, §5.6).
+>
+> **The pattern, stated plainly and it is not v2's.** Six findings make the engine or the record
+> look better than the artifacts support (§7.2, §7.3, §7.4, §7.6, §7.7, §7.11); **three make the
+> funded coupling look *more* inert than the artifacts support** (§7.1, §7.8, §7.9) — i.e. they
+> lean *against* this document's own headline. Two are neutral.
+
 **The records it stands on** (all committed, all on this branch):
 
 | record | commit | what it is |
@@ -76,8 +99,9 @@ byte-frozen v2 seal and continue to govern which arm `T1` and `O1` are judged on
 
 **What the seal hashes.** Eleven paths — thresholds and judging code together: the exam delta
 itself, `stage2-anchors.json`, `stage2-antitest-results.json`, the **v2 seal and v2 anchors
-loaded whole**, and five scripts (`stage2_anchors.py`, `stage2_antitest.py`, `stage2_report.py`,
-`stage2_seal.py`, plus `spine_v2_report.py` and `spine_v2_grader.py`). The two pilot scripts
+loaded whole**, and ~~five~~ **six** scripts [C5] (`stage2_anchors.py`, `stage2_antitest.py`,
+`stage2_report.py`, `stage2_seal.py`, plus `spine_v2_report.py` and `spine_v2_grader.py`) — the
+eleven are **5 documents/JSON + 6 scripts**, all recomputed clean by the review. The two pilot scripts
 that carry `R1` and `R2` (`spine_pilot_b3.py`, `spine_pilot_report.py`) are reached through the
 v2 seal, which is itself hashed, and recomputed by `tests/test_spine_v2_seal.py` on every run —
 so the chain is closed by a machine check rather than by a convention.
@@ -131,7 +155,7 @@ All readings by the sealed judges themselves. The eight pre-flesh bars are quote
 | **P2** | unconditional | [0.391707, 0.673371] | **0.770682653481** | **FAIL — above the band** | A |
 | **A1** | unconditional | direction, high spread inside [−5.053, +32.316] pp | **+0.378055215669 pp**; high **+2.142367937923 pp** | **PASS** | **C** |
 | **A2** | unconditional | corr > 0; gap ≥ 0.136094; ≥ 80% of windows | **−0.017742671153; +0.060911208541; 0.4760** | **FAIL — all three** | **C** |
-| **R1** | b3 ladder, n = 20 | monotone coverage; ≥ 1/20 breach at 55 | medians **[0.098065, 0.291855, 0.361632, 0.667991]**; breach **4/20** | **PASS** | **C** |
+| **R1** | **declared premise**, b3 ladder, n = 20 [C4] | monotone coverage; ≥ 1/20 breach at 55 | medians **[0.098065, 0.291855, 0.361632, 0.667991]**; breach **4/20** | **PASS** | **C** |
 | **R2** | unconditional | join ≤ 2.5 pp; p95 ≤ 0.9292 pp | **4.132499999786 pp**; **0.883035257076 pp** | **FAIL — join half only** | **C** |
 
 > **Nine of twelve pass. Three fail.** And **all twelve have readings** — the first time in
@@ -141,11 +165,18 @@ All readings by the sealed judges themselves. The eight pre-flesh bars are quote
 **Two facts about the batch, so the scoreboard is not read as more than it is.** `A1`, `A2`,
 `R2` and the eight pre-flesh bars are all read on the **same unconditional 50-decade batch at
 seed 20260821** — week A's own verification seed — so a week-C verdict is attributable to the
-flesh alone. That claim is not prose: the eight pre-flesh bars were **re-judged on week C's own
-fleshed batch** and checked against week A's artifact at **exactly 0.0 drift on all eight**
-(`stage2-weekc-results.json`, `spine_identity.max_abs_drift = 0.0`; the check is in code, not
-asserted). And week A's engine is **frozen input** to week C: 42 coefficients re-checked, worst
-absolute drift **4.841e−13** against a 1e−11 tolerance, a drift raises.
+flesh alone. **`R1` is the exception and it matters** [C4]: `stage2-weekc-results.json` records
+`batches.R1.arm = "declared premise"` against `batches.A1_A2_R2.arm = "unconditional"`, so the
+one flesh bar that passes cleanly is read on **the arm on which `A1`'s sign reverses** (§2.3).
+That is the carried bar's own byte-frozen construction and changing it is the thing a carried
+bar exists to prevent — but the two are not like-for-like and the original table did not say so. That claim is not prose: the eight pre-flesh bars were **re-judged on week C's own
+fleshed batch** and checked against week A's artifact — ~~at **exactly 0.0 drift on all
+eight**~~ **at a worst absolute drift of 2.862e−13** [C2 — the `0.0` in
+`spine_identity.max_abs_drift` is the artifact's twelve-decimal rounding, not a measurement; the
+unrounded figure is what `scripts/stage2_weekc.py` prints, and `spine_identity` **raises** above
+1e−12, so the conclusion is untouched and the phrasing was wrong]. And week A's engine is
+**frozen input** to week C: 42 coefficients re-checked, worst absolute drift **4.841e−13**
+against a 1e−11 tolerance, a drift raises.
 
 ### 2.1 THE headline — `A2`, the flesh, and 8.2%
 
@@ -336,15 +367,20 @@ either. But it says the `A1` PASS is **not robust to the premise**, and §4's fo
 stop-question asks whether a bar that flips sign between the two arms is carrying the meaning it
 was written for.
 
-### 2.4 `R2` — a FAIL on ONE forced re-entry in 6,000 months, with the p95 half passing for the first time
+### 2.4 `R2` — a FAIL on ONE forced re-entry in 6,000 months, with the p95 half now passing on a pooled batch
 
 | half | generated | bound | verdict |
 |---|---|---|---|
 | largest jump at a seam | **4.132499999786 pp** | ≤ 2.5 pp | **FAIL** |
 | p95 adjacent-month change | **0.883035257076 pp** | ≤ 0.929238995443 pp | **PASS** |
 
-**Round two failed BOTH halves** (5.3195 pp and p95 0.9658–0.9678). **The p95 half has flipped
-from FAIL to PASS** — the first time in this campaign line — and the join half has not.
+**Round two failed BOTH halves** on both its seeds (max jumps 5.3195 and 2.4935 pp; p95 0.9678
+and 0.9658). **The p95 half has flipped from FAIL to PASS** and the join half has not.
+~~— the first time in this campaign line —~~ **[C7: FALSE and withdrawn.** Round one's b2
+recorded p95 **0.9128** (seed 199002) and **0.9200** (seed 2199008), both inside the 0.9292
+bound, and seed 199002 passed b2 **outright**. What is new here is that the p95 half passes on a
+**pooled 50-decade batch** and that round two failed both halves on both its seeds — which is
+all the week-C report itself claimed. The "first time" was added by this verdict.**]**
 
 **The failure decomposes to a single event** (`r2_diagnostics`):
 
@@ -379,8 +415,11 @@ both batches, so the interpolated percentile is too.
 ### 2.5 `T1`, `O1`, `D1`–`D4`, `P1`, `R1` — the nine passes, and what each is worth
 
 **`O1` is the one that had never passed.** It reads **0.560824742268** against a floor of
-0.5180669104991394, clearing by **+0.0428**. It had failed **everywhere** across two prior
-campaigns — every engine, every arm, every point of both frontier sweeps. It also clears the
+0.5180669104991394, clearing by **+0.0428**. It had failed **everywhere it had ever been
+measured** — ~~across two prior campaigns~~ **the v2 campaign's eight engine × arm cells
+(0.4913 to 0.5149) and every point of both its frontier sweeps** [C6: `O1` is a v2-exam bar and
+appears in neither the pilot's nor spine-02's records, so "two prior campaigns" overstated its
+history; it is **one** campaign, four engines, two arms, two sweeps]. It also clears the
 **windowing-symmetric** floor the stage-2 exam calls its primary construct (**0.515672**, by
 +0.045153), so ruling `SQ1`'s reserved disagreement — the two constructs returning different
 verdicts on the same engine — **does not arise**. The v2 verdict's §8.1 correction, which
@@ -474,16 +513,35 @@ a decade**: switching it off entirely changes `O1` by **−0.0012** and flips **
 **Why, in one line of arithmetic.** Fitted persistence `a` = **0.994814** — a **half-life of 133
 months**. The long-run inflation gap per unit of cycle input is `lam_x/(1−a)` = **1.2199 pp**,
 which is large; but growth spells in this engine last two to four years, over which only
-`1 − a^L` of that adjustment happens: **11.7% at 24 months, 21% at 48**. The channel is real, it
-is significant, and it operates on a timescale an order of magnitude longer than the cycle it is
-supposed to be coupled to. Its own signature confirms it: mean inflation gap by growth-spell age
-barely separates the two axes (expanding +0.124 pp against contracting +0.056 pp in the 13–36
-month bucket, and **the 37+ bucket separates the wrong way**).
+`1 − a^L` of that adjustment happens: **11.7% at 24 months, ~~21%~~ 22.1% at 48** [C9 — the exact
+figure is `1 − a^48` = 0.220866; the 24-month figure is exact]. The channel is real, it is
+significant, and it operates on a timescale an order of magnitude longer than the cycle it is
+supposed to be coupled to.
+
+**Its own age signature, corrected [C1] — and the correction leans against this section.** The
+diagnostic is the mean inflation gap by growth-spell age: if inflation follows growth, the gap
+should climb the longer an expansion runs and fall the longer a contraction runs.
+
+| growth-spell age | expanding | contracting | separation | direction |
+|---|---|---|---|---|
+| 1–12 months | +0.122619 | +0.125498 | **−0.002879** | **the wrong way** |
+| 13–36 months | +0.123613 | +0.056135 | **+0.067478** | the right way |
+| 37+ months | +0.215498 | +0.183389 | **+0.032109** | the right way |
+
+> ~~"the 37+ bucket separates the wrong way"~~ **FALSE.** The bucket that separates the wrong way
+> is **1–12 months**; the 37+ bucket separates the **right** way, by less than the 13–36 bucket
+> does. What survives is the weaker and still-true claim the sentence was for: **the signature
+> barely separates the two axes at all**, the largest separation anywhere being 0.067 pp against
+> an inflation-gap standard deviation of 0.217 pp. **The inertness finding does not rest on this
+> diagnostic** — it rests on the ×0 vs ×1 re-runs (−0.0012), and the diagnostic is never a bar.
 
 **The coupling frontier is flat, and that flatness is a finding rather than a null result.**
 Scaling `lam_x` × 0, 0.5, 1, 2, 4: seven bars pass at every point; `O1` reads 0.5620, 0.5565,
 0.5608, 0.5489, 0.5556 — a range of 0.013 with no monotone trend, which is noise at fifty
-decades; `P2` moves 0.7717 → 0.7692 across a **sixteen-fold** change in the coupling. **There is
+decades; `P2` moves 0.7717 → 0.7692 across ~~a **sixteen-fold** change in the coupling~~ **the
+whole sweep — the coupling switched off entirely at one end, and an eight-fold range (×0.5 to
+×4) between the non-zero points** [C8: the grid is ×0, 0.5, 1, 2, 4; there is no sixteen-fold
+change in it, and the quoted endpoints are ×0 and ×4, between which no ratio exists]. **There is
 no frontier on this axis.**
 
 **The disclosure arm makes it worse, not better.** Fitting the same inflation block on the
@@ -685,8 +743,12 @@ Inherited whole from the seal's `L1` and repeated here because it bears directly
 `P1` PASS. Against a synthetic engine whose two dials are **independent by construction**, `P1`
 returns a PASS in **9.0% of 300 batches of fifty decades** at the sealed thresholds — against
 **1.3%** at the recommended construct's own candidate and **0.3%** at the strictest published one.
-The judge is not broken (its mean departure at zero coupling is +0.0006, inside one standard error
-of zero); this is the bar's **size**, and it is what ruling `SQ7` cost.
+The judge is not broken — its mean departure at zero coupling is ~~+0.0006~~ **−7.99e−05 on
+growth flips and −1.10e−04 on inflation crossings**, both inside their own Monte Carlo standard
+errors (1.778e−03, 1.820e−03) [C10 — the `+0.0006` is quoted from the **sealed** exam delta's §6
+`L1` prose, and it matches neither the artifact nor the exam's own §5 control table nor the seal
+JSON's own `L1` string; see §7.10, and note that no sealed file was edited to say so]. This is
+the bar's **size**, and it is what ruling `SQ7` cost.
 
 **How this campaign's reading sits against it.** The measured departures are **2.5× and 2.3×** the
 sealed thresholds, well clear of a 9% false-positive band. **But the reason they are clear is
@@ -781,12 +843,58 @@ bounds what any future bar conditioned on the spine's dial can see in the flesh:
   generator line is a convincing model of history, **the holdout is spent**, and no appeal to
   held-out data is available to any result this campaign produces.
 
+### 5.6 Generation-time covariate LEVEL mismatches (added post-review) [C3]
+
+The v2 review raised this class as its finding C3 and put it in the v2 register as §6.6, because
+the campaign had disclosed the covariates' **dispersion** ratios and not their **levels**. Stage 2
+repeated the omission. From `stage2-fitted-params.json`, `verification.diagnostics`:
+
+| quantity | generated | history | why it matters |
+|---|---|---|---|
+| **inverted-curve share** | **0.160333** | **0.183272** | `T1` conditions on `slope < 0`, so this **is** its tight set — the conditioning population, not a side fact |
+| expanding share | 0.776667 | 0.719557 | the growth axis the hazard runs on, and the axis `P1`'s growth flips are counted over |
+| inflation-gap sd | 0.216515 | 0.159701 | the 1.356× ratio `P2` catches; disclosed in §2.2 as a ratio, not as a level |
+
+**And the consequence the verdict did not draw.** The v2 campaign ran the generated curve at
+**27.5% inverted against history's 18.3% — a 1.5× over-inversion**, and its own review had to
+correct the verdict for presenting that as a fix. Stage 2's engine runs at **16.0% against
+18.3% — 0.87×, under-inverted.** So `T1`'s conditioning population **moved from over- to
+under-inverted between the two campaigns** while `T1` itself moved 1.913 → 2.239. Nothing in the
+body says so, and any comparison of the two `T1` readings should carry it.
+
+### 5.7 Four sealed limitations the body did not restate (added post-review) [C11]
+
+`L12` is inherited whole and `L1`, `L2`, `L3`, `L6`, `L8`, `L9`, `L13` are carried above. Four
+more are in the seal's own `declared_limitations` and two of them bear directly on readings this
+document leads with:
+
+- **`L4` — `P1` asks for a fraction of a departure history can only just establish.** On the
+  uncensored construct history's **own** growth-flip departure has a 95% interval of
+  **[−0.000283, +0.233050]** — *not distinguishable from zero*. On the sealed construct it just
+  is, by 0.0066 at the lower edge, and at 12-month blocks it is not. `M3`'s gate closes whether
+  the *channel* exists; it does not close how precisely its *size* is known.
+- **`L7` — the strict share is NOT an explained-variance figure.** It sums squared component
+  standard deviations, i.e. treats the components as uncorrelated. On the generated side they are,
+  by construction. **On history they are not**: the rule-implied rate and the inflation gap
+  correlate at **0.705**, and history's total sum of squares is **1.78× the slope's own
+  variance**. Anyone reading §2.2's *"history's strict economic share = 0.558667"* as "56% of the
+  curve's movement is explained" is reading it wrong; the number that answers *that* question is
+  the realised R², **0.2464**.
+- **`L10` — `P2`'s power is sampling adequacy only.** It places history's own components inside
+  history's interval; it cannot say whether a coupled engine would produce components of that size.
+- **`L11` — history is the most favourable engine there is.** Both power figures use history itself
+  as the true engine while resampling the same 813 months the thresholds are cut from, so they see
+  sampling noise and **not** estimation error. They are **upper bounds** on any real engine's power.
+
 ---
 
 ## 6. Status and disposition
 
 **FRONTIER.** Nine of twelve bars pass; three fail. No owner ruling has been taken and twelve
-stop-questions are open.
+stop-questions are open. *(Read with §7: the verdict-integrity review changed no verdict value
+and no PASS/FAIL word — it reproduced all twelve to the digit and found all twelve PASS/FAIL
+words correct — and it returned eleven findings, all interpretive or omissive, correcting the
+characterization attached to several readings and adding two entries to the register.)*
 
 - **The seal stands, unamended.** `amendments` is empty: no threshold moved, no hashed file was
   edited, no arm was re-chosen after a reading. Every prior round's verdicts stay frozen.
@@ -806,12 +914,194 @@ stop-questions are open.
 
 ---
 
-## 7. Post-review corrections
+## 7. Post-review corrections (verdict-integrity review, 2026-08-18)
 
-*(Reserved. An independent verdict-integrity review of this document follows the v2 campaign's
-precedent — re-derive rather than re-read, reproduce every reading from the committed artifacts,
-check every PASS/FAIL word against the sealed bands, and hunt omissions in the limitations
-register. Its findings are appended below, under the same rule the v2 §8 followed: **no verdict
-value and no PASS/FAIL word changes unless one is found wrong**; what is corrected is the
-characterization attached to them, and where the review section and the body conflict, **the
-review section governs**.)*
+An independent verdict-integrity review re-ran `scripts/stage2_fit.py` and
+`scripts/stage2_weekc.py` and re-derived every load-bearing claim from the committed artifacts
+rather than re-reading the working reports.
+
+**What it certified.**
+
+- **Both artifacts regenerated byte-identically.** `stage2-fitted-params.json`
+  `sha256 0604e55502df530e5ca8861cf45424668d9b686b0125cfeb2043a617e52a9c54`;
+  `stage2-weekc-results.json`
+  `sha256 565413ac70cbd8a8e7763ffa541790fd770860879fea47035ea010ebf9cc6f19`. Both match the
+  values the working reports publish, and `git status` was **clean after both runs**.
+- **All eleven sealed hashes recomputed clean** against the working tree, exam delta included, and
+  the seal's `amendments` list is **empty** — nothing was amended in stage 2.
+- **All twelve bar readings reproduced to the digit** by re-running the entry points. The fit
+  script printed `T1 PASS 2.2392467988040385 · O1 PASS 0.5608247422680412 · D1 2.0 · D2 4.0 ·
+  D3 4.0 · D4 3.0 · P1 PASS 0.042073930959286236 · P2 FAIL 0.7706826534809134`; the week-C script
+  printed `A1 PASS 0.3780552156694983 · A2 FAIL −0.01774267115346028 · R1 PASS 4/20 ·
+  R2 FAIL 4.132499999786177`. **No discrepancy at any digit.**
+- **Every PASS/FAIL word re-checked against the sealed bands: 12 of 12 correct**, recomputed
+  independently of the judges from `stage2-prereg.json`'s own thresholds — including `P2`'s
+  `failure_side: above` and `R2`'s split verdict (join FAIL, p95 PASS).
+- **The three interpretive claims re-derived exactly.** 494/6000 = 0.08233333 ✓;
+  `p·q + (1−p)(1−q)` = 0.5915961591 against the artifact's 0.591596159122 (agreement to 1.8e−13) ✓;
+  agreement 0.605925925926, excess over chance **+0.014330** ✓. `A2` both ways: the sealed judge's
+  three conditions recomputed on both series, FAIL 0/3 on the spine's inflation and PASS 3/3 on
+  the drawn months' ✓, with the reported gap equal to (high − low) to 0.0 in both. `R2`: 444 seams
+  = 443 ordinary + 1 forced; `max(ordinary, forced) = 4.132499999786 = the bar's value` ✓; the
+  ordinary maximum clears the bound by 0.019875 pp; the p95 bound is exactly 1.25 × the panel's
+  0.7433911964 ✓; 5,950 adjacent pairs = 50 × 119 ✓.
+- **The seal genuinely predates the fit.** `scripts/stage2_fit.py` does **not exist** at the seal
+  commit `d67a455`; it first appears at `0a5884d`. The `sealed_at_utc` string's HEAD commit
+  `3b54a58…` is the commit immediately preceding the seal.
+
+**What it found.** Eleven findings — none touching a verdict value or a PASS/FAIL word, all
+interpretive or omissive. **The rule this section follows** (the v2 campaign's precedent): where
+this section and the body conflict, **this section governs**.
+
+**And the pattern, which is not v2's.** The v2 review found eleven of twelve findings leaning the
+same way. Here they split: **six make the engine or the record look better than the artifacts
+support** (§7.2, §7.3, §7.4, §7.6, §7.7, §7.11) and **three make the funded coupling look *more*
+inert than the artifacts support** (§7.1, §7.8, §7.9) — the latter leaning *against* this
+document's own headline. Two (§7.5, §7.10) are neutral. That is worth stating because a
+one-directional pattern is evidence of motivated reading and a split one is not; what this split
+is evidence of is ordinary carelessness in both directions.
+
+### 7.1 C1 (SUBSTANTIVE) — the coupling's age signature: the wrong bucket was named, and the correction favours the coupling
+
+Corrected inline in §3.1 with the full three-bucket table. The claim as published — carried
+verbatim from week-A fit report §5 — was *"the 37+ bucket separates the wrong way"*. From
+`verification.diagnostics.inflation_gap_by_growth_spell_age`:
+
+```
+1-12 months   expanding +0.122619   contracting +0.125498   separation -0.002879   WRONG way
+13-36 months  expanding +0.123613   contracting +0.056135   separation +0.067478   right way
+37+  months   expanding +0.215498   contracting +0.183389   separation +0.032109   right way
+```
+
+**The bucket that separates the wrong way is 1–12 months, not 37+.** The 37+ bucket separates the
+right way, by less than the 13–36 bucket does. The weaker claim the sentence was for survives —
+the signature *barely* separates the axes, the largest separation anywhere being 0.067 pp against
+an inflation-gap sd of 0.217 pp — and **the inertness finding does not rest on the signature at
+all**: it rests on the ×0-vs-×1 re-runs (`O1` −0.001175257732), which the review reproduced.
+
+### 7.2 C2 (SUBSTANTIVE) — "exactly 0.0 drift, not 'small'" is a rounding artifact
+
+Corrected inline in §2. `stage2-weekc-results.json` carries
+`spine_identity.max_abs_drift = 0.0` and `abs_drift = 0.0` on each of the eight bars, and the
+week-C report §1.4 puts it emphatically: *"Worst absolute drift across all eight: 0.0. Exactly
+zero, not 'small'."* **Every float in that artifact is written through `weeka._round(payload, 12)`.**
+Re-running the script prints the unrounded value:
+
+```
+frozen-engine agreement: max drift 4.841e-13
+spine identity vs week A:  max drift 2.862e-13
+```
+
+So the measured worst drift is **2.862e−13**, not zero. **The conclusion is untouched and is
+arguably strengthened**: `spine_identity` *raises* above a 1e−12 tolerance, 2.862e−13 is well
+inside it, and the eight verdicts are identical — the batch really is week A's. What is wrong is
+the phrasing. Note the asymmetry that made this catchable: `frozen_engine_agreement.max_abs_drift`
+is rounded to `0.0` in the same artifact, and there both working reports quote the **unrounded**
+4.841e−13 correctly. The same field, treated two different ways, in one file.
+
+### 7.3 C3 (SUBSTANTIVE, omission) — the generation-time covariate LEVELS were undisclosed, again
+
+Now in the register as **§5.6**. This is the v2 review's own C3 recurring: dispersion ratios
+disclosed, levels not. The consequential one is that `T1` conditions on `slope < 0`, so the
+inverted share **is** its tight set — and it moved from v2's **1.5× over**-inversion (0.274 vs
+0.189) to stage 2's **0.87× under**-inversion (0.160 vs 0.183) while `T1` moved 1.913 → 2.239.
+A reader comparing the two campaigns' `T1` numbers is comparing readings taken over materially
+different conditioning populations, and neither verdict said so.
+
+### 7.4 C4 (SUBSTANTIVE, omission) — `R1` is judged on a different arm from every other flesh bar
+
+Now corrected in §2's table and in the note beneath it. `stage2-weekc-results.json` records
+`batches.R1.arm = "declared premise"` against `batches.A1_A2_R2.arm = "unconditional"`. The
+original table's arm column read "b3 ladder, n = 20", which is true and does not say it. It
+matters because §2.3 discloses that **`A1`'s sign reverses on the premise-accepted batch**
+(+0.3781 → −2.9465 pp), so the flesh bar that passes most cleanly is read on the arm where the
+other passing flesh bar fails. R1's construction is byte-frozen and changing it is exactly what a
+carried bar exists to prevent — so this is a disclosure obligation, not a defect.
+
+### 7.5 C5 (MINOR) — "five scripts", six then listed
+
+Corrected inline in §1. The eleven hashed paths are **5 documents/JSON + 6 scripts**. The total was
+right, the interior count was not. **This is finding C10 of the v2 review repeating verbatim**
+("six scripts", seven then listed) — the same sentence shape, in the same position, one campaign
+later.
+
+### 7.6 C6 (MINOR) — `O1` "failed everywhere across two prior campaigns" overstates its history
+
+Corrected inline in §2.5. `O1` is a **v2-exam** bar. It appears nowhere in
+`2026-08-15-spine-pilot-results.md` or `2026-08-16-spine02-results.md`, whose sealed bars are
+`b1`–`b6`. What is established, and it is still a strong statement, is that `O1` failed in **all
+eight** of the v2 campaign's engine × arm cells (0.491345 to 0.514911 against a floor of
+0.5180669) and at every point of both v2 frontier sweeps — **one** prior campaign, four engines,
+two arms, two sweeps.
+
+### 7.7 C7 (MINOR) — "the p95 half passing for the first time" is FALSE
+
+Corrected inline in §2.4 and in its heading. Round one's `b2` recorded p95 **0.9128** on seed
+199002 and **0.9200** on seed 2199008, both inside the 0.9292 bound; seed 199002 passed `b2`
+**outright** (max jump 2.3453 pp). The week-C report's own claim is correctly scoped to round two
+(*"Round two failed **both** halves … the p95 half has flipped"*) — **the "first time in this
+campaign line" was added by this verdict** and is withdrawn. What is new is that the p95 half
+passes on a **pooled 50-decade batch** rather than per-seed.
+
+### 7.8 C8 (MINOR) — "a sixteen-fold change in the coupling"
+
+Corrected inline in §3.1. The `lam_x` frontier grid is **×0, 0.5, 1, 2, 4**. The largest ratio
+between non-zero points is **eight-fold**, and the quoted endpoints (0.7717 → 0.7692) are ×0 and
+×4, between which no ratio exists at all. Carried from week-A fit report §6. **The finding is
+unaffected** — `P2` moves 0.0025 across the whole sweep, the coupling switched off entirely at
+one end — but the overstatement made the flatness look better-tested than it is, i.e. it leans
+*toward* this document's own headline.
+
+### 7.9 C9 (MINOR) — "21% at 48 months" is 22.1%
+
+Corrected inline in §3.1. `1 − a^48` at `a` = 0.994814070132 is **0.220866**. The 24-month figure
+(0.117314 → 11.7%) is exact, as are the half-life (133.312 months), the long-run gap
+(`lam_x/(1−a)` = 1.219912 pp) and the calibrated axis swing (1.0 − 0.008772 = 0.991228).
+Understates the coupling's reach by about a point — again leaning toward the inertness headline.
+
+### 7.10 C10 — a factual error inside a SEALED document, recorded and NOT edited
+
+Corrected inline in §5.2. The sealed exam delta's §6 `L1` states that `P1`'s *"mean departure at
+zero coupling is +0.0006, inside one standard error of zero"*. From
+`stage2-antitest-results.json`, `controls.P1_null_engine`:
+
+| move type | mean departure at zero coupling | its Monte Carlo standard error | inside 1 s.e. of zero? |
+|---|---|---|---|
+| growth flips | **−7.990761e−05** | 1.778222e−03 | yes |
+| inflation crossings | **−1.097286e−04** | 1.819705e−03 | yes |
+
+**The `+0.0006` matches nothing.** It disagrees with the artifact, with the exam's **own §5
+control table** (which quotes −0.00008 / −0.00011 correctly), and with the seal JSON's own `L1`
+string (which says only "within one standard error of zero"). The claim `L1` is making — that the
+judge is centred on the null — **is true**, and no threshold, judging rule or verdict is affected.
+
+**How it is handled.** Following the v2 precedent (§8.6 / `AM-SPV2-2026-08-17-002`): **the sealed
+file is not edited**, because the seal is the record and editing it would erase the thing the
+record exists to keep. The correction is recorded here. Whether it is also appended to the seal's
+`amendments` log as a `documentation` entry — which would be the first amendment of any kind in
+stage 2 — **is the owner's call and was deliberately not taken by this review.**
+
+### 7.11 C11 (MINOR, omission) — four sealed limitations were not restated
+
+Now in the register as **§5.7**: `L4` (history's own uncensored growth-flip departure has a 95%
+interval of [−0.000283, +0.233050] and does not exclude zero), `L7` (the strict share is **not**
+an explained-variance figure — history's components correlate at 0.705 and its total sum of
+squares is 1.78× the slope's variance; the explained-variance number is R² = 0.2464), `L10` and
+`L11` (`P2`'s power is sampling adequacy only, and both power figures use history as the true
+engine, so they are upper bounds). `L4` bears on the `P1` PASS this document leads with and `L7`
+bears on how §2.2's share table may be quoted.
+
+### 7.12 Two review observations that are not corrections, recorded anyway
+
+- **One claim in the body is carried rather than re-derived, and it is labelled as such.** §2.4's
+  explanation of the identical p95 across two different batches — *"the 5,651st and 5,652nd sorted
+  values are the same number on both batches"* — is week C's, and re-deriving it needs both
+  ensembles rather than either committed artifact. The **arithmetic around it checks out** (5,950
+  adjacent pairs = 50 × 119, and a linear-interpolated p95 lands at index 0.95 × 5,949 = 5,651.55,
+  i.e. between the 5,651st and 5,652nd order statistics), and both batches' p95 fields are
+  byte-identical in the artifact. The plateau claim itself is **not independently verified here**.
+- **The review checked whether §2.1's headline reads better than the artifact supports, and it
+  does not.** The A2-on-drawn-months disclosure passes all three sealed conditions by the sealed
+  judge's own arithmetic (corr +0.176479 > 0; gap +0.348323 ≥ 0.136094; share 0.928499 ≥ 0.80),
+  the artifact flags it `"Reported, never judged"`, and §2.1 says so in bold. The 8.2% and the
+  60.6%/59.2% pair reproduce exactly. **No finding.**
