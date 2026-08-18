@@ -29,8 +29,10 @@ where it used to be 1.4.** The residual 22.4% is not slack: **every** unreached 
 divergence the join filters refused, and 81% of those are refused by the era filter alone,
 which is the constraint the ruling preserved — the era bucket and the quadrant's hot bit
 are literally the same predicate, so an era-safe join *cannot* cross the inflation line.
-On the scoreboard **nine of twelve still pass and three still fail, and the failures are
-not the same failures**: the eight spine bars are bit-unchanged (a compiler change cannot
+On the scoreboard **eight of twelve pass after the fix (nine passed before) and the
+failures are not the same failures** [CORRECTED — the integrity review caught the
+original "nine still pass" here contradicting this document's own §4 table: `A1`
+flips PASS→FAIL and nothing flips up to compensate]: the eight spine bars are bit-unchanged (a compiler change cannot
 move them, and that is checked to 1e-12, not assumed); `A2` goes from failing all three
 conditions to failing **one** (the window share), with its correlation now positive on
 6 seeds of 6 where it was −0.018 before; `R2`'s join half is **cured** — the single
@@ -227,7 +229,9 @@ week A's committed value to 1e-12.
 | no-regression | **R1** | monotone coverage; ≥ 1/20 breach at 55 | medians [0.0981, 0.2919, 0.3616, 0.6680]; breach 4/20 | **[0.1219, 0.3785, 0.4730, 0.9225]; breach 8/20** | PASS → **PASS** |
 | no-regression | **R2** | join ≤ 2.5 pp; p95 ≤ 0.929239 pp | 4.132500 / 0.883035 | **2.499733 / 1.102315** | FAIL (join) → **FAIL (p95)** |
 
-> **Nine of twelve pass, before and after.** The eight spine bars are bit-identical —
+> **Nine of twelve passed before; eight of twelve pass after — `A1`'s flip is the
+> difference.** [CORRECTED per the integrity review; the original boxed claim of
+> "nine, before and after" contradicted the table above it.] The eight spine bars are bit-identical —
 > a compiler change cannot move a bar cut from the spine, and the worst drift over the
 > eight is **2.862e−13**, week C's own figure, which is twelve-digit rounding. **The three
 > flesh bars that can move, moved: one improved without flipping (`A2`), one flipped in
@@ -323,8 +327,9 @@ jump, 2.499733 pp, is an ordinary join landing 0.00027 pp under its own bound.
 
 **Across seeds the cure is real but not universal**: max jump before was
 [4.13, 10.98, 12.55, 7.03, 9.59, 6.05] — **0 of 6 inside the bound**, and the sealed seed
-was the mildest of the six. After: [2.50, 13.04, 9.34, 2.49, 4.55, 2.48] — **4 of 6
-inside**. Forced re-entry is a rare event and the fix makes it rarer, not impossible.
+was the mildest of the six. After: [2.50, 13.04, 9.34, 2.49, 4.55, 2.48] — **3 of 6
+inside** [CORRECTED per the integrity review: 2.499733, 2.494033 and 2.475963 are ≤ 2.5;
+the original said 4 of 6]. Forced re-entry is a rare event and the fix makes it rarer, not impossible.
 
 **The p95 half fails for a compositional reason, and here is the arithmetic.** The p95 is
 taken over all 5,950 adjacent-month pairs. Split them:
