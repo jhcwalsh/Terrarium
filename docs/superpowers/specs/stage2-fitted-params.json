@@ -1,0 +1,1513 @@
+{
+  "anchor_agreement": {
+    "all_identities_hold": true,
+    "m3_lam_x_max_abs_drift": 0.0,
+    "m3_selected_lag_matches": true,
+    "m4_curve_beta_max_abs_drift": 0.0,
+    "m4_history_strict_share_abs_drift": 0.0,
+    "m4_rho_abs_drift": 0.0,
+    "tolerance": 1e-11,
+    "tolerance_note": "both artifacts round to twelve decimals, so an exact refit of the identical equation agrees to a few units in the thirteenth. The tolerance is one order looser than that rounding and eleven orders tighter than anything that could move a verdict",
+    "week3_hazard_coefficients_max_abs_drift": 0.0,
+    "why_it_matters": "the inflation block IS M3's equation and the curve block IS M4's, so the engine's own fit and the sealed anchors are the same numbers. A drift here would mean the bar and the engine were cut from different objects"
+  },
+  "attribution": {
+    "o1_moved_by_the_coupling": -0.001175257732,
+    "o1_moved_by_the_curve": 0.023538461538,
+    "reading": "the two numbers above are the whole attribution: how much of O1's move is the growth -> inflation arrow lam_x, and how much is the curve reading the rule-implied policy rate. They are read at the same seed on the same tape",
+    "rows": [
+      {
+        "O1": 0.538461538462,
+        "P1_departures": {
+          "growth_flip": 0.061449307241,
+          "inflation_crossing": 0.05688457186
+        },
+        "P2_share": 0.024675919152,
+        "T1": 1.765282772148,
+        "bars": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": true,
+          "P1": true,
+          "P2": false,
+          "T1": false
+        },
+        "coupling_multiplier": 0.0,
+        "curve": "week3",
+        "generated_slope_sd_pp": 0.745390749545,
+        "n_passing": 6
+      },
+      {
+        "O1": 0.536178107607,
+        "P1_departures": {
+          "growth_flip": 0.058378722554,
+          "inflation_crossing": 0.056342945756
+        },
+        "P2_share": 0.024244976916,
+        "T1": 1.764510779436,
+        "bars": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": true,
+          "P1": true,
+          "P2": false,
+          "T1": false
+        },
+        "coupling_multiplier": 1.0,
+        "curve": "week3",
+        "generated_slope_sd_pp": 0.747880881189,
+        "n_passing": 6
+      },
+      {
+        "O1": 0.562,
+        "P1_departures": {
+          "growth_flip": 0.102730820272,
+          "inflation_crossing": 0.072018795495
+        },
+        "P2_share": 0.771663821093,
+        "T1": 2.3606370876,
+        "bars": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": true,
+          "P1": true,
+          "P2": false,
+          "T1": true
+        },
+        "coupling_multiplier": 0.0,
+        "curve": "stage2",
+        "generated_slope_sd_pp": 1.453631585239,
+        "n_passing": 7
+      },
+      {
+        "O1": 0.560824742268,
+        "P1_departures": {
+          "growth_flip": 0.101751856212,
+          "inflation_crossing": 0.073519637718
+        },
+        "P2_share": 0.770682653481,
+        "T1": 2.239246798804,
+        "bars": {
+          "D1": true,
+          "D2": true,
+          "D3": true,
+          "D4": true,
+          "O1": true,
+          "P1": true,
+          "P2": false,
+          "T1": true
+        },
+        "coupling_multiplier": 1.0,
+        "curve": "stage2",
+        "generated_slope_sd_pp": 1.462301797711,
+        "n_passing": 7
+      }
+    ]
+  },
+  "disclosure_arms": {
+    "curve_with_u_hat_restored": {
+      "c_i_with_u_present": -0.232902171337,
+      "c_u_estimate": -0.074824345809,
+      "economic_share_on_history_with_u_as_exogenous": 0.550087158476,
+      "judged": false,
+      "loglik_with_u": 416.231873240847,
+      "loglik_without_u": 410.921798885662,
+      "lr_statistic": 10.62014871037,
+      "why": "the design document's curve line reads i_t = i_rule + u. The sealed P2 anchor decomposes history on i_rule alone and classifies u_hat as EXOGENOUS, so restoring it adds a term to the denominator and none to the numerator. Fitted here so the cost of the primary choice is a number"
+    },
+    "hazard_with_the_inflation_gap_substituted": {
+      "judged": false,
+      "loglik_baseline": -118.84012073861,
+      "loglik_difference": -0.883320978368,
+      "loglik_substituted": -119.723441716978,
+      "transmission_baseline": -1.488804908804,
+      "transmission_substituted": -1.413902175805,
+      "why": "the design document's \u00a72.2 hazard line writes x_t where week 2's third covariate is pi* - pi_target. This is that substitution, at the same parameter count, so the two log-likelihoods are directly comparable"
+    },
+    "inflation_block_on_the_grader_axis": {
+      "judged": false,
+      "lam_x": 0.005020829136,
+      "long_run_gap_per_unit_cycle_pp": 3.613620198528,
+      "lr_statistic": 36.49258695644,
+      "persistence_a": 0.998610581948,
+      "selected_lag_months": 2,
+      "standard_error": 0.000823102472,
+      "t_ratio": 6.09988343659,
+      "why": "M3's own cycle-input sensitivity arm: the same equation with the classifier's growth axis in place of fred.USREC. It is the object the ENGINE generates, which is the argument for it; it is not the design document's c_t and not the sealed anchor's, which is the argument against"
+    }
+  },
+  "exam": "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+  "fit": {
+    "axis_calibrated_cycle": {
+      "contracting": 0.008771929825,
+      "expanding": 1.0,
+      "note": "the panel mean of 1 - 2*USREC inside each of the classifier's growth axes. Averaged over the panel's own axis shares this reproduces the panel mean exactly, which is what keeps the generated inflation LEVEL where the fitted equation put it",
+      "panel_mean_of_the_wp26_contract": 0.722017220172
+    },
+    "curve": {
+      "centers": [
+        4.870325522229,
+        0.094394815478,
+        0.281829419036,
+        2.094318696445,
+        0.557653866183
+      ],
+      "coefficients": {
+        "C": -0.079260146498,
+        "E": -0.038446024211,
+        "K": 0.026812281313,
+        "c_i_policy_rule": -0.240319668577,
+        "c_x_inflation_gap": 0.492034580114,
+        "intercept": 0.602573166833
+      },
+      "form": "M4's equation: slope_t = c0 + c_i (i_rule_t - ibar) + c_x (x_t - xbar) + c_C (C - Cbar) + c_E (E - Ebar) + c_K (K - Kbar) + e_t, e AR(1), exact Gaussian maximum likelihood",
+      "history_strict_economic_share": 0.558666923174,
+      "innovation_sd_pp": 0.14530767769,
+      "loglik": 410.921798885662,
+      "n_months": 809,
+      "r_squared_realised": 0.246374417074,
+      "residual_stationary_sd_pp": 0.747992998622,
+      "restrictions": {
+        "full_loglik": 410.921798885662,
+        "no_economics_at_all": {
+          "columns_zeroed": [
+            "c_i_policy_rule",
+            "c_x_inflation_gap",
+            "C",
+            "E",
+            "K"
+          ],
+          "degrees_of_freedom": 5,
+          "lr_statistic": 396.298103647295,
+          "p_value": null,
+          "restricted_loglik": 212.772747062015
+        },
+        "no_inflation_gap": {
+          "columns_zeroed": [
+            "c_x_inflation_gap"
+          ],
+          "degrees_of_freedom": 1,
+          "lr_statistic": 3.531404211057,
+          "p_value": 0.060216769428,
+          "restricted_loglik": 409.156096780134
+        },
+        "no_policy_rule": {
+          "columns_zeroed": [
+            "c_i_policy_rule"
+          ],
+          "degrees_of_freedom": 1,
+          "lr_statistic": 377.413439377425,
+          "p_value": 0.0,
+          "restricted_loglik": 222.21507919695
+        },
+        "no_season_block": {
+          "columns_zeroed": [
+            "C",
+            "E",
+            "K"
+          ],
+          "degrees_of_freedom": 3,
+          "lr_statistic": 6.106008041068,
+          "p_value": 0.106565077387,
+          "restricted_loglik": 407.868794865129
+        }
+      },
+      "rho": 0.980949399223,
+      "rho_standard_error": 0.006819853727,
+      "standard_errors": {
+        "C": 0.04322209667,
+        "E": 0.015546742106,
+        "K": 0.019857183068,
+        "c_i_policy_rule": 0.01100672518,
+        "c_x_inflation_gap": 0.261498545916,
+        "intercept": 0.25511804162
+      },
+      "t_ratios": {
+        "C": -1.833787636522,
+        "E": -2.472931238458,
+        "K": 1.350256036872,
+        "c_i_policy_rule": -21.833893791454,
+        "c_x_inflation_gap": 1.881595855114,
+        "intercept": 2.361938665747
+      }
+    },
+    "hazard": {
+      "coefficients": {
+        "cov_contracting[credit_gap]": 0.668914559519,
+        "cov_contracting[curve_slope]": 1.190431613451,
+        "cov_contracting[drawdown_state]": -1.793130811305,
+        "cov_contracting[pi_gap]": 0.63070539888,
+        "cov_expanding[credit_gap]": 0.202595936354,
+        "cov_expanding[curve_slope]": -1.488804908804,
+        "cov_expanding[drawdown_state]": 1.994911202669,
+        "cov_expanding[pi_gap]": 0.338781196262,
+        "intercept[expansion]": -3.451516574169,
+        "intercept[recession]": -0.818048799628,
+        "intercept[recovery]": -4.502257266668,
+        "intercept[stagflation]": -2.158180788557,
+        "log_dwell[expansion]": -0.182106942447,
+        "log_dwell[recession]": -0.43033569509,
+        "log_dwell[recovery]": 0.100843792034,
+        "log_dwell[stagflation]": -0.049412937902
+      },
+      "curve_lag_months": 9,
+      "form": "unchanged from week 2 and week 3",
+      "loglik": -118.84012073861,
+      "n_events": 35.0,
+      "n_obs": 792.0,
+      "standard_errors": {
+        "cov_contracting[credit_gap]": 0.333603233228,
+        "cov_contracting[curve_slope]": 0.391842530204,
+        "cov_contracting[drawdown_state]": 0.839209890144,
+        "cov_contracting[pi_gap]": 0.339728826164,
+        "cov_expanding[credit_gap]": 0.324899234788,
+        "cov_expanding[curve_slope]": 0.504121046203,
+        "cov_expanding[drawdown_state]": 1.298564362572,
+        "cov_expanding[pi_gap]": 0.363573512676,
+        "intercept[expansion]": 0.678966051027,
+        "intercept[recession]": 0.690805353765,
+        "intercept[recovery]": 1.023223483385,
+        "intercept[stagflation]": 0.965792845596,
+        "log_dwell[expansion]": 0.289922786141,
+        "log_dwell[recession]": 0.35226454621,
+        "log_dwell[recovery]": 0.303350769437,
+        "log_dwell[stagflation]": 0.434798943205
+      }
+    },
+    "inflation": {
+      "cbar": 0.743654822335,
+      "cycle_input": "usrec",
+      "half_life_months": 133.312315106399,
+      "innovation_sd_pp": 0.019789989939,
+      "intercept": 0.000511093975,
+      "lag_profile": {
+        "0": {
+          "lam_x": 0.003661834069,
+          "loglik": 1960.722142678882,
+          "persistence_a": 0.997101756176,
+          "standard_error": 0.00112792507,
+          "t_ratio": 3.246522454842
+        },
+        "1": {
+          "lam_x": 0.005437670733,
+          "loglik": 1967.290175560084,
+          "persistence_a": 0.99920400813,
+          "standard_error": 0.001111981375,
+          "t_ratio": 4.890073570038
+        },
+        "10": {
+          "lam_x": 0.006326376583,
+          "loglik": 1972.868709699528,
+          "persistence_a": 0.994814070132,
+          "standard_error": 0.001062582187,
+          "t_ratio": 5.953776244487
+        },
+        "11": {
+          "lam_x": 0.004987524393,
+          "loglik": 1966.343809505848,
+          "persistence_a": 0.993614499284,
+          "standard_error": 0.001064016552,
+          "t_ratio": 4.687450006369
+        },
+        "12": {
+          "lam_x": 0.004325749669,
+          "loglik": 1963.715539001701,
+          "persistence_a": 0.992974766447,
+          "standard_error": 0.001061489624,
+          "t_ratio": 4.075169056444
+        },
+        "13": {
+          "lam_x": 0.002729417926,
+          "loglik": 1958.76338898077,
+          "persistence_a": 0.992377362546,
+          "standard_error": 0.001062848818,
+          "t_ratio": 2.568020851617
+        },
+        "14": {
+          "lam_x": 0.002441705519,
+          "loglik": 1958.1263633716,
+          "persistence_a": 0.992194299693,
+          "standard_error": 0.001059021565,
+          "t_ratio": 2.30562398295
+        },
+        "15": {
+          "lam_x": 0.001854749531,
+          "loglik": 1957.012240579975,
+          "persistence_a": 0.992048169106,
+          "standard_error": 0.001056110773,
+          "t_ratio": 1.756207377277
+        },
+        "16": {
+          "lam_x": 0.00215023713,
+          "loglik": 1957.561759863632,
+          "persistence_a": 0.991964104265,
+          "standard_error": 0.001051188977,
+          "t_ratio": 2.0455286133
+        },
+        "17": {
+          "lam_x": 0.002667308465,
+          "loglik": 1958.719652912444,
+          "persistence_a": 0.991827581785,
+          "standard_error": 0.001045652431,
+          "t_ratio": 2.550855699675
+        },
+        "18": {
+          "lam_x": 0.002939574317,
+          "loglik": 1959.449624042763,
+          "persistence_a": 0.991641182028,
+          "standard_error": 0.001040946139,
+          "t_ratio": 2.823944685021
+        },
+        "19": {
+          "lam_x": 0.003809550465,
+          "loglik": 1962.223878847735,
+          "persistence_a": 0.991297699225,
+          "standard_error": 0.001033849568,
+          "t_ratio": 3.684820870866
+        },
+        "2": {
+          "lam_x": 0.005379266941,
+          "loglik": 1967.216689656755,
+          "persistence_a": 0.998605710597,
+          "standard_error": 0.001103524436,
+          "t_ratio": 4.87462421952
+        },
+        "20": {
+          "lam_x": 0.002904846678,
+          "loglik": 1959.404215157597,
+          "persistence_a": 0.991236311029,
+          "standard_error": 0.001034593631,
+          "t_ratio": 2.807717533005
+        },
+        "21": {
+          "lam_x": 0.001814549005,
+          "loglik": 1956.996320649055,
+          "persistence_a": 0.991427811873,
+          "standard_error": 0.001038595493,
+          "t_ratio": 1.747118120994
+        },
+        "22": {
+          "lam_x": 0.000816726778,
+          "loglik": 1955.776200387256,
+          "persistence_a": 0.99171616728,
+          "standard_error": 0.001040780624,
+          "t_ratio": 0.784725194989
+        },
+        "23": {
+          "lam_x": 0.0009616843,
+          "loglik": 1955.895466899385,
+          "persistence_a": 0.991654128455,
+          "standard_error": 0.001040866207,
+          "t_ratio": 0.923926911297
+        },
+        "24": {
+          "lam_x": 0.000186219091,
+          "loglik": 1955.483286673205,
+          "persistence_a": 0.991929148759,
+          "standard_error": 0.001041716735,
+          "t_ratio": 0.178761734875
+        },
+        "3": {
+          "lam_x": 0.005038891398,
+          "loglik": 1965.905104079014,
+          "persistence_a": 0.997701572852,
+          "standard_error": 0.001097640051,
+          "t_ratio": 4.590659199935
+        },
+        "4": {
+          "lam_x": 0.005280398547,
+          "loglik": 1967.086062738608,
+          "persistence_a": 0.997492531075,
+          "standard_error": 0.001089405181,
+          "t_ratio": 4.847047396149
+        },
+        "5": {
+          "lam_x": 0.00537474768,
+          "loglik": 1967.651762286192,
+          "persistence_a": 0.997076774892,
+          "standard_error": 0.0010824328,
+          "t_ratio": 4.965433123519
+        },
+        "6": {
+          "lam_x": 0.005658217347,
+          "loglik": 1969.137387629842,
+          "persistence_a": 0.996793297853,
+          "standard_error": 0.001074802073,
+          "t_ratio": 5.264427274464
+        },
+        "7": {
+          "lam_x": 0.005766817194,
+          "loglik": 1969.816346300376,
+          "persistence_a": 0.996294875232,
+          "standard_error": 0.001068737421,
+          "t_ratio": 5.395915852875
+        },
+        "8": {
+          "lam_x": 0.005598714614,
+          "loglik": 1968.968015288744,
+          "persistence_a": 0.995632823284,
+          "standard_error": 0.001070265168,
+          "t_ratio": 5.231147179554
+        },
+        "9": {
+          "lam_x": 0.006314773426,
+          "loglik": 1972.687598048642,
+          "persistence_a": 0.995515539056,
+          "standard_error": 0.001066319656,
+          "t_ratio": 5.922026652857
+        }
+      },
+      "lam_x": 0.006326376583,
+      "lam_x_standard_error": 0.001062582187,
+      "lam_x_t_ratio": 5.953776244487,
+      "long_run_gap_per_unit_cycle_pp": 1.219911711793,
+      "lr_statistic_against_no_coupling": 34.802923281521,
+      "n_rows": 788,
+      "persistence_a": 0.994814070132,
+      "selected_lag_months": 10,
+      "stationary_sd_pp": 0.194572313319,
+      "unconditional_mean_pp": 0.098553969748
+    },
+    "joint_loglik": 2225.515987676062,
+    "policy": {
+      "innovation_sd": 0.254011941072,
+      "intercept": -0.035727746553,
+      "lam_c": 0.034691062752,
+      "lam_u": 0.092150287916,
+      "lr_statistic_against_no_loadings": 7.09897080452,
+      "n_rows": 812,
+      "persistence_phi_u": 0.961414959736,
+      "standard_errors": {
+        "intercept": 0.015601284148,
+        "lam_c": 0.013593032497,
+        "lam_u": 0.060516792151,
+        "persistence": 0.00916783703
+      },
+      "stationary_sd": 0.92333630625,
+      "units_note": "u is build_panel's STANDARDISED policy deviation (mean 0, sd 1 on the panel), so lam_u and lam_c are in standard deviations of u per percentage point of inflation gap and per unit of cycle input"
+    }
+  },
+  "frontier": [
+    {
+      "O1_value": 0.562,
+      "P1_departures": {
+        "growth_flip": 0.102730820272,
+        "inflation_crossing": 0.072018795495
+      },
+      "P2_share": 0.771663821093,
+      "attempts": 50,
+      "axis": "lam_x",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 0.0,
+      "n_passing": 7,
+      "values": {
+        "D1": 2.0,
+        "D2": 4.0,
+        "D3": 3.0,
+        "D4": 3.0,
+        "O1": 0.562,
+        "P1": 0.040573088736,
+        "P2": 0.771663821093,
+        "T1": 2.3606370876
+      }
+    },
+    {
+      "O1_value": 0.556451612903,
+      "P1_departures": {
+        "growth_flip": 0.0988246186,
+        "inflation_crossing": 0.06942775585
+      },
+      "P2_share": 0.771146419001,
+      "attempts": 50,
+      "axis": "lam_x",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 0.5,
+      "n_passing": 7,
+      "values": {
+        "D1": 2.0,
+        "D2": 4.0,
+        "D3": 3.0,
+        "D4": 3.0,
+        "O1": 0.556451612903,
+        "P1": 0.037982049091,
+        "P2": 0.771146419001,
+        "T1": 2.347850227602
+      }
+    },
+    {
+      "O1_value": 0.560824742268,
+      "P1_departures": {
+        "growth_flip": 0.101751856212,
+        "inflation_crossing": 0.073519637718
+      },
+      "P2_share": 0.770682653481,
+      "attempts": 50,
+      "axis": "lam_x",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 1.0,
+      "n_passing": 7,
+      "values": {
+        "D1": 2.0,
+        "D2": 4.0,
+        "D3": 4.0,
+        "D4": 3.0,
+        "O1": 0.560824742268,
+        "P1": 0.042073930959,
+        "P2": 0.770682653481,
+        "T1": 2.239246798804
+      }
+    },
+    {
+      "O1_value": 0.548856548857,
+      "P1_departures": {
+        "growth_flip": 0.09044924091,
+        "inflation_crossing": 0.063158546118
+      },
+      "P2_share": 0.769929409064,
+      "attempts": 50,
+      "axis": "lam_x",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 2.0,
+      "n_passing": 7,
+      "values": {
+        "D1": 2.0,
+        "D2": 4.0,
+        "D3": 3.0,
+        "D4": 3.0,
+        "O1": 0.548856548857,
+        "P1": 0.031712839359,
+        "P2": 0.769929409064,
+        "T1": 2.327216683524
+      }
+    },
+    {
+      "O1_value": 0.555555555556,
+      "P1_departures": {
+        "growth_flip": 0.095861975628,
+        "inflation_crossing": 0.068603925581
+      },
+      "P2_share": 0.769166037737,
+      "attempts": 50,
+      "axis": "lam_x",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 4.0,
+      "n_passing": 7,
+      "values": {
+        "D1": 2.5,
+        "D2": 4.0,
+        "D3": 3.0,
+        "D4": 2.0,
+        "O1": 0.555555555556,
+        "P1": 0.037158218822,
+        "P2": 0.769166037737,
+        "T1": 2.355117057301
+      }
+    },
+    {
+      "O1_value": 0.512428298279,
+      "P1_departures": {
+        "growth_flip": 0.029401999956,
+        "inflation_crossing": 0.039294806569
+      },
+      "P2_share": 0.0,
+      "attempts": 50,
+      "axis": "curve_loadings",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": false,
+        "P1": false,
+        "P2": false,
+        "T1": false
+      },
+      "multiplier": 0.0,
+      "n_passing": 4,
+      "values": {
+        "D1": 3.0,
+        "D2": 3.0,
+        "D3": 3.0,
+        "D4": 3.0,
+        "O1": 0.512428298279,
+        "P1": -0.010928202992,
+        "P2": 0.0,
+        "T1": 1.484375
+      }
+    },
+    {
+      "O1_value": 0.565476190476,
+      "P1_departures": {
+        "growth_flip": 0.108471846033,
+        "inflation_crossing": 0.081720552501
+      },
+      "P2_share": 0.456992994052,
+      "attempts": 50,
+      "axis": "curve_loadings",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": true,
+        "T1": true
+      },
+      "multiplier": 0.5,
+      "n_passing": 8,
+      "values": {
+        "D1": 2.0,
+        "D2": 3.0,
+        "D3": 3.0,
+        "D4": 2.0,
+        "O1": 0.565476190476,
+        "P1": 0.050274845742,
+        "P2": 0.456992994052,
+        "T1": 1.983824697321
+      }
+    },
+    {
+      "O1_value": 0.560824742268,
+      "P1_departures": {
+        "growth_flip": 0.101751856212,
+        "inflation_crossing": 0.073519637718
+      },
+      "P2_share": 0.770682653481,
+      "attempts": 50,
+      "axis": "curve_loadings",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 1.0,
+      "n_passing": 7,
+      "values": {
+        "D1": 2.0,
+        "D2": 4.0,
+        "D3": 4.0,
+        "D4": 3.0,
+        "O1": 0.560824742268,
+        "P1": 0.042073930959,
+        "P2": 0.770682653481,
+        "T1": 2.239246798804
+      }
+    },
+    {
+      "O1_value": 0.547297297297,
+      "P1_departures": {
+        "growth_flip": 0.096805718521,
+        "inflation_crossing": 0.054801100319
+      },
+      "P2_share": 0.93067810102,
+      "attempts": 50,
+      "axis": "curve_loadings",
+      "bars": {
+        "D1": true,
+        "D2": true,
+        "D3": true,
+        "D4": true,
+        "O1": true,
+        "P1": true,
+        "P2": false,
+        "T1": true
+      },
+      "multiplier": 2.0,
+      "n_passing": 7,
+      "values": {
+        "D1": 4.0,
+        "D2": 4.0,
+        "D3": 3.0,
+        "D4": 3.0,
+        "O1": 0.547297297297,
+        "P1": 0.02335539356,
+        "P2": 0.93067810102,
+        "T1": 2.594049507748
+      }
+    }
+  ],
+  "identifiability": {
+    "coefficients": {
+      "C": {
+        "ci95": [
+          -0.163973899308,
+          0.005453606312
+        ],
+        "estimate": -0.079260146498,
+        "interval_spans_both_signs": true,
+        "load_bearing": false,
+        "standard_error": 0.04322209667,
+        "t_ratio": -1.833787636522
+      },
+      "E": {
+        "ci95": [
+          -0.068917078816,
+          -0.007974969606
+        ],
+        "estimate": -0.038446024211,
+        "interval_spans_both_signs": false,
+        "load_bearing": false,
+        "standard_error": 0.015546742106,
+        "t_ratio": -2.472931238458
+      },
+      "K": {
+        "ci95": [
+          -0.012107082335,
+          0.06573164496
+        ],
+        "estimate": 0.026812281313,
+        "interval_spans_both_signs": true,
+        "load_bearing": false,
+        "standard_error": 0.019857183068,
+        "t_ratio": 1.350256036872
+      },
+      "c_i_policy_rule": {
+        "ci95": [
+          -0.261892453518,
+          -0.218746883636
+        ],
+        "estimate": -0.240319668577,
+        "interval_spans_both_signs": false,
+        "load_bearing": true,
+        "standard_error": 0.01100672518,
+        "t_ratio": -21.833893791454
+      },
+      "c_x_inflation_gap": {
+        "ci95": [
+          -0.020493151891,
+          1.00456231212
+        ],
+        "estimate": 0.492034580114,
+        "interval_spans_both_signs": true,
+        "load_bearing": true,
+        "standard_error": 0.261498545916,
+        "t_ratio": 1.881595855114
+      },
+      "cov_expanding[curve_slope]": {
+        "ci95": [
+          -2.47686400321,
+          -0.500745814398
+        ],
+        "estimate": -1.488804908804,
+        "interval_spans_both_signs": false,
+        "load_bearing": true,
+        "standard_error": 0.504121046203,
+        "t_ratio": -2.953268704052
+      },
+      "lam_c": {
+        "ci95": [
+          0.008049208617,
+          0.061332916886
+        ],
+        "estimate": 0.034691062752,
+        "interval_spans_both_signs": false,
+        "load_bearing": true,
+        "standard_error": 0.013593032497,
+        "t_ratio": 2.552120931068
+      },
+      "lam_u": {
+        "ci95": [
+          -0.026460445159,
+          0.210761020991
+        ],
+        "estimate": 0.092150287916,
+        "interval_spans_both_signs": true,
+        "load_bearing": true,
+        "standard_error": 0.060516792151,
+        "t_ratio": 1.522722613691
+      },
+      "lam_x": {
+        "ci95": [
+          0.004243753766,
+          0.0084089994
+        ],
+        "estimate": 0.006326376583,
+        "interval_spans_both_signs": false,
+        "load_bearing": true,
+        "standard_error": 0.001062582187,
+        "t_ratio": 5.953776244487
+      }
+    },
+    "cross_block_information_is_zero": true,
+    "cross_block_note": "the four blocks share no parameters and every path they read is OBSERVED on the panel, so the joint information matrix is block-diagonal and there are no cross-block correlations to report. That is a property of the data, not an achievement of the design -- week 3's own statement, and it applies again. The correlation structure that DOES exist is inside the curve block, where c_i and c_x both read the inflation trend, and it is reported above",
+    "curve_block_correlation": {
+      "labels": [
+        "intercept",
+        "c_i_policy_rule",
+        "c_x_inflation_gap",
+        "C",
+        "E",
+        "K"
+      ],
+      "largest_off_diagonal_abs": 0.741451072108,
+      "matrix": [
+        [
+          1.0,
+          0.030526875303,
+          0.015375687871,
+          -0.000298585116,
+          0.006559542642,
+          -0.00397199292
+        ],
+        [
+          0.030526875303,
+          1.0,
+          -0.199144259064,
+          -0.064434212803,
+          -0.081391984675,
+          0.109541709182
+        ],
+        [
+          0.015375687871,
+          -0.199144259064,
+          1.0,
+          -0.010431646621,
+          0.036454601696,
+          -0.036632645153
+        ],
+        [
+          -0.000298585116,
+          -0.064434212803,
+          -0.010431646621,
+          1.0,
+          0.741451072108,
+          -0.687517499142
+        ],
+        [
+          0.006559542642,
+          -0.081391984675,
+          0.036454601696,
+          0.741451072108,
+          1.0,
+          -0.511792501856
+        ],
+        [
+          -0.00397199292,
+          0.109541709182,
+          -0.036632645153,
+          -0.687517499142,
+          -0.511792501856,
+          1.0
+        ]
+      ]
+    },
+    "definition": "a coefficient is UNIDENTIFIED when its 95% interval spans both signs. The panel carries 12 completed stagflation spells and 35 growth-axis flips, and stage 2 adds five parameters to a system already fitted on those events",
+    "load_bearing_unidentified": [
+      "c_x_inflation_gap",
+      "lam_u"
+    ],
+    "stop_coefficient": "lam_x",
+    "stop_condition": "the design document's Cheap Exit A, pre-declared: 'If lam_x -- inflation's response to growth -- is not significant on the panel, stop.' It is the only pre-declared identifiability stop in this campaign and no other coefficient was allowed to acquire one after the estimates were visible",
+    "stop_condition_triggered": false,
+    "unidentified": [
+      "C",
+      "K",
+      "c_x_inflation_gap",
+      "lam_u"
+    ],
+    "verdict": "PARTIALLY IDENTIFIED -- these load-bearing coefficients' 95% intervals span both signs and their SIZE is not established by this panel: c_x_inflation_gap, lam_u"
+  },
+  "label_stability": {
+    "arms": {
+      "baseline": {
+        "arm": "baseline",
+        "economic_share_on_history": 0.558666923174,
+        "grader_axis_selected_lag_months": 2,
+        "moves_by_se": {
+          "c_i_policy_rule": 0.0,
+          "c_x_inflation_gap": 0.0,
+          "cov_expanding[curve_slope]": 0.0,
+          "lam_x_grader_axis": 0.0,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.240319668577,
+          "c_x_inflation_gap": 0.492034580114,
+          "cov_expanding[curve_slope]": -1.488804908804,
+          "lam_x_grader_axis": 0.005020829136,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "both_minus_50bp": {
+        "arm": "both_minus_50bp",
+        "economic_share_on_history": 0.559534728505,
+        "grader_axis_selected_lag_months": 2,
+        "moves_by_se": {
+          "c_i_policy_rule": -0.114287917616,
+          "c_x_inflation_gap": 0.088319752336,
+          "cov_expanding[curve_slope]": -0.103347509085,
+          "lam_x_grader_axis": 0.658656062573,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.241577604278,
+          "c_x_inflation_gap": 0.515130066926,
+          "cov_expanding[curve_slope]": -1.540904563207,
+          "lam_x_grader_axis": 0.005562970569,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "both_plus_50bp": {
+        "arm": "both_plus_50bp",
+        "economic_share_on_history": 0.555967547416,
+        "grader_axis_selected_lag_months": 1,
+        "moves_by_se": {
+          "c_i_policy_rule": 0.180546607358,
+          "c_x_inflation_gap": -0.090075892142,
+          "cov_expanding[curve_slope]": 0.891773047404,
+          "lam_x_grader_axis": -0.275874517305,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.238332441688,
+          "c_x_inflation_gap": 0.468479865297,
+          "cov_expanding[curve_slope]": -1.039243347172,
+          "lam_x_grader_axis": 0.004793756139,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "growth_line_minus_50bp": {
+        "arm": "growth_line_minus_50bp",
+        "economic_share_on_history": 0.559534728505,
+        "grader_axis_selected_lag_months": 2,
+        "moves_by_se": {
+          "c_i_policy_rule": -0.114287917616,
+          "c_x_inflation_gap": 0.088319752336,
+          "cov_expanding[curve_slope]": -0.054548151047,
+          "lam_x_grader_axis": 0.658656062573,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.241577604278,
+          "c_x_inflation_gap": 0.515130066926,
+          "cov_expanding[curve_slope]": -1.516303779778,
+          "lam_x_grader_axis": 0.005562970569,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "growth_line_plus_50bp": {
+        "arm": "growth_line_plus_50bp",
+        "economic_share_on_history": 0.555967547416,
+        "grader_axis_selected_lag_months": 1,
+        "moves_by_se": {
+          "c_i_policy_rule": 0.180546607358,
+          "c_x_inflation_gap": -0.090075892142,
+          "cov_expanding[curve_slope]": 0.994237704531,
+          "lam_x_grader_axis": -0.275874517305,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.238332441688,
+          "c_x_inflation_gap": 0.468479865297,
+          "cov_expanding[curve_slope]": -0.987588757022,
+          "lam_x_grader_axis": 0.004793756139,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "inflation_line_minus_50bp": {
+        "arm": "inflation_line_minus_50bp",
+        "economic_share_on_history": 0.558666923174,
+        "grader_axis_selected_lag_months": 2,
+        "moves_by_se": {
+          "c_i_policy_rule": 0.0,
+          "c_x_inflation_gap": 0.0,
+          "cov_expanding[curve_slope]": 0.012781123352,
+          "lam_x_grader_axis": 0.0,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.240319668577,
+          "c_x_inflation_gap": 0.492034580114,
+          "cov_expanding[curve_slope]": -1.482361675528,
+          "lam_x_grader_axis": 0.005020829136,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "inflation_line_plus_50bp": {
+        "arm": "inflation_line_plus_50bp",
+        "economic_share_on_history": 0.558666923174,
+        "grader_axis_selected_lag_months": 2,
+        "moves_by_se": {
+          "c_i_policy_rule": 0.0,
+          "c_x_inflation_gap": 0.0,
+          "cov_expanding[curve_slope]": 0.126760796382,
+          "lam_x_grader_axis": 0.0,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.240319668577,
+          "c_x_inflation_gap": 0.492034580114,
+          "cov_expanding[curve_slope]": -1.424902123515,
+          "lam_x_grader_axis": 0.005020829136,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "inflation_minus_growth_plus": {
+        "arm": "inflation_minus_growth_plus",
+        "economic_share_on_history": 0.555967547416,
+        "grader_axis_selected_lag_months": 1,
+        "moves_by_se": {
+          "c_i_policy_rule": 0.180546607358,
+          "c_x_inflation_gap": -0.090075892142,
+          "cov_expanding[curve_slope]": 0.970573721942,
+          "lam_x_grader_axis": -0.275874517305,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.238332441688,
+          "c_x_inflation_gap": 0.468479865297,
+          "cov_expanding[curve_slope]": -0.999518268682,
+          "lam_x_grader_axis": 0.004793756139,
+          "lam_x_usrec": 0.006326376583
+        }
+      },
+      "inflation_plus_growth_minus": {
+        "arm": "inflation_plus_growth_minus",
+        "economic_share_on_history": 0.559534728505,
+        "grader_axis_selected_lag_months": 2,
+        "moves_by_se": {
+          "c_i_policy_rule": -0.114287917616,
+          "c_x_inflation_gap": 0.088319752336,
+          "cov_expanding[curve_slope]": -1.044216879702,
+          "lam_x_grader_axis": 0.658656062573,
+          "lam_x_usrec": 0.0
+        },
+        "values": {
+          "c_i_policy_rule": -0.241577604278,
+          "c_x_inflation_gap": 0.515130066926,
+          "cov_expanding[curve_slope]": -2.015216614662,
+          "lam_x_grader_axis": 0.005562970569,
+          "lam_x_usrec": 0.006326376583
+        }
+      }
+    },
+    "coupling_coefficient_verdict": "the PRIMARY lam_x is fitted against 1 - 2*USREC, which is not a function of the classifier's dials at all, so it is INVARIANT under the whole grid by construction -- a real stability property and not a measurement. The dial sensitivity that exists is carried by lam_x_grader_axis, the same equation refitted on the classifier's own growth axis, and that is the number to read",
+    "escalated": [
+      "cov_expanding[curve_slope]"
+    ],
+    "escalation_rule": "the sealed rule: a statistic that moves by more than its own standard error across the nine dial arms escalates to soft labels and both are reported",
+    "worst_arm_per_coefficient": {
+      "c_i_policy_rule": {
+        "arm": "growth_line_plus_50bp",
+        "baseline": -0.240319668577,
+        "baseline_standard_error": 0.01100672518,
+        "escalated": false,
+        "moves_by_se": 0.180546607358
+      },
+      "c_x_inflation_gap": {
+        "arm": "growth_line_plus_50bp",
+        "baseline": 0.492034580114,
+        "baseline_standard_error": 0.261498545916,
+        "escalated": false,
+        "moves_by_se": -0.090075892142
+      },
+      "cov_expanding[curve_slope]": {
+        "arm": "inflation_plus_growth_minus",
+        "baseline": -1.488804908804,
+        "baseline_standard_error": 0.504121046203,
+        "escalated": true,
+        "moves_by_se": -1.044216879702
+      },
+      "lam_x_grader_axis": {
+        "arm": "growth_line_minus_50bp",
+        "baseline": 0.005020829136,
+        "baseline_standard_error": 0.000823102472,
+        "escalated": false,
+        "moves_by_se": 0.658656062573
+      },
+      "lam_x_usrec": {
+        "arm": "inflation_line_minus_50bp",
+        "baseline": 0.006326376583,
+        "baseline_standard_error": 0.001062582187,
+        "escalated": false,
+        "moves_by_se": 0.0
+      }
+    }
+  },
+  "model": {
+    "joint_likelihood": "L = L_hazard(beta) + L_inflation(k0, a, lam_x, sig_x) + L_policy(u0, phi_u, lam_u, lam_c, sig_u) + L_curve(c, rho, sigma), maximised as one object. It block-diagonalises because every path is OBSERVED on the panel -- the season from grader_v2's labels, the slope from the panel's own 10y-2y, the inflation gap from CPI minus L1's trend, the policy deviation from the observed rate minus L1's own anchor. That is a property of the data and not an achievement of the design; what the joint fit buys is that every 'no coupling' restriction nests exactly and is a likelihood-ratio test",
+    "lag_selection_rule": "SEALED (ruling SQ9): maximum likelihood on the declared 25-lag grid, 0 to 24 months, one parameter at every lag, a common sample at every lag, the highest likelihood wins, the whole profile published",
+    "system": "x_{t+1} = k0 + a x_t + lam_x (c_{t-m} - cbar) + sig_x e; pi_t = pi*_t + x_t; u_{t+1} = u0 + phi_u u_t + lam_u x_t + lam_c c_t + sig_u e; i_t = r*_t + pi*_t + phi_pi x_t + phi_c c_t; slope_t = c0 + c_i (i_t - ibar) + c_x (x_t - xbar) + season_term(g_t, a_t) + e_t, e AR(1); season_{t+1} ~ Bernoulli(h(season_t, dwell_t, z_t)) with z carrying slope at the curve's own lead"
+  },
+  "panel": {
+    "climate_artifact_sha256": "5d48def735ad98346e9316c613db1fc743df84ab8143085013870ccbd7066e6b",
+    "curve": {
+      "inverted_share": 0.183271832718,
+      "slope_ar1": 0.975532651517,
+      "slope_mean_pp": 0.708608937107,
+      "slope_sd_pp": 0.842693768935
+    },
+    "era_threshold_pp": 3.351323828921,
+    "panel_months": 813,
+    "panel_span": [
+      "1953-04-01",
+      "2020-12-01"
+    ],
+    "pi_star_tracks_observed_cpi": {
+      "correlation": 0.999798006841,
+      "residual_sd_pp": 0.159700810719
+    },
+    "pi_target": 2.0,
+    "regimes_artifact_sha256": "59763881331993417df5eba0752b3be6eafaabb6d85a713f65ea7c950e478a26",
+    "theta_bar": {
+      "phi_c": 0.093014789081,
+      "phi_pi": 0.624609790015,
+      "psi": 0.693781497687,
+      "s_m_pi": 0.029454557091
+    },
+    "valuation_drawdown_calibration": {
+      "agreement_with_equity_dummy": 0.940959409594,
+      "equity_drawdown_threshold": -0.2,
+      "equity_dummy_rate": 0.116851168512,
+      "v_drawdown_threshold": -0.323365525588,
+      "v_dummy_rate": 0.116851168512
+    },
+    "vintage_id": "2026-08-10.1"
+  },
+  "primary_constructs": {
+    "curve_arm": "m4_rule_implied",
+    "cycle_input": "axis_calibrated",
+    "declared_before_any_bar_was_read": true,
+    "deviations_from_the_design_document": [
+      {
+        "deviation": "the curve reads i_rule, not i = i_rule + u",
+        "reason": "the sealed P2 anchor (exam delta 4.3) decomposes history on the rule-implied rate and classifies u_hat as exogenous. Keeping u out of the curve makes the generated and historical decompositions the same object with an empty exogenous block on both sides. The i_rule + u arm is fitted and reported as a disclosure"
+      },
+      {
+        "deviation": "the hazard's third covariate stays pi* - pi_target",
+        "reason": "the design document writes x_t there and calls the chain 'unchanged in form' in the same paragraph; the substitution is fitted as a disclosure rather than taken"
+      },
+      {
+        "deviation": "the generated cycle input is the axis-calibrated WP2.6 contract, not +1/-1",
+        "reason": "see PRIMARY_CYCLE_INPUT: a literal +-1 applies a USREC-fitted coefficient to a regressor with a different mean and twice the range, which moves the inflation LEVEL as a side effect. Both alternatives are simulated and reported"
+      },
+      {
+        "deviation": "the inflation innovation is drawn i.i.d.",
+        "reason": "that is the equation as fitted. Its residual carries a lag-1 autocorrelation of 0.198 from the trailing-12-month construction; simulating that structure would be simulating a model that was not estimated. Declared as a limitation"
+      }
+    ],
+    "hazard_arm": "v2_unchanged"
+  },
+  "purpose": "stage 2 week A: the coupled monthly macro system -- growth, inflation, policy and the curve -- fitted jointly on the campaign panel by maximum likelihood, and the eight pre-flesh bars read by the sealed judges. A1/A2/R1/R2 need the flesh or the twin and are week C",
+  "schema": "stage2-fitted-params-1",
+  "seal": "docs/superpowers/specs/stage2-prereg.json",
+  "seal_files_untouched": [
+    "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+    "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+    "docs/superpowers/specs/spine-pilot-prereg.json",
+    "docs/superpowers/specs/spine-v2-anchors.json",
+    "docs/superpowers/specs/spine-v2-antitest-results.json",
+    "docs/superpowers/specs/spine-v2-prereg.json",
+    "docs/superpowers/specs/spine02-prereg.json",
+    "docs/superpowers/specs/stage2-anchors.json",
+    "docs/superpowers/specs/stage2-antitest-results.json",
+    "scripts/spine_pilot_b3.py",
+    "scripts/spine_pilot_report.py",
+    "scripts/spine_v2_anchors.py",
+    "scripts/spine_v2_antitest.py",
+    "scripts/spine_v2_grader.py",
+    "scripts/spine_v2_report.py",
+    "scripts/spine_v2_seal.py",
+    "scripts/stage2_anchors.py",
+    "scripts/stage2_antitest.py",
+    "scripts/stage2_report.py",
+    "scripts/stage2_seal.py"
+  ],
+  "spec": "docs/superpowers/specs/2026-08-17-stage2-coupled-system-design.md",
+  "standing_caveat": "nothing built on this generator line is a convincing model of history, the holdout is spent, and no appeal to held-out data is available to any result stage 2 produces",
+  "status": "FRONTIER",
+  "streams": {
+    "attempt_ladder_disjoint_from_platform_ladder": true,
+    "disjoint_from_platform_layer_offsets": true,
+    "n_streams_checked": 904,
+    "new_offset_this_campaign": {
+      "policydev": 1674811
+    },
+    "offsets": {
+      "inflnoise": 829417,
+      "labels": 1063441,
+      "openage": 1298743,
+      "policydev": 1674811,
+      "seasons": 601387,
+      "slope": 715393
+    },
+    "per_decade_streams_distinct": true,
+    "platform_seed_stride": 7919,
+    "spine2_attempt_stride": 32452843
+  },
+  "verification": {
+    "all_eight_pass": false,
+    "arm": "unconditional",
+    "attempts": 50,
+    "bars": [
+      {
+        "band": [
+          1.775282749111,
+          3.347362210254
+        ],
+        "bar": "T1",
+        "measured": true,
+        "pass": true,
+        "value": 2.239246798804
+      },
+      {
+        "bar": "O1",
+        "measured": true,
+        "pass": true,
+        "threshold": 0.518066910499,
+        "value": 0.560824742268
+      },
+      {
+        "band": [
+          0.0,
+          5.0
+        ],
+        "bar": "D1",
+        "measured": true,
+        "pass": true,
+        "value": 2.0
+      },
+      {
+        "band": [
+          1.0,
+          7.0
+        ],
+        "bar": "D2",
+        "measured": true,
+        "pass": true,
+        "value": 4.0
+      },
+      {
+        "band": [
+          2.0,
+          8.0
+        ],
+        "bar": "D3",
+        "measured": true,
+        "pass": true,
+        "value": 4.0
+      },
+      {
+        "band": [
+          1.0,
+          7.0
+        ],
+        "bar": "D4",
+        "measured": true,
+        "pass": true,
+        "value": 3.0
+      },
+      {
+        "bar": "P1",
+        "measured": true,
+        "pass": true,
+        "per_move_type": {
+          "growth_flip": {
+            "clockwise_fraction": 0.590243902439,
+            "departure": 0.101751856212,
+            "n_transitions": 205,
+            "own_null": 0.488492046227,
+            "pass": true,
+            "threshold": 0.040330202948
+          },
+          "inflation_crossing": {
+            "clockwise_fraction": 0.563432835821,
+            "departure": 0.073519637718,
+            "n_transitions": 268,
+            "own_null": 0.489913198103,
+            "pass": true,
+            "threshold": 0.031445706759
+          }
+        },
+        "value": 0.042073930959
+      },
+      {
+        "band": [
+          0.391706974667,
+          0.673370849738
+        ],
+        "bar": "P2",
+        "decomposition": {
+          "component_is_economic": {
+            "inflation_gap": true,
+            "policy_rule": true,
+            "season_term": true
+          },
+          "component_sd_pp": {
+            "inflation_gap": 0.106532889969,
+            "policy_rule": 1.36583069058,
+            "season_term": 0.059040873619
+          },
+          "economic_share": 0.770682653481,
+          "economic_sum_of_squares": 1.880328556732,
+          "exogenous_sum_of_squares": 0.0,
+          "naive_explained_share": 0.770682653481,
+          "residual_share": 0.229317346519,
+          "residual_stationary_sd_pp": 0.747992998622,
+          "residual_sum_of_squares": 0.559493525988,
+          "total_sum_of_squares": 2.43982208272
+        },
+        "failure_side": "above",
+        "measured": true,
+        "pass": false,
+        "value": 0.770682653481
+      },
+      {
+        "bar": "A1",
+        "measured": false,
+        "why": "needs the flesh (A1, A2), the institutional twin's over-commitment grid (R1) or an ensemble and the panel source (R2). Week C, not week A"
+      },
+      {
+        "bar": "A2",
+        "measured": false,
+        "why": "needs the flesh (A1, A2), the institutional twin's over-commitment grid (R1) or an ensemble and the panel source (R2). Week C, not week A"
+      },
+      {
+        "bar": "R1",
+        "measured": false,
+        "why": "needs the flesh (A1, A2), the institutional twin's over-commitment grid (R1) or an ensemble and the panel source (R2). Week C, not week A"
+      },
+      {
+        "bar": "R2",
+        "measured": false,
+        "why": "needs the flesh (A1, A2), the institutional twin's over-commitment grid (R1) or an ensemble and the panel source (R2). Week C, not week A"
+      }
+    ],
+    "diagnostics": {
+      "dispersion_ratios_generated_over_history": {
+        "i_rule": 1.634983523142,
+        "slope": 1.735270689801,
+        "why_it_is_here": "P2 is a SHARE, so it moves with the numerator's dispersion as much as with the coefficients. If the generated rule-implied rate is more dispersed than history's, the economic share rises without any coupling changing -- and these three ratios are how a reader tells the two apart",
+        "x_gap": 1.355754209869
+      },
+      "generated": {
+        "expanding_share": 0.776666666667,
+        "hot_share": 0.371833333333,
+        "i_rule_sd_pp": 5.683391204164,
+        "inverted_share": 0.160333333333,
+        "mean_x_gap_contracting_pp": 0.108955788659,
+        "mean_x_gap_expanding_pp": 0.157772018442,
+        "months": 6000,
+        "slope_sd_pp": 1.462301797711,
+        "x_gap_mean_pp": 0.146869727124,
+        "x_gap_sd_pp": 0.216515046452,
+        "yoy_mean_pp": 1.811093043627
+      },
+      "history": {
+        "expanding_share": 0.719557195572,
+        "hot_share": 0.392009987516,
+        "i_rule_sd_pp": 3.476115278057,
+        "inverted_share": 0.183271832718,
+        "months": 801,
+        "slope_sd_pp": 0.842693768935,
+        "usrec_cycle_mean": 0.722017220172,
+        "x_gap_sd_pp": 0.159700810719,
+        "yoy_mean_pp": 3.489818839492
+      },
+      "inflation_gap_by_growth_spell_age": {
+        "months_13_36": {
+          "contracting_mean_x_gap_pp": 0.056135136188,
+          "expanding_mean_x_gap_pp": 0.123613195586
+        },
+        "months_1_12": {
+          "contracting_mean_x_gap_pp": 0.125498264596,
+          "expanding_mean_x_gap_pp": 0.122619221928
+        },
+        "months_37_plus": {
+          "contracting_mean_x_gap_pp": 0.183388904358,
+          "expanding_mean_x_gap_pp": 0.215498125707
+        }
+      },
+      "note": "the last block is the coupling's own signature: if inflation follows growth, the gap should climb the longer an expansion has run and fall the longer a contraction has. It is a diagnostic, never a bar"
+    },
+    "n_decades": 50,
+    "n_passing": 7,
+    "o1_symmetric_disclosure": {
+      "disclosure": "O1_under_the_stage2_primary_construct",
+      "generated_value": 0.560824742268,
+      "judged": false,
+      "margin_against_the_symmetric_floor": 0.045153025091,
+      "note": "the generated statistic is unchanged between the two constructs -- symmetrising windows HISTORY, not the engine -- so this is the same number read against a different floor. The symmetric floor is under-resolved at 2000 draws and is reported, never judged",
+      "sealed_floor": 0.518066910499,
+      "sealed_pass": true,
+      "symmetric_floor": 0.515671717177,
+      "would_clear_the_symmetric_floor": true
+    },
+    "p2_components": {
+      "component_sd_pp": {
+        "inflation_gap": 0.106532889969,
+        "policy_rule": 1.36583069058,
+        "season_term": 0.059040873619
+      },
+      "residual_stationary_sd_pp": 0.747992998622
+    },
+    "seed": 20260821,
+    "seed_note": "week 3's verification seed, re-used deliberately: the same batch identity, so a change of verdict is attributable to the engine and not to a tape"
+  },
+  "week_c": {
+    "bars": [
+      "A1",
+      "A2",
+      "R1",
+      "R2"
+    ],
+    "why": "A1 and A2 need the flesh -- verbatim real months of asset returns compiled onto the spine, which this loop does not run. R1 needs the institutional twin's over-commitment grid and R2 needs an ensemble and the panel source. None of the four is measured here and none is estimated"
+  }
+}
