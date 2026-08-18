@@ -4,6 +4,65 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## stage2-01 — THE STAGE-2 SEAL (2026-08-18)
+
+**The stage-2 exam is sealed, before the coupled fit is written and before any stage-2
+batch is simulated.** `docs/superpowers/specs/stage2-prereg.json` hashes the two new bars'
+thresholds together with the code that judges them, the ten carried v2 bars loaded whole,
+the anti-test evidence, and the exam document itself
+(`docs/superpowers/specs/2026-08-18-stage2-exam-delta.md`). After this commit none of it
+can change except through the machine-checked amendment log, enforced by
+`tests/test_stage2_seal.py`.
+
+**The two new bars.** **`P1`** (phase coupling) asks that *both* move types depart from the
+batch's **own** within-decade phase-scrambled null by at least **0.040330** (growth flips)
+and **0.031446** (inflation crossings). **`P2`** (curve endogeneity) asks that the strict
+economic share of the generated slope's variance land inside **[0.391707, 0.673371]**,
+two-sided — the upper edge is load-bearing, because a share can be bought by shrinking the
+noise the product needs.
+
+**The ten v2 bars carry byte-frozen.** `scripts/stage2_report.py` imports
+`scripts/spine_v2_report.py`'s own judges and hands them the v2 seal loaded whole; R1 and
+R2 reach round one's and round two's functions through it. Nothing is re-implemented, so a
+change in one of those ten verdicts is attributable to the engine and to nothing else.
+
+**Six coordinator rulings, recorded verbatim with their reasoning, all cheap-veto
+disclosed.** `O1` carries byte-frozen while the stage-2 *primary* ordering measurement is
+the windowed-overlapping symmetric construct — compatible because symmetrising windows
+**history**, not the engine, so the symmetric floor (0.515672) is published beside every
+`O1` reading and never judged (SQ1). `P2` seals on the strict share, with the realised-R²
+non-robustness a declared limitation rather than a second bar (SQ6). `P1` seals at the
+**minimum** of the published candidate set (SQ7), cut from the **within-window** null on
+both sides (SQ8). The coupling lag is a sealed **selection rule** — maximum likelihood on
+the declared 25-lag grid — rather than a value, because the panel does not pin ten months
+(SQ9). And the 640,000-draw floor rule is adopted as binding.
+
+**The anti-tests: four sweeps, all monotone; five controls, all hold** — including the two
+named gaming routes. An uncoupled engine is centred on the null; a passing batch that is
+phase-scrambled collapses from 0.290 to −0.001 and from 1.000 to 0.123; every recorded
+engine fails `P1` on its own null; shrinking the residual from 0.748 to 0.500 takes the
+share to 0.723 and the judge fails it **on the upper side** 12 times out of 12; and week 2
+and week 3 both fail `P2` below the band, re-scored **through the sealed judge** from their
+committed component standard deviations.
+
+**What the softest threshold costs, measured: `P1`'s size is 9.0%.** Against a synthetic
+engine whose two dials are independent by construction, `P1` returns a PASS in 9% of 300
+batches of fifty decades — against 1.3% at the recommended construct's own candidate. The
+judge is not broken (centred on the null to 0.2% of the threshold); this is the bar's size
+and it is the price of ruling SQ7. It is L1 in a thirteen-entry limitations register and
+the first stop-question, and the alternative threshold pair is already inside the sealed
+candidate set, so a veto is an amendment naming two numbers.
+
+**Honest about the floors ruling.** Neither sealed floor was re-cut at 640,000 draws and
+the seal says so in checkable terms: `P1`'s thresholds carry **no tape at all** (both
+halves are exhaustively enumerated), and `P2`'s band is a 2000-draw bootstrap whose
+smallest margin is 0.369 against an O1-class 0.00076 — so the rule is met by arithmetic
+while its tape noise stays **unmeasured**, recorded as `meets_the_rule: null` rather than
+as a yes.
+
+Nothing sealed was edited; `stage2-anchors.json` and `scripts/stage2_anchors.py` are
+untouched and re-run byte-identical. `src/` and `schemas/` untouched.
+
 ## stage2-01 — the pre-seal measurements, second pass (2026-08-17)
 
 **M3, M5, the generated side's own scrambled null and the floor-noise sizing**, all in
