@@ -17,7 +17,60 @@
       "threshold_change": "a sealed pass/fail value changes"
     }
   },
-  "amendments": [],
+  "amendments": [
+    {
+      "amendment_id": "AM-SPV2-2026-08-17-001",
+      "authority": "owner ruling D-SP-8, 2026-08-17: build the season-to-curve feedback, refit, re-run the sealed verification, and resolve the measurement-arm ambiguity by a logged amendment BEFORE any re-measurement",
+      "date": "2026-08-17",
+      "paths": [
+        "docs/superpowers/specs/2026-08-17-spine-v2-exam.md"
+      ],
+      "payload": {
+        "ambiguity_resolved": "section 8.1's power model draws decade stretches uniformly (unconditional) while its ruling sentence says '50 decades per premise'",
+        "exam_document_left_byte_identical": true,
+        "hashed_files_edited": [],
+        "judged_on_premise_accepted_batch": [
+          "D1",
+          "D2",
+          "D3",
+          "D4",
+          "A1",
+          "A2",
+          "R1",
+          "R2"
+        ],
+        "judged_on_unconditional_batch": [
+          "T1",
+          "O1"
+        ],
+        "like_for_like_precedents": [
+          "PRE-SEAL RULING 1 (2026-08-17): D1-D4 put both sides on the same 120-month window, because a censoring mismatch made D3 unpassable by a correct engine",
+          "round two: B6 re-defined so its conditional and unconditional base rates were measured on comparable populations"
+        ],
+        "n_seeds_unchanged": 50,
+        "readings_known_at_amendment_time": {
+          "O1_floor": 0.5180669104991394,
+          "O1_premise_accepted": 0.500707,
+          "O1_unconditional": 0.514911,
+          "T1_band": [
+            1.7752827491108736,
+            3.3473622102535145
+          ],
+          "T1_premise_accepted": 1.230161,
+          "T1_unconditional": 1.763633,
+          "amended_arm_reads_more_favourably": true,
+          "both_arms_fail_both_bars_at_amendment_time": true
+        },
+        "source_of_readings": "docs/superpowers/specs/2026-08-17-spine-v2-fit-report.md",
+        "thresholds_changed": [],
+        "unconditional_batch_definition": "n_seeds = 50 decades of 120 months from the same engine and the same base seed, with ah.gen.spine._reject_reason's premise acceptance NOT applied"
+      },
+      "post_hoc": true,
+      "rationale": "WHICH ARM JUDGES THE CAUSAL BARS T1 AND O1. The sealed record is ambiguous about the batch T1 and O1 are judged on, and the ambiguity is decision-bearing. Section 8.1's power calculation models a true engine as one emitting UNCONDITIONALLY drawn contiguous 120-month stretches of the panel -- no premise selection appears anywhere in it -- while the same section's ruling fixes n_seeds at '50 decades PER PREMISE'. Week 2 measured both arms and they disagree materially, so the reading has to be settled before a verdict rather than after one. \n\nTHE RULING. T1 and O1 are judged on an UNCONDITIONAL 50-decade batch -- the same engine, the same seed, no premise acceptance. Every other bar continues to be judged on the premise-accepted batch: D1-D4 now, and A1/A2/R1/R2 when the flesh exists. \n\nTHE REASONING -- the like-for-like principle, applied a third time. T1's band is the block-bootstrap 95% interval for the recession-or-crisis lift measured over the WHOLE panel (789 eligible months, 149 of them inverted), and O1's floor is the lower edge of the clockwise-fraction interval measured over the WHOLE panel (68 transitions, 41 clockwise). Both anchors are unconditional: they are cut from all of history, with no selection for a supply shock arriving in quarter 8 against an above-trend inflation backdrop. The principle that put both sides of D1-D4 on the same 120-month window (PRE-SEAL RULING 1) and that made round two re-define B6 so its two base rates were comparable is the same principle here: the generated side must carry the conditioning of the side it is compared against. Premise selection does not carry it. It oversamples downturns -- season occupancy in the accepted batch is recession 20.5%, stagflation 23.2%, recovery 28.0%, expansion 28.3%, against history's 13.6/13.9/47.2/25.3 -- and so mechanically distorts the very composition T1 measures: the share of inverted-curve months that sit in expansions rather than inside a downturn already under way. A bar whose anchor is unconditional, judged on a batch selected for downturns, measures the selection and not the engine. \n\nWHAT WAS KNOWN WHEN THIS AMENDMENT WAS MADE, STATED PLAINLY. Both arms had already been measured and published (docs/superpowers/specs/2026-08-17-spine-v2-fit-report.md, sections 6 and 7), and the unconditional arm reads MORE FAVOURABLY on both bars: T1 1.7636 unconditional against 1.2302 premise-accepted, band [1.7752827491108736, 3.3473622102535145]; O1 0.5149 against 0.5007, floor 0.5180669104991394. Both arms FAIL both bars as of this amendment, so nothing is being converted from FAIL to PASS -- but the amended arm does move both readings toward their bands, and that is disclosed here rather than left for a reader to find. \n\nWHY IT IS PRINCIPLED NONETHELESS. The argument is about conditioning symmetry and stands whichever way the readings fall: had the unconditional arm read worse, the anchors would still be unconditional and like-for-like would still select it. The ruling is self-limiting -- it reaches ONLY the two bars whose historical anchors are unconditional, and the premise-accepted batch remains the construct for every bar that is conditional by design -- so it cannot be reached for again to rescue some other bar. No threshold moves, no judge changes, and no file the seal hashes is edited: the exam document is left BYTE-IDENTICAL, exactly as it demands ('An amendment after the seal goes through the machine-checked log, never by editing this file'), so the original ambiguity stays on the record beside its resolution. \n\nPOST-HOC: TRUE. Week-2 results were seen before this amendment was written. Every report from this date forward carries the flag.",
+      "type": "protocol_change",
+      "where": "T1, O1 -- the measurement arm, not the thresholds"
+    }
+  ],
   "anti_test_record": {
     "all_monotone": true,
     "not_swept": "R1 and R2 are byte-frozen and are deliberately NOT re-swept: changing them is the thing a no-regression bar exists to prevent",
