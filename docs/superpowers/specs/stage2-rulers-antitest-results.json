@@ -1,0 +1,317 @@
+{
+  "all_controls_hold": true,
+  "all_monotone": true,
+  "anchor": {
+    "digest": "3e7ce6af9f245648f4e99762da0a90ae4e083dbb70e768ecba9aa2639594b46e",
+    "n_jumps": 800,
+    "note": "the p95 IS spine_pilot_report.judge_b2's sealed panel_p95_adjacent_yoy_pp, 0.7433911963542538 -- S1 does not open a second anchor",
+    "p95_pp": 0.7433911963542538
+  },
+  "broken_controls": [],
+  "controls": {
+    "S1_history_identity": {
+      "control": "fifty contiguous 120-month stretches of the real panel",
+      "holds": true,
+      "pass_rate": 1.0,
+      "replicates": [
+        {
+          "margin": 0.4387946727460723,
+          "pass": true,
+          "replicate": 0,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4796559022956568,
+          "pass": true,
+          "replicate": 1,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4080546452173838,
+          "pass": true,
+          "replicate": 2,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4684204640561923,
+          "pass": true,
+          "replicate": 3,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.45786010784800396,
+          "pass": true,
+          "replicate": 4,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4379521457568553,
+          "pass": true,
+          "replicate": 5,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.47420304236941097,
+          "pass": true,
+          "replicate": 6,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4651779804940262,
+          "pass": true,
+          "replicate": 7,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4816169856557354,
+          "pass": true,
+          "replicate": 8,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.47909187656454566,
+          "pass": true,
+          "replicate": 9,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4324461679032777,
+          "pass": true,
+          "replicate": 10,
+          "seams_vacuous": true
+        },
+        {
+          "margin": 0.4732911670582519,
+          "pass": true,
+          "replicate": 11,
+          "seams_vacuous": true
+        }
+      ],
+      "requirement": "must PASS every replicate, with the seam half vacuous. A bar that fails a world which IS history is measuring itself and no other reading of it is honest",
+      "seam_half_vacuous_rate": 1.0,
+      "seed": 41000683
+    },
+    "S1_noise_inflation_attack": {
+      "attack": "seams at 1.3x history's own scale, camouflaged by drawing every block entry from progressively more violent stretches of the panel so the world's own months move as much as its splices do",
+      "best_camouflage_at_roughness": 0.8,
+      "holds": true,
+      "pass_rate": 0.0,
+      "requirement": "three things, and all three are needed for the control to say anything. (1) S1's pass rate must be ZERO at every rung -- the attack never works. (2) The camouflage must actually fool the self-referential bar S1 refuses to be, at a strictly positive rate, or the attack is a strawman and barring it proves nothing. (3) At the rung where the camouflage works best, S1's TEXTURE half must fail on the UPPER side in every replicate: the roughening that hides the seams is exactly what S1 catches",
+      "rungs": [
+        {
+          "entry_roughness_percentile": 0.0,
+          "mean_s1_margin": -0.8489548762346985,
+          "s1_pass_rate": 0.0,
+          "s1_texture_fails_above_rate": 0.0,
+          "self_referential_bar_pass_rate": 0.0
+        },
+        {
+          "entry_roughness_percentile": 0.5,
+          "mean_s1_margin": -0.9186729209957446,
+          "s1_pass_rate": 0.0,
+          "s1_texture_fails_above_rate": 0.5833333333333334,
+          "self_referential_bar_pass_rate": 0.0
+        },
+        {
+          "entry_roughness_percentile": 0.8,
+          "mean_s1_margin": -1.0967141861021108,
+          "s1_pass_rate": 0.0,
+          "s1_texture_fails_above_rate": 1.0,
+          "self_referential_bar_pass_rate": 0.5
+        },
+        {
+          "entry_roughness_percentile": 0.9,
+          "mean_s1_margin": -1.503557969947394,
+          "s1_pass_rate": 0.0,
+          "s1_texture_fails_above_rate": 1.0,
+          "self_referential_bar_pass_rate": 0.3333333333333333
+        }
+      ],
+      "seam_scale": 1.3,
+      "seed": 41000541,
+      "self_referential_bar_pass_rate": 0.5,
+      "texture_fails_above_rate": 1.0
+    }
+  },
+  "decade_months": 120,
+  "mean_block_months": 6,
+  "n_decades": 50,
+  "n_replicates": 12,
+  "non_monotone_sweeps": [],
+  "not_blind": "DISCLOSED: D-SP-10's own results document already published this engine's seam and contiguous p95 (1.9143 and 0.6956 against a panel p95 of 0.7434), so S1 was NOT designed blind to the numbers it would read. The band is nonetheless a pure function of the panel and of a sample size -- no generated quantity enters its derivation -- and both endpoints of both sweeps were fixed by the construction (fidelity at 1.0) rather than chosen to land anywhere",
+  "not_swept": "A1R is not swept and cannot be: it is A1's own statistic and A1's own carried containment band read on a larger batch, so there is no new judging rule to anti-test -- what changed is the batch size, and its adequacy is a power calculation rather than a sweep. The twelve sealed bars are byte-frozen and are deliberately not re-swept, the reason a carried bar exists",
+  "obligation": "exam section 6.1, carried into D-SP-11: before a judge is sealed, sweep the property the judge claims to measure and confirm the pass rate increases in it. D-SP-11's charter adds two: a seam-worsening sweep must fail the bar monotonically, and a seam-hiding-by-noise-inflation attack must also fail",
+  "parameters_judged_against": {
+    "a1r_alpha": 0.05,
+    "a1r_decades_per_sub_batch": 50,
+    "band_block_months": 24,
+    "band_draws": 2000,
+    "band_level": 0.95,
+    "band_seed": 20260821,
+    "deduplicate_transitions": true,
+    "era_crossing_window_months": 0,
+    "min_tail_count": 5
+  },
+  "rule": "S1 asks whether a seam is DISTINGUISHABLE from an ordinary historical month-transition, which is a two-sided property, so its pass region is an interval and a single sweep of 'more of the effect' would be non-monotone by construction. Each sweep therefore runs TOWARD fidelity from one side and the pass rate must not fall. The noise-inflation attack is a CONTROL: its pass rate is required to be zero and its failure required to be on the upper side of the texture half, so it is excluded from the monotonicity gate and carries its own boolean",
+  "schema": "stage2-rulers-antitest-1",
+  "seeds": {
+    "S1_history_identity": 41000683,
+    "S1_noise_inflation_attack": 41000541,
+    "S1_seam_inflation": 41000117,
+    "S1_seam_oversmoothing": 41000253,
+    "S1_texture_roughening": 41000397
+  },
+  "sweeps": {
+    "S1_seam_inflation": {
+      "effect": "seam jumps shrinking from 3x history's own scale down to history's own scale (the charter's seam-worsening sweep, read from its good end)",
+      "grid": [
+        3.0,
+        2.0,
+        1.5,
+        1.2,
+        1.0
+      ],
+      "mean_statistic": [
+        -8.607215009462687,
+        -4.102870907433723,
+        -1.77533323797524,
+        -0.38605074293096037,
+        0.3360044435180205
+      ],
+      "monotone_non_decreasing": true,
+      "n_replicates": 12,
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "seam_half_pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "seed": 41000117,
+      "statistic": "S1 binding margin: the smallest slack from a judged quantile to its band",
+      "texture_half_pass_rate": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "S1_seam_oversmoothing": {
+      "effect": "seam jumps growing from a fifth of history's own scale up to it -- the other way a seam becomes findable, by being unnaturally smooth",
+      "grid": [
+        0.2,
+        0.4,
+        0.6,
+        0.8,
+        1.0
+      ],
+      "mean_statistic": [
+        -3.025313295232056,
+        -2.179468117557376,
+        -1.2563498063001475,
+        -0.3735223250093973,
+        0.3036400300333199
+      ],
+      "monotone_non_decreasing": true,
+      "n_replicates": 12,
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "seam_half_pass_rate": [
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0
+      ],
+      "seed": 41000253,
+      "statistic": "S1 binding margin: the smallest slack from a judged quantile to its band",
+      "texture_half_pass_rate": [
+        1.0,
+        1.0,
+        1.0,
+        1.0,
+        1.0
+      ]
+    },
+    "S1_texture_roughening": {
+      "effect": "block entries widening from the panel's most violent decile back to the whole panel, with the seams held at history's own scale throughout",
+      "grid": [
+        0.9,
+        0.75,
+        0.5,
+        0.25,
+        0.0
+      ],
+      "mean_statistic": [
+        -0.3985845974096003,
+        -0.22099429362581113,
+        -0.012517934027790818,
+        0.08759900221465394,
+        0.2948199865100543
+      ],
+      "monotone_non_decreasing": true,
+      "n_replicates": 12,
+      "pass_rate": [
+        0.0,
+        0.0,
+        0.4166666666666667,
+        1.0,
+        1.0
+      ],
+      "seam_half_pass_rate": [
+        0.0,
+        0.8333333333333334,
+        1.0,
+        1.0,
+        1.0
+      ],
+      "seed": 41000397,
+      "statistic": "S1 binding margin: the smallest slack from a judged quantile to its band",
+      "texture_half_pass_rate": [
+        0.0,
+        0.0,
+        0.4166666666666667,
+        1.0,
+        1.0
+      ]
+    }
+  },
+  "thresholds_judged_against": {
+    "A1R_alpha": 0.05,
+    "A1R_decades": 25700,
+    "A1R_history_difference_pp": 3.4932826800308607,
+    "A1R_history_spread_high_pp": 4.871958498950341,
+    "A1R_history_spread_low_pp": 1.37867581891948,
+    "A1R_pilot_mean_pp": -0.974800566398,
+    "A1R_pilot_n_seeds": 6,
+    "A1R_pilot_sd_pp": 3.866342110522,
+    "A1R_power": 0.9,
+    "A1R_seed_stride": 15485863,
+    "A1R_sub_batches": 514,
+    "S1_band_level": 0.95,
+    "S1_both_halves_required": true,
+    "S1_conditions": [
+      "contiguous_q0.5",
+      "contiguous_q0.95",
+      "seam_q0.5",
+      "seam_q0.95"
+    ],
+    "S1_quantiles": [
+      0.5,
+      0.95
+    ]
+  }
+}
