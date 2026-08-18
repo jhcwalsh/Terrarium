@@ -406,3 +406,17 @@ favourably on both bars.
   the amendment stands with its disclosure, the post-hoc spec choices
   stand as disclosures. The stage-2 coupled-system spec is committed as
   D-SP-9 PROPOSED, not taken.
+
+## D-SP-9 - RULED 2026-08-17: FUND STAGE 2 (the coupled macro system)
+
+Owner ruling ("Go ahead" on the committed proposal
+docs/superpowers/specs/2026-08-17-stage2-coupled-system-design.md): the
+coupled monthly system - growth, inflation, policy stance, curve, fitted
+jointly - is funded per the spec: 2-3 weeks modelling plus the full exam
+weeks the v2 campaign never ran, cheap exits named per week. Sealed-exam
+discipline carries over: all ten v2 bars byte-frozen, the two new bars
+(P1 phase coupling, P2 curve endogeneity) sealed only after their
+pre-obligations - the M4 historical decomposition for P2 (drop P2 if
+history is too noisy to band, per the A2-ceiling precedent) and the
+windowing-symmetric re-derivation of the phase anchor (the O1-censoring
+caveat). Asset-return conditional means (stage 3) remain unfunded.
