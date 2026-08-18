@@ -354,6 +354,16 @@ A **forced re-entry** happens when a block reaches the panel's last row: the own
 candidate in that month's pool matches the era filter, it draws **unfiltered**. That happened
 **once in six thousand months**, and that single unfiltered draw is the entire `R2` failure.
 
+### 6.2 One coincidence a reviewer will spot, checked rather than left
+
+The unconditional batch and the premise-accepted batch (§8.2) report **exactly the same p95**,
+0.883035257076, to twelve decimals — on two batches that are demonstrably different (444 seams
+against 370, and maximum jumps of 4.13 pp against 11.24 pp). It is not a caching bug and it was
+checked rather than assumed: the p95 is taken over 5,950 adjacent-month pairs that are almost
+all **contiguous panel rows**, so its order statistics come from the panel's own
+adjacent-inflation distribution, which has a plateau exactly there — the 5,651st and 5,652nd
+sorted values are the same number on both batches, so the interpolated percentile is too.
+
 **So `R2` is one line of code away from passing, and it is not stage 2's line.** The
 unfiltered fallback is a declared, owner-ruled escape hatch in the platform's compiler; the
 exam expected `R2` to flip on join-constraint tightening, which is inside D-SP-6's funded scope
