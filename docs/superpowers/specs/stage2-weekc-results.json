@@ -1,0 +1,477 @@
+{
+ "a_bar_diagnostics": {
+  "agreement": 0.605925925926,
+  "agreement_expected_if_the_two_dials_were_independent": 0.591596159122,
+  "era_line_the_grader_splits_on_pp": 3.351323828921,
+  "era_line_the_pools_condition_on_pp": 3.351323828921,
+  "inflation_line_pp": 4.0,
+  "mean_drawn_inflation_when_the_spine_says_high_pp": 3.224842333401,
+  "mean_drawn_inflation_when_the_spine_says_low_pp": 3.025038592897,
+  "months": 5400,
+  "months_in_the_batch": 6000,
+  "quadrant_selected_months": 494,
+  "reading": "the two dials agree on this share of judged months. Where they disagree, A1 and A2 are reading real months whose own inflation is on the other side of the line from the dial the bar conditions on",
+  "share_high_on_the_months_drawn": 0.217037037037,
+  "share_high_on_the_spine_dial": 0.338148148148,
+  "share_of_months_selected_for_their_quadrant": 0.082333333333
+ },
+ "bars": [
+  {
+   "bar": "A1",
+   "containment_pass": true,
+   "containment_pp": [
+    -5.053054679081,
+    32.316056499657
+   ],
+   "directional_pass": true,
+   "inflation_line_pp": 4.0,
+   "months_high": 1826,
+   "months_low": 3574,
+   "pass": true,
+   "spread_high_pp": 2.142367937923,
+   "spread_low_pp": 1.764312722254,
+   "value_difference_pp": 0.378055215669
+  },
+  {
+   "bar": "A2",
+   "correlation_difference": 0.060911208541,
+   "correlation_high": -0.017742671153,
+   "correlation_low": -0.078653879694,
+   "level_positive": false,
+   "margin": 0.136093781397,
+   "margin_pass": false,
+   "pass": false,
+   "share_high_floor": 0.8,
+   "share_high_pass": false,
+   "share_positive_high": 0.476,
+   "share_positive_low_disclosure": 0.468148148148,
+   "windows_high": 1500,
+   "windows_low": 2700
+  },
+  {
+   "bar": "R1",
+   "breach_count": 4,
+   "breach_n": 20,
+   "breach_pass": true,
+   "breach_threshold": 1,
+   "coverage_medians": [
+    0.098064894961,
+    0.291854867753,
+    0.361632454215,
+    0.667990783224
+   ],
+   "depth_band_disclosure": [
+    -0.426,
+    -0.375
+   ],
+   "depth_pass_disclosure": true,
+   "judge_overall_including_depth": true,
+   "median_depth_disclosure": -0.376590584108,
+   "monotone_pass": true,
+   "pass": true
+  },
+  {
+   "bar": "R2",
+   "join_bound_pp": 2.5,
+   "max_join_jump_pp": 4.132499999786,
+   "n_joins": 444,
+   "ok_join": false,
+   "ok_p95": true,
+   "p95_adjacent_yoy_pp": 0.883035257076,
+   "p95_bound_pp": 0.929238995443,
+   "pass": false
+  }
+ ],
+ "batches": {
+  "A1_A2_R2": {
+   "arm": "unconditional",
+   "compiler": {
+    "distinct_panel_rows_visited": 721,
+    "forced_reentries": 1,
+    "n_pools_built": 28,
+    "smallest_pool": 1,
+    "spine_attempts": 50,
+    "unfiltered_reentries": 1
+   },
+   "n_decades": 50,
+   "seed": 20260821,
+   "seed_note": "week A's own verification seed, so the spine is bit-identical to the one the eight pre-flesh bars were read on"
+  },
+  "R1": {
+   "arm": "declared premise",
+   "grid_private_pct": [
+    15.0,
+    35.0,
+    40.0,
+    55.0
+   ],
+   "ladder": {
+    "attempts_per_rung": {
+     "199002": 55,
+     "206921": 4,
+     "214840": 24,
+     "222759": 14,
+     "230678": 0,
+     "238597": 12,
+     "246516": 1,
+     "254435": 0,
+     "262354": 79,
+     "270273": 3,
+     "278192": 3,
+     "286111": 13,
+     "294030": 16,
+     "301949": 26,
+     "309868": 2,
+     "317787": 7,
+     "325706": 4,
+     "333625": 15,
+     "341544": 38,
+     "349463": 16
+    },
+    "month_tapes": {
+     "all_distinct": true,
+     "distinct": 20,
+     "n": 20
+    },
+    "seeds": [
+     199002,
+     206921,
+     214840,
+     222759,
+     230678,
+     238597,
+     246516,
+     254435,
+     262354,
+     270273,
+     278192,
+     286111,
+     294030,
+     301949,
+     309868,
+     317787,
+     325706,
+     333625,
+     341544,
+     349463
+    ],
+    "spines": {
+     "all_distinct": true,
+     "distinct": 20,
+     "n": 20
+    },
+    "stride": 7919
+   },
+   "n_rungs": 20
+  }
+ },
+ "disclosures": {
+  "A1_A2_at_other_inflation_lines": {
+   "3pp": {
+    "A1": {
+     "bar": "A1",
+     "containment_pass": true,
+     "containment_pp": [
+      -5.053054679081,
+      32.316056499657
+     ],
+     "directional_pass": true,
+     "inflation_line_pp": 3.0,
+     "months_high": 2301,
+     "months_low": 3099,
+     "pass": true,
+     "spread_high_pp": 2.012607455032,
+     "spread_low_pp": 1.802713059037,
+     "value_difference_pp": 0.209894395995
+    },
+    "A2": {
+     "bar": "A2",
+     "correlation_difference": 0.107493856187,
+     "correlation_high": 0.001882519546,
+     "correlation_low": -0.10561133664,
+     "level_positive": true,
+     "margin": 0.136093781397,
+     "margin_pass": false,
+     "pass": false,
+     "share_high_floor": 0.8,
+     "share_high_pass": false,
+     "share_positive_high": 0.498933901919,
+     "share_positive_low_disclosure": 0.448364888124,
+     "windows_high": 1876,
+     "windows_low": 2324
+    }
+   },
+   "5pp": {
+    "A1": {
+     "bar": "A1",
+     "containment_pass": true,
+     "containment_pp": [
+      -5.053054679081,
+      32.316056499657
+     ],
+     "directional_pass": true,
+     "inflation_line_pp": 5.0,
+     "months_high": 1415,
+     "months_low": 3985,
+     "pass": true,
+     "spread_high_pp": 2.012585874619,
+     "spread_low_pp": 1.849387330338,
+     "value_difference_pp": 0.163198544281
+    },
+    "A2": {
+     "bar": "A2",
+     "correlation_difference": 0.031755755924,
+     "correlation_high": -0.033758806886,
+     "correlation_low": -0.06551456281,
+     "level_positive": false,
+     "margin": 0.136093781397,
+     "margin_pass": false,
+     "pass": false,
+     "share_high_floor": 0.8,
+     "share_high_pass": false,
+     "share_positive_high": 0.437819420784,
+     "share_positive_low_disclosure": 0.483807005948,
+     "windows_high": 1174,
+     "windows_low": 3026
+    }
+   }
+  },
+  "A1_A2_on_the_flesh_realised_inflation": {
+   "A1": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": true,
+    "inflation_line_pp": 4.0,
+    "months_high": 1172,
+    "months_low": 4228,
+    "pass": true,
+    "spread_high_pp": 6.065115936876,
+    "spread_low_pp": 0.735407201032,
+    "value_difference_pp": 5.329708735843
+   },
+   "A2": {
+    "bar": "A2",
+    "correlation_difference": 0.348323439257,
+    "correlation_high": 0.176478725447,
+    "correlation_low": -0.17184471381,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": true,
+    "pass": true,
+    "share_high_floor": 0.8,
+    "share_high_pass": true,
+    "share_positive_high": 0.928499496475,
+    "share_positive_low_disclosure": 0.329279700655,
+    "windows_high": 993,
+    "windows_low": 3207
+   },
+   "note": "the same batch judged on the trailing inflation of the real months drawn, instead of the coupled system's own. Reported, never judged"
+  },
+  "premise_accepted_batch": {
+   "A1": {
+    "bar": "A1",
+    "containment_pass": true,
+    "containment_pp": [
+     -5.053054679081,
+     32.316056499657
+    ],
+    "directional_pass": false,
+    "inflation_line_pp": 4.0,
+    "months_high": 3616,
+    "months_low": 1784,
+    "pass": false,
+    "spread_high_pp": -0.183307535072,
+    "spread_low_pp": 2.763205954344,
+    "value_difference_pp": -2.946513489416
+   },
+   "A2": {
+    "bar": "A2",
+    "correlation_difference": 0.117979218899,
+    "correlation_high": 0.043965444227,
+    "correlation_low": -0.074013774672,
+    "level_positive": true,
+    "margin": 0.136093781397,
+    "margin_pass": false,
+    "pass": false,
+    "share_high_floor": 0.8,
+    "share_high_pass": false,
+    "share_positive_high": 0.538031319911,
+    "share_positive_low_disclosure": 0.469696969697,
+    "windows_high": 2682,
+    "windows_low": 1518
+   },
+   "R2": {
+    "bar": "R2",
+    "join_bound_pp": 2.5,
+    "max_join_jump_pp": 11.23853069831,
+    "n_joins": 370,
+    "ok_join": false,
+    "ok_p95": true,
+    "p95_adjacent_yoy_pp": 0.883035257076,
+    "p95_bound_pp": 0.929238995443,
+    "pass": false
+   },
+   "attempts": 832,
+   "note": "the same three bars on the premise-accepted batch. A DISCLOSURE: the exam's own arm for the eight pre-flesh bars is the unconditional one and week C keeps its batch identical to week A's"
+  }
+ },
+ "engine": "docs/superpowers/specs/stage2-fitted-params.json (FROZEN INPUT)",
+ "frozen_engine_agreement": {
+  "artifact": "docs/superpowers/specs/stage2-fitted-params.json",
+  "holds": true,
+  "max_abs_drift": 0.0,
+  "max_abs_drift_at": "curve.K",
+  "n_numbers_checked": 42,
+  "note": "week A's parameters are FROZEN INPUT. This rebuild runs week A's own deterministic estimator and checks every coefficient against the committed artifact; nothing in week C fits, tunes or scales a parameter",
+  "tolerance": 1e-11
+ },
+ "promotion_note": "the stage-2 world assembly is COMPOSED in scripts/ (stage2_worlds.py) and installs its spine sampler at runtime; the platform's own flesh machinery runs byte-verbatim underneath it. Promoting the stage-2 sampler into src/ is a SEPARATE OWNER RELEASE EVENT, after a pass, and is not done by this campaign",
+ "purpose": "stage 2 week C: the four bars that had never been measured in any round -- A1 and A2 (the flesh), R1 (the institutional twin's over-commitment ladder) and R2 (era coherence at the seams) -- read by the sealed judges on the coupled engine of week A, fleshed with verbatim real panel months",
+ "r2_diagnostics": {
+  "bound_pp": 2.5,
+  "forced_reentries_stamped": 1,
+  "max_jump_at_a_forced_reentry_pp": 4.132499999786,
+  "max_jump_at_an_ordinary_join_pp": 2.480125016536,
+  "max_jump_pp": 4.132499999786,
+  "n_forced_reentry_seams": 1,
+  "n_seams": 444,
+  "reading": "an ordinary join is filtered on the era bucket AND on |dYoY| <= the bound, so it cannot exceed it; a forced re-entry at the panel's last row draws unfiltered when no candidate matches, and that is the only seam that can",
+  "unfiltered_reentries_stamped": 1
+ },
+ "schema": "stage2-weekc-results-1",
+ "seal": "docs/superpowers/specs/stage2-prereg.json",
+ "spec": "docs/superpowers/specs/2026-08-18-stage2-exam-delta.md",
+ "spine_identity": {
+  "bars": [
+   {
+    "abs_drift": 0.0,
+    "bar": "T1",
+    "pass": true,
+    "week_a": 2.239246798804,
+    "week_a_pass": true,
+    "week_c_reread": 2.239246798804
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "O1",
+    "pass": true,
+    "week_a": 0.560824742268,
+    "week_a_pass": true,
+    "week_c_reread": 0.560824742268
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D1",
+    "pass": true,
+    "week_a": 2.0,
+    "week_a_pass": true,
+    "week_c_reread": 2.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D2",
+    "pass": true,
+    "week_a": 4.0,
+    "week_a_pass": true,
+    "week_c_reread": 4.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D3",
+    "pass": true,
+    "week_a": 4.0,
+    "week_a_pass": true,
+    "week_c_reread": 4.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "D4",
+    "pass": true,
+    "week_a": 3.0,
+    "week_a_pass": true,
+    "week_c_reread": 3.0
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "P1",
+    "pass": true,
+    "week_a": 0.042073930959,
+    "week_a_pass": true,
+    "week_c_reread": 0.042073930959
+   },
+   {
+    "abs_drift": 0.0,
+    "bar": "P2",
+    "pass": false,
+    "week_a": 0.770682653481,
+    "week_a_pass": false,
+    "week_c_reread": 0.770682653481
+   }
+  ],
+  "holds": true,
+  "max_abs_drift": 0.0
+ },
+ "src_untouched": true,
+ "standing_caveat": "nothing built on this generator line is a convincing model of history, the holdout is spent, and no appeal to held-out data is available",
+ "streams": {
+  "flesh": {
+   "base_seeds": [
+    20260821,
+    199002,
+    206921,
+    214840,
+    222759,
+    230678,
+    238597,
+    246516,
+    254435,
+    262354,
+    270273,
+    278192,
+    286111,
+    294030,
+    301949,
+    309868,
+    317787,
+    325706,
+    333625,
+    341544,
+    349463
+   ],
+   "construction_note": "the flesh opens PCG64(seed + offset).jumped(p); stage 2 opens PCG64(seed + offset + ATTEMPT_STRIDE * attempt). Whole tapes are drawn and compared because two integers being different says nothing about two differently-constructed streams",
+   "disjoint_from_every_stage2_attempt_stream": true,
+   "disjoint_from_the_bare_ladder": true,
+   "flesh_offsets": {
+    "blocks": 350377,
+    "hazard": 224737
+   },
+   "flesh_per_path_streams_distinct": true,
+   "flesh_streams_checked": 2688,
+   "stage2_streams_checked": 25200
+  },
+  "stage2": {
+   "attempt_ladder_disjoint_from_platform_ladder": true,
+   "disjoint_from_platform_layer_offsets": true,
+   "n_streams_checked": 904,
+   "new_offset_this_campaign": {
+    "policydev": 1674811
+   },
+   "offsets": {
+    "inflnoise": 829417,
+    "labels": 1063441,
+    "openage": 1298743,
+    "policydev": 1674811,
+    "seasons": 601387,
+    "slope": 715393
+   },
+   "per_decade_streams_distinct": true,
+   "platform_seed_stride": 7919,
+   "spine2_attempt_stride": 32452843
+  }
+ },
+ "world": "src/ah/presets/spine_pilot.json"
+}
