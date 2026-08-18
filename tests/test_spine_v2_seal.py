@@ -1,6 +1,6 @@
 """The spine v2 seal: hashes, threshold literals, and the amendment log's check.
 
-Self-contained -- no catalog, no network, no ensemble. Three jobs, and they catch
+Self-contained -- no catalog, no network, no ensemble. Four jobs, and they catch
 different failures:
 
 1. ``test_spine_v2_seal_hashes_match`` recomputes every sealed hash against the
@@ -14,6 +14,13 @@ different failures:
    the amendment procedure: a hashed file may differ from its sealed hash ONLY if
    an amendment entry names it. That is what makes "amendments go through the log,
    never by editing a file" enforceable rather than aspirational.
+4. ``test_the_construct_amendment_is_pinned_by_literals`` and
+   ``test_the_amended_exam_document_is_still_byte_identical_to_its_sealed_hash``
+   do for AM-SPV2-2026-08-17-001 what (2) does for the thresholds. Naming a path
+   in the log makes job (1) skip that path, so an amendment written in order to
+   leave a file ALONE needs its own check that the file was in fact left alone --
+   and an amendment that decides which batch two bars are judged on needs its
+   scope pinned by literals, not by prose.
 """
 
 from __future__ import annotations
@@ -76,9 +83,10 @@ def test_spine_v2_seal_exists_and_hashes_match() -> None:
 def test_amendment_log_is_well_formed_and_covers_every_mismatch() -> None:
     """The machine check the amendment procedure promises.
 
-    Empty today. It is written now, with the log empty, because a check added
-    after the first amendment would be a check written by the thing it is meant
-    to police.
+    Written while the log was still empty, because a check added after the first
+    amendment would be a check written by the thing it is meant to police. The
+    log is no longer empty (AM-SPV2-2026-08-17-001) and this check now has work
+    to do.
     """
     sealed = _sealed()
     required = set(sealed["amendment_procedure"]["entry_keys"])
@@ -103,6 +111,92 @@ def test_amendment_log_is_well_formed_and_covers_every_mismatch() -> None:
     assert mismatched <= amended, (
         f"these hashed files changed with no amendment entry naming them: "
         f"{sorted(mismatched - amended)}"
+    )
+
+
+def test_the_construct_amendment_is_pinned_by_literals() -> None:
+    """AM-SPV2-2026-08-17-001, the D-SP-8 measurement-arm amendment.
+
+    Pinned the same way the thresholds are, and for the same reason: the hash
+    test cannot see a rationale being softened or a bar quietly added to the
+    amended arm, and this is the one entry that decides which batch two of the
+    six bars are judged on. The three claims that make it a *narrow* amendment
+    are asserted, not merely described -- no threshold moved, no hashed file was
+    edited, and the arm change reaches only T1 and O1.
+    """
+    sealed = _sealed()
+    entries = [e for e in sealed["amendments"] if e["amendment_id"] == "AM-SPV2-2026-08-17-001"]
+    assert len(entries) == 1, "the D-SP-8 construct amendment must be logged exactly once"
+    entry = entries[0]
+
+    assert entry["date"] == "2026-08-17"
+    assert entry["type"] == "protocol_change"
+    assert entry["post_hoc"] is True
+    assert entry["paths"] == ["docs/superpowers/specs/2026-08-17-spine-v2-exam.md"]
+
+    payload = entry["payload"]
+    assert payload["judged_on_unconditional_batch"] == ["T1", "O1"]
+    assert payload["judged_on_premise_accepted_batch"] == [
+        "D1",
+        "D2",
+        "D3",
+        "D4",
+        "A1",
+        "A2",
+        "R1",
+        "R2",
+    ]
+    assert (
+        set(payload["judged_on_unconditional_batch"])
+        & set(payload["judged_on_premise_accepted_batch"])
+        == set()
+    ), "a bar cannot be judged on both arms"
+    assert set(payload["judged_on_unconditional_batch"]) | set(
+        payload["judged_on_premise_accepted_batch"]
+    ) == set(sealed["bar_codes"]), "every sealed bar must be assigned to exactly one arm"
+    assert payload["thresholds_changed"] == []
+    assert payload["hashed_files_edited"] == []
+    assert payload["n_seeds_unchanged"] == 50
+    assert payload["exam_document_left_byte_identical"] is True
+
+    # the disclosure the amendment is required to carry: at the time it was
+    # written the amended arm was already known to read more favourably
+    known = payload["readings_known_at_amendment_time"]
+    assert known["T1_band"] == sealed["bars"]["T1_lift_band"]
+    assert known["O1_floor"] == sealed["bars"]["O1_clockwise_min"]
+    assert known["T1_unconditional"] == 1.763633
+    assert known["T1_premise_accepted"] == 1.230161
+    assert known["O1_unconditional"] == 0.514911
+    assert known["O1_premise_accepted"] == 0.500707
+    assert known["amended_arm_reads_more_favourably"] is True
+    assert known["both_arms_fail_both_bars_at_amendment_time"] is True
+    # ...and the disclosure must be TRUE of the numbers it quotes, not just present
+    lo, hi = sealed["bars"]["T1_lift_band"]
+    floor = sealed["bars"]["O1_clockwise_min"]
+    assert known["T1_unconditional"] > known["T1_premise_accepted"]
+    assert known["O1_unconditional"] > known["O1_premise_accepted"]
+    assert not (lo <= known["T1_unconditional"] <= hi)
+    assert not (lo <= known["T1_premise_accepted"] <= hi)
+    assert known["O1_unconditional"] < floor and known["O1_premise_accepted"] < floor
+
+
+def test_the_amended_exam_document_is_still_byte_identical_to_its_sealed_hash() -> None:
+    """The compensating check for naming a path in the amendment log.
+
+    ``test_spine_v2_seal_exists_and_hashes_match`` SKIPS any path an amendment
+    names -- which is right in general (an amendment exists to permit a change)
+    and would be a hole here, because AM-SPV2-2026-08-17-001 names the exam
+    document precisely in order to leave it untouched. The exam's own rule is
+    "an amendment goes through the machine-checked log, never by editing this
+    file", so the file must still hash to its sealed value, and that is asserted
+    here rather than trusted.
+    """
+    sealed = _sealed()
+    rel = "docs/superpowers/specs/2026-08-17-spine-v2-exam.md"
+    got = hashlib.sha256((_REPO_ROOT / rel).read_bytes()).hexdigest()
+    assert got == sealed["hashes"][rel], (
+        "the exam document was edited. AM-SPV2-2026-08-17-001 states it was left "
+        "byte-identical, and the exam itself forbids amending by editing it"
     )
 
 

@@ -1,0 +1,1285 @@
+{
+  "curve_link": {
+    "intercept": 0.708608937107,
+    "r_squared": 0.404266670185,
+    "residual_ar1_rho": 0.947188362872,
+    "residual_innovation_sd": 0.208565406092,
+    "residual_sd": 0.650422762921,
+    "u_hat_loading": -0.535801285624,
+    "u_mean_historical": -0.213934753955,
+    "u_sd_historical": 0.2727207245
+  },
+  "engine": {
+    "covariate_standardisation": {
+      "mean": [
+        0.708608937107,
+        -1.065891335424,
+        1.358188787191,
+        0.0
+      ],
+      "sd": [
+        0.842693768935,
+        6.193884378266,
+        2.655126775134,
+        1.0
+      ]
+    },
+    "curve_lag_months": 9,
+    "inflation_residual_ar1_rho": 0.992067235938,
+    "inflation_residual_innovation_sd": 0.020083908479,
+    "initial_expanding_rate": 0.725343320849,
+    "season_cycle": [
+      0.376146788991,
+      -0.279279279279,
+      1.0,
+      1.0
+    ],
+    "stag_cpi_line_pp": 4.0,
+    "stag_spell_rate": 0.777777777778,
+    "valuation_drawdown_threshold": -0.323365525588
+  },
+  "fit": {
+    "coefficients": {
+      "cov_contracting[credit_gap]": 0.668914559519,
+      "cov_contracting[curve_slope]": 1.190431613451,
+      "cov_contracting[drawdown_state]": -1.793130811305,
+      "cov_contracting[pi_gap]": 0.63070539888,
+      "cov_expanding[credit_gap]": 0.202595936354,
+      "cov_expanding[curve_slope]": -1.488804908804,
+      "cov_expanding[drawdown_state]": 1.994911202669,
+      "cov_expanding[pi_gap]": 0.338781196262,
+      "intercept[expansion]": -3.451516574169,
+      "intercept[recession]": -0.818048799628,
+      "intercept[recovery]": -4.502257266668,
+      "intercept[stagflation]": -2.158180788557,
+      "log_dwell[expansion]": -0.182106942447,
+      "log_dwell[recession]": -0.43033569509,
+      "log_dwell[recovery]": 0.100843792034,
+      "log_dwell[stagflation]": -0.049412937902
+    },
+    "loglik": -118.84012073861,
+    "n_at_risk_months": 792.0,
+    "n_growth_axis_flips": 35.0,
+    "standard_errors": {
+      "cov_contracting[credit_gap]": 0.333603233228,
+      "cov_contracting[curve_slope]": 0.391842530204,
+      "cov_contracting[drawdown_state]": 0.839209890144,
+      "cov_contracting[pi_gap]": 0.339728826164,
+      "cov_expanding[credit_gap]": 0.324899234788,
+      "cov_expanding[curve_slope]": 0.504121046203,
+      "cov_expanding[drawdown_state]": 1.298564362572,
+      "cov_expanding[pi_gap]": 0.363573512676,
+      "intercept[expansion]": 0.678966051027,
+      "intercept[recession]": 0.690805353765,
+      "intercept[recovery]": 1.023223483385,
+      "intercept[stagflation]": 0.965792845596,
+      "log_dwell[expansion]": 0.289922786141,
+      "log_dwell[recession]": 0.35226454621,
+      "log_dwell[recovery]": 0.303350769437,
+      "log_dwell[stagflation]": 0.434798943205
+    },
+    "t_ratios": {
+      "cov_contracting[credit_gap]": 2.005120133421,
+      "cov_contracting[curve_slope]": 3.038035745716,
+      "cov_contracting[drawdown_state]": -2.136689322139,
+      "cov_contracting[pi_gap]": 1.85649656522,
+      "cov_expanding[credit_gap]": 0.623565446333,
+      "cov_expanding[curve_slope]": -2.953268704052,
+      "cov_expanding[drawdown_state]": 1.53624360884,
+      "cov_expanding[pi_gap]": 0.931809343778,
+      "intercept[expansion]": -5.083489180277,
+      "intercept[recession]": -1.184195801566,
+      "intercept[recovery]": -4.400072261606,
+      "intercept[stagflation]": -2.234620807555,
+      "log_dwell[expansion]": -0.62812221444,
+      "log_dwell[recession]": -1.221626472831,
+      "log_dwell[recovery]": 0.332432952852,
+      "log_dwell[stagflation]": -0.113645487585
+    }
+  },
+  "label_stability": {
+    "arms": {
+      "baseline": {
+        "arm": "baseline",
+        "loglik": -118.84012073861,
+        "moves_by_se": 0.0,
+        "n_events": 35.0,
+        "n_obs": 792.0,
+        "standard_error": 0.504121046203,
+        "transmission": -1.488804908804
+      },
+      "borderline_downweighted": {
+        "arm": "borderline_downweighted",
+        "loglik": -101.556882781062,
+        "moves_by_se": 0.316305498623,
+        "n_events": 28.864640890757,
+        "n_obs": 699.511676548652,
+        "standard_error": 0.517952789448,
+        "transmission": -1.329348649918
+      },
+      "both_minus_50bp": {
+        "arm": "both_minus_50bp",
+        "loglik": -103.637200722462,
+        "moves_by_se": -0.103347509085,
+        "n_events": 29.0,
+        "n_obs": 793.0,
+        "standard_error": 0.509871762574,
+        "transmission": -1.540904563207
+      },
+      "both_plus_50bp": {
+        "arm": "both_plus_50bp",
+        "loglik": -132.596029165626,
+        "moves_by_se": 0.891773047404,
+        "n_events": 41.0,
+        "n_obs": 792.0,
+        "standard_error": 0.423088242491,
+        "transmission": -1.039243347172
+      },
+      "growth_line_minus_50bp": {
+        "arm": "growth_line_minus_50bp",
+        "loglik": -102.98269138917,
+        "moves_by_se": -0.054548151047,
+        "n_events": 29.0,
+        "n_obs": 793.0,
+        "standard_error": 0.491635931489,
+        "transmission": -1.516303779778
+      },
+      "growth_line_plus_50bp": {
+        "arm": "growth_line_plus_50bp",
+        "loglik": -132.180049903013,
+        "moves_by_se": 0.994237704531,
+        "n_events": 41.0,
+        "n_obs": 792.0,
+        "standard_error": 0.394278161513,
+        "transmission": -0.987588757022
+      },
+      "inflation_line_minus_50bp": {
+        "arm": "inflation_line_minus_50bp",
+        "loglik": -119.73051659289,
+        "moves_by_se": 0.012781123352,
+        "n_events": 35.0,
+        "n_obs": 792.0,
+        "standard_error": 0.507087144533,
+        "transmission": -1.482361675528
+      },
+      "inflation_line_plus_50bp": {
+        "arm": "inflation_line_plus_50bp",
+        "loglik": -118.659672849537,
+        "moves_by_se": 0.126760796382,
+        "n_events": 35.0,
+        "n_obs": 792.0,
+        "standard_error": 0.516673389748,
+        "transmission": -1.424902123515
+      },
+      "inflation_minus_growth_plus": {
+        "arm": "inflation_minus_growth_plus",
+        "loglik": -134.42446801794,
+        "moves_by_se": 0.970573721942,
+        "n_events": 41.0,
+        "n_obs": 792.0,
+        "standard_error": 0.412631287644,
+        "transmission": -0.999518268682
+      },
+      "inflation_plus_growth_minus": {
+        "arm": "inflation_plus_growth_minus",
+        "loglik": -103.973096120936,
+        "moves_by_se": -1.044216879702,
+        "n_events": 29.0,
+        "n_obs": 793.0,
+        "standard_error": 0.616915218856,
+        "transmission": -2.015216614662
+      },
+      "soft_labels_escalation": {
+        "arm": "soft_labels_escalation",
+        "loglik": -68.631963906973,
+        "moves_by_se": 0.813838943075,
+        "n_events": 18.496531747624,
+        "n_obs": 550.807607838437,
+        "standard_error": 0.618497743352,
+        "transmission": -1.078531569381
+      }
+    },
+    "baseline_standard_error": 0.504121046203,
+    "baseline_value": -1.488804908804,
+    "borderline_downweighted_moves_by_se": 0.316305498623,
+    "escalated": true,
+    "escalation_rule": "the sealed escalation path: if the fitted transmission strength moves by more than its own standard error across arms, refit with soft labels (each month weighted by classification confidence) and report both",
+    "statistic": "cov_expanding[curve_slope]",
+    "verdict": "UNSTABLE -- escalated to soft labels, both reported",
+    "worst_threshold_arm": "inflation_plus_growth_minus",
+    "worst_threshold_arm_moves_by_se": -1.044216879702
+  },
+  "model": {
+    "at_risk_rule": "a defined season this month and next, every covariate readable, and not inside the panel's first (left-truncated) season spell; the panel's last month is right-censored out",
+    "covariates": [
+      "curve_slope",
+      "credit_gap",
+      "pi_gap",
+      "drawdown_state"
+    ],
+    "curve_lag_selection": {
+      "criterion": "maximum likelihood at constant parameter count and a common at-risk set",
+      "grid_months": [
+        0,
+        3,
+        6,
+        9,
+        12,
+        15,
+        18,
+        24
+      ],
+      "profile": [
+        {
+          "lag_months": 0,
+          "loglik": -128.495052239617,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.375458055622,
+          "transmission": -0.473120548564
+        },
+        {
+          "lag_months": 3,
+          "loglik": -125.400086109258,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.432565984377,
+          "transmission": -0.952334339835
+        },
+        {
+          "lag_months": 6,
+          "loglik": -121.655637911343,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.423440695756,
+          "transmission": -0.968707565324
+        },
+        {
+          "lag_months": 9,
+          "loglik": -118.824690626541,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.503658897878,
+          "transmission": -1.48651523113
+        },
+        {
+          "lag_months": 12,
+          "loglik": -127.579439874204,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.375413174554,
+          "transmission": -0.539084458072
+        },
+        {
+          "lag_months": 15,
+          "loglik": -127.943287530781,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.329879562484,
+          "transmission": -0.361489437362
+        },
+        {
+          "lag_months": 18,
+          "loglik": -129.079703232532,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.307901142642,
+          "transmission": -0.174246882077
+        },
+        {
+          "lag_months": 24,
+          "loglik": -129.59709188901,
+          "n_events": 35.0,
+          "n_obs": 788.0,
+          "standard_error": 0.285205438734,
+          "transmission": -0.127925623282
+        }
+      ],
+      "selected_lag_months": 9
+    },
+    "duration_dependence": "one log(dwell) slope per season, fitted jointly with the covariate loadings in one design matrix; b_s = 0 is a memoryless geometric chain, so no-duration-dependence is nested and testable by a t-ratio",
+    "form": "logit h_t = a_[season] + b_[season]*log(dwell_t) + z_t' g_[growth axis]; y_t = 1[growth axis flips between t and t+1]; weighted Bernoulli log-likelihood over at-risk months, maximised by IRLS",
+    "label_emission": {
+      "measured_on_history": {
+        "month_rate": 0.326315789474,
+        "months_at_or_above_cpi_line": 95.0,
+        "months_labelled_stag": 31.0,
+        "spell_rate": 0.777777777778,
+        "spells_eligible": 9.0,
+        "spells_with_stag": 7.0
+      },
+      "rule": "expanding -> EXP; a contracting SPELL draws once at the measured rate and, if it draws STAG, its months at or above the ruleset's 4.0 pp CPI line are STAG and the rest REC; CRI is never emitted",
+      "why_not_one_label_per_season": "T1's downturn union is REC-or-CRI and is NOT re-anchored under the mapping fix, so the REC/STAG split inside the contracting side decides T1's numerator; on the panel it is 64 REC-or-CRI against 31 STAG among the 95 contracting months at or above 4.0 pp"
+    },
+    "parameter_labels": [
+      "intercept[recession]",
+      "intercept[stagflation]",
+      "intercept[recovery]",
+      "intercept[expansion]",
+      "log_dwell[recession]",
+      "log_dwell[stagflation]",
+      "log_dwell[recovery]",
+      "log_dwell[expansion]",
+      "cov_expanding[curve_slope]",
+      "cov_expanding[credit_gap]",
+      "cov_expanding[pi_gap]",
+      "cov_expanding[drawdown_state]",
+      "cov_contracting[curve_slope]",
+      "cov_contracting[credit_gap]",
+      "cov_contracting[pi_gap]",
+      "cov_contracting[drawdown_state]"
+    ],
+    "state_space": [
+      "recession",
+      "stagflation",
+      "recovery",
+      "expansion"
+    ]
+  },
+  "panel": {
+    "climate_artifact_sha256": "5d48def735ad98346e9316c613db1fc743df84ab8143085013870ccbd7066e6b",
+    "curve": {
+      "inverted_share": 0.183271832718,
+      "slope_ar1": 0.975532651517,
+      "slope_mean_pp": 0.708608937107,
+      "slope_sd_pp": 0.842693768935
+    },
+    "era_threshold_pp": 3.351323828921,
+    "panel_months": 813,
+    "panel_span": [
+      "1953-04-01",
+      "2020-12-01"
+    ],
+    "pi_star_tracks_observed_cpi": {
+      "correlation": 0.999798006841,
+      "residual_sd_pp": 0.159700810719
+    },
+    "pi_target": 2.0,
+    "regimes_artifact_sha256": "59763881331993417df5eba0752b3be6eafaabb6d85a713f65ea7c950e478a26",
+    "theta_bar": {
+      "phi_c": 0.093014789081,
+      "phi_pi": 0.624609790015,
+      "psi": 0.693781497687,
+      "s_m_pi": 0.029454557091
+    },
+    "valuation_drawdown_calibration": {
+      "agreement_with_equity_dummy": 0.940959409594,
+      "equity_drawdown_threshold": -0.2,
+      "equity_dummy_rate": 0.116851168512,
+      "v_drawdown_threshold": -0.323365525588,
+      "v_dummy_rate": 0.116851168512
+    },
+    "vintage_id": "2026-08-10.1"
+  },
+  "purpose": "spine v2 week 2: the season-transition hazard fitted to history by maximum likelihood, with duration dependence, and its in-model verification against the six pre-sampler bars of the SEALED exam. A1/A2/R1/R2 need the flesh and are week 4.",
+  "schema": "spine-v2-fitted-params-1",
+  "seal": "docs/superpowers/specs/spine-v2-prereg.json",
+  "seal_files_untouched": [
+    "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+    "docs/superpowers/specs/spine-pilot-prereg.json",
+    "docs/superpowers/specs/spine-v2-anchors.json",
+    "docs/superpowers/specs/spine-v2-antitest-results.json",
+    "docs/superpowers/specs/spine02-prereg.json",
+    "scripts/spine_pilot_b3.py",
+    "scripts/spine_pilot_report.py",
+    "scripts/spine_v2_anchors.py",
+    "scripts/spine_v2_antitest.py",
+    "scripts/spine_v2_grader.py",
+    "scripts/spine_v2_report.py",
+    "scripts/spine_v2_seal.py"
+  ],
+  "spec": "docs/superpowers/specs/2026-08-17-spine-v2-exam.md",
+  "status": "FRONTIER",
+  "verification": {
+    "bars_deferred_reason": "A1 and A2 are measured on asset returns and R1/R2 on a compiled ensemble; a no-flesh spine has none of those, so they are NOT measured here and NOT estimated",
+    "bars_deferred_to_week_4": [
+      "A1",
+      "A2",
+      "R1",
+      "R2"
+    ],
+    "bars_measured": [
+      "T1",
+      "O1",
+      "D1",
+      "D2",
+      "D3",
+      "D4"
+    ],
+    "covariate_dispersion": {
+      "credit_gap": {
+        "historical_mean": -1.065891335424,
+        "historical_sd": 6.193884378266,
+        "sd_ratio_simulated_over_historical": 0.589108916709,
+        "simulated_mean": 3.187983883713,
+        "simulated_sd": 3.648872516304
+      },
+      "curve_slope": {
+        "historical_inverted_share": 0.183271832718,
+        "historical_mean": 0.708608937107,
+        "historical_sd": 0.842693768935,
+        "pilot_proxy_inverted_share": 0.0,
+        "pilot_proxy_note": "the pilot's simulation-time slope is psi0 - phi_c0*c(R_t): three values on the pinned artifact, spanning 0.60 to 0.79 pp, never below zero (semimarkov.py's own recorded v1 limitation) -- this is the attenuation week 2 was funded to remove",
+        "sd_ratio_simulated_over_historical": 0.865351430934,
+        "simulated_inverted_share": 0.275166666667,
+        "simulated_mean": 0.466803703223,
+        "simulated_sd": 0.729226258787
+      },
+      "drawdown_state": {
+        "historical_mean": 0.116851168512,
+        "historical_sd": 0.32124285662,
+        "sd_ratio_simulated_over_historical": 1.346729142521,
+        "simulated_mean": 0.249333333333,
+        "simulated_sd": 0.432627116836
+      },
+      "pi_gap": {
+        "historical_mean": 1.358188787191,
+        "historical_sd": 2.655126775134,
+        "sd_ratio_simulated_over_historical": 1.603812739978,
+        "simulated_mean": 1.261107722642,
+        "simulated_sd": 4.258326148217
+      }
+    },
+    "months_per_decade": 120,
+    "n_decades": 50,
+    "premise": {
+      "arrives_quarter": 8,
+      "backdrop": "inflation_above_trend",
+      "recovery": "slow",
+      "shock": "supply"
+    },
+    "premise_acceptance": {
+      "arrival": 143,
+      "attempts": 687,
+      "backdrop:inflation_above_trend": 481,
+      "recovery:slow": 13
+    },
+    "readings": [
+      {
+        "bar": "T1",
+        "detail": {
+          "conditional_rate": 0.394676806084,
+          "eligible_months": 4800,
+          "tight_base_rate": 0.273958333333,
+          "tight_months": 1315,
+          "unconditional_rate": 0.320833333333
+        },
+        "measured": 1.230161473507,
+        "pass": false,
+        "sealed_band": [
+          1.775282749111,
+          3.347362210254
+        ]
+      },
+      {
+        "bar": "O1",
+        "detail": {
+          "n_clockwise": 354,
+          "n_transitions": 707
+        },
+        "measured": 0.500707213579,
+        "pass": false,
+        "sealed_band": [
+          0.518066910499,
+          null
+        ]
+      },
+      {
+        "bar": "D1",
+        "detail": {
+          "n_pooled_spells": 134,
+          "quartiles_months": [
+            1.0,
+            6.75
+          ],
+          "spells_per_decade": 2.68
+        },
+        "measured": 2.0,
+        "pass": true,
+        "sealed_band": [
+          0.0,
+          5.0
+        ]
+      },
+      {
+        "bar": "D2",
+        "detail": {
+          "n_pooled_spells": 205,
+          "quartiles_months": [
+            1.0,
+            6.0
+          ],
+          "spells_per_decade": 4.1
+        },
+        "measured": 3.0,
+        "pass": true,
+        "sealed_band": [
+          1.0,
+          7.0
+        ]
+      },
+      {
+        "bar": "D3",
+        "detail": {
+          "n_pooled_spells": 120,
+          "quartiles_months": [
+            1.0,
+            9.0
+          ],
+          "spells_per_decade": 2.4
+        },
+        "measured": 3.0,
+        "pass": true,
+        "sealed_band": [
+          2.0,
+          8.0
+        ]
+      },
+      {
+        "bar": "D4",
+        "detail": {
+          "n_pooled_spells": 198,
+          "quartiles_months": [
+            2.0,
+            7.0
+          ],
+          "spells_per_decade": 3.96
+        },
+        "measured": 4.0,
+        "pass": true,
+        "sealed_band": [
+          1.0,
+          7.0
+        ]
+      }
+    ],
+    "readings_unconditional_disclosure": [
+      {
+        "bar": "T1",
+        "detail": {
+          "conditional_rate": 0.36889332004,
+          "eligible_months": 4800,
+          "tight_base_rate": 0.208958333333,
+          "tight_months": 1003,
+          "unconditional_rate": 0.209166666667
+        },
+        "measured": 1.763633402581,
+        "pass": false,
+        "sealed_band": [
+          1.775282749111,
+          3.347362210254
+        ]
+      },
+      {
+        "bar": "O1",
+        "detail": {
+          "n_clockwise": 259,
+          "n_transitions": 503
+        },
+        "measured": 0.514910536779,
+        "pass": false,
+        "sealed_band": [
+          0.518066910499,
+          null
+        ]
+      },
+      {
+        "bar": "D1",
+        "detail": {
+          "n_pooled_spells": 89,
+          "quartiles_months": [
+            1.0,
+            6.0
+          ],
+          "spells_per_decade": 1.78
+        },
+        "measured": 2.0,
+        "pass": true,
+        "sealed_band": [
+          0.0,
+          5.0
+        ]
+      },
+      {
+        "bar": "D2",
+        "detail": {
+          "n_pooled_spells": 98,
+          "quartiles_months": [
+            1.0,
+            8.0
+          ],
+          "spells_per_decade": 1.96
+        },
+        "measured": 3.0,
+        "pass": true,
+        "sealed_band": [
+          1.0,
+          7.0
+        ]
+      },
+      {
+        "bar": "D3",
+        "detail": {
+          "n_pooled_spells": 120,
+          "quartiles_months": [
+            1.0,
+            11.0
+          ],
+          "spells_per_decade": 2.4
+        },
+        "measured": 3.0,
+        "pass": true,
+        "sealed_band": [
+          2.0,
+          8.0
+        ]
+      },
+      {
+        "bar": "D4",
+        "detail": {
+          "n_pooled_spells": 151,
+          "quartiles_months": [
+            1.0,
+            7.0
+          ],
+          "spells_per_decade": 3.02
+        },
+        "measured": 3.0,
+        "pass": true,
+        "sealed_band": [
+          1.0,
+          7.0
+        ]
+      }
+    ],
+    "season_composition": {
+      "generated_batch_pooled": {
+        "diagonal_moves": 33,
+        "growth_axis_flips": 439,
+        "inflation_crossings": 353,
+        "occupancy": {
+          "expansion": 0.283333333333,
+          "recession": 0.204833333333,
+          "recovery": 0.279666666667,
+          "stagflation": 0.232166666667
+        },
+        "transitions_total": 825
+      },
+      "historical_panel": {
+        "diagonal_moves": 2,
+        "growth_axis_flips": 34,
+        "inflation_crossings": 36,
+        "occupancy": {
+          "expansion": 0.253433208489,
+          "recession": 0.136079900125,
+          "recovery": 0.47191011236,
+          "stagflation": 0.138576779026
+        },
+        "transitions_total": 72
+      }
+    },
+    "seed": 20260821,
+    "streams": {
+      "attempt_ladder_disjoint_from_platform_ladder": true,
+      "n_streams_checked": 520,
+      "per_decade_streams_distinct": true,
+      "platform_seed_stride": 7919,
+      "spine2_attempt_stride": 32452843,
+      "spine_attempt_stride": 104395301
+    },
+    "t1_decomposition": {
+      "generated_batch": {
+        "all": {
+          "conditional_rate": 0.394676806084,
+          "lift": 1.230161473507,
+          "months": 4800,
+          "tight_months": 1315,
+          "tight_share": 0.273958333333,
+          "unconditional_rate": 0.320833333333
+        },
+        "all_months_that_are_expanding": 0.533888888889,
+        "contracting_only": {
+          "conditional_rate": 0.306803594352,
+          "lift": 1.113841250159,
+          "months": 2240,
+          "tight_months": 779,
+          "tight_share": 0.347767857143,
+          "unconditional_rate": 0.275446428571
+        },
+        "expanding_only": {
+          "conditional_rate": 0.522388059701,
+          "lift": 1.448876958652,
+          "months": 2560,
+          "tight_months": 536,
+          "tight_share": 0.209375,
+          "unconditional_rate": 0.360546875
+        },
+        "tight_months_that_are_expanding": 0.401469605878
+      },
+      "historical_panel": {
+        "all": {
+          "conditional_rate": 0.577181208054,
+          "lift": 2.371854026846,
+          "months": 789,
+          "tight_months": 149,
+          "tight_share": 0.188846641318,
+          "unconditional_rate": 0.243346007605
+        },
+        "all_months_that_are_expanding": 0.736375158428,
+        "contracting_only": {
+          "conditional_rate": 0.228571428571,
+          "lift": 1.901714285714,
+          "months": 208,
+          "tight_months": 35,
+          "tight_share": 0.168269230769,
+          "unconditional_rate": 0.120192307692
+        },
+        "expanding_only": {
+          "conditional_rate": 0.684210526316,
+          "lift": 2.380397100536,
+          "months": 581,
+          "tight_months": 114,
+          "tight_share": 0.196213425129,
+          "unconditional_rate": 0.28743545611
+        },
+        "tight_months_that_are_expanding": 0.765100671141
+      },
+      "reading": "compare tight_months_that_are_expanding on the two sides: history's inverted curve is concentrated in expansions (it inverts ahead of a turn and steepens once the turn arrives); the fitted engine's curve is exogenous to the season, so its inverted months are spread across all four seasons and T1's tight population is diluted by months that are already contracting"
+    },
+    "transmission_frontier": {
+      "multipliers": [
+        0.0,
+        0.5,
+        1.0,
+        1.5,
+        2.0,
+        3.0,
+        4.0,
+        6.0
+      ],
+      "rows": [
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 2.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.504736129905,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.339513325608,
+          "T1_lift": 1.123906181324,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.179791666667,
+          "T1_unconditional_rate": 0.302083333333,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 723,
+          "transmission_coefficient": -0.0,
+          "transmission_multiplier": 0.0
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 2.0,
+          "D3_recovery_median": 4.0,
+          "D4_expansion_median": 4.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.508426966292,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.371376811594,
+          "T1_lift": 1.188405797101,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.23,
+          "T1_unconditional_rate": 0.3125,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 672,
+          "transmission_coefficient": -0.744402454402,
+          "transmission_multiplier": 0.5
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 4.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.500707213579,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.394676806084,
+          "T1_lift": 1.230161473507,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.273958333333,
+          "T1_unconditional_rate": 0.320833333333,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 687,
+          "transmission_coefficient": -1.488804908804,
+          "transmission_multiplier": 1.0
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.497333333333,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.443267776097,
+          "T1_lift": 1.295788870441,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.275416666667,
+          "T1_unconditional_rate": 0.342083333333,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 672,
+          "transmission_coefficient": -2.233207363206,
+          "transmission_multiplier": 1.5
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.488290398126,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.502293577982,
+          "T1_lift": 1.274317745408,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.2725,
+          "T1_unconditional_rate": 0.394166666667,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 591,
+          "transmission_coefficient": -2.977609817608,
+          "transmission_multiplier": 2.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.490586932447,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.503602305476,
+          "T1_lift": 1.288534683519,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.289166666667,
+          "T1_unconditional_rate": 0.390833333333,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 597,
+          "transmission_coefficient": -4.466414726412,
+          "transmission_multiplier": 3.0
+        },
+        {
+          "D1_recession_median": 3.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 2.0,
+          "D4_expansion_median": 1.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.488493723849,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.528377298161,
+          "T1_lift": 1.305978903798,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.260625,
+          "T1_unconditional_rate": 0.404583333333,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 576,
+          "transmission_coefficient": -5.955219635216,
+          "transmission_multiplier": 4.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 2.0,
+          "D4_expansion_median": 1.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.485059760956,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.490740740741,
+          "T1_lift": 1.190275672337,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.2475,
+          "T1_unconditional_rate": 0.412291666667,
+          "all_six_pass": false,
+          "arm": "premise_accepted",
+          "attempts": 508,
+          "transmission_coefficient": -8.932829452824,
+          "transmission_multiplier": 6.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.52037037037,
+          "O1_pass": true,
+          "T1_conditional_rate": 0.203389830508,
+          "T1_lift": 0.922751593989,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.220416666667,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -0.0,
+          "transmission_multiplier": 0.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 4.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.518737672584,
+          "O1_pass": true,
+          "T1_conditional_rate": 0.29112662014,
+          "T1_lift": 1.384943287086,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.210208333333,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -0.744402454402,
+          "transmission_multiplier": 0.5
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 3.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.514910536779,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.36889332004,
+          "T1_lift": 1.763633402581,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.209166666667,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -1.488804908804,
+          "transmission_multiplier": 1.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.511583011583,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.414755732802,
+          "T1_lift": 1.85884922264,
+          "T1_pass": true,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.223125,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -2.233207363206,
+          "transmission_multiplier": 1.5
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.486842105263,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.443668993021,
+          "T1_lift": 1.877963991623,
+          "T1_pass": true,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.23625,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -2.977609817608,
+          "transmission_multiplier": 2.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 3.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.488288288288,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.457627118644,
+          "T1_lift": 1.824427051073,
+          "T1_pass": true,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.250833333333,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -4.466414726412,
+          "transmission_multiplier": 3.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 2.0,
+          "D4_expansion_median": 2.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.486254295533,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.460618145563,
+          "T1_lift": 1.727318045862,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.266666666667,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -5.955219635216,
+          "transmission_multiplier": 4.0
+        },
+        {
+          "D1_recession_median": 2.0,
+          "D2_stagflation_median": 3.0,
+          "D3_recovery_median": 2.0,
+          "D4_expansion_median": 1.0,
+          "D_all_pass": true,
+          "O1_clockwise": 0.482084690554,
+          "O1_pass": false,
+          "T1_conditional_rate": 0.436689930209,
+          "T1_lift": 1.525554341343,
+          "T1_pass": false,
+          "T1_tight_base_rate": 0.208958333333,
+          "T1_unconditional_rate": 0.28625,
+          "all_six_pass": false,
+          "arm": "unconditional",
+          "attempts": 50,
+          "transmission_coefficient": -8.932829452824,
+          "transmission_multiplier": 6.0
+        }
+      ],
+      "what_moves": "ONLY cov_expanding[curve_slope], scaled; nothing is re-fitted and no other parameter is touched, so a row is a counterfactual about transmission strength and nothing else"
+    },
+    "verdicts_full": {
+      "D1": {
+        "anchor_months": 2.0,
+        "band": [
+          0.0,
+          5.0
+        ],
+        "bar": "D1",
+        "n_decades": 50,
+        "n_pooled_spells": 134,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          6.75
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "recession",
+        "spells_per_decade": 2.68,
+        "value": 2.0
+      },
+      "D2": {
+        "anchor_months": 4.0,
+        "band": [
+          1.0,
+          7.0
+        ],
+        "bar": "D2",
+        "n_decades": 50,
+        "n_pooled_spells": 205,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          6.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "stagflation",
+        "spells_per_decade": 4.1,
+        "value": 3.0
+      },
+      "D3": {
+        "anchor_months": 5.0,
+        "band": [
+          2.0,
+          8.0
+        ],
+        "bar": "D3",
+        "n_decades": 50,
+        "n_pooled_spells": 120,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          9.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "recovery",
+        "spells_per_decade": 2.4,
+        "value": 3.0
+      },
+      "D4": {
+        "anchor_months": 4.0,
+        "band": [
+          1.0,
+          7.0
+        ],
+        "bar": "D4",
+        "n_decades": 50,
+        "n_pooled_spells": 198,
+        "pass": true,
+        "quartiles_months": [
+          2.0,
+          7.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "expansion",
+        "spells_per_decade": 3.96,
+        "value": 4.0
+      },
+      "O1": {
+        "bar": "O1",
+        "n_clockwise": 354,
+        "n_decades": 50,
+        "n_transitions": 707,
+        "pass": false,
+        "threshold": 0.518066910499,
+        "value": 0.500707213579
+      },
+      "T1": {
+        "band": [
+          1.775282749111,
+          3.347362210254
+        ],
+        "bar": "T1",
+        "conditional_rate": 0.394676806084,
+        "crisis_only_disclosure": {
+          "conditional_rate": 0.0,
+          "judged": false,
+          "lift": null,
+          "unconditional_rate": 0.0
+        },
+        "eligible_months": 4800,
+        "n_decades": 50,
+        "pass": false,
+        "tight_base_rate": 0.273958333333,
+        "tight_months": 1315,
+        "unconditional_rate": 0.320833333333,
+        "value": 1.230161473507
+      }
+    },
+    "verdicts_unconditional_full": {
+      "D1": {
+        "anchor_months": 2.0,
+        "band": [
+          0.0,
+          5.0
+        ],
+        "bar": "D1",
+        "n_decades": 50,
+        "n_pooled_spells": 89,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          6.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "recession",
+        "spells_per_decade": 1.78,
+        "value": 2.0
+      },
+      "D2": {
+        "anchor_months": 4.0,
+        "band": [
+          1.0,
+          7.0
+        ],
+        "bar": "D2",
+        "n_decades": 50,
+        "n_pooled_spells": 98,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          8.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "stagflation",
+        "spells_per_decade": 1.96,
+        "value": 3.0
+      },
+      "D3": {
+        "anchor_months": 5.0,
+        "band": [
+          2.0,
+          8.0
+        ],
+        "bar": "D3",
+        "n_decades": 50,
+        "n_pooled_spells": 120,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          11.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "recovery",
+        "spells_per_decade": 2.4,
+        "value": 3.0
+      },
+      "D4": {
+        "anchor_months": 4.0,
+        "band": [
+          1.0,
+          7.0
+        ],
+        "bar": "D4",
+        "n_decades": 50,
+        "n_pooled_spells": 151,
+        "pass": true,
+        "quartiles_months": [
+          1.0,
+          7.0
+        ],
+        "reading_note": "a FAIL that misses by one quarter is inside the anchor's own sampling noise and is not evidence about the engine (exam section 3)",
+        "season": "expansion",
+        "spells_per_decade": 3.02,
+        "value": 3.0
+      },
+      "O1": {
+        "bar": "O1",
+        "n_clockwise": 259,
+        "n_decades": 50,
+        "n_transitions": 503,
+        "pass": false,
+        "threshold": 0.518066910499,
+        "value": 0.514910536779
+      },
+      "T1": {
+        "band": [
+          1.775282749111,
+          3.347362210254
+        ],
+        "bar": "T1",
+        "conditional_rate": 0.36889332004,
+        "crisis_only_disclosure": {
+          "conditional_rate": 0.0,
+          "judged": false,
+          "lift": null,
+          "unconditional_rate": 0.0
+        },
+        "eligible_months": 4800,
+        "n_decades": 50,
+        "pass": false,
+        "tight_base_rate": 0.208958333333,
+        "tight_months": 1003,
+        "unconditional_rate": 0.209166666667,
+        "value": 1.763633402581
+      }
+    }
+  }
+}
