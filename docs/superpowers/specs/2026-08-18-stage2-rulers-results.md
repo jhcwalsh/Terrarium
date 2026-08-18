@@ -593,3 +593,28 @@ and the breach count at the 55-point arm rises **8/20 → 10/20** (it was 2/20 i
 - **Nothing here reaches the private book.** ER-14 stands.
 - **The standing caveat carries.** Nothing built on this generator line is a convincing model
   of history, the holdout is spent, and no appeal to held-out data is available.
+
+## Post-review notes (verdict-integrity review, 2026-08-18 - overall CLEAN)
+
+The independent review reproduced every number in this document from scratch
+(including a fresh scipy re-derivation of the A1R pooled statistics and a
+tape-based recomputation of the era audit) and found zero numeric, verdict,
+or arithmetic errors. Its S1 blind-design assessment: an honest
+foreknowledge disclosure, not a rigged statistic - every discretionary
+design choice traces to a pre-existing sealed convention, and the FAIL
+margin is far too large for any disclosed alternative to flip. Three
+precision notes it asked to be recorded here:
+
+1. Of the era-audit quartet (323 story crossings / 252 licences offered /
+   104 taken / 0 unlicensed), the 252 comes from an engine runtime counter,
+   not the tape-based audit like the other three - the review verified it
+   against the tape independently; the provenance difference is disclosed
+   here.
+2. The "both prior records still regenerate byte-identically" claim was
+   verified by a logical inertness proof plus hash-matching of the
+   committed files, not by full from-scratch regeneration in the review
+   itself (time-boxed).
+3. The determinism-incident narrative (wall-clock keys found and removed
+   pre-commit) is not verifiable from the repository, since the pre-fix
+   artifacts were never committed; the committed code stores no wall-clock
+   key, consistent with the account.
