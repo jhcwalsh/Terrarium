@@ -11,6 +11,24 @@ housekeeping questions, and what a future stage-2 campaign inherits. It is a *ve
 document, not a new measurement — every number in it is quoted from a committed record and
 carries its source. Nothing here re-judges anything.
 
+> **POST-REVIEW NOTE (2026-08-17) — read §8 before using any characterization below.** An
+> independent verdict-integrity review re-ran both scripts, reproduced both artifacts
+> byte-identically, recomputed all twelve sealed hashes as clean, and found **every bar
+> reading and every PASS/FAIL word in this document correct against the seal**. It also
+> returned **twelve findings**, all interpretive or omissive — and, in the reviewer's words,
+> *"eleven of the twelve lean the same way: they make the week-3 mechanism look better, or the
+> remaining gap look smaller, than the committed artifacts support."*
+>
+> **No verdict value and no PASS/FAIL word below changes.** What changes is the *reading*
+> attached to several of them. **§8 supersedes the framing in §2.1, §2.2, §2.3, §3, §5.1,
+> §5.2, §5.3 and §6 wherever the two conflict**, and three of its consequences should be known
+> before the body is read at all: (i) the claim that **O1 is unreachable by this engine is NOT
+> established** — the O1 FAIL stands under the sealed construct, but that construct carries a
+> known censoring asymmetry worth **twice** the shortfall (§8.1); (ii) on the arm T1 is judged
+> on, the fitted feedback's own contribution to T1 is **≈0 and slightly negative**, and **T1
+> passes with the feedback switched off** (§8.2); (iii) the generation-time covariate *level*
+> mismatches were undisclosed and are now in the register (§8.3, §6.5).
+
 **The records it stands on** (all committed, all on this branch):
 
 | record | commit | what it is |
@@ -57,7 +75,8 @@ existed**.
 
 **What the seal hashes.** Twelve paths, thresholds and judging code together — the exam
 document itself, `spine-v2-anchors.json`, `spine-v2-antitest-results.json`, the two prior
-rounds' preregs (`spine-pilot-prereg.json`, `spine02-prereg.json`), and six scripts
+rounds' preregs (`spine-pilot-prereg.json`, `spine02-prereg.json`), and ~~six~~ **seven** scripts
+[C10]
 (`spine_v2_anchors.py`, `spine_v2_antitest.py`, `spine_v2_grader.py`, `spine_v2_report.py`,
 `spine_v2_seal.py`, plus the byte-frozen `spine_pilot_b3.py` and `spine_pilot_report.py` that
 carry R1 and R2). The exam document's sha256 is
@@ -142,8 +161,18 @@ Source: feedback report §4 (`45dc10e`). Premise-accepted batch: 708 attempts fo
 T1 is inside its band. It is **not** a clean win, and this document will not present it as
 one. Three measured facts sit beside the number, all from feedback report §5–6:
 
-**(a) Most of the movement was the estimator, not the mechanism.** The attribution, each row
-a real re-run rather than a decomposition on paper:
+**(a) Most of the movement was the estimator, not the mechanism.**
+
+> **SUPERSEDED IN FRAMING by §8.2 — read that first.** On the arm T1 is actually judged on,
+> the correct lead is the script's own clean counterfactual: **×0.0 → ×1.0 moves T1 by
+> −0.00036**, i.e. the fitted feedback's contribution to T1 is *approximately zero and
+> slightly negative*, and **T1 passes at ×0.0 with the whole week-3 deliverable switched off**
+> (1.91344 vs 1.91308). The estimator did the work; the mechanism did none of it on this arm.
+> The +0.0748 row below is the **OLS-arm** reading of the feedback's worth — a labelled
+> alternative, and the largest of the three available answers, not the headline.
+
+The attribution as originally published, each row a real re-run rather than a decomposition on
+paper:
 
 | change | T1, unconditional | movement |
 |---|---|---|
@@ -189,7 +218,19 @@ exercise from being "run two and report whichever passes".
 
 O1 reads **0.511765** against a floor of 0.5180669104991394 — short by 0.0063. It does not
 clear anywhere: its best value on the entire feedback frontier is **0.5156 at ×0.5**, still
-short by 0.0025, and it falls monotonically beyond that to 0.4778 at ×6 (feedback report §8).
+short by 0.0025, and it ~~falls monotonically~~ **falls, though not monotonically** [C9 —
+0.50870 at ×2.0 rises to 0.50933 at ×3.0 before falling to 0.48644 at ×4.0], to 0.4778 at ×6
+(feedback report §8, which carries the same error).
+
+> **SUPERSEDED IN FRAMING by §8.1 — the material review finding.** The decomposition table
+> below is measured on a **different construct from the bar**: the sealed judge censors each
+> decade's first twelve months (the trailing-inflation warm-up), the decomposition does not.
+> Its generated overall of **0.5241 clears O1's sealed floor**, and the construct gap
+> (**+0.0124**) is about **twice** the 0.0063 shortfall this section exists to diagnose. The
+> sealed FAIL stands; the *diagnosis* below does not carry the weight originally put on it,
+> and "O1 is unreachable" is not established. Two figures in the paragraphs below are also
+> corrected there: "about 0.06 each" (actually 0.0814 and 0.0634) and history's "about 0.09
+> on each move type" (unsupported).
 
 **Why, measured rather than argued** (feedback report §7). O1's clockwise clock is
 `recovery → expansion → stagflation → recession → recovery`, and it **alternates axes**: two
@@ -203,11 +244,14 @@ between the two dials, not of either dial alone.** Decomposed:
 | **history** | 0.5972 | **0.6176** (47.2% of transitions) | **0.6111** (50.0%) | 0.0000 (2.8%) |
 | **generated** (`feedback`, unconditional) | 0.5241 | **0.5362** (40.5%) | **0.5477** (56.0%) | 0.0000 (3.4%) |
 
-The shortfall is spread evenly across both move types — about 0.06 each — and both sit near
+The shortfall is spread across both move types — ~~about 0.06 each~~ **0.0814 on growth flips
+and 0.0634 on inflation crossings** [C1b] — and both sit near
 0.53, which is a coin flip. The engine's two dials are close to independent: the growth chain
 is the fitted hazard, the inflation axis is read straight off L1, and **nothing couples their
 phase**. History has a mild phase relation — downturns tend to begin hot, disinflation tends to
-arrive during them — worth about 0.09 on each move type. A season → curve channel cannot
+arrive during them — ~~worth about 0.09 on each move type~~ **[C1c: unsupported; history's own
+per-move excess over a coin flip is 0.1176 and 0.1111, and 0.09 is closest to its *overall*
+excess of 0.0972, which is not a per-move quantity]**. A season → curve channel cannot
 supply that, because the curve is not the link between growth and inflation. The frontier
 sweep confirms the diagnosis behaves as stated: O1 is flat-to-declining in feedback strength.
 
@@ -222,7 +266,11 @@ D1–D4 pass on **both arms, for all four engines** (`week2`, `ml_link`, `ols_fe
 `feedback`; feedback report §4's attribution table), and in **all sixteen rows of each
 frontier sweep** — week 2's transmission sweep and week 3's feedback sweep, thirty-two rows
 between them, across a twelve-fold change in transmission strength and a six-fold change in
-feedback strength. The dwell medians move by at most one month anywhere in that space.
+feedback strength. ~~The dwell medians move by at most one month anywhere in that space.~~
+**FALSE — corrected in §8.5 (C5).** Week-2 unconditional D4 runs 3, 4, 3, 2, 2, 2, 2, 1 and
+premise D4 runs 3, 4, 4, 3, 2, 2, 2, 1 — a range of **three** months; and D3/D4 sit **exactly
+on their bands' lower edges** at the sweeps' extremes (D4 = 1 against [1, 7] at ×6 on both arms
+and at ×4 premise; D3 = 2 against [2, 8] at ×4/×6). The PASSes stand. The margin does not.
 
 **Across two campaigns and thirty-two frontier rows the dwell medians have never been the
 binding constraint.** That matters because recovery persistence is precisely what sank the
@@ -360,14 +408,20 @@ in one likelihood, on 809 months.
   rejected**: `mean log age` is literally what the loading multiplies, and it matches history
   to 0.04 on the expanding side (2.8638 generated vs 2.9017 historical). The actual reason is
   that the season term is worth **0.155 of a residual standard deviation** under the primary
-  fit — 0.30 pp of total travel against a 0.73 pp residual sd. A term worth a sixth of the
+  fit — ~~0.30 pp~~ **0.4657 pp** [C7: the artifact's `season_term_range_on_generated_pp` is
+  [−0.166497, +0.299185]; 0.2992 is the term's maximum, not its range] of total travel against
+  a 0.73 pp residual sd. A term worth a sixth of the
   noise cannot reorganise a curve however right its sign is.
 - **Pushing the mechanism harder does not buy the bar.** The diagnostic is monotone in feedback
   strength; T1 is not. T1 peaks near ×0.5 and *falls to a FAIL at ×4* before recovering at ×6 —
   the same saturation week 2 found along its own axis, and for the same reason.
-- **O1 is unreachable along this axis at all,** and §2.2 says why. That is the second
-  frontier: not "the feedback was too weak" but "the bar that remains is measuring something
-  the built channel structurally cannot supply".
+- **O1 does not clear anywhere along this axis under the sealed judge,** and §2.2 says why.
+  That is the second frontier: not "the feedback was too weak" but "the bar that remains is
+  measuring something the built channel structurally cannot supply". **Narrowed by §8.1:** the
+  original wording here was "**O1 is unreachable along this axis at all**", and the review
+  established that this is **not** supported — the sealed construct's decade warm-up censoring
+  costs ~0.0124, twice the shortfall, so what is established is that *O1 fails under the
+  sealed construct*, not that the engine cannot reach the ordering the bar is about.
 
 **Read together, the two frontiers are one story.** Week 2 said the missing thing is a curve
 that responds to the cycle. Week 3 built exactly that, proved it real and correctly signed,
@@ -453,7 +507,8 @@ arrives and policy is cut, and that is stage 2 of D-SP-6, explicitly not funded.
   **23.5%** of the inverted-and-expanding gap at its fitted strength (0.4048 → 0.4893 against
   history's 0.7651).
 - Where it does and does not bite, against history: the inverted share of **contracting**
-  months goes 0.400 → 0.284 against history's 0.154 — about 40% of that error closed; the
+  months goes 0.400 → 0.284 against history's 0.154 — ~~about 40%~~ **47.3%** [C8] of that
+  error closed; the
   **expanding** side barely moves, 0.126 → 0.132 against history's 0.195. Sign right in both
   places, size short in both.
 - **Scaling it is not the fix.** At ×4–×6 the diagnostic reaches and passes history's
@@ -471,13 +526,20 @@ fitted hazard; the inflation axis is read straight off L1; they are close to ind
 
 **Its measured size.**
 
-- O1 shortfall is **≈0.06 on each move type**, evenly split: growth flips 0.5362 generated vs
-  0.6176 historical; inflation crossings 0.5477 vs 0.6111. Both generated values sit near a
-  coin flip.
-- History's own phase relation — downturns tend to begin hot, disinflation tends to arrive
-  during them — is worth about **0.09 on each move type**.
+- O1 shortfall is ~~≈0.06 on each move type, evenly split~~ **0.0814 on growth flips and
+  0.0634 on inflation crossings** [C1b — "about 0.06 each" understates the growth-flip gap by
+  36%]: growth flips 0.5362 generated vs 0.6176 historical; inflation crossings 0.5477 vs
+  0.6111. Both generated values sit near a coin flip. **And the generated side of this
+  comparison is the un-censored internal path, not the sealed judge's — see §8.1.**
+- ~~History's own phase relation … is worth about 0.09 on each move type.~~ **UNSUPPORTED
+  [C1c].** History's per-move excess over a coin flip is **0.1176** and **0.1111**; the
+  per-move history-minus-generated gaps are 0.0814 and 0.0634. The 0.09 figure matches
+  neither — it is closest to history's *overall* excess (0.5972 − 0.5 = 0.0972), which is not
+  a per-move-type quantity.
 - O1's best value anywhere on the feedback frontier is **0.5156** (at ×0.5) against a floor of
-  0.5181: **short by 0.0025 at the very best**, monotone-declining thereafter.
+  0.5181: **short by 0.0025 at the very best**, ~~monotone-declining~~ **declining but not
+  monotonically** [C9] thereafter — and measured under the sealed judge's decade-warm-up
+  censoring, which §8.1 shows is worth about twice the shortfall.
 - A contributing, separable defect: the generated batch runs **56.0% inflation crossings vs
   history's 50.0%**, consistent with L1's `pi_gap` at **1.604×** history's dispersion.
 
@@ -500,7 +562,9 @@ anything this campaign fitted, so it can be attacked independently of the phase 
 - **The stream discipline is proved, not asserted.** `SPINE2_ATTEMPT_STRIDE = 32452843`, prime
   and coprime to the platform's 7919 and distinct from `ah.gen.spine.ATTEMPT_STRIDE`; five
   per-decade byte offsets disjoint from the platform's five; `assert_distinct_tapes` draws the
-  first eight float64s of 520 streams and checks no two coincide and that no attempt-strided
+  first eight float64s of ~~520~~ **320** streams [C11: `n_streams_checked` = 520 is week 2's
+  *four*-offset check; the five-offset check is `n_streams_checked_with_openage` = 320, and
+  `openage_disjoint_from_every_other_layer` is true] and checks no two coincide and that no attempt-strided
   stream lands on the platform's `base_seed + 7919*k` ladder. This is the seed-stride collision
   that cost round one 18 of its 20 spines, and it does not recur here.
 - **Two judge defects and a bar defect are logged from the prior rounds and still stand:** B1
@@ -568,6 +632,16 @@ these labels. It cannot be fixed inside the campaign: `regime_ruleset_v1` is sea
 platform-wide (`src/ah/data/regime_thresholds.yaml`), and changing it would move the panel's
 own labels, every anchor in this exam, and every prior round's sealed record.
 
+**Added post-review [C6] — it reaches the campaign's only clean pass, not just the hazard.**
+This entry originally applied the defect to the monthly hazard alone. The exam's own §12.1
+carries a sharper consequence that was dropped: the **2019-04 → 2020-02** cluster "is *exactly
+the right-censored recession spell D1 discloses* (2019-04 → 2020-12, observed minimum 21
+months); the richer classifier keeps only its COVID tail." That links the grader defect
+directly to a **D anchor** — i.e. to D1–D4, the campaign's only unqualified pass and the one
+thing §5.3 hands to stage 2 as settled. The pooled medians are blunt instruments and survive
+(§11.6's "simplicity wins" verdict protects exactly that and nothing finer), but the anchor
+D1 is judged against rests partly on months a second reasonable classifier calls recoveries.
+
 ### 6.3 The 93.9%-noise curve
 
 The single most consequential limitation, and it is on the pass side of the ledger rather than
@@ -606,15 +680,285 @@ script can.** Any future use of T1 as evidence should carry the question with it
 
 ---
 
+### 6.5 The O1 diagnostic is measured on a different construct from the O1 bar (added post-review)
+
+The bar reads **0.511765** under the sealed judge; the decomposition that carries §2.2, §5.2
+and stage-2 "mechanism two" reads **0.524138** on the simulator's internal season path — and
+**0.5241 clears the sealed floor of 0.5180669**. The difference is the sealed judge's
+per-decade trailing-inflation warm-up (`yoy[:12] = nan`, so the first 12 of every 120 months
+lose their transitions) against a decomposition that scores a path "always defined
+internally". **The gap, +0.0124 on the judged cell, is about twice the 0.0063 shortfall.**
+Full reconciliation and the eight-cell table: §8.1.
+
+### 6.6 Generation-time covariate LEVEL mismatches (added post-review)
+
+Week 2 disclosed the covariates' **dispersion** ratios and this document repeated them. Their
+**levels** were disclosed nowhere, and two of the three bear directly on a bar. From
+`spine-v2-fitted-params.json`, `verification/covariate_dispersion`:
+
+| covariate | simulated mean | historical mean | shift | why it matters |
+|---|---|---|---|---|
+| `curve_slope` | **0.4668 pp** | **0.7086 pp** | −0.242 pp = −0.29 of history's sd | T1's tight set is `slope < 0`, so the shift moves the conditioning population itself: generated tight share **0.274** vs history's **0.189** |
+| `credit_gap` | **+3.188** | **−1.066** | +4.25 = +0.69 of history's sd | feeds `cov_contracting[credit_gap]` = +0.6689 (t = 2.01) |
+| `drawdown_state` | fires **24.9%** of months | fires **11.7%** | 2.13× | feeds `cov_expanding[drawdown_state]` = +1.995, the largest coefficient in the expanding block; absent from §6.4 entirely |
+
+**And the headline correction inside this entry:** §3 presents the generated curve inverting in
+**27.5%** of months as the fix for the pilot's 0%. History's own inverted share is **18.3%**.
+That is a **1.5× over-inversion, not a match** — the pilot's attenuation was replaced by a
+mismatch in the other direction, and the verdict presented only the half that reads as a fix.
+
+### 6.7 The drawdown covariate is a calibrated proxy, not the ruleset's dummy (added post-review)
+
+`drawdown_state` is **not** the ruleset's equity-drawdown dummy. A no-flesh spine has no equity
+path, so it is a **36-month trailing drawdown of L1's valuation state `v`**, with one constant
+(**−0.3234**) calibrated so its firing rate on history equals the equity dummy's 11.685%; the
+two dummies agree on **94.10%** of months. Disclosed in fit report §2, absent from this
+register until the review. It is one calibrated constant, calibrated to history rather than to
+a bar — and it is still a substitution inside the covariate that carries the largest expanding
+coefficient (see §6.6's firing-rate row).
+
+---
+
 ## 7. Status and disposition
 
-**CLOSED**, owner-ruled 2026-08-17, at the second frontier.
+**CLOSED**, owner-ruled 2026-08-17, at the second frontier. *(Read with §8: the review changed
+no verdict value and no PASS/FAIL word, and it narrowed what the O1 FAIL and the T1 PASS can
+be said to establish.)*
 
-- The seal stands with its single amendment; every prior round's verdicts stay frozen.
-- Five of the ten bars have readings: **D1–D4 PASS**, **T1 QUALIFIED PASS**, **O1 FAIL**. Four
+- The seal stands with its single construct amendment, plus one documentation follow-up
+  (`AM-SPV2-2026-08-17-002`, §8.6) correcting a superseded anchor citation inside the first
+  entry's rationale. Every prior round's verdicts stay frozen.
+- Five of the ten bars have readings: **D1–D4 PASS**, **T1 QUALIFIED PASS**, **O1 FAIL under
+  the sealed construct** (§8.1: the construct carries a censoring asymmetry worth twice the
+  shortfall, so "unreachable" is not established). Four
   bars — **A1, A2, R1, R2** — were never measured, because the flesh was never built.
 - No parameter was tuned to move a bar in either week. Every scaled coefficient exists only
   inside a frontier sweep and is reported as a counterfactual. The soft-label refit fired, is
   reported, and was **not adopted** although it reads better.
 - A **stage-2 campaign is not proposed here.** §5 states what one would inherit and what its
   two named targets would be; whether to fund it is the owner's decision and is open.
+
+---
+
+## 8. Post-review corrections (verdict-integrity review, 2026-08-17)
+
+An independent verdict-integrity review re-ran `scripts/spine_v2_fit.py` and
+`scripts/spine_v2_feedback.py` read-only, and reported in three parts.
+
+**What it certified.** Both artifacts regenerated **byte-identically**
+(`spine-v2-fitted-params.json`, `spine-v2-feedback-params.json`). All twelve sealed hashes
+recomputed **clean** against the working tree, exam document included. Every bar reading, all
+32 frontier rows, both attribution tables, the 16 hazard coefficients, the curve block, the
+label-stability arms, the premise tallies and every historical anchor re-derived from
+`spine-v2-anchors.json` matched **to the digit**: *"No discrepancy at any digit."* Every
+PASS/FAIL word was checked against the sealed bands and found **ALL CORRECT**, including the
+NOT MEASURED status of A1/A2/R1/R2, verified against `bars_measured` and
+`bars_deferred_to_week_4` in the artifact itself.
+
+**What it found.** Twelve findings — one material, three substantive, eight minor — all
+interpretive or omissive, and one pattern the review named explicitly:
+
+> "**eleven of the twelve lean the same way: they make the week-3 mechanism look better, or
+> the remaining gap look smaller, than the committed artifacts support.**"
+
+**The rule this section follows** (round two's precedent, `2026-08-16-spine02-results.md`):
+**no verdict value and no PASS/FAIL word changes** — none was found wrong. What is corrected is
+the *characterization* attached to them. Where this section and the body conflict, **this
+section governs**. Each correction quotes the reviewer's own finding.
+
+### 8.1 C1 (MATERIAL) — the O1 diagnostic is measured on a different construct from the O1 bar
+
+**The sealed verdict is unchanged: O1 FAILS at 0.511765 against the floor 0.5180669104991394.**
+The review is explicit that it is not claiming a mis-scored bar:
+
+> "To be clear about what this does and does not mean: **the sealed judge is the authority, O1
+> FAILS at 0.511765, and I am not claiming the bar was mis-scored.** The seal defines the
+> construct and the construct includes the warm-up. What I am claiming is that the verdict's
+> diagnostic section is built on a different object than the bar, in the favourable direction,
+> by more than the margin at issue — and says nothing about it."
+
+**The two objects, named.** `judge_o1` (sealed) scores `clockwise_counts(_cells(decade,
+sealed))` — the sealed grader's re-derivation from emitted labels plus simulated year-on-year
+inflation — and `to_decade()` sets `yoy[:12] = np.nan` (*"the decade's own trailing-inflation
+warm-up"*), so **the first 12 months of every decade are cell −1 and their transitions are
+dropped**. The `o1_decomposition` used in §2.2 scores `d.season`, the simulator's internal
+season index, documented in its own dataclass as *"always defined internally"*. The
+transition/clockwise logic is otherwise byte-for-byte the same, so the entire gap is the
+per-decade warm-up censoring.
+
+**The measurement, all eight engine x arm cells — the decomposition reads higher every time:**
+
+| engine | arm | sealed judge | decomposition | gap | decomposition vs floor 0.51807 |
+|---|---|---|---|---|---|
+| `week2` | unconditional | 0.514911 (259/503) | 0.522807 (298/570) | +0.0079 | PASS |
+| `ml_link` | unconditional | 0.514563 (265/515) | 0.526496 (308/585) | +0.0119 | PASS |
+| `ols_feedback` | unconditional | 0.504798 (263/521) | 0.513559 (303/590) | +0.0088 | FAIL |
+| **`feedback` (the judged cell)** | **unconditional** | **0.511765 (261/510)** | **0.524138 (304/580)** | **+0.0124** | **PASS** |
+| `week2` | premise | 0.500707 | 0.517576 | +0.0169 | FAIL |
+| `ml_link` | premise | 0.496571 | 0.514758 | +0.0182 | FAIL |
+| `ols_feedback` | premise | 0.507102 | 0.521212 | +0.0141 | PASS |
+| `feedback` | premise | 0.491345 | 0.506373 | +0.0150 | FAIL |
+
+**The three facts that follow, stated plainly:**
+
+1. **The construct gap is twice the shortfall.** +0.0124 against a 0.0063 miss.
+2. **The internal-path measurement clears the floor.** 0.5241 > 0.5180669. §2.2 printed
+   "short by 0.0063" and then, four lines later, a table whose generated overall is 0.5241,
+   *"with no reconciliation, no note that the two are different constructs, and no note that
+   one of them is above the bar. A reader is left to assume the table explains the FAIL. It
+   does not: on the table's own construct there is no FAIL to explain."*
+3. **The asymmetry is this campaign's own named defect, not applied here.** The
+   decomposition's *history* side is on the sealed construct (72 transitions / 43 clockwise,
+   matching `l_grader_v2.full_ordering_v2` exactly) and loses one 12-month warm-up in 813
+   months — **1.5%**. The bar's *generated* side loses 12 in every 120 — **10%**. As the review
+   puts it: *"That is precisely the censoring mismatch **PRE-SEAL RULING 1 fixed for D1-D4**
+   ... and that **AM-SPV2-2026-08-17-001 invoked for the arm choice**. The like-for-like
+   principle was applied twice and not applied here."*
+
+**What is therefore established, and what is not.**
+
+- **Established:** *O1 fails under the sealed construct, and the sealed construct carries a
+  known censoring asymmetry* — one that costs the generated side about twice the margin the
+  bar was missed by.
+- **NOT established:** *"O1 is unreachable by this engine."* That claim appeared in §3
+  ("unreachable along this axis at all"), was echoed in §2.2, §5.2 and in the campaign's
+  framing of its second frontier, and it is **withdrawn**. The frontier finding that survives
+  is narrower and still real: **under the sealed judge, no feedback strength clears O1** (best
+  0.5156 at x0.5), and O1's construct is a phase test the curve channel does not address.
+  Whether a windowing-symmetric O1 would be cleared by this engine is **unmeasured** — the
+  internal-path reading of the judged cell is above the floor, which is suggestive and is not
+  a verdict, because it is not the sealed construct.
+- **Consequence for stage 2:** any stage-2 seal must **re-derive the phase anchor under
+  windowing-symmetric constructs before using O1's shortfall as a justification.** That caveat
+  is carried into `2026-08-17-stage2-coupled-system-design.md` §WHY.
+
+**Two sub-findings inside the same claim** (both corrected inline in §2.2 and §5.2):
+
+- **C1b — "the shortfall is spread evenly ... about 0.06 each" is wrong.** The actual gaps are
+  **0.0814** (growth flips) and **0.0634** (inflation crossings): *"'About 0.06 each'
+  understates the growth-flip gap by 36%."* Self-correcting, since both numbers are printed
+  beside the claim, but the characterization was wrong.
+- **C1c — history's "about 0.09 on each move type" is UNSUPPORTED.** History's per-move excess
+  over a coin flip is **0.1176** and **0.1111**; the per-move history-minus-generated gaps are
+  0.0814 and 0.0634. *"`0.09` matches neither; it is closest to history's overall excess
+  (0.5972 − 0.5 = 0.0972), which is not a per-move-type quantity."* The figure appeared in
+  §2.2 and §5.2 here and in feedback report §7, stated each time as measured.
+
+The qualitative diagnosis itself survives, and the review says so: it recomputed the mix effect
+— holding the generated per-move rates at history's move mix changes the overall by only
+**0.0028** — so the shortfall really is a per-move-type rate effect and not composition.
+
+### 8.2 C2 (SUBSTANTIVE) — the feedback's own effect on the causal bars is ~0, and T1 passes with it OFF
+
+**This is the reading §2.1(a) should have led with.** The artifact defines the x0.0 row of the
+frontier as *"the primary engine with the three loadings zeroed, **keeping the unrestricted
+fit's** intercept, u_hat loading and residual AR(1) ... the gap between them is the nuisance
+parameters, **not a feedback effect**"* — i.e. **the artifact itself designates x0.0 as the
+clean isolation of the feedback**. Measured on the arm the bars are judged on:
+
+```
+x0.0   T1 1.91343964  PASS      O1 0.51456311
+x1.0   T1 1.91308121  PASS      O1 0.51176471
+       dT1 = -0.00035842        dO1 = -0.00279840
+```
+
+**So the fitted season-to-curve feedback moves T1 by essentially zero, slightly negative, and
+moves O1 AWAY from its floor — and T1 passes at x0.0, with the entire week-3 deliverable
+switched off.**
+
+T1's response is strongly non-additive (+0.0748 + 0.1421 = 0.2169 against a joint +0.1495, an
+interaction of −0.0674), so "what the feedback is worth" has **three** answers, and the verdict
+headlined the largest:
+
+| reading of the feedback's T1 effect | value | status |
+|---|---|---|
+| **frontier x0.0 vs x1.0 — the script's own clean counterfactual** | **−0.00036** | **the primary reading** |
+| exact-ML `feedback` vs `ml_link` (nuisance parameters refit under the restriction) | +0.0074 | secondary |
+| under week 2's OLS estimator — the row §2.1(a) quoted | +0.0748 | labelled alternative only |
+
+The review's judgement was UNDERSTATED rather than OVERSTATED, and it says why: *"The verdict
+says 'most of that movement came from changing the estimator, not from the mechanism the week
+was funded to build.' That is directionally honest and it is the reason I do not call this
+OVERSTATED. But on the arm the verdict is judged on, it is not 'most' — it is all of it, and
+the artifact records the number that says so. Neither −0.00036, −0.00280, nor 'T1 passes at
+x0.0' appears anywhere in the verdict."* All three now appear, here and in §2.1(a).
+
+**What this does not change.** T1's QUALIFIED PASS stands, and the qualification gets stronger,
+not weaker: on the judged arm the pass is attributable to the estimator alone. §5.1's statement
+of what stage 2 inherits is unaffected in substance — the mechanism is real, correctly signed,
+significant (LR 12.23, p = 0.0066) and monotone in its own diagnostic — but "it moved T1 across
+its lower edge" (feedback report §10, quoted approvingly in §3 here) must be read as **the
+estimator moved T1 across its lower edge**.
+
+### 8.3 C3 (SUBSTANTIVE) — the covariate LEVEL mismatches were undisclosed
+
+> "**Generation-time covariate *level* mismatches are undisclosed — only dispersion ratios
+> are.**"
+
+Now in the register as **§6.6**, with the three shifts (curve mean −0.242 pp; `credit_gap`
++4.25; drawdown firing 2.13x) and, most consequentially, the correction that the generated
+curve's **27.5% inverted share against history's 18.3% is a 1.5x over-inversion rather than a
+match** — §3 presented it as the fix for the pilot's 0% without the comparison. The tight-set
+consequence is direct: T1 conditions on `slope < 0`, so the generated tight share is 0.274
+against history's 0.189, and the conditioning population itself differs.
+
+### 8.4 C4 (MINOR) — the drawdown covariate is a proxy substitution
+
+> "It is a 36-month trailing drawdown of L1's valuation state `v`, standing in for the
+> ruleset's equity-drawdown dummy, with one constant (−0.3234) calibrated so the historical
+> firing rates match; the two agree on 94.1% of months. Disclosed in fit report §2; absent
+> from the verdict's register."
+
+Now in the register as **§6.7**.
+
+### 8.5 C5–C11 — the overstated dwell margin and the six numeric slips
+
+| # | claim as published | correction | where |
+|---|---|---|---|
+| **C5** (substantive) | "The dwell medians move by **at most one month** anywhere in that space" | **FALSE.** Week-2 unconditional D4 runs 3, 4, 3, 2, 2, 2, 2, 1; premise D4 runs 3, 4, 4, 3, 2, 2, 2, 1 — **a range of three**. D3/D4 also sit **exactly on their bands' lower edges** at the sweep extremes (D4 = 1 vs [1, 7] at x6 both arms and x4 premise; D3 = 2 vs [2, 8] at x4/x6). "PASS everywhere" and "these do not miss" both stand; the *margin* was overstated — and, as the review notes, *"since 'persistence is solved' is the one clean thing §5.3 hands to stage 2, the margin is overstated."* | §2.3, corrected inline |
+| **C6** (minor) | §6.2 applied the grader defect to the hazard only | The exam §12.1 consequence that was dropped: the 2019-04 -> 2020-02 cluster **is exactly the right-censored recession spell D1 discloses**, so the defect reaches a **D anchor** — the campaign's only clean pass | §6.2, added inline |
+| **C7** (minor) | "**0.30 pp** of total travel" | **0.4657 pp.** The artifact records `season_term_range_on_generated_pp` = [−0.166497, +0.299185]; **0.2992 is the maximum, not the range**. From the published coefficients the theoretical flattest-to-steepest is 0.436 pp. Understated the mechanism by ~35%. The load-bearing 0.155 sd ratio is separately correct (`season_term_sd_over_residual_sd` = 0.154721), so the conclusion is unaffected | §5.1, corrected inline |
+| **C8** (minor) | "about **40%** of that error closed" | **47.3%** — (0.4002 − 0.2835)/(0.4002 − 0.1535). Understated | §5.1, corrected inline |
+| **C9** (minor) | O1 "**falls monotonically** ... to 0.4778 at x6" | **Not monotone:** 0.50870 at x2.0 -> **0.50933** at x3.0 -> 0.48644 at x4.0. Same error in feedback report §8. The "no feedback strength clears O1" finding survives | §2.2 and §5.2, corrected inline |
+| **C10** (minor) | "**six** scripts", seven then listed | **Seven.** The twelve hashed paths are 5 documents + 7 scripts; the total was right, the interior count was not | §1, corrected inline |
+| **C11** (minor) | "`assert_distinct_tapes` draws the first eight float64s of **520** streams", attached to the five-offset claim | `n_streams_checked` = 520 is week 2's **four**-offset check; the five-offset check is `n_streams_checked_with_openage` = **320**. The substantive claim stands: five offsets, disjoint from the platform's five, `openage_disjoint_from_every_other_layer` = true | §5.3, corrected inline |
+
+### 8.6 C12 — the amendment's superseded anchor citation, corrected by follow-up amendment
+
+The one finding that is **not** in this document: it is inside the sealed log.
+
+> "the rationale states O1's floor is 'the lower edge of the clockwise-fraction interval
+> measured over the WHOLE panel (**68 transitions, 41 clockwise**)'. Per
+> `spine-v2-anchors.json`, 68/41 is the **superseded pre-mapping-fix** anchor ... The sealed
+> floor `0.5180669104991394` is cut from grader_v2's **72 transitions / 43 clockwise**. The
+> floor *value* quoted is correct; the provenance sentence names the wrong anchor. Immaterial
+> to the ruling, but it is a factual error inside a sealed amendment. The verdict's §1 table
+> gets it right (`0.5972 over 72 transitions`)."
+
+**How it was handled.** `AM-SPV2-2026-08-17-001` was **not edited** — the log is the record, and
+editing an entry would erase the thing the log exists to keep. A follow-up entry,
+**`AM-SPV2-2026-08-17-002`** (type `documentation`, post-hoc, appended through the same log
+machinery and machine-checked by `tests/test_spine_v2_seal.py`), records the correction: the
+sealed floor is cut from `l_grader_v2.full_ordering_v2` — **72 transitions, 43 clockwise,
+clockwise fraction 0.5972, block-24m bootstrap CI lower edge 0.5180669104991394** — while **68
+transitions / 41 clockwise** (fraction 0.6029, floor 0.5185185185185185) is the pre-mapping-fix
+`e_ordering` anchor, superseded by PRE-SEAL RULING 2 and retained in the anchors file only
+under `exam_bars_superseded`. **No threshold moves, no hashed file is edited, and the ruling of
+AM-SPV2-2026-08-17-001 is unchanged in every respect** — only its provenance sentence is
+corrected, in the log, where a reader of the first entry will find it.
+
+### 8.7 Two review observations that are not corrections, recorded anyway
+
+- **On the 93.9% noise share (judged FAIR).** The review endorsed §2.1(b)/§6.3 — *"That is the
+  right call and it is not hedged"* — with two caveats. First, the share is a **sum of squares
+  of three component sds**, not a covariance-aware decomposition of the realised generated
+  slope, and the components are not independent by construction; the artifact's own reading
+  text is more careful, calling the season/residual ratio *"a ceiling"*. Second, the verdict
+  left both horns open, but **its own four-engine set leans to the first**: `ols_feedback`
+  **passes** T1 at 49.4% noise while `week2` **fails** at 59.6%, so **T1's verdict is not
+  ordered by noise share** — evidence for "T1 is insensitive to how economically determined the
+  curve is", which went unremarked. It is remarked now.
+- **On §1's bar table (presentational, not an error).** "round two: PASS" and "round two: FAIL"
+  for R1/R2 sit in a column headed *historical anchor*; those are prior-round verdicts, not
+  anchors. §2 and §7 are unambiguous, so no reader is actually misled — noted for a future
+  table.

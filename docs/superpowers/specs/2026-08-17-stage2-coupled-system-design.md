@@ -45,6 +45,21 @@ otherwise.
 Neither of these is a hypothesis. Both were measured, by sealed judges or by
 decompositions published beside them, and both have a recorded location.
 
+> **CAVEAT ADDED 2026-08-17 (verdict-integrity review) — it bears on P1's justification.**
+> Part of §1.1's case rests on O1's measured shortfall, and that shortfall is now known to be
+> **smaller than a censoring artifact inside the bar's own construct**. The sealed judge
+> censors each generated decade's first twelve months (the trailing-inflation warm-up — 12 of
+> every 120, ~10%) while the historical side loses one warm-up in 813 months (~1.5%). On the
+> judged cell the resulting construct gap is **+0.0124**, roughly **twice** the **0.0063** by
+> which O1 was missed, and the same engine measured on its un-censored internal path reads
+> **0.5241**, which *clears* O1's sealed floor of 0.5180669. The sealed FAIL stands and is not
+> reopened — but "the engine cannot keep the two dials in phase" is **not** established by it.
+> **Any stage-2 seal must therefore re-derive the phase anchor under windowing-symmetric
+> constructs — both sides losing the same fraction of their months — before P1's threshold is
+> cut, and before O1's shortfall is cited as the size of the problem P1 exists to fix.** Full
+> reconciliation: `docs/superpowers/specs/2026-08-17-spine-v2-results.md` §8.1. §1.2's 93.9%
+> finding is untouched by this caveat; the review judged that one FAIR as stated.
+
 ### 1.1 Growth and inflation do not know about each other (the O1 diagnosis)
 
 **Where it was recorded.** Week 3's report, §7 ("O1: measured, and it is not the curve's
