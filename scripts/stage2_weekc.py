@@ -41,6 +41,14 @@ publishes both and judges neither), A1/A2 re-read on the flesh's own realised
 panel inflation instead of the spine's, and all four bars re-read on the
 premise-accepted batch. None of them can supply a verdict.
 
+**D-SP-10 does not run here.** The conditioning-reach fix (owner ruling
+2026-08-18) changed the block sampler's default design, and this script is the
+*record* of the arm that was measured before it: every batch below is compiled
+under ``stage2_worlds.REACH_BASELINE``, named explicitly at each of the three
+call sites, so ``stage2-weekc-results.json`` still regenerates byte-identically.
+The re-run under the fix is ``scripts/stage2_reach.py``, which writes its own
+artifact and leaves this one alone.
+
 Run (from the worktree root, no network):
 
     uv run python scripts/stage2_weekc.py
@@ -96,6 +104,11 @@ PRE_FLESH_BARS = weeka.PRE_FLESH_BARS
 #: ordering reverses, and the exam prints it precisely so it cannot be
 #: discovered later. Both are DISCLOSURES and neither is ever judged.
 A1_DISCLOSURE_LINES_PP = (3.0, 5.0)
+
+#: The arm this script records: the block sampler as it stood before D-SP-10.
+#: Named at every call site rather than left to the module default, so the
+#: default moving (it has, once) can never silently rewrite this record.
+_BASELINE = worlds.reach_design(worlds.REACH_BASELINE)
 
 
 # --------------------------------------------------------------------------- #
@@ -488,7 +501,9 @@ def main() -> int:
     # ------------------------------------------------------------------ #
     # A1, A2, R2 -- the unconditional 50-decade batch, fleshed
     # ------------------------------------------------------------------ #
-    with worlds.stage2_flesh(frozen, premise_mode=worlds.PREMISE_UNCONDITIONAL) as run:
+    with worlds.stage2_flesh(
+        frozen, premise_mode=worlds.PREMISE_UNCONDITIONAL, design=_BASELINE
+    ) as run:
         ens = worlds.compile_world(world, n_decades, weeka.STAGE2_VERIFY_SEED)
         decades = run.last_decades
         rows = np.asarray(ens.row_indices)
@@ -522,7 +537,7 @@ def main() -> int:
     # ------------------------------------------------------------------ #
     # the same three bars on the PREMISE-ACCEPTED batch -- a disclosure
     # ------------------------------------------------------------------ #
-    with worlds.stage2_flesh(frozen, premise_mode=worlds.PREMISE_DECLARED) as run:
+    with worlds.stage2_flesh(frozen, premise_mode=worlds.PREMISE_DECLARED, design=_BASELINE) as run:
         p_ens = worlds.compile_world(world, n_decades, weeka.STAGE2_VERIFY_SEED)
         p_rows = np.asarray(p_ens.row_indices)
         p_batch = fleshed_batch(run.last_decades, p_rows, assets)
@@ -543,7 +558,7 @@ def main() -> int:
     # ------------------------------------------------------------------ #
     # R1 -- the b3 over-commitment ladder, byte-frozen
     # ------------------------------------------------------------------ #
-    with worlds.stage2_flesh(frozen, premise_mode=worlds.PREMISE_DECLARED) as run:
+    with worlds.stage2_flesh(frozen, premise_mode=worlds.PREMISE_DECLARED, design=_BASELINE) as run:
         rung_rows = [
             np.asarray(worlds.compile_world(world, 1, seed).row_indices)[0] for seed in ladder_seeds
         ]
