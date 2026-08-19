@@ -142,8 +142,12 @@ ASSETS: tuple[str, ...] = (
     "pe",
     "pc",
     "re",
+    # ER-14 close-out (D-ER14-2, Task S1): the fourth private class. APPENDED -
+    # the tuple's order is the digest contract and infra must be last for the
+    # same reason its draw is (design 2.7.2).
+    "infra",
 )
-REPORTED_SLEEVES: tuple[str, ...] = ("pe", "pc", "re")
+REPORTED_SLEEVES: tuple[str, ...] = ("pe", "pc", "re", "infra")
 
 # Toy-engine defaults for absent (optional) factor/structural fields. The engine
 # needs concrete numbers even where the WorldSpec leaves a field to "let the
@@ -433,6 +437,13 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     e_pe = _t_draws(rng, nm)
     e_pc = _t_draws(rng, nm)
     e_re = _t_draws(rng, nm)
+    # ER-14 close-out (Task S1). APPENDED AT THE END OF THE BLOCK, NEVER
+    # INSERTED: any other position shifts every subsequent stream and
+    # silently changes e_pe/e_pc/e_re - and, through the common-factor
+    # construction, the public assets too - in every world, with no test
+    # naming the cause. AT-14 in tests/test_er14_streams.py is the guard;
+    # design 2.7.2 is the argument.
+    e_infra = _t_draws(rng, nm)
 
     crisis = _crisis_mask(world, nm)
     rate = _rate_path(world, nm, z_rate)
@@ -585,6 +596,23 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
         + _LAMBDA_RE * x / 12.0
         - _D_RE * _GAMMA_RE * d_x
     )
+    # ER-14 close-out (Task S1): the fourth private class, wired through the
+    # pure function built in Task M6. No schema field exists for infra_yield
+    # (design 2.7.0), so it stays a declared engine constant; linkage and
+    # discount_rate_shift_bps are read from the world exactly like re's
+    # income_yield_pct/cap_rate_shift_bps riders.
+    infra = infra_return(
+        x=x,
+        d_x=d_x,
+        d_rate=d_rate,
+        eq=eq,
+        e_infra=e_infra,
+        crisis=crisis,
+        linkage=_f(st.infrastructure, "inflation_linkage", _DEF["infra_linkage"]),
+        disc_shift_bps=_f(st.infrastructure, "discount_rate_shift_bps", _DEF["infra_disc"]),
+        yield_pct=_DEF["infra_yield"],
+        nm=nm,
+    )
 
     returns = {
         "equity": eq,
@@ -595,6 +623,7 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
         "pe": pe,
         "pc": pc,
         "re": re,
+        "infra": infra,
     }
     # Limited liability (ER-7 close-out): no long-only stream loses more than
     # everything in a month. See _MONTHLY_RETURN_FLOOR_PCT.
@@ -620,6 +649,7 @@ def _reported_marks(world: NumericWorld, returns: dict[str, np.ndarray]) -> dict
         "pe": _f(weights_model, "private_equity", _DEF["smooth_pe"]),
         "pc": _f(weights_model, "private_credit", _DEF["smooth_pc"]),
         "re": _f(weights_model, "real_estate", _DEF["smooth_re"]),
+        "infra": _f(weights_model, "infrastructure", _DEF["smooth_infra"]),
     }
     out: dict[str, np.ndarray] = {}
     for sleeve in REPORTED_SLEEVES:
