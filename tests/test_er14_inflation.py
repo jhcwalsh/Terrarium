@@ -460,3 +460,50 @@ def test_inflation_stress_never_exceeds_the_engines_own_crisis_stress():
     caps inflation.average_pct at 20 (x_max = 18) and _CRISIS_LOSS_AMPLIFIER is
     1.6, so omega_PC <= 0.6/18 = 0.033."""
     assert engine._OMEGA_PC <= (engine._CRISIS_LOSS_AMPLIFIER - 1.0) / 18.0
+
+
+# --------------------------------------------------------------------------- #
+# Task C3: the C2 convexity, decoupled from CDLI (theta_toy)
+# --------------------------------------------------------------------------- #
+
+
+def _pc_at(peak_bps: float, **extra) -> float:
+    """Annualised pc on a calm-inflation world whose HY spread peak is set."""
+    return annualised(
+        probe(2.0, **{"factor_conditions.credit.hy_spread_peak_bps": peak_bps, **extra}), "pc"
+    )
+
+
+def test_theta_is_additive_never_a_replacement():
+    """C2's bare form implies ZERO loss below the median spread. Substituting it
+    for the toy engine's through-cycle loss would delete ER-1's close-out and hand
+    private credit back the Sharpe near 2 that ER-1 and ER-4 were written to
+    remove. The convex term is ADDED on top of the existing linear loss - so below
+    s_bar the world's declared annual_loss_rate_pct still bites, hard."""
+    lo = _pc_at(350.0, **{"structural.private_credit.annual_loss_rate_pct": 0.5})  # type: ignore[arg-type]
+    hi = _pc_at(350.0, **{"structural.private_credit.annual_loss_rate_pct": 5.0})  # type: ignore[arg-type]
+    assert lo - hi > 2.0
+
+
+def test_theta_is_convex_above_the_engines_own_spread_reference():
+    """s_bar = _SPREAD_REFERENCE_BPS = 400, documented in place as 'the spread a
+    normal credit market prices' - no new constant, and it plays exactly the role
+    C2's s_bar plays. Each extra 200bp of peak spread must cost MORE when spreads
+    are already wide than when they are near the reference."""
+    near = _pc_at(400.0) - _pc_at(600.0)
+    wide = _pc_at(1600.0) - _pc_at(1800.0)
+    assert wide > near
+
+
+def test_theta_toy_is_the_ratified_declared_value_pending_cdli():
+    """D-ER14-2: CDLI decoupled - the convexity ships DECLARED at 0.10 and C2's
+    measured half awaits the Cliffwater export. Anchor: _HY_LOSS_SHARE 0.45 x the
+    engine's own pc/hy spread-sensitivity ratio (0.8/3.5 = 0.229) = 0.103."""
+    assert engine._THETA_TOY == 0.10
+    assert engine._THETA_TOY == pytest.approx(engine._HY_LOSS_SHARE * (0.8 / 3.5), abs=0.005)
+
+
+def test_private_credit_has_not_recovered_its_pre_er1_sharpe():
+    """ER-1/ER-4 regression guard: the convex term must not be a net GIFT.
+    Decade Sharpe of pc on the stagflation preset stays well under 2.0."""
+    assert sharpe(probe(6.5), "pc") < 1.5

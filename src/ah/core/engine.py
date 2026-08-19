@@ -123,6 +123,7 @@ _MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
 
 _PHI_PC = 1.0  # Fisher one-for-one on a nominal reference rate (er14-03 Task C1)
 _OMEGA_PC = 0.03  # fractional loss uplift per pp of excess; bounded under the crisis amplifier
+_THETA_TOY = 0.10  # C2's convexity adapted to the toy plane; DECLARED, CDLI decoupled (D-ER14-2)
 
 _LAMBDA_INFRA_DEFAULT = 0.60  # C1's declared pm_infra linkage; a DEFAULT, not a constant
 _GAMMA_INFRA = 0.30  # gamma_RE 0.50 x ~1.6 duration premium x 0.4 unregulated share
@@ -511,6 +512,15 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
         # borrower coverage through input costs, it squeezes it through
         # revenue, a different channel, deliberately not modelled (design 4).
         * (1.0 + _OMEGA_PC * np.maximum(0.0, x))
+        # ER-14 (Task C3): C2's convexity, adapted to the toy plane and
+        # decoupled from CDLI (D-ER14-2 - the measured half awaits the
+        # Cliffwater export; theta_toy ships DECLARED at 0.10). ADDITIVE,
+        # never a replacement for the through-cycle linear loss above: C2's
+        # bare form implies zero loss below the median spread, which would
+        # delete ER-1/ER-4's close-out. s_bar is not a new number - it is
+        # _SPREAD_REFERENCE_BPS, "the spread a normal credit market prices",
+        # already playing exactly that role above.
+        + _THETA_TOY * np.maximum(spread_lagged - _SPREAD_REFERENCE_BPS, 0.0) / 1200.0 * loss_amp
     )
 
     eq = eq_drift / 12.0 + eq_vol_m * z_eq - 2.2 * crisis
