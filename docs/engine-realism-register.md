@@ -1124,6 +1124,23 @@ stated rather than implied:**
   reaches players through the engine's own filter (`_reported_marks`), not
   the sealed per-sleeve kernel — de-smoothing a shipped reported series still
   does not recover the true series, exactly as ER-11 already states.
+- **The generated plane's inflation state is the world's declared average,
+  not a real historical CPI trail — a G2-build finding, not part of the
+  original C1 design.** `mappings/sleeve-mappings-v1.2.yaml`'s
+  `inflation_passthrough.c_anchor` (measured, `0.03068`: the real historical
+  trailing-CPI mean over train+validation, per its original
+  AM-2026-08-15-001 specification) is declared for provenance/reproducibility
+  but is **not read at runtime**. `bootstrap-v1` stratifies row selection by
+  REGIME LABEL only and structurally ignores `factor_conditions` (the same
+  rule the crisis channel already carries), so a per-row real CPI trail
+  cannot respond to a world's declared `inflation.average_pct` — AT-10's
+  probe (varying that one field) would be dead on arrival if it tried.
+  `src/ah/port/adapter.py` instead demeans the WORLD's declared average
+  against `ah.core.engine.INFLATION_ANCHOR_PCT` (2.0%, the toy plane's own
+  policy-style anchor) — a different quantity for a necessarily different
+  mechanism, not a bug, but the artifact's `c_anchor` field is vestigial for
+  its originally-specified runtime purpose until a future WP makes row
+  selection itself inflation-conditional.
 - **The standing caveat is unchanged.** `hier-flow-v1` is not a convincing
   model of history; closing ER-14 removes one missing channel from the toy
   and generated engines and makes nothing decision-ready.
