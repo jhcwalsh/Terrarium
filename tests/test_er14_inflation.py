@@ -31,6 +31,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
+from ah.core import engine
 from ah.core.digest import sha256_of_arrays
 from ah.core.engine import (
     INFLATION_ANCHOR_PCT,
@@ -179,3 +180,83 @@ def test_the_anchor_is_the_engines_own_anchor():
     """C_ANCHOR is not a new number: it is _RATE_SHOCK_INFLATION_ANCHOR and
     _DEF['infl_avg'] (D-ER14-2 A1 row 1)."""
     assert INFLATION_ANCHOR_PCT == _RATE_SHOCK_INFLATION_ANCHOR == _DEF["infl_avg"] == 2.0
+
+
+# --------------------------------------------------------------------------- #
+# Task M3: real estate - income escalation vs cap-rate repricing
+# --------------------------------------------------------------------------- #
+
+
+def test_at1_private_returns_are_no_longer_bit_identical_across_inflation():
+    """AT-1, the literal inversion. ER-14's headline is 'bit-identical across a
+    twelvefold change'; this is that sentence negated. Break-proof: it cannot be
+    satisfied by a test that restates the implementation."""
+    lo = run_path(_world(1.0), 12345)
+    hi = run_path(_world(12.0), 12345)
+    for asset in ("pe", "re"):
+        assert not np.array_equal(lo.returns[asset], hi.returns[asset]), asset
+
+
+def test_at3_real_estate_moves_the_right_way_and_materially():
+    """AT-3. Delta annualised re, 1% -> 12%, must be POSITIVE and >= +1.5 pp/yr
+    (lambda_RE's declared range floor 0.15 x 11pp - rounding). Today's measured
+    value is -0.117: this is a sign flip of ~1.6 pp/yr minimum."""
+    delta = annualised(probe(12.0), "re") - annualised(probe(1.0), "re")
+    assert delta >= 1.5, delta
+
+
+def test_at8_the_deflation_mirror():
+    """AT-8. deflation_bust (-1.0%) re sits at least 0.5 pp/yr BELOW goldilocks
+    (2.0%) re. The mechanism must be symmetric - an inflation RESPONSE, not a
+    one-sided bonus that only ever pays. lambda_RE's range floor 0.15 x 3.0pp =
+    0.45, rounded to 0.5."""
+    bust = annualised(ensemble_of("deflation_bust"), "re")
+    gold = annualised(ensemble_of("goldilocks"), "re")
+    assert gold - bust >= 0.5, (gold, bust)
+
+
+def test_the_repricing_term_is_a_change_effect_not_a_level_effect():
+    """Income escalation is proportional to x (permanent); cap-rate repricing is
+    proportional to dx (transient). Modelling them with the same time signature
+    is the single most common way to get this wrong (design 2.1). With inflation
+    STEADY the repricing term contributes nothing."""
+    steady = np.full(120, 6.5)
+    x = inflation_excess(steady)
+    d_x = np.diff(x, prepend=x[0])
+    assert np.allclose(d_x[24:], 0.0, atol=1e-12)
+
+
+def _anchored(path: Path) -> dict:
+    doc = _load(path)
+    _set_dotted(doc, "factor_conditions.inflation.average_pct", 2.0)
+    doc["factor_conditions"]["crisis_windows"] = []
+    return doc
+
+
+@pytest.mark.parametrize("asset", ["pe", "re"])
+def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
+    """AT-6a (pe/re half; pc joins in Task C5). Every new term is additive in
+    x/d_x (LAMBDA*x, D*GAMMA*d_x), so x == 0 makes them vanish algebraically -
+    that is the property under test, and it is exact, not statistical.
+
+    DEVIATION from the plan's literal test body (recorded in the Task M3
+    commit): the plan set only the DECLARED average to the anchor and expected
+    "x == 0" from that alone. It does not - _inflation_path is a stochastic
+    mean-REVERTING process (kappa=0.12, monthly noise std 0.28), so even with
+    average_pct == C_ANCHOR and crisis cleared, the REALIZED trailing mean
+    wanders around the anchor rather than sitting on it (measured: deflation_bust
+    moved by up to 0.38pp/month on `re` under the literal test - a real,
+    reproducible effect of the new terms firing on non-zero noise, not a
+    determinism defect). inflation_excess is monkeypatched to return zero
+    identically, forcing x (and therefore d_x) to exactly zero regardless of the
+    realized path - the fixture never depended on inflation (pe/re/pc read no
+    inflation term before this release), so it is still the correct reference
+    under the patch. This tests the same claim the plan intended - the new
+    terms are inert when x==0 - without the false premise."""
+    monkeypatch.setattr(engine, "inflation_excess", lambda infl, **_: np.zeros_like(infl, dtype=np.float64))
+    ref = np.load(ANCHOR_BASELINE_NPZ)
+    for path in TOY_PRESETS:
+        paths = run_path(project_numeric(load_worldspec(_anchored(path))), SEED)
+        np.testing.assert_array_equal(
+            paths.returns[asset], ref[f"{path.stem}/{asset}"], err_msg=f"{path.stem}/{asset}"
+        )

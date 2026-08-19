@@ -79,8 +79,26 @@ def build(out_stem: str, assets: tuple[str, ...]) -> None:
     print(f"{out_stem}: {len(arrays)} arrays, {len(digests)} digests, {len(skipped)} skipped")
 
 
+def build_anchor_baseline() -> None:
+    """The AT-6a reference: every toy-v0 preset with its declared inflation set
+    to the anchor and its crisis windows cleared, so _inflation_path's mean-
+    reverting path sits at C_ANCHOR and the new terms are inert by
+    construction."""
+    arrays: dict[str, np.ndarray] = {}
+    for path in _toy_preset_paths():
+        doc = json.loads(path.read_text(encoding="utf-8"))
+        doc["factor_conditions"]["inflation"]["average_pct"] = 2.0
+        doc["factor_conditions"]["crisis_windows"] = []
+        paths = _paths(doc)
+        for asset in ("pe", "pc", "re"):
+            arrays[f"{path.stem}/{asset}"] = np.asarray(paths.returns[asset], dtype=np.float64)
+    np.savez_compressed(ROOT / "tests/fixtures/er14/anchor-baseline-toy-v0.6.npz", **arrays)
+    print("anchor-baseline-toy-v0.6: written")
+
+
 if __name__ == "__main__":
     build(
         "tests/fixtures/er14/public-baseline-toy-v0.6",
         ("equity", "bonds", "hy", "commodities", "reits"),
     )
+    build_anchor_baseline()

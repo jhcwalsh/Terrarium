@@ -112,6 +112,12 @@ _CREDIT_LOSS_LAG_MONTHS = 12
 # breaking too.
 _CRISIS_LOSS_AMPLIFIER = 1.6
 
+# ER-14 close-out coefficients (D-ER14-2 A1, ratified 2026-08-18). Every value is
+# the owner's, with its anchor recorded in the design's 2.1/2.2/2.3/2.6.
+_LAMBDA_RE = 0.30  # income escalation: C1's declared pm_re_value_add
+_GAMMA_RE = 0.50  # cap-rate repricing: partial Fisher, 0.64 x 72% at K=8
+_D_RE = 4.0  # NOT new: the property rate duration already in -4.0*d_rate
+
 # Asset order is part of the contract (drives the golden digest); do not reorder.
 ASSETS: tuple[str, ...] = (
     "equity",
@@ -392,6 +398,12 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     d_rate = np.diff(rate, prepend=rate[0])
     d_spread = np.diff(spread, prepend=spread[0]) / 100.0
 
+    # ER-14 close-out: the shared inflation-excess state, computed once
+    # immediately after d_rate/d_spread; every mechanism below reads it.
+    # Same convention as d_rate: month 0 has zero first-difference.
+    x = inflation_excess(inflation)
+    d_x = np.diff(x, prepend=x[0])
+
     fc = world.factor_conditions
     st = world.structural
     infl_avg = _f(fc.inflation, "average_pct", _DEF["infl_avg"])
@@ -453,10 +465,15 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     re = (
         4.5 / 12.0
         - re_cap / (100.0 * nm) * 2.2
-        - 4.0 * d_rate
+        - _D_RE * d_rate
         + 0.35 * eq
         + 1.5 * e_re
         - 1.0 * crisis
+        # ER-14: leases escalate with the price level (a LEVEL effect on x), while
+        # nominal discount rates lift cap rates and mark a long-duration asset down
+        # (a CHANGE effect on dx). Same duration the rate term already uses.
+        + _LAMBDA_RE * x / 12.0
+        - _D_RE * _GAMMA_RE * d_x
     )
 
     returns = {
