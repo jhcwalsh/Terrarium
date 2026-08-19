@@ -62,7 +62,42 @@
       "threshold_change": "a sealed pass/fail value or band RULE changes"
     }
   },
-  "amendments": [],
+  "amendments": [
+    {
+      "amendment_id": "AM-DSP11-2026-08-19-001",
+      "date": "2026-08-19",
+      "paths": [
+        "scripts/stage2_rulers_antitest.py",
+        "scripts/stage2_rulers_seal.py"
+      ],
+      "payload": {
+        "canonical_hashes_sha256": {
+          "scripts/stage2_rulers_antitest.py": "3397642f7189a25a7fa7a4d5ad6b04170984fdecae9410a77e90c7838611f0e3",
+          "scripts/stage2_rulers_seal.py": "21744b17734e727d8b244ebe1ebbe5228645d0c8382ffd7b64b6fabfb4b0bdb7"
+        },
+        "content_unchanged_since_sealing_commit": true,
+        "defect": "seal minted over CRLF-rendered working copies of two scripts on Windows",
+        "hashed_files_edited": [],
+        "originally_sealed_hashes_sha256_unchanged_in_hashes_map": {
+          "scripts/stage2_rulers_antitest.py": "4657114158e4428b35479d1c82dbd80c366f48a6fc6a901a4b74a4dd6cc18ff0",
+          "scripts/stage2_rulers_seal.py": "f82d4e504ac97bf8632a90b33d2a70378d30db69af04b5cc45110be46bdf1a98"
+        },
+        "sealing_commits": {
+          "scripts/stage2_rulers_antitest.py": "9b38d30",
+          "scripts/stage2_rulers_seal.py": "5a4577b"
+        },
+        "swept_files_with_no_defect_found": [
+          "docs/superpowers/specs/stage2-prereg.json (round one) -- all hashed paths canonical",
+          "docs/superpowers/specs/spine-v2-prereg.json -- all hashed paths canonical",
+          "the seven other paths hashed by stage2-prereg-2.json itself -- all canonical"
+        ],
+        "thresholds_changed": []
+      },
+      "post_hoc": true,
+      "rationale": "CRLF-RENDERING DEFECT AT MINT, NOT A CONTENT CHANGE. This seal was minted by running scripts/stage2_rulers_seal.py against a working copy checked out with Windows line-ending rendering (CRLF), even though the repository's .gitattributes pins `* text=auto eol=lf` and the committed blobs for both paths are LF throughout. The sealed hashes for scripts/stage2_rulers_antitest.py and scripts/stage2_rulers_seal.py are therefore the sha256 of each file's CRLF-rendered bytes, not of the canonical LF bytes git stores and every other clone checks out. Both files are unchanged since their sealing commits (stage2_rulers_antitest.py: 9b38d30, 'feat(stage2-04): S1's anti-tests -- three sweeps monotone, two controls hold, SEALABLE'; stage2_rulers_seal.py: 5a4577b, 'SEAL(stage2-04): D-SP-11's rulers pre-registered -- stage2-prereg-2.json') -- `git diff HEAD` against each is empty, and each has exactly one commit touching it. No threshold, judge, formula, or byte of judging code has moved; only the rendering of the line endings the hash was taken over has changed between the minting machine and this one. \n\nSWEEP PERFORMED. Every path hashed by this seal, by stage2-prereg.json (round one), and by spine-v2-prereg.json was checked with `git ls-files --eol` and by recomputing both the canonical-LF sha256 and the CRLF-rendered sha256 against each sealed hash. These two paths are the only ones in any of the three specs whose sealed hash matches the CRLF rendering rather than the canonical bytes; every other hashed path in all three files already matches canonical LF bytes exactly and needs no entry. \n\nWHAT THIS ENTRY DOES AND DOES NOT DO. It re-records the hash for these two paths over canonical bytes so a normal (LF) checkout verifies; it does not touch the `hashes` map itself, which stays frozen exactly as minted -- tests/test_stage2_rulers_seal.py::test_rulers_seal_exists_and_hashes_match skips hash verification entirely for any path named by an amendment, so the frozen map is never re-checked against these canonical hashes; this entry is the record that supersedes it. The canonical (re-recorded) hashes are: scripts/stage2_rulers_antitest.py = 3397642f7189a25a7fa7a4d5ad6b04170984fdecae9410a77e90c7838611f0e3; scripts/stage2_rulers_seal.py = 21744b17734e727d8b244ebe1ebbe5228645d0c8382ffd7b64b6fabfb4b0bdb7. Zero content, threshold, or judging-code change of any kind.",
+      "type": "documentation"
+    }
+  ],
   "anti_test_record": {
     "all_controls_hold": true,
     "all_monotone": true,
