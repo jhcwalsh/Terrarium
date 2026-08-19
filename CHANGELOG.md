@@ -35,8 +35,10 @@ rather than waiting on the CDLI/Cliffwater export. Discharges AT-4, AT-5, AT-6a 
   export). `pc_loss_m` gains an ADDITIVE convex term above `_SPREAD_REFERENCE_BPS`
   (`s_bar`, no new constant) — never a replacement for the through-cycle linear loss, so
   C2's bare-form zero-loss-below-median behaviour can't resurface and undo ER-1/ER-4.
-  Post-mechanism AT-4: −0.8990pp/yr (theta adds a small further bite); convexity
-  confirmed (wide-spread delta 0.1187 > near-spread delta 0.1116); decade Sharpe on
+  Post-mechanism AT-4: −0.8990pp/yr (was −0.9011 after C2 alone — theta's marginal
+  effect on this specific probe is a slightly SMALLER magnitude, not a further bite;
+  the convexity property itself is separately and directly confirmed, not inferred from
+  AT-4): wide-spread delta 0.1187 > near-spread delta 0.1116; decade Sharpe on
   stagflation `pc` = 0.987, well under the 1.5 ER-1/ER-4 regression-guard ceiling.
 - **C4**: rider R2 — `structural.private_credit.spread_over_base_bps` is now read
   (`_DEF["pc_spread_bps"]=450.0`, matching the prior hardcode exactly); no shipped preset

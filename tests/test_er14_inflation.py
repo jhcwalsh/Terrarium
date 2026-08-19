@@ -551,9 +551,24 @@ def test_r2_the_spread_over_base_is_read_from_the_world():
     abs=0.30 to absorb the now-larger compounding artifact while still
     failing hard if the field stopped being read (delta would be 0.0) or if
     the hardcode default drifted (delta would move by whole points, not
-    tenths)."""
-    lo = annualised(probe(6.5, **{"structural.private_credit.spread_over_base_bps": 300.0}), "pc")  # type: ignore[arg-type]
-    hi = annualised(probe(6.5, **{"structural.private_credit.spread_over_base_bps": 700.0}), "pc")  # type: ignore[arg-type]
+    tenths).
+
+    Fix-round addendum (reviewer): the abs=0.30 annualized tolerance above is
+    WIDE for the Jensen artifact, which means it is also wide enough to hide
+    a genuinely NON-uniform defect landing in the 0.20-0.30pp band (e.g. a
+    shift that quietly picked up a dependency on x or spread_lagged instead
+    of staying a flat additive constant). The uniformity proof this docstring
+    describes therefore needs to be a standing assertion, not just commit-body
+    prose. THIS assertion is the defect catcher: it re-runs the exact check
+    used in that analysis (raw per-month return diff, max-minus-min at tight
+    tolerance) directly on the two ensembles used below - a non-uniform shift
+    fails here regardless of what the annualized number does."""
+    lo_ens = probe(6.5, **{"structural.private_credit.spread_over_base_bps": 300.0})  # type: ignore[arg-type]
+    hi_ens = probe(6.5, **{"structural.private_credit.spread_over_base_bps": 700.0})  # type: ignore[arg-type]
+    diff = hi_ens.returns["pc"] - lo_ens.returns["pc"]
+    assert diff.max() - diff.min() < 1e-10, "the shift is not a uniform constant"
+    lo = annualised(lo_ens, "pc")
+    hi = annualised(hi_ens, "pc")
     assert hi - lo == pytest.approx(4.0, abs=0.30)
 
 
