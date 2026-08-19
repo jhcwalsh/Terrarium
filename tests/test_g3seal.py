@@ -150,3 +150,18 @@ class TestJudgedCode:
 
         with pytest.raises(st.SleeveTailsError, match="n_paths"):
             st.judge_sleeve("hf_macro", np.zeros(120), [])
+
+
+class TestER14Amendment:
+    def test_the_er14_amendment_declares_every_ratified_coefficient(self):
+        """Ratified coefficients are hashed into the entry BEFORE the estimator
+        runs (design SS7 item 14). An artifact whose numbers were not declared
+        first is indistinguishable from a tuned one."""
+        from ah.eval.prereg import load_amendments
+
+        log = ROOT / "governance" / "amendment-log.yaml"
+        entry = {a.amendment_id: a for a in load_amendments(log)}["AM-2026-08-18-001"]
+        declared = entry.payload["ratified_coefficients"]
+        assert declared["lambda_RE"] == 0.30 and declared["lambda_INFRA_default"] == 0.60
+        assert len(declared) == 15
+        assert entry.payload["extends"] == "AM-2026-08-15-001"
