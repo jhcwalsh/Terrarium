@@ -121,6 +121,13 @@ _D_RE = 4.0  # NOT new: the property rate duration already in -4.0*d_rate
 _LAMBDA_PE = 0.35  # unlevered pass-through 0.25 x the engine's declared 1.4 leverage beta
 _MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
 
+_LAMBDA_INFRA_DEFAULT = 0.60  # C1's declared pm_infra linkage; a DEFAULT, not a constant
+_GAMMA_INFRA = 0.30  # gamma_RE 0.50 x ~1.6 duration premium x 0.4 unregulated share
+_D_INFRA = 4.0  # RE's duration reused, so ONE number carries the difference
+_BETA_INFRA = 0.33  # pm_infra's estimated equity_mkt loading (v1.1, 60 quarters)
+_SIGMA_INFRA = 1.65  # pm_infra's residual_sigma_annual 0.0569 / sqrt(12)
+_INFRA_CRISIS = 0.5  # half of real estate's -1.0; the weakest-anchored number here
+
 # Asset order is part of the contract (drives the golden digest); do not reorder.
 ASSETS: tuple[str, ...] = (
     "equity",
@@ -155,6 +162,15 @@ _DEF = {
     "smooth_pc": 0.30,
     "smooth_re": 0.35,
     "re_income_yield": 4.5,  # R1: the hardcoded income level, now a default
+    # ER-14 close-out (Task M6): consumed by run_path once infra is wired in
+    # (Task S1, er14-04b) - added here so the pure function and its defaults
+    # land together. No schema field exists for infra_yield (design 2.7.0).
+    "infra_yield": 5.0,
+    "infra_linkage": _LAMBDA_INFRA_DEFAULT,
+    "infra_disc": 0.0,  # matches re_cap_shift's default
+    "smooth_infra": 0.35,  # plan decision, not in the design: matches smooth_re;
+    # the schema declares the field (range 0.1-1) and no preset sets it, so
+    # nothing shipped moves.
 }
 
 
@@ -351,6 +367,41 @@ def inflation_excess(
     lo = np.maximum(0, idx - k + 1)
     trail = (csum[idx + 1] - csum[lo]) / (idx - lo + 1)
     return trail - anchor
+
+
+def infra_return(
+    *,
+    x: np.ndarray,
+    d_x: np.ndarray,
+    d_rate: np.ndarray,
+    eq: np.ndarray,
+    e_infra: np.ndarray,
+    crisis: np.ndarray,
+    linkage: float,
+    disc_shift_bps: float,
+    yield_pct: float,
+    nm: int,
+) -> np.ndarray:
+    """Core/core-plus infrastructure: contracted income, an escalator whose share
+    the WORLD declares, and a damped discount-rate repricing.
+
+    Same time signatures as real estate, deliberately, so the two are directly
+    comparable: escalation is a LEVEL effect on x, repricing a CHANGE effect on
+    dx. The escalator is SYMMETRIC - C1 defers caps and floors, so deflation
+    charges infrastructure the full -0.6 x |x| and the overstatement is measured
+    (AT-13), not argued about. Leverage is not modelled: pm_infra is estimated on
+    a net levered composite, so it is already inside beta and sigma.
+    """
+    return (
+        yield_pct / 12.0
+        + linkage * x / 12.0
+        - _D_INFRA * _GAMMA_INFRA * d_x
+        - _D_INFRA * d_rate
+        - disc_shift_bps / (100.0 * nm) * 2.2
+        + _BETA_INFRA * eq
+        + _SIGMA_INFRA * e_infra
+        - _INFRA_CRISIS * crisis
+    )
 
 
 def run_path(world: NumericWorld, seed: int) -> EnginePaths:

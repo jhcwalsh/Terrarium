@@ -316,3 +316,77 @@ def test_the_live_presets_no_longer_hand_author_the_inflation_drift():
     for stem in ("stagflation", "stagflation_1974"):
         doc = json.loads((PRESETS / f"{stem}.json").read_text(encoding="utf-8"))
         assert doc["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] == 0.0
+
+
+# --------------------------------------------------------------------------- #
+# Task M6: the infrastructure return mechanism (pure function)
+# --------------------------------------------------------------------------- #
+
+
+def _flat_infra_kwargs(x_level: float, nm: int = 24) -> dict:
+    return dict(
+        x=np.full(nm, x_level),
+        d_x=np.zeros(nm),
+        d_rate=np.zeros(nm),
+        eq=np.zeros(nm),
+        e_infra=np.zeros(nm),
+        crisis=np.zeros(nm),
+        linkage=0.6,
+        disc_shift_bps=0.0,
+        yield_pct=5.0,
+        nm=nm,
+    )
+
+
+def test_infra_escalator_is_the_declared_linkage_share():
+    """lambda_INFRA is not a constant - it is
+    structural.infrastructure.inflation_linkage, 'Share of revenues contractually
+    inflation-linked', bounded 0-1. That IS the pass-through coefficient,
+    definitionally (design 2.6)."""
+    kw = _flat_infra_kwargs(x_level=4.5)
+    hi = engine.infra_return(**{**kw, "linkage": 0.9}).mean() * 12
+    lo = engine.infra_return(**{**kw, "linkage": 0.3}).mean() * 12
+    assert (hi - lo) == pytest.approx((0.9 - 0.3) * 4.5, abs=0.05)
+
+
+def test_infra_response_ratio_is_linear_in_the_linkage_share():
+    """AT-12's property at the function level: the ratio of two worlds'
+    inflation responses is the ratio of their declared linkages, 0.3/0.9 = 0.33."""
+    base = _flat_infra_kwargs(x_level=0.0)
+    hot = _flat_infra_kwargs(x_level=4.5)
+
+    def resp(k: float) -> float:
+        return engine.infra_return(**{**hot, "linkage": k}).mean() - engine.infra_return(
+            **{**base, "linkage": k}
+        ).mean()
+
+    assert resp(0.3) / resp(0.9) == pytest.approx(0.333, abs=0.05)
+
+
+def test_infra_reprices_less_than_property_for_the_same_acceleration():
+    """gamma_INFRA 0.30 on a 4.0 duration charges -1.2 x dx against real estate's
+    -2.0 x dx. Infrastructure both earns more from sustained inflation and is
+    marked down less when inflation surges - the class's investment case, and the
+    design reproduces both without either being asserted."""
+    assert engine._D_INFRA * engine._GAMMA_INFRA < engine._D_RE * engine._GAMMA_RE
+
+
+def test_infra_reads_the_discount_rate_shift_field():
+    """structural.infrastructure.discount_rate_shift_bps was declared and dead
+    (the second half of ER-14's most quotable line)."""
+    kw = _flat_infra_kwargs(x_level=0.0)
+    assert engine.infra_return(**{**kw, "disc_shift_bps": 300.0}).sum() < engine.infra_return(**kw).sum()
+
+
+def test_infra_uses_the_transplanted_pm_infra_constants():
+    """beta_INFRA and sigma_INFRA come straight out of the sealed pm_infra row in
+    sleeve-mappings-v1.1.yaml: equity_mkt 0.3337 and residual_sigma_annual 0.0569,
+    which at monthly resolution is 0.0569/sqrt(12) = 1.64%. Label: chosen
+    (transplanted from a measured row)."""
+    import yaml
+
+    row = yaml.safe_load(Path("mappings/sleeve-mappings-v1.1.yaml").read_text())["pm_sleeves"]["pm_infra"]
+    assert engine._BETA_INFRA == pytest.approx(row["loadings"]["equity_mkt"], abs=0.005)
+    assert engine._SIGMA_INFRA == pytest.approx(
+        row["residual_sigma_annual"] / math.sqrt(12) * 100, abs=0.02
+    )
