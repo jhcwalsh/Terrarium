@@ -4,6 +4,60 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## er14-02 — THE ER-14 INFLATION MECHANISMS: RE, PE, INFRA (WIP, branch `er14-02-mechanisms`)
+
+**Private markets start feeling inflation.** ER-14 found that moving a world's declared
+inflation from 1% to 12% changed private equity's annualised return by exactly zero,
+private credit by +0.02pp/yr, and real estate by -0.12pp/yr — the wrong sign. This WP
+(M1-M6 of the ratified `2026-08-18-er14-implementation.md` plan, coefficients from
+`D-ER14-2`) ships three of the four channels on the toy engine (`src/ah/core/engine.py`);
+credit (`er14-03`) and the sleeve wiring (`er14-04b`) are separate WPs, and the version
+stamps/world fences move exactly once at the release (`er14-05`) — this branch does not
+merge to `main` alone.
+
+- **M1**: `scripts/gen_er14_baseline.py` and `tests/test_er14_inflation.py` capture the
+  toy-v0.6 public-asset reference and arm AT-6b (public assets bit-identical,
+  unconditionally) before any mechanism edit. Reproduced the register's own numbers one
+  last time: pe delta 0.000, pc +0.022, re -0.117 — confirmed present. DEVIATION: five of
+  ten `src/ah/presets/` files are generated-plane presets (`hier-flow-v1`/`bootstrap-*`)
+  that `ah.core.engine.run_path` structurally rejects; every PRESETS iteration in this WP
+  filters to the toy-v0 subset (`TOY_PRESETS`, world ids 511-515), matching the plan's own
+  world-fence table.
+- **M2**: `inflation_excess()` — a 24-month trailing mean of the simulated inflation path,
+  demeaned at the engine's own 2.0% anchor (`INFLATION_TRAIL_MONTHS`, `INFLATION_ANCHOR_PCT`).
+  Derived state, consumes no RNG. Not yet wired into any return equation.
+- **M3**: real estate feels inflation — `_LAMBDA_RE=0.30` (income escalation, a LEVEL effect
+  on the excess) and `_GAMMA_RE=0.50` (cap-rate repricing, a CHANGE effect on its first
+  difference, same 4.0 duration the rate term already used). AT-3 delta 1%->12%: +3.35pp/yr
+  (was -0.117). AT-8 (deflation mirror) was already green at baseline for unrelated reasons
+  (crisis-window differences between the two presets), recorded honestly.
+- **M4**: rider R1 — `structural.real_estate.income_yield_pct` is now read (default 4.5%,
+  matching the prior hardcode); no shipped preset declares it, so no number moves.
+- **M5**: private equity feels inflation — `_LAMBDA_PE=0.35` (nominal earnings pass-through)
+  net `_MU_PE=0.45` (multiple compression), expressed through the engine's own
+  `entry_multiple_drift` vocabulary. AT-2 delta: -1.12pp/yr (was exactly 0.000). The two
+  live presets (`stagflation`, `stagflation_1974`) have their hand-authored -2.0pp drift
+  zeroed to avoid double-counting; the four retired 7xx/8xx presets are untouched records.
+- **M6**: the infrastructure return mechanism, `infra_return()` — a pure function (not yet
+  wired into `run_path`; the `infra` asset and its Student-t draw arrive in `er14-04b`
+  Task S1, appended LAST per design 2.7.2/AT-14 to avoid corrupting every existing stream).
+  `_GAMMA_INFRA=0.30`, `_BETA_INFRA=0.33`, `_SIGMA_INFRA=1.65` transplanted from the sealed
+  `pm_infra` row in `mappings/sleeve-mappings-v1.1.yaml`.
+
+All coefficients are ratified in `D-ER14-2` (`governance/decision-register.md`) and carried
+verbatim in the plan's header table — none re-derived. AT-6b (public assets) holds
+bit-identical throughout every task. The three seal locks (main/G3/G5 `pre-registration*.lock`)
+verified unchanged before the first edit and again at WP close.
+
+**The suite is legitimately red until `er14-05`'s golden re-pin sweep.** Full run at WP
+close: 4 failures, 0 errors, every one a clean `AssertionError` traced to a committed
+golden/fixture that embeds pre-ER14 `pe`/`re` numbers — `test_engine.py::test_golden_snapshot`,
+`test_institution.py::test_golden_hold_course_final_value`,
+`test_play_linkage.py::test_default_run_is_unchanged_by_these_additions`,
+`test_cioview.py::test_committed_cio_fixtures_match_the_builder`. All four logged in
+`docs/superpowers/plans/er14-red-ledger.md` with cause and clearing WP; no unexplained
+failure. `tests/test_er14_inflation.py` itself: 24/24 green.
+
 ## stage2-01 — THE STAGE-2 SEAL (2026-08-18)
 
 **The stage-2 exam is sealed, before the coupled fit is written and before any stage-2

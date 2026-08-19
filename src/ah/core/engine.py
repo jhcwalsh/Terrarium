@@ -76,6 +76,15 @@ _INNOVATION_DF = 6.0
 
 _ENSEMBLE_SEED_STRIDE = 7919  # run_ensemble uses base_seed + 7919*k
 
+# -- ER-14 close-out (D-ER14-2, 2026-08-18): the inflation channel's shared
+# state. K = 24 months is C1's declared cpi_trail_k (8 quarters) at the
+# engine's monthly resolution - inherited from AM-2026-08-15-001, not chosen
+# here. The anchor is the engine's own: _RATE_SHOCK_INFLATION_ANCHOR and
+# _DEF["infl_avg"], so a 2% world gets essentially no new drift and adoption
+# adds STATE-DEPENDENCE, not return.
+INFLATION_TRAIL_MONTHS = 24
+INFLATION_ANCHOR_PCT = 2.0
+
 # -- register ER-4: the policy rate has to move for duration to be a risk --- #
 _RATE_KAPPA = 0.08  # monthly pull back to the glide path
 _RATE_SHOCK_PCT = 0.22  # baseline monthly innovation, in percentage points
@@ -102,6 +111,22 @@ _CREDIT_LOSS_LAG_MONTHS = 12
 # Defaults cluster: the same loss rate hurts more when everything else is
 # breaking too.
 _CRISIS_LOSS_AMPLIFIER = 1.6
+
+# ER-14 close-out coefficients (D-ER14-2 A1, ratified 2026-08-18). Every value is
+# the owner's, with its anchor recorded in the design's 2.1/2.2/2.3/2.6.
+_LAMBDA_RE = 0.30  # income escalation: C1's declared pm_re_value_add
+_GAMMA_RE = 0.50  # cap-rate repricing: partial Fisher, 0.64 x 72% at K=8
+_D_RE = 4.0  # NOT new: the property rate duration already in -4.0*d_rate
+
+_LAMBDA_PE = 0.35  # unlevered pass-through 0.25 x the engine's declared 1.4 leverage beta
+_MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
+
+_LAMBDA_INFRA_DEFAULT = 0.60  # C1's declared pm_infra linkage; a DEFAULT, not a constant
+_GAMMA_INFRA = 0.30  # gamma_RE 0.50 x ~1.6 duration premium x 0.4 unregulated share
+_D_INFRA = 4.0  # RE's duration reused, so ONE number carries the difference
+_BETA_INFRA = 0.33  # pm_infra's estimated equity_mkt loading (v1.1, 60 quarters)
+_SIGMA_INFRA = 1.65  # pm_infra's residual_sigma_annual 0.0569 / sqrt(12)
+_INFRA_CRISIS = 0.5  # half of real estate's -1.0; the weakest-anchored number here
 
 # Asset order is part of the contract (drives the golden digest); do not reorder.
 ASSETS: tuple[str, ...] = (
@@ -136,6 +161,16 @@ _DEF = {
     "smooth_pe": 0.35,
     "smooth_pc": 0.30,
     "smooth_re": 0.35,
+    "re_income_yield": 4.5,  # R1: the hardcoded income level, now a default
+    # ER-14 close-out (Task M6): consumed by run_path once infra is wired in
+    # (Task S1, er14-04b) - added here so the pure function and its defaults
+    # land together. No schema field exists for infra_yield (design 2.7.0).
+    "infra_yield": 5.0,
+    "infra_linkage": _LAMBDA_INFRA_DEFAULT,
+    "infra_disc": 0.0,  # matches re_cap_shift's default
+    "smooth_infra": 0.35,  # plan decision, not in the design: matches smooth_re;
+    # the schema declares the field (range 0.1-1) and no preset sets it, so
+    # nothing shipped moves.
 }
 
 
@@ -314,6 +349,61 @@ def _t_draws(rng: np.random.Generator, nm: int, df: float = _INNOVATION_DF) -> n
     return rng.standard_t(df, nm) / math.sqrt(df / (df - 2.0))
 
 
+def inflation_excess(
+    inflation: np.ndarray,
+    *,
+    k: int = INFLATION_TRAIL_MONTHS,
+    anchor: float = INFLATION_ANCHOR_PCT,
+) -> np.ndarray:
+    """Trailing-mean inflation less the anchor, in ANNUAL percentage points.
+
+    Warm-up: for m < k-1 the mean is over the months available, not held at
+    zero - a decade world is 120 months and two years of dead channel would be
+    a fifth of the game. Consumes no RNG.
+    """
+    infl = np.asarray(inflation, dtype=np.float64)
+    csum = np.concatenate([[0.0], np.cumsum(infl)])
+    idx = np.arange(infl.size)
+    lo = np.maximum(0, idx - k + 1)
+    trail = (csum[idx + 1] - csum[lo]) / (idx - lo + 1)
+    return trail - anchor
+
+
+def infra_return(
+    *,
+    x: np.ndarray,
+    d_x: np.ndarray,
+    d_rate: np.ndarray,
+    eq: np.ndarray,
+    e_infra: np.ndarray,
+    crisis: np.ndarray,
+    linkage: float,
+    disc_shift_bps: float,
+    yield_pct: float,
+    nm: int,
+) -> np.ndarray:
+    """Core/core-plus infrastructure: contracted income, an escalator whose share
+    the WORLD declares, and a damped discount-rate repricing.
+
+    Same time signatures as real estate, deliberately, so the two are directly
+    comparable: escalation is a LEVEL effect on x, repricing a CHANGE effect on
+    dx. The escalator is SYMMETRIC - C1 defers caps and floors, so deflation
+    charges infrastructure the full -0.6 x |x| and the overstatement is measured
+    (AT-13), not argued about. Leverage is not modelled: pm_infra is estimated on
+    a net levered composite, so it is already inside beta and sigma.
+    """
+    return (
+        yield_pct / 12.0
+        + linkage * x / 12.0
+        - _D_INFRA * _GAMMA_INFRA * d_x
+        - _D_INFRA * d_rate
+        - disc_shift_bps / (100.0 * nm) * 2.2
+        + _BETA_INFRA * eq
+        + _SIGMA_INFRA * e_infra
+        - _INFRA_CRISIS * crisis
+    )
+
+
 def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     """Simulate one monthly history from ``seed`` (PCG64). Pure & deterministic."""
     _require_toy(world)
@@ -363,6 +453,12 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     d_rate = np.diff(rate, prepend=rate[0])
     d_spread = np.diff(spread, prepend=spread[0]) / 100.0
 
+    # ER-14 close-out: the shared inflation-excess state, computed once
+    # immediately after d_rate/d_spread; every mechanism below reads it.
+    # Same convention as d_rate: month 0 has zero first-difference.
+    x = inflation_excess(inflation)
+    d_x = np.diff(x, prepend=x[0])
+
     fc = world.factor_conditions
     st = world.structural
     infl_avg = _f(fc.inflation, "average_pct", _DEF["infl_avg"])
@@ -373,6 +469,7 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     pe_mult = _f(st.private_equity, "entry_multiple_drift_annual_pct", _DEF["pe_mult_drift"])
     pc_loss = _f(st.private_credit, "annual_loss_rate_pct", _DEF["pc_loss"])
     re_cap = _f(st.real_estate, "cap_rate_shift_bps", _DEF["re_cap_shift"])
+    re_income = _f(st.real_estate, "income_yield_pct", _DEF["re_income_yield"])
 
     # Common-factor loadings: stronger co-movement inside crisis months.
     rho = np.where(crisis > 0, 0.85, 0.45)
@@ -414,7 +511,12 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     )
     commodities = com_drift / 12.0 + max(0.0, infl_avg - 2.5) / 12.0 + 5.2 * z_com
     reits = 0.65 * eq - 2.5 * d_rate + 2.6 * e_reit
-    pe = 1.4 * eq + (pe_illiq + pe_mult) / 12.0 + 2.0 * e_pe
+    # ER-14: portfolio companies bill in nominal currency (lambda_PE, folding in
+    # the real erosion of fixed-rate acquisition debt - disclosed as a fold-in,
+    # design 2.2), and exits price on multiples that compress as nominal discount
+    # rates rise (mu_PE). Expressed inside the engine's OWN vocabulary: mu_PE makes
+    # entry_multiple_drift respond to inflation instead of being hand-authored.
+    pe = 1.4 * eq + (pe_illiq + pe_mult + (_LAMBDA_PE - _MU_PE) * x) / 12.0 + 2.0 * e_pe
     # A private credit book reprices when public credit does - less than high
     # yield, because it is senior secured, but it is not immune. Without a
     # credit-cycle beta its only risk was idiosyncratic noise.
@@ -422,12 +524,17 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # Property is rate-sensitive (cap rates move with rates) and reprices hard
     # in a crisis; both were missing, leaving it a near-riskless income stream.
     re = (
-        4.5 / 12.0
+        re_income / 12.0
         - re_cap / (100.0 * nm) * 2.2
-        - 4.0 * d_rate
+        - _D_RE * d_rate
         + 0.35 * eq
         + 1.5 * e_re
         - 1.0 * crisis
+        # ER-14: leases escalate with the price level (a LEVEL effect on x), while
+        # nominal discount rates lift cap rates and mark a long-duration asset down
+        # (a CHANGE effect on dx). Same duration the rate term already uses.
+        + _LAMBDA_RE * x / 12.0
+        - _D_RE * _GAMMA_RE * d_x
     )
 
     returns = {
