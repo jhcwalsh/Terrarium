@@ -134,17 +134,46 @@ class TestEnsembleContract:
             assert np.abs(rep[:, 2::3]).sum() > 0.0
 
     def test_private_assets_use_the_pm_sleeve_mappings(self, synthetic_registry):
-        """pe/pc/re truths come from the sealed PM loadings applied at monthly
-        frequency (alpha_quarterly/3), systematic only — the stated convention."""
+        """pe/pc/re/infra truths come from the sealed PM loadings applied at
+        monthly frequency (alpha_quarterly/3), systematic only — the stated
+        convention. ER-14 close-out (Task S4): infra maps to the ALREADY
+        estimated pm_infra row (v1.1, 60 quarters) -- no new estimation."""
         assert PM_SLEEVE_FOR_ASSET == {
             "pe": "pm_buyout",
             "pc": "pm_direct_lending",
             "re": "pm_re_value_add",
+            "infra": "pm_infra",
         }
         result = run_gen_ensemble(_gen_world(), 2, base_seed=SEED)
         # not the equity series and not zeros: the loadings actually applied
         assert np.abs(result.returns["pe"]).sum() > 0.0
         assert not np.allclose(result.returns["pe"], result.returns["equity"])
+
+    def test_infra_maps_to_the_already_estimated_pm_infra_row(self, synthetic_registry):
+        """The pm_infra row already exists in the sealed v1.1 artifact -
+        estimated, 60 quarters, sum-beta(2) - so the generated path needs NO
+        new estimation for infrastructure (design 2.7.1). infra_core stays
+        parked as Tier B evergreen."""
+        import yaml
+
+        assert PM_SLEEVE_FOR_ASSET["infra"] == "pm_infra"
+        art = yaml.safe_load(
+            (ROOT / "mappings" / "sleeve-mappings-v1.1.yaml").read_text(encoding="utf-8")
+        )
+        assert "pm_infra" in art["pm_sleeves"]
+
+    def test_generated_assets_carry_infra_and_still_drop_reits(self):
+        assert "infra" in GEN_ASSETS
+        assert "reits" not in GEN_ASSETS  # OD-3 unchanged
+
+    def test_the_pm_residual_matrix_widened_and_this_is_disclosed(self, synthetic_registry):
+        """standard_normal fills row-major, so a fourth column re-rolls
+        pe/pc/re. The generated plane's digests move in this release anyway
+        (GEN_PLAY_ALPHA_VERSION bumps, the played world moves 603 -> 604).
+        Recorded here so the next reader does not mistake it for corruption."""
+        result = run_gen_ensemble(_gen_world(), 2, base_seed=SEED)
+        assert result.returns["infra"].shape == result.returns["pe"].shape
+        assert np.abs(result.returns["infra"]).sum() > 0.0
 
 
 class TestDigestThreading:
@@ -312,12 +341,14 @@ class TestPlayAndFeed:
     def test_simulate_play_runs_a_generated_tape(self, synthetic_registry):
         """The twin ledger's engine accepts the generated sleeve set: liquid
         sleeves come from the tape's own asset_order (no reits), opening
-        targets from GEN_START_TARGETS (reits' 8 points to equity)."""
+        targets from GEN_START_TARGETS (reits' 8 points to equity, then ER-14
+        close-out's A15 carve: 3 more points from equity and 2 from re to
+        infra, 41 -> 38)."""
         from ah.play import simulate_play
         from ah.port.adapter import GEN_START_TARGETS
 
         assert "reits" not in GEN_START_TARGETS
-        assert GEN_START_TARGETS["equity"] == pytest.approx(41.0)
+        assert GEN_START_TARGETS["equity"] == pytest.approx(38.0)
         assert sum(GEN_START_TARGETS.values()) == pytest.approx(98.0)  # +2 cash
         p = run_gen_path(_gen_world(), SEED)
         result = simulate_play(p, None, start_targets=GEN_START_TARGETS)

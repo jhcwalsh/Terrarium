@@ -73,8 +73,28 @@ PM_SLEEVE_FOR_ASSET: dict[str, str] = {
     "pe": "pm_buyout",
     "pc": "pm_direct_lending",
     "re": "pm_re_value_add",
+    # ER-14 close-out (D-ER14-2, Task S4): pm_infra is ALREADY estimated in
+    # the sealed v1.1 artifact (60 quarters, sum-beta(2)) -- no new
+    # estimation needed for the generated plane (design 2.7.1).
+    "infra": "pm_infra",
 }
-_PM_ASSET_ORDER: tuple[str, ...] = ("pe", "pc", "re")  # residual column order, fixed
+# residual column order, fixed. APPENDED at the end, matching the toy
+# engine's own e_infra convention -- but see the FINDING below: unlike the
+# toy plane's up-front draw block, widening THIS matrix is NOT bit-identity
+# preserving for pe/pc/re.
+_PM_ASSET_ORDER: tuple[str, ...] = ("pe", "pc", "re", "infra")
+
+# FINDING (not in the design, Task S4): rng.standard_normal((months, N))
+# fills ROW-MAJOR, so widening N from 3 to 4 re-rolls every column's draw,
+# including pe/pc/re -- even though "infra" is appended LAST in
+# _PM_ASSET_ORDER. AT-14's bit-identity claim is therefore SCOPED TO THE
+# TOY PLANE, exactly as AT-14 words it ("on every preset"). The generated
+# plane's digests move in this release regardless of this fact
+# (GEN_PLAY_ALPHA_VERSION bumps and the played generated world moves
+# ...603 -> ...604), so nothing is lost -- but it must be STATED, not
+# discovered. Do NOT "fix" this by restructuring the draw into per-sleeve
+# streams: that would be a second, unattributed numeric change in the same
+# release (the ER-12 lesson).
 
 _HY_LOSS_SHARE = 0.45  # mirrors the toy engine's convention
 _HY_SPREAD_DURATION = 4.0  # stated; HY duration is shorter than govt 8.5
@@ -92,14 +112,21 @@ class AdapterError(ValueError):
 # for two layers: GEN_START_MIX mirrors the toy institution's fractions;
 # GEN_START_TARGETS mirrors the play layer's points-of-100 book (reits' 8
 # points to equity; privates and cash untouched).
+#
+# ER-14 close-out (D-ER14-2, Task S4, A15): infra enters at 5 points. The
+# generated book has no REITs to carve from, so the two points come from
+# real estate (7 -> 5, mirroring the toy carve exactly) and the remaining
+# three from equity (41 -> 38) -- private stays at 38 (pe 20 + pc 8 + re 5 +
+# infra 5), matching play.START_TARGETS' own total.
 GEN_START_TARGETS: dict[str, float] = {
-    "equity": 41.0,
+    "equity": 38.0,
     "bonds": 12.0,
     "hy": 5.0,
     "commodities": 5.0,
     "pe": 20.0,
     "pc": 8.0,
-    "re": 7.0,
+    "re": 5.0,
+    "infra": 5.0,
 }
 
 # Scores from generated worlds carry their OWN alpha stamp — a distinct
@@ -107,14 +134,20 @@ GEN_START_TARGETS: dict[str, float] = {
 # engines (survey S3; the world_id block separation is the second fence).
 GEN_PLAY_ALPHA_VERSION = "port-v4-ladder-gen"  # v4: staggered seed ladder (ladder-01)
 
+# ER-14 close-out (D-ER14-2, Task S4, A15): infra 0.05, carved 0.02 from re
+# and 0.03 from equity -- equity's resulting 0.32 matches
+# institution.START_MIX['equity'] + START_MIX['reits'] (0.30 + 0.02)
+# exactly, so OD-3's own invariant ("reits' weight moves to equity") still
+# holds after the carve (test_gen_start_mix_moves_reits_weight_to_equity).
 GEN_START_MIX: dict[str, float] = {
-    "equity": 0.35,
+    "equity": 0.32,
     "bonds": 0.10,
     "hy": 0.05,
     "commodities": 0.05,
     "pe": 0.25,
     "pc": 0.10,
-    "re": 0.10,
+    "re": 0.08,
+    "infra": 0.05,
 }
 
 
