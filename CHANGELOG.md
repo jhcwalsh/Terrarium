@@ -4,6 +4,53 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## er14-04c — THE APP (WIP, branch `er14-04c-app`)
+
+**Infrastructure reaches every app surface.** Continues `er14-04b` (the fourth private
+class in the engine/institution/server contract) by carrying it through the label maps,
+the decision window's commitment lever, the opening book screen, the fan-chart cockpit
+and the CIO dashboard. Discharges the "app-side" half of A14/A15/A16; no server contract
+changed (checked at every task — none needed one).
+
+- **Opening step**: appended the two app-side reds `er14-04b`'s own close-out (Task S8)
+  said would exist but never recorded on `docs/superpowers/plans/er14-red-ledger.md`
+  (a process gap against the plan's own line ~2199 instruction) — `bundle.ts`'s
+  `SUPPORTED_BUNDLE_VERSIONS` missing `"world-bundle-0.6"` (an 11-test-id cascade) and
+  `bundle.test.ts`'s own two stale version-string pins — cause `bundle-fixture`, cleared
+  in this same WP.
+- **A1**: `ASSET_LABELS`/`labelFor` (`lib/assetLabels.ts`) and `SLEEVE_LABEL`
+  (`lib/sleeveLabels.ts`) gain `infra`/"Infrastructure", in the engine's own contract
+  order. `Play.tsx`'s `PRIVATE_ASSETS` set and its "eight charts" docstrings move to
+  nine. `DecisionWindow`'s `PRIVATE_SLEEVES` gains the fourth lever row; its input now
+  carries `aria-label="{label} commitment"` (a new affordance the row had none of
+  before). The secondary-sale lever's copy stays scoped to private equity (A16),
+  unchanged. New: `lib/assetLabels.test.ts`.
+- **A2**: `BookEntry.tsx` needed one line — `data-testid="rung-{sleeve}"` on each ladder
+  row — the screen was already fully data-driven off `resp.book.private`'s keys and
+  `liquid_sleeves`. The real work was the test fixtures: `DEFAULT_RESPONSE` and
+  `REITS_RESPONSE` had already drifted from server reality (still carrying pre-`er14-04b`
+  target numbers), so both were regenerated against the real served shape
+  (`default_opening_book(GEN_START_TARGETS)` / `(START_TARGETS)`, called directly)
+  rather than hand-edited: infra joins at its real carved target (5) with its real
+  15-rung ladder (one rung per year of `pm_infra`'s contractual life, ER-12); every
+  downstream row-count, weight/drift and band assertion moved with it. Three new tests
+  cover infra directly: the ninth target row, its band + fourth vintage chart, and its
+  fifteen rungs.
+- **A3**: no production edit was needed in `CioDashboard.tsx` or `VintageChart.tsx` —
+  both are fully data-driven off the server's own view/rung payloads (grepped for a
+  hardcoded `pe`/`pc`/`re` list: none). `Play.cio.test.tsx`'s "eight moved fan charts"
+  re-pinned to nine (still names every asset explicitly — a re-pin, not a weakening).
+  `CioDashboard.test.tsx`'s two stale pins ($6.21bn headline, 8-of-9 band zones — both
+  moved once the infra-carrying CIO fixtures actually loaded) were fixed alongside the
+  opening-step bundle repair, since they sat behind the same version block.
+- **A4 close-out**: `npm run typecheck && npm run test && npm run build` all clean (17
+  files / 220 tests). Live-walked the API surface against this worktree's own session
+  service (a scratch port, not the shared 8787 listener another session owns —
+  restarting a listener outside this worktree is out of this WP's scope): `POST
+  /sessions` + `GET /sessions/{id}/cio` confirms `Infrastructure` renders with a band
+  (3.0-7.0) inside the "Real return" goal bucket, matching the served `classIds` this
+  screen already reads generically. Red ledger's two app-side entries confirmed cleared.
+
 ## er14-04b — THE INFRASTRUCTURE SLEEVE (WIP, branch `er14-04b-sleeve`)
 
 **Infrastructure joins the book a player allocates.** Continues `er14-02`+`er14-03`
