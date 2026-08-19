@@ -80,18 +80,37 @@ def build(out_stem: str, assets: tuple[str, ...]) -> None:
 
 
 def build_anchor_baseline() -> None:
-    """The AT-6a reference: every toy-v0 preset with its declared inflation set
-    to the anchor and its crisis windows cleared, so _inflation_path's mean-
-    reverting path sits at C_ANCHOR and the new terms are inert by
-    construction."""
-    arrays: dict[str, np.ndarray] = {}
-    for path in _toy_preset_paths():
-        doc = json.loads(path.read_text(encoding="utf-8"))
-        doc["factor_conditions"]["inflation"]["average_pct"] = 2.0
-        doc["factor_conditions"]["crisis_windows"] = []
-        paths = _paths(doc)
-        for asset in ("pe", "pc", "re"):
-            arrays[f"{path.stem}/{asset}"] = np.asarray(paths.returns[asset], dtype=np.float64)
+    """The AT-6a reference.
+
+    DEVIATION (Task M3, extended in Task M5 -- see tests/test_er14_inflation.py's
+    test_at6a_the_inflation_channel_is_inert_at_the_anchor docstring for the
+    full account): setting only the DECLARED inflation.average_pct to the
+    anchor does not make the REALIZED trailing-mean inflation_excess exactly
+    zero -- _inflation_path is a stochastic mean-REVERTING process, so the
+    realized path wanders around the anchor. inflation_excess is forced to an
+    exact zero array here (mirroring the test's monkeypatch) so the new
+    lambda*x / D*gamma*d_x terms vanish algebraically rather than
+    approximately -- the reference is then "every OTHER (non-inflation) term
+    in the current formula, on the current preset content", which is exactly
+    what the test's own monkeypatched run reduces to. This also makes the
+    fixture immune to preset-content edits (Task M5 zeroed
+    entry_multiple_drift_annual_pct on the two live presets) -- it is a
+    formula-structure guard, not a frozen numeric snapshot."""
+    import ah.core.engine as _engine
+
+    original = _engine.inflation_excess
+    _engine.inflation_excess = lambda infl, **_: np.zeros_like(infl, dtype=np.float64)
+    try:
+        arrays: dict[str, np.ndarray] = {}
+        for path in _toy_preset_paths():
+            doc = json.loads(path.read_text(encoding="utf-8"))
+            doc["factor_conditions"]["inflation"]["average_pct"] = 2.0
+            doc["factor_conditions"]["crisis_windows"] = []
+            paths = _paths(doc)
+            for asset in ("pe", "pc", "re"):
+                arrays[f"{path.stem}/{asset}"] = np.asarray(paths.returns[asset], dtype=np.float64)
+    finally:
+        _engine.inflation_excess = original
     np.savez_compressed(ROOT / "tests/fixtures/er14/anchor-baseline-toy-v0.6.npz", **arrays)
     print("anchor-baseline-toy-v0.6: written")
 

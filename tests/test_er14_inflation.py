@@ -282,3 +282,37 @@ def test_r1_changes_no_shipped_preset():
     for path in TOY_PRESETS:
         doc = _load(path)
         assert "income_yield_pct" not in doc["structural"].get("real_estate", {}), path.stem
+
+
+# --------------------------------------------------------------------------- #
+# Task M5: private equity - nominal earnings vs multiple compression
+# --------------------------------------------------------------------------- #
+
+
+def test_at2_private_equity_differs_materially_across_inflation():
+    """AT-2. |Delta annualised pe|, 1% -> 12%, >= 0.65 pp/yr (the asked net floor
+    0.06 x the 11pp probe range). Today's measured value is EXACTLY 0.000: pe =
+    1.4*eq + const, and equity carries no inflation term either."""
+    delta = abs(annualised(probe(12.0), "pe") - annualised(probe(1.0), "pe"))
+    assert delta >= 0.65, delta
+
+
+def test_the_pe_net_floor_is_respected():
+    """A3, ratified: |lambda_PE - mu_PE| >= 0.06, so no in-range combination can
+    produce a near-zero net and quietly re-create ER-14 in weaker form."""
+    assert abs(engine._LAMBDA_PE - engine._MU_PE) >= 0.06
+
+
+def test_pe_responds_negatively_to_inflation():
+    """Net PE = lambda_PE - mu_PE = -0.10 pp/yr per pp: a 12% world's private
+    equity runs about 1.1 pp/yr below a 1% world's (design 2.2)."""
+    assert annualised(probe(12.0), "pe") < annualised(probe(1.0), "pe")
+
+
+def test_the_live_presets_no_longer_hand_author_the_inflation_drift():
+    """A5. mu_PE makes multiple compression endogenous; leaving the authored
+    -2.0 in place would charge it twice. The field now means NON-inflation
+    multiple drift (secular dry-powder, sector re-rating)."""
+    for stem in ("stagflation", "stagflation_1974"):
+        doc = json.loads((PRESETS / f"{stem}.json").read_text(encoding="utf-8"))
+        assert doc["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] == 0.0

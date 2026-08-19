@@ -118,6 +118,9 @@ _LAMBDA_RE = 0.30  # income escalation: C1's declared pm_re_value_add
 _GAMMA_RE = 0.50  # cap-rate repricing: partial Fisher, 0.64 x 72% at K=8
 _D_RE = 4.0  # NOT new: the property rate duration already in -4.0*d_rate
 
+_LAMBDA_PE = 0.35  # unlevered pass-through 0.25 x the engine's declared 1.4 leverage beta
+_MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
+
 # Asset order is part of the contract (drives the golden digest); do not reorder.
 ASSETS: tuple[str, ...] = (
     "equity",
@@ -457,7 +460,12 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     )
     commodities = com_drift / 12.0 + max(0.0, infl_avg - 2.5) / 12.0 + 5.2 * z_com
     reits = 0.65 * eq - 2.5 * d_rate + 2.6 * e_reit
-    pe = 1.4 * eq + (pe_illiq + pe_mult) / 12.0 + 2.0 * e_pe
+    # ER-14: portfolio companies bill in nominal currency (lambda_PE, folding in
+    # the real erosion of fixed-rate acquisition debt - disclosed as a fold-in,
+    # design 2.2), and exits price on multiples that compress as nominal discount
+    # rates rise (mu_PE). Expressed inside the engine's OWN vocabulary: mu_PE makes
+    # entry_multiple_drift respond to inflation instead of being hand-authored.
+    pe = 1.4 * eq + (pe_illiq + pe_mult + (_LAMBDA_PE - _MU_PE) * x) / 12.0 + 2.0 * e_pe
     # A private credit book reprices when public credit does - less than high
     # yield, because it is senior secured, but it is not immune. Without a
     # credit-cycle beta its only risk was idiosyncratic noise.
