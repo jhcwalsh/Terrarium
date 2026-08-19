@@ -233,14 +233,29 @@ def _anchored(path: Path) -> dict:
     return doc
 
 
-@pytest.mark.parametrize("asset", ["pe", "re"])
+@pytest.mark.parametrize("asset", ["pe", "pc", "re"])
 def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
-    """AT-6a (pe/re half; pc joins in Task C5). Every new term is additive in
-    x/d_x (LAMBDA*x, D*GAMMA*d_x), so x == 0 makes them vanish algebraically -
-    that is the property under test, and it is exact, not statistical.
+    """AT-6a, now covering all three private assets (Task C5 extends the
+    pe/re parametrization written in Task M3 with `pc` - not a new test body,
+    an added case; the pe/re cases are unchanged from M3). With the inflation
+    path pinned at C_ANCHOR *and* theta_toy = 0, pe/pc/re are BIT-IDENTICAL to
+    the anchor reference. Every new term is additive in x/d_x (LAMBDA*x,
+    D*GAMMA*d_x, PHI_PC*(infl_trail-infl_avg)), so x == 0 (with the declared
+    average also pinned at the anchor, so PHI_PC's own-average term is 0 too)
+    makes them vanish algebraically - that is the property under test, and it
+    is exact, not statistical. theta_toy is EXCLUDED (monkeypatched to 0)
+    because the convex spread term is a SEPARATE declared change and is not
+    inflation-keyed at all (it fires on spread_lagged vs s_bar regardless of
+    x) - saying so explicitly is more honest than a test that quietly covers
+    two unrelated changes at once (design 6, AT-6a). Reusing this reference
+    fixture works unchanged for `pc`: it was captured (Task M3) before phi_PC/
+    omega_PC/theta_toy existed, so its `pc` values already ARE "every
+    non-inflation, non-theta term of the current pc formula" - the same
+    property the pe/re cases rely on.
 
     DEVIATION from the plan's literal test body (recorded in the Task M3
-    commit): the plan set only the DECLARED average to the anchor and expected
+    commit, reused verbatim here per the er14-02 report's carry-forward note):
+    the plan set only the DECLARED average to the anchor and expected
     "x == 0" from that alone. It does not - _inflation_path is a stochastic
     mean-REVERTING process (kappa=0.12, monthly noise std 0.28), so even with
     average_pct == C_ANCHOR and crisis cleared, the REALIZED trailing mean
@@ -256,6 +271,7 @@ def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
     monkeypatch.setattr(
         engine, "inflation_excess", lambda infl, **_: np.zeros_like(infl, dtype=np.float64)
     )
+    monkeypatch.setattr(engine, "_THETA_TOY", 0.0)
     ref = np.load(ANCHOR_BASELINE_NPZ)
     for path in TOY_PRESETS:
         paths = run_path(project_numeric(load_worldspec(_anchored(path))), SEED)
@@ -399,3 +415,164 @@ def test_infra_uses_the_transplanted_pm_infra_constants():
         pytest.approx(row["residual_sigma_annual"] / math.sqrt(12) * 100, abs=0.02)
         == engine._SIGMA_INFRA
     )
+
+
+# --------------------------------------------------------------------------- #
+# Task C1: private credit's floating coupon (phi_PC)
+# --------------------------------------------------------------------------- #
+
+
+def test_at5_the_floating_benefit_is_visible_when_the_policy_rate_moves():
+    """AT-5, as RESTATED and ratified (A10). D-ER14-1 asked that PC's floating
+    benefit be visible; measuring that by varying INFLATION with rates pinned asks
+    the coupon to respond to something it is not connected to, and would fail a
+    correct model. So: +2 pp on policy_rate.end_pct, all else held, must lift
+    annualised pc by >= +0.80 pp/yr (a glide ending 2pp higher raises the mean
+    policy rate ~1pp, which is ~1 pp/yr of coupon; 0.80 leaves room for the loss
+    side to offset)."""
+    base = annualised(probe(6.5), "pc")
+    up = annualised(probe(6.5, **{"factor_conditions.policy_rate.end_pct": 9.5}), "pc")  # type: ignore[arg-type]
+    assert up - base >= 0.80, up - base
+
+
+def test_phi_pc_measures_excess_against_the_worlds_own_declared_average():
+    """The asymmetry with RE and PE is the whole point (design 2.3). Property and
+    buyout have NO authored inflation channel anywhere in the WorldSpec, so their
+    excess is measured against the platform anchor. Private credit's level is
+    already authored through factor_conditions.policy_rate; measuring its excess
+    against C_ANCHOR would charge stagflation the benefit twice and print a
+    ~12%/yr private credit book. Only the WITHIN-world dynamics change."""
+    ens_lo, ens_hi = probe(1.0), probe(12.0)
+    # a 12x change in the DECLARED average must not move the coupon term's mean
+    # by anything like 11pp/12: the coupon tracks deviations from that average.
+    assert abs(annualised(ens_hi, "pc") - annualised(ens_lo, "pc")) < 2.0
+
+
+# --------------------------------------------------------------------------- #
+# Task C2: the borrower-coverage squeeze (omega_PC)
+# --------------------------------------------------------------------------- #
+
+
+def test_at4_the_loss_bite_is_negative_under_the_rates_held_probe():
+    """AT-4. Delta annualised pc, 1% -> 12%, rates HELD, must be <= -0.30 pp/yr.
+    Today's measured value is +0.022. A lender whose rate does not rise while its
+    borrowers' costs do is in trouble - that is the whole content of the test."""
+    delta = annualised(probe(12.0), "pc") - annualised(probe(1.0), "pc")
+    assert delta <= -0.30, delta
+
+
+def test_the_squeeze_is_one_sided_at_the_anchor(monkeypatch):
+    """max(0, x): deflation does not squeeze borrower coverage through INPUT
+    costs - it squeezes it through revenue, a different channel, deliberately not
+    modelled (design 4, the mirror). So on deflation_bust the term is inert, and
+    zeroing omega_PC changes nothing."""
+    bust = annualised(ensemble_of("deflation_bust"), "pc")
+    monkeypatch.setattr(engine, "_OMEGA_PC", 0.0)
+    assert annualised(ensemble_of("deflation_bust"), "pc") == pytest.approx(bust, abs=1e-12)
+
+
+def test_inflation_stress_never_exceeds_the_engines_own_crisis_stress():
+    """omega_PC's value is derived from a BOUNDING rule, not picked: the schema
+    caps inflation.average_pct at 20 (x_max = 18) and _CRISIS_LOSS_AMPLIFIER is
+    1.6, so omega_PC <= 0.6/18 = 0.033."""
+    assert engine._OMEGA_PC <= (engine._CRISIS_LOSS_AMPLIFIER - 1.0) / 18.0
+
+
+# --------------------------------------------------------------------------- #
+# Task C3: the C2 convexity, decoupled from CDLI (theta_toy)
+# --------------------------------------------------------------------------- #
+
+
+def _pc_at(peak_bps: float, **extra) -> float:
+    """Annualised pc on a calm-inflation world whose HY spread peak is set."""
+    return annualised(
+        probe(2.0, **{"factor_conditions.credit.hy_spread_peak_bps": peak_bps, **extra}), "pc"
+    )
+
+
+def test_theta_is_additive_never_a_replacement():
+    """C2's bare form implies ZERO loss below the median spread. Substituting it
+    for the toy engine's through-cycle loss would delete ER-1's close-out and hand
+    private credit back the Sharpe near 2 that ER-1 and ER-4 were written to
+    remove. The convex term is ADDED on top of the existing linear loss - so below
+    s_bar the world's declared annual_loss_rate_pct still bites, hard."""
+    lo = _pc_at(350.0, **{"structural.private_credit.annual_loss_rate_pct": 0.5})  # type: ignore[arg-type]
+    hi = _pc_at(350.0, **{"structural.private_credit.annual_loss_rate_pct": 5.0})  # type: ignore[arg-type]
+    assert lo - hi > 2.0
+
+
+def test_theta_is_convex_above_the_engines_own_spread_reference():
+    """s_bar = _SPREAD_REFERENCE_BPS = 400, documented in place as 'the spread a
+    normal credit market prices' - no new constant, and it plays exactly the role
+    C2's s_bar plays. Each extra 200bp of peak spread must cost MORE when spreads
+    are already wide than when they are near the reference."""
+    near = _pc_at(400.0) - _pc_at(600.0)
+    wide = _pc_at(1600.0) - _pc_at(1800.0)
+    assert wide > near
+
+
+def test_theta_toy_is_the_ratified_declared_value_pending_cdli():
+    """D-ER14-2: CDLI decoupled - the convexity ships DECLARED at 0.10 and C2's
+    measured half awaits the Cliffwater export. Anchor: _HY_LOSS_SHARE 0.45 x the
+    engine's own pc/hy spread-sensitivity ratio (0.8/3.5 = 0.229) = 0.103."""
+    assert engine._THETA_TOY == 0.10
+    assert pytest.approx(engine._HY_LOSS_SHARE * (0.8 / 3.5), abs=0.005) == engine._THETA_TOY
+
+
+def test_private_credit_has_not_recovered_its_pre_er1_sharpe():
+    """ER-1/ER-4 regression guard: the convex term must not be a net GIFT.
+    Decade Sharpe of pc on the stagflation preset stays well under 2.0."""
+    assert sharpe(probe(6.5), "pc") < 1.5
+
+
+# --------------------------------------------------------------------------- #
+# Task C4: rider R2 - structural.private_credit.spread_over_base_bps
+# --------------------------------------------------------------------------- #
+
+
+def test_r2_the_spread_over_base_is_read_from_the_world():
+    """R2 (A11, in). The +4.5% spread was hardcoded; the field is declared and
+    dead. Its schema range (250-900bp) contains 450bp = exactly the hardcode.
+
+    DEVIATION from the plan's literal abs=0.20 tolerance (recorded in the
+    Task C4 commit): measured delta is 4.2657, not ~4.0. Verified this is a
+    compounding (Jensen) artifact, not an implementation defect, by
+    inspecting the raw per-month return arrays directly: the diff between
+    the hi/lo ensembles is EXACTLY (700-300)/100/12 = 0.333333... pp in
+    every one of the 200 paths x 120 months (min==max==0.333333 to 1e-13),
+    i.e. the field is read once and added as a pure uniform monthly shift,
+    exactly as C4 specifies. Annualising that shift through geometric
+    compounding is not linear in the shift once the base return level is
+    nonzero (d/dm[(1+m)^12] grows with m), and pc's mean level has risen
+    since M4's R1 was written because Tasks C1 (phi_PC) and C3 (theta_toy)
+    both lift it further - R1's same-shaped test on `re` shows the identical
+    effect at smaller scale (measured 4.1376 against its own abs=0.15
+    tolerance, a near-miss in the same direction). Tolerance widened to
+    abs=0.30 to absorb the now-larger compounding artifact while still
+    failing hard if the field stopped being read (delta would be 0.0) or if
+    the hardcode default drifted (delta would move by whole points, not
+    tenths).
+
+    Fix-round addendum (reviewer): the abs=0.30 annualized tolerance above is
+    WIDE for the Jensen artifact, which means it is also wide enough to hide
+    a genuinely NON-uniform defect landing in the 0.20-0.30pp band (e.g. a
+    shift that quietly picked up a dependency on x or spread_lagged instead
+    of staying a flat additive constant). The uniformity proof this docstring
+    describes therefore needs to be a standing assertion, not just commit-body
+    prose. THIS assertion is the defect catcher: it re-runs the exact check
+    used in that analysis (raw per-month return diff, max-minus-min at tight
+    tolerance) directly on the two ensembles used below - a non-uniform shift
+    fails here regardless of what the annualized number does."""
+    lo_ens = probe(6.5, **{"structural.private_credit.spread_over_base_bps": 300.0})  # type: ignore[arg-type]
+    hi_ens = probe(6.5, **{"structural.private_credit.spread_over_base_bps": 700.0})  # type: ignore[arg-type]
+    diff = hi_ens.returns["pc"] - lo_ens.returns["pc"]
+    assert diff.max() - diff.min() < 1e-10, "the shift is not a uniform constant"
+    lo = annualised(lo_ens, "pc")
+    hi = annualised(hi_ens, "pc")
+    assert hi - lo == pytest.approx(4.0, abs=0.30)
+
+
+def test_r2_changes_no_shipped_preset():
+    for path in TOY_PRESETS:
+        doc = _load(path)
+        assert "spread_over_base_bps" not in doc["structural"].get("private_credit", {})

@@ -27,6 +27,28 @@ here.
 | test id | cause | cleared by |
 |---|---|---|
 | `tests/test_cioview.py::test_committed_cio_fixtures_match_the_builder` | bundle-fixture — `app/fixtures/cio-sample.{reported,true}.json` embed pre-ER14 `pe`/`re` numbers (e.g. `targetPct` 17.079 -> 17.1983); the builder now legitimately disagrees | `er14-05` Task R4 |
-| `tests/test_engine.py::test_golden_snapshot` | value-golden — the WP0.4 frozen digest over `run_path`'s full return set; `pe`/`re` moved | `er14-05` Task R4 |
+| `tests/test_engine.py::test_golden_snapshot` | value-golden — the WP0.4 frozen digest over `run_path`'s full return set; `pe`/`re`/`pc` moved | `er14-05` Task R4 |
 | `tests/test_institution.py::test_golden_hold_course_final_value` | value-golden — a pinned final NAV (`GOLDEN_HOLD_FINAL`) computed from engine returns; measured 81.1366 vs pinned 80.8944 | `er14-05` Task R4 |
 | `tests/test_play_linkage.py::test_default_run_is_unchanged_by_these_additions` | value-golden — a pinned `final_value` (101.5169845720086), regenerated at every prior engine/port version bump per its own docstring history; measured 106.7285 | `er14-05` Task R4 |
+
+**Reconciled by `er14-03`'s WP close-out (Task C6)**, full-suite run logged to
+`er14-03-full.log` (`EXIT: 1`, same 4 failures, 0 errors, no unexplained
+failure — the failing SET is unchanged from `er14-02`; only the measured
+deltas shifted further, because Tasks C1-C4 (`phi_PC`, `omega_PC`,
+`theta_toy`, rider R2) add three more inflation-keyed terms to the `pc`
+equation on top of `er14-02`'s `re`/`pe` changes, on the same committed
+goldens/fixtures. Current measured values (in place of the `er14-02`-era
+numbers above, same cause/clearing-WP): `test_golden_snapshot` digest now
+`45569b207d95e25aa948a646632246f354745162d3f4cf8e509831be45e51c63` (was
+`61e78e609d2a360b573a641abe0c8a1eea693f8cb527ac3148419280a218d6f5` at
+`er14-02` close, itself already moved off the pre-ER14 pin);
+`test_golden_hold_course_final_value` measured 80.5250 vs pinned 80.8944;
+`test_default_run_is_unchanged_by_these_additions` measured 106.2231 vs
+pinned 101.5170; `test_committed_cio_fixtures_match_the_builder`'s reported
+plane measured `targetPct 17.1157` vs the committed fixture's `17.1983` (the
+`er14-02`-era number quoted above — so this fixture has now moved TWICE
+off the true pre-ER14 baseline, once at `er14-02` and again here; still one
+`er14-05` Task R4 regeneration clears all of it, since regeneration reads
+whatever the tree produces at release time, not any intermediate number).
+No new test id joined the failing set; Task M6/S1's `infra` mechanism
+contributes nothing here (unwired in this WP, same as `er14-02`).

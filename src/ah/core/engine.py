@@ -121,6 +121,10 @@ _D_RE = 4.0  # NOT new: the property rate duration already in -4.0*d_rate
 _LAMBDA_PE = 0.35  # unlevered pass-through 0.25 x the engine's declared 1.4 leverage beta
 _MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
 
+_PHI_PC = 1.0  # Fisher one-for-one on a nominal reference rate (er14-03 Task C1)
+_OMEGA_PC = 0.03  # fractional loss uplift per pp of excess; bounded under the crisis amplifier
+_THETA_TOY = 0.10  # C2's convexity adapted to the toy plane; DECLARED, CDLI decoupled (D-ER14-2)
+
 _LAMBDA_INFRA_DEFAULT = 0.60  # C1's declared pm_infra linkage; a DEFAULT, not a constant
 _GAMMA_INFRA = 0.30  # gamma_RE 0.50 x ~1.6 duration premium x 0.4 unregulated share
 _D_INFRA = 4.0  # RE's duration reused, so ONE number carries the difference
@@ -162,6 +166,7 @@ _DEF = {
     "smooth_pc": 0.30,
     "smooth_re": 0.35,
     "re_income_yield": 4.5,  # R1: the hardcoded income level, now a default
+    "pc_spread_bps": 450.0,  # R2: the hardcoded +4.5% spread, now a default
     # ER-14 close-out (Task M6): consumed by run_path once infra is wired in
     # (Task S1, er14-04b) - added here so the pure function and its defaults
     # land together. No schema field exists for infra_yield (design 2.7.0).
@@ -468,6 +473,7 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     pe_illiq = _f(st.private_equity, "illiquidity_premium_annual_pct", _DEF["pe_illiq"])
     pe_mult = _f(st.private_equity, "entry_multiple_drift_annual_pct", _DEF["pe_mult_drift"])
     pc_loss = _f(st.private_credit, "annual_loss_rate_pct", _DEF["pc_loss"])
+    pc_spread_pct = _f(st.private_credit, "spread_over_base_bps", _DEF["pc_spread_bps"]) / 100.0
     re_cap = _f(st.real_estate, "cap_rate_shift_bps", _DEF["re_cap_shift"])
     re_income = _f(st.real_estate, "income_yield_pct", _DEF["re_income_yield"])
 
@@ -497,7 +503,27 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # the same cycle — but it does lose, and it loses MORE when spreads are
     # wide. The old formula charged only 0.6x its own loss rate outside crisis
     # months, which is why it cleared a Sharpe near 2 in every world.
-    pc_loss_m = (pc_loss / 12.0) * (0.7 + 0.6 * spread_lagged / _SPREAD_REFERENCE_BPS) * loss_amp
+    pc_loss_m = (
+        (pc_loss / 12.0)
+        * (0.7 + 0.6 * spread_lagged / _SPREAD_REFERENCE_BPS)
+        * loss_amp
+        # ER-14 (Task C2): sustained inflation squeezes levered borrowers from
+        # both ends - input and wage costs rise, and their own floating
+        # coupons rise with the reference rate - so coverage deteriorates and
+        # defaults rise. One-sided (max(0, x)): deflation does not squeeze
+        # borrower coverage through input costs, it squeezes it through
+        # revenue, a different channel, deliberately not modelled (design 4).
+        * (1.0 + _OMEGA_PC * np.maximum(0.0, x))
+        # ER-14 (Task C3): C2's convexity, adapted to the toy plane and
+        # decoupled from CDLI (D-ER14-2 - the measured half awaits the
+        # Cliffwater export; theta_toy ships DECLARED at 0.10). ADDITIVE,
+        # never a replacement for the through-cycle linear loss above: C2's
+        # bare form implies zero loss below the median spread, which would
+        # delete ER-1/ER-4's close-out. s_bar is not a new number - it is
+        # _SPREAD_REFERENCE_BPS, "the spread a normal credit market prices",
+        # already playing exactly that role above.
+        + _THETA_TOY * np.maximum(spread_lagged - _SPREAD_REFERENCE_BPS, 0.0) / 1200.0 * loss_amp
+    )
 
     eq = eq_drift / 12.0 + eq_vol_m * z_eq - 2.2 * crisis
     bonds = rate / 12.0 - 6.0 * d_rate + 0.7 * z_b
@@ -520,7 +546,30 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # A private credit book reprices when public credit does - less than high
     # yield, because it is senior secured, but it is not immune. Without a
     # credit-cycle beta its only risk was idiosyncratic noise.
-    pc = (rate + 4.5) / 12.0 - pc_loss_m - 0.8 * d_spread + 0.18 * eq + 1.45 * e_pc
+    # ER-14 (Task C4 / rider R2): pc_spread_pct was hardcoded at 4.5; now read
+    # from structural.private_credit.spread_over_base_bps (default 450bp,
+    # matching the prior hardcode exactly).
+    # ER-14 (Task C1): the loan's floating base tracks inflation WITHIN the
+    # world. A shadow rate that can differ from the engine's own `rate` path is
+    # an admitted approximation (ER-2 already records that rate is a
+    # continuous drift with no meeting calendar); the clean alternative - a
+    # policy reaction function in _rate_path - is DECLINED in design 2.4
+    # because it would route the fix through a PUBLIC channel, which is the
+    # very second-order effect ER-14 exists to complain about. Measured
+    # against the world's OWN declared average (infl_avg), not the platform
+    # anchor: property/buyout have no authored inflation channel and so are
+    # measured against C_ANCHOR, but private credit's level is already
+    # authored through factor_conditions.policy_rate - measuring against
+    # C_ANCHOR would charge stagflation the benefit twice.
+    infl_trail = x + INFLATION_ANCHOR_PCT
+    pc = (
+        (rate + pc_spread_pct) / 12.0
+        + _PHI_PC * (infl_trail - infl_avg) / 12.0
+        - pc_loss_m
+        - 0.8 * d_spread
+        + 0.18 * eq
+        + 1.45 * e_pc
+    )
     # Property is rate-sensitive (cap rates move with rates) and reprices hard
     # in a crisis; both were missing, leaving it a near-riskless income stream.
     re = (
