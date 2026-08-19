@@ -34,21 +34,40 @@ SLEEVES: tuple[str, ...] = (
     "pe",
     "pc",
     "re",
+    # ER-14 close-out (D-ER14-2, Task S3): the fourth private class, same
+    # order as core.engine.ASSETS (feed.py:330 zips these positionally).
+    "infra",
 )
 
+# A15 (D-ER14-2): the same proportional carve as the played book (3 points
+# from REITs, 2 from real estate, out of a 100-point book -- here in
+# fraction-space, so 0.03/0.02) -- infra enters at 0.05 with reits
+# 0.05->0.02 and re 0.10->0.08, keeping the combined real-asset weight
+# (reits+re+infra) unchanged at 0.15 and the mix summing to exactly 1.0.
+# DEVIATION from the plan's literal text ("reits 0.05 -> 0.03"): that number
+# only removes 0.02 (not the 0.03 A15's own "3 points from REITs" implies),
+# which combined with re's -0.02 leaves just 0.04 removed against infra's
+# +0.05 -- START_MIX would then sum to 1.01, contradicting the plan's own
+# stated interface ("START_MIX summing to 1.0"). Corrected to 0.05->0.02,
+# which is the arithmetic A15 actually describes and restores the sum-to-1.0
+# invariant; asserted directly by test_start_mix_sums_to_one_with_the_fourth_private_sleeve.
 START_MIX: dict[str, float] = {
     "equity": 0.30,
     "bonds": 0.10,
     "hy": 0.05,
     "commodities": 0.05,
-    "reits": 0.05,
+    "reits": 0.02,
     "pe": 0.25,
     "pc": 0.10,
-    "re": 0.10,
+    "re": 0.08,
+    "infra": 0.05,
 }
 
 GROWTH: tuple[str, ...] = ("equity", "pe")
 DEFENSIVE: tuple[str, ...] = ("bonds", "pc")
+# infra joins NEITHER tilt bucket, matching how re, reits and commodities
+# are already treated (design 2.7.1): the derisk/leanin decisions only ever
+# move weight between GROWTH and DEFENSIVE, so an entry here would be inert.
 ACTIONS: frozenset[str] = frozenset({"hold", "derisk", "leanin", "secondary"})
 
 _SHIFT_PTS = 0.10  # derisk/leanin move 10 percentage points
@@ -142,6 +161,10 @@ def simulate_institution(
             elif action == "leanin":
                 _shift(targets, DEFENSIVE, GROWTH, _SHIFT_PTS)
             elif action == "secondary":
+                # A16 (D-ER14-2): the secondary lever stays scoped to "pe"
+                # deliberately -- infrastructure secondaries are thin. This
+                # hardcode is UNCHANGED, not an oversight (matching
+                # play.SECONDARY_SLEEVE's own scope on the played twin).
                 w_pe = value["pe"] / total if total > 0 else 0.0
                 sold = min(_SECONDARY_SELL_CAP, w_pe)
                 total *= 1.0 - sold * _SECONDARY_DISCOUNT
