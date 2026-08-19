@@ -351,7 +351,18 @@ def test_sample_raises_when_the_world_declares_no_x_stress():
 # --------------------------------------------------------------------------- #
 
 
-@pytest.mark.parametrize("preset", ["stress_1974.json", "stress_1990.json"])
+@pytest.mark.parametrize(
+    "preset",
+    [
+        "stress_1974.json",
+        "stress_1990.json",
+        # er14-06: the successors (701/703 retired with no playable successor
+        # in the picker's declared-stress family; the third is a new
+        # demonstration world, not a rebuild) exercise the same path.
+        "stress_1974_successor.json",
+        "stress_1990_successor.json",
+    ],
+)
 def test_the_stress_preset_builds_samples_and_replays(tmp_path, preset):
     doc = json.loads((PRESETS / preset).read_text(encoding="utf-8"))
     nw = project_numeric(WorldSpec.model_validate(doc))
