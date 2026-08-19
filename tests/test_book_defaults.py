@@ -40,6 +40,14 @@ class TestDefaultBook:
         assert "reits" in default_opening_book(START_TARGETS).liquid
         assert "reits" not in default_opening_book(GEN_START_TARGETS).liquid
 
+    def test_every_private_sleeve_gets_a_seeded_ladder(self):
+        """ER-14 close-out (Task S2): infra is a fourth PRIVATE_ASSETS member,
+        so the derived opening book must seed it a ladder exactly like
+        pe/pc/re -- not silently drop it because default_opening_book's
+        private comprehension only knew about three names at write time."""
+        book = default_opening_book(START_TARGETS)
+        assert set(book.private) == set(PRIVATE_ASSETS)
+
     def test_each_private_sleeve_gets_a_ten_rung_ladder(self):
         book = default_opening_book(START_TARGETS)
         for sleeve in PRIVATE_ASSETS:

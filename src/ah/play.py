@@ -65,6 +65,7 @@ __all__ = [
     "LIQUID_ASSETS",
     "PLAY_ALPHA_VERSION",
     "PRIVATE_ASSETS",
+    "SECONDARY_SLEEVE",
     "START_CASH",
     "START_TARGETS",
     "PlayAttribution",
@@ -92,7 +93,11 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 PLAY_ALPHA_VERSION = "port-v4-ladder"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
-PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
+# ER-14 close-out (D-ER14-2, Task S2): the fourth private class. Keep in step
+# with port/book.py's own PRIVATE_SLEEVES -- the two literals gate different
+# layers (this one the played institution, that one the served plan/book
+# shape) and a divergence 422s every plan the server itself just served.
+PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re", "infra")
 
 #: Opening book, in points of 100.
 #:
@@ -105,15 +110,20 @@ PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
 #: before this was corrected. The book now opens at 35 points private, inside
 #: the band, with room for the denominator effect to move it without an
 #: instant breach.
+# A15 (D-ER14-2): infrastructure enters at 5 points, carved 3 from REITs and
+# 2 from real estate. Private lands at 38, not 40 -- the policy band's upper
+# bound is 0.40 and an opening breach previously produced 29 forced quarters
+# out of 40 (see the module docstring above).
 START_TARGETS: dict[str, float] = {
     "equity": 33.0,
     "bonds": 12.0,
     "hy": 5.0,
     "commodities": 5.0,
-    "reits": 8.0,
+    "reits": 5.0,
     "pe": 20.0,
     "pc": 8.0,
-    "re": 7.0,
+    "re": 5.0,
+    "infra": 5.0,
 }
 START_CASH = 2.0
 
@@ -330,8 +340,17 @@ def _validate_commit_decisions(decisions: Mapping[int, Any], targets: Mapping[st
 _SHIFT_POINTS = 10.0
 _SECONDARY_POINTS = 8.0
 
+# infra joins NEITHER tilt bucket, matching how re, reits and commodities
+# are already treated (design 2.7.1): _rebalance filters both tuples to
+# LIQUID_ASSETS, so an entry here would be a no-op that misleads a reader.
 _GROWTH: tuple[str, ...] = ("equity", "pe")
 _DEFENSIVE: tuple[str, ...] = ("bonds", "pc")
+
+# A16 (D-ER14-2): the forced/voluntary secondary lever stays scoped to
+# buyout. Infrastructure secondaries are thin; this is a DECISION, recorded
+# here rather than left implicit in a hardcoded "pe_ladder" key (design
+# 2.7.1).
+SECONDARY_SLEEVE = "pe"
 
 
 @dataclass(frozen=True)
@@ -512,10 +531,11 @@ def _seed_ladder(base: dict[str, Any], asset: str, target_nav: float) -> list[Cl
     different point on its J-curve. The play surface used to open with a
     single mid-life cohort per sleeve instead, cloned from the fixture at age
     5.25, which meant the ENTIRE opening private book reached the end of its
-    life in the same quarter: all three sleeves lapsed together in quarter 19,
-    expiring 9.0 of undrawn commitment (17% of the decade's calls) and winding
-    up their NAV at once. Found 2026-08-14 by the audit-F2 expiry column, the
-    first surface on which it was visible.
+    life in the same quarter: all three sleeves (the private set was pe/pc/re
+    at the time; infrastructure joined later, ER-14) lapsed together in
+    quarter 19, expiring 9.0 of undrawn commitment (17% of the decade's
+    calls) and winding up their NAV at once. Found 2026-08-14 by the
+    audit-F2 expiry column, the first surface on which it was visible.
 
     Each rung is built by the model itself — a fresh commitment stepped
     forward to its age at ``_WARMUP_QUARTERLY_RETURN`` — so paid-in, unfunded,
@@ -625,7 +645,7 @@ def _secondary_sale(
     from. Selling early is a liquidity decision with a price, not a weight
     tweak.
     """
-    live = [c for c in cohorts.get("pe_ladder", []) if c.nav_true > 0.0]
+    live = [c for c in cohorts.get(f"{SECONDARY_SLEEVE}_ladder", []) if c.nav_true > 0.0]
     cohort = max(live, key=lambda c: c.nav_true) if live else None
     if cohort is None:
         return 0.0
@@ -760,7 +780,11 @@ def simulate_play(
                 elif name == "leanin":
                     _rebalance(portfolio, _DEFENSIVE, _GROWTH, _SHIFT_POINTS)
                 elif name == "secondary":
-                    _secondary_sale(portfolio, {"pe_ladder": ladders["pe"]}, policy)
+                    _secondary_sale(
+                        portfolio,
+                        {f"{SECONDARY_SLEEVE}_ladder": ladders[SECONDARY_SLEEVE]},
+                        policy,
+                    )
 
         liq_open = _liquid_snapshot()
         cash_open = float(portfolio.cash)

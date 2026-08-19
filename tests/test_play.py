@@ -329,3 +329,35 @@ class TestAttribution:
         attr = window_contributions_play(stagflation, {})
         assert attr.contributions == tuple(0.0 for _ in attr.months)
         assert attr.total_alpha == 0.0
+
+
+class TestInfrastructureCarve:
+    """ER-14 close-out (Task S2, A15/A16, D-ER14-2): infrastructure joins the
+    played book at 5 points, carved 3 from REITs and 2 from real estate --
+    private lands at 38, not 40, so the opening book stays clear of
+    Policy.private_weight_range's 0.40 upper bound (an opening breach
+    previously produced 29 forced quarters out of 40)."""
+
+    def test_the_opening_book_still_sits_inside_the_policy_band(self):
+        from ah.play import PRIVATE_ASSETS, _policy_private_weight
+
+        assert 0.15 < _policy_private_weight(START_TARGETS) < 0.40
+        assert sum(START_TARGETS[a] for a in PRIVATE_ASSETS) == pytest.approx(38.0)
+
+    def test_the_real_goal_bucket_is_unchanged_by_the_carve(self):
+        """A15: 3 points from REITs and 2 from real estate, so commodities 5 +
+        reits 5 + re 5 + infra 5 = 20 points, exactly as before the carve.
+        Commodities is DELIBERATELY untouched: ER-14's own attribution
+        experiment moves those five points, and touching the sleeve would
+        confound the measurement the close-out is judged against."""
+        assert START_TARGETS["commodities"] == 5.0
+        assert sum(START_TARGETS[a] for a in ("commodities", "reits", "re", "infra")) == 20.0
+
+    def test_infrastructure_is_excluded_from_the_secondary_lever_by_decision(self):
+        """A16, ratified: infra is excluded from the secondary-sale lever for
+        now (infrastructure secondaries are genuinely thin). _secondary_sale
+        is scoped to the pe ladder by an EXPLICIT constant, not by an
+        accident of a hardcoded key."""
+        from ah.play import SECONDARY_SLEEVE
+
+        assert SECONDARY_SLEEVE == "pe"
