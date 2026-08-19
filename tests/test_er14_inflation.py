@@ -34,9 +34,9 @@ import pytest
 from ah.core import engine
 from ah.core.digest import sha256_of_arrays
 from ah.core.engine import (
-    INFLATION_ANCHOR_PCT,
     _DEF,
     _RATE_SHOCK_INFLATION_ANCHOR,
+    INFLATION_ANCHOR_PCT,
     EnsembleResult,
     inflation_excess,
     run_ensemble,
@@ -253,7 +253,9 @@ def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
     inflation term before this release), so it is still the correct reference
     under the patch. This tests the same claim the plan intended - the new
     terms are inert when x==0 - without the false premise."""
-    monkeypatch.setattr(engine, "inflation_excess", lambda infl, **_: np.zeros_like(infl, dtype=np.float64))
+    monkeypatch.setattr(
+        engine, "inflation_excess", lambda infl, **_: np.zeros_like(infl, dtype=np.float64)
+    )
     ref = np.load(ANCHOR_BASELINE_NPZ)
     for path in TOY_PRESETS:
         paths = run_path(project_numeric(load_worldspec(_anchored(path))), SEED)
@@ -271,8 +273,8 @@ def test_r1_income_yield_is_read_from_the_world():
     """R1 (A11, recommended in). The 4.5% income yield was hardcoded while the
     schema field structural.real_estate.income_yield_pct sat declared and dead
     (ER-14's unconsumed-field map). Schema range 2-8."""
-    lo = annualised(probe(6.5, **{"structural.real_estate.income_yield_pct": 3.0}), "re")
-    hi = annualised(probe(6.5, **{"structural.real_estate.income_yield_pct": 7.0}), "re")
+    lo = annualised(probe(6.5, **{"structural.real_estate.income_yield_pct": 3.0}), "re")  # type: ignore[arg-type]
+    hi = annualised(probe(6.5, **{"structural.real_estate.income_yield_pct": 7.0}), "re")  # type: ignore[arg-type]
     assert hi - lo == pytest.approx(4.0, abs=0.15)
 
 
@@ -356,9 +358,10 @@ def test_infra_response_ratio_is_linear_in_the_linkage_share():
     hot = _flat_infra_kwargs(x_level=4.5)
 
     def resp(k: float) -> float:
-        return engine.infra_return(**{**hot, "linkage": k}).mean() - engine.infra_return(
-            **{**base, "linkage": k}
-        ).mean()
+        return (
+            engine.infra_return(**{**hot, "linkage": k}).mean()
+            - engine.infra_return(**{**base, "linkage": k}).mean()
+        )
 
     assert resp(0.3) / resp(0.9) == pytest.approx(0.333, abs=0.05)
 
@@ -375,7 +378,10 @@ def test_infra_reads_the_discount_rate_shift_field():
     """structural.infrastructure.discount_rate_shift_bps was declared and dead
     (the second half of ER-14's most quotable line)."""
     kw = _flat_infra_kwargs(x_level=0.0)
-    assert engine.infra_return(**{**kw, "disc_shift_bps": 300.0}).sum() < engine.infra_return(**kw).sum()
+    assert (
+        engine.infra_return(**{**kw, "disc_shift_bps": 300.0}).sum()
+        < engine.infra_return(**kw).sum()
+    )
 
 
 def test_infra_uses_the_transplanted_pm_infra_constants():
@@ -385,8 +391,11 @@ def test_infra_uses_the_transplanted_pm_infra_constants():
     (transplanted from a measured row)."""
     import yaml
 
-    row = yaml.safe_load(Path("mappings/sleeve-mappings-v1.1.yaml").read_text())["pm_sleeves"]["pm_infra"]
-    assert engine._BETA_INFRA == pytest.approx(row["loadings"]["equity_mkt"], abs=0.005)
-    assert engine._SIGMA_INFRA == pytest.approx(
-        row["residual_sigma_annual"] / math.sqrt(12) * 100, abs=0.02
+    row = yaml.safe_load(Path("mappings/sleeve-mappings-v1.1.yaml").read_text())["pm_sleeves"][
+        "pm_infra"
+    ]
+    assert pytest.approx(row["loadings"]["equity_mkt"], abs=0.005) == engine._BETA_INFRA
+    assert (
+        pytest.approx(row["residual_sigma_annual"] / math.sqrt(12) * 100, abs=0.02)
+        == engine._SIGMA_INFRA
     )
