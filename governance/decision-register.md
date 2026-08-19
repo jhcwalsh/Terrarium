@@ -467,3 +467,32 @@ acknowledged: TOY_ENGINE_VERSION and play-alpha bumps, digest
 invalidation, bundle rebuilds, battery re-run, leaderboard fencing.
 Sequence: mechanism design + coefficient proposal for owner ratification
 FIRST; nothing sealed before the ratification.
+
+## D-ER14-2 - RATIFIED 2026-08-18: THE ER-14 COEFFICIENTS AND THE INFRASTRUCTURE SLEEVE
+
+Owner standing order ("Go when you come back with infrastructure"),
+executed after the schemas check cleared (no locked file constrains the
+sleeve set; worldspec-v1.3 already carries structural.infrastructure and
+the G3-locked taxonomy already carries pm_infra). Ratified as proposed in
+docs/superpowers/specs/2026-08-18-er14-close-out-design.md:
+- All fifteen coefficients (the nine of revision 1 plus infrastructure's
+  six), each chosen-labelled with its recorded anchor and upgrade path;
+  lambda_INFRA reads LIVE from structural.infrastructure.inflation_linkage
+  (default 0.60); net infra response +0.60 pp/yr per pp - the book's
+  strongest hedge, by design.
+- CDLI decoupled (private-credit convexity ships declared at 0.10; C2's
+  measured half awaits the export); C1 extended to pm_buyout by amendment;
+  the six presets' hand-authored entry_multiple_drift zeroed (no double
+  charge); cashflow timing stays inflation-blind (returns respond,
+  cashflows follow derivatively); Delta 3 compliant - mechanisms read
+  state variables, never regime labels.
+- The infrastructure SLEEVE is GO: closed-end via pm_infra's estimated
+  row; infra_core stays parked Tier B; pacing gains one pm_infra row
+  (contractual_life_years 15, drift-guarded); infra excluded from the
+  secondary-sale lever for now (A16 - revisit); in-flight sessions demote
+  to practice on the digest move (accepted).
+- Campaign worlds 7xx/8xx RETIRED, not renumbered (their sealed records
+  stand; the tape shape change forces it).
+- AT-1..AT-14 are the acceptance bars, incl. AT-14 (stream-order
+  corruption guard: e_infra drawn LAST) mandated verbatim.
+Cost accepted: 7.5-8 days, one reseal covering ER-14 + F5 + the sleeve.
