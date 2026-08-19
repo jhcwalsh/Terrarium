@@ -33,7 +33,11 @@ import pytest
 
 from ah.core.digest import sha256_of_arrays
 from ah.core.engine import (
+    INFLATION_ANCHOR_PCT,
+    _DEF,
+    _RATE_SHOCK_INFLATION_ANCHOR,
     EnsembleResult,
+    inflation_excess,
     run_ensemble,
     run_path,
 )
@@ -132,3 +136,46 @@ def test_at6b_public_assets_hold_on_every_compiler_fixture():
         stem, asset = key.rsplit("/", 1)
         paths = run_path(project_numeric(load_worldspec(_load(FIXTURES / f"{stem}.json"))), SEED)
         assert sha256_of_arrays([paths.returns[asset]]) == expected, key
+
+
+# --------------------------------------------------------------------------- #
+# Task M2: inflation_excess, the shared state variable
+# --------------------------------------------------------------------------- #
+
+
+def test_inflation_excess_is_a_trailing_mean_demeaned_at_the_anchor():
+    x = inflation_excess(np.full(36, 6.5))
+    assert np.allclose(x, 4.5)
+
+
+def test_inflation_excess_warms_up_over_available_months_not_from_zero():
+    """K=24 with a 120-month world would leave a fifth of the game dead and put a
+    visible step at month 24. The mean is taken over the months available, so a
+    world that opens hot is hot from month 0 (design 2.0)."""
+    infl = np.array([10.0, 0.0, 0.0, 0.0])
+    x = inflation_excess(infl, k=24)
+    assert x[0] == pytest.approx(10.0 - 2.0)
+    assert x[1] == pytest.approx(5.0 - 2.0)
+    assert x[3] == pytest.approx(2.5 - 2.0)
+
+
+def test_inflation_excess_window_is_exactly_k_months():
+    infl = np.concatenate([np.zeros(24), np.full(24, 12.0)])
+    x = inflation_excess(infl, k=24)
+    assert x[47] == pytest.approx(12.0 - 2.0)
+    assert x[35] == pytest.approx(6.0 - 2.0)
+
+
+def test_inflation_excess_consumes_no_rng():
+    """The channel is derived state, not a new stream (AT-7's precondition)."""
+    rng = np.random.Generator(np.random.PCG64(7))
+    before = rng.standard_normal(3).tolist()
+    inflation_excess(np.full(24, 3.0))
+    rng2 = np.random.Generator(np.random.PCG64(7))
+    assert rng2.standard_normal(3).tolist() == before
+
+
+def test_the_anchor_is_the_engines_own_anchor():
+    """C_ANCHOR is not a new number: it is _RATE_SHOCK_INFLATION_ANCHOR and
+    _DEF['infl_avg'] (D-ER14-2 A1 row 1)."""
+    assert INFLATION_ANCHOR_PCT == _RATE_SHOCK_INFLATION_ANCHOR == _DEF["infl_avg"] == 2.0

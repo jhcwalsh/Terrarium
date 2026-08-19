@@ -76,6 +76,15 @@ _INNOVATION_DF = 6.0
 
 _ENSEMBLE_SEED_STRIDE = 7919  # run_ensemble uses base_seed + 7919*k
 
+# -- ER-14 close-out (D-ER14-2, 2026-08-18): the inflation channel's shared
+# state. K = 24 months is C1's declared cpi_trail_k (8 quarters) at the
+# engine's monthly resolution - inherited from AM-2026-08-15-001, not chosen
+# here. The anchor is the engine's own: _RATE_SHOCK_INFLATION_ANCHOR and
+# _DEF["infl_avg"], so a 2% world gets essentially no new drift and adoption
+# adds STATE-DEPENDENCE, not return.
+INFLATION_TRAIL_MONTHS = 24
+INFLATION_ANCHOR_PCT = 2.0
+
 # -- register ER-4: the policy rate has to move for duration to be a risk --- #
 _RATE_KAPPA = 0.08  # monthly pull back to the glide path
 _RATE_SHOCK_PCT = 0.22  # baseline monthly innovation, in percentage points
@@ -312,6 +321,26 @@ def _t_draws(rng: np.random.Generator, nm: int, df: float = _INNOVATION_DF) -> n
     point: the defect was the shape of the tail, not the size of the variance.
     """
     return rng.standard_t(df, nm) / math.sqrt(df / (df - 2.0))
+
+
+def inflation_excess(
+    inflation: np.ndarray,
+    *,
+    k: int = INFLATION_TRAIL_MONTHS,
+    anchor: float = INFLATION_ANCHOR_PCT,
+) -> np.ndarray:
+    """Trailing-mean inflation less the anchor, in ANNUAL percentage points.
+
+    Warm-up: for m < k-1 the mean is over the months available, not held at
+    zero - a decade world is 120 months and two years of dead channel would be
+    a fifth of the game. Consumes no RNG.
+    """
+    infl = np.asarray(inflation, dtype=np.float64)
+    csum = np.concatenate([[0.0], np.cumsum(infl)])
+    idx = np.arange(infl.size)
+    lo = np.maximum(0, idx - k + 1)
+    trail = (csum[idx + 1] - csum[lo]) / (idx - lo + 1)
+    return trail - anchor
 
 
 def run_path(world: NumericWorld, seed: int) -> EnginePaths:
