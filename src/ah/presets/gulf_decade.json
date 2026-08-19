@@ -1,0 +1,117 @@
+{
+  "engine_defaults": {
+    "base_seed": 202608,
+    "generator_id": "bootstrap-stratified",
+    "n_paths": 1000
+  },
+  "extensions": {
+    "x_campaign_vintage_id": "2026-08-10.1",
+    "x_stress": {
+      "functional": "all_down",
+      "segments": [
+        {"from_quarter": 0,  "to_quarter": 7,  "entry_percentile": 35, "mean_block_months": 6},
+        {"from_quarter": 8,  "to_quarter": 11, "entry_percentile": 10, "mean_block_months": 6},
+        {"from_quarter": 12, "to_quarter": 31, "entry_percentile": 10, "mean_block_months": 6},
+        {"from_quarter": 32, "to_quarter": 39, "entry_percentile": 35, "mean_block_months": 6}
+      ],
+      "join_tolerance": {"hy_spread": 1.5, "policy_rate": 1.0},
+      "precedent": [
+        "1973-74 OPEC embargo: supply cut into a hot inflation backdrop ran -48% over 21 months with inflation above 10%",
+        "1990 Gulf War spike: Iraq's invasion of Kuwait roughly doubled crude in weeks, tipping an already-slowing US economy into recession",
+        "1979 second oil shock: the Iranian Revolution landed on an economy still carrying 1973's inflation and produced the deepest stagflation of the post-war era - the precedent for dialing the grind segment to the severe rung, not just the shock quarter",
+        "all_down: 2022 ran equities and bonds down together, with no flight-to-quality bid",
+        "a new demonstration world (er14-06), not a rebuild of a retired campaign: no parent_world_id, a fresh base_seed, and its own world_id in the 71x successor block alongside the stress_1974/stress_1990 successors"
+      ]
+    }
+  },
+  "factor_conditions": {
+    "correlation": {
+      "equity_bond_regime": "inflation_conditional"
+    },
+    "equity": {
+      "drift_annual_pct": 3.0,
+      "vol_annual_pct": 20.0
+    },
+    "inflation": {
+      "average_pct": 8.0,
+      "peak_pct": 12.5,
+      "peak_quarter": 9
+    },
+    "policy_rate": {
+      "end_pct": 9.5,
+      "start_pct": 6.5
+    }
+  },
+  "horizon": {
+    "quarters": 40,
+    "start": "2026-Q3"
+  },
+  "narrative": {
+    "dispatches": [
+      {
+        "date": "2026",
+        "headline": "The Gulf Decade — escalation, into a market already running hot"
+      },
+      {
+        "date": "2027",
+        "headline": "The Gulf Decade — the strait closes and the barrel doubles"
+      },
+      {
+        "date": "2031",
+        "headline": "The Gulf Decade — a decade that stays hot, not one that crashes"
+      },
+      {
+        "date": "2035",
+        "headline": "The Gulf Decade — the uneasy unwind"
+      }
+    ],
+    "language": "en",
+    "lesson": "Every month in this decade is a real month from 1953-2020; only the sequence is new. An oil shock does not need a cold economy to be dangerous — arriving on top of inflation that is already running hot removes the policymaker's usual room to look through it.",
+    "summary": "A DECLARED STRESS SCENARIO compiled by bootstrap-stratified: real 1953-2020 months, entered at severity-tilted percentiles per the declared x_stress rule, dialed to the severe rung (worst-decile entry) through both the shock quarter and the decade-long grind that follows it. The premise: escalating military action in the Middle East disrupts oil supply into an economy already running hot on inflation — echoing 1973-74's embargo and 1990's Gulf War spike, but landing on a declared backdrop of 8% average inflation rather than a cold start. Severe and internally coherent by construction; not a probability-weighted forecast. A new demonstration world, not a rebuild of a retired campaign: no parent_world_id, its own fresh seed.",
+    "tagline": "A declared stress scenario, not a forecast.",
+    "title": "The Gulf Decade"
+  },
+  "provenance": {
+    "author": "sso:preset",
+    "created_at": "2026-08-19T00:00:00Z",
+    "source": {
+      "kind": "preset"
+    }
+  },
+  "regimes": {
+    "mode": "sequence",
+    "sequence": [
+      {
+        "from_quarter": 0,
+        "regime": "stagflation",
+        "to_quarter": 7
+      },
+      {
+        "from_quarter": 8,
+        "regime": "crisis",
+        "to_quarter": 11
+      },
+      {
+        "from_quarter": 12,
+        "regime": "stagflation",
+        "to_quarter": 31
+      },
+      {
+        "from_quarter": 32,
+        "regime": "recovery",
+        "to_quarter": 39
+      }
+    ]
+  },
+  "spec_version": "1.2.0",
+  "status": "draft",
+  "structural": {
+    "parameter_vintage": "custom",
+    "private_equity": {
+      "entry_multiple_drift_annual_pct": -2.0,
+      "illiquidity_premium_annual_pct": 2.0,
+      "leverage_turns": 5.5
+    }
+  },
+  "world_id": "00000000-0000-4000-9000-000000000712"
+}

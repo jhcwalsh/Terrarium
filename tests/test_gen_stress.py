@@ -361,6 +361,7 @@ def test_sample_raises_when_the_world_declares_no_x_stress():
         # demonstration world, not a rebuild) exercise the same path.
         "stress_1974_successor.json",
         "stress_1990_successor.json",
+        "gulf_decade.json",
     ],
 )
 def test_the_stress_preset_builds_samples_and_replays(tmp_path, preset):
