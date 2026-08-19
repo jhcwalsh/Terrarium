@@ -124,6 +124,31 @@ def test_the_retired_presets_are_still_readable_and_byte_unchanged() -> None:
         assert doc["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] == -2.0
 
 
+def test_the_successor_stress_presets_are_not_retired_and_load_clean() -> None:
+    """er14-06: retiring 701/703 (D-ER14-2) left the app's declared-stress
+    picker family (SHOWN_GENERATOR_IDS = ["bootstrap-stratified"]) with no
+    playable world. The fix is NOT to re-block the retired files in place --
+    ``test_the_retired_presets_are_still_readable_and_byte_unchanged`` above
+    and CHANGELOG's R3 ("byte-unchanged JSON records") both pin
+    stress_1974.json/stress_1990.json as the permanent record, and
+    RETIRED_WORLD_IDS is a hardcoded frozenset independent of file content --
+    a rename in place would still leave the OLD id fenced forever while
+    quietly rewriting the record's own file out from under it. So: three new
+    files, three new world_ids in a new 71x sub-block (the same tens-digit
+    move used for 51x -> 52x), none of them in RETIRED_WORLD_IDS, all loading
+    clean through the same WorldSpec loader the retired ids are checked
+    against here."""
+    from ah.cli import PRESETS_DIR, RETIRED_WORLD_IDS
+    from ah.core import loader
+
+    for stem in ("stress_1974_successor", "stress_1990_successor", "gulf_decade"):
+        doc = json.loads((PRESETS_DIR / f"{stem}.json").read_text(encoding="utf-8"))
+        assert doc["world_id"] not in RETIRED_WORLD_IDS
+        world = loader.load_worldspec(doc)
+        assert world.world_id == doc["world_id"]
+        assert world.engine_defaults.generator_id == "bootstrap-stratified"
+
+
 def test_replay_detects_tampered_digest(tmp_path: Path) -> None:
     db = tmp_path / "ah.db"
     _invoke(db, "world", "build", "--preset", "stagflation")
