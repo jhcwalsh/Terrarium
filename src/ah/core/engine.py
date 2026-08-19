@@ -121,6 +121,8 @@ _D_RE = 4.0  # NOT new: the property rate duration already in -4.0*d_rate
 _LAMBDA_PE = 0.35  # unlevered pass-through 0.25 x the engine's declared 1.4 leverage beta
 _MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
 
+_PHI_PC = 1.0  # Fisher one-for-one on a nominal reference rate (er14-03 Task C1)
+
 _LAMBDA_INFRA_DEFAULT = 0.60  # C1's declared pm_infra linkage; a DEFAULT, not a constant
 _GAMMA_INFRA = 0.30  # gamma_RE 0.50 x ~1.6 duration premium x 0.4 unregulated share
 _D_INFRA = 4.0  # RE's duration reused, so ONE number carries the difference
@@ -520,7 +522,28 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # A private credit book reprices when public credit does - less than high
     # yield, because it is senior secured, but it is not immune. Without a
     # credit-cycle beta its only risk was idiosyncratic noise.
-    pc = (rate + 4.5) / 12.0 - pc_loss_m - 0.8 * d_spread + 0.18 * eq + 1.45 * e_pc
+    pc_spread_pct = 4.5
+    # ER-14 (Task C1): the loan's floating base tracks inflation WITHIN the
+    # world. A shadow rate that can differ from the engine's own `rate` path is
+    # an admitted approximation (ER-2 already records that rate is a
+    # continuous drift with no meeting calendar); the clean alternative - a
+    # policy reaction function in _rate_path - is DECLINED in design 2.4
+    # because it would route the fix through a PUBLIC channel, which is the
+    # very second-order effect ER-14 exists to complain about. Measured
+    # against the world's OWN declared average (infl_avg), not the platform
+    # anchor: property/buyout have no authored inflation channel and so are
+    # measured against C_ANCHOR, but private credit's level is already
+    # authored through factor_conditions.policy_rate - measuring against
+    # C_ANCHOR would charge stagflation the benefit twice.
+    infl_trail = x + INFLATION_ANCHOR_PCT
+    pc = (
+        (rate + pc_spread_pct) / 12.0
+        + _PHI_PC * (infl_trail - infl_avg) / 12.0
+        - pc_loss_m
+        - 0.8 * d_spread
+        + 0.18 * eq
+        + 1.45 * e_pc
+    )
     # Property is rate-sensitive (cap rates move with rates) and reprices hard
     # in a crisis; both were missing, leaving it a near-riskless income stream.
     re = (

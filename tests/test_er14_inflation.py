@@ -399,3 +399,34 @@ def test_infra_uses_the_transplanted_pm_infra_constants():
         pytest.approx(row["residual_sigma_annual"] / math.sqrt(12) * 100, abs=0.02)
         == engine._SIGMA_INFRA
     )
+
+
+# --------------------------------------------------------------------------- #
+# Task C1: private credit's floating coupon (phi_PC)
+# --------------------------------------------------------------------------- #
+
+
+def test_at5_the_floating_benefit_is_visible_when_the_policy_rate_moves():
+    """AT-5, as RESTATED and ratified (A10). D-ER14-1 asked that PC's floating
+    benefit be visible; measuring that by varying INFLATION with rates pinned asks
+    the coupon to respond to something it is not connected to, and would fail a
+    correct model. So: +2 pp on policy_rate.end_pct, all else held, must lift
+    annualised pc by >= +0.80 pp/yr (a glide ending 2pp higher raises the mean
+    policy rate ~1pp, which is ~1 pp/yr of coupon; 0.80 leaves room for the loss
+    side to offset)."""
+    base = annualised(probe(6.5), "pc")
+    up = annualised(probe(6.5, **{"factor_conditions.policy_rate.end_pct": 9.5}), "pc")  # type: ignore[arg-type]
+    assert up - base >= 0.80, up - base
+
+
+def test_phi_pc_measures_excess_against_the_worlds_own_declared_average():
+    """The asymmetry with RE and PE is the whole point (design 2.3). Property and
+    buyout have NO authored inflation channel anywhere in the WorldSpec, so their
+    excess is measured against the platform anchor. Private credit's level is
+    already authored through factor_conditions.policy_rate; measuring its excess
+    against C_ANCHOR would charge stagflation the benefit twice and print a
+    ~12%/yr private credit book. Only the WITHIN-world dynamics change."""
+    ens_lo, ens_hi = probe(1.0), probe(12.0)
+    # a 12x change in the DECLARED average must not move the coupon term's mean
+    # by anything like 11pp/12: the coupon tracks deviations from that average.
+    assert abs(annualised(ens_hi, "pc") - annualised(ens_lo, "pc")) < 2.0
