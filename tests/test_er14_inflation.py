@@ -430,3 +430,33 @@ def test_phi_pc_measures_excess_against_the_worlds_own_declared_average():
     # a 12x change in the DECLARED average must not move the coupon term's mean
     # by anything like 11pp/12: the coupon tracks deviations from that average.
     assert abs(annualised(ens_hi, "pc") - annualised(ens_lo, "pc")) < 2.0
+
+
+# --------------------------------------------------------------------------- #
+# Task C2: the borrower-coverage squeeze (omega_PC)
+# --------------------------------------------------------------------------- #
+
+
+def test_at4_the_loss_bite_is_negative_under_the_rates_held_probe():
+    """AT-4. Delta annualised pc, 1% -> 12%, rates HELD, must be <= -0.30 pp/yr.
+    Today's measured value is +0.022. A lender whose rate does not rise while its
+    borrowers' costs do is in trouble - that is the whole content of the test."""
+    delta = annualised(probe(12.0), "pc") - annualised(probe(1.0), "pc")
+    assert delta <= -0.30, delta
+
+
+def test_the_squeeze_is_one_sided_at_the_anchor(monkeypatch):
+    """max(0, x): deflation does not squeeze borrower coverage through INPUT
+    costs - it squeezes it through revenue, a different channel, deliberately not
+    modelled (design 4, the mirror). So on deflation_bust the term is inert, and
+    zeroing omega_PC changes nothing."""
+    bust = annualised(ensemble_of("deflation_bust"), "pc")
+    monkeypatch.setattr(engine, "_OMEGA_PC", 0.0)
+    assert annualised(ensemble_of("deflation_bust"), "pc") == pytest.approx(bust, abs=1e-12)
+
+
+def test_inflation_stress_never_exceeds_the_engines_own_crisis_stress():
+    """omega_PC's value is derived from a BOUNDING rule, not picked: the schema
+    caps inflation.average_pct at 20 (x_max = 18) and _CRISIS_LOSS_AMPLIFIER is
+    1.6, so omega_PC <= 0.6/18 = 0.033."""
+    assert engine._OMEGA_PC <= (engine._CRISIS_LOSS_AMPLIFIER - 1.0) / 18.0

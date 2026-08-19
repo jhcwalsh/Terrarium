@@ -122,6 +122,7 @@ _LAMBDA_PE = 0.35  # unlevered pass-through 0.25 x the engine's declared 1.4 lev
 _MU_PE = 0.45  # the shipped presets' own authored -2.0 drift at 4.5pp excess
 
 _PHI_PC = 1.0  # Fisher one-for-one on a nominal reference rate (er14-03 Task C1)
+_OMEGA_PC = 0.03  # fractional loss uplift per pp of excess; bounded under the crisis amplifier
 
 _LAMBDA_INFRA_DEFAULT = 0.60  # C1's declared pm_infra linkage; a DEFAULT, not a constant
 _GAMMA_INFRA = 0.30  # gamma_RE 0.50 x ~1.6 duration premium x 0.4 unregulated share
@@ -499,7 +500,18 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # the same cycle — but it does lose, and it loses MORE when spreads are
     # wide. The old formula charged only 0.6x its own loss rate outside crisis
     # months, which is why it cleared a Sharpe near 2 in every world.
-    pc_loss_m = (pc_loss / 12.0) * (0.7 + 0.6 * spread_lagged / _SPREAD_REFERENCE_BPS) * loss_amp
+    pc_loss_m = (
+        (pc_loss / 12.0)
+        * (0.7 + 0.6 * spread_lagged / _SPREAD_REFERENCE_BPS)
+        * loss_amp
+        # ER-14 (Task C2): sustained inflation squeezes levered borrowers from
+        # both ends - input and wage costs rise, and their own floating
+        # coupons rise with the reference rate - so coverage deteriorates and
+        # defaults rise. One-sided (max(0, x)): deflation does not squeeze
+        # borrower coverage through input costs, it squeezes it through
+        # revenue, a different channel, deliberately not modelled (design 4).
+        * (1.0 + _OMEGA_PC * np.maximum(0.0, x))
+    )
 
     eq = eq_drift / 12.0 + eq_vol_m * z_eq - 2.2 * crisis
     bonds = rate / 12.0 - 6.0 * d_rate + 0.7 * z_b
