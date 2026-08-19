@@ -79,6 +79,9 @@ _TIGHT: dict[str, tuple[float, float]] = {
     "pe": (5.0, 7.0),
     "pc": (10.0, 11.0),
     "re": (3.0, 4.0),
+    # ER-14 close-out (Task S2): infra's own policy target is 5.0 (A15's
+    # carve), so this band excludes it exactly like every other sleeve here.
+    "infra": (7.0, 8.0),
 }
 
 
@@ -1012,8 +1015,8 @@ class TestBandReport:
         assert [s["sleeve"] for s in doc["band_report"]["sleeves"]] == ["equity", "pe"]
 
     def test_the_sleeves_are_listed_in_the_worlds_own_order(self, service):
-        """Liquid in the engine's ``asset_order``, then pe/pc/re — regardless
-        of the order the analyst happened to type the ranges in."""
+        """Liquid in the engine's ``asset_order``, then pe/pc/re/infra —
+        regardless of the order the analyst happened to type the ranges in."""
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
         scrambled = {s: _WIDE for s in reversed(_all_sleeves(default))}
@@ -1027,6 +1030,7 @@ class TestBandReport:
             "pe",
             "pc",
             "re",
+            "infra",
         ]
 
     def test_a_sleeve_comfortably_inside_its_band_reports_ok(self, service):

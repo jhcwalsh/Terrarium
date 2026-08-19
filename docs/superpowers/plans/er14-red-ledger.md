@@ -52,3 +52,22 @@ off the true pre-ER14 baseline, once at `er14-02` and again here; still one
 whatever the tree produces at release time, not any intermediate number).
 No new test id joined the failing set; Task M6/S1's `infra` mechanism
 contributes nothing here (unwired in this WP, same as `er14-02`).
+
+**`er14-04b`'s WP close-out (Task S9)**: `test_committed_cio_fixtures_match_the_builder`
+is **CLEARED ahead of schedule** — Task S8 regenerated
+`app/fixtures/cio-sample.{reported,true,decided}.json` against the tree as it
+stood after Task S7 (the CIO view carrying infra), so the fixture and the
+builder agree again; confirmed green in the S8 commit and again at this
+close-out, not merely assumed. Removed from the "still open" set below.
+
+The three remaining `er14-02`/`er14-03` entries (`test_golden_snapshot`,
+`test_golden_hold_course_final_value`, `test_default_run_is_unchanged_by_these_additions`)
+all moved AGAIN in this WP — Tasks S1 (infra joins ASSETS/REPORTED_SLEEVES)
+and S3 (the twin's SLEEVES/START_MIX gain infra) both change the values
+these goldens pin, on top of `er14-02`'s/`er14-03`'s own drift. Same cause,
+same clearing WP (`er14-05` Task R4); current measured values recorded in
+the S1/S3 commit bodies (`test_golden_hold_course_final_value` now
+83.40037746399018 vs the original pin 80.8944).
+
+No new test id joined the failing set from this WP's own changes; full-suite
+confirmation is in `er14-04b-full.log` (see the S9 close-out commit).

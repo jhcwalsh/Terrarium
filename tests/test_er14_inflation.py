@@ -606,8 +606,10 @@ def test_at12_the_dead_field_is_alive():
     the contract's only inflation-linkage field belongs to a class the
     engine does not simulate."""
     key = "structural.infrastructure.inflation_linkage"
-    lo_hot, lo_cold = probe(12.0, **{key: 0.3}), probe(1.0, **{key: 0.3})
-    hi_hot, hi_cold = probe(12.0, **{key: 0.9}), probe(1.0, **{key: 0.9})
+    lo_hot = probe(12.0, **{key: 0.3})  # type: ignore[arg-type]
+    lo_cold = probe(1.0, **{key: 0.3})  # type: ignore[arg-type]
+    hi_hot = probe(12.0, **{key: 0.9})  # type: ignore[arg-type]
+    hi_cold = probe(1.0, **{key: 0.9})  # type: ignore[arg-type]
     assert not np.array_equal(lo_hot.returns["infra"], hi_hot.returns["infra"])
     resp_lo = annualised(lo_hot, "infra") - annualised(lo_cold, "infra")
     resp_hi = annualised(hi_hot, "infra") - annualised(hi_cold, "infra")
