@@ -54,7 +54,7 @@ import {
 // from "./Play"` is unaffected.
 export { ASSET_LABELS };
 
-const PRIVATE_ASSETS = new Set(["pe", "pc", "re"]);
+const PRIVATE_ASSETS = new Set(["pe", "pc", "re", "infra"]);
 
 // Plane is re-exported from lib/cioView.ts (cio-02) rather than declared
 // here a second time — it is the same "reported" | "true" domain the plane
@@ -76,8 +76,9 @@ export type BundleBands = Record<string, Record<string, number[]>>;
  *
  * Deliberately omits book mode's eyebrow and non-stacked `.fan-key`
  * description paragraph — those stay put in `Play`'s book-mode section
- * so this tab doesn't double them. Only the `.chart-grid` (the eight
- * charts plus the stacked legend) is shared.
+ * so this tab doesn't double them. Only the `.chart-grid` (the nine
+ * charts plus the stacked legend — ER-14 close-out's fourth private
+ * class, infra, joined the other eight) is shared.
  */
 export function peerTabs(
   bands: BundleBands | null,
@@ -417,7 +418,7 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   const order = bundle.revealed.series_order;
   const column = (name: string) =>
     bundle.revealed.tape.map((row) => row[order.indexOf(name)]);
-  // cio-03 task 4: the eight peer-cone fan charts live in exactly one place
+  // cio-03 task 4: the nine peer-cone fan charts live in exactly one place
   // now — this factory call, rendered as book mode's chart section AND as
   // the cockpit's injected Peers tab.
   const peerTab = peerTabs(bundle.bands, column, revealed, plane, bundle.meta.n_paths);
