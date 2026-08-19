@@ -18,6 +18,7 @@ export const ASSET_LABELS: ReadonlyArray<readonly [string, string]> = [
   ["pe", "Private equity"],
   ["pc", "Private credit"],
   ["re", "Real estate"],
+  ["infra", "Infrastructure"],
 ];
 
 /** The display name for a sleeve key, falling back to the raw key for

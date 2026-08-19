@@ -24,6 +24,7 @@ export const SLEEVE_LABEL: Record<string, string> = {
   pe: "Private Equity",
   pc: "Private Credit",
   re: "Real Estate",
+  infra: "Infrastructure",
   cash: "Cash",
 };
 

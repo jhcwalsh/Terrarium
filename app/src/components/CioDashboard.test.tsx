@@ -56,11 +56,12 @@ describe("CioDashboard", () => {
   });
 
   it("renders the CIO headline value in the $10bn display denomination (app-open-01 item 1)", () => {
-    // view.plan.totalValue is 62.1323 (fixture) — the underlying scored
+    // view.plan.totalValue is 64.5205 (fixture, regenerated at er14-04b
+    // Task S8 to carry the fourth private class) — the underlying scored
     // points are untouched; only the rendering (money.ts usd()) changed.
     // Two-decimal bn precision is review-round fix 3 ($10m granularity).
     render(<CioDashboard view={view} onPlaneChange={() => {}} />);
-    expect(host!.textContent).toContain("$6.21bn");
+    expect(host!.textContent).toContain("$6.45bn");
   });
 
   it("switches tabs and renders each", () => {
@@ -716,9 +717,11 @@ describe("CioDashboard — allocation panel band zones (app-open-02 task 3)", ()
     expect(bandZonesIn(commoditiesRow as Element).length).toBe(0);
   });
 
-  it("renders one band zone per class that carries a band — 8 of the fixture's 9 classes (cash excluded)", () => {
+  it("renders one band zone per class that carries a band — 9 of the fixture's 10 classes (cash excluded)", () => {
+    // was 8 of 9 before the fourth private class (infra) joined the fixture
+    // at er14-04b Task S8.
     render(<CioDashboard view={view} onPlaneChange={() => {}} />);
-    expect(bandZonesIn(allocationPanel()).length).toBe(8);
+    expect(bandZonesIn(allocationPanel()).length).toBe(9);
   });
 
   it("goal headers show no band zone of their own — only member-class rows draw one", () => {

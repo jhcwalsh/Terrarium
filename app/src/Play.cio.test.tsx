@@ -324,21 +324,21 @@ describe("peer tab injection", () => {
     expect(tabs[0].label).toBe("Peers");
   });
 
-  // I-2: the eight moved FanCharts, actually rendered — covers the move,
-  // not just the gating logic above.
-  it("renders all eight moved fan charts", () => {
+  // I-2: the nine moved FanCharts, actually rendered — covers the move,
+  // not just the gating logic above. Was eight before ER-14's close-out
+  // (D-ER14-2, 2026-08-18) added infra as the fourth private class.
+  it("renders all nine moved fan charts", () => {
     const series = [1, 1.01, 1.02, 1.03];
     const bands = Object.fromEntries(
-      ["equity", "bonds", "hy", "commodities", "reits", "pe", "pc", "re"].map((key) => [
-        key,
-        { p5: series, p25: series, p50: series, p75: series, p95: series },
-      ]),
+      ["equity", "bonds", "hy", "commodities", "reits", "pe", "pc", "re", "infra"].map(
+        (key) => [key, { p5: series, p25: series, p50: series, p75: series, p95: series }],
+      ),
     );
     const tabs = peerTabs(bands, () => series, series.length);
     host = document.createElement("div");
     document.body.appendChild(host);
     root = createRoot(host);
     act(() => root!.render(tabs[0].render() as React.ReactElement));
-    expect(host.querySelectorAll("figure.fan-chart")).toHaveLength(8);
+    expect(host.querySelectorAll("figure.fan-chart")).toHaveLength(9);
   });
 });

@@ -71,3 +71,28 @@ the S1/S3 commit bodies (`test_golden_hold_course_final_value` now
 
 No new test id joined the failing set from this WP's own changes; full-suite
 confirmation is in `er14-04b-full.log` (see the S9 close-out commit).
+
+**Process-gap correction (`er14-04c`, opening step).** Task S8's own text
+(plan line ~2199) said plainly: "`cd app && npm run test` will still be red
+until WP `er14-04c` — record those in the red ledger with cause
+`bundle-fixture`." Task S9's close-out reconciled the PYTHON-side ledger
+correctly but never appended the app-side entries this line obliged —
+`npm run test` was red at the `er14-04b` merge and the ledger said nothing
+about it. Recorded here, one release late, with cause `bundle-fixture`, and
+cleared in this same WP:
+
+| test id | cause | cleared by |
+|---|---|---|
+| `app/src/lib/bundle.ts` — `SUPPORTED_BUNDLE_VERSIONS` does not list `world-bundle-0.6` (04b's `BUNDLE_VERSION` bump), so `parseBundle` throws `BundleFormatError` on every committed fixture; cascades into `app/src/lib/bundle.test.ts` (4 of its 6 cases), `app/src/components/Provenance.test.tsx` (2), `app/src/Play.overlay.test.tsx` (4), `app/src/App.test.tsx` (1) — 11 test ids total, one root cause | bundle-fixture | `er14-04c` |
+| `app/src/lib/bundle.test.ts` — its own two `bundle_version` pins (`"world-bundle-0.5"` at lines 37 and 45) go stale the moment the allowlist above is fixed: `loads the committed fixture and verifies its seal` and `loads the committed GENERATED fixture: seal, factors, credibility (su-gen-02)` | bundle-fixture | `er14-04c` |
+
+Two additional test ids were ALSO red at the `er14-04c` branch tip, but are
+NOT this cause: `CioDashboard.test.tsx`'s `$6.21bn` headline pin and its
+"8 of 9 classes" band-zone count are stale against the infra-carrying CIO
+fixtures `er14-04b` Task S8 already regenerated — a display re-pin that is
+Task A3's own primary work, not a residual red inherited from another WP, so
+it is fixed in-line rather than carried on this ledger.
+
+**Cleared by `er14-04c`'s WP close-out (Task A4).** Both rows above confirmed
+green in the close-out full-suite run (`er14-04c` close-out commit); no
+app-side entry remains on this ledger.

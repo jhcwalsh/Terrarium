@@ -215,7 +215,8 @@ export interface Book {
   private: Record<string, Rung[]>;
   cash: number;
   /** su-app-07: the institution's POLICY targets in points, naming the FULL
-   * sleeve set — every liquid sleeve AND `pe`/`pc`/`re`. Distinct from the
+   * sleeve set — every liquid sleeve AND every private one (`pe`/`pc`/`re`,
+   * plus `infra` since ER-14's close-out). Distinct from the
    * opening VALUES above: an institution can target 35 equity while holding
    * 41. `null`/absent is the `opening-book-0.1` shape and means "no targets
    * entered", which the server resolves to the book's own opening weights

@@ -41,8 +41,9 @@
  *     never invents a band; it renders whatever `book.ranges` the server
  *     sent, same as before — an untouched pre-fill still posts the SAME
  *     document it was served, so ranked eligibility still survives it.
- *  2. The private sleeves (pe/pc/re) are rows of the SAME targets/bands
- *     table as the liquid sleeves, not a separate strip above each ladder —
+ *  2. The private sleeves (pe/pc/re, and infra since ER-14's close-out) are
+ *     rows of the SAME targets/bands table as the liquid sleeves, not a
+ *     separate strip above each ladder —
  *     same columns, same validation. A private row's `value` cell is
  *     read-only text (the ladder below it, summed at nav_true); it is
  *     edited on the ladder, not here.
@@ -750,7 +751,7 @@ export function BookEntry({
               </thead>
               <tbody>
                 {book.private[sleeve].map((rung, i) => (
-                  <tr key={i}>
+                  <tr key={i} data-testid={`rung-${sleeve}`}>
                     <td>{i}</td>
                     {RUNG_FIELDS.map((field) => {
                       const v = rungField(rung, field);
