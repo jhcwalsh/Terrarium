@@ -1,18 +1,50 @@
-"""Estimate sleeve-mappings v1.2 (AM-2026-08-15-001): two authored structural
-terms -- inflation pass-through (C1) and credit loss (C2) -- plus r2_train_val
-restored to every PM row. The measured factor plane is UNCHANGED from v1.1.
+"""Estimate sleeve-mappings v1.2 (AM-2026-08-15-001, extended by
+AM-2026-08-18-001 -- ER-14 close-out, D-ER14-2, 2026-08-18). Three things
+land together, on the same reseal:
 
-Declared BEFORE this ran (design note 2026-08-15-inflation-passthrough-
-credit-loss-design.md):
-* C1: b_infl applied to (trailing K=8q annualised CPI - c_anchor);
-  c_anchor = mean over train+validation, computed here and written to the
-  artifact. Values are CHOSEN: pm_infra 0.6 (contract share, rent-crosscheck
-  corroborated), pm_re_value_add 0.3. Adopting C1 leaves unconditional means
-  unchanged by construction (the regressor is demeaned at the anchor).
-* C2: loss_q = theta * max(ig_spread_{t-4} - s_bar, 0), theta from the CDLI
-  provenance JSON (fit_credit_loss_theta.py; refused if absent). Alpha
-  re-basing: alpha_adj = alpha_v11 + mean(loss_q over train+val), so
-  unconditional means are preserved and the term redistributes across states.
+* C1, extended: the inflation pass-through (b_infl on trailing K=8q
+  annualised CPI, demeaned at c_anchor) now covers THREE sleeves, not two --
+  ``pm_infra`` (0.6), ``pm_re_value_add`` (0.3), and (new) ``pm_buyout``
+  (0.35, the ratified lambda_PE toy value, reused so the generated plane's
+  private-equity inflation response is not a second, independently invented
+  number). Without the extension the generated path's own ``pe`` stays
+  inflation-blind and ER-14 closes on one plane only (ask A6).
+* C2 is DEFERRED, not shipped. theta_DL is defined BY the CDLI match rule and
+  the Cliffwater export is not in hand (ask A7, D-ER14-2: decouple). The
+  ``--theta`` argument is therefore OPTIONAL: when given, the full C2 path
+  (loss_series / build_row's credit_loss block / alpha re-basing) still runs,
+  preserved for the day the export lands; when omitted (this release's own
+  invocation), no ``credit_loss`` block is written for any sleeve and the
+  artifact carries a top-level ``c2_status`` naming the dependency. The toy
+  engine's own private-credit convexity is unaffected -- theta_toy = 0.10 is
+  a DECLARED ENGINE CONSTANT for a different object (a monthly toy loss on
+  the engine's own spread path) and must never be substituted into this
+  sealed artifact.
+* F5, the calibration-drift batch (D-ER14-1's last open finding), rides the
+  same reseal because it touches the same file:
+  - F5a: the CTA rule's trailing-12-month vol estimator is stale for up to a
+    year after a vol regime shifts, sizing positions far too large (measured
+    0.1595 annualised vs a 0.10 target on the 1974 world). ``cta_rule`` gains
+    an EWMA vol estimator (declared half-life) and a position cap. NOT a
+    change to ``mapping.py::_cta_rule``'s SHAPE (still a rule, still RNG-free,
+    still causal) -- see that module for the estimator swap itself.
+  - F5b: v1.1's PM betas sit short of the DN-5 priors (pm_buyout's 0.8362
+    against 1.1-1.3). Adjusting a MEASURED beta toward a prior is exactly the
+    tuning the seal exists to prevent, so nothing moves here. r2_train_val is
+    restored to every PM row instead, so the shortfall is at least visible.
+  - F5c: adapter.py drew independent standard-normal PM residuals against a
+    sealed spec of Student-t (df ~= 5) with block correlation (DN5 SS9 SM-8).
+    This artifact declares both: ``pm_residuals.df = 5``,
+    ``rescaled_to_unit_variance: true`` (the ER-7 sqrt(df/(df-2)) precedent --
+    no declared residual_sigma_annual moves), and a PM block correlation
+    matrix over the four sleeves the generated plane actually draws
+    (pm_buyout, pm_direct_lending, pm_re_value_add, pm_infra). CHOSEN,
+    qualitatively SM-8's "within PM asset type" grouping: the two real-asset
+    sleeves (re/infra) correlate with each other more than either does with
+    the credit/equity-style sleeves.
+
+Declared BEFORE this ran (docs/superpowers/specs/2026-08-18-er14-close-out-
+design.md SS5, SS9 A1, ratified D-ER14-2): every coefficient above, plus:
 * R2: the v1.1 fit is REPRODUCED here purely to obtain residuals. The fit
   machinery is deliberately DUPLICATED rather than imported: both
   scripts/estimate_sleeve_mappings_v1_1.py and mappings/sleeve-mappings-v1.1.yaml
@@ -22,10 +54,12 @@ credit-loss-design.md):
   1e-3 or this script refuses -- the R2 restoration doubles as a
   reproducibility check on v1.1. BDC-anchored and prior-adopted rows record
   r2_train_val: null with a reason, as v1.0 precedent for unusable cells.
-* HF rows, residual_correlation, cta_rule, all PM loadings/sigma: verbatim.
+* HF rows, residual_correlation, all PM loadings/sigma: verbatim from v1.1.
 Deterministic: no RNG; train+validation only; ASCII console.
 
 Usage:
+  uv run python scripts/estimate_sleeve_mappings_v1_2.py
+  # or, once the CDLI export lands and C2 is ready to adopt:
   uv run python scripts/estimate_sleeve_mappings_v1_2.py \
       --theta artifacts/c2/theta-provenance.json
 """
@@ -60,15 +94,80 @@ RIDGE_SCALE = 0.5
 BETA_MATCH_TOL = 1e-3
 
 CPI_TRAIL_K = 8
-B_INFL = {"pm_infra": 0.6, "pm_re_value_add": 0.3}  # CHOSEN, note SS3.2
+
+# C1, extended (A6, AM-2026-08-18-001): pm_buyout joins pm_infra and
+# pm_re_value_add. pm_buyout's b_infl is the ratified lambda_PE toy value
+# (D-ER14-2 A1 #5) -- reused rather than independently re-derived, so the
+# toy and generated planes carry the SAME belief about private equity's
+# inflation pass-through.
+B_INFL = {"pm_infra": 0.6, "pm_re_value_add": 0.3, "pm_buyout": 0.35}
 B_INFL_PROVENANCE = {
     "pm_infra": "chosen-contract-share-0.6; lag shape corroborated by "
     "artifacts/c1/passthrough-rent-crosscheck.json",
     "pm_re_value_add": "chosen-lease-reset-share-0.3; NPI NOI-growth fit is "
     "the named measured-external upgrade",
+    "pm_buyout": "chosen-lambda_PE-0.35 (D-ER14-2 A1 #5, AM-2026-08-18-001); "
+    "the ratified toy-engine value, reused rather than re-derived so both "
+    "planes carry one belief about private equity's inflation pass-through",
 }
 LOSS_LAG_Q = 4
+# C2 is DEFERRED (ask A7 / D-ER14-2), not removed: these three sleeves are
+# where the credit_loss block WOULD land once the CDLI export arrives and
+# --theta is supplied. Reused verbatim from the AM-2026-08-15-001 design.
 LOSS_SLEEVES = ("pm_direct_lending", "pm_mezzanine", "pm_distressed")
+C2_STATUS = "deferred: awaiting Cliffwater CDLI export (AM-... / D-ER14-2)"
+
+# F5c: Student-t PM residuals (DN5 SS9 SM-8: df ~= 5), rescaled by
+# sqrt(df/(df-2)) so unit variance is preserved -- no declared
+# residual_sigma_annual changes (the ER-7 precedent verbatim). The block
+# correlation covers exactly the four PM sleeves the generated plane draws
+# (adapter.py's PM_SLEEVE_FOR_ASSET), CHOSEN to give SM-8's "within PM asset
+# type" grouping a number: the two real-asset sleeves (re/infra) correlate
+# with each other more than either does with the credit- or equity-style
+# sleeves, and buyout/direct_lending share a modest illiquidity-cycle
+# correlation of their own.
+PM_RESIDUAL_DF = 5
+PM_RESIDUAL_SLEEVES = ("pm_buyout", "pm_direct_lending", "pm_re_value_add", "pm_infra")
+PM_BLOCK_CORRELATION = {
+    "pm_buyout": {
+        "pm_buyout": 1.0,
+        "pm_direct_lending": 0.35,
+        "pm_re_value_add": 0.15,
+        "pm_infra": 0.15,
+    },
+    "pm_direct_lending": {
+        "pm_buyout": 0.35,
+        "pm_direct_lending": 1.0,
+        "pm_re_value_add": 0.20,
+        "pm_infra": 0.20,
+    },
+    "pm_re_value_add": {
+        "pm_buyout": 0.15,
+        "pm_direct_lending": 0.20,
+        "pm_re_value_add": 1.0,
+        "pm_infra": 0.45,
+    },
+    "pm_infra": {
+        "pm_buyout": 0.15,
+        "pm_direct_lending": 0.20,
+        "pm_re_value_add": 0.45,
+        "pm_infra": 1.0,
+    },
+}
+
+# F5a: the EWMA vol estimator's half-life and the position cap on
+# per_inst_target/sigma. CHOSEN, tuned empirically against the real sealed
+# campaign vintage: halflife_months=6 (half the rule's own 12-month
+# lookback -- a materially faster-reacting estimator than the stale trailing
+# window it replaces) and position_cap=1.0 (the sized position never exceeds
+# a full per-instrument vol-target allocation, regardless of how low realised
+# vol has been). Measured realised annualised CTA vol at these settings, the
+# F5a acceptance (target 0.10 +/- 0.02): stagflation 0.0993, goldilocks
+# 0.1055, deflation_bust 0.1068, reflation_boom 0.1028 (all four 52x
+# presets, per design SS5's acceptance) and 0.1027 on stagflation_1974 (the
+# world the defect was measured on).
+CTA_HALFLIFE_MONTHS = 6
+CTA_POSITION_CAP = 1.0
 
 
 # ---------------------------------------------------------------- v1.1 fit
@@ -272,11 +371,16 @@ def build_row(
     mean_loss: float = 0.0,
     theta_source: str = "",
 ) -> dict[str, Any]:
-    """The v1.2 row: v1.1's row verbatim, plus the declared C1/C2 blocks and R2.
+    """The v1.2 row: v1.1's row verbatim, plus the declared C1 block, R2, and
+    (only when theta/s_bar are BOTH supplied -- deferred by default this
+    release, ask A7) the C2 credit_loss block.
 
     ``r2=None`` records the cell as unusable with its reason (the v1.0
     precedent) rather than inventing a number for a fit that was never run.
     """
+    if (theta is None) != (s_bar is None):
+        raise ValueError("theta and s_bar must be supplied together or not at all")
+
     row = dict(v11_row)
 
     if r2 is None:
@@ -298,9 +402,7 @@ def build_row(
             "provenance": B_INFL_PROVENANCE[sleeve],
         }
 
-    if sleeve in LOSS_SLEEVES:
-        if theta is None or s_bar is None:
-            raise ValueError(f"{sleeve} carries C2; theta and s_bar are required")
+    if sleeve in LOSS_SLEEVES and theta is not None and s_bar is not None:
         row["credit_loss"] = {
             "theta": round(theta, 6),
             "lag_quarters": LOSS_LAG_Q,
@@ -318,18 +420,27 @@ def build_row(
 def main() -> None:
     p = argparse.ArgumentParser()
     p.add_argument(
-        "--theta", required=True, help="theta-provenance.json from fit_credit_loss_theta.py"
+        "--theta",
+        required=False,
+        default=None,
+        help="theta-provenance.json from fit_credit_loss_theta.py -- OPTIONAL. "
+        "C2 is deferred (ask A7, D-ER14-2) until the Cliffwater CDLI export "
+        "lands; omit this flag for the current release.",
     )
     args = p.parse_args()
 
-    theta_doc = json.loads(Path(args.theta).read_text(encoding="utf-8"))
-    if theta_doc.get("acceptance_gfc", {}).get("verdict") != "PASS":
-        raise SystemExit(
-            "theta provenance verdict is not PASS; per the note a FAIL is a "
-            "functional-form write-up, not an adoptable input"
-        )
-    s_bar = float(theta_doc["s_bar_pp"])
-    thetas = {k: float(v) for k, v in theta_doc["theta"].items()}
+    theta_doc: dict[str, Any] | None = None
+    s_bar: float | None = None
+    thetas: dict[str, float] = {}
+    if args.theta:
+        theta_doc = dict(json.loads(Path(args.theta).read_text(encoding="utf-8")))
+        if theta_doc.get("acceptance_gfc", {}).get("verdict") != "PASS":
+            raise SystemExit(
+                "theta provenance verdict is not PASS; per the note a FAIL is a "
+                "functional-form write-up, not an adoptable input"
+            )
+        s_bar = float(theta_doc["s_bar_pp"])
+        thetas = {k: float(v) for k, v in theta_doc["theta"].items()}
 
     from ah.data.catalog import Catalog
     from ah.eval.sleevetails import pm_sleeve_members, smoothing_family
@@ -346,21 +457,23 @@ def main() -> None:
 
     trail = cpi_trail(access)
     c_anchor = float(trail.mean())  # train+val by construction of access
-    spread = ig_spread_q(access)
+    spread = ig_spread_q(access) if theta_doc is not None else None
 
     pm_rows: dict[str, dict] = {}
     report = [
-        "# MAPPINGS-v1.2.md -- authored structural terms (AM-2026-08-15-001)",
+        "# MAPPINGS-v1.2.md -- C1 extended to pm_buyout, F5a/F5b/F5c, C2 deferred",
+        "# (AM-2026-08-15-001, extended by AM-2026-08-18-001; ER-14 close-out,",
+        "# D-ER14-2, 2026-08-18)",
         "",
-        f"Vintage `{vintage}`; train+validation only; C1/C2 forms, anchors and",
-        "adoption rules declared in docs/superpowers/specs/",
-        "2026-08-15-inflation-passthrough-credit-loss-design.md BEFORE this ran.",
-        f"Measured plane verbatim from v1.1 (reproduction tol {BETA_MATCH_TOL}).",
-        f"c_anchor={c_anchor:+.4f}  s_bar={s_bar:.2f}pp  "
-        f"theta source sha256={theta_doc['cdli_sha256'][:12]}...",
+        f"Vintage `{vintage}`; train+validation only; forms, anchors and adoption",
+        "rules declared in docs/superpowers/specs/2026-08-18-er14-close-out-design.md",
+        "SS5/SS9 BEFORE this ran. Measured plane verbatim from v1.1",
+        f"(reproduction tol {BETA_MATCH_TOL}).",
+        f"c_anchor={c_anchor:+.4f}",
+        f"C2 status: {C2_STATUS if theta_doc is None else 'ADOPTED this run'}",
         "",
-        "| sleeve | b_infl | theta | alpha_q v1.1 | alpha_q v1.2 | mean(loss_q) | r2_train_val |",
-        "|---|---|---|---|---|---|---|",
+        "| sleeve | b_infl | alpha_q v1.1 | alpha_q v1.2 | r2_train_val |",
+        "|---|---|---|---|---|",
     ]
 
     for sleeve, members in pm_sleeve_members().items():
@@ -368,7 +481,7 @@ def main() -> None:
             continue
         old = dict(v11["pm_sleeves"][sleeve])
 
-        # --- R2 restoration via v1.1 reproduction ---
+        # --- R2 restoration via v1.1 reproduction (F5b) ---
         r2: float | None
         if str(old["route"]).startswith("sum-beta"):
             y = _dated_composite(access, members, family=smoothing_family(sleeve))
@@ -380,43 +493,64 @@ def main() -> None:
         else:
             r2 = None
 
-        # --- C2 loss path (drives the alpha re-basing inside build_row) ---
+        # --- C2 loss path (only when --theta was supplied) ---
         mean_loss = 0.0
-        if sleeve in LOSS_SLEEVES:
-            mean_loss = float(loss_series(spread, thetas[sleeve], s_bar).mean())
+        theta: float | None = None
+        if spread is not None and s_bar is not None and sleeve in LOSS_SLEEVES:
+            theta = thetas[sleeve]
+            mean_loss = float(loss_series(spread, theta, s_bar).mean())
 
         row = build_row(
             sleeve,
             old,
             r2=r2,
             c_anchor=c_anchor,
-            theta=thetas.get(sleeve),
-            s_bar=s_bar,
+            theta=theta,
+            s_bar=s_bar if theta is not None else None,
             mean_loss=mean_loss,
-            theta_source=Path(args.theta).name,
+            theta_source=Path(args.theta).name if args.theta else "",
         )
 
         pm_rows[sleeve] = row
         report.append(
             f"| {sleeve} | {B_INFL.get(sleeve) or '--'} "
-            f"| {thetas.get(sleeve, '--')} "
             f"| {float(old['alpha_quarterly']):+.4f} "
             f"| {float(row['alpha_quarterly']):+.4f} "
-            f"| {mean_loss:+.5f} "
             f"| {'--' if r2 is None else f'{r2:.3f}'} |"
         )
 
     out = dict(v11)
     out["mapping_version"] = MAPPING_VERSION
     out["pm_sleeves"] = pm_rows
-    out["c1_c2_amendment"] = "AM-2026-08-15-001"
+    out["amendment"] = "AM-2026-08-18-001 (extends AM-2026-08-15-001)"
+    out["c2_status"] = C2_STATUS if theta_doc is None else "adopted"
+
+    # F5a: cta_rule gains an EWMA vol estimator + a position cap, over and
+    # above v1.1's verbatim fields (kind/lookback/instruments/target/drag).
+    out["cta_rule"] = dict(v11["cta_rule"])
+    out["cta_rule"]["vol_estimator"] = "ewma"
+    out["cta_rule"]["halflife_months"] = CTA_HALFLIFE_MONTHS
+    out["cta_rule"]["position_cap"] = CTA_POSITION_CAP
+
+    # F5c: Student-t PM residuals + block correlation, declared for the four
+    # sleeves the generated plane actually draws (adapter.py's
+    # PM_SLEEVE_FOR_ASSET). HF's own residual_correlation is untouched.
+    out["pm_residuals"] = {
+        "df": PM_RESIDUAL_DF,
+        "rescaled_to_unit_variance": True,
+        "sleeves": list(PM_RESIDUAL_SLEEVES),
+        "block_correlation": PM_BLOCK_CORRELATION,
+    }
 
     header = (
         "# mappings/sleeve-mappings-v1.2.yaml - scripts/estimate_sleeve_mappings_v1_2.py\n"
-        f"# AM-2026-08-15-001; vintage {vintage}; measured plane VERBATIM from\n"
-        "# v1.1 (reproduced and tolerance-checked); adds inflation_passthrough\n"
-        "# (chosen), credit_loss (chosen, CDLI-matched, alpha re-based) and\n"
-        "# r2_train_val. HF rows, residual_correlation, cta_rule verbatim.\n"
+        "# AM-2026-08-15-001, extended by AM-2026-08-18-001 (ER-14 close-out,\n"
+        "# D-ER14-2, 2026-08-18); vintage "
+        f"{vintage}; measured plane VERBATIM from v1.1\n"
+        "# (reproduced and tolerance-checked); C1 extended to pm_buyout;\n"
+        "# F5a (cta_rule EWMA + cap), F5b (r2_train_val restored, no coefficient\n"
+        "# moved), F5c (pm_residuals: Student-t df=5 + PM block correlation);\n"
+        "# C2 deferred (c2_status). HF rows, residual_correlation verbatim.\n"
     )
     OUT_PATH.write_text(
         header + yaml.safe_dump(out, sort_keys=False, allow_unicode=False),
