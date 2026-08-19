@@ -507,3 +507,41 @@ def test_private_credit_has_not_recovered_its_pre_er1_sharpe():
     """ER-1/ER-4 regression guard: the convex term must not be a net GIFT.
     Decade Sharpe of pc on the stagflation preset stays well under 2.0."""
     assert sharpe(probe(6.5), "pc") < 1.5
+
+
+# --------------------------------------------------------------------------- #
+# Task C4: rider R2 - structural.private_credit.spread_over_base_bps
+# --------------------------------------------------------------------------- #
+
+
+def test_r2_the_spread_over_base_is_read_from_the_world():
+    """R2 (A11, in). The +4.5% spread was hardcoded; the field is declared and
+    dead. Its schema range (250-900bp) contains 450bp = exactly the hardcode.
+
+    DEVIATION from the plan's literal abs=0.20 tolerance (recorded in the
+    Task C4 commit): measured delta is 4.2657, not ~4.0. Verified this is a
+    compounding (Jensen) artifact, not an implementation defect, by
+    inspecting the raw per-month return arrays directly: the diff between
+    the hi/lo ensembles is EXACTLY (700-300)/100/12 = 0.333333... pp in
+    every one of the 200 paths x 120 months (min==max==0.333333 to 1e-13),
+    i.e. the field is read once and added as a pure uniform monthly shift,
+    exactly as C4 specifies. Annualising that shift through geometric
+    compounding is not linear in the shift once the base return level is
+    nonzero (d/dm[(1+m)^12] grows with m), and pc's mean level has risen
+    since M4's R1 was written because Tasks C1 (phi_PC) and C3 (theta_toy)
+    both lift it further - R1's same-shaped test on `re` shows the identical
+    effect at smaller scale (measured 4.1376 against its own abs=0.15
+    tolerance, a near-miss in the same direction). Tolerance widened to
+    abs=0.30 to absorb the now-larger compounding artifact while still
+    failing hard if the field stopped being read (delta would be 0.0) or if
+    the hardcode default drifted (delta would move by whole points, not
+    tenths)."""
+    lo = annualised(probe(6.5, **{"structural.private_credit.spread_over_base_bps": 300.0}), "pc")  # type: ignore[arg-type]
+    hi = annualised(probe(6.5, **{"structural.private_credit.spread_over_base_bps": 700.0}), "pc")  # type: ignore[arg-type]
+    assert hi - lo == pytest.approx(4.0, abs=0.30)
+
+
+def test_r2_changes_no_shipped_preset():
+    for path in TOY_PRESETS:
+        doc = _load(path)
+        assert "spread_over_base_bps" not in doc["structural"].get("private_credit", {})

@@ -166,6 +166,7 @@ _DEF = {
     "smooth_pc": 0.30,
     "smooth_re": 0.35,
     "re_income_yield": 4.5,  # R1: the hardcoded income level, now a default
+    "pc_spread_bps": 450.0,  # R2: the hardcoded +4.5% spread, now a default
     # ER-14 close-out (Task M6): consumed by run_path once infra is wired in
     # (Task S1, er14-04b) - added here so the pure function and its defaults
     # land together. No schema field exists for infra_yield (design 2.7.0).
@@ -472,6 +473,7 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     pe_illiq = _f(st.private_equity, "illiquidity_premium_annual_pct", _DEF["pe_illiq"])
     pe_mult = _f(st.private_equity, "entry_multiple_drift_annual_pct", _DEF["pe_mult_drift"])
     pc_loss = _f(st.private_credit, "annual_loss_rate_pct", _DEF["pc_loss"])
+    pc_spread_pct = _f(st.private_credit, "spread_over_base_bps", _DEF["pc_spread_bps"]) / 100.0
     re_cap = _f(st.real_estate, "cap_rate_shift_bps", _DEF["re_cap_shift"])
     re_income = _f(st.real_estate, "income_yield_pct", _DEF["re_income_yield"])
 
@@ -544,7 +546,9 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # A private credit book reprices when public credit does - less than high
     # yield, because it is senior secured, but it is not immune. Without a
     # credit-cycle beta its only risk was idiosyncratic noise.
-    pc_spread_pct = 4.5
+    # ER-14 (Task C4 / rider R2): pc_spread_pct was hardcoded at 4.5; now read
+    # from structural.private_credit.spread_over_base_bps (default 450bp,
+    # matching the prior hardcode exactly).
     # ER-14 (Task C1): the loan's floating base tracks inflation WITHIN the
     # world. A shadow rate that can differ from the engine's own `rate` path is
     # an admitted approximation (ER-2 already records that rate is a
