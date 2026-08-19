@@ -670,3 +670,19 @@ def test_at10_generated_private_credit_still_takes_the_loss_bite():
     deferred on the CDLI export (D-ER14-2)."""
     delta = annualised(gen_probe(12.0), "pc") - annualised(gen_probe(1.0), "pc")
     assert delta < 0.0, delta
+
+
+# --------------------------------------------------------------------------- #
+# AT-13: the escalator asymmetry, measured not argued (Task B2)
+# --------------------------------------------------------------------------- #
+
+
+def test_at13_the_symmetric_escalators_deflation_cost_is_recorded():
+    """AT-13, a DISCLOSURE with no threshold. C1 explicitly defers escalator
+    caps and floors ('documented asymmetry, deferred'), so this design
+    inherits a SYMMETRIC escalator and overstates infrastructure's deflation
+    downside - possibly by the whole -1.8 pp/yr. The size goes in the
+    close-out entry as a number, so the deferred item carries its own cost
+    estimate."""
+    doc = json.loads((ROOT / "artifacts" / "er14" / "response.json").read_text())
+    assert "at13" in doc and "floored_variant_delta_pp" in doc["at13"]
