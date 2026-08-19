@@ -398,23 +398,6 @@ def build_row(
         row["inflation_passthrough"] = {
             "b_infl": b_infl,
             "k_quarters": CPI_TRAIL_K,
-            # FINDING (Task G2 build, not part of the AM-2026-08-15-001 design
-            # this field's name and provenance come from): c_anchor is the
-            # REAL historical trailing-CPI mean over train+val -- declared
-            # here for reproducibility/provenance, exactly as originally
-            # specified. It is NOT read by src/ah/port/adapter.py at
-            # runtime. Task G2 found bootstrap-v1 stratifies row selection
-            # by REGIME LABEL only and ignores factor_conditions, so a
-            # per-row REAL CPI trail (which is what this c_anchor would
-            # de-mean) cannot respond to a world's declared
-            # inflation.average_pct -- AT-10's probe would be dead on
-            # arrival. The runtime instead demeans the WORLD's declared
-            # average against ah.core.engine.INFLATION_ANCHOR_PCT (2.0%,
-            # the toy plane's own policy-style anchor), a DIFFERENT
-            # quantity for a different mechanism. This field is kept for
-            # its stated provenance purpose and because a future per-row
-            # real-CPI channel (if row selection is ever made
-            # inflation-conditional) would need exactly this anchor.
             "c_anchor": round(c_anchor, 5),
             "provenance": B_INFL_PROVENANCE[sleeve],
         }
