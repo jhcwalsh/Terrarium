@@ -19,7 +19,243 @@ import { act } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { BookEntry } from "./BookEntry";
-import type { DefaultBookResponse } from "./lib/session";
+import type { DefaultBookResponse, Rung } from "./lib/session";
+
+/**
+ * ER-14 close-out (D-ER14-2, er14-04c Task A2): infrastructure's fifteen-rung
+ * ladder (one rung per year of pm_infra's contractual life, ER-12's staggered
+ * seeding), pulled from the real server payload
+ * (`default_opening_book(GEN_START_TARGETS)`, this file's own regeneration
+ * instruction) rather than invented — it is IDENTICAL under the toy and the
+ * generated target sets below, because both carry the same infra target (5).
+ */
+const INFRA_RUNGS: Rung[] = [
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.032777048909130704,
+      unfunded: 0.3418177957666488,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.032777048909130704,
+      nav_reported: 0.032777048909130704,
+      cumulative_distributions: 0.0,
+    },
+    identity: { vintage_year: 2019 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.1408533600855862,
+      unfunded: 0.23374148459019325,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.14910648806185522,
+      nav_reported: 0.14910648806185522,
+      cumulative_distributions: 2.8724249691272705e-5,
+    },
+    identity: { vintage_year: 2018 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.21697711807949738,
+      unfunded: 0.15761772659628207,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.24498884490806908,
+      nav_reported: 0.24498884490806908,
+      cumulative_distributions: 0.0004898262691950227,
+    },
+    identity: { vintage_year: 2017 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.25764449254763283,
+      unfunded: 0.11695035212814664,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.3127451463190014,
+      nav_reported: 0.3127451463190014,
+      cumulative_distributions: 0.002534623111309532,
+    },
+    identity: { vintage_year: 2016 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.28304893000027403,
+      unfunded: 0.09154591467550541,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.36849701753637376,
+      nav_reported: 0.36849701753637376,
+      cumulative_distributions: 0.008069527906904767,
+    },
+    identity: { vintage_year: 2015 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.29904901027817715,
+      unfunded: 0.07554583439760228,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.41429392206647875,
+      nav_reported: 0.41429392206647875,
+      cumulative_distributions: 0.019731413947794086,
+    },
+    identity: { vintage_year: 2014 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.30975925351469247,
+      unfunded: 0.06483559116108699,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.44996019269560344,
+      nav_reported: 0.44996019269560344,
+      cumulative_distributions: 0.04072218260872906,
+    },
+    identity: { vintage_year: 2013 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.3189510899310302,
+      unfunded: 0.055643754744749224,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.4746544604069393,
+      nav_reported: 0.4746544604069393,
+      cumulative_distributions: 0.07458843335792985,
+    },
+    identity: { vintage_year: 2012 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.32683978627890165,
+      unfunded: 0.04775505839687778,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.4839297571607243,
+      nav_reported: 0.4839297571607243,
+      cumulative_distributions: 0.12463508392782004,
+    },
+    identity: { vintage_year: 2011 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.33361009062834684,
+      unfunded: 0.040984754047432584,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.47405114915217345,
+      nav_reported: 0.47405114915217345,
+      cumulative_distributions: 0.19296699636719997,
+    },
+    identity: { vintage_year: 2010 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.3394205590457913,
+      unfunded: 0.035174285629988124,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.44316675750495577,
+      nav_reported: 0.44316675750495577,
+      cumulative_distributions: 0.27944478337173195,
+    },
+    identity: { vintage_year: 2009 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.34440726887263773,
+      unfunded: 0.030187575803141683,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.3923962129870718,
+      nav_reported: 0.3923962129870718,
+      cumulative_distributions: 0.38084838801701226,
+    },
+    identity: { vintage_year: 2008 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.3486870055669306,
+      unfunded: 0.025907839108848814,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.326357111989186,
+      nav_reported: 0.326357111989186,
+      cumulative_distributions: 0.4907005738453172,
+    },
+    identity: { vintage_year: 2007 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.3523599977418252,
+      unfunded: 0.022234846933954243,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.2526810121028336,
+      nav_reported: 0.2526810121028336,
+      cumulative_distributions: 0.6001191265430497,
+    },
+    identity: { vintage_year: 2006 },
+  },
+  {
+    commitment: {
+      committed: 0.37459484467577947,
+      paid_in: 0.35551226445365985,
+      unfunded: 0.019082580222119578,
+      recallable_balance: 0,
+      cumulative_recycled: 0,
+    },
+    value: {
+      nav_true: 0.1803948781996038,
+      nav_reported: 0.1803948781996038,
+      cumulative_distributions: 0.6997045780783809,
+    },
+    identity: { vintage_year: 2005 },
+  },
+];
 
 /**
  * su-app-07 Ruling D: the SERVER pre-fills `targets` (equal to the values on
@@ -31,11 +267,18 @@ import type { DefaultBookResponse } from "./lib/session";
  * would let a client that invents targets or bands locally, or posts a
  * document the server would not have, pass every test in this file while
  * silently stripping RANKED from an untouched book on the real service.
+ *
+ * ER-14 close-out (er14-04c Task A2): regenerated against the real served
+ * shape (`default_opening_book(GEN_START_TARGETS)`, this world's four-sleeve
+ * generated target set) rather than hand-edited — infra joins at its real
+ * carved target (5, the equity carve 41 -> 38 and the real estate carve
+ * 7 -> 5 that funded it, `src/ah/port/adapter.py`'s `GEN_START_TARGETS`
+ * comment, Task S4/A15).
  */
 const DEFAULT_RESPONSE: DefaultBookResponse = {
   book: {
-    state_version: "opening-book-0.2",
-    liquid: { equity: 41, bonds: 12, hy: 5, commodities: 5 },
+    state_version: "opening-book-0.3",
+    liquid: { equity: 38, bonds: 12, hy: 5, commodities: 5 },
     private: {
       pe: [
         {
@@ -66,35 +309,48 @@ const DEFAULT_RESPONSE: DefaultBookResponse = {
       re: [
         {
           commitment: {
-            committed: 1.4,
-            paid_in: 0.7,
-            unfunded: 0.7,
+            committed: 1,
+            paid_in: 0.5,
+            unfunded: 0.5,
             recallable_balance: 0,
             cumulative_recycled: 0,
           },
-          value: { nav_true: 7, nav_reported: 7, cumulative_distributions: 0 },
+          value: { nav_true: 5, nav_reported: 5, cumulative_distributions: 0 },
           identity: { vintage_year: 2019 },
         },
       ],
+      infra: INFRA_RUNGS,
     },
     cash: 2,
-    // the eight-sleeve SAA, equal to the values on the derived default
-    // (41 + 12 + 5 + 5 + 20 + 8 + 7 = 98, + 2 cash = 100)
-    targets: { equity: 41, bonds: 12, hy: 5, commodities: 5, pe: 20, pc: 8, re: 7 },
-    // app-open-01 delta 1: +/-10% of each target above, one decimal place
-    // (41 -> +/-4.1, 12 -> +/-1.2, 5 -> +/-0.5, 20 -> +/-2.0, 8 -> +/-0.8,
-    // 7 -> +/-0.7) — matches `default_band` exactly, not invented here.
+    // the nine-sleeve SAA, equal to the values on the derived default
+    // (38 + 12 + 5 + 5 + 20 + 8 + 5 + 5 = 98, + 2 cash = 100)
+    targets: {
+      equity: 38,
+      bonds: 12,
+      hy: 5,
+      commodities: 5,
+      pe: 20,
+      pc: 8,
+      re: 5,
+      infra: 5,
+    },
+    // app-open-01 delta 1: +/-10% of each target above, one decimal place —
+    // matches `default_band` exactly, not invented here.
     ranges: {
-      equity: [36.9, 45.1],
+      equity: [34.2, 41.8],
       bonds: [10.8, 13.2],
       hy: [4.5, 5.5],
       commodities: [4.5, 5.5],
       pe: [18, 22],
       pc: [7.2, 8.8],
-      re: [6.3, 7.7],
+      re: [4.5, 5.5],
+      infra: [4.5, 5.5],
     },
   },
-  plan: { state_version: "commitment-plan-0.1", points: { pe: [3.6], pc: [1.44], re: [1.26] } },
+  plan: {
+    state_version: "commitment-plan-0.1",
+    points: { pe: [3.6], pc: [1.44], re: [0.9], infra: [0.9] },
+  },
   liquid_sleeves: ["equity", "bonds", "hy", "commodities"],
   book_digest: "a".repeat(64),
   plan_digest: "b".repeat(64),
@@ -105,21 +361,35 @@ const DEFAULT_RESPONSE: DefaultBookResponse = {
 };
 
 /**
- * A world that DOES carry reits. The default fixture above is a four-sleeve
- * (generated) world, so "four target rows, not five" is only a real claim
- * about the server driving the sleeve set if some other fixture produces
- * five from the same component. This is that fixture: 33 + 12 + 5 + 5 + 8 =
- * 63 liquid, + 35 private, + 2 cash = 100, with targets equal to values.
+ * A world that DOES carry reits. The default fixture above is a five-sleeve
+ * (generated) world (four liquid, ER-14's fourth private class), so "five
+ * target rows, not six" [sic — see the tests below, which state the real
+ * counts] is only a real claim about the server driving the sleeve set if
+ * some other fixture produces a different count from the same component.
+ * This is that fixture: 33 + 12 + 5 + 5 + 5 = 60 liquid, + 38 private, + 2
+ * cash = 100, with targets equal to values — the real toy `START_TARGETS`
+ * carve (reits 8 -> 5, re 7 -> 5, funding infra's 5; equity untouched at 33).
  */
 const REITS_RESPONSE: DefaultBookResponse = {
   ...DEFAULT_RESPONSE,
   book: {
     ...DEFAULT_RESPONSE.book,
-    liquid: { equity: 33, bonds: 12, hy: 5, commodities: 5, reits: 8 },
-    targets: { equity: 33, bonds: 12, hy: 5, commodities: 5, reits: 8, pe: 20, pc: 8, re: 7 },
-    // equity's own band moves with its own target (33, not 41); reits gets
-    // its own +/-10% band (8 -> +/-0.8); the rest are unchanged from above.
-    ranges: { ...DEFAULT_RESPONSE.book.ranges, equity: [29.7, 36.3], reits: [7.2, 8.8] },
+    liquid: { equity: 33, bonds: 12, hy: 5, commodities: 5, reits: 5 },
+    targets: {
+      equity: 33,
+      bonds: 12,
+      hy: 5,
+      commodities: 5,
+      reits: 5,
+      pe: 20,
+      pc: 8,
+      re: 5,
+      infra: 5,
+    },
+    // equity's own band moves with its own target (33, not 38); reits gets
+    // its own +/-10% band at its real (carved) target; the rest are
+    // unchanged from above.
+    ranges: { ...DEFAULT_RESPONSE.book.ranges, equity: [29.7, 36.3], reits: [4.5, 5.5] },
   },
   liquid_sleeves: ["equity", "bonds", "hy", "commodities", "reits"],
 };
@@ -226,7 +496,7 @@ describe("BookEntry", () => {
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     const equity = byLabel<HTMLInputElement>("equity");
-    expect(equity.value).toBe("41");
+    expect(equity.value).toBe("38");
   });
 
   it("shows the running total and reports 100 for the default", async () => {
@@ -240,7 +510,7 @@ describe("BookEntry", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     const equity = byLabel<HTMLInputElement>("equity");
     setValue(equity, "50");
-    expect(byTestId("book-total").textContent).toContain("109");
+    expect(byTestId("book-total").textContent).toContain("112");
     expect(findButton(/play/i).disabled).toBe(true);
   });
 
@@ -414,19 +684,23 @@ describe("BookEntry", () => {
 describe("BookEntry — policy targets and reporting bands", () => {
   it("pre-fills every target from the served book, and every band at its default", async () => {
     // Ruling D: the targets are the SERVER's, not synthesized here — every
-    // sleeve carries one, the four liquid AND pe/pc/re. app-open-01 delta 1:
-    // the bands are ALSO the server's now, defaulted to +/-10% of the
-    // target (41 -> 36.9/45.1, 20 -> 18/22) rather than left blank.
+    // sleeve carries one, the four liquid AND every private class (ER-14
+    // close-out: pe/pc/re/infra). app-open-01 delta 1: the bands are ALSO
+    // the server's now, defaulted to +/-10% of the target (38 -> 34.2/41.8,
+    // 20 -> 18/22) rather than left blank.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    expect(byLabel<HTMLInputElement>("equity target").value).toBe("41");
+    expect(byLabel<HTMLInputElement>("equity target").value).toBe("38");
     expect(byLabel<HTMLInputElement>("commodities target").value).toBe("5");
     expect(byLabel<HTMLInputElement>("pe target").value).toBe("20");
-    expect(byLabel<HTMLInputElement>("re target").value).toBe("7");
-    expect(byLabel<HTMLInputElement>("equity range lo").value).toBe("36.9");
-    expect(byLabel<HTMLInputElement>("equity range hi").value).toBe("45.1");
+    expect(byLabel<HTMLInputElement>("re target").value).toBe("5");
+    expect(byLabel<HTMLInputElement>("infra target").value).toBe("5");
+    expect(byLabel<HTMLInputElement>("equity range lo").value).toBe("34.2");
+    expect(byLabel<HTMLInputElement>("equity range hi").value).toBe("41.8");
     expect(byLabel<HTMLInputElement>("pe range lo").value).toBe("18");
     expect(byLabel<HTMLInputElement>("pe range hi").value).toBe("22");
+    expect(byLabel<HTMLInputElement>("infra range lo").value).toBe("4.5");
+    expect(byLabel<HTMLInputElement>("infra range hi").value).toBe("5.5");
   });
 
   it("an untouched pre-fill is still the default book, so ranked survives", async () => {
@@ -459,7 +733,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity target"), "35");
     expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
-    setValue(byLabel<HTMLInputElement>("equity target"), "41");
+    setValue(byLabel<HTMLInputElement>("equity target"), "38");
     expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
   });
 
@@ -512,8 +786,8 @@ describe("BookEntry — policy targets and reporting bands", () => {
     setValue(byLabel<HTMLInputElement>("equity range lo"), "30");
     setValue(byLabel<HTMLInputElement>("equity range hi"), "45");
     expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
-    setValue(byLabel<HTMLInputElement>("equity range lo"), "36.9");
-    setValue(byLabel<HTMLInputElement>("equity range hi"), "45.1");
+    setValue(byLabel<HTMLInputElement>("equity range lo"), "34.2");
+    setValue(byLabel<HTMLInputElement>("equity range hi"), "41.8");
     expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
     act(() => findButton(/play/i).click());
     expect(onReady.mock.calls[0][0].ranges).toEqual(DEFAULT_RESPONSE.book.ranges);
@@ -546,9 +820,11 @@ describe("BookEntry — policy targets and reporting bands", () => {
     // At target 20 the cap is 7.2 (3.6 comfortably under it); dropping pe to
     // 5 drops the cap to 1.8, which 3.6 now exceeds. equity absorbs the
     // 15-point move so the targets still total 100 -- isolating the plan-cap
-    // fault from the unrelated "targets do not total 100" one.
+    // fault from the unrelated "targets do not total 100" one. Equity's own
+    // base moved 41 -> 38 at ER-14's close-out (infra's carve), so the
+    // absorbing figure is 38 + 15 = 53, not the old 56.
     function lowerPeBelowItsCap() {
-      setValue(byLabel<HTMLInputElement>("equity target"), "56");
+      setValue(byLabel<HTMLInputElement>("equity target"), "53");
       setValue(byLabel<HTMLInputElement>("pe target"), "5");
     }
 
@@ -568,7 +844,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
       await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
       lowerPeBelowItsCap();
       expect(findButton(/play/i).disabled).toBe(true);
-      setValue(byLabel<HTMLInputElement>("equity target"), "41");
+      setValue(byLabel<HTMLInputElement>("equity target"), "38");
       setValue(byLabel<HTMLInputElement>("pe target"), "20");
       expect(findButton(/play/i).disabled).toBe(false);
       expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
@@ -582,53 +858,81 @@ describe("BookEntry — policy targets and reporting bands", () => {
   });
 
   it("shows the policy weight the target implies, not the number typed", async () => {
-    // the drift readout. 51 out of (108 targets + 2 cash) is 46.4% — so a
+    // the drift readout. 51 out of (111 targets + 2 cash) is 45.1% — so a
     // readout that merely echoed the typed number would print "51.0" and
     // fail here. That is the point: while the targets are mid-edit and do
     // not yet total 100, the implied weight is NOT the number in the box.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    expect(byTestId("target-weight-equity").textContent).toContain("41.0");
+    expect(byTestId("target-weight-equity").textContent).toContain("38.0");
     setValue(byLabel<HTMLInputElement>("equity target"), "51");
-    expect(byTestId("target-weight-equity").textContent).toContain("46.4");
+    expect(byTestId("target-weight-equity").textContent).toContain("45.1");
     expect(byTestId("target-weight-equity").textContent).not.toContain("51");
   });
 
   it("shows the drift between the weight held and the weight targeted", async () => {
-    // held 41.0 against a policy weight of 46.4 is -5.4 points of drift.
+    // held 38.0 against a policy weight of 45.1 is -7.1 points of drift.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     expect(byTestId("target-drift-equity").textContent).toContain("+0.0");
     setValue(byLabel<HTMLInputElement>("equity target"), "51");
-    expect(byTestId("target-drift-equity").textContent).toContain("-5.4");
+    expect(byTestId("target-drift-equity").textContent).toContain("-7.1");
   });
 
-  it("renders one target row per tradeable sleeve this world carries — seven, not eight", async () => {
-    // app-open-01 delta 2: the merged table follows the SERVER's sleeve set
-    // across BOTH liquid and private — four liquid (no reits) plus pe/pc/re.
+  it("renders one target row per tradeable sleeve this world carries — eight, not nine", async () => {
+    // app-open-01 delta 2 + ER-14 close-out: the merged table follows the
+    // SERVER's sleeve set across BOTH liquid and private — four liquid (no
+    // reits) plus the four private classes (pe/pc/re/infra).
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    expect(host!.querySelectorAll('.policy-grid [aria-label$=" target"]').length).toBe(7);
+    expect(host!.querySelectorAll('.policy-grid [aria-label$=" target"]').length).toBe(8);
     expect(host!.querySelector('[aria-label="reits target"]')).toBeNull();
   });
 
-  it("renders eight target rows for a world that does carry reits", async () => {
+  it("renders nine target rows for a world that does carry reits", async () => {
     // the other half of the claim above: the count follows the SERVER's
-    // sleeve set. Without this, "seven, not eight" would also pass a
-    // component that hardcoded seven.
+    // sleeve set. Without this, "eight, not nine" would also pass a
+    // component that hardcoded eight. Was eight before ER-14's close-out;
+    // infra is the ninth row.
     stubFetch(REITS_RESPONSE);
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    expect(host!.querySelectorAll('.policy-grid [aria-label$=" target"]').length).toBe(8);
-    expect(byLabel<HTMLInputElement>("reits target").value).toBe("8");
+    expect(host!.querySelectorAll('.policy-grid [aria-label$=" target"]').length).toBe(9);
+    expect(byLabel<HTMLInputElement>("reits target").value).toBe("5");
+    expect(byLabel<HTMLInputElement>("infra target").value).toBe("5");
   });
 
-  it("the merged table has eight rows total: seven tradeable sleeves plus cash", async () => {
+  it("renders a band row and a vintage ladder for infrastructure (ER-14 close-out)", async () => {
+    stubFetch(REITS_RESPONSE);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    expect(byLabel<HTMLInputElement>("infra range lo").value).toBe("4.5");
+    expect(byLabel<HTMLInputElement>("infra range hi").value).toBe("5.5");
+    const t = [...host!.querySelectorAll('[role="tab"]')].find((b) =>
+      /historical vintages/i.test(b.textContent ?? ""),
+    ) as HTMLButtonElement;
+    act(() => t.click());
+    expect(host!.querySelectorAll('[data-testid="vintage-chart"]').length).toBe(4);
+  });
+
+  it("the infrastructure ladder carries fifteen rungs — one per year of pm_infra's contractual life (ER-12)", async () => {
+    stubFetch(REITS_RESPONSE);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const t = [...host!.querySelectorAll('[role="tab"]')].find((b) =>
+      /historical vintages/i.test(b.textContent ?? ""),
+    ) as HTMLButtonElement;
+    act(() => t.click());
+    expect(host!.querySelectorAll('[data-testid="rung-infra"]').length).toBe(15);
+    // and the other three ladders are untouched at one rung each
+    expect(host!.querySelectorAll('[data-testid="rung-pe"]').length).toBe(1);
+  });
+
+  it("the merged table has nine rows total: eight tradeable sleeves plus cash", async () => {
     // app-open-01 delta 2: private classes are ROWS of the same table, not a
     // separate strip — this is the bite-proof that they actually landed
-    // there, on the world's default (no-reits) fixture.
+    // there, on the world's default (no-reits) fixture. Was eight rows
+    // before ER-14's close-out added infra.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    expect(host!.querySelectorAll(".policy-grid .policy-row").length).toBe(8);
+    expect(host!.querySelectorAll(".policy-grid .policy-row").length).toBe(9);
   });
 
   it("shows every sleeve's full, capitalized name — never a lowercase code", async () => {
@@ -646,6 +950,7 @@ describe("BookEntry — policy targets and reporting bands", () => {
       "Private Equity",
       "Private Credit",
       "Real Estate",
+      "Infrastructure",
       "Cash",
     ]);
   });
@@ -719,12 +1024,14 @@ describe("BookEntry — policy targets and reporting bands", () => {
   });
 
   it("blocks the commit on a negative target even when the targets still total 100", async () => {
-    // equity -1 and bonds 54 nets to the same 98 + 2 cash, so this cannot
-    // pass by way of the total check.
+    // equity -1 and bonds 51 nets to the same 98 + 2 cash (equity+bonds was
+    // 38+12=50; -1+51=50), so this cannot pass by way of the total check.
+    // Bonds' figure moved 54 -> 51 when equity's own base moved 41 -> 38 at
+    // ER-14's close-out.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity target"), "-1");
-    setValue(byLabel<HTMLInputElement>("bonds target"), "54");
+    setValue(byLabel<HTMLInputElement>("bonds target"), "51");
     expect(findButton(/play/i).disabled).toBe(true);
     expect(byTestId("shape-faults").textContent).toMatch(/target is negative/i);
     expect(byTestId("shape-faults").textContent).not.toMatch(/targets do not total 100/i);
@@ -991,7 +1298,7 @@ describe("BookEntry — the vintage chart tracks live rung edits (task 10)", () 
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     openVintagesTab();
     const sections = [...host!.querySelectorAll(".book-ladder")];
-    expect(sections.length).toBe(3); // pe, pc, re
+    expect(sections.length).toBe(4); // pe, pc, re, infra (ER-14 close-out)
     sections.forEach((section) => {
       const chart = section.querySelector('[data-testid="vintage-chart"]');
       expect(chart).not.toBeNull();
