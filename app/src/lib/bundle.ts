@@ -30,6 +30,11 @@ export const SUPPORTED_BUNDLE_VERSIONS = [
   // verdict + vintage - the audit trail behind "rearranged truth"). Toy
   // bundles are unchanged in shape; the two sections are optional.
   "world-bundle-0.5",
+  // 0.6 (ER-14 close-out, D-ER14-2): the fourth private class (infra) joins
+  // the played book -- thirteen toy series, twelve generated. No new
+  // top-level section; every series this bundle carries flows through the
+  // same `revealed`/`bands` shapes already handled below.
+  "world-bundle-0.6",
 ];
 
 /** su-gen-02: factor lineage for generated worlds (optional section). */

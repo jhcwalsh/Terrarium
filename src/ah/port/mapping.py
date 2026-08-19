@@ -1,12 +1,15 @@
 """Apply the estimated factor -> sleeve mappings to an ensemble (WP3.2 runtime).
 
-Loads the versioned artifact (``mappings/sleeve-mappings-v1.1.yaml``, the file
-WorldSpec's ``mapping_version`` names) and turns a generated ensemble into TRUE
-sleeve returns: linear loadings + correlated residuals for six HF sleeves, and
-the CTA RULE (DN-5 §3.4 — a 12-month time-series-momentum overlay computed on
-the generated paths themselves, vol-targeted, with a cost drag) for the
-seventh. No estimation happens here; the artifact is the frozen output of
-``scripts/estimate_sleeve_mappings.py`` and carries its own provenance.
+Loads the versioned artifact (``mappings/sleeve-mappings-v1.2.yaml`` — ER-14
+close-out, D-ER14-2, 2026-08-18; the file WorldSpec's ``mapping_version``
+names) and turns a generated ensemble into TRUE sleeve returns: linear
+loadings + correlated residuals for six HF sleeves, and the CTA RULE (DN-5
+§3.4 — a time-series-momentum overlay computed on the generated paths
+themselves, vol-targeted, with a cost drag) for the seventh. No estimation
+happens here; the artifact is the frozen output of
+``scripts/estimate_sleeve_mappings_v1_2.py`` and carries its own provenance.
+v1.2's HF rows, residual_correlation and sleeve loadings are v1.1 verbatim
+(F5b: no coefficient moves); only ``cta_rule`` gains the F5a EWMA fix below.
 
 Determinism: path ``k`` draws its residuals from ``PCG64(seed + 7919 * k)`` —
 the platform seed rule — so a sleeve panel is bit-reproducible from
@@ -25,7 +28,7 @@ import yaml
 from ah.gen.base import Ensemble
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-ARTIFACT_PATH = _REPO_ROOT / "mappings" / "sleeve-mappings-v1.1.yaml"
+ARTIFACT_PATH = _REPO_ROOT / "mappings" / "sleeve-mappings-v1.2.yaml"
 
 SEED_STRIDE = 7919
 BOND_DURATION_YEARS = 8.5  # matches the sealed govt_tr_10y derived-series convention
@@ -90,7 +93,18 @@ def _bond_total_return(ust10: np.ndarray) -> np.ndarray:
 
 
 def _cta_rule(ensemble: Ensemble, rule: dict[str, Any]) -> np.ndarray:
-    """DN-5 §3.4's overlay: 12m TSM across the instruments, vol-targeted, net of drag.
+    """DN-5 §3.4's overlay: TSM across the instruments, vol-targeted, net of drag.
+
+    F5a (ER-14 close-out, D-ER14-2): position size is ``per_inst_target /
+    sigma``, and a TRAILING window sigma is stale for up to a year after a
+    vol regime shifts — measured 0.1595 annualised vol against a 0.10 target
+    on the 1974 world. When the artifact's ``cta_rule`` declares
+    ``vol_estimator: ewma`` (v1.2+), sigma is instead a causal EWMA variance
+    (half-life ``halflife_months``, seeded from the first ``lookback``
+    window so warm-up is unchanged) and the size multiplier is additionally
+    capped at ``position_cap``. A v1.1-shaped rule (no ``vol_estimator``)
+    falls back to the original trailing-window estimator unchanged, so this
+    function does not hard-require v1.2.
 
     Causal throughout: month ``t`` uses signals and vol estimated on months
     ``< t``. Warm-up months (before one full lookback) hold flat at zero.
@@ -107,13 +121,32 @@ def _cta_rule(ensemble: Ensemble, rule: dict[str, Any]) -> np.ndarray:
     n_paths, months = instruments[0].shape
     out = np.zeros((n_paths, months))
     per_inst_target = vol_target / (np.sqrt(12.0) * len(instruments))
+
+    use_ewma = rule.get("vol_estimator") == "ewma"
+    halflife = float(rule.get("halflife_months", 0.0))
+    cap = float(rule.get("position_cap", np.inf))
+    decay = 0.5 ** (1.0 / halflife) if use_ewma and halflife > 0 else None
+
     for r in instruments:
-        for t in range(lookback, months):
-            window = r[:, t - lookback : t]
-            signal = np.sign(window.sum(axis=1))
-            sigma = window.std(axis=1, ddof=1)
-            sigma[sigma <= 1e-8] = 1e-8
-            out[:, t] += signal * (per_inst_target / sigma) * r[:, t]
+        if use_ewma and decay is not None:
+            window0 = r[:, :lookback]
+            var = window0.var(axis=1, ddof=1)
+            var[var <= 1e-12] = 1e-12
+            for t in range(lookback, months):
+                sigma = np.sqrt(var)
+                sigma[sigma <= 1e-8] = 1e-8
+                size = np.minimum(per_inst_target / sigma, cap)
+                signal = np.sign(r[:, t - lookback : t].sum(axis=1))
+                out[:, t] += signal * size * r[:, t]
+                var = decay * var + (1.0 - decay) * (r[:, t] ** 2)
+                var = np.maximum(var, 1e-12)
+        else:
+            for t in range(lookback, months):
+                window = r[:, t - lookback : t]
+                signal = np.sign(window.sum(axis=1))
+                sigma = window.std(axis=1, ddof=1)
+                sigma[sigma <= 1e-8] = 1e-8
+                out[:, t] += signal * (per_inst_target / sigma) * r[:, t]
     out[:, lookback:] -= drag_m
     return out
 

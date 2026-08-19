@@ -37,7 +37,7 @@ class TestContract:
     def test_sections_and_provenance(self, stored_run):
         db, rid = stored_run
         doc = build_bundle(connect(db), rid)
-        assert doc["bundle_version"] == "world-bundle-0.5"
+        assert doc["bundle_version"] == "world-bundle-0.6"
         # toy worlds carry no factor-lineage sections (generated worlds only)
         assert "factors" not in doc
         assert "credibility" not in doc
@@ -63,6 +63,7 @@ class TestContract:
         # the numeric tape carries assets then reported columns, sealed at t0
         order = doc["revealed"]["series_order"]
         assert order == [*ASSETS, *(f"{s}_reported" for s in REPORTED_SLEEVES)]
+        assert len(order) == 13  # ER-14 close-out: 9 assets + 4 reported sleeves
         tape = np.array(doc["revealed"]["tape"], dtype=np.float64)
         assert tape.shape == (months, len(order))
         assert verify_tape(tape, doc["revealed"]["tape_seal"])
@@ -178,10 +179,11 @@ class TestSizeAndCli:
         finally:
             registry.restore(saved)
 
-        assert doc["bundle_version"] == "world-bundle-0.5"
+        assert doc["bundle_version"] == "world-bundle-0.6"
         assert doc["meta"]["digest_verified"] is True
         order = doc["revealed"]["series_order"]
         assert order == [*GEN_ASSETS, *(f"{s}_reported" for s in REPORTED_SLEEVES)]
+        assert len(order) == 12  # ER-14 close-out: 8 generated assets + 4 reported sleeves
         assert set(doc["bands"]) == set(GEN_ASSETS)
         tape = np.array(doc["revealed"]["tape"], dtype=np.float64)
         assert verify_tape(tape, doc["revealed"]["tape_seal"])
@@ -213,7 +215,7 @@ class TestSizeAndCli:
         for name, expect_factors in (("toy.bundle.gz", False), ("gen.bundle.gz", True)):
             raw = gzip.decompress((fixtures / name).read_bytes())
             doc = json.loads(raw)
-            assert doc["bundle_version"] == "world-bundle-0.5", name
+            assert doc["bundle_version"] == "world-bundle-0.6", name
             tape = np.array(doc["revealed"]["tape"], dtype=np.float64)
             assert verify_tape(tape, doc["revealed"]["tape_seal"]), name
             assert ("factors" in doc) is expect_factors, name

@@ -34,7 +34,7 @@ function fixtureBytes(): ArrayBuffer {
 describe("parseBundle", () => {
   it("loads the committed fixture and verifies its seal", async () => {
     const { bundle, sealVerified } = await parseBundle(fixtureBytes());
-    expect(bundle.bundle_version).toBe("world-bundle-0.5");
+    expect(bundle.bundle_version).toBe("world-bundle-0.6");
     expect(sealVerified).toBe(true);
     expect(bundle.revealed.tape.length).toBe(bundle.meta.months);
     expect(bundle.summary.decision_months.length).toBeGreaterThan(0);
@@ -42,7 +42,7 @@ describe("parseBundle", () => {
 
   it("loads the committed GENERATED fixture: seal, factors, credibility (su-gen-02)", async () => {
     const { bundle, sealVerified } = await parseBundle(bytesOf(GEN_FIXTURE));
-    expect(bundle.bundle_version).toBe("world-bundle-0.5");
+    expect(bundle.bundle_version).toBe("world-bundle-0.6");
     expect(sealVerified).toBe(true);
     const factors = bundle.factors!;
     expect(factors.names.length).toBe(16);

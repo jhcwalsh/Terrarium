@@ -248,19 +248,22 @@ class TestThePacingDenominatorFollowsTheBooksCash:
     so a book holding cash other than 2.0 gets the wrong denominator unless
     its own cash is threaded through."""
 
-    #: values: 31 + 12 + 5 + 5 + 8 liquid, 35 private NAV, 4 cash = 100.
+    #: values: 31 + 12 + 5 + 5 + 5 liquid, 38 private NAV, 4 cash = 100.
+    #: ER-14 close-out (Task S2, A15): reits 8->5, re 7->5, infra 0->5 --
+    #: the same carve as play.START_TARGETS.
     _CASH = 4.0
-    _TARGETS_HI: ClassVar[dict[str, float]] = {  # private total 35, all targets total 96
+    _TARGETS_HI: ClassVar[dict[str, float]] = {  # private total 38, all targets total 96
         "equity": 31.0,
         "bonds": 12.0,
         "hy": 5.0,
         "commodities": 5.0,
-        "reits": 8.0,
+        "reits": 5.0,
         "pe": 20.0,
         "pc": 8.0,
-        "re": 7.0,
+        "re": 5.0,
+        "infra": 5.0,
     }
-    _TARGETS_LO: ClassVar[dict[str, float]] = {  # private total 29
+    _TARGETS_LO: ClassVar[dict[str, float]] = {  # private total 32
         **_TARGETS_HI,
         "equity": 37.0,
         "pe": 14.0,

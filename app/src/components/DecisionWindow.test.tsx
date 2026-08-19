@@ -94,7 +94,9 @@ describe("DecisionWindow (E1)", () => {
       />,
     );
     const inputs = [...host!.querySelectorAll<HTMLInputElement>(".lever-row input")];
-    expect(inputs.map((i) => i.value)).toEqual(["1.50", "1.20", "0.90"]);
+    // infra carries no entry in this test's plan, so its row falls through
+    // to shown()'s zero default — the fourth row (ER-14 close-out).
+    expect(inputs.map((i) => i.value)).toEqual(["1.50", "1.20", "0.90", "0.00"]);
 
     // edit ONE sleeve
     act(() => {
@@ -113,6 +115,26 @@ describe("DecisionWindow (E1)", () => {
     expect(commitments).toEqual({ pe: 2 });
     expect(commitments).not.toHaveProperty("pc");
     expect(commitments).not.toHaveProperty("re");
+    expect(commitments).not.toHaveProperty("infra");
+  });
+
+  it("offers a commit row for every private sleeve the server serves, infra included (ER-14 close-out)", () => {
+    render(
+      <DecisionWindow
+        open
+        month={11}
+        year={1}
+        onCommit={() => {}}
+        planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9, infra: 0.4 }}
+      />,
+    );
+    const infra = host!.querySelector<HTMLInputElement>('[aria-label="Infrastructure commitment"]');
+    expect(infra).not.toBeNull();
+    expect(infra!.value).toBe("0.40");
+    // and the row is the FOURTH lever row, not a fifth appended elsewhere
+    const rows = [...host!.querySelectorAll(".lever-row")];
+    expect(rows).toHaveLength(4);
+    expect(rows[3].querySelector("input")).toBe(infra);
   });
 
   it("declares the state the pre-fill was computed from", () => {

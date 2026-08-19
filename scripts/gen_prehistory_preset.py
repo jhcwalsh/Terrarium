@@ -22,10 +22,11 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "src" / "ah" / "presets"
 
-# World ids: see scripts/gen_presets.py's block-convention comment. The 51x
-# sub-block is toy-v0.6 (ER-10 closed); 511-514 are already taken by the four
-# playable presets, so this one is 515 -- same engine generation, its own id.
-WORLD_ID = "00000000-0000-4000-9000-000000000515"
+# World ids: see scripts/gen_presets.py's block-convention comment. The 52x
+# sub-block is toy-v0.7 (ER-14 close-out, D-ER14-2); 521-524 are already
+# taken by the four playable presets, so this one is 525 -- same engine
+# generation, its own id.
+WORLD_ID = "00000000-0000-4000-9000-000000000525"
 
 
 def build_prehistory_preset() -> dict[str, Any]:

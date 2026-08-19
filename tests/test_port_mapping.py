@@ -48,9 +48,12 @@ def _ensemble(n_paths: int = 6, months: int = 120, seed: int = 5) -> Ensemble:
 
 class TestArtifact:
     def test_artifact_exists_with_declared_shape_and_provenance(self):
-        """re-pinned under map-2026.08.2 (AM-2026-08-12-001)"""
+        """re-pinned under map-2026.08.2 (AM-2026-08-12-001).
+        Re-pinned again under map-2026.08.3 (ER-14 close-out, D-ER14-2,
+        2026-08-18): ARTIFACT_PATH moved to sleeve-mappings-v1.2.yaml (C1
+        extended to pm_buyout, F5a/F5b/F5c); HF rows verbatim."""
         doc = mp.load_artifact()
-        assert doc["mapping_version"] == "map-2026.08.2"
+        assert doc["mapping_version"] == "map-2026.08.3"
         assert doc["desmoothing_method"].startswith("glm_ma")  # SM-10 pairing
         assert set(doc["sleeves"]) == {
             "hf_credit",
@@ -124,15 +127,22 @@ class TestApplier:
             mp.sleeve_returns(ens, seed=1)
 
     def test_artifact_and_report_agree_on_version(self):
-        text = (mp._REPO_ROOT / "MAPPINGS.md").read_text(encoding="utf-8")
+        """Re-pinned under map-2026.08.3 (ER-14 close-out, D-ER14-2,
+        2026-08-18): the runtime's report moved with ARTIFACT_PATH, from
+        MAPPINGS.md (v1.1) to MAPPINGS-v1.2.md."""
+        text = (mp._REPO_ROOT / "MAPPINGS-v1.2.md").read_text(encoding="utf-8")
         assert yaml.safe_load(mp.ARTIFACT_PATH.read_text("utf-8"))["mapping_version"] in text
 
 
-def test_runtime_consumes_the_v11_artifact():
+def test_runtime_consumes_the_v12_artifact():
     """AM-2026-08-12-001: the runtime's default artifact is v1.1. Written
-    FAILING against v1.0 before ARTIFACT_PATH moved."""
+    FAILING against v1.0 before ARTIFACT_PATH moved.
+    Re-pinned under map-2026.08.3 (ER-14 close-out, D-ER14-2, 2026-08-18):
+    ARTIFACT_PATH moved to sleeve-mappings-v1.2.yaml (C1 extended to
+    pm_buyout, F5a/F5b/F5c); pm_direct_lending's route is v1.1 verbatim
+    (F5b: no coefficient moves)."""
     from ah.port.mapping import load_artifact
 
     doc = load_artifact()
-    assert doc["mapping_version"] == "map-2026.08.2"
+    assert doc["mapping_version"] == "map-2026.08.3"
     assert doc["pm_sleeves"]["pm_direct_lending"]["route"] == "bdc-anchor*0.5"

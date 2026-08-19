@@ -106,8 +106,10 @@ class TestFlinchIsMeasuredAgainstTheEnteredPlan:
         flinch = [n for n in notes if n["type"] == "flinch"]
         assert len(flinch) == 1
         assert flinch[0]["distribution_shortfall"] > 0.0
-        # 3 sleeves x 1.0 planned, cut to 0.0 — the entered plan's own total
-        assert "from 3.0 to 0.0 points" in flinch[0]["text"]
+        # ER-14 close-out (Task S2): PRIVATE_ASSETS is now 4 sleeves
+        # (pe/pc/re/infra), so 4 sleeves x 1.0 planned, cut to 0.0 — the
+        # entered plan's own total.
+        assert "from 4.0 to 0.0 points" in flinch[0]["text"]
 
     def test_the_counterfactual_restores_the_plan_not_the_pacing_rule(self):
         """The shortfall is priced by re-running with the window "restored to
@@ -116,9 +118,12 @@ class TestFlinchIsMeasuredAgainstTheEnteredPlan:
         never planned, so the two shortfalls must differ."""
         p = _paths()
         # both stay under the declared bound the engine itself enforces
-        # (2x target x rate; re's is the tightest at 2.52 on START_TARGETS)
+        # (2x target x rate). ER-14 close-out (Task S2, A15) tightened the
+        # bound: re AND infra now share the tightest cap, 2*5.0*0.18=1.8
+        # (re's target moved 7.0->5.0 in the carve; infra enters at 5.0
+        # too) -- was re alone at 2.52 on the pre-ER14 START_TARGETS.
         low = post_game_annotations(p, _cut(11), commitment_plan=self._plan(0.5))
-        high = post_game_annotations(p, _cut(11), commitment_plan=self._plan(2.0))
+        high = post_game_annotations(p, _cut(11), commitment_plan=self._plan(1.5))
         low_note = next(n for n in low if n["type"] == "flinch")
         high_note = next(n for n in high if n["type"] == "flinch")
         assert high_note["distribution_shortfall"] > low_note["distribution_shortfall"]

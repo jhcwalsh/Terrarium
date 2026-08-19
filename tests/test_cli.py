@@ -99,6 +99,31 @@ def test_unknown_preset_errors(tmp_path: Path) -> None:
     assert _invoke(db, "world", "build", "--preset", "nope").exit_code != 0
 
 
+def test_a_retired_world_cannot_be_built_under_the_new_engine(tmp_path: Path) -> None:
+    """D-ER14-2: the campaign and spine worlds are RETIRED, not renumbered.
+    Their world_ids are records of what a campaign actually executed -
+    gen_presets.py states the principle for the G0 world ('a record of what
+    G0 actually ran, and must not be rewritten') - and adding infra changes
+    the SHAPE of the tape, so a re-run would return nine return series where
+    the recorded evidence describes eight. Retirement is the only option
+    that keeps the record meaning what it says."""
+    db = tmp_path / "ah.db"
+    result = _invoke(db, "world", "build", "--preset", "stress_1974")
+    assert result.exit_code != 0
+    assert "retired" in result.output.lower()
+    assert result.output.isascii()  # Windows console is cp1252
+
+
+def test_the_retired_presets_are_still_readable_and_byte_unchanged() -> None:
+    from ah.cli import PRESETS_DIR, RETIRED_WORLD_IDS
+
+    for stem in ("stress_1974", "stress_1990", "narration_1974", "spine_pilot"):
+        doc = json.loads((PRESETS_DIR / f"{stem}.json").read_text(encoding="utf-8"))
+        assert doc["world_id"] in RETIRED_WORLD_IDS
+        # the record is untouched: the authored multiple drift is STILL -2.0 here
+        assert doc["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] == -2.0
+
+
 def test_replay_detects_tampered_digest(tmp_path: Path) -> None:
     db = tmp_path / "ah.db"
     _invoke(db, "world", "build", "--preset", "stagflation")

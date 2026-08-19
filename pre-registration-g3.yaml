@@ -181,6 +181,14 @@ seal_scope:
     # v1.0 stays sealed above as the G1-era record; v1.1 is forward-only.
     - scripts/estimate_sleeve_mappings_v1_1.py
     - mappings/sleeve-mappings-v1.1.yaml
+    # AM-2026-08-18-001 (post_hoc, disclosed; ER-14 close-out, D-ER14-2,
+    # 2026-08-18): C1 extended to pm_buyout + the F5 calibration-drift batch
+    # join in the commit that creates them - same planned-arrival pattern as
+    # AM-2026-08-15-001, which this entry extends. v1.0/v1.1 stay sealed
+    # above as records; v1.2 is forward-only. C2 (credit_loss) is deferred
+    # on the Cliffwater CDLI export and does not appear in this artifact.
+    - scripts/estimate_sleeve_mappings_v1_2.py
+    - mappings/sleeve-mappings-v1.2.yaml
     # AM-2026-08-01-003 (pre-hoc, same rule): WP3.3's smoothing-kernel estimate
     # joins — the sealed mark_lag criterion could be gamed through θ, so the
     # ESTIMATE seals; the kernel engine (src/ah/port/smoothing.py) stays

@@ -84,11 +84,19 @@ class TestSeedLadder:
     """
 
     def test_the_ladder_is_staggered_one_rung_per_year_of_fund_life(self):
-        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio, _doc
+        """ER-14 close-out (Task S5): each sleeve's own life, not a single
+        fixture-wide constant -- infra's pacing row declares 15 years
+        (mappings/pacing-parameters-v1.0.yaml's pm_infra), the other three
+        sleeves fall back to the shared fixture's 10 (pc/re have no row of
+        their own yet; pe's pm_buyout row already agrees at 10)."""
+        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio, _doc, _ladder_life
 
-        life = int(_doc("closed-end-cohort.example.json")["lifecycle"]["contractual_life_years"])
+        fixture_life = int(
+            _doc("closed-end-cohort.example.json")["lifecycle"]["contractual_life_years"]
+        )
         _, cohorts = _build_portfolio(Policy(), START_TARGETS, LIQUID_ASSETS)
         for asset in PRIVATE_ASSETS:
+            life = _ladder_life(asset, fixture_life)
             ages = [c.age_years for c in cohorts[asset]]
             assert len(ages) == life
             assert ages == sorted(ages)  # a staircase
@@ -278,6 +286,25 @@ class TestScoringIdentity:
         assert PLAY_ALPHA_VERSION != decision_metrics.DECISION_ALPHA_VERSION
         assert PLAY_ALPHA_VERSION
 
+    def test_both_play_alpha_stamps_moved_and_they_are_distinct(self):
+        """Survey S3: a shared bump is never right - the two planes score
+        different tapes."""
+        from ah.port.adapter import GEN_PLAY_ALPHA_VERSION
+
+        assert PLAY_ALPHA_VERSION == "port-v5-inflation"
+        assert GEN_PLAY_ALPHA_VERSION == "port-v5-inflation-gen"
+        assert PLAY_ALPHA_VERSION != GEN_PLAY_ALPHA_VERSION
+
+    def test_the_research_alpha_definition_is_untouched(self):
+        """decision_alpha_version names Step 5's RESEARCH definition and
+        lives inside the G5 seal; bumping it would mean something different
+        (ER-14's own consequences paragraph, verbatim)."""
+        import yaml
+
+        ROOT = Path(__file__).resolve().parents[1]
+        doc = yaml.safe_load((ROOT / "step5-evaluation-protocol.yaml").read_text())
+        assert doc["decision_alpha_version"] == "1.0"
+
     def test_play_does_not_use_the_toy_simulator(self):
         """It replaces ah.core.institution for SCORING rather than wrapping it.
 
@@ -329,3 +356,35 @@ class TestAttribution:
         attr = window_contributions_play(stagflation, {})
         assert attr.contributions == tuple(0.0 for _ in attr.months)
         assert attr.total_alpha == 0.0
+
+
+class TestInfrastructureCarve:
+    """ER-14 close-out (Task S2, A15/A16, D-ER14-2): infrastructure joins the
+    played book at 5 points, carved 3 from REITs and 2 from real estate --
+    private lands at 38, not 40, so the opening book stays clear of
+    Policy.private_weight_range's 0.40 upper bound (an opening breach
+    previously produced 29 forced quarters out of 40)."""
+
+    def test_the_opening_book_still_sits_inside_the_policy_band(self):
+        from ah.play import PRIVATE_ASSETS, _policy_private_weight
+
+        assert 0.15 < _policy_private_weight(START_TARGETS) < 0.40
+        assert sum(START_TARGETS[a] for a in PRIVATE_ASSETS) == pytest.approx(38.0)
+
+    def test_the_real_goal_bucket_is_unchanged_by_the_carve(self):
+        """A15: 3 points from REITs and 2 from real estate, so commodities 5 +
+        reits 5 + re 5 + infra 5 = 20 points, exactly as before the carve.
+        Commodities is DELIBERATELY untouched: ER-14's own attribution
+        experiment moves those five points, and touching the sleeve would
+        confound the measurement the close-out is judged against."""
+        assert START_TARGETS["commodities"] == 5.0
+        assert sum(START_TARGETS[a] for a in ("commodities", "reits", "re", "infra")) == 20.0
+
+    def test_infrastructure_is_excluded_from_the_secondary_lever_by_decision(self):
+        """A16, ratified: infra is excluded from the secondary-sale lever for
+        now (infrastructure secondaries are genuinely thin). _secondary_sale
+        is scoped to the pe ladder by an EXPLICIT constant, not by an
+        accident of a hardcoded key."""
+        from ah.play import SECONDARY_SLEEVE
+
+        assert SECONDARY_SLEEVE == "pe"

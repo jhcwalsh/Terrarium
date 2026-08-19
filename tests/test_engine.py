@@ -23,6 +23,7 @@ from hypothesis import strategies as st
 from ah.core.engine import (
     ASSETS,
     REPORTED_SLEEVES,
+    TOY_ENGINE_VERSION,
     UnsupportedGeneratorError,
     run_ensemble,
     run_path,
@@ -45,7 +46,12 @@ GOLDEN_SEED = 42
 # d6da53bc277c9b95922f2e5f2912b94843892383b5198e9bb3624d3800de9180
 # Re-pinned under toy-v0.6 (ER-10). Prior value, toy-v0.5:
 # 6c3f7c896a552b49eccbdb07aff4aed175ef9eebf6df9d98919a5e136a9a1f83
-GOLDEN_DIGEST = "61e78e609d2a360b573a641abe0c8a1eea693f8cb527ac3148419280a218d6f5"
+# Re-pinned under toy-v0.7 (ER-14 close-out, D-ER14-2, 2026-08-18): the four
+# inflation channels (real estate, private equity, private credit,
+# infrastructure) and the infra sleeve joining ASSETS/REPORTED_SLEEVES change
+# every private return on this seed's path. Prior value, toy-v0.6:
+# 61e78e609d2a360b573a641abe0c8a1eea693f8cb527ac3148419280a218d6f5
+GOLDEN_DIGEST = "ab52ebe15509e14c86bc83c541eab76db36ba76ae7e6480c016f13a647e54db4"
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:
@@ -77,6 +83,14 @@ def test_golden_snapshot() -> None:
     p = run_path(make_world(), GOLDEN_SEED)
     assert p.months == 120
     assert digest_of(p) == GOLDEN_DIGEST
+
+
+def test_the_engine_stamps_toy_v07() -> None:
+    """A return-process change bumps the stamp: RunRecords carry it as
+    resolved_engine.generator_version, so scores made under two engines can
+    never share a leaderboard row (generator_id itself is a schemas/ enum and
+    cannot gain values)."""
+    assert TOY_ENGINE_VERSION == "toy-v0.7"
 
 
 def test_determinism_same_seed() -> None:

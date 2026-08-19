@@ -65,6 +65,7 @@ const PRIVATE_SLEEVES: ReadonlyArray<readonly [string, string]> = [
   ["pe", "Private equity"],
   ["pc", "Private credit"],
   ["re", "Real estate"],
+  ["infra", "Infrastructure"],
 ];
 
 interface DecisionWindowProps {
@@ -221,6 +222,7 @@ export function DecisionWindow({
                 type="number"
                 min={0}
                 step={0.1}
+                aria-label={`${label} commitment`}
                 value={shown(key).toFixed(2)}
                 onChange={(e) =>
                   setCommitments({

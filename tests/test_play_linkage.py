@@ -76,10 +76,14 @@ def test_default_run_is_unchanged_by_these_additions():
     staggered ladder of one vintage per year of a fund's life, instead of
     three clones of one age-5.25 cohort, so every book differs from its first
     quarter): toy-v0.6/port-v3's value was 98.04417427685921.
+    Regenerated again under toy-v0.7/port-v5-inflation (ER-14 close-out,
+    D-ER14-2, 2026-08-18): the four inflation channels move every private
+    return, and the opening book carries a fourth private sleeve (infra,
+    carved from REITs and real estate). Prior value: 101.5169845720086.
     """
     result = simulate_play(_paths())
     assert len(result.quarters) == 40
-    assert result.final_value == 101.5169845720086
+    assert result.final_value == 106.97599069995118
     assert result.forced_secondaries == 0
 
 

@@ -519,6 +519,23 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
 
     @app.post("/sessions", status_code=201)
     def create_session(body: CreateSession, conn: sqlite3.Connection = Depends(db)):
+        """Create a session against the world's derived default book/plan, or
+        an entered one.
+
+        ER-15, ANNOUNCED (D-ER14-2, 2026-08-18): the ER-14 close-out gave the
+        default opening book a fourth private sleeve (infra), so
+        `default_opening_book`'s digest moved under every world -- any
+        session created before this release (or any client still POSTing a
+        stored three-sleeve book) no longer matches the served default.
+        `OpeningBook`/`CommitmentPlan`'s own shape check (`set(book.private)
+        == set(PRIVATE_SLEEVES)`) refuses a book that cannot name the
+        world's full private set, so a legacy three-sleeve book 422s here
+        rather than being silently accepted and demoted to practice -- a
+        plan that cannot name the world's sleeves is malformed, not merely
+        edited. This is a correct, accepted side effect of the fourth
+        sleeve landing, not a defect; see CHANGELOG.md's ER-14 close-out
+        entry.
+        """
         rec = get_run_record(conn, body.run_id)
         if rec is None:
             raise HTTPException(status_code=404, detail=f"no run_record {body.run_id}")

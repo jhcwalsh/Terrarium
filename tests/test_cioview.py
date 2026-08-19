@@ -268,6 +268,53 @@ def _view(
     )
 
 
+# --------------------------------------------------------------------------- #
+# ER-14 close-out (Task S7, er14-04b): the CIO view carries infrastructure
+# --------------------------------------------------------------------------- #
+
+
+def _class(view: dict, cid: str) -> dict:
+    return next(c for c in view["allocation"]["classes"] if c["id"] == cid)
+
+
+def _tier(view: dict, tid: str) -> dict:
+    return next(t for t in view["liquidity"]["tiers"] if t["id"] == tid)
+
+
+def test_every_asset_has_a_goal_a_label_and_a_fallback_band():
+    """Three unguarded dict lookups in cioview KeyError on an unmapped
+    asset: CLASS_LABEL (lines 490, 691, 747, 803, 821), BAND_PCT (line 477),
+    GOAL_OF (lines 481, 491)."""
+    from ah.cioview import BAND_PCT, CLASS_LABEL, GOAL_OF
+    from ah.core.engine import ASSETS
+
+    for asset in (*ASSETS, "cash"):
+        assert asset in GOAL_OF and asset in CLASS_LABEL and asset in BAND_PCT
+
+
+def test_infrastructure_reads_as_a_real_asset_and_as_illiquid():
+    """GOAL_OF real (design 2.7.1). Tier assignment is automatic --
+    everything in PRIVATE_ASSETS is the illiquid remainder (cioview.py's own
+    comment, "TIER1_CLASSES"/"TIER2_CLASSES" plus the illiquid tier's
+    classIds = list(PRIVATE_ASSETS)) -- so no tier edit is needed, only the
+    dict entries below."""
+    from ah.cioview import GOAL_OF
+
+    assert GOAL_OF["infra"] == "real"
+    v = _view()
+    assert _class(v, "infra")["goalId"] == "real"
+    illiquid = _tier(v, "illiquid")
+    assert illiquid["liquid"] is False
+    assert "infra" in illiquid["classIds"]
+
+
+def test_the_no_book_band_fallback_is_the_real_estate_value():
+    """A15: BAND_PCT['infra'] = 2.0, matching re."""
+    from ah.cioview import BAND_PCT
+
+    assert BAND_PCT["infra"] == BAND_PCT["re"] == 2.0
+
+
 def test_target_pct_follows_the_entered_books_policy_targets():
     """su-app-07 Ruling G. Since task 2 the engine paces and caps off the
     book's ``effective_targets()``. A dashboard whose ``targetPct`` still read

@@ -87,10 +87,10 @@
   "structural": {
     "parameter_vintage": "custom",
     "private_equity": {
-      "entry_multiple_drift_annual_pct": -2.0,
+      "entry_multiple_drift_annual_pct": 0.0,
       "illiquidity_premium_annual_pct": 2.0,
       "leverage_turns": 5.5
     }
   },
-  "world_id": "00000000-0000-4000-9000-000000000603"
+  "world_id": "00000000-0000-4000-9000-000000000604"
 }

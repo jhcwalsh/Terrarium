@@ -37,6 +37,21 @@ PRESETS_DIR = Path(__file__).resolve().parent / "presets"
 FIXTURES_DIR = _REPO_ROOT / "fixtures" / "compiler"
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 
+# ER-14 close-out (D-ER14-2, 2026-08-18). These worlds' numbers - and, with the
+# infrastructure sleeve, the SHAPE of their tapes - changed under toy-v0.7, but
+# their ids are records of what a campaign actually executed. Renumbering would
+# not reproduce those campaigns, only produce differently-shaped new ones under
+# new ids; leaving them runnable would invite exactly the leaderboard collision
+# the fences exist to prevent. So: readable forever, never re-runnable.
+RETIRED_WORLD_IDS = frozenset(
+    {
+        "00000000-0000-4000-9000-000000000701",  # stress_1974
+        "00000000-0000-4000-9000-000000000703",  # stress_1990
+        "00000000-0000-4000-9000-000000000801",  # narration_1974
+        "00000000-0000-4000-9000-000000000802",  # spine_pilot
+    }
+)
+
 app = typer.Typer(
     help="Alternate Histories platform CLI.", no_args_is_help=True, add_completion=False
 )
@@ -114,6 +129,13 @@ def world_build(
             available = ", ".join(p.stem for p in sorted(PRESETS_DIR.glob("*.json")))
             raise typer.BadParameter(f"unknown preset '{preset}'. Available: {available}")
         raw = json.loads(path.read_text(encoding="utf-8"))
+        if raw.get("world_id") in RETIRED_WORLD_IDS:
+            typer.echo(
+                f"RETIRED: world {raw['world_id']} is a campaign record and cannot be "
+                "rebuilt under toy-v0.7 (ER-14 close-out, D-ER14-2). Read it, do not run it.",
+                err=True,
+            )
+            raise typer.Exit(1)
     elif live:
         from ah.compiler.anthropic_adapter import AnthropicCompiler
 
