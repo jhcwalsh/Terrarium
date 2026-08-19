@@ -47,7 +47,11 @@ GOLDEN_SEED = 42
 # drag falls, and the twin ends HIGHER than under Gaussian innovations. The
 # floor does not bind on this seed's path, so this value equals the unfloored
 # t-innovation number measured in the 2026-08-06 diagnosis.
-GOLDEN_HOLD_FINAL = 80.894413
+# Re-pinned under toy-v0.7 (ER-14 close-out, D-ER14-2, 2026-08-18): the real
+# estate, private equity and infrastructure inflation channels (Tasks M3/M5/M6)
+# and the infra sleeve joining ASSETS (Task S1) move every private return on
+# this seed's path. Prior value, toy-v0.6: 80.894413
+GOLDEN_HOLD_FINAL = 83.40037746399018
 
 
 def make_world(quarters: int | None = None) -> NumericWorld:

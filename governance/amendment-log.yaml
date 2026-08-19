@@ -2030,3 +2030,66 @@ amendments:
     RULING A, ratified by the owner on 2026-08-15, is entered in governance/decision-register.md
     as dated precedent -- it does not live only in the design note.'
   type: protocol_change
+- amendment_id: AM-2026-08-18-001
+  date: '2026-08-18'
+  payload:
+    artifact: mappings/sleeve-mappings-v1.2.yaml
+    c1_extended_to: pm_buyout, at lambda_PE=0.35 (ask A6) -- without it the generated
+      plane private equity stays inflation-blind (AT-10)
+    c2_deferred:
+      ask: 'A7 (D-ER14-2): C1 and C2 decoupled -- C1 (+ the buyout extension and F5)
+        adopts now; C2 adopts on the generated plane when the export lands'
+      reason: theta_DL is defined by the CDLI match rule and the Cliffwater export
+        is not in hand
+      toy_plane_unaffected: theta_toy=0.10 is a DECLARED engine constant for a different
+        object (a monthly toy loss on the engine own spread path) and never entered
+        this sealed artifact
+    estimator: scripts/estimate_sleeve_mappings_v1_2.py
+    extends: AM-2026-08-15-001
+    f5:
+      a: cta_rule gains an EWMA vol estimator (halflife_months) and a position_cap,
+        correcting a trailing-window vol estimator stale for up to a year (measured
+        0.1595 annualised vs a 0.10 target on the 1974 world)
+      b: r2_train_val restored to every PM row; no coefficient moved toward the DN-5
+        priors -- adjusting a MEASURED beta would be exactly the tuning the seal exists
+        to prevent
+      c: pm_residuals declares Student-t df=5 (DN5 SS9 SM-8) with a PM block correlation,
+        rescaled by sqrt(df/(df-2)) so no declared residual_sigma_annual moves (the
+        ER-7 precedent)
+    ratification: D-ER14-2 (governance/decision-register.md), ratified 2026-08-18
+    ratified_coefficients:
+      C_ANCHOR: 2.0
+      K_months: 24
+      beta_INFRA: 0.33
+      gamma_INFRA: 0.3
+      gamma_RE: 0.5
+      infra_crisis_term: -0.5
+      infra_yield_pct: 5.0
+      lambda_INFRA_default: 0.6
+      lambda_PE: 0.35
+      lambda_RE: 0.3
+      mu_PE: 0.45
+      omega_PC: 0.03
+      phi_PC: 1.0
+      sigma_INFRA: 1.65
+      theta_toy: 0.1
+    seal_impact: G3 only. pre-registration.lock and pre-registration-g5.lock digests
+      are unchanged by this amendment.
+    superseded_lock_digest: sha256:45c805062052f863e13a72963057f5d533cb4b62470aaef5068a8ec7cb66828c
+    trigger: 'ER-14 (filed 2026-08-16): the engine realism register found private
+      markets structurally inflation-blind; the design close-out is docs/superpowers/specs/2026-08-18-er14-close-out-design.md'
+  post_hoc: true
+  rationale: 'ER-14 close-out (D-ER14-2, 2026-08-18): the engine realism register
+    found private markets structurally blind to inflation across every generated-plane
+    value -- pe/pc/re bit-identical from 1% to 12% declared inflation. This entry
+    extends AM-2026-08-15-001 (C1/C2, the inflation pass-through and credit-loss design)
+    with the buyout extension (ask A6) and folds in the F5 calibration-drift batch
+    (D-ER14-1) onto the same reseal, since both touch the same artifact. post_hoc
+    TRUE: the v1.1 measured plane was seen before this amendment; the design note
+    and this entry declare every coefficient, its anchor, and its measured-external
+    upgrade path BEFORE scripts/estimate_sleeve_mappings_v1_2.py ran -- an artifact
+    whose numbers were not declared first is indistinguishable from a tuned one. C2
+    is explicitly deferred (ask A7): theta_DL is defined by the CDLI match rule and
+    the Cliffwater export is not in hand, so this amendment ships C1 (extended) and
+    F5 only, and names the CDLI dependency as the adoption trigger for the remainder.'
+  type: protocol_change

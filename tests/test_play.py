@@ -286,6 +286,25 @@ class TestScoringIdentity:
         assert PLAY_ALPHA_VERSION != decision_metrics.DECISION_ALPHA_VERSION
         assert PLAY_ALPHA_VERSION
 
+    def test_both_play_alpha_stamps_moved_and_they_are_distinct(self):
+        """Survey S3: a shared bump is never right - the two planes score
+        different tapes."""
+        from ah.port.adapter import GEN_PLAY_ALPHA_VERSION
+
+        assert PLAY_ALPHA_VERSION == "port-v5-inflation"
+        assert GEN_PLAY_ALPHA_VERSION == "port-v5-inflation-gen"
+        assert PLAY_ALPHA_VERSION != GEN_PLAY_ALPHA_VERSION
+
+    def test_the_research_alpha_definition_is_untouched(self):
+        """decision_alpha_version names Step 5's RESEARCH definition and
+        lives inside the G5 seal; bumping it would mean something different
+        (ER-14's own consequences paragraph, verbatim)."""
+        import yaml
+
+        ROOT = Path(__file__).resolve().parents[1]
+        doc = yaml.safe_load((ROOT / "step5-evaluation-protocol.yaml").read_text())
+        assert doc["decision_alpha_version"] == "1.0"
+
     def test_play_does_not_use_the_toy_simulator(self):
         """It replaces ah.core.institution for SCORING rather than wrapping it.
 

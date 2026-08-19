@@ -893,7 +893,10 @@ This inherited past is a *consistent simulated* construction: it passes the vali
 
 ## ER-14 — Inflation does not reach private markets at all
 
-**Status:** open (owner-filed 2026-08-16; no fix scheduled)
+**Status:** CLOSED 2026-08-18 (`er14-05-release` branch, `toy-v0.7`), D-ER14-2.
+See the close-out section at the end of this entry for the post-fix
+measurement, the named residuals, and the retirement/demotion this release
+also does.
 **Found:** 2026-08-15, writing up how the private classes are modeled. Not
 found by playing a world — found by varying one field and measuring, which is
 why it survived a stagflation preset, a validation battery and five gates
@@ -1053,11 +1056,122 @@ rate path feeds `bonds`, `hy`, `re`'s duration term, and more), which is
 exactly the kind of second-order public-channel effect this entry exists to
 complain about when it happens *by accident*; doing it *on purpose* here
 would be the same mistake with better intentions. Left as an open ask, not
-resolved in this WP. **ER-14 itself remains open at this point in the
-release** — the close-out entry (with `_THETA_TOY`'s CDLI-decoupled status
-folded in) is written in `er14-05` Task D2, once the sleeve wiring
-(`er14-04b`) and the generated-plane channel (`er14-05` itself) have
-landed.
+resolved in this WP.
+
+**CLOSED 2026-08-18 (`er14-05-release`, `toy-v0.7`), D-ER14-2.** Four
+inflation channels (real estate, private equity, private credit,
+infrastructure) now exist on both planes, plus a fourth private class
+(`infra`) with contractual inflation linkage. The channel this entry filed as
+missing now exists; the standing caveat below says what that does and does
+not buy.
+
+**Post-fix measurement (probe basis: stagflation preset, 200 paths,
+`base_seed=12345`, `factor_conditions.inflation.average_pct` varied 1% → 12%,
+everything else held).** Full numbers, the world-basis pair, and AT-13's
+escalator-asymmetry measurement are in the tracked artifact
+`artifacts/er14/response.json` (`scripts/measure_er14_response.py`,
+deterministic, re-run any time). Read beside the **pre-fix** table above —
+the inversion is the point:
+
+| asset | pre-fix delta (1%→12%) | post-fix delta (1%→12%) |
+|---|---|---|
+| pe | **0.000** (bit-identical) | **−1.123 pp/yr** |
+| pc | +0.02pp (noise) | **−0.899 pp/yr** |
+| re | **−0.12pp** (wrong sign) | **+3.353 pp/yr** |
+| infra | did not exist as an asset | **+7.005 pp/yr** — the largest response in the book |
+
+Design §4's predicted probe-basis table (RE +3.3, PE −1.1, PC −0.8, infra
++6.6 pp/yr) is matched within compounding/transient noise on pe/pc/re;
+infra measures ~6% above its linear prediction (7.005 vs 6.6), attributable
+to the `gamma_INFRA * dx` transient term the probe does not hold flat
+(inflation's own simulated path still moves within one probe run) plus
+ordinary compounding amplification — reconciled, not a defect.
+
+**The named residuals — closing ER-14 does not buy these, and each is
+stated rather than implied:**
+
+- **The propensity to distribute stays inflation-blind.** Inflation changes
+  the LEVEL of distributions through NAV, never the PROPENSITY: two worlds
+  with identical drawdown and spreads have the same `f_dist` (design §3,
+  ratified — Delta 3 was declined, `mappings/cashflow-tier1-v1.0.yaml` stays
+  untouched).
+- **It is a response, not a hedge.** At 6.5% inflation, +1.35 pp/yr of
+  escalated property income and +2.7 pp/yr on infrastructure are both still
+  large REAL losses. Nothing in this design makes a private book an
+  inflation hedge in real terms — it makes it less bad than a nominal one.
+- **The escalator is symmetric, and real ones usually are not.** C1
+  explicitly defers escalator caps/floors; AT-13 measured the overstatement
+  at `+0.601 pp/yr` on infra's deflation side (stagflation preset, probe
+  excess −1.0pp) — smaller than design §4's illustrative −1.8 because that
+  number used `deflation_bust`'s larger −3.0pp excess; both are the same
+  mechanism at different magnitudes. The fix belongs to C1's own deferred
+  item, not a new one.
+- **The played infrastructure sleeve is closed-end.** `infra_core` stays
+  Tier B and unparameterized because `ClosedEndCohort` is closed-end by
+  construction (design §2.7.4/§2.7.5) — no register row is reclassified by
+  this close-out.
+- **The shadow-rate approximation in φ_PC** (the working note immediately
+  above this close-out) is unchanged: `phi_PC` tracks `inflation_excess`
+  within the world, not the engine's own simulated `rate` path, and design
+  §2.4's declined alternative (a policy reaction function inside
+  `_rate_path`) stays declined.
+- **`structural.infrastructure` has no income-yield field**, so
+  `infra_yield` stays a hardcoded engine constant (5.0%, ratified) — a
+  CONTRACT limitation, not an implementation gap; recorded in the
+  unconsumed/unavailable-field map above, which otherwise stands unchanged
+  by this close-out (the six other fields listed there are still unread).
+- **ER-11 still governs the reported plane.** The inflation response above
+  reaches players through the engine's own filter (`_reported_marks`), not
+  the sealed per-sleeve kernel — de-smoothing a shipped reported series still
+  does not recover the true series, exactly as ER-11 already states.
+- **The generated plane's inflation state is the world's declared average,
+  not a real historical CPI trail — a G2-build finding, not part of the
+  original C1 design.** `mappings/sleeve-mappings-v1.2.yaml`'s
+  `inflation_passthrough.c_anchor` (measured, `0.03068`: the real historical
+  trailing-CPI mean over train+validation, per its original
+  AM-2026-08-15-001 specification) is declared for provenance/reproducibility
+  but is **not read at runtime**. `bootstrap-v1` stratifies row selection by
+  REGIME LABEL only and structurally ignores `factor_conditions` (the same
+  rule the crisis channel already carries), so a per-row real CPI trail
+  cannot respond to a world's declared `inflation.average_pct` — AT-10's
+  probe (varying that one field) would be dead on arrival if it tried.
+  `src/ah/port/adapter.py` instead demeans the WORLD's declared average
+  against `ah.core.engine.INFLATION_ANCHOR_PCT` (2.0%, the toy plane's own
+  policy-style anchor) — a different quantity for a necessarily different
+  mechanism, not a bug, but the artifact's `c_anchor` field is vestigial for
+  its originally-specified runtime purpose until a future WP makes row
+  selection itself inflation-conditional.
+- **The standing caveat is unchanged.** `hier-flow-v1` is not a convincing
+  model of history; closing ER-14 removes one missing channel from the toy
+  and generated engines and makes nothing decision-ready.
+
+**Two retirements this release also does, both announced rather than
+discovered:**
+
+- **The `7xx`/`8xx` campaign and spine worlds are RETIRED, not renumbered**
+  (`stress_1974`, `stress_1990`, `narration_1974`, `spine_pilot` —
+  `ah.cli.RETIRED_WORLD_IDS`). `toy-v0.7` changes their numbers and, with the
+  infra sleeve, the SHAPE of their tapes, but their world_ids are records of
+  campaigns that actually ran; renumbering would not reproduce them, only
+  produce differently-shaped new ones under new ids. The JSONs are
+  byte-unchanged and stay readable forever; `ah world build` refuses to
+  rebuild them under the new engine.
+- **ER-15 session demotion.** The default opening book gains a fourth
+  private sleeve, so its digest moves and every in-flight session is
+  invalidated — old three-sleeve posts demote to practice. Correct
+  behaviour under the ER-15 rule, recorded here so it is announced, not
+  discovered.
+
+**Deviations from a literal reading of the design, both flagged in their own
+task commit bodies:** (1) risk R-6's preset scope — `entry_multiple_drift_annual_pct`
+was zeroed on the two LIVE presets (`stagflation`, `stagflation_1974`) only;
+the four retired 7xx/8xx worlds are untouched records, never re-authored,
+per the "readable forever, never rebuilt" rule above. (2) AT-14's bit-identity
+claim is scoped to the TOY plane only (Task S4's finding: `rng.standard_normal`
+fills row-major, so widening 3 columns to 4 re-rolls every column's draw on
+the GENERATED plane even with `infra` appended last) — stated, not silently
+narrowed; the generated plane's digests move in this release regardless,
+since the world-fence and mapping-artifact changes move them anyway.
 
 ---
 

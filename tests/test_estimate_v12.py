@@ -1,13 +1,20 @@
-"""AM-2026-08-15-001: the v1.2 PM estimator's pure functions.
+"""AM-2026-08-15-001, extended by AM-2026-08-18-001 (ER-14 close-out,
+D-ER14-2, 2026-08-18): the v1.2 PM estimator's pure functions, plus the
+extended-C1 / F5 tests that read the real written artifact.
 
-Pure-function tests only -- no catalog, no network, no RNG. The catalog-touching
-path is exercised by the real run (blocked on the CDLI/NPI exports).
+Pure-function tests -- no catalog, no network, no RNG -- cover build_row,
+loss_series (kept for when C2 lands), the v1.1 reproduction machinery, and
+the two defect-reproduction regressions kept whole from the drop review. The
+artifact-reading tests (C1 extension, F5a/b/c, the C2 deferral) run against
+the REAL file written by ``uv run python scripts/estimate_sleeve_mappings_v1_2.py``
+against the sealed campaign vintage -- this module does not run the script
+itself; run it first (no network, deterministic, no RNG).
 
-Two of these pin defects found reviewing the drop rather than properties of a
-working design, and say so in their docstrings: the ``_to_quarterly`` gap test
-(the reimplementation fabricated 0.0% quarters) and the naive half of the
-sum-beta test (the drop kept the assertion that the fix works and dropped the
-one proving the defect was there to fix).
+Two of the pure-function tests pin defects found reviewing the drop rather
+than properties of a working design, and say so in their docstrings: the
+``_to_quarterly`` gap test (the reimplementation fabricated 0.0% quarters)
+and the naive half of the sum-beta test (the drop kept the assertion that
+the fix works and dropped the one proving the defect was there to fix).
 """
 
 from __future__ import annotations
@@ -18,6 +25,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 import pytest
+import yaml
 
 _ROOT = Path(__file__).resolve().parents[1]
 _spec = importlib.util.spec_from_file_location(
@@ -26,6 +34,8 @@ _spec = importlib.util.spec_from_file_location(
 assert _spec is not None and _spec.loader is not None
 _mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
+
+OUT_PATH = _mod.OUT_PATH
 
 
 def _idx(n: int) -> pd.DatetimeIndex:
@@ -52,6 +62,8 @@ _V11_ROW = {
 
 
 # ------------------------------------------------------------------- C2 form
+# C2 is DEFERRED this release (ask A7, D-ER14-2); the machinery is kept
+# whole -- unit-tested here -- for the day the CDLI export lands.
 
 
 def test_loss_series_shape_and_floor():
@@ -65,10 +77,12 @@ def test_loss_series_shape_and_floor():
     assert first_nonzero == spread.index[8 + _mod.LOSS_LAG_Q]
 
 
-def test_build_row_rebases_alpha_by_mean_loss():
+def test_build_row_rebases_alpha_by_mean_loss_when_theta_is_supplied():
     """The note's SS4.1 rule, applied by the code rather than by the test:
     alpha_adj = alpha_v11 + mean(loss_q), so the sleeve's unconditional mean
-    survives adoption and the term only redistributes across states."""
+    survives adoption and the term only redistributes across states. This
+    path is exercised only when the caller explicitly supplies theta/s_bar
+    (the future CDLI-adoption event); this release's own run does not."""
     row = _mod.build_row(
         "pm_direct_lending",
         _V11_ROW,
@@ -87,18 +101,35 @@ def test_build_row_rebases_alpha_by_mean_loss():
     assert row["credit_loss"]["theta"] == pytest.approx(0.0123)
 
 
-def test_build_row_leaves_a_non_loss_sleeve_alpha_untouched():
-    """pm_buyout carries neither term; adoption must not move its alpha at all."""
-    row = _mod.build_row("pm_buyout", _V11_ROW, r2=0.61, c_anchor=0.033)
+def test_build_row_leaves_a_non_c1_non_c2_sleeve_alpha_untouched():
+    """pm_vc carries neither term; adoption must not move its alpha at all."""
+    row = _mod.build_row("pm_vc", _V11_ROW, r2=0.61, c_anchor=0.033)
     assert row["alpha_quarterly"] == _V11_ROW["alpha_quarterly"]
     assert "credit_loss" not in row
     assert "alpha_v11" not in row
     assert "inflation_passthrough" not in row
 
 
-def test_build_row_refuses_a_loss_sleeve_without_its_theta():
-    with pytest.raises(ValueError, match="theta and s_bar are required"):
-        _mod.build_row("pm_mezzanine", _V11_ROW, r2=None, c_anchor=0.033)
+def test_build_row_omits_credit_loss_when_theta_is_not_supplied():
+    """C2 deferred (ask A7, D-ER14-2, AM-2026-08-18-001): a loss sleeve built
+    WITHOUT theta/s_bar (this release's own invocation) gets no credit_loss
+    block and no error -- a clean deferral, not a crash.
+
+    INVERTS the pre-D-ER14-2 behaviour: the AM-2026-08-15-001 drop raised
+    ValueError here, back when C1 and C2 were declared as one adoption
+    event. D-ER14-2 (ask A7) decoupled them so C1 could ship without
+    waiting on the Cliffwater export; a loss sleeve is therefore
+    legitimately built with no theta now, and that must not be an error."""
+    row = _mod.build_row("pm_direct_lending", _V11_ROW, r2=None, c_anchor=0.033)
+    assert "credit_loss" not in row
+    assert "alpha_v11" not in row
+    assert row["alpha_quarterly"] == _V11_ROW["alpha_quarterly"]
+
+
+def test_build_row_refuses_theta_without_s_bar_or_vice_versa():
+    """A partial pair is a programming error, not a deferred adoption."""
+    with pytest.raises(ValueError, match="theta and s_bar must be supplied together"):
+        _mod.build_row("pm_mezzanine", _V11_ROW, r2=None, c_anchor=0.033, theta=0.01)
 
 
 # ------------------------------------------------------------------- C1 form
@@ -119,11 +150,22 @@ def test_build_row_writes_the_declared_c1_block_on_declared_sleeves_only():
     )
 
 
-def test_b_infl_only_on_declared_sleeves():
-    assert set(_mod.B_INFL) == {"pm_infra", "pm_re_value_add"}
+def test_build_row_writes_the_c1_block_on_the_extended_buyout_sleeve():
+    """A6 / AM-2026-08-18-001: C1 now covers pm_buyout too, at the ratified
+    lambda_PE toy value -- without this the generated plane's own private
+    equity stays inflation-blind (AT-10)."""
+    row = _mod.build_row("pm_buyout", _V11_ROW, r2=0.61, c_anchor=0.03343)
+    block = row["inflation_passthrough"]
+    assert block["b_infl"] == 0.35
+    assert "D-ER14-2" in block["provenance"] or "lambda_PE" in block["provenance"]
+
+
+def test_b_infl_covers_exactly_the_three_c1_sleeves():
+    assert set(_mod.B_INFL) == {"pm_infra", "pm_re_value_add", "pm_buyout"}
+    assert _mod.B_INFL["pm_buyout"] == 0.35  # lambda_PE, the ratified toy value
     assert set(_mod.LOSS_SLEEVES) == {"pm_direct_lending", "pm_mezzanine", "pm_distressed"}
-    # PE sleeves carry neither term -- the SS1 scope table, machine-checked
-    for s in ("pm_buyout", "pm_growth", "pm_vc", "pm_secondaries"):
+    # the remaining PE sleeves carry neither term -- the SS1 scope table, machine-checked
+    for s in ("pm_growth", "pm_vc", "pm_secondaries"):
         assert s not in _mod.B_INFL and s not in _mod.LOSS_SLEEVES
 
 
@@ -210,3 +252,63 @@ def test_to_quarterly_omits_gaps_rather_than_fabricating_zero_quarters():
     fabricated = (1.0 + s).resample("QE").prod() - 1.0
     assert len(fabricated) == 3
     assert float(fabricated.iloc[1]) == 0.0
+
+
+# --------------------------------------------- the real written artifact
+# These read mappings/sleeve-mappings-v1.2.yaml as WRITTEN by running
+# scripts/estimate_sleeve_mappings_v1_2.py against the sealed campaign
+# vintage (no --theta: this release's own invocation, C2 deferred).
+
+
+def test_c1_now_covers_buyout():
+    """A6, ratified: without the extension the generated path's private
+    equity stays inflation-blind and ER-14 closes on one plane only.
+    AM-2026-08-15-001 scoped C1 to pm_infra and pm_re_value_add;
+    PM_SLEEVE_FOR_ASSET maps the product's pe to pm_buyout."""
+    assert set(_mod.B_INFL) == {"pm_infra", "pm_re_value_add", "pm_buyout"}
+    assert _mod.B_INFL["pm_buyout"] == 0.35  # lambda_PE, the ratified toy value
+
+
+def test_the_artifact_ships_without_the_cdli_blocked_credit_loss_block():
+    """A7 / D-ER14-2: CDLI decoupled. C1 (+ the buyout extension and F5)
+    adopts now; C2's measured half adopts when the Cliffwater export lands.
+    The toy plane's convexity is a DECLARED engine constant
+    (theta_toy = 0.10) and does not enter this sealed artifact."""
+    doc = yaml.safe_load(OUT_PATH.read_text())
+    assert all("credit_loss" not in row for row in doc["pm_sleeves"].values())
+    assert doc["c2_status"] == "deferred: awaiting Cliffwater CDLI export (AM-... / D-ER14-2)"
+
+
+def test_f5b_restores_r2_but_moves_no_coefficient():
+    """F5b: record only. Adjusting a MEASURED beta toward a prior is precisely
+    the tuning the seal exists to prevent. v1.1's loadings are carried
+    verbatim; the estimator refuses (tol 1e-3) if the reproduced betas
+    drift."""
+    v11 = yaml.safe_load(Path("mappings/sleeve-mappings-v1.1.yaml").read_text())
+    v12 = yaml.safe_load(OUT_PATH.read_text())
+    for name, row in v11["pm_sleeves"].items():
+        assert v12["pm_sleeves"][name]["loadings"] == row["loadings"]
+    assert v12["pm_sleeves"]["pm_buyout"]["r2_train_val"] is not None
+
+
+def test_f5c_declares_student_t_residuals_and_a_pm_block_correlation():
+    """DN5 section 9 SM-8 seals 'Student-t, df ~ 5; block correlation within
+    style family and within PM asset type'. adapter.py drew standard_normal,
+    independent across sleeves - thin tails and no co-movement on the path
+    players actually play. df = 5 per SM-8 (A9: a seal beats a convenience;
+    the toy engine's 6.0 is disclosed as a divergence)."""
+    doc = yaml.safe_load(OUT_PATH.read_text())
+    assert doc["pm_residuals"]["df"] == 5
+    assert doc["pm_residuals"]["rescaled_to_unit_variance"] is True
+    corr = doc["pm_residuals"]["block_correlation"]
+    assert corr["pm_buyout"]["pm_buyout"] == 1.0
+
+
+def test_f5a_declares_an_ewma_vol_and_a_position_cap():
+    """The CTA rule realises 0.1595 annualised vol against a declared 0.10
+    target on the 1974 world: position size is per_inst_target / sigma with a
+    trailing 12-month sigma, so a vol jump leaves the denominator stale for up
+    to a year."""
+    rule = yaml.safe_load(OUT_PATH.read_text())["cta_rule"]
+    assert rule["vol_estimator"] == "ewma" and rule["halflife_months"] > 0
+    assert rule["position_cap"] > 0

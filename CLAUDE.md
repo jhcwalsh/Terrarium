@@ -213,12 +213,7 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   months) and ER-13 (the CIO dashboard's inherited decade is a simulated
   past scaled to the opening book's NAV, not a reconstruction of the history
   that actually produced it — opening weights sit exactly at target, with no
-  drift) and **ER-14** (inflation does not reach private markets AT ALL:
-  PE is bit-identical from 1% to 12% inflation, RE moves the wrong way,
-  the tier-1 linkage cannot see inflation by signature, and the whole
-  apparent response of the private book is a second-order effect of the
-  commodity sleeve beside it — filed 2026-08-16, detail in
-  `docs/current/private-markets-and-inflation.md`) and ER-15 (an entered opening book can sit arbitrarily far outside the
+  drift) and ER-15 (an entered opening book can sit arbitrarily far outside the
   staggered shape the pacing model and linkage were fitted on, or open with an
   un-converged appraisal filter; mitigated by practice-only demotion, not fixed) are open.
   **ER-6 CLOSED 2026-08-12** (declared curve ~90% called by year
@@ -245,6 +240,21 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   to net terminal lumps by amount, deliberately as its own change so the
   attribution stayed clean). ER-5/ER-8/ER-9 remain one family for the toy
   engine. Each entry says what a fix invalidates.
+  **ER-14 CLOSED 2026-08-18** (`toy-v0.7`, D-ER14-2): private markets were
+  structurally inflation-blind — PE bit-identical from 1% to 12% inflation,
+  RE moving the wrong sign, filed 2026-08-16. Four inflation channels now
+  exist on both the toy and generated planes, plus a fourth private class
+  (`infra`, contractual inflation linkage) that did not exist before. Named
+  residuals that closing this does NOT buy: the cashflow layer's distribution
+  *propensity* is still inflation-blind by signature (Delta 3 declined); the
+  escalator is symmetric and real ones usually are not (AT-13 measured the
+  deflation-side overstatement); it is a response, not a hedge, in real terms;
+  ER-11 still governs the reported plane. `TOY_ENGINE_VERSION` `toy-v0.6` ->
+  `toy-v0.7`; both play-alpha stamps moved to `port-v5-inflation`/`-gen`; the
+  `7xx`/`8xx` campaign and spine worlds RETIRED (readable, never rebuildable);
+  the ER-15 session demotion fires (a fourth private sleeve moves the default
+  book's digest). Detail in `docs/engine-realism-register.md`'s ER-14
+  close-out and `docs/current/private-markets-and-inflation.md`.
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 

@@ -240,3 +240,11 @@ app/public/*.bundle.bin
 !/artifacts/c2/
 /artifacts/c2/*
 !/artifacts/c2/theta-provenance.json
+
+# ER-14 close-out (D-ER14-2, 2026-08-18, WP er14-05 Task B2): the post-fix
+# measurement run (scripts/measure_er14_response.py), committed so the
+# close-out entry's numbers are reproducible from a tracked file, not only
+# from stdout. Per-file allowlist, same rule as c1/c2 above.
+!/artifacts/er14/
+/artifacts/er14/*
+!/artifacts/er14/response.json

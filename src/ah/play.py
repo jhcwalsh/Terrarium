@@ -92,7 +92,10 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 # ones. (port-v3 was sp-01's pacing flex + the lever; port-v2 the ER-6
 # close-out; port-v1 the first cashflow twin. Leaderboards restart per stamp;
 # old rows stay readable.)
-PLAY_ALPHA_VERSION = "port-v4-ladder"
+# port-v5: ER-14 close-out (D-ER14-2, 2026-08-18) — the fourth private sleeve
+# (infra) and the inflation channels change the played book's shape and its
+# returns; the toy stamp moves in lockstep (TOY_ENGINE_VERSION toy-v0.7).
+PLAY_ALPHA_VERSION = "port-v5-inflation"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
 # ER-14 close-out (D-ER14-2, Task S2): the fourth private class. Keep in step
