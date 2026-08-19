@@ -121,3 +121,11 @@ if __name__ == "__main__":
         ("equity", "bonds", "hy", "commodities", "reits"),
     )
     build_anchor_baseline()
+    # ER-14 close-out (Task S1, er14-04b): the AT-14 reference -- the tree AS
+    # IT STANDS RIGHT NOW (mechanisms complete, no infra sleeve wired in yet).
+    # Captured before engine.py gains ASSETS+"infra" and the appended e_infra
+    # draw, so AT-14 has something pre-sleeve to compare against.
+    build(
+        "tests/fixtures/er14/no-infra-baseline",
+        ("equity", "bonds", "hy", "commodities", "reits", "pe", "pc", "re"),
+    )
