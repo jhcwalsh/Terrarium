@@ -4,6 +4,75 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## er14-03 — THE DECOUPLED CREDIT PATH (WIP, branch `er14-03-credit`)
+
+**Private credit starts feeling inflation too, without waiting on CDLI.** Continues
+`er14-02` (merged: RE/PE/infra-function mechanisms) with the credit channel: a floating
+coupon, a borrower-coverage squeeze, and a convex spread-loss term that ships DECLARED
+(D-ER14-2: "the convexity ships declared at 0.10; C2's measured half awaits the export")
+rather than waiting on the CDLI/Cliffwater export. Discharges AT-4, AT-5, AT-6a (in full).
+
+- **C1**: the floating coupon, `_PHI_PC=1.0` (Fisher one-for-one). `pc` gains
+  `phi_PC * (infl_trail - infl_avg) / 12.0`, measured against the WORLD's OWN declared
+  average (`infl_avg`), deliberately not the platform anchor — private credit's level is
+  already authored through `factor_conditions.policy_rate`, so anchoring it too would
+  double-charge stagflation-style worlds (the asymmetry with RE/PE is the point: those
+  two have no authored inflation channel at all). AT-5 and the own-average guard were
+  both already green at baseline (delta +0.8848pp/yr on +2pp `policy_rate.end_pct`,
+  just above the +0.80 floor) — recorded honestly, not claimed as new evidence; built
+  anyway because AT-5 asks for a NAMED mechanism, not an accidental green.
+- **C2**: the borrower-coverage squeeze, `_OMEGA_PC=0.03`, derived from a bounding rule
+  (schema's `inflation.average_pct` cap of 20, `_CRISIS_LOSS_AMPLIFIER=1.6` →
+  `omega_PC <= 0.6/18 = 0.033`) and asserted directly. `pc_loss_m` gains a one-sided
+  `(1 + omega_PC * max(0, x))` multiplier — inert on deflation (a different, unmodelled
+  revenue channel per design 4), proved by zeroing `omega_PC` on `deflation_bust` and
+  finding no change. AT-4 delta: **−0.9011** pp/yr (was **+0.2855** measured after C1's
+  phi_PC landed — not the register's original +0.022, since C1 already shifted the
+  baseline; recorded honestly). Break-and-revert: `omega_PC=0` → AT-4 red at +0.2855 →
+  reverted → green.
+- **C3**: the C2 convexity, adapted to the toy plane and **decoupled from CDLI**
+  (`_THETA_TOY=0.10`, declared per D-ER14-2 — the CDLI/Cliffwater-fitted half awaits the
+  export). `pc_loss_m` gains an ADDITIVE convex term above `_SPREAD_REFERENCE_BPS`
+  (`s_bar`, no new constant) — never a replacement for the through-cycle linear loss, so
+  C2's bare-form zero-loss-below-median behaviour can't resurface and undo ER-1/ER-4.
+  Post-mechanism AT-4: −0.8990pp/yr (theta adds a small further bite); convexity
+  confirmed (wide-spread delta 0.1187 > near-spread delta 0.1116); decade Sharpe on
+  stagflation `pc` = 0.987, well under the 1.5 ER-1/ER-4 regression-guard ceiling.
+- **C4**: rider R2 — `structural.private_credit.spread_over_base_bps` is now read
+  (`_DEF["pc_spread_bps"]=450.0`, matching the prior hardcode exactly); no shipped preset
+  declares it, so no number moves. DEVIATION (full reasoning in the test docstring): the
+  plan's literal `abs=0.20` tolerance around a 4.0pp delta doesn't hold — measured 4.2657.
+  Root-caused as a compounding (Jensen) artifact of geometric annualisation, not a defect:
+  the raw per-month return diff between hi/lo ensembles is EXACTLY uniform at
+  `(700-300)/100/12 = 0.333333` in every one of 200 paths × 120 months (verified directly
+  on the return arrays). Tolerance widened to `abs=0.30`.
+- **C5**: AT-6a extended to all three private assets (`pe`/`pc`/`re`) — with
+  `inflation_excess` forced to zero (M3's monkeypatch pattern, reused per the er14-02
+  carry-forward note) AND `_THETA_TOY` monkeypatched to 0 (the convex term is a SEPARATE
+  declared change, not inflation-keyed at all), `pc` is bit-identical to the existing
+  anchor-baseline reference — no fixture regeneration needed, since that fixture predates
+  phi_PC/omega_PC/theta_toy and already holds exactly "every non-inflation,
+  non-theta term of the current formula". Recorded a working note (not the close-out) on
+  the still-open `ER-14` register entry: `phi_PC` is an admitted shadow-rate
+  approximation (the coupon tracks `inflation_excess` directly rather than the engine's
+  own `rate` path — defensible under the already-open ER-2), with the clean alternative
+  (a policy reaction function inside `_rate_path`) declined per design §2.4/ask A8
+  because it would route the fix through a PUBLIC channel.
+
+All coefficients ratified in `D-ER14-2`, carried verbatim from the plan's header table.
+AT-6b (public assets) holds bit-identical throughout every task. The three seal locks
+verified unchanged before the first edit and again at WP close. `tests/test_er14_inflation.py`:
+36/36 green.
+
+**The suite is still legitimately red until `er14-05`'s golden re-pin sweep.** Full run at
+WP close (`er14-03-full.log`): same 4 failures, 0 errors as at `er14-02` close — no new
+unexplained failure, no STOP — `test_engine.py::test_golden_snapshot`,
+`test_institution.py::test_golden_hold_course_final_value`,
+`test_play_linkage.py::test_default_run_is_unchanged_by_these_additions`,
+`test_cioview.py::test_committed_cio_fixtures_match_the_builder`. Measured deltas moved
+further off their pins (Tasks C1-C4 add three more terms to `pc` on top of `er14-02`'s
+`re`/`pe`), reconciled with current numbers in `docs/superpowers/plans/er14-red-ledger.md`.
+
 ## er14-02 — THE ER-14 INFLATION MECHANISMS: RE, PE, INFRA (WIP, branch `er14-02-mechanisms`)
 
 **Private markets start feeling inflation.** ER-14 found that moving a world's declared

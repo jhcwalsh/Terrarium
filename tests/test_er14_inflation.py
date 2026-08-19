@@ -516,7 +516,7 @@ def test_theta_toy_is_the_ratified_declared_value_pending_cdli():
     measured half awaits the Cliffwater export. Anchor: _HY_LOSS_SHARE 0.45 x the
     engine's own pc/hy spread-sensitivity ratio (0.8/3.5 = 0.229) = 0.103."""
     assert engine._THETA_TOY == 0.10
-    assert engine._THETA_TOY == pytest.approx(engine._HY_LOSS_SHARE * (0.8 / 3.5), abs=0.005)
+    assert pytest.approx(engine._HY_LOSS_SHARE * (0.8 / 3.5), abs=0.005) == engine._THETA_TOY
 
 
 def test_private_credit_has_not_recovered_its_pre_er1_sharpe():
