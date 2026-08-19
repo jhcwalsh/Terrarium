@@ -67,6 +67,34 @@ credit path, sleeve and app work), which shipped with the suite legitimately red
   asset + the inflation channels reaching the correlation matrix. Zero enforce
   failures in either run; `thresholds.yaml` untouched.
   Full disclosure: `docs/superpowers/specs/2026-08-18-er14-battery-disclosure.md`.
+- **B2**: the close-out measurements (`scripts/measure_er14_response.py`,
+  `artifacts/er14/response.json`) and AT-13 (the escalator-asymmetry disclosure:
+  `+0.601 pp/yr` on infra's deflation side, stagflation-preset basis). The
+  credibility console walk (stagflation, goldilocks, deflation_bust) found 35
+  flags, all the already-disclosed ER-9 fat-tail floor/ceiling pattern, now
+  also on the new infra sleeve as expected — no new adapter defect.
+- **D1**: `docs/engine-realism-register.md`'s ER-14 entry -> **CLOSED**, with
+  the post-fix measurement table beside the pre-fix one, the named residuals,
+  and the 7xx/8xx retirement + ER-15 session demotion announced.
+  `docs/current/private-markets-and-inflation.md` re-headed (CURRENT IN KIND
+  AS OF 2026-08-18; a §4.5 post-fix summary added, the pre-fix numbers kept
+  as the record); `docs/current/README.md`'s status row moved with it.
+  `governance/decision-register.md` gains a close-out note under D-ER14-2
+  naming both deviations (R-6's preset scope; AT-14's toy-plane-only scope)
+  and the one disclosed follow-up (the doc's `.pdf` mirror not re-rendered —
+  a headless-Chrome step outside this WP).
+- **Incident, recorded per house norm (not hidden):** Task R5's CLI round-trip
+  check ran `rm -f data/ah.db` before `ah world build`, not realising
+  `Terrarium-spine2/data` is a junction to the MAIN repo's
+  `Terrarium/data` (shared across every worktree in this session) — the
+  delete hit the SHARED `ah.db`, permanently losing whatever RunRecord/
+  chronicle/leaderboard rows it held (gitignored, no backup; nothing
+  committed — worlds, campaign records, and code — was affected, and every
+  world/run is deterministically rebuildable). Flagged to the coordinator
+  immediately; the live session service serving from that shared path was
+  surfaced for the owner's attention. Guard adopted for the remainder of this
+  WP and going forward: every `ah` CLI invocation uses an explicit `--db`
+  into this WP's own worktree or scratch space, never the shared default.
 
 ## er14-04c — THE APP (WIP, branch `er14-04c-app`)
 

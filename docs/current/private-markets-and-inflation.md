@@ -1,15 +1,21 @@
 # Private markets and inflation pass-through
 
-*Status: GOVERNING (2026-08-15; ER-14 filed 2026-08-16). A technical account of
+*Status: SUPPORTING DETAIL for a CLOSED finding (written 2026-08-15; ER-14 filed
+2026-08-16; **CLOSED 2026-08-18**, `toy-v0.7`, D-ER14-2). A technical account of
 how the private market asset classes are modeled across the three layers that
-model them, and of what happens to a private book when the world's inflation
-changes.*
+model them, and of what happened to a private book when the world's inflation
+changed — before the fix. The pre-fix numbers below are kept as the record;
+the post-fix numbers are in §4.5 and in the tracked measurement artifact.*
 
-> **The inflation finding below is filed as ER-14** in
-> `docs/engine-realism-register.md`, which is the governing statement of it and
-> carries the consequences of any fix. This document is the supporting detail —
-> the layer-by-layer account of the model, the unconsumed-field map, and the
-> probes that produced the numbers.
+> **ER-14 is now CLOSED** in `docs/engine-realism-register.md`, which carries
+> the post-fix measurement, the named residuals, and the consequences the fix
+> actually invoked. This document remains the supporting detail for the
+> PRE-FIX finding — the layer-by-layer account of the model as it stood, the
+> unconsumed-field map (§5, still accurate for the fields it lists), and the
+> probes that produced the pre-fix numbers (§7). Do not read §2/§4's
+> description of the return equations as current: `ah/core/engine.py` and
+> `ah/port/adapter.py` both gained inflation terms in the `er14-02`/`er14-03`/
+> `er14-05` work; see the register entry for what changed.
 
 **The short version.** Private markets are modeled in three separate places
 that agree on the state contract and disagree on almost everything else: the
@@ -297,7 +303,30 @@ transmitted through total NAV → reported private weight → the pacing multipl
 
 Distributions are near-flat across all four worlds (46.33 → 46.39) because the
 tier-1 linkage reads only equity drawdown and credit spread, and neither moves
-with declared inflation on this preset.
+with declared inflation on this preset. **This is still true after the fix**
+(§4.5) — Delta 3 was declined; the cashflow layer's distribution PROPENSITY
+remains inflation-blind by signature.
+
+### 4.5 Post-fix (`toy-v0.7`, ER-14 CLOSED 2026-08-18)
+
+Same probe (stagflation preset, 200 paths, `base_seed=12345`,
+`factor_conditions.inflation.average_pct` varied 1% → 12%, everything else
+held), run after the fix:
+
+| asset | pre-fix delta (1%→12%) | post-fix delta (1%→12%) |
+|---|---|---|
+| pe | 0.000 | **−1.123 pp/yr** |
+| pc | +0.02pp | **−0.899 pp/yr** |
+| re | −0.12pp | **+3.353 pp/yr** |
+| infra | (asset did not exist) | **+7.005 pp/yr** |
+
+Full numbers (every asset, every probe point, the world-basis pair, and
+AT-13's escalator-asymmetry measurement) are in the tracked artifact
+`artifacts/er14/response.json`, reproducible with
+`uv run python scripts/measure_er14_response.py` — deterministic, no
+network. `docs/engine-realism-register.md`'s ER-14 close-out is the
+governing account of what this means and what it does not buy; read it
+before citing a post-fix number from here.
 
 ---
 

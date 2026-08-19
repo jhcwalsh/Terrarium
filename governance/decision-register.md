@@ -496,3 +496,38 @@ docs/superpowers/specs/2026-08-18-er14-close-out-design.md:
 - AT-1..AT-14 are the acceptance bars, incl. AT-14 (stream-order
   corruption guard: e_infra drawn LAST) mandated verbatim.
 Cost accepted: 7.5-8 days, one reseal covering ER-14 + F5 + the sleeve.
+
+**Close-out note, 2026-08-18 (`er14-05-release`, WP `er14-05` Task D1).**
+Shipped: `TOY_ENGINE_VERSION` `toy-v0.6` -> `toy-v0.7`; both play-alpha
+stamps -> `port-v5-inflation`/`-gen`; the `52x`/`604` world fences; the
+7xx/8xx retirement (`ah.cli.RETIRED_WORLD_IDS`); `mappings/sleeve-mappings-
+v1.2.yaml` (C1 extended to `pm_buyout`, F5a/b/c, C2 deferred on the CDLI
+export per ask A7) sealed under `AM-2026-08-18-001` (one G3 reseal,
+`sha256:45c80506...` -> `sha256:9d00930c...`); the battery re-run and its
+disclosure (`docs/superpowers/specs/2026-08-18-er14-battery-disclosure.md`
+— only `corr_distance`, a report-severity metric with no declared band,
+moved; zero enforce failures before or after); the post-fix measurement
+(`artifacts/er14/response.json`); ER-14 closed in
+`docs/engine-realism-register.md`.
+
+Two deviations from a literal reading, both named in their task commits:
+- **R-6's preset scope.** `entry_multiple_drift_annual_pct` was zeroed on
+  the two LIVE presets (`stagflation`, `stagflation_1974`) only — the four
+  retired 7xx/8xx worlds are untouched records, per the "readable forever,
+  never rebuilt" rule the retirement itself established. A literal reading
+  of "the six presets" would have edited records that must not change.
+- **AT-14's plane scope** (found in `er14-04b` Task S4, carried forward
+  here). `rng.standard_normal` fills its draw matrix row-major, so widening
+  3 residual columns to 4 (the infra sleeve) re-rolls every column's draw on
+  the GENERATED plane, even with `infra` appended last — AT-14's bit-identity
+  guarantee holds on the TOY plane only, exactly as AT-14's own wording says
+  ("on every preset" — the toy presets). The generated plane's digests move
+  in this release regardless of this fact (the world-fence and mapping-
+  artifact changes move them anyway), so nothing is lost by the scoping, but
+  it is stated here rather than left to be discovered.
+
+Also disclosed, not a deviation: `docs/current/private-markets-and-inflation.md`'s
+committed `.pdf` mirror was not re-rendered against the doc's post-fix banner
+and §4.5 addition (a headless-Chrome build step, `scripts/build_doc_pdf.py`,
+outside this WP's scope) — the served markdown and this register are
+current; the PDF is one edit behind. Follow-up, not blocking.
