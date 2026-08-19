@@ -233,14 +233,29 @@ def _anchored(path: Path) -> dict:
     return doc
 
 
-@pytest.mark.parametrize("asset", ["pe", "re"])
+@pytest.mark.parametrize("asset", ["pe", "pc", "re"])
 def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
-    """AT-6a (pe/re half; pc joins in Task C5). Every new term is additive in
-    x/d_x (LAMBDA*x, D*GAMMA*d_x), so x == 0 makes them vanish algebraically -
-    that is the property under test, and it is exact, not statistical.
+    """AT-6a, now covering all three private assets (Task C5 extends the
+    pe/re parametrization written in Task M3 with `pc` - not a new test body,
+    an added case; the pe/re cases are unchanged from M3). With the inflation
+    path pinned at C_ANCHOR *and* theta_toy = 0, pe/pc/re are BIT-IDENTICAL to
+    the anchor reference. Every new term is additive in x/d_x (LAMBDA*x,
+    D*GAMMA*d_x, PHI_PC*(infl_trail-infl_avg)), so x == 0 (with the declared
+    average also pinned at the anchor, so PHI_PC's own-average term is 0 too)
+    makes them vanish algebraically - that is the property under test, and it
+    is exact, not statistical. theta_toy is EXCLUDED (monkeypatched to 0)
+    because the convex spread term is a SEPARATE declared change and is not
+    inflation-keyed at all (it fires on spread_lagged vs s_bar regardless of
+    x) - saying so explicitly is more honest than a test that quietly covers
+    two unrelated changes at once (design 6, AT-6a). Reusing this reference
+    fixture works unchanged for `pc`: it was captured (Task M3) before phi_PC/
+    omega_PC/theta_toy existed, so its `pc` values already ARE "every
+    non-inflation, non-theta term of the current pc formula" - the same
+    property the pe/re cases rely on.
 
     DEVIATION from the plan's literal test body (recorded in the Task M3
-    commit): the plan set only the DECLARED average to the anchor and expected
+    commit, reused verbatim here per the er14-02 report's carry-forward note):
+    the plan set only the DECLARED average to the anchor and expected
     "x == 0" from that alone. It does not - _inflation_path is a stochastic
     mean-REVERTING process (kappa=0.12, monthly noise std 0.28), so even with
     average_pct == C_ANCHOR and crisis cleared, the REALIZED trailing mean
@@ -256,6 +271,7 @@ def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
     monkeypatch.setattr(
         engine, "inflation_excess", lambda infl, **_: np.zeros_like(infl, dtype=np.float64)
     )
+    monkeypatch.setattr(engine, "_THETA_TOY", 0.0)
     ref = np.load(ANCHOR_BASELINE_NPZ)
     for path in TOY_PRESETS:
         paths = run_path(project_numeric(load_worldspec(_anchored(path))), SEED)

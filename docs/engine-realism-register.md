@@ -1030,6 +1030,35 @@ inflation-conditioned result about private markets from this platform means
 anything, and that should be said out loud rather than inferred from a register
 entry.
 
+**Working note, 2026-08-18 (`er14-03` Task C5) — the private-credit shadow
+rate.** `phi_PC` (Task C1) makes the loan's floating base track
+`inflation_excess` *within the world* — a within-world coupon response, not
+a repricing against the platform anchor (see the `pe`/`re` asymmetry above:
+those two classes have no authored inflation channel anywhere in the
+WorldSpec, so their excess is measured against `INFLATION_ANCHOR_PCT`;
+private credit's level is already authored through
+`factor_conditions.policy_rate`, so measuring it against the platform anchor
+too would double-charge a stagflation-style world). This coupon-tracking
+variable is therefore a **shadow rate**: it can differ from the engine's own
+`rate` path (`_rate_path`), because `_rate_path` is a glide with mean
+reversion and its own innovation, while the coupon term reads
+`inflation_excess` directly. This is an admitted approximation, defensible
+under ER-2 (already on record: `rate` is a continuous drift with no meeting
+calendar and no 25bp quantisation, so it was never a clean policy-rate
+proxy to begin with). The clean alternative — routing the fix through a
+policy reaction function inside `_rate_path` itself, so the coupon tracks
+the engine's *actual* rate path rather than a shadow — is **declined**
+(design §2.4, ask A8): it would move the fix onto a PUBLIC channel (the
+rate path feeds `bonds`, `hy`, `re`'s duration term, and more), which is
+exactly the kind of second-order public-channel effect this entry exists to
+complain about when it happens *by accident*; doing it *on purpose* here
+would be the same mistake with better intentions. Left as an open ask, not
+resolved in this WP. **ER-14 itself remains open at this point in the
+release** — the close-out entry (with `_THETA_TOY`'s CDLI-decoupled status
+folded in) is written in `er14-05` Task D2, once the sleeve wiring
+(`er14-04b`) and the generated-plane channel (`er14-05` itself) have
+landed.
+
 ---
 
 ## ER-15 — An entered opening book can sit outside the fitted ladder shape
