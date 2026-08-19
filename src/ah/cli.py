@@ -43,12 +43,14 @@ DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 # not reproduce those campaigns, only produce differently-shaped new ones under
 # new ids; leaving them runnable would invite exactly the leaderboard collision
 # the fences exist to prevent. So: readable forever, never re-runnable.
-RETIRED_WORLD_IDS = frozenset({
-    "00000000-0000-4000-9000-000000000701",   # stress_1974
-    "00000000-0000-4000-9000-000000000703",   # stress_1990
-    "00000000-0000-4000-9000-000000000801",   # narration_1974
-    "00000000-0000-4000-9000-000000000802",   # spine_pilot
-})
+RETIRED_WORLD_IDS = frozenset(
+    {
+        "00000000-0000-4000-9000-000000000701",  # stress_1974
+        "00000000-0000-4000-9000-000000000703",  # stress_1990
+        "00000000-0000-4000-9000-000000000801",  # narration_1974
+        "00000000-0000-4000-9000-000000000802",  # spine_pilot
+    }
+)
 
 app = typer.Typer(
     help="Alternate Histories platform CLI.", no_args_is_help=True, add_completion=False
