@@ -56,6 +56,11 @@ GOAL_OF: dict[str, str] = {
     "commodities": "real",
     "reits": "real",
     "re": "real",
+    # ER-14 close-out (D-ER14-2, Task S7): infra reads as a REAL asset
+    # (design 2.7.1) -- same goal bucket as re/reits/commodities. Its
+    # illiquid tier assignment is automatic (everything in PRIVATE_ASSETS is
+    # the illiquid remainder), so this is the only goal-side entry needed.
+    "infra": "real",
     "bonds": "income",
     "hy": "income",
     "pc": "income",
@@ -70,6 +75,7 @@ CLASS_LABEL: dict[str, str] = {
     "pe": "Private equity",
     "pc": "Private credit",
     "re": "Real estate",
+    "infra": "Infrastructure",
     "cash": "Cash",
 }
 #: Band half-widths in points, the NO-BOOK fallback (app-open-02 task 2):
@@ -86,6 +92,7 @@ BAND_PCT: dict[str, float] = {
     "pe": 4.0,
     "pc": 2.0,
     "re": 2.0,
+    "infra": 2.0,  # A15: matches re
     "cash": 2.0,
 }
 GOAL_TOLERANCE_PCT = 5.0

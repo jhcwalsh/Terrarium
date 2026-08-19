@@ -83,6 +83,23 @@ PLAUSIBLE: dict[str, Band] = {
     "pe": Band(-10.0, 16.0, 15.0, 32.0, "true marks, not appraisals", -40.0, 90.0),
     "pc": Band(2.0, 11.0, 3.0, 12.0, "carry net of losses", -20.0, 55.0),
     "re": Band(-6.0, 11.0, 6.0, 18.0, "direct property, true marks", -25.0, 65.0),
+    # ER-14 close-out (D-ER14-2, Task S7): infra is not a schema-declared
+    # asset the register anchored a band for, so this is a DECISION (not
+    # re-derived from a dataset), anchored to re's own band -- the closest
+    # analogue (same equity beta ballpark, 0.33 vs 0.35, and a comparable
+    # residual sigma, 1.65 vs 1.5, per src/ah/core/engine.py's transplanted
+    # pm_infra constants) -- widened on the upside to admit the contracted
+    # 5%/yr yield plus a full inflation-linked escalator the register does
+    # not carry for re.
+    "infra": Band(
+        -6.0,
+        15.0,
+        6.0,
+        20.0,
+        "core/core-plus infra; contracted income + inflation escalator",
+        -25.0,
+        70.0,
+    ),
 }
 
 # A decade Sharpe above this needs an explanation, whatever the asset.
