@@ -84,11 +84,19 @@ class TestSeedLadder:
     """
 
     def test_the_ladder_is_staggered_one_rung_per_year_of_fund_life(self):
-        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio, _doc
+        """ER-14 close-out (Task S5): each sleeve's own life, not a single
+        fixture-wide constant -- infra's pacing row declares 15 years
+        (mappings/pacing-parameters-v1.0.yaml's pm_infra), the other three
+        sleeves fall back to the shared fixture's 10 (pc/re have no row of
+        their own yet; pe's pm_buyout row already agrees at 10)."""
+        from ah.play import LIQUID_ASSETS, START_TARGETS, _build_portfolio, _doc, _ladder_life
 
-        life = int(_doc("closed-end-cohort.example.json")["lifecycle"]["contractual_life_years"])
+        fixture_life = int(
+            _doc("closed-end-cohort.example.json")["lifecycle"]["contractual_life_years"]
+        )
         _, cohorts = _build_portfolio(Policy(), START_TARGETS, LIQUID_ASSETS)
         for asset in PRIVATE_ASSETS:
+            life = _ladder_life(asset, fixture_life)
             ages = [c.age_years for c in cohorts[asset]]
             assert len(ages) == life
             assert ages == sorted(ages)  # a staircase

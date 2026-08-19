@@ -66,3 +66,19 @@ class TestImpliedCurve:
         dist_q = doc["flows"]["distributions_income"] + doc["flows"]["distributions_capital"]
         snapshot_annual = 4.0 * dist_q / doc["value"]["nav_true"]
         assert snapshot_annual == pytest.approx(implied_annual, rel=0.02)
+
+
+class TestInfraRow:
+    """ER-14 close-out (Task S5): the fourth private sleeve's pacing row."""
+
+    def test_the_infra_row_makes_exactly_one_claim(self):
+        """A16, ratified: contractual_life_years 15 against buyout's 10,
+        anchored in taxonomy/sleeves.yaml's own pm_infra note ('Long lives;
+        extension behavior matters'). bow and yield_rate carry over from
+        pm_buyout UNCHANGED, so the new row makes exactly one claim."""
+        table = _table()
+        buyout, infra = table["sleeves"]["pm_buyout"], table["sleeves"]["pm_infra"]
+        assert infra["contractual_life_years"] == 15.0
+        assert infra["bow"] == buyout["bow"]
+        assert infra["yield_rate"] == buyout["yield_rate"]
+        assert infra["rc_curve"] == buyout["rc_curve"]

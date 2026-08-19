@@ -46,10 +46,12 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+import yaml
 
 from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
@@ -506,6 +508,44 @@ _SEED_AGE_OFFSET = 0.25
 #: sets only the SHAPE across vintages — the J-curve staircase — never the level.
 _WARMUP_QUARTERLY_RETURN = 0.026816
 
+_PACING_TABLE_PATH = _REPO_ROOT / "mappings" / "pacing-parameters-v1.0.yaml"
+
+
+@lru_cache(maxsize=1)
+def _pacing_table() -> dict[str, Any]:
+    """``mappings/pacing-parameters-v1.0.yaml``, cached.
+
+    NOT in any of the three seal locks (verified: main/G3/G5 all checked
+    before this task's first edit) but owner-approved (WI-I6-1, 2026-08-02)
+    with ``tests/test_pacing_artifact.py`` as its drift guard.
+    """
+    return yaml.safe_load(_PACING_TABLE_PATH.read_text(encoding="utf-8"))
+
+
+def _ladder_life(asset: str, default: int) -> int:
+    """The staggered ladder's rung count for one private sleeve.
+
+    ER-14 close-out (Task S5): resolved from the sleeve's OWN
+    ``contractual_life_years`` in the pacing table (via
+    ``adapter.PM_SLEEVE_FOR_ASSET``), not a hardcoded ``10`` -- infra's
+    15-year life needs 15 rungs, one per year (ER-12's "one rung per year of
+    contractual life" construction).
+
+    Sleeves with no row in the table (pc/re map to pm_direct_lending/
+    pm_re_value_add, neither estimated there yet -- only pm_buyout and, as
+    of this task, pm_infra are) fall back to ``default``, which is the
+    shared fixture's own life -- UNCHANGED behaviour for every sleeve this
+    task does not touch (pe's pm_buyout row already agrees with the fixture
+    at 10.0, so its ladder is unaffected either way).
+    """
+    from ah.port.adapter import PM_SLEEVE_FOR_ASSET
+
+    pm_sleeve = PM_SLEEVE_FOR_ASSET.get(asset)
+    row = _pacing_table()["sleeves"].get(pm_sleeve) if pm_sleeve else None
+    if row is None:
+        return default
+    return int(row["contractual_life_years"])
+
 
 def _scaled_cohort(cohort: ClosedEndCohort, scale: float) -> ClosedEndCohort:
     """The same cohort with every monetary quantity multiplied by ``scale``.
@@ -548,13 +588,20 @@ def _seed_ladder(base: dict[str, Any], asset: str, target_nav: float) -> list[Cl
     private NAV as before — the ladder changes the SHAPE of the opening book,
     never the institution's allocation.
     """
-    life = int(base["lifecycle"]["contractual_life_years"])
+    life = _ladder_life(asset, int(base["lifecycle"]["contractual_life_years"]))
     vintage0 = int(base["identity"]["vintage_year"])
     rungs: list[ClosedEndCohort] = []
     for k in range(life):
         age = k + _SEED_AGE_OFFSET
         doc = json.loads(json.dumps(base))
         doc["identity"] = {**base["identity"], "sleeve_id": asset}
+        # ER-14 close-out (Task S5): the cohort's OWN contractual life must
+        # match `life`, or a sleeve with a longer table life than the shared
+        # fixture's (infra: 15 vs the fixture's 10) hits the fixture's
+        # terminal-liquidation age mid-warm-up and NAV/unfunded math breaks
+        # (ClosedEndCohort.step reads lifecycle.contractual_life_years off
+        # the cohort's own contract, not the outer loop bound).
+        doc["lifecycle"] = {**base["lifecycle"], "contractual_life_years": life}
         cohort = ClosedEndCohort.new_commitment(
             doc,
             committed=1.0,
