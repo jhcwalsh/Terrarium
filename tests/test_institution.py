@@ -14,13 +14,15 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
+import pytest
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from ah.core.engine import run_path
+from ah.core.engine import ASSETS, run_path
 from ah.core.institution import (
     DEFENSIVE,
     GROWTH,
+    SLEEVES,
     START_MIX,
     decision_alpha,
     decision_months,
@@ -98,7 +100,7 @@ def test_weights_sum_to_one_and_never_negative(
     decisions = {m: data.draw(_ACTIONS) for m in dmonths}
     r = simulate_institution(run_path(world, seed), decisions)
 
-    assert r.weights.shape == (quarters * 3, 8)
+    assert r.weights.shape == (quarters * 3, len(SLEEVES))
     assert np.all(r.weights >= -1e-12)  # no negative sleeves
     assert np.allclose(r.weights.sum(axis=1), 1.0, atol=1e-9)
     assert np.all(r.total >= 0.0)
@@ -179,3 +181,26 @@ def test_unknown_action_treated_as_hold() -> None:
     weird = simulate_institution(run_path(world, GOLDEN_SEED), {dm[0]: "nonsense"})
     hold = hold_course_twin(world, GOLDEN_SEED)
     assert math.isclose(weird.final_value, hold.final_value)
+
+
+# --------------------------------------------------------------------------- #
+# ER-14 close-out (Task S3, er14-04b): the twin gains a fourth private sleeve
+# --------------------------------------------------------------------------- #
+
+
+def test_start_mix_sums_to_one_with_the_fourth_private_sleeve() -> None:
+    assert sum(START_MIX.values()) == pytest.approx(1.0)
+    assert set(START_MIX) == set(SLEEVES)
+
+
+def test_sleeve_order_matches_the_engines_asset_order() -> None:
+    """feed.py:330 zips institution weights against asset names positionally
+    - a divergence mislabels every board-pack allocation line SILENTLY."""
+    assert SLEEVES == ASSETS
+
+
+def test_infrastructure_joins_neither_tilt_bucket() -> None:
+    """Matching how re, reits and commodities are already treated (design
+    2.7.1)."""
+    assert "infra" not in GROWTH
+    assert "infra" not in DEFENSIVE

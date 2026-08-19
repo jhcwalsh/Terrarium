@@ -23,7 +23,7 @@ from pydantic import BaseModel, ConfigDict, field_validator
 from ah.core.digest import canonical_json
 from ah.port.cohort import ClosedEndCohort
 
-BOOK_STATE_VERSION = "opening-book-0.2"
+BOOK_STATE_VERSION = "opening-book-0.3"  # 0.3: the fourth private sleeve (ER-14)
 PLAN_STATE_VERSION = "commitment-plan-0.1"
 
 #: Liquid points + private NAV + cash. The default books are 98 + 2 cash.
@@ -35,7 +35,12 @@ BOOK_TOLERANCE = 1e-6
 #: paid_in + unfunded == committed, which recycling can legitimately break.
 RUNG_TOLERANCE = 1e-9
 
-PRIVATE_SLEEVES: tuple[str, ...] = ("pe", "pc", "re")
+PRIVATE_SLEEVES: tuple[str, ...] = (
+    "pe",
+    "pc",
+    "re",
+    "infra",
+)  # keep in step with play.PRIVATE_ASSETS
 
 #: app-open-01 delta 1 (owner-dictated 2026-08-16): the default reporting
 #: band is +/-10% OF the sleeve's own target allocation — relative, not a
@@ -142,7 +147,9 @@ class OpeningBook(BaseModel):
 
     model_config = ConfigDict(extra="forbid")
 
-    state_version: Literal["opening-book-0.1", "opening-book-0.2"] = BOOK_STATE_VERSION
+    state_version: Literal["opening-book-0.1", "opening-book-0.2", "opening-book-0.3"] = (
+        BOOK_STATE_VERSION
+    )
     liquid: dict[str, float]
     private: dict[str, list[dict[str, Any]]]
     cash: float

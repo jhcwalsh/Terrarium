@@ -54,6 +54,21 @@ sleeves:
                                     # Residual at lapse now EXPIRES visibly
                                     # (CohortStep.expired_undrawn).
 
+  # ER-14 close-out (D-ER14-2, Task S5, owner-approved WI-I6-1, A16 ratified
+  # 2026-08-18): the fourth private sleeve. Makes EXACTLY ONE claim --
+  # contractual_life_years 15 against buyout's 10, anchored in
+  # taxonomy/sleeves.yaml's own pm_infra note ("Long lives; extension
+  # behavior matters"). bow, yield_rate and rc_curve carry over from
+  # pm_buyout UNCHANGED (class: chosen, same anchors as pm_buyout above --
+  # no independent infrastructure distribution-shape data is in hand).
+  pm_infra:
+    contractual_life_years: 15.0   # class: chosen; per taxonomy/sleeves.yaml's
+                                    # pm_infra note (long-lived, extension-prone)
+    bow: 2.5                        # class: chosen; carried over from pm_buyout
+    yield_rate: 0.55                # class: chosen; carried over from pm_buyout
+    rc_curve: [0.35, 0.40, 0.30, 0.25, 0.20, 0.15]
+                                    # class: declared; carried over from pm_buyout
+
 open_questions:
   - id: PQ-1
     question: >

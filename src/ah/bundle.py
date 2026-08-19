@@ -54,7 +54,7 @@ from ah.store.worlds import get_world
 
 __all__ = ["BUNDLE_VERSION", "MAX_COMPRESSED_BYTES", "BundleError", "build_bundle", "write_bundle"]
 
-BUNDLE_VERSION = "world-bundle-0.5"  # 0.5: factor lineage for generated worlds (su-gen-02)
+BUNDLE_VERSION = "world-bundle-0.6"  # 0.6: the fourth private sleeve (ER-14 close-out)
 MAX_COMPRESSED_BYTES = 1_000_000  # W2's budget: a complete world under 1 MB compressed
 _QUANTILES = (5, 25, 50, 75, 95)
 

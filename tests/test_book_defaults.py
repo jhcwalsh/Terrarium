@@ -40,10 +40,29 @@ class TestDefaultBook:
         assert "reits" in default_opening_book(START_TARGETS).liquid
         assert "reits" not in default_opening_book(GEN_START_TARGETS).liquid
 
-    def test_each_private_sleeve_gets_a_ten_rung_ladder(self):
+    def test_every_private_sleeve_gets_a_seeded_ladder(self):
+        """ER-14 close-out (Task S2): infra is a fourth PRIVATE_ASSETS member,
+        so the derived opening book must seed it a ladder exactly like
+        pe/pc/re -- not silently drop it because default_opening_book's
+        private comprehension only knew about three names at write time."""
         book = default_opening_book(START_TARGETS)
-        for sleeve in PRIVATE_ASSETS:
+        assert set(book.private) == set(PRIVATE_ASSETS)
+
+    def test_each_private_sleeve_gets_a_ten_rung_ladder(self):
+        # ER-14 close-out (Task S5): infra's ladder is now 15 rungs, one per
+        # year of its own 15-year contractual life (mappings/pacing-
+        # parameters-v1.0.yaml's pm_infra row) -- see
+        # test_the_infra_ladder_has_one_rung_per_year_of_contractual_life.
+        book = default_opening_book(START_TARGETS)
+        for sleeve in ("pe", "pc", "re"):
             assert len(book.private[sleeve]) == 10
+
+    def test_the_infra_ladder_has_one_rung_per_year_of_contractual_life(self):
+        """ER-12's close-out extends by construction: at a 15-year life the
+        opening staggered book is 15 rungs, not 10."""
+        book = default_opening_book(START_TARGETS)
+        assert len(book.private["infra"]) == 15
+        assert len(book.private["pe"]) == 10
 
     def test_each_sleeve_opens_at_its_target_nav(self):
         book = default_opening_book(START_TARGETS)

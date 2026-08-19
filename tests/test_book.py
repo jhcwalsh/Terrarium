@@ -57,13 +57,18 @@ def _rung(committed: float, paid_in: float, nav: float, cohort_id: str = "rung")
 
 
 def _book(**overrides) -> OpeningBook:
-    """A valid toy-shaped book: liquid 63 + private 35 + cash 2 = 100."""
+    """A valid toy-shaped book: liquid 60 + private 38 + cash 2 = 100.
+
+    ER-14 close-out (Task S2, A15): reits 8->5, re 7->5, infra 0->5 -- the
+    same carve as play.START_TARGETS, so this fixture stays a faithful
+    toy-shaped book rather than an arbitrary one that happens to total 100."""
     fields = {
-        "liquid": {"equity": 33.0, "bonds": 12.0, "hy": 5.0, "commodities": 5.0, "reits": 8.0},
+        "liquid": {"equity": 33.0, "bonds": 12.0, "hy": 5.0, "commodities": 5.0, "reits": 5.0},
         "private": {
             "pe": [_rung(40.0, 20.0, 20.0, "pe-0")],
             "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-            "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+            "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+            "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
         },
         "cash": 2.0,
     }
@@ -102,7 +107,8 @@ class TestOpeningBook:
                     private={
                         "pe": [bad],
                         "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                        "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+                        "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -115,7 +121,8 @@ class TestOpeningBook:
                     private={
                         "pe": [],
                         "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                        "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+                        "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -133,7 +140,8 @@ class TestOpeningBook:
                     private={
                         "pe": [bad],
                         "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                        "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+                        "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -152,7 +160,7 @@ class TestOpeningBook:
     def test_digest_is_stable_and_order_independent(self):
         a = _book()
         b = _book(
-            liquid={"reits": 8.0, "commodities": 5.0, "hy": 5.0, "bonds": 12.0, "equity": 33.0}
+            liquid={"reits": 5.0, "commodities": 5.0, "hy": 5.0, "bonds": 12.0, "equity": 33.0}
         )
         assert a.digest() == b.digest()
 
@@ -162,7 +170,8 @@ class TestOpeningBook:
             private={
                 "pe": [_rung(40.0, 20.5, 20.0)],
                 "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+                "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
             }
         )
         assert a.digest() != b.digest()
@@ -182,7 +191,8 @@ class TestCohortIdsAreThePortfoliosKeys:
                     private={
                         "pe": [_rung(20.0, 10.0, 10.0, "same"), _rung(20.0, 10.0, 10.0, "same")],
                         "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                        "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+                        "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -198,7 +208,8 @@ class TestCohortIdsAreThePortfoliosKeys:
                     private={
                         "pe": [_rung(40.0, 20.0, 20.0, "shared")],
                         "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                        "re": [_rung(14.0, 7.0, 7.0, "shared")],
+                        "re": [_rung(10.0, 5.0, 5.0, "shared")],
+                        "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -212,7 +223,8 @@ class TestCohortIdsAreThePortfoliosKeys:
                     private={
                         "pe": [_rung(40.0, 20.0, 20.0, "pe-v3")],
                         "pc": [_rung(16.0, 8.0, 8.0, "pc-0")],
-                        "re": [_rung(14.0, 7.0, 7.0, "re-0")],
+                        "re": [_rung(10.0, 5.0, 5.0, "re-0")],
+                        "infra": [_rung(10.0, 5.0, 5.0, "infra-0")],
                     }
                 ),
                 liquid_sleeves=TOY_LIQUID,
@@ -235,17 +247,19 @@ class TestTargetsAndRanges:
     the su-app-06 book contract — a book naming neither must validate and
     behave exactly as it did before (deletability)."""
 
-    # the book's own weights (liquid + private target NAV): 63 + 35, so with
-    # cash 2.0 this is a valid `targets` document too (totals 100).
+    # the book's own weights (liquid + private target NAV): 60 + 38, so with
+    # cash 2.0 this is a valid `targets` document too (totals 100). ER-14
+    # close-out (Task S2, A15): reits 8->5, re 7->5, infra 0->5.
     _TARGETS: ClassVar[dict[str, float]] = {
         "equity": 33.0,
         "bonds": 12.0,
         "hy": 5.0,
         "commodities": 5.0,
-        "reits": 8.0,
+        "reits": 5.0,
         "pe": 20.0,
         "pc": 8.0,
-        "re": 7.0,
+        "re": 5.0,
+        "infra": 5.0,
     }
 
     def test_a_state_version_0_1_document_still_validates(self):
@@ -359,22 +373,56 @@ class TestDefaultBand:
 
 class TestCommitmentPlan:
     def test_a_valid_plan_passes(self):
-        plan = CommitmentPlan(points={"pe": [3.6] * 10, "pc": [1.44] * 10, "re": [1.26] * 10})
-        validate_plan(plan, targets={"pe": 20.0, "pc": 8.0, "re": 7.0})
+        plan = CommitmentPlan(
+            points={"pe": [3.6] * 10, "pc": [1.44] * 10, "re": [1.26] * 10, "infra": [1.0] * 10}
+        )
+        validate_plan(plan, targets={"pe": 20.0, "pc": 8.0, "re": 5.0, "infra": 5.0})
 
     def test_a_year_over_the_declared_cap_is_refused(self):
         # the bound is 0..COMMIT_CAP_MULTIPLE (2.0) x target x 0.18
         # pe: 2.0 * 20.0 * 0.18 = 7.2
         plan = CommitmentPlan(
-            points={"pe": [7.3] + [3.6] * 9, "pc": [1.44] * 10, "re": [1.26] * 10}
+            points={
+                "pe": [7.3] + [3.6] * 9,
+                "pc": [1.44] * 10,
+                "re": [1.26] * 10,
+                "infra": [1.0] * 10,
+            }
         )
         with pytest.raises(BookError, match="year 0"):
-            validate_plan(plan, targets={"pe": 20.0, "pc": 8.0, "re": 7.0})
+            validate_plan(plan, targets={"pe": 20.0, "pc": 8.0, "re": 5.0, "infra": 5.0})
 
     def test_a_negative_year_is_refused(self):
         with pytest.raises(ValueError):
-            CommitmentPlan(points={"pe": [-1.0] * 10, "pc": [1.44] * 10, "re": [1.26] * 10})
+            CommitmentPlan(
+                points={
+                    "pe": [-1.0] * 10,
+                    "pc": [1.44] * 10,
+                    "re": [1.26] * 10,
+                    "infra": [1.0] * 10,
+                }
+            )
 
     def test_sleeves_of_different_lengths_are_refused(self):
         with pytest.raises(ValueError):
-            CommitmentPlan(points={"pe": [3.6] * 10, "pc": [1.44] * 9, "re": [1.26] * 10})
+            CommitmentPlan(
+                points={
+                    "pe": [3.6] * 10,
+                    "pc": [1.44] * 9,
+                    "re": [1.26] * 10,
+                    "infra": [1.0] * 10,
+                }
+            )
+
+
+class TestPrivateSetDeclaredOnce:
+    """ER-14 close-out (Task S2): the private set is declared TWICE --
+    play.PRIVATE_ASSETS and port/book.py's own PRIVATE_SLEEVES -- and
+    CommitmentPlan._shape gates every served plan by the latter. A
+    divergence 422s every plan the server itself just served."""
+
+    def test_the_private_set_is_declared_once_in_effect(self):
+        from ah.play import PRIVATE_ASSETS
+        from ah.port.book import PRIVATE_SLEEVES
+
+        assert tuple(sorted(PRIVATE_ASSETS)) == tuple(sorted(PRIVATE_SLEEVES))

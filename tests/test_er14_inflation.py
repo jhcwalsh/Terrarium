@@ -576,3 +576,41 @@ def test_r2_changes_no_shipped_preset():
     for path in TOY_PRESETS:
         doc = _load(path)
         assert "spread_over_base_bps" not in doc["structural"].get("private_credit", {})
+
+
+# --------------------------------------------------------------------------- #
+# AT-11, AT-12 (Task S1, er14-04b): the fourth private class
+# --------------------------------------------------------------------------- #
+
+
+def test_at11_infrastructure_is_the_strongest_responder_in_the_book():
+    """AT-11. Delta annualised infra, 1% -> 12%, must be POSITIVE and >= +4.0
+    pp/yr (lambda_INFRA's declared range floor 0.4 x 11pp - rounding). Also
+    required: infra's response must EXCEED real estate's on the same probe -
+    the RANKING is the substantive claim, and a mechanism that got the
+    levels right but the order wrong would be worse than useless to an
+    allocator."""
+    d_infra = annualised(probe(12.0), "infra") - annualised(probe(1.0), "infra")
+    d_re = annualised(probe(12.0), "re") - annualised(probe(1.0), "re")
+    assert d_infra >= 4.0, d_infra
+    assert d_infra > d_re, (d_infra, d_re)
+
+
+def test_at12_the_dead_field_is_alive():
+    """AT-12. Two worlds identical but for
+    structural.infrastructure.inflation_linkage = 0.3 vs 0.9 must produce
+    DIFFERENT infra returns, and the ratio of their inflation responses must
+    be 0.33 +/- 0.05.
+
+    This is the second inverted defect: ER-14's most quotable line is that
+    the contract's only inflation-linkage field belongs to a class the
+    engine does not simulate."""
+    key = "structural.infrastructure.inflation_linkage"
+    lo_hot = probe(12.0, **{key: 0.3})  # type: ignore[arg-type]
+    lo_cold = probe(1.0, **{key: 0.3})  # type: ignore[arg-type]
+    hi_hot = probe(12.0, **{key: 0.9})  # type: ignore[arg-type]
+    hi_cold = probe(1.0, **{key: 0.9})  # type: ignore[arg-type]
+    assert not np.array_equal(lo_hot.returns["infra"], hi_hot.returns["infra"])
+    resp_lo = annualised(lo_hot, "infra") - annualised(lo_cold, "infra")
+    resp_hi = annualised(hi_hot, "infra") - annualised(hi_cold, "infra")
+    assert resp_lo / resp_hi == pytest.approx(0.333, abs=0.05)

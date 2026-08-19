@@ -46,10 +46,12 @@ from __future__ import annotations
 import json
 from collections.abc import Mapping
 from dataclasses import dataclass, field
+from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
 import numpy as np
+import yaml
 
 from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
@@ -65,6 +67,7 @@ __all__ = [
     "LIQUID_ASSETS",
     "PLAY_ALPHA_VERSION",
     "PRIVATE_ASSETS",
+    "SECONDARY_SLEEVE",
     "START_CASH",
     "START_TARGETS",
     "PlayAttribution",
@@ -92,7 +95,11 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 PLAY_ALPHA_VERSION = "port-v4-ladder"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
-PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
+# ER-14 close-out (D-ER14-2, Task S2): the fourth private class. Keep in step
+# with port/book.py's own PRIVATE_SLEEVES -- the two literals gate different
+# layers (this one the played institution, that one the served plan/book
+# shape) and a divergence 422s every plan the server itself just served.
+PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re", "infra")
 
 #: Opening book, in points of 100.
 #:
@@ -105,15 +112,20 @@ PRIVATE_ASSETS: tuple[str, ...] = ("pe", "pc", "re")
 #: before this was corrected. The book now opens at 35 points private, inside
 #: the band, with room for the denominator effect to move it without an
 #: instant breach.
+# A15 (D-ER14-2): infrastructure enters at 5 points, carved 3 from REITs and
+# 2 from real estate. Private lands at 38, not 40 -- the policy band's upper
+# bound is 0.40 and an opening breach previously produced 29 forced quarters
+# out of 40 (see the module docstring above).
 START_TARGETS: dict[str, float] = {
     "equity": 33.0,
     "bonds": 12.0,
     "hy": 5.0,
     "commodities": 5.0,
-    "reits": 8.0,
+    "reits": 5.0,
     "pe": 20.0,
     "pc": 8.0,
-    "re": 7.0,
+    "re": 5.0,
+    "infra": 5.0,
 }
 START_CASH = 2.0
 
@@ -330,8 +342,17 @@ def _validate_commit_decisions(decisions: Mapping[int, Any], targets: Mapping[st
 _SHIFT_POINTS = 10.0
 _SECONDARY_POINTS = 8.0
 
+# infra joins NEITHER tilt bucket, matching how re, reits and commodities
+# are already treated (design 2.7.1): _rebalance filters both tuples to
+# LIQUID_ASSETS, so an entry here would be a no-op that misleads a reader.
 _GROWTH: tuple[str, ...] = ("equity", "pe")
 _DEFENSIVE: tuple[str, ...] = ("bonds", "pc")
+
+# A16 (D-ER14-2): the forced/voluntary secondary lever stays scoped to
+# buyout. Infrastructure secondaries are thin; this is a DECISION, recorded
+# here rather than left implicit in a hardcoded "pe_ladder" key (design
+# 2.7.1).
+SECONDARY_SLEEVE = "pe"
 
 
 @dataclass(frozen=True)
@@ -487,6 +508,44 @@ _SEED_AGE_OFFSET = 0.25
 #: sets only the SHAPE across vintages — the J-curve staircase — never the level.
 _WARMUP_QUARTERLY_RETURN = 0.026816
 
+_PACING_TABLE_PATH = _REPO_ROOT / "mappings" / "pacing-parameters-v1.0.yaml"
+
+
+@lru_cache(maxsize=1)
+def _pacing_table() -> dict[str, Any]:
+    """``mappings/pacing-parameters-v1.0.yaml``, cached.
+
+    NOT in any of the three seal locks (verified: main/G3/G5 all checked
+    before this task's first edit) but owner-approved (WI-I6-1, 2026-08-02)
+    with ``tests/test_pacing_artifact.py`` as its drift guard.
+    """
+    return yaml.safe_load(_PACING_TABLE_PATH.read_text(encoding="utf-8"))
+
+
+def _ladder_life(asset: str, default: int) -> int:
+    """The staggered ladder's rung count for one private sleeve.
+
+    ER-14 close-out (Task S5): resolved from the sleeve's OWN
+    ``contractual_life_years`` in the pacing table (via
+    ``adapter.PM_SLEEVE_FOR_ASSET``), not a hardcoded ``10`` -- infra's
+    15-year life needs 15 rungs, one per year (ER-12's "one rung per year of
+    contractual life" construction).
+
+    Sleeves with no row in the table (pc/re map to pm_direct_lending/
+    pm_re_value_add, neither estimated there yet -- only pm_buyout and, as
+    of this task, pm_infra are) fall back to ``default``, which is the
+    shared fixture's own life -- UNCHANGED behaviour for every sleeve this
+    task does not touch (pe's pm_buyout row already agrees with the fixture
+    at 10.0, so its ladder is unaffected either way).
+    """
+    from ah.port.adapter import PM_SLEEVE_FOR_ASSET
+
+    pm_sleeve = PM_SLEEVE_FOR_ASSET.get(asset)
+    row = _pacing_table()["sleeves"].get(pm_sleeve) if pm_sleeve else None
+    if row is None:
+        return default
+    return int(row["contractual_life_years"])
+
 
 def _scaled_cohort(cohort: ClosedEndCohort, scale: float) -> ClosedEndCohort:
     """The same cohort with every monetary quantity multiplied by ``scale``.
@@ -512,10 +571,11 @@ def _seed_ladder(base: dict[str, Any], asset: str, target_nav: float) -> list[Cl
     different point on its J-curve. The play surface used to open with a
     single mid-life cohort per sleeve instead, cloned from the fixture at age
     5.25, which meant the ENTIRE opening private book reached the end of its
-    life in the same quarter: all three sleeves lapsed together in quarter 19,
-    expiring 9.0 of undrawn commitment (17% of the decade's calls) and winding
-    up their NAV at once. Found 2026-08-14 by the audit-F2 expiry column, the
-    first surface on which it was visible.
+    life in the same quarter: all three sleeves (the private set was pe/pc/re
+    at the time; infrastructure joined later, ER-14) lapsed together in
+    quarter 19, expiring 9.0 of undrawn commitment (17% of the decade's
+    calls) and winding up their NAV at once. Found 2026-08-14 by the
+    audit-F2 expiry column, the first surface on which it was visible.
 
     Each rung is built by the model itself — a fresh commitment stepped
     forward to its age at ``_WARMUP_QUARTERLY_RETURN`` — so paid-in, unfunded,
@@ -528,13 +588,20 @@ def _seed_ladder(base: dict[str, Any], asset: str, target_nav: float) -> list[Cl
     private NAV as before — the ladder changes the SHAPE of the opening book,
     never the institution's allocation.
     """
-    life = int(base["lifecycle"]["contractual_life_years"])
+    life = _ladder_life(asset, int(base["lifecycle"]["contractual_life_years"]))
     vintage0 = int(base["identity"]["vintage_year"])
     rungs: list[ClosedEndCohort] = []
     for k in range(life):
         age = k + _SEED_AGE_OFFSET
         doc = json.loads(json.dumps(base))
         doc["identity"] = {**base["identity"], "sleeve_id": asset}
+        # ER-14 close-out (Task S5): the cohort's OWN contractual life must
+        # match `life`, or a sleeve with a longer table life than the shared
+        # fixture's (infra: 15 vs the fixture's 10) hits the fixture's
+        # terminal-liquidation age mid-warm-up and NAV/unfunded math breaks
+        # (ClosedEndCohort.step reads lifecycle.contractual_life_years off
+        # the cohort's own contract, not the outer loop bound).
+        doc["lifecycle"] = {**base["lifecycle"], "contractual_life_years": life}
         cohort = ClosedEndCohort.new_commitment(
             doc,
             committed=1.0,
@@ -625,7 +692,7 @@ def _secondary_sale(
     from. Selling early is a liquidity decision with a price, not a weight
     tweak.
     """
-    live = [c for c in cohorts.get("pe_ladder", []) if c.nav_true > 0.0]
+    live = [c for c in cohorts.get(f"{SECONDARY_SLEEVE}_ladder", []) if c.nav_true > 0.0]
     cohort = max(live, key=lambda c: c.nav_true) if live else None
     if cohort is None:
         return 0.0
@@ -760,7 +827,11 @@ def simulate_play(
                 elif name == "leanin":
                     _rebalance(portfolio, _DEFENSIVE, _GROWTH, _SHIFT_POINTS)
                 elif name == "secondary":
-                    _secondary_sale(portfolio, {"pe_ladder": ladders["pe"]}, policy)
+                    _secondary_sale(
+                        portfolio,
+                        {f"{SECONDARY_SLEEVE}_ladder": ladders[SECONDARY_SLEEVE]},
+                        policy,
+                    )
 
         liq_open = _liquid_snapshot()
         cash_open = float(portfolio.cash)

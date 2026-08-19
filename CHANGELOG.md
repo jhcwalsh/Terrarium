@@ -4,6 +4,110 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## er14-04b — THE INFRASTRUCTURE SLEEVE (WIP, branch `er14-04b-sleeve`)
+
+**Infrastructure joins the book a player allocates.** Continues `er14-02`+`er14-03`
+(merged: the RE/PE/infra-function mechanisms and the decoupled credit path) by putting
+the fourth private class into the engine's asset tuple, the played institution, the
+generated path, the pacing table, the session contracts, the CIO view and the bundle
+contract. Discharges AT-7, AT-11, AT-12, AT-14. Ratified: A14 (the sleeve addition
+itself), A15 (the carve: 3 points from REITs + 2 from real estate to infra), A16 (the
+secondary-sale lever stays scoped to buyout) — all D-ER14-2.
+
+- **S1**: `infra` joins `ASSETS` (a 9-tuple) and `REPORTED_SLEEVES`. **The single
+  highest-risk line in the release**: the new Student-t draw (`e_infra`) is appended
+  strictly LAST in `run_path`'s up-front draw block, immediately after `e_re` and
+  nowhere else (design 2.7.2) — inserting it anywhere else silently re-rolls
+  `e_pe`/`e_pc`/`e_re` and, through the common-factor construction, the public assets
+  too, in every world. **Break-and-revert proof performed and confirmed**: moving the
+  draw to the top of the block made AT-14 (`tests/test_er14_streams.py`) go RED with
+  100% of elements mismatched on `deflation_bust/equity` (e.g. index 0: 2.5186 actual
+  vs 1.2465 desired); reverting restored green. AT-7 pins the literal draw order by
+  reading `run_path`'s source; a distinct-tape guard proves `e_infra` correlates with no
+  other stream (< 0.25) and is not a copy of one. AT-11/AT-12 require infra's inflation
+  response to exceed real estate's (>= +4.0 pp/yr, 1%→12%) and the declared
+  `inflation_linkage` field to be alive (0.3 vs 0.9 linkage ratio 0.33 ± 0.05).
+- **S2**: the private set is declared TWICE — `play.PRIVATE_ASSETS` and
+  `port/book.py`'s own `PRIVATE_SLEEVES` — and moved together to
+  `("pe","pc","re","infra")`, or every served plan 422s. `BOOK_STATE_VERSION` →
+  `"opening-book-0.3"` (Literal widened to accept 0.1/0.2/0.3, old documents stay
+  readable). A15's carve: `START_TARGETS` gains `infra: 5.0`, `reits` 8.0→5.0, `re`
+  7.0→5.0 — private lands at 38 not 40, inside `Policy.private_weight_range`'s 0.40
+  upper bound. A16: `SECONDARY_SLEEVE = "pe"`, an explicit constant replacing a
+  hardcoded `"pe_ladder"` string. `_GROWTH`/`_DEFENSIVE` gain neither — infra joins
+  neither tilt bucket, matching `re`/`reits`/`commodities`.
+- **S3**: the twin's `SLEEVES` gains `infra` (matching `ASSETS`' order exactly —
+  `feed.py:330` zips these positionally). `START_MIX` gains `infra: 0.05`. DEVIATION
+  (arithmetic correction): the plan's literal text ("reits 0.05→0.03") only removes
+  0.04 against infra's +0.05, leaving `START_MIX` summing to 1.01 — contradicting the
+  plan's own stated "sums to 1.0" interface. A15's own wording ("3 points from REITs")
+  applied in fraction-space is `reits` 0.05→0.02, not 0.03; corrected, restoring both
+  the A15 proportions and the invariant. Independently cross-confirmed by S4: the
+  generated plane's `GEN_START_MIX["equity"]` (0.32, matching the plan's own literal
+  text) exactly equals `START_MIX["equity"] + START_MIX["reits"]` (0.30 + 0.02) under
+  the corrected value, not the plan's stated one.
+- **S4**: `PM_SLEEVE_FOR_ASSET["infra"] = "pm_infra"` — the row is ALREADY estimated in
+  the sealed `sleeve-mappings-v1.1.yaml` (60 quarters, sum-beta(2)), so the generated
+  plane needs no new estimation. `GEN_ASSETS` auto-inherits `infra`. `GEN_START_TARGETS`
+  re-carved to A15 (equity 41→38, re 7→5, infra +5, total 98.0 unchanged); `GEN_START_MIX`
+  gains `infra: 0.05` (re 0.10→0.08, equity 0.35→0.32). **FINDING**: `rng.standard_normal`
+  fills row-major, so widening the PM residual matrix from 3 to 4 columns re-rolls
+  `pe`/`pc`/`re`'s residuals even though `infra` is appended last — AT-14's bit-identity
+  claim is therefore scoped to the TOY plane only, exactly as AT-14 words it. The
+  generated plane's digests move in this release regardless (`GEN_PLAY_ALPHA_VERSION`
+  bumps, the played generated world moves 603→604 in `er14-05`), so nothing is lost, but
+  it is stated here rather than left for a future reader to mistake as corruption.
+- **S5**: `mappings/pacing-parameters-v1.0.yaml` gains a `pm_infra` row —
+  `contractual_life_years: 15.0` (taxonomy/sleeves.yaml's own pm_infra note, "Long lives;
+  extension behavior matters"), `bow`/`yield_rate`/`rc_curve` all carried over from
+  `pm_buyout` unchanged, so the row makes exactly one claim. **REAL CHANGE** (anticipated
+  by the plan): `_seed_ladder` previously hardcoded its rung count to the shared fixture's
+  own life for every sleeve — nothing consulted the pacing table at all. Added
+  `_pacing_table()`/`_ladder_life()` in `src/ah/play.py`, resolving each sleeve's ladder
+  life from its OWN pacing-table row (via `PM_SLEEVE_FOR_ASSET`), falling back to the
+  fixture's default for sleeves with no row (`pc`/`re`, unaffected — `pe`'s `pm_buyout`
+  row already agreed with the fixture at 10.0). A second finding, caught during
+  implementation: `ClosedEndCohort.step()` reads `contractual_life_years` off the
+  cohort's OWN contract, not the caller's loop bound, so infra's rungs at age >= 10 were
+  hitting the FIXTURE's terminal-liquidation age mid-warm-up; fixed by overriding
+  `doc["lifecycle"]["contractual_life_years"]` on each rung's copy too. Infra's opening
+  ladder is now 15 rungs (one per year of its own contractual life), pe/pc/re stay at 10.
+- **S6**: `/book/default`, `/book/ladder` and `POST /sessions` were already
+  comprehensions over `PRIVATE_ASSETS`/`PRIVATE_SLEEVES` (Task S2), so they serve and
+  validate a four-sleeve book/plan with no endpoint-body change. Added a docstring to
+  `POST /sessions` recording ER-15 (accepted side effect, D-ER14-2): the default opening
+  book's digest moved, so every in-flight three-sleeve session is invalidated —
+  `OpeningBook`/`CommitmentPlan`'s own shape check refuses a book/plan that cannot name
+  the world's full private set, so a legacy submission 422s at the door rather than
+  being silently accepted and demoted. Announced with date and authority, per the
+  Global Constraints, not discovered.
+- **S7**: three previously-unguarded dict lookups in `src/ah/cioview.py` (`CLASS_LABEL`,
+  `BAND_PCT`, `GOAL_OF`) gain `"infra"` entries — `GOAL_OF["infra"] = "real"` (design
+  2.7.1, same bucket as `re`/`reits`/`commodities`), `CLASS_LABEL["infra"] =
+  "Infrastructure"`, `BAND_PCT["infra"] = 2.0` (A15: matches `re`). The illiquid tier
+  needed no edit — its `classIds` is `list(PRIVATE_ASSETS)`, already inherited from S2.
+  `src/ah/console.py`'s per-sleeve columns and `src/ah/inspect.py`'s correlogram were
+  both already generic over `PRIVATE_ASSETS`/`len(ASSETS)`, confirmed by their green
+  suites rather than assumed. **FINDING** (a fourth unguarded lookup the plan's task
+  text did not enumerate): `src/ah/credibility.py`'s `PLAUSIBLE` band dict also needed
+  an `"infra"` entry; no register/dataset anchors this asset, so the band is a DECISION
+  (recorded in a comment) anchored to `re`'s own band and widened on the return upside
+  for the contracted yield plus the inflation escalator `re` does not carry.
+- **S8**: `BUNDLE_VERSION` → `"world-bundle-0.6"`. Step 1 STOP check (grepped
+  `series_order`/`bundle_version`/`world-bundle` across `app/src`, `src`, `tests`):
+  confirmed `app/src/lib/bundle.ts`'s `shapeCheck` pins tape ROWS to `meta.months` and
+  never a column count; `series_order` is read dynamically, never indexed by a hardcoded
+  count. No STOP triggered. Regenerated `app/fixtures/{toy,gen}.bundle.gz` (34,976 /
+  33,103 bytes compressed, both well under the 1 MB budget) and
+  `app/fixtures/cio-sample.{reported,true,decided}.json` — the latter cleared the
+  already-ledgered `test_committed_cio_fixtures_match_the_builder` ahead of `er14-05`.
+  Toy series: 9 assets + 4 reported sleeves = 13 columns (was 8+3=11); generated: 8+4=12
+  (was 7+3=10). **EXPECTED APP-SIDE RED, not touched here** (per the plan's
+  file-structure table — `app/src/…` is `er14-04c`'s scope): `app/src/lib/bundle.ts`'s
+  `SUPPORTED_BUNDLE_VERSIONS` does not yet list `"world-bundle-0.6"`, and
+  `bundle.test.ts` still asserts `"world-bundle-0.5"` — `cd app && npm run test` will
+  fail on both until `er14-04c` lands.
+
 ## er14-03 — THE DECOUPLED CREDIT PATH (WIP, branch `er14-03-credit`)
 
 **Private credit starts feeling inflation too, without waiting on CDLI.** Continues
