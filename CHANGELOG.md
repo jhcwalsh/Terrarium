@@ -4,6 +4,70 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## er14-05 — THE RELEASE (WIP, branch `er14-05-release`)
+
+**Makes ER-14 real.** Version stamps move, the campaign/spine worlds retire, every
+value golden is re-pinned to the toy-v0.7 engine, the generated plane gains its own
+inflation channel through a new sealed mapping artifact, the battery re-runs, and the
+release closes out. Continues `er14-02`/`er14-03`/`er14-04b`/`er14-04c` (the mechanism,
+credit path, sleeve and app work), which shipped with the suite legitimately red
+(`docs/superpowers/plans/er14-red-ledger.md`).
+
+- **R1**: `TOY_ENGINE_VERSION` `toy-v0.6` -> `toy-v0.7`; `PLAY_ALPHA_VERSION`
+  `port-v4-ladder` -> `port-v5-inflation`; `GEN_PLAY_ALPHA_VERSION`
+  `port-v4-ladder-gen` -> `port-v5-inflation-gen` — three distinct stamps, never a
+  shared bump. `decision_alpha_version` (the G5-sealed research definition) untouched.
+- **R2**: the world fences move. Toy presets `...511-515` -> `...521-525` (the `52x`
+  sub-block = toy-v0.7, `scripts/gen_presets.py`'s documented convention); the played
+  generated preset `stagflation_1974` `...603` -> `...604`.
+- **R3**: `ah.cli.RETIRED_WORLD_IDS` fences the 7xx/8xx campaign and spine worlds
+  (`stress_1974`, `stress_1990`, `narration_1974`, `spine_pilot`) at `ah world build` —
+  readable forever (byte-unchanged JSON records), never rebuildable under toy-v0.7.
+- **R4**: the mechanical golden re-pin sweep. Three value goldens re-pinned with
+  docstring history (`test_engine.py::GOLDEN_DIGEST`,
+  `test_institution.py::GOLDEN_HOLD_FINAL`,
+  `test_play_linkage.py::test_default_run_is_unchanged_by_these_additions`); the red
+  ledger driven to empty and deleted. Full suite green (`EXIT: 0`) confirmed by log
+  before proceeding.
+- **R5**: both committed bundles (`toy.bundle.gz`, `gen.bundle.gz`) rebuilt under the
+  toy-v0.7 / `52x` fence; `ah world build && ah run && ah replay` verified MATCH.
+- **G1**: `mappings/sleeve-mappings-v1.2.yaml` (new sealed artifact,
+  `scripts/estimate_sleeve_mappings_v1_2.py` rewritten). C1 (inflation pass-through)
+  extended to `pm_buyout` at `lambda_PE = 0.35` (ask A6). C2 (credit_loss) explicitly
+  **deferred** — no CDLI export in hand (ask A7, D-ER14-2); the machinery is kept whole
+  (unit-tested) for when it lands, but `--theta` is optional and this release's own run
+  omits it. F5 batched onto the same reseal: F5a (`cta_rule` gains an EWMA vol
+  estimator + position cap), F5b (`r2_train_val` restored to every PM row; no
+  coefficient moved), F5c (`pm_residuals`: Student-t df=5 + a PM block correlation,
+  rescaled to unit variance per the ER-7 precedent).
+- **G2**: the generated plane stops being inflation-blind (AT-10). `adapter.py` gains
+  `cpi_trail_excess` (via `ah.core.engine.inflation_excess`/`INFLATION_TRAIL_MONTHS`,
+  `port -> core`) and applies each C1 sleeve's declared `b_infl`; PM residuals draw
+  standardised Student-t, correlated by the artifact's declared block matrix;
+  `mapping.py::_cta_rule` gains the F5a EWMA fix. F5a acceptance (realised annualised
+  CTA vol, target 0.10 +/- 0.02): stagflation 0.0993, goldilocks 0.1055, deflation_bust
+  0.1068, reflation_boom 0.1028 (the four `52x` presets), 0.1027 on `stagflation_1974`.
+  **Deviation**: `pc` (no C1 term) takes a direct `OMEGA_PC`-equivalent loss bite on the
+  shared `cpi_trail_excess` tape, not through the artifact (C2 deferred); `pe` applies
+  `pm_buyout`'s declared `b_infl` with the toy plane's NET SIGN (negative, R-9) rather
+  than its own pass-through sign, since the generated plane has no second authored term
+  (`mu_PE`) to net it against. Both sign-only placeholders pending CDLI adoption. Both
+  bundles rebuilt again (the generated plane's content changed after R5's rebuild).
+- **G3**: `AM-2026-08-18-001` appended (extends `AM-2026-08-15-001`; all fifteen
+  ratified coefficients declared in the entry BEFORE the estimator ran; the C2 deferral
+  named with its CDLI trigger). `pre-registration-g3.yaml`'s `seal_scope.hashed_files`
+  gains the v1.2 pair; G3 resealed once
+  (`sha256:45c80506...` -> `sha256:9d00930c4ee16a4880713333e39ee6d79fb03e06c8312679acf3cbca91d91705`).
+  Main and G5 lock digests verified unchanged before and after.
+- **B1**: the battery re-runs on the stagflation preset (before: `main`'s pre-`er14-02`
+  tip, detached-HEAD checkout in-place — a scratch worktree was unavailable since `main`
+  was already checked out elsewhere; after: this branch). Every public-path stylized
+  fact is bit-identical (AT-6b's own guarantee, independently confirmed); `corr_distance`
+  (no declared band, disclosure-only) moved 4.133 -> 4.955 from the fourth private
+  asset + the inflation channels reaching the correlation matrix. Zero enforce
+  failures in either run; `thresholds.yaml` untouched.
+  Full disclosure: `docs/superpowers/specs/2026-08-18-er14-battery-disclosure.md`.
+
 ## er14-04c — THE APP (WIP, branch `er14-04c-app`)
 
 **Infrastructure reaches every app surface.** Continues `er14-04b` (the fourth private
