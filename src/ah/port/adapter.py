@@ -51,14 +51,20 @@ Stated conventions (each is a modelling choice recorded here, not a fact):
 
 from __future__ import annotations
 
+import math
+
 import numpy as np
 
 from ah.core.engine import (
+    _OMEGA_PC,
     ASSETS,
+    INFLATION_ANCHOR_PCT,
+    INFLATION_TRAIL_MONTHS,
     REPORTED_SLEEVES,
     EnginePaths,
     EnsembleResult,
     _reported_marks,
+    inflation_excess,
 )
 from ah.core.numericworld import NumericWorld
 from ah.gen import registry
@@ -156,7 +162,18 @@ GEN_START_MIX: dict[str, float] = {
 }
 
 
-def _source_series(source) -> dict[str, np.ndarray]:
+def _declared_inflation_average_pct(world: NumericWorld) -> float:
+    """``world.factor_conditions.inflation.average_pct``, defensively —
+    mirrors ``ah.core.engine._f``'s (possibly-None sub-model, non-numeric
+    attribute) fallback locally rather than importing a private helper."""
+    model = world.factor_conditions.inflation
+    if model is None:
+        return 2.0  # ah.core.engine._DEF["infl_avg"]
+    value = getattr(model, "average_pct", None)
+    return float(value) if isinstance(value, (int, float)) else 2.0
+
+
+def _source_series(source, world: NumericWorld) -> dict[str, np.ndarray]:
     """Per-row derived series on the SOURCE panel (each row a real month).
 
     Row 0 has no predecessor inside the panel: its change terms are zero and
@@ -188,6 +205,26 @@ def _source_series(source) -> dict[str, np.ndarray]:
         back = min(r, 12)
         infl[r] = ((cpi[r] / cpi[r - back]) ** (12.0 / back) - 1.0) * 100.0
 
+    # ER-14 close-out (D-ER14-2, Task G2). The generated plane's inflation
+    # STATE, alongside infl_pct (the 12-month REAL historical display series
+    # above, left untouched — this is a new, separate regressor). Not a
+    # per-row real CPI trail: bootstrap-v1 stratifies row selection by REGIME
+    # LABEL only and structurally ignores factor_conditions (the crisis
+    # channel's own documented rule elsewhere in this module), so a trail
+    # built from the drawn rows' real history could never respond to a
+    # world's declared inflation.average_pct, and AT-10's probe (the SAME
+    # one-field variation AT-1 uses on the toy plane) would be dead on
+    # arrival by construction. The only inflation signal a generated world
+    # actually carries is its OWN declared average — the same anchor C1's
+    # C_ANCHOR cites (goldilocks/prehistory's declared average) — so
+    # cpi_trail_excess is ``inflation_excess`` (K = 24 months, port -> core,
+    # Task M2) applied to that constant, held flat across the whole source
+    # panel. Consumes no RNG.
+    avg_pct = _declared_inflation_average_pct(world)
+    cpi_trail_excess = inflation_excess(
+        np.full(n_rows, avg_pct), k=INFLATION_TRAIL_MONTHS, anchor=INFLATION_ANCHOR_PCT
+    )
+
     def d(x: np.ndarray) -> np.ndarray:
         return np.concatenate([[0.0], np.diff(x)])
 
@@ -195,6 +232,7 @@ def _source_series(source) -> dict[str, np.ndarray]:
         "bond_pct": bond * 100.0,
         "hy_pct": hy,
         "infl_pct": infl,
+        "cpi_trail_excess": cpi_trail_excess,
         "d_level": d(y10),
         "d_slope": d(y10 - ust2),
         "d_ig": d(ig),
@@ -214,8 +252,10 @@ def _source_of(gen):
 def _pm_true_monthly_path(
     ensemble, rows: np.ndarray, series: dict[str, np.ndarray], seed: int
 ) -> dict[str, np.ndarray]:
-    """Monthly TRUE percent returns for pe/pc/re on one path: sealed loadings
-    on source-space regressors + the artifact's residual sigma (stated stream)."""
+    """Monthly TRUE percent returns for pe/pc/re/infra on one path: sealed
+    loadings on source-space regressors, C1's inflation pass-through where
+    the v1.2 artifact declares it, + the artifact's residual (stated
+    stream)."""
     artifact = load_artifact()
     reg = {
         "equity_mkt": ensemble.factor("equity_mkt")[0],
@@ -227,7 +267,25 @@ def _pm_true_monthly_path(
         "d_ig": series["d_ig"][rows],
     }
     rng = np.random.Generator(np.random.PCG64(seed + RESIDUAL_SEED_OFFSET))
-    shocks = rng.standard_normal((ensemble.months, len(_PM_ASSET_ORDER)))
+
+    # F5c (DN5 SS9 SM-8): standardised Student-t residuals, correlated across
+    # the PM block by the artifact's declared matrix, rescaled by
+    # sqrt(df/(df-2)) to unit variance so no declared residual_sigma_annual
+    # moves (the ER-7 precedent verbatim). A v1.1-only artifact (no
+    # pm_residuals block) falls back to the pre-F5c independent normal draw,
+    # so this function does not hard-require v1.2.
+    pmr = artifact.get("pm_residuals")
+    if pmr is not None:
+        df = float(pmr["df"])
+        names = [PM_SLEEVE_FOR_ASSET[a] for a in _PM_ASSET_ORDER]
+        corr = np.array([[float(pmr["block_correlation"][a][b]) for b in names] for a in names])
+        chol = np.linalg.cholesky(corr)
+        raw_t = rng.standard_t(df, size=(ensemble.months, len(_PM_ASSET_ORDER)))
+        raw_t = raw_t / math.sqrt(df / (df - 2.0))
+        shocks = raw_t @ chol.T
+    else:
+        shocks = rng.standard_normal((ensemble.months, len(_PM_ASSET_ORDER)))
+
     out: dict[str, np.ndarray] = {}
     for j, asset in enumerate(_PM_ASSET_ORDER):
         spec = artifact["pm_sleeves"][PM_SLEEVE_FOR_ASSET[asset]]
@@ -235,6 +293,35 @@ def _pm_true_monthly_path(
         for name, beta in spec["loadings"].items():
             if float(beta) != 0.0:
                 r = r + float(beta) * reg[name]
+        passthrough = spec.get("inflation_passthrough")
+        if passthrough and asset == "pe":
+            # AT-10 (the AT-2/3 half): the SIGN rules transfer unchanged --
+            # PE's toy-plane net (LAMBDA_PE - MU_PE) is NEGATIVE (R-9;
+            # multiple compression dominates income pass-through). The v1.2
+            # artifact declares a single pm_buyout coefficient (LAMBDA_PE,
+            # the income HALF, reused so both planes share "one belief"
+            # about the pass-through itself) and the generated plane has no
+            # second authored term to net it against, so the declared
+            # magnitude is applied here with the toy plane's NET sign
+            # instead of the pass-through's own sign.
+            r = r - float(passthrough["b_infl"]) * (series["cpi_trail_excess"][rows] / 12.0) / 100.0
+        elif passthrough:
+            # b_infl * (annual pp excess / 12) / 100 -- annual pp to monthly
+            # decimal fraction, the same convention engine.py's own
+            # LAMBDA_RE * x/12 (in percent) uses one level up.
+            r = r + float(passthrough["b_infl"]) * (series["cpi_trail_excess"][rows] / 12.0) / 100.0
+        elif asset == "pc":
+            # AT-10 (the AT-4 half): pc still takes a loss bite, one-sided on
+            # excess inflation, using the toy engine's own OMEGA_PC constant
+            # (0.03, "fractional loss uplift per pp of excess") applied
+            # directly to the shared cpi_trail_excess tape -- NOT through the
+            # sealed v1.2 artifact's b_infl mechanism, which C1 does not
+            # extend to pm_direct_lending. This is a sign-only placeholder:
+            # C2's measured loss beta (the toy plane's theta_toy convexity
+            # equivalent) is deferred on the Cliffwater CDLI export
+            # (D-ER14-2, ask A7) and adopts on the generated plane when it
+            # lands.
+            r = r - _OMEGA_PC * np.maximum(0.0, series["cpi_trail_excess"][rows]) / 12.0 / 100.0
         sigma_m = float(spec["residual_sigma_annual"]) / np.sqrt(12.0)
         out[asset] = (r + shocks[:, j] * sigma_m) * 100.0
     return out
@@ -252,7 +339,7 @@ def run_gen_path(world: NumericWorld, seed: int) -> EnginePaths:
             "and path-space differencing fabricates block-seam moves (the 1974 finding)"
         )
     rows = np.asarray(ensemble.row_indices)[0]
-    series = _source_series(_source_of(gen))
+    series = _source_series(_source_of(gen), world)
 
     returns = {
         "equity": ensemble.factor("equity_mkt")[0] * 100.0,

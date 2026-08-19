@@ -2,6 +2,7 @@
 # (AM-2026-08-15-001, extended by AM-2026-08-18-001; ER-14 close-out,
 # D-ER14-2, 2026-08-18)
 
+mapping_version: map-2026.08.3
 Vintage `2026-08-10.1`; train+validation only; forms, anchors and adoption
 rules declared in docs/superpowers/specs/2026-08-18-er14-close-out-design.md
 SS5/SS9 BEFORE this ran. Measured plane verbatim from v1.1

@@ -465,6 +465,7 @@ def main() -> None:
         "# (AM-2026-08-15-001, extended by AM-2026-08-18-001; ER-14 close-out,",
         "# D-ER14-2, 2026-08-18)",
         "",
+        f"mapping_version: {MAPPING_VERSION}",
         f"Vintage `{vintage}`; train+validation only; forms, anchors and adoption",
         "rules declared in docs/superpowers/specs/2026-08-18-er14-close-out-design.md",
         "SS5/SS9 BEFORE this ran. Measured plane verbatim from v1.1",

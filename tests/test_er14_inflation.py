@@ -614,3 +614,59 @@ def test_at12_the_dead_field_is_alive():
     resp_lo = annualised(lo_hot, "infra") - annualised(lo_cold, "infra")
     resp_hi = annualised(hi_hot, "infra") - annualised(hi_cold, "infra")
     assert resp_lo / resp_hi == pytest.approx(0.333, abs=0.05)
+
+
+# --------------------------------------------------------------------------- #
+# AT-10: the generated plane consumes the channel (Task G2)
+# --------------------------------------------------------------------------- #
+
+import yaml  # noqa: E402
+
+from ah.port.adapter import run_gen_ensemble  # noqa: E402
+
+GEN_WORLD = PRESETS / "stagflation_1974.json"
+
+
+def gen_probe(infl_pct: float) -> EnsembleResult:
+    """The same one-field probe, run through the generated path."""
+    return run_gen_ensemble(_world(infl_pct, GEN_WORLD), 200, base_seed=SEED)
+
+
+def _declared_b_infl(sleeve: str) -> float:
+    art = yaml.safe_load(Path("mappings/sleeve-mappings-v1.2.yaml").read_text())
+    return float(art["pm_sleeves"][sleeve]["inflation_passthrough"]["b_infl"])
+
+
+def test_at10_the_generated_plane_is_no_longer_inflation_blind():
+    """AT-10, the AT-1 half. Bit-identity across a twelvefold change must be dead
+    on BOTH planes - otherwise ER-14 closes on one plane and stays open on the one
+    that ships generated worlds."""
+    lo, hi = gen_probe(1.0), gen_probe(12.0)
+    for asset in ("pe", "pc", "re", "infra"):
+        assert not np.array_equal(lo.returns[asset], hi.returns[asset]), asset
+
+
+@pytest.mark.parametrize(
+    "asset,sleeve,direction",
+    [("pe", "pm_buyout", -1), ("re", "pm_re_value_add", +1), ("infra", "pm_infra", +1)],
+)
+def test_at10_generated_sign_and_materiality(asset, sleeve, direction):
+    """AT-10, the AT-2/3 half. The SIGN rules transfer unchanged. The materiality
+    floor is derived in-test from the artifact's OWN declared b_infl times the
+    11pp probe range (x 0.5, the same 'range floor not central value' discipline
+    the toy thresholds use), because the generated plane's units are the
+    artifact's, not the toy engine's - a hardcoded toy threshold here would be
+    testing a coincidence. If a derived floor cannot be met, STOP and report; do
+    not lower it."""
+    delta = annualised(gen_probe(12.0), asset) - annualised(gen_probe(1.0), asset)
+    floor = 0.5 * _declared_b_infl(sleeve) * 11.0
+    assert direction * delta >= floor, (asset, delta, floor)
+
+
+def test_at10_generated_private_credit_still_takes_the_loss_bite():
+    """AT-10, the AT-4 half: pc responds NEGATIVELY to inflation with rates held.
+    On the generated plane the bite is the toy engine's omega_PC equivalent
+    riding the shared tape, so this is a sign test only - C2's measured half is
+    deferred on the CDLI export (D-ER14-2)."""
+    delta = annualised(gen_probe(12.0), "pc") - annualised(gen_probe(1.0), "pc")
+    assert delta < 0.0, delta
