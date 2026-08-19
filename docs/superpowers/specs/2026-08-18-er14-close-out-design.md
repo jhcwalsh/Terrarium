@@ -6,8 +6,13 @@ which funds the ER-14 close-out, batches it with F5, and requires this
 document — mechanism design plus coefficient proposal — before anything is
 sealed.*
 
+*Revision 2 (2026-08-18), after owner review: "Infrastructure is missing from
+this." Correct, and it was the most consequential omission available — §2.6 adds
+the fourth private class and §2.7 inventories what putting it in the playable
+book actually costs. Revision 1's three mechanisms are unchanged.*
+
 **What this document is for.** ER-14 says private markets cannot feel
-inflation. Closing it means writing three economic channels into the return
+inflation. Closing it means writing four economic channels into the return
 process. Each channel needs a coefficient, and a coefficient is a claim about
 the world, so the owner ratifies it rather than an implementer choosing it
 inside a commit. This document proposes every coefficient with its anchor, says
@@ -25,14 +30,41 @@ repo-internal anchor, it says so.
 
 ## 0. Executive summary
 
-Three mechanisms, nine new coefficients, one new derived state variable, no new
-random number stream, no change to any sealed file's *contents*.
+**Four** mechanisms, fifteen coefficients, one new derived state variable, no
+change to any sealed file's *contents*.
 
 | Class | The channel that helps | The channel that hurts | Net, per pp of inflation excess |
 |---|---|---|---|
 | Real estate | rent/income escalation, λ_RE = 0.30 | cap-rate repricing, γ_RE = 0.50 on a 4.0-year duration | **+0.30 pp/yr steady-state**, with a transient markdown while inflation is *accelerating* |
 | Private equity | nominal earnings pass-through, λ_PE = 0.35 | exit-multiple compression, μ_PE = 0.45 | **−0.10 pp/yr** |
 | Private credit | floating coupon, φ_PC = 1.0 on within-world inflation deviation | borrower-coverage squeeze, ω_PC = 0.03, plus the C2 convex spread loss θ_toy = 0.10 | **−0.08 pp/yr** with rates held; **strongly positive** in a coherent hot world where rates are authored high |
+| **Infrastructure** (§2.6) | contracted/regulated escalators, **λ_INFRA = 0.60**, read live from `structural.infrastructure.inflation_linkage` | discount-rate repricing, γ_INFRA = 0.30, damped by the regulated-return offset | **+0.60 pp/yr steady-state — the strongest responder in the book, by design** |
+
+**Why infrastructure changes the shape of the package.** ER-14's sharpest single
+observation is that the *one* field in the entire WorldSpec that expresses
+asset-side inflation linkage — `structural.infrastructure.inflation_linkage`,
+"Share of revenues contractually inflation-linked" — belongs to the one private
+class the engine does not simulate. §2.6 makes that field **the coefficient
+itself**: the pass-through a world declares is the pass-through it gets. Closing
+ER-14 without infrastructure would leave that observation standing.
+
+The infrastructure work splits cleanly in two, and the second half can be
+deferred without the first:
+
+- **(a) The mechanism** — §2.6. Four new coefficients plus two engine constants
+  transplanted from the sealed `pm_infra` row. Cheap, and it makes both
+  infrastructure schema fields live.
+- **(b) The sleeve** — §2.7. Infrastructure is not in the playable book at all
+  (`play.py:95`, `PRIVATE_ASSETS = ("pe", "pc", "re")`). Adding it touches the
+  engine's asset tuple, the ladder, pacing, the session contracts, the CIO view,
+  the app and every committed fixture. **Not cheap: +2.5–3 days.** Ask A14 is its
+  own go/no-go, so the mechanism can be ratified while the sleeve waits.
+
+**`schemas/` does not block this. Checked first and reported up front rather than
+buried: no schema in `schemas/` enumerates the asset or sleeve set, and the
+WorldSpec already carries `structural.infrastructure` and
+`structural.smoothing.weights_on_truth.infrastructure`.** Full evidence in
+§2.7.0, including the one genuine read-only-truth limitation it does leave.
 
 Two structural recommendations that go with them:
 
@@ -446,6 +478,312 @@ that plane the mechanism is not engine code but the sealed mapping artifact:
   decoupled on the generated plane — `AM-2026-08-15-001` currently declares them
   as one adoption event.
 
+### 2.6 Infrastructure — the fourth private class
+
+**The economics.** Core and core-plus infrastructure is the asset class held
+*specifically* for inflation linkage, and it is the only one where the linkage is
+written into a document rather than inferred from behaviour. A regulated utility
+earns an allowed return on a regulated asset base that is indexed; a toll road or
+an availability-payment concession has an explicit CPI or CPI+X escalator in the
+contract. That is why C1 puts its declared pass-through at 0.6 — the highest of
+any sleeve — and why the WorldSpec's only inflation-linkage field lives here.
+
+Against it: infrastructure is a very long-duration asset, so a rise in nominal
+discount rates marks it down hard. But — and this is the class's distinguishing
+feature — the *regulated* portion of the revenue has its allowed return **reset
+against a cost-of-capital determination that itself tracks rates**, so that
+portion's discount-rate exposure is largely offset. The net rate sensitivity is
+therefore *lower* than property's despite the longer duration.
+
+**The form:**
+
+```
+infra = infra_yield / 12                              # contracted / regulated income
+      + λ_INFRA * x[m] / 12                           # escalator pass-through (level effect)
+      - D_INFRA * Δ( γ_INFRA * x[m] )                 # discount-rate repricing (change effect)
+      - D_INFRA * d_rate                              # the authored rate path
+      - infra_disc / (100*nm) * 2.2                   # structural.infrastructure.discount_rate_shift_bps
+      + β_INFRA * eq                                  # cyclicality
+      + σ_INFRA * e_infra                             # idiosyncratic Student-t
+      - 0.5 * crisis                                  # crisis repricing
+```
+
+Same time signatures as real estate, deliberately, so the two are directly
+comparable: escalation is a *level* effect on `x`, repricing is a *change* effect
+on `Δx`. `D_INFRA = 4.0` is **RE's existing duration reused**, so exactly one
+number — γ_INFRA — carries the difference in rate sensitivity between the two
+real-asset classes, and a reader can compare them by reading one figure.
+
+**λ_INFRA = 0.60, and it is not a constant — it is
+`structural.infrastructure.inflation_linkage`.** This is the design's best single
+move and it should be ratified as such. The schema field is described as "Share of
+revenues contractually inflation-linked", bounded 0–1. That *is* the pass-through
+coefficient, definitionally. So the proposal is not "add a coefficient of 0.6"; it
+is **read the field, and default it to 0.6 when a world is silent**
+(`_DEF["infra_linkage"] = 0.6`). Consequences:
+
+- C1's declared `pm_infra: 0.6` (`AM-2026-08-15-001`, label `chosen`, declared
+  range 0.4–0.8, anchored to concession and regulatory contract share) becomes the
+  *default*, verbatim, with the same upgrade path recorded in the decision
+  register's C1 row (NCREIF query-tool export → relabel `measured-external`).
+- A world author who writes `inflation_linkage: 0.85` gets 0.85. ER-14's
+  unconsumed-field map loses its most conspicuous entry, and the sentence "the one
+  field that expresses this concept belongs to the one class the engine does not
+  simulate" stops being true.
+
+**γ_INFRA = 0.30 pp of discount rate per pp of inflation excess**, against real
+estate's 0.50. Derived in the open from RE's ratified value and one repo-declared
+share:
+
+- **Upward, for duration.** Concession and regulatory lives run decades against
+  property's roughly ten-year effective hold; the longer asset reprices more per
+  unit of discount-rate change. Taking a plausible infra effective duration of
+  6–7 years against `D_RE = 4.0` gives a factor of about **×1.6**.
+- **Downward, for the regulatory offset.** The share of revenue under a regulated
+  or contracted return framework is **0.6 — the same C1 linkage share**, which is
+  the point: the revenue that is contractually indexed is also the revenue whose
+  allowed return resets with the cost of capital. Only the remaining **0.4**
+  reprices freely.
+- Net: 0.50 × 1.6 × 0.4 = **0.32**, taken as **0.30**.
+
+Declared range **0.15–0.50**: the floor is complete regulatory offset with no
+duration premium; the ceiling is real estate's own value, i.e. treating
+infrastructure as ungeared property with no regulatory protection at all. Label
+`chosen`. Note the qualitative property this preserves — **infrastructure's rate
+sensitivity is lower than property's even after the duration premium**, which is
+the behaviour the class is bought for.
+
+**β_INFRA = 0.33 and σ_INFRA = 1.65 — transplanted, not invented.** Both come
+straight out of the sealed `pm_infra` row in `mappings/sleeve-mappings-v1.1.yaml`:
+`equity_mkt: 0.3337` (60 quarters, sum-beta(2) route) and
+`residual_sigma_annual: 0.0569`, which at monthly resolution is
+0.0569 / √12 = 1.64% — the same units as the engine's existing `1.5 * e_re` and
+`1.45 * e_pc` multipliers on unit-variance Student-t draws. Label: **`chosen`
+(transplanted from a measured row)** — the numbers are estimated, but moving them
+from a quarterly composite regression into a monthly toy return equation is a
+judgment, and calling them `measured` would overclaim.
+
+**infra_yield = 5.0 %/yr**, the contracted income level, hardcoded. Anchor,
+derived from the same sealed row: `pm_infra` carries `alpha_quarterly = 0.00888`
+(3.55 %/yr) on top of `0.3337 × equity_mkt`; at the engine's 6 %/yr default equity
+drift that is a composite total return near 5.6 %/yr. A 5.0 % income yield plus
+β_INFRA × equity lands the toy sleeve on its own estimated composite. Declared
+range 4.0–6.0. Label `chosen`.
+
+**The crisis term, −0.5.** Half of real estate's −1.0, on the same
+regulated-and-contracted-revenue argument that damps γ_INFRA. **This is the
+weakest-anchored number in the infrastructure set** — it is a judgment scaled off
+a neighbouring judgment, with no external reference — and it is flagged as such
+rather than dressed up. Setting it to 0.0 (infrastructure does not reprice in a
+crisis) or to −1.0 (it reprices like property) are both defensible; the acceptance
+tests do not depend on it.
+
+**Leverage: deliberately not modelled.** Infrastructure funds are levered at the
+project level, but the `pm_infra` row is estimated on a *net, levered composite*,
+so leverage is already inside β_INFRA, σ_INFRA and the implied return. Unlike
+private equity — where the engine hardcodes a `1.4 ×` beta that λ_PE could
+legitimately be levered by — there is no infra leverage constant in the engine to
+reuse, and inventing one would be a second unanchored number. **Consequence,
+disclosed:** λ_INFRA = 0.6 is an *asset-level revenue* pass-through applied to an
+*already-levered* return stream, so the equity-level pass-through is arguably
+understated. Recorded as a known conservatism, not fixed. (Ask A15.)
+
+**Loss and GDP linkage: none, deliberately.** Availability-payment and regulated
+revenue is not volume-driven, which is precisely why the class earns the highest
+linkage share; a demand or GDP term would need an anchor that does not exist and a
+GDP state the engine does not carry. Whatever cyclicality there is rides in
+β_INFRA. Stated so the omission is a choice on the record.
+
+**The net response, derived.** Steady-state, per pp of inflation excess:
+**+0.60 pp/yr**, twice real estate's and the largest in the book — which is the
+whole reason the class exists in an allocator's portfolio. The repricing term is
+transient and, at γ_INFRA = 0.30 on a 4.0 duration, charges
+4.0 × 0.30 × Δx = −1.2 × Δx per unit of acceleration, against real estate's
+−2.0 × Δx. So infrastructure both **earns more from sustained inflation and is
+marked down less when inflation surges** — the two properties together are the
+class's investment case, and the design reproduces both without either being
+asserted.
+
+**One asymmetry the owner should see.** C1 explicitly parks "caps/floors on
+escalators (documented asymmetry, deferred)" as out of scope. This design inherits
+that: the escalator here is **symmetric**, so `deflation_bust` charges
+infrastructure −0.6 × 3.0 = **−1.8 pp/yr**, the largest negative of any class.
+Real CPI escalators very often have a **zero floor** — they ratchet up and do not
+ratchet down. The symmetric model therefore overstates infrastructure's deflation
+downside, and the fix is C1's own deferred item. Flagged here, not silently
+carried; §6 AT-13 measures it so the size of the overstatement is on the record.
+
+### 2.7 Adding the sleeve — full scope inventory
+
+Everything above is the *mechanism*. It produces an `infra` return stream. It does
+**not** put infrastructure in the book a player allocates: `play.py:95` declares
+`PRIVATE_ASSETS = ("pe", "pc", "re")` and the engine's `ASSETS` tuple has no infra
+entry. This section inventories what changing that costs, so ask A14 can be
+answered with a number rather than a feeling.
+
+#### 2.7.0 `schemas/` — checked first, and it does **not** block
+
+`schemas/` is read-only vendored truth, so if it constrained the sleeve set this
+would be a STOP-level finding and the sleeve could not be added at all. **It does
+not.** Evidence, all four relevant schemas grepped:
+
+| Schema | Does it enumerate assets/sleeves? | Notes |
+|---|---|---|
+| `worldspec-v1.3.schema.json` | **No** | Already carries `structural.infrastructure.{discount_rate_shift_bps, inflation_linkage}` (lines 562–578) **and** `structural.smoothing.weights_on_truth.infrastructure` (line 608). The only closed enum near this area is `engine_defaults.generator_id`, which is unrelated |
+| `portfolio-institution-state-v1.0.schema.json` | **No** | No sleeve enum of any kind |
+| `sleeve-vehicle-state-v1.0.schema.json` | **No** | Its one enum is `["european", "american"]` (carry style) |
+| `generator-output-v1.0.schema.json` | **No** | No asset enum |
+
+So the contract **anticipated this class**: it can already describe an
+infrastructure sleeve's structural parameters and its appraisal-smoothing weight.
+`ah/core/validator.py:490` likewise already lists it —
+`_SLEEVES = ("private_equity", "private_credit", "real_estate", "infrastructure")`
+— and `taxonomy/sleeves.yaml` (which *is* inside the G3 lock) already carries the
+`pm_infra` sleeve with its five sub-sleeves, so **no locked file needs editing to
+name the class.**
+
+**The one genuine read-only limitation, reported rather than designed around:**
+`structural.real_estate` has an `income_yield_pct`, and `structural.infrastructure`
+**has no income-yield field** — only `discount_rate_shift_bps` and
+`inflation_linkage`. So `infra_yield = 5.0` must stay a hardcoded engine constant,
+and rider R1's repair (making the property income yield author-settable) has no
+infrastructure counterpart. `schemas/` is not edited to fix this. It is recorded in
+ER-14's unconsumed/unavailable-field map as a *contract* limitation, in exactly the
+form the register already uses for the fields that exist but are unread.
+
+#### 2.7.1 What each layer needs
+
+| Layer | File(s) | Change | Risk |
+|---|---|---|---|
+| **Return process** | `src/ah/core/engine.py` | `ASSETS` gains `"infra"`; `REPORTED_SLEEVES` gains it; `_DEF` gains `infra_yield`, `infra_linkage`, `infra_disc`, `smooth_infra`; `_reported_marks` weight lookup gains infra; a new `e_infra` Student-t draw | **HIGH — see 2.7.2** |
+| **Book / institution** | `src/ah/play.py` | `PRIVATE_ASSETS` → 4-tuple; `START_TARGETS` re-carved (2.7.3); `_GROWTH` bucket decision. Genuinely well parameterized — commitments, calls, distributions, ladders, expiry and the quarterly loop are all comprehensions over `PRIVATE_ASSETS` and need **no** per-sleeve edits | LOW |
+| | `src/ah/play.py:628, 763` | **`_secondary_sale` is hardcoded to the pe ladder** (`cohorts.get("pe_ladder")`, called as `{"pe_ladder": ladders["pe"]}`). A fourth sleeve silently inherits "never sold on the secondary market". That may be the right answer — infrastructure secondaries are thin — but it must be a **decision**, not an oversight discovered later | MED |
+| | `src/ah/core/institution.py` | `START_MIX` gains infra. `GROWTH`/`DEFENSIVE`: propose **neither**, matching how `re`, `reits` and `commodities` are already treated | LOW |
+| **Generated path** | `src/ah/port/adapter.py` | `GEN_START_TARGETS`, `GEN_START_MIX`, `_PM_ASSET_ORDER`, and `PM_SLEEVE_FOR_ASSET` gains `infra: pm_infra`. **The `pm_infra` row already exists in the sealed v1.1 artifact** — estimated, 60 quarters — so the generated path needs **no new estimation** for infrastructure. A real saving, and worth stating | LOW |
+| **Pacing** | `mappings/pacing-parameters-v1.0.yaml` | **Finding: this artifact has exactly ONE sleeve, `pm_buyout`** — pe, pc and re already share buyout's pacing curve. See 2.7.4 | MED |
+| **Sleeve mapping** | `mappings/sleeve-mappings-v1.2.yaml` | **Use `pm_infra`'s existing estimated row** and hang C1's `b_infl = 0.6` on it. **Do not parameterize `infra_core`** — see 2.7.5 | LOW |
+| **Session service** | `src/ah/serve.py` | Opening-book validation, target dicts, and the book/plan digest that drives ER-15's practice-only demotion. The default book gains a fourth private sleeve, so **its digest moves and every in-flight session is invalidated** — old 3-sleeve posts are demoted to practice, which is correct behaviour but must be announced | MED |
+| **CIO view** | `src/ah/cioview.py` | `GOAL_OF["infra"] = "real"`, `CLASS_LABEL["infra"] = "Infrastructure"`, `BAND_PCT["infra"] = 2.0` (matching `re`). Tier assignment is automatic — everything in `PRIVATE_ASSETS` is the illiquid remainder | LOW |
+| **Bundle / feed / console** | `src/ah/bundle.py`, `feed.py`, `credibility.py` | `bundle.py` derives its series list from `asset_order` and `REPORTED_SLEEVES`, so it follows automatically — but the `world-bundle-0.3` contract's series count changes, so **check at implementation whether the contract version must move; if the app's decoder pins a count, STOP and decide** | MED |
+| **App** | `app/src/Play.tsx:57` (`PRIVATE_ASSETS` Set), `lib/assetLabels.ts`, `lib/sleeveLabels.ts`, `components/DecisionWindow.tsx`, `BookEntry.tsx` (a fourth private row in the entry grid plus its `ranges` row), `components/CioDashboard.tsx`, `components/VintageChart.tsx`, and `Play.cio.test.tsx` which pins the eight-asset list explicitly | Every label map and every fixture | **HIGH — the bulk of the cost** |
+| **Fixtures / tests** | `app/fixtures/toy.bundle.gz`, `app/fixtures/gen.bundle.gz`, `tests/test_pacing_artifact.py` (drift guard), every golden pinning an asset count or a digest, the preset JSONs | Regenerate + re-pin | HIGH |
+
+#### 2.7.2 The one change that can silently corrupt every world
+
+`run_path` draws every random stream up front, in a fixed order, as the
+determinism anchor. Adding `e_infra = _t_draws(rng, nm)` **anywhere except the end
+of that block shifts every subsequent stream**, which would change `e_pe`, `e_pc`,
+`e_re` and — through the common-factor construction — the public assets too, in
+every world, invisibly and with no test naming the cause.
+
+**Hard constraint for the implementation plan: the new draw is appended at the end
+of the existing draw block, never inserted.** Appended, every existing stream is
+bit-identical and AT-6b/AT-7 hold. This is the single highest-risk line in the
+whole sleeve addition and it is one line.
+
+#### 2.7.3 The starting weight, and where it is carved from
+
+Current `START_TARGETS` (points of 100, plus 2 cash): equity 33, bonds 12, hy 5,
+commodities 5, reits 8, pe 20, pc 8, re 7 — **35 points private**, deliberately
+inside `Policy.private_weight_range` = (0.15, 0.40) with room to move, per the
+comment at `play.py:99-107` recording that an opening breach previously produced
+29 forced quarters out of 40.
+
+**Proposal: infrastructure = 5 points, carved 3 from REITs (8 → 5) and 2 from real
+estate (7 → 5).** Reasoning, and what each alternative would have cost:
+
+- **Not from commodities.** ER-14's central attribution experiment is "move the
+  five points of commodities into equity and the private book's inflation response
+  reverses". Touching that sleeve would confound the very measurement the
+  close-out is judged against. Commodities stays at 5.
+- **Mostly from REITs**, because REITs and infrastructure sit in the same
+  `real` goal bucket in `cioview.GOAL_OF`, so the bucket's weight is unchanged
+  (commodities 5 + reits 5 + re 5 + infra 5 = 20 points, exactly as now) and the
+  CIO dashboard's goal display does not shift for an unrelated reason. REITs is
+  also the sleeve dropped entirely on generated worlds (OD-3), so it is the
+  least load-bearing point of exposure in the book.
+- **Two points from real estate**, so the private total lands at
+  20 + 8 + 5 + 5 = **38 points**, not 40. Carving all five from REITs would put
+  private at 40 — exactly on the policy band's upper bound, re-creating the
+  opening-breach condition the book was explicitly restructured to avoid.
+- **5 points** is inside the 3–6 % range typical of an institutional
+  infrastructure allocation, and is the smallest weight at which the sleeve is a
+  usable lever rather than a decoration.
+
+**The arithmetic of visibility, stated honestly.** At 5 points and λ_INFRA = 0.6,
+a 4.5 pp inflation excess contributes 5 % × 0.6 × 4.5 = **+13.5 bp/yr to the total
+book** — against +6.8 bp from real estate's 5 points at 0.30. Small in both cases.
+**The value of the sleeve is not its default weight; it is that a player can now
+tilt into the one asset that genuinely passes inflation through**, and that the
+CIO view can show them doing it. If the owner wants infrastructure to move the
+*default* book materially, the starting weight has to be larger than any
+institution actually holds — which would be a worse model. Ask A15.
+
+Two display consequences: `default_band` is ±10 % of target, so a 5-point sleeve
+shows a 4.5–5.5 reporting band; and `cioview.BAND_PCT["infra"]` needs a no-book
+fallback (propose 2.0 points, matching `re`). Neither is a *constraint* — the hard
+constraint remains `private_weight_range` — but a ±0.5-point reporting band on the
+book's designated inflation lever reads oddly, and the owner may want a wider
+declared range for this sleeve specifically.
+
+#### 2.7.4 Pacing: one row today, and the evergreen problem
+
+**`mappings/pacing-parameters-v1.0.yaml` contains exactly one sleeve entry,
+`pm_buyout`.** All three current private sleeves already run on buyout's
+contractual life, bow and yield rate. Two options for infrastructure:
+
+- **(a) Reuse the single row.** Zero new parameters, perfectly consistent with
+  what pe/pc/re already do.
+- **(b) Add a `pm_infra` row.** *Recommended*, with exactly **one** number
+  changed: `contractual_life_years: 15` against buyout's 10, anchored in
+  `taxonomy/sleeves.yaml`'s own note on the `pm_infra` sleeve — *"Long lives;
+  extension behavior matters (spec §1.2)"*. `bow` and `yield_rate` carry over from
+  `pm_buyout` unchanged, so the new row makes exactly one claim.
+
+The file is **not in any of the three locks** (verified), but it is
+owner-approved (WI-I6-1, 2026-08-02), it is the declared accessible source of
+truth for pacing, and `tests/test_pacing_artifact.py` is its drift guard. Adding a
+row is an owner event, not a cleanup. It also lengthens the ladder: at a 15-year
+life the opening staggered book is 15 rungs rather than 10, and ER-12's
+close-out — one rung per year of contractual life — extends by construction.
+
+**The evergreen problem, stated rather than modelled around.** `ClosedEndCohort`
+is closed-end *by construction*: a contractual life, a bow-shaped distribution
+curve, terminal liquidation at `age >= L`, and expiry of residual unfunded
+commitment. **Core infrastructure is evergreen** — `taxonomy/sleeves.yaml` says so
+in the `pm_infra` note ("Core infra is evergreen"), and the decision register's own
+row calls `infra_core` "declared but unparameterized (Tier B, evergreen)". A
+closed-end recursion cannot represent an open-ended vehicle, and pretending
+otherwise would be a new ER entry rather than a close-out.
+
+**So this release adds a CLOSED-END infrastructure sleeve** — the `pm_infra`
+composite, which is an aggregate of closed-end fund vehicles — **and leaves
+`infra_core` parked as Tier B exactly where the register has it.** No register row
+is quietly reclassified. If evergreen vehicles are ever wanted, that is a new
+vehicle type in `ah/port/`, its own work, and its own decision.
+
+#### 2.7.5 `infra_core` or `pm_infra`? — the coordinator's question, answered
+
+**Use `pm_infra`'s existing row. Do not parameterize `infra_core`.** Three
+reasons:
+
+1. `pm_infra` is **already estimated and already sealed** in
+   `sleeve-mappings-v1.1.yaml` (equity_mkt 0.3337, alpha_quarterly 0.00888,
+   residual_sigma_annual 0.0569, 60 quarters, sum-beta(2) route), so both the
+   generated path and the toy transplant have real numbers to stand on.
+2. **C1 already attaches `b_infl = 0.6` to `pm_infra` specifically**
+   (`AM-2026-08-15-001`, `C1_values: pm_infra: 0.6`). Using any other row would
+   orphan the one declared coefficient this class has.
+3. `infra_core` is **evergreen and Tier B**, and 2.7.4 explains why the cashflow
+   machinery cannot carry an evergreen vehicle. Parameterizing it here would mean
+   either building a new vehicle type or misrepresenting one — and the register row
+   is explicit that it is "parked until those sleeves are parameterized", with its
+   own upgrade path through the Albourne coefficient request §2a.
+
+The register's `infra_core` / `re_core` row therefore comes out of this release
+**unchanged**, which is the correct outcome: it is a pending data dependency, not
+a gap this design is entitled to fill.
+
 ---
 
 ## 3. The Delta-3 question, framed for decision
@@ -459,7 +797,7 @@ spread are sufficient."* It is enforced structurally, in the signature of
 block: *"both functions consume continuous market states only — no regime label,
 no recession dummy, by signature."*
 
-**How the proposed mechanisms comply.** All nine coefficients in §2 read
+**How the proposed mechanisms comply.** Every coefficient in §2 reads
 **continuous state variables** and never a label:
 
 | Mechanism | Reads | Label read? |
@@ -469,6 +807,15 @@ no recession dummy, by signature."*
 | φ_PC | `infl_trail` and the world's declared average | no |
 | ω_PC | `infl_trail` | no |
 | θ_toy | `spread_lagged`, a continuous level | no |
+| λ_INFRA, γ_INFRA | `infl_trail`, scaled by a **declared WorldSpec field** (`inflation_linkage`) that is a contract parameter, not a state label | no |
+
+Infrastructure is worth one extra sentence here because it is the only mechanism
+whose coefficient is read from the world rather than fixed in code:
+`inflation_linkage` is a **structural parameter of the asset class** — the share of
+its revenue under contract — in exactly the sense that
+`private_credit.annual_loss_rate_pct` and `real_estate.cap_rate_shift_bps` already
+are. It is not a regime label, it does not vary with time or state, and it tells
+the engine nothing about what kind of world it is in.
 
 Nothing keys on `crisis`, on a regime name, or on a narrative field. The
 narrative-blindness invariant is untouched: `NumericWorld` still structurally
@@ -494,7 +841,7 @@ drawdown and spread.
 1. **No evidential anchor exists.** WP3.10's paper evidence covers drawdown and
    spread. There is no comparable finding for inflation. An inflation coefficient
    in `f_dist` would be `chosen` with *no* anchor at all — weaker provenance than
-   any of the nine coefficients in §2, all of which trace to something declared.
+   any of the fifteen coefficients in §2, all of which trace to something declared.
 2. **The response is largely derived anyway.** The cohort recursion is
    `dist_t = Y·(age/L)^B·f_dist·NAV_grown`. Once real estate returns respond
    +1.35 pp/yr and private equity −0.45 pp/yr, NAV moves, and distributions move
@@ -537,16 +884,27 @@ honest:
 | **Real estate** | **+3.3 pp/yr** (0.30 × 11) | **+0.5 to +1.4 pp/yr** — escalated income (+1.35) against the authored rate glide's existing −0.8 pp/yr drag | **Down ~2–4% in years 1–2** while inflation accelerates into the Q6 peak, then **+1.35 pp/yr for the rest of the decade**; the markdown reverses as inflation recedes | Yes — this is the standard property experience of the 1970s: marked down hard on the surge, then the best real asset in the book |
 | **Private equity** | **−1.1 pp/yr** (−0.10 × 11) | **Heavily negative**, but almost all of it from the 1.4× beta on a crashing equity market; the *inflation channel itself* contributes only about −0.45 pp/yr | Roughly uniform; no transient | Yes, with a caveat worth seeing: the model says inflation is *mildly* bad for buyout and the equity crash is *severely* bad. If the owner's intuition is that inflation itself should be more punishing, that is an argument for a larger μ_PE, and §8 A3 is where to say so |
 | **Private credit** | **−0.8 pp/yr** — the borrower-coverage squeeze, with no offsetting coupon because the probe holds rates fixed | **+2 to +3 pp/yr nominal** — roughly +3.5 pp/yr of extra coupon (6→8% base) less about 1 pp/yr of extra loss from the inflation squeeze and the convex spread term | Coupon benefit steady; losses concentrated in the crisis block and the spread peak, lagged one year behind the spread | Yes, and the pair is the insight: floating-rate credit is a *good* place to be when the central bank responds, and a *bad* one when it does not. A model that could not say both would be worth less |
+| **Infrastructure** | **+6.6 pp/yr** (0.60 × 11) — **by far the largest response in the book** | **+1.9 pp/yr** — escalators +2.7, less the authored rate glide's drag (−4.0 × 2 pp over the decade ≈ −0.8 pp/yr), less a transient discount-rate markdown of about −1.2 % as inflation accelerates into the Q6 peak | **Down ~1 % in years 1–2**, then **+2.7 pp/yr of escalated revenue** for the rest of the decade; marked down materially less than property because γ_INFRA is 0.30 against 0.50 | Yes, and this is the row the whole revision exists for. CPI-escalated concessions and regulated utilities were the best private real-asset exposure of the 1970s, and this is the only class in the book where the linkage is contractual rather than behavioural. It also *ranks correctly*: infra beats real estate, which beats private credit in real terms, which beats private equity |
 | **Commodities** (unchanged) | +11 pp/yr | already the only asset with explicit pass-through | — | Unchanged by this design; noted so the private numbers are read in proportion |
 | **The real-terms line** | — | At 6.5% inflation, +1.35 pp/yr of nominal property escalation is **still a large real loss**. Nothing in this design makes a private book an inflation *hedge* in real terms — it makes it *less bad* than a nominal one | — | Correct, and it should be said in the close-out: closing ER-14 gives private markets a *response*, not a *hedge* |
 
 **The mirror, which matters as much.** `deflation_bust` declares −1.0% inflation,
 so `x = −3.0`: real estate loses 0.30 × 3.0 = **−0.9 pp/yr** of income escalation,
-private equity gains 0.10 × 3.0 = **+0.3 pp/yr**, private credit's loss uplift is
-zero (the `max(0, x)` floor — deflation does not squeeze borrower coverage through
-input costs; it squeezes it through revenue, a different channel, deliberately not
-modelled here). If any of those signs looks wrong to the owner, the coefficient is
-wrong, and it is much cheaper to find out now.
+**infrastructure loses 0.60 × 3.0 = −1.8 pp/yr, the largest negative of any
+class**, private equity gains 0.10 × 3.0 = **+0.3 pp/yr**, and private credit's
+loss uplift is zero (the `max(0, x)` floor — deflation does not squeeze borrower
+coverage through input costs; it squeezes it through revenue, a different channel,
+deliberately not modelled here). If any of those signs looks wrong to the owner,
+the coefficient is wrong, and it is much cheaper to find out now.
+
+**Infrastructure's deflation number is the one to look hardest at**, and §2.6
+already flags why: real CPI escalators frequently carry a **zero floor**, so a
+regulated revenue base ratchets up and does not ratchet down. C1 explicitly
+defers escalator caps and floors ("documented asymmetry, deferred"), so this
+design inherits a **symmetric** escalator and therefore overstates infrastructure's
+deflation downside — possibly by the whole −1.8. AT-13 measures it so the size is
+recorded rather than argued about, and the fix is C1's own deferred item, not a
+new one.
 
 ---
 
@@ -625,15 +983,23 @@ makes "inverted" mean something.
 | **AT-7** | **No new random stream.** The draw order in `run_path` is unchanged; a test asserts it | structural | Determinism invariant. A new `rng.` call would shift every subsequent stream and make AT-6b unachievable |
 | **AT-8** | **Deflation mirror.** `deflation_bust` (−1.0%) `re` must sit **below** `goldilocks` (2.0%) `re` | **≥ 0.5 pp/yr below** | λ_RE range floor 0.15 × 3.0pp = 0.45, rounded. The mechanism must be symmetric — an inflation *response*, not a one-sided bonus that only ever pays |
 | **AT-9** | **Battery honesty.** The validation battery re-runs on the stagflation preset; every stylized fact that moves outside its band is **disclosed in the close-out**, and **no threshold is moved to accommodate it** | disclosure rule | The ER-4 discipline: flags are never silenced by moving the flag. This is not pass/fail — it is the rule that governs what happens when the battery moves, which it will |
-| **AT-10** | **Generated plane parity.** AT-1/2/3/4 re-run through `ah/port/adapter.py` on the 1974 generated world | same thresholds | Otherwise ER-14 closes on one plane and stays open on the one that ships generated worlds |
+| **AT-10** | **Generated plane parity.** AT-1/2/3/4 re-run through `ah/port/adapter.py` on the 1974 generated world | same thresholds |
+| **AT-11** | **Infra sign and magnitude.** Δ annualised `infra`, 1 % → 12 %, must be **positive** | **≥ +4.0 pp/yr** | Mechanism predicts +6.6. 4.0 = λ_INFRA's declared range floor (0.4, per C1's 0.4–0.8) × 11 pp − rounding. Also required: **infra's response must EXCEED real estate's** on the same probe — the ranking is the substantive claim, and a mechanism that got the levels right but the order wrong would be worse than useless to an allocator |
+| **AT-12** | **The dead field is alive.** Two worlds identical but for `structural.infrastructure.inflation_linkage` = 0.3 versus 0.9 must produce **different** `infra` returns, and the ratio of their inflation responses must be **0.33 ± 0.05** | ratio test | This is the second inverted defect. ER-14's most quotable line is that the contract's only inflation-linkage field belongs to a class the engine does not simulate; the test asserts the field now drives the number it describes, at the linearity the design claims |
+| **AT-13** | **Escalator asymmetry, measured not argued.** Record `infra`'s annualised return on `deflation_bust` against a variant with the escalator floored at zero below the anchor | **disclosure, no threshold** | §2.6 and §4 both flag that C1 defers escalator floors and that the symmetric model overstates infrastructure's deflation downside. The size of that overstatement goes in the close-out entry as a number, so the deferred item carries its own cost estimate |
+| **AT-14** | **Sleeve addition, if A14 is granted: the draw-order guard.** With `infra` added to `ASSETS`, the five public assets **and** `pe`/`pc`/`re` must remain bit-identical to the no-infra build on every preset | exact equality | §2.7.2: appending the new Student-t draw at the end of the block preserves every existing stream; inserting it anywhere else silently corrupts every world. This test is the only thing standing between a one-line mistake and an undetectable one | Otherwise ER-14 closes on one plane and stays open on the one that ships generated worlds |
 
 **Two anti-test guards**, because a defect this old survived five gates:
 
 - Each of AT-2/3/4 must be demonstrated to **fail on `toy-v0.6`** before the
   mechanism lands (they will: measured deltas today are 0.000, −0.117, +0.022).
-  A test that never failed against the defect is not evidence.
-- AT-1 and AT-6b must survive a **break-and-revert**: set λ_RE to 0 and AT-3
-  must go red; add a stray RNG draw and AT-6b must go red.
+  AT-11 and AT-12 cannot fail on `toy-v0.6` because the asset does not exist — so
+  their equivalent is that **AT-12 must fail against a build where
+  `inflation_linkage` is read but ignored**, which is the exact defect shape ER-14
+  describes and the one a careless implementation would reproduce.
+- AT-1, AT-6b and AT-14 must survive a **break-and-revert**: set λ_RE to 0 and
+  AT-3 must go red; set λ_INFRA to a constant and AT-12 must go red; insert the
+  new RNG draw at the top of the block instead of the end and AT-14 must go red.
 
 ---
 
@@ -673,6 +1039,12 @@ Expanded into the checklist, with the design's answers filled in:
 | 13 | Credibility console walk | `uv run ah credibility --preset stagflation --preset goldilocks --preset deflation_bust --out …` before merge. Memory rule: the console has twice caught adapter defect classes the unit suite missed |
 | 14 | Amendment path | A new dated entry in `governance/amendment-log.yaml` **extending** `AM-2026-08-15-001` (C1 to `pm_buyout`; the toy-plane coefficients; F5a/F5c), `post_hoc: true` with the trigger named as ER-14. Ratified coefficients hashed into the entry **before** the estimator runs |
 | 15 | Register + docs | ER-14 → **CLOSED** with the §3 residual named; `CLAUDE.md` register line; `CHANGELOG.md`; `docs/current/private-markets-and-inflation.md` re-headed with the post-fix measurements |
+| **16** | **Infra sleeve (only if A14 is granted)** | `ASSETS` and `REPORTED_SLEEVES` gain `infra`; the new Student-t draw is **appended at the end of the draw block** (§2.7.2 — AT-14 guards it); `PRIVATE_ASSETS`, `START_TARGETS` (reits 8→5, re 7→5, infra 5), `START_MIX`, `GEN_START_TARGETS`, `GEN_START_MIX`, `_PM_ASSET_ORDER`, `PM_SLEEVE_FOR_ASSET` |
+| **17** | **Pacing artifact** | `mappings/pacing-parameters-v1.0.yaml` gains a `pm_infra` row (`contractual_life_years: 15`, everything else carried from `pm_buyout`). **Not in any lock**, but owner-approved under WI-I6-1 with `tests/test_pacing_artifact.py` as its drift guard — an owner event. Run `scripts/inspect_pacing.py` and read it before and after |
+| **18** | **Session contracts** | `serve.py`: the default book gains a fourth private sleeve, so **its digest moves and every in-flight session is invalidated**. Old three-sleeve posts demote to practice under the ER-15 rule — correct, but it must be announced rather than discovered |
+| **19** | **Display + app** | `cioview.py` (`GOAL_OF`, `CLASS_LABEL`, `BAND_PCT`); `app/src/Play.tsx`'s `PRIVATE_ASSETS`, `lib/assetLabels.ts`, `lib/sleeveLabels.ts`, `components/DecisionWindow.tsx`, `BookEntry.tsx`, `CioDashboard`, `VintageChart`, and `Play.cio.test.tsx`'s pinned eight-asset list. `npm run typecheck && npm run test && npm run build` |
+| **20** | **Bundle contract check** | `bundle.py` follows `asset_order` automatically, but the `world-bundle-0.3` series count changes. **If the app's decoder pins a count, STOP and decide whether the contract version moves** before writing anything |
+| **21** | **Secondary-sale scope** | `play.py:628/763` hardcodes the pe ladder. Infrastructure inherits "never sold on the secondary market" by default. Confirm that is intended (ask A16) rather than leaving it to be found |
 
 **Locks — all three grepped, listed with impact.**
 
@@ -686,6 +1058,15 @@ Memory rule applies: three locks share `factors.yaml`, `prereg.py` and
 `splits.py`. None is edited here — but the digest of all three is checked before
 and after, not just G3's.
 
+**Two lock facts specific to the infrastructure sleeve, both favourable:**
+
+- **`taxonomy/sleeves.yaml` is inside the G3 lock and already carries `pm_infra`**
+  (with its five sub-sleeves and the "long lives / core infra is evergreen" note).
+  Adding the class therefore requires **no edit to any locked file** to name it.
+- **`mappings/pacing-parameters-v1.0.yaml` is in no lock at all** (verified across
+  all three). It is nonetheless owner-approved under WI-I6-1 and drift-guarded, so
+  adding the `pm_infra` row is an owner decision, not a free edit.
+
 ---
 
 ## 8. Cost and sequence
@@ -698,12 +1079,33 @@ background, log read as its own step).
 |---|---|---|
 | `er14-02` | Shared state (`infl_trail`, `C_ANCHOR`) + the real estate mechanism, TDD; AT-1, AT-3, AT-6a, AT-8; rider R1 | 0.5 |
 | `er14-03` | Private equity and private credit mechanisms; C2 convexity; riders R2; preset `entry_multiple_drift` re-authoring; AT-2, AT-4, AT-5 | 0.5 |
+| **`er14-03b`** | **Infrastructure mechanism** (§2.6): the return equation, `inflation_linkage` and `discount_rate_shift_bps` read live, the transplanted `pm_infra` constants; AT-11, AT-12, AT-13. *Assumes the sleeve exists — if A14 is deferred, this WP produces the stream and nothing holds it, which is still worth doing but is dead code until the sleeve lands (see the sequencing note below)* | **0.5** |
 | `er14-04` | `toy-v0.7` bump, world fences `51x`→`52x` and `603`→`604`, both bundles, **the mechanical re-pin sweep**; AT-6b, AT-7 | **1.5** |
-| `er14-05` | Generated plane: v1.2 artifact (C1 + C1-extension to `pm_buyout` + F5a + F5c + restored `r2_train_val`), estimator run, amendment entry, **G3 reseal**, `GEN_PLAY_ALPHA_VERSION`; AT-10 | 1.5 |
+| **`er14-04b`** | **Infrastructure sleeve** (§2.7, only if A14 granted): `ASSETS`/`PRIVATE_ASSETS`/targets/pacing row/serve contracts/cioview; AT-14; the draw-order guard | **1.0** |
+| **`er14-04c`** | **The app** (only if A14 granted): a fourth private sleeve through `BookEntry`, `Play`, `CioDashboard`, `VintageChart`, every label map, every fixture; typecheck + test + build | **1.5** |
+| `er14-05` | Generated plane: v1.2 artifact (C1 + C1-extension to `pm_buyout` + `b_infl` on `pm_infra` + F5a + F5c + restored `r2_train_val`), estimator run, amendment entry, **G3 reseal**, `GEN_PLAY_ALPHA_VERSION`; AT-10 | 1.5 |
 | `er14-06` | Battery re-run + disclosure (AT-9), credibility console walk, ER-14 close-out entry with the §3 residual, `CLAUDE.md` / `CHANGELOG` / `private-markets-and-inflation.md` | 0.5 |
 
-**Honest total: 4.5 days, and 4.5 is the optimistic read.** Two reasons to hold a
-buffer:
+**Totals, by what is ratified:**
+
+| Scope | Days |
+|---|---|
+| Three mechanisms only (revision 1, unchanged) | **4.5** |
+| + infrastructure **mechanism**, sleeve deferred (A14 = no) | **5.0** |
+| + infrastructure **mechanism and sleeve** (A14 = yes) | **7.5–8.0** |
+| Toy-plane only (`er14-05` deferred on the CDLI blocker), with the sleeve | **6.0–6.5** |
+
+**A sequencing note the owner should weigh before deferring the sleeve.** If A14
+is deferred, `er14-03b` builds an `infra` return stream that nothing consumes.
+That is not wasted — it is testable, it makes `inflation_linkage` live, and it
+means the sleeve later is a wiring job rather than a modelling job. But it is
+**dead code in a shipped engine**, which this repository has a register entry's
+worth of feeling about. The clean alternative is to defer §2.6 *and* §2.7
+together and close ER-14 on three classes, recording infrastructure as a named
+residual. Ask A14 offers both.
+
+**Honest total: 4.5 days for revision 1's scope, and 4.5 was already the
+optimistic read.** Three reasons to hold a buffer:
 
 - **`er14-04` is the item that overruns.** The ER-10 precedent — a strictly
   smaller change, one function — needed its own dedicated re-pin task and still
@@ -725,7 +1127,8 @@ toy-plane-only release with `er14-05` deferred.**
 Nothing is implemented until these are answered. Recommendations are given for
 every one; each can be overruled with a sentence.
 
-**A1 — The nine coefficients.** Ratify, adjust, or reject each:
+**A1 — The fifteen coefficients.** Ratify, adjust, or reject each. Rows 1–9 are
+revision 1's, unchanged; rows 10–15 are infrastructure's:
 
 | # | Coefficient | Proposed | Range | Anchor (short) | Label |
 |---|---|---|---|---|---|
@@ -738,12 +1141,26 @@ every one; each can be overruled with a sentence.
 | 7 | `φ_PC` | **1.0** | 0.75–1.50 | Fisher one-for-one on a nominal reference rate (Taylor's extra 0.5 is a real-rate response the authored glide already carries) | chosen |
 | 8 | `ω_PC` | **0.03** | 0.015–0.033 | bounded so inflation stress at the schema maximum stays under `_CRISIS_LOSS_AMPLIFIER = 1.6` | chosen |
 | 9 | `θ_toy` | **0.10** | 0.05–0.20 | `_HY_LOSS_SHARE` 0.45 × the engine's own pc/hy spread-sensitivity ratio (0.8/3.5 = 0.229) = 0.103 | chosen |
+| **10** | **`λ_INFRA`** — read live from `structural.infrastructure.inflation_linkage`, this value is the **default** | **0.60** | 0.4–0.8 | C1 / `AM-2026-08-15-001` declared `pm_infra: 0.6`, anchored to concession and regulatory contract share | chosen |
+| **11** | **`γ_INFRA`** infra discount-rate response | **0.30** | 0.15–0.50 | γ_RE 0.50 × ~1.6 duration premium × 0.4 unregulated revenue share (the complement of the same 0.6 linkage share) = 0.32 | chosen |
+| **12** | **`β_INFRA`** infra equity beta | **0.33** | — | `pm_infra`'s estimated `equity_mkt` loading, 0.3337, sealed v1.1, 60 quarters, sum-beta(2) | chosen (transplanted from a measured row) |
+| **13** | **`σ_INFRA`** infra residual | **1.65** | — | `pm_infra`'s `residual_sigma_annual` 0.0569 ÷ √12 = 1.64 %/month, same units as the engine's 1.5 `e_re` / 1.45 `e_pc` | chosen (transplanted from a measured row) |
+| **14** | **`infra_yield`** contracted income | **5.0 %** | 4.0–6.0 | `pm_infra`'s `alpha_quarterly` 0.00888 (3.55 %/yr) + 0.3337 × the engine's 6 %/yr default equity drift ⇒ composite ≈ 5.6 %/yr; 5.0 income + β·eq lands the toy sleeve on its own estimated composite | chosen |
+| **15** | infra crisis term | **−0.5** | 0.0 to −1.0 | half of real estate's −1.0, on the regulated-revenue argument. **The weakest-anchored number in the package** — flagged, not dressed up; no acceptance test depends on it | chosen |
 
 Every one is `chosen`, none is `measured`, and each upgrade path to
 `measured-external` is recorded in §2 and inherited from the C1/C2 lineage
-(`b_infl` → NCREIF NPI NOI-growth and cap-rate fits; `θ` → the CDLI match rule;
-`λ_PE`/`μ_PE` → an Albourne buyout revenue/EBITDA panel). `D_RE = 4.0` and
-`s̄ = 400 bp` are **existing engine constants reused**, not new coefficients.
+(`b_infl` → NCREIF NPI NOI-growth and cap-rate fits, covering λ_RE and λ_INFRA
+together; `θ` → the CDLI match rule; `λ_PE`/`μ_PE` → an Albourne buyout
+revenue/EBITDA panel). `D_RE = 4.0` (reused again as `D_INFRA`) and `s̄ = 400 bp`
+are **existing engine constants reused**, not new coefficients.
+
+**Note the shape of the infra ask.** Only #10 and #11 are genuine economic
+judgments; #12–#14 are transplants from a sealed estimated row, and #15 is
+explicitly the weakest number here. If the owner wants to spend attention
+efficiently, spend it on γ_INFRA = 0.30 — the claim that infrastructure's rate
+sensitivity is *lower* than property's despite longer duration is the one
+non-obvious assertion in the class.
 
 **A2 — Delta 3.** *Recommended: do NOT admit inflation to `f_dist`/`f_call`.*
 The cashflow layer becomes inflation-sensitive derivatively; the sealed
@@ -786,6 +1203,15 @@ without inviting a collision. *Recommended: (c)*, with the retirement noted in
 the ER-14 close-out entry. **Owner's call**, and it must be made before
 `er14-04`, not during it.
 
+**A13 is strengthened, not changed, if A14 is granted.** Adding `infra` to
+`ASSETS` changes the *shape* of every world's tape, not merely its numbers: a
+campaign world re-run under `toy-v0.7` would return nine return series where its
+recorded evidence describes eight. Option (b) — renumber and re-run — would
+therefore not reproduce those campaigns at all, only produce differently-shaped
+new ones under new ids. Option (c), retirement, becomes the only option that
+keeps the campaign record meaning what it says. If the sleeve lands, treat A13's
+recommendation as effectively forced.
+
 **A6 — Extend C1 to `pm_buyout`.** *Recommended: yes.* Without it the generated
 path's private equity stays inflation-blind and ER-14 closes on one plane only.
 Requires a new amendment extending `AM-2026-08-15-001`'s declared scope.
@@ -820,6 +1246,50 @@ declares either field. R3 (read `private_equity.leverage_turns` to scale the 1.4
 beta): *recommended out* — five presets declare 5.5, so it **would** move shipped
 numbers and adds a second confound to the same release.
 
+**A14 — THE SLEEVE GO/NO-GO. Infrastructure in the playable book: yes or no?**
+This is deliberately separate from A1's coefficients, because the mechanism and
+the sleeve are separable and cost very different amounts. Three answers are
+coherent:
+
+- **(i) Mechanism and sleeve** (+3.0–3.5 days over revision 1). ER-14 closes on
+  all four private classes; the player can hold and tilt the one asset with
+  contractual inflation linkage; `inflation_linkage` becomes live *and* load-
+  bearing. *Recommended if infrastructure matters to the product's argument at
+  all* — which the owner's review implies it does.
+- **(ii) Mechanism only, sleeve deferred** (+0.5 days). `inflation_linkage`
+  becomes live and the return stream exists and is tested, but nothing holds the
+  asset, so it is **dead code in a shipped engine** until the sleeve lands.
+  Cheaper now, and it makes the later sleeve a wiring job rather than a modelling
+  one.
+- **(iii) Neither; record infrastructure as a named ER-14 residual.** Honest,
+  cheapest, and leaves standing the single most quotable line in the register —
+  that the contract's only inflation-linkage field belongs to a class the engine
+  does not simulate.
+
+**A15 — Infrastructure's starting weight and carve (only under A14(i)).**
+Proposed: **5 points**, carved 3 from REITs (8 → 5) and 2 from real estate
+(7 → 5), leaving private at 38 of 100 and the `real` goal bucket unchanged at 20.
+Commodities is deliberately untouched so ER-14's own attribution experiment stays
+valid. Confirm, or set a different weight — noting §2.7.3's arithmetic: at any
+institutionally realistic weight the sleeve moves the *total book* by low tens of
+basis points, and its value is as a **lever the player can pull**, not as a
+default-book effect. Also within this ask: the `cioview.BAND_PCT["infra"]`
+fallback (proposed 2.0 points, matching `re`), and whether this sleeve should
+carry a wider declared range than `default_band`'s ±10 % so the lever has travel.
+
+**A16 — Two infrastructure scope confirmations.**
+- **Pacing:** add a `pm_infra` row to `mappings/pacing-parameters-v1.0.yaml` with
+  `contractual_life_years: 15` and everything else carried from `pm_buyout`
+  (*recommended*), or reuse the single existing row (zero new parameters). Note
+  the file is in **no lock** but is owner-approved under WI-I6-1 with a drift
+  guard — an owner event either way. Note also that this release adds a
+  **closed-end** infrastructure sleeve and leaves `infra_core` parked as Tier B
+  evergreen, exactly as the register has it (§2.7.4/§2.7.5).
+- **Secondaries:** `play.py`'s `_secondary_sale` is hardcoded to the pe ladder, so
+  infrastructure would inherit "never sold on the secondary market". Infrastructure
+  secondaries are genuinely thin, so this may be right — but confirm it as a
+  decision rather than leaving it to be discovered.
+
 **A12 — Out of scope, confirm.** Spending indexation (`Policy.spending_rate_annual`
 charges 4.5% of *nominal* reported value; `ah/port/twin.py` already has the
 machinery and the played institution does not use it) is *recommended out*: it
@@ -836,8 +1306,16 @@ in every world at once. Both remain open register items either way.
 Stated here so the close-out entry can carry it rather than a reader inferring it:
 
 - **It is a response, not a hedge.** At 6.5% inflation, +1.35 pp/yr of escalated
-  property income is still a large real loss. Private markets become
-  inflation-*aware*, not inflation-*proof*.
+  property income and +2.7 pp/yr on infrastructure are both still large real
+  losses. Private markets become inflation-*aware*, not inflation-*proof*.
+- **Infrastructure's escalator is symmetric and real ones usually are not.** C1
+  defers escalator caps and floors, so this design overstates the class's
+  deflation downside. AT-13 measures the overstatement; the fix belongs to C1's
+  deferred item.
+- **The played infrastructure sleeve is closed-end.** `infra_core` — the
+  evergreen vehicle a real allocator most often holds — remains Tier B and
+  unparameterized, because the cohort model is closed-end by construction.
+  Nothing here reclassifies that register row.
 - **The propensity to distribute stays inflation-blind** under the §3
   recommendation — the named residual.
 - **The standing caveat is unchanged.** `hier-flow-v1` beats its benchmark on the
