@@ -53,7 +53,11 @@ TOY_GENERATOR_ID = "toy-v0"
 #         (reported PM cumulated ~1/3 of truth). Now filters the whole
 #         quarter's compounded true return, so cumulative reported catches
 #         up to cumulative true.
-TOY_ENGINE_VERSION = "toy-v0.6"
+#   v0.7  ER-14 close-out (D-ER14-2, 2026-08-18): four inflation channels
+#         (real estate, private equity, private credit, infrastructure) and a
+#         fourth private asset (infra) join ASSETS/REPORTED_SLEEVES. A
+#         return-process change, so the stamp moves per this file's own rule.
+TOY_ENGINE_VERSION = "toy-v0.7"
 
 # -- register ER-7 close-out: limited liability ----------------------------- #
 # A holder of a long-only asset cannot lose more than everything: monthly

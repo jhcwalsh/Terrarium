@@ -132,7 +132,12 @@ GEN_START_TARGETS: dict[str, float] = {
 # Scores from generated worlds carry their OWN alpha stamp — a distinct
 # value, not a bump of the toy one — so a leaderboard row can never mix
 # engines (survey S3; the world_id block separation is the second fence).
-GEN_PLAY_ALPHA_VERSION = "port-v4-ladder-gen"  # v4: staggered seed ladder (ladder-01)
+# v5: ER-14 close-out (D-ER14-2, 2026-08-18) — the v1.2 mapping artifact's
+# inflation channel (C1 extended to pm_buyout) and F5's Student-t/EWMA fixes
+# change the generated plane's returns; distinct from PLAY_ALPHA_VERSION's
+# own v5 bump (survey S3: never a shared bump, the two planes score
+# different tapes).
+GEN_PLAY_ALPHA_VERSION = "port-v5-inflation-gen"
 
 # ER-14 close-out (D-ER14-2, Task S4, A15): infra 0.05, carved 0.02 from re
 # and 0.03 from equity -- equity's resulting 0.32 matches

@@ -23,6 +23,7 @@ from hypothesis import strategies as st
 from ah.core.engine import (
     ASSETS,
     REPORTED_SLEEVES,
+    TOY_ENGINE_VERSION,
     UnsupportedGeneratorError,
     run_ensemble,
     run_path,
@@ -77,6 +78,14 @@ def test_golden_snapshot() -> None:
     p = run_path(make_world(), GOLDEN_SEED)
     assert p.months == 120
     assert digest_of(p) == GOLDEN_DIGEST
+
+
+def test_the_engine_stamps_toy_v07() -> None:
+    """A return-process change bumps the stamp: RunRecords carry it as
+    resolved_engine.generator_version, so scores made under two engines can
+    never share a leaderboard row (generator_id itself is a schemas/ enum and
+    cannot gain values)."""
+    assert TOY_ENGINE_VERSION == "toy-v0.7"
 
 
 def test_determinism_same_seed() -> None:
