@@ -38,7 +38,19 @@ from ah.port.adapter import (
 
 ROOT = Path(__file__).resolve().parents[1]
 PRESET = ROOT / "src" / "ah" / "presets" / "stagflation.json"
+PRESETS = ROOT / "src" / "ah" / "presets"
 SEED = 197400
+
+
+def test_the_toy_presets_moved_to_the_52x_block():
+    """The 52x sub-block is toy-v0.7 (gen_presets.py's documented convention:
+    50x = toy-v0.5, 51x = toy-v0.6). The engine is not part of a WorldSpec, so
+    world identity is the only place the difference between two engines can
+    live, and the leaderboard is keyed (world_id, seed, decision_alpha_version)."""
+    ids = {p.stem: json.loads(p.read_text())["world_id"][-3:] for p in PRESETS.glob("*.json")}
+    assert ids["stagflation"] == "521" and ids["goldilocks"] == "522"
+    assert ids["deflation_bust"] == "523" and ids["reflation_boom"] == "524"
+    assert ids["prehistory"] == "525" and ids["stagflation_1974"] == "604"
 
 
 from conftest import make_synthetic_source_16 as _synthetic_source_16  # noqa: E402
@@ -405,6 +417,8 @@ class TestAgainstTheRealPanel:
 
         re-pinned under map-2026.08.2 (AM-2026-08-12-001): world fence 601->602.
         re-pinned again for ER-10 (toy-v0.6): world fence 602->603.
+        re-pinned again for ER-14 close-out (toy-v0.7, D-ER14-2, 2026-08-18):
+        world fence 603->604.
         """
         from typer.testing import CliRunner
 
@@ -420,7 +434,7 @@ class TestAgainstTheRealPanel:
             return r
 
         build = invoke("world", "build", "--preset", "stagflation_1974")
-        assert "00000000-0000-4000-9000-000000000603" in build.output
+        assert "00000000-0000-4000-9000-000000000604" in build.output
         rid = invoke("run", "--paths", "12").output.strip().splitlines()[-1]
         replay = invoke("replay", rid)
         assert "MATCH" in replay.output
