@@ -151,6 +151,7 @@ _DEF = {
     "smooth_pe": 0.35,
     "smooth_pc": 0.30,
     "smooth_re": 0.35,
+    "re_income_yield": 4.5,  # R1: the hardcoded income level, now a default
 }
 
 
@@ -414,6 +415,7 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     pe_mult = _f(st.private_equity, "entry_multiple_drift_annual_pct", _DEF["pe_mult_drift"])
     pc_loss = _f(st.private_credit, "annual_loss_rate_pct", _DEF["pc_loss"])
     re_cap = _f(st.real_estate, "cap_rate_shift_bps", _DEF["re_cap_shift"])
+    re_income = _f(st.real_estate, "income_yield_pct", _DEF["re_income_yield"])
 
     # Common-factor loadings: stronger co-movement inside crisis months.
     rho = np.where(crisis > 0, 0.85, 0.45)
@@ -463,7 +465,7 @@ def run_path(world: NumericWorld, seed: int) -> EnginePaths:
     # Property is rate-sensitive (cap rates move with rates) and reprices hard
     # in a crisis; both were missing, leaving it a near-riskless income stream.
     re = (
-        4.5 / 12.0
+        re_income / 12.0
         - re_cap / (100.0 * nm) * 2.2
         - _D_RE * d_rate
         + 0.35 * eq

@@ -260,3 +260,25 @@ def test_at6a_the_inflation_channel_is_inert_at_the_anchor(asset, monkeypatch):
         np.testing.assert_array_equal(
             paths.returns[asset], ref[f"{path.stem}/{asset}"], err_msg=f"{path.stem}/{asset}"
         )
+
+
+# --------------------------------------------------------------------------- #
+# Task M4: rider R1 - structural.real_estate.income_yield_pct
+# --------------------------------------------------------------------------- #
+
+
+def test_r1_income_yield_is_read_from_the_world():
+    """R1 (A11, recommended in). The 4.5% income yield was hardcoded while the
+    schema field structural.real_estate.income_yield_pct sat declared and dead
+    (ER-14's unconsumed-field map). Schema range 2-8."""
+    lo = annualised(probe(6.5, **{"structural.real_estate.income_yield_pct": 3.0}), "re")
+    hi = annualised(probe(6.5, **{"structural.real_estate.income_yield_pct": 7.0}), "re")
+    assert hi - lo == pytest.approx(4.0, abs=0.15)
+
+
+def test_r1_changes_no_shipped_preset():
+    """NO shipped preset declares income_yield_pct, so every preset is
+    numerically unchanged by R1 - the cheapest honest repair in the package."""
+    for path in TOY_PRESETS:
+        doc = _load(path)
+        assert "income_yield_pct" not in doc["structural"].get("real_estate", {}), path.stem
