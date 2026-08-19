@@ -11,6 +11,7 @@ pipe, which pytest-socket blocks by default.
 
 from __future__ import annotations
 
+import json
 from typing import ClassVar
 
 import pytest
@@ -112,7 +113,7 @@ def _banded_session(
 
 
 def _all_sleeves(default: dict) -> list[str]:
-    return [*default["liquid_sleeves"], "pe", "pc", "re"]
+    return [*default["liquid_sleeves"], "pe", "pc", "re", "infra"]
 
 
 def _weights(doc: dict, plane: str) -> dict[str, float]:
@@ -142,8 +143,9 @@ class TestDefaultBookEndpoint:
         assert r.status_code == 200
         body = r.json()
         # su-app-07 Ruling D: default_opening_book now populates `targets`,
-        # at the new state_version ("opening-book-0.2").
-        assert body["book"]["state_version"] == "opening-book-0.2"
+        # at the new state_version. ER-14 close-out (Task S2) moved this to
+        # "opening-book-0.3" -- the fourth private sleeve.
+        assert body["book"]["state_version"] == "opening-book-0.3"
         assert body["plan"]["state_version"] == "commitment-plan-0.1"
         assert set(body["book"]["liquid"]) == set(body["liquid_sleeves"])
         assert len(body["book_digest"]) == 64
@@ -151,12 +153,13 @@ class TestDefaultBookEndpoint:
     def test_the_private_sleeves_are_present_in_the_served_book(self, service):
         # app-open-01 delta 2: the entry screen's merged targets/bands table
         # reads the private sleeves off `book.private` (values) and
-        # `book.targets`/`book.ranges` (policy) — this pins that all three
-        # structures really do name pe/pc/re, which is the whole premise a
-        # merged table relies on rather than a second server change.
+        # `book.targets`/`book.ranges` (policy) — this pins that all four
+        # structures really do name pe/pc/re/infra, which is the whole
+        # premise a merged table relies on rather than a second server
+        # change. ER-14 close-out (Task S2) added infra to the set.
         client, _db, rid = service
         body = client.get(f"/book/default?run_id={rid}").json()
-        private = {"pe", "pc", "re"}
+        private = {"pe", "pc", "re", "infra"}
         assert private <= set(body["book"]["private"])
         assert private <= set(body["book"]["targets"])
         assert private <= set(body["book"]["ranges"])
@@ -349,6 +352,70 @@ class TestCreateSessionWithABook:
         assert r.status_code == 422
         assert "expected" in r.json()["detail"]
         assert "decision window" in r.json()["detail"]
+
+
+def _legacy_three_sleeve_book(book: dict) -> dict:
+    """A pre-ER-14 book: the served default with the fourth private sleeve
+    (infra) stripped back out of private/targets/ranges -- what an
+    in-flight three-sleeve session's stored book looked like before this
+    release. Used to pin ER-15's accepted demotion (D-ER14-2)."""
+    book = json.loads(json.dumps(book))
+    book["private"].pop("infra", None)
+    if book.get("targets"):
+        book["targets"].pop("infra", None)
+    if book.get("ranges"):
+        book["ranges"].pop("infra", None)
+    return book
+
+
+class TestFourthPrivateSleeve:
+    """ER-14 close-out (Task S6, D-ER14-2): the served book/plan carry a
+    fourth private sleeve, and the ER-15 side effect (an in-flight
+    three-sleeve session's stored book no longer names the world's full
+    private set) is ANNOUNCED, not discovered."""
+
+    def test_the_served_default_book_carries_four_private_sleeves(self, service):
+        client, _db, rid = service
+        body = client.get(f"/book/default?run_id={rid}").json()
+        assert set(body["book"]["private"]) == {"pe", "pc", "re", "infra"}
+        assert set(body["plan"]["points"]) == {"pe", "pc", "re", "infra"}
+
+    def test_the_default_book_submitted_back_still_keeps_ranked(self, service):
+        """Ruling D's invariant: the served default and the pre-fill move
+        together, so an untouched POST still digests as the default."""
+        client, _db, rid = service
+        body = client.get(f"/book/default?run_id={rid}").json()
+        r = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": body["book"], "plan": body["plan"], "ranked": True},
+        )
+        assert r.status_code == 201, r.text
+        assert r.json()["ranked"] is True
+
+    def test_a_three_sleeve_book_is_demoted_to_practice_not_crashed(self, service):
+        """ER-15, accepted side effect (D-ER14-2): the default book gains a
+        fourth private sleeve, so its digest moves and every in-flight
+        session is invalidated. A legacy three-sleeve book cannot satisfy
+        CommitmentPlan/OpeningBook's shape check (it does not name the
+        world's full private set), so it 422s at the door rather than being
+        silently accepted and demoted -- the recommended, documented
+        outcome: a plan that cannot name the world's sleeves is malformed,
+        not merely edited."""
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        legacy = _legacy_three_sleeve_book(default["book"])
+        r = client.post(
+            "/sessions",
+            json={"run_id": rid, "book": legacy, "plan": default["plan"], "ranked": True},
+        )
+        assert r.status_code in (200, 201, 422)
+        if r.status_code in (200, 201):
+            assert r.json()["ranked"] is False
+
+    def test_the_unknown_sleeve_422_names_the_new_set(self, service):
+        client, _db, rid = service
+        r = client.get(f"/book/ladder?run_id={rid}&sleeve=nope&value=5")
+        assert r.status_code == 422 and "infra" in r.json()["detail"]
 
 
 class TestBookThreadedThroughReplaySurfaces:
@@ -1275,7 +1342,7 @@ class TestLadderRebuildEndpoint:
     def test_the_default_target_value_reproduces_the_default_rungs_exactly(self, service):
         client, _db, rid = service
         default = client.get(f"/book/default?run_id={rid}").json()
-        for sleeve in ("pe", "pc", "re"):
+        for sleeve in ("pe", "pc", "re", "infra"):
             value = default["book"]["targets"][sleeve]
             r = client.get(f"/book/ladder?run_id={rid}&sleeve={sleeve}&value={value}")
             assert r.status_code == 200, r.text

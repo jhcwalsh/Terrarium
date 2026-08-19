@@ -262,7 +262,7 @@ class TestCommitmentLeverAPI:
         client.post(f"/sessions/{sid}/advance", json={"to_month": 12})
         doc = client.get(f"/sessions/{sid}").json()
         plan = doc["next_plan_commitments"]
-        assert set(plan) == {"pe", "pc", "re"}
+        assert set(plan) == {"pe", "pc", "re", "infra"}
         assert all(v > 0 for v in plan.values())
 
     def test_decide_accepts_commitments_and_scores_them(self, service):
