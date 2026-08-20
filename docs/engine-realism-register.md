@@ -1286,6 +1286,8 @@ built from a non-default book is affected, and those never score).
 **Status:** open (mitigated in part by D-ER16-1, 2026-08-19 — the level and
 the crash magnitude are fixed by chosen coefficients; the missing convexity
 is not)
+Post-adoption measurements (the 72x successor worlds under v1.3) live in
+`docs/superpowers/specs/2026-08-20-pe-chosen-release-evidence.md`.
 **Found:** 2026-08-19, `pe-serenity-01`, investigating why The Gulf Decade
 (world 712, severe `all_down`, equity -45.5% in year 5) compounds PE true to
 +532% over the decade. Probe: `scripts/pe_serenity_probe.py`; full finding in

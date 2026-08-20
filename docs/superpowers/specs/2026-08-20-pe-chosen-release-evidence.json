@@ -1,0 +1,323 @@
+{
+  "live_row": {
+    "mapping_version": "map-2026.08.4",
+    "alpha_quarterly": 0.007399,
+    "alpha_annualised_as_adapter_applies_it_pct": 3.0001,
+    "equity_beta": 1.2,
+    "replaced": {
+      "alpha_quarterly": 0.019441,
+      "equity_mkt": 0.8362
+    }
+  },
+  "n_seeds": 200,
+  "worlds": {
+    "stress_1974_successor": {
+      "world_id": "00000000-0000-4000-9000-000000000721",
+      "generator_id": "bootstrap-stratified",
+      "base_seed": 197400,
+      "n_paths": 200,
+      "live_tape_decade_pe_true_pct": 322.65,
+      "live_tape_decade_equity_pct": 174.56,
+      "decade_pe_true_pct": {
+        "n": 200,
+        "min": -44.93,
+        "p05": 4.91,
+        "median": 274.55,
+        "p95": 964.21,
+        "max": 2373.12,
+        "mean": 355.35
+      },
+      "decade_equity_pct": {
+        "n": 200,
+        "min": -25.26,
+        "p05": 27.71,
+        "median": 183.24,
+        "p95": 402.04,
+        "max": 730.42,
+        "mean": 202.64
+      },
+      "max_drawdown_pe_pct": {
+        "n": 200,
+        "min": -83.35,
+        "p05": -71.11,
+        "median": -38.07,
+        "p95": -21.56,
+        "max": -13.12,
+        "mean": -41.53
+      },
+      "max_drawdown_equity_pct": {
+        "n": 200,
+        "min": -76.46,
+        "p05": -58.42,
+        "median": -29.85,
+        "p95": -15.87,
+        "max": -11.13,
+        "mean": -32.27
+      },
+      "n_paths_pe_decade_beats_equity_decade": 146,
+      "worst_rolling_12m_equity_window": {
+        "equity_compound_pct": {
+          "n": 200,
+          "min": -59.77,
+          "p05": -44.32,
+          "median": -20.87,
+          "p95": -4.96,
+          "max": -1.02,
+          "mean": -23.88
+        },
+        "pe_true_compound_pct": {
+          "n": 200,
+          "min": -70.78,
+          "p05": -56.07,
+          "median": -27.15,
+          "p95": -3.03,
+          "max": 36.52,
+          "mean": -28.68
+        },
+        "median_pe_minus_median_equity_pp": -6.27
+      }
+    },
+    "gulf_decade": {
+      "world_id": "00000000-0000-4000-9000-000000000722",
+      "generator_id": "bootstrap-stratified",
+      "base_seed": 202608,
+      "n_paths": 200,
+      "live_tape_decade_pe_true_pct": 385.91,
+      "live_tape_decade_equity_pct": 107.51,
+      "decade_pe_true_pct": {
+        "n": 200,
+        "min": -86.65,
+        "p05": -13.61,
+        "median": 191.64,
+        "p95": 779.29,
+        "max": 1700.18,
+        "mean": 273.57
+      },
+      "decade_equity_pct": {
+        "n": 200,
+        "min": -65.55,
+        "p05": -1.93,
+        "median": 149.91,
+        "p95": 439.05,
+        "max": 738.39,
+        "mean": 179.03
+      },
+      "max_drawdown_pe_pct": {
+        "n": 200,
+        "min": -91.89,
+        "p05": -72.92,
+        "median": -42.2,
+        "p95": -23.44,
+        "max": -16.64,
+        "mean": -44.5
+      },
+      "max_drawdown_equity_pct": {
+        "n": 200,
+        "min": -81.13,
+        "p05": -61.86,
+        "median": -32.11,
+        "p95": -16.33,
+        "max": -11.75,
+        "mean": -34.9
+      },
+      "n_paths_pe_decade_beats_equity_decade": 136,
+      "worst_rolling_12m_equity_window": {
+        "equity_compound_pct": {
+          "n": 200,
+          "min": -66.78,
+          "p05": -54.87,
+          "median": -26.22,
+          "p95": -8.15,
+          "max": -0.92,
+          "mean": -27.99
+        },
+        "pe_true_compound_pct": {
+          "n": 200,
+          "min": -71.3,
+          "p05": -66.32,
+          "median": -32.1,
+          "p95": -6.22,
+          "max": 13.66,
+          "mean": -33.09
+        },
+        "median_pe_minus_median_equity_pp": -5.88
+      },
+      "gulf_extras": {
+        "seed": 202608,
+        "year5_months_48_59": {
+          "pe_true_pct": -47.55,
+          "equity_pct": -45.54
+        },
+        "live_tape_decade_decomposition": {
+          "arith_sum_of_monthly_pe_pp": 183.972,
+          "decade_pe_true_pct": 385.91,
+          "decade_equity_pct": 107.51,
+          "terms": {
+            "alpha": {
+              "arith_sum_pp_over_decade": 29.596,
+              "share_of_arith_sum": 0.1609,
+              "arith_sum_pp_year5": 2.96,
+              "compounded_alone_pct": 34.39
+            },
+            "beta_equity_mkt": {
+              "arith_sum_pp_over_decade": 105.768,
+              "share_of_arith_sum": 0.5749,
+              "arith_sum_pp_year5": -67.62,
+              "compounded_alone_pct": 131.35
+            },
+            "beta_d_ig": {
+              "arith_sum_pp_over_decade": 6.278,
+              "share_of_arith_sum": 0.0341,
+              "arith_sum_pp_year5": -0.474,
+              "compounded_alone_pct": 6.43
+            },
+            "inflation": {
+              "arith_sum_pp_over_decade": -21.0,
+              "share_of_arith_sum": -0.1141,
+              "arith_sum_pp_year5": -2.1,
+              "compounded_alone_pct": -18.96
+            },
+            "residual": {
+              "arith_sum_pp_over_decade": 63.33,
+              "share_of_arith_sum": 0.3442,
+              "arith_sum_pp_year5": 8.742,
+              "compounded_alone_pct": 78.72
+            }
+          }
+        }
+      }
+    },
+    "stress_1990_successor": {
+      "world_id": "00000000-0000-4000-9000-000000000723",
+      "generator_id": "bootstrap-stratified",
+      "base_seed": 199001,
+      "n_paths": 200,
+      "live_tape_decade_pe_true_pct": 59.1,
+      "live_tape_decade_equity_pct": 37.12,
+      "decade_pe_true_pct": {
+        "n": 200,
+        "min": -76.25,
+        "p05": -53.73,
+        "median": 124.48,
+        "p95": 764.83,
+        "max": 1775.25,
+        "mean": 213.14
+      },
+      "decade_equity_pct": {
+        "n": 200,
+        "min": -65.29,
+        "p05": -42.73,
+        "median": 82.21,
+        "p95": 413.28,
+        "max": 960.28,
+        "mean": 118.96
+      },
+      "max_drawdown_pe_pct": {
+        "n": 200,
+        "min": -92.21,
+        "p05": -81.21,
+        "median": -46.9,
+        "p95": -27.55,
+        "max": -20.01,
+        "mean": -50.31
+      },
+      "max_drawdown_equity_pct": {
+        "n": 200,
+        "min": -84.86,
+        "p05": -70.84,
+        "median": -36.16,
+        "p95": -18.9,
+        "max": -11.55,
+        "mean": -40.82
+      },
+      "n_paths_pe_decade_beats_equity_decade": 134,
+      "worst_rolling_12m_equity_window": {
+        "equity_compound_pct": {
+          "n": 200,
+          "min": -65.52,
+          "p05": -54.23,
+          "median": -28.35,
+          "p95": -12.18,
+          "max": -3.46,
+          "mean": -31.13
+        },
+        "pe_true_compound_pct": {
+          "n": 200,
+          "min": -79.53,
+          "p05": -64.89,
+          "median": -34.65,
+          "p95": -7.32,
+          "max": 15.85,
+          "mean": -35.29
+        },
+        "median_pe_minus_median_equity_pp": -6.31
+      }
+    },
+    "stagflation_1974": {
+      "world_id": "00000000-0000-4000-9000-000000000724",
+      "generator_id": "bootstrap-v1",
+      "base_seed": 197400,
+      "n_paths": 200,
+      "live_tape_decade_pe_true_pct": 310.33,
+      "live_tape_decade_equity_pct": 170.12,
+      "decade_pe_true_pct": {
+        "n": 200,
+        "min": -35.45,
+        "p05": 54.48,
+        "median": 296.73,
+        "p95": 1090.89,
+        "max": 2398.12,
+        "mean": 398.48
+      },
+      "decade_equity_pct": {
+        "n": 200,
+        "min": -15.02,
+        "p05": 45.54,
+        "median": 208.77,
+        "p95": 535.7,
+        "max": 991.87,
+        "mean": 234.25
+      },
+      "max_drawdown_pe_pct": {
+        "n": 200,
+        "min": -77.81,
+        "p05": -60.7,
+        "median": -33.11,
+        "p95": -20.31,
+        "max": -17.05,
+        "mean": -36.36
+      },
+      "max_drawdown_equity_pct": {
+        "n": 200,
+        "min": -68.64,
+        "p05": -44.64,
+        "median": -22.71,
+        "p95": -14.53,
+        "max": -11.75,
+        "mean": -25.35
+      },
+      "n_paths_pe_decade_beats_equity_decade": 150,
+      "worst_rolling_12m_equity_window": {
+        "equity_compound_pct": {
+          "n": 200,
+          "min": -58.9,
+          "p05": -40.57,
+          "median": -17.31,
+          "p95": -6.02,
+          "max": -2.08,
+          "mean": -19.71
+        },
+        "pe_true_compound_pct": {
+          "n": 200,
+          "min": -69.52,
+          "p05": -50.41,
+          "median": -23.71,
+          "p95": 1.04,
+          "max": 16.92,
+          "mean": -23.51
+        },
+        "median_pe_minus_median_equity_pp": -6.4
+      }
+    }
+  }
+}
