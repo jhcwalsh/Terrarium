@@ -1509,6 +1509,38 @@ describe("BookEntry — weights derive and edit; the plan follows the book (app-
     expect(findButton(/play/i).disabled).toBe(false);
   });
 
+  it("a broken recycling identity names the sleeve, the rung and its vintage, and where to fix it", async () => {
+    // review fix round 1 (app-open-03): the identity fault used to say only
+    // "a rung breaks paid_in + unfunded = committed + recycled" — the one
+    // blocker left below contract C's bar. It must name the offender the way
+    // the blank/negative faults do, and say where the fix lives.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rung 0 unfunded"), "3");
+    const faults = byTestId("shape-faults").textContent ?? "";
+    expect(faults).toMatch(/paid_in \+ unfunded/); // the identity itself, still stated
+    expect(faults).toMatch(/pe rung 0 \(vintage 2019\)/); // the offender, named
+    expect(faults).toMatch(/historical vintages tab/i); // and where to act
+    expect(findButton(/play/i).disabled).toBe(true);
+  });
+
+  it("a weight typed beyond what liquid and cash can supply is capped, and the cap says so beside the field", async () => {
+    // review fix round 1 (app-open-03): the clamp used to fire silently.
+    // Private NAV is 38 of the default 100, so liquid+cash can supply at
+    // most 62% — typing 90 applies 62 and must SAY it did, with the number
+    // and the reason, next to the weight field.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("equity weight"), "90");
+    expect(byLabel<HTMLInputElement>("equity").value).toBe("62");
+    const note = byTestId("weight-cap-equity").textContent ?? "";
+    expect(note).toMatch(/capped at 62(\.0)?%/i);
+    expect(note).toMatch(/ladder/i); // the reason: private values move there
+    // an un-capped edit clears the note
+    setValue(byLabel<HTMLInputElement>("equity weight"), "30");
+    expect(host!.querySelector('[data-testid="weight-cap-equity"]')).toBeNull();
+  });
+
   it("a vintage edit re-posts the book and the plan grid follows the server's answer", async () => {
     // symptom 2's core walk: edit a HISTORICAL VINTAGE field -> the plan tab
     // changes. The edit here is a reported mark, which is what the server's

@@ -114,7 +114,7 @@
  *     hands it back to the server's derivation.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { usd } from "./lib/money";
 import {
   getDefaultBook,
@@ -279,13 +279,19 @@ function effectiveBook(book: Book): Book {
  * (equally when they hold nothing), and private classes' values move only on
  * their ladders. Weights therefore keep summing to 100 by construction. The
  * typed weight is clamped to what the liquid side can actually cede —
- * private NAV cannot be taken from here. */
-function applyWeightEdit(book: Book, sleeve: string, weightPct: number): Book {
+ * private NAV cannot be taken from here — and when the clamp fires the
+ * result SAYS so (`cappedAt`, the weight actually applied, in percent):
+ * review fix round 1, a silent clamp is below contract C's wording bar. */
+function applyWeightEdit(
+  book: Book,
+  sleeve: string,
+  weightPct: number,
+): { book: Book; cappedAt: number | null } {
   const total = bookTotal(book);
-  if (!(total > 0) || !Number.isFinite(weightPct)) return book;
+  if (!(total > 0) || !Number.isFinite(weightPct)) return { book, cappedAt: null };
   const isCash = sleeve === "cash";
   const current = isCash ? book.cash : book.liquid[sleeve];
-  if (current === undefined) return book;
+  if (current === undefined) return { book, cappedAt: null };
   const privateSum = Object.values(book.private)
     .flat()
     .reduce((a, r) => a + r.value.nav_true, 0);
@@ -296,6 +302,7 @@ function applyWeightEdit(book: Book, sleeve: string, weightPct: number): Book {
   const r6 = (v: number) => Math.round(v * 1e6) / 1e6;
   const liquidSide = total - privateSum; // this class + its absorbers
   const desired = (Math.min(Math.max(weightPct, 0), 100) / 100) * total;
+  const capped = desired > liquidSide + 1e-9;
   const next = r6(Math.min(desired, liquidSide));
   const required = liquidSide - next; // what the absorbers must now hold
   const absorberSum = liquidSide - current;
@@ -310,7 +317,7 @@ function applyWeightEdit(book: Book, sleeve: string, weightPct: number): Book {
     ]),
   );
   const cash = isCash ? next : scaled(book.cash);
-  return { ...book, liquid, cash };
+  return { book: { ...book, liquid, cash }, cappedAt: capped ? (next / total) * 100 : null };
 }
 
 /** a band mid-entry. Held as TEXT, not as numbers, because "" and 0 are
@@ -471,15 +478,23 @@ const RUNG_TOLERANCE = 1e-9;
 
 /** spec section 7: `paid_in + unfunded = committed + cumulative_recycled`.
  * Deliberately NOT the simpler `paid_in + unfunded = committed`, which
- * recycling legitimately breaks — the same note `ah/port/book.py` carries. */
-function recyclingIdentityHolds(book: Book): boolean {
-  return Object.values(book.private)
-    .flat()
-    .every((r) => {
+ * recycling legitimately breaks — the same note `ah/port/book.py` carries.
+ * Returns the offending rungs NAMED (sleeve, rung index, vintage) rather
+ * than a boolean — review fix round 1 (app-open-03): every blocker on this
+ * screen meets contract C's bar, saying exactly what is wrong and where to
+ * change it. Empty means the identity holds everywhere. */
+function recyclingBreaks(book: Book): string[] {
+  const out: string[] = [];
+  for (const [sleeve, rungs] of Object.entries(book.private)) {
+    rungs.forEach((r, i) => {
       const lhs = r.commitment.paid_in + r.commitment.unfunded;
       const rhs = r.commitment.committed + r.commitment.cumulative_recycled;
-      return Math.abs(lhs - rhs) <= RUNG_TOLERANCE;
+      if (Math.abs(lhs - rhs) > RUNG_TOLERANCE) {
+        out.push(`${sleeve} rung ${i} (vintage ${r.identity.vintage_year})`);
+      }
     });
+  }
+  return out;
 }
 
 export function BookEntry({
@@ -534,6 +549,11 @@ export function BookEntry({
    * `rangeText`/`rebuildText`. Keyed to one input at a time (the focused
    * one); every unfocused weight cell shows the DERIVED share. */
   const [weightDraft, setWeightDraft] = useState<{ sleeve: string; text: string } | null>(null);
+  /** review fix round 1 (app-open-03): the last weight edit that was CAPPED
+   * (typed more than liquid+cash can supply), with the weight actually
+   * applied — rendered as one plain sentence under the affected row.
+   * Cleared by the next un-capped weight edit. */
+  const [weightCap, setWeightCap] = useState<{ sleeve: string; applied: number } | null>(null);
   /** app-open-03: true once the analyst hand-edits a plan cell — the plan is
    * theirs from then on and stops following book edits (stated in copy on
    * the Cashflow tab); "Reset plan" hands it back to the server's
@@ -614,8 +634,12 @@ export function BookEntry({
       if (negative.length > 0) {
         shapeFaults.push(`negative: ${nameFields(negative)} - every entry must be zero or more`);
       }
-      if (!recyclingIdentityHolds(book)) {
-        shapeFaults.push("a rung breaks paid_in + unfunded = committed + recycled");
+      const broken = recyclingBreaks(book);
+      if (broken.length > 0) {
+        shapeFaults.push(
+          `paid_in + unfunded must equal committed + recycled, and fails on ${nameFields(broken)}` +
+            " - adjust one of those four fields on the Historical vintages tab",
+        );
       }
       // app-open-03: the old "the book does not total 100" gate is GONE —
       // the posted book is the typed one rescaled to 100 (`effectiveBook`),
@@ -669,7 +693,7 @@ export function BookEntry({
     failingFields(book, plan, (n) => n < 0, false).length > 0 ||
     Object.values(targets).some((t) => t < 0) ||
     (!(targetSum > 0) && cashWeight < 100 - SCALE_TOLERANCE) ||
-    !recyclingIdentityHolds(book);
+    recyclingBreaks(book).length > 0;
   useEffect(() => {
     if (!resp || !book || !bookJson) return;
     if (planEdited) return;
@@ -777,13 +801,33 @@ export function BookEntry({
           setWeightDraft({ sleeve, text: e.target.value });
           const n = Number(e.target.value);
           if (e.target.value.trim() !== "" && Number.isFinite(n)) {
-            setBook((b) => (b ? applyWeightEdit(b, sleeve, n) : b));
+            // review fix round 1: the clamp must not fire silently — when
+            // the typed weight asks for more than liquid+cash can supply,
+            // record the applied number so the row can say so.
+            const applied = applyWeightEdit(book, sleeve, n);
+            setBook(applied.book);
+            setWeightCap(
+              applied.cappedAt !== null ? { sleeve, applied: applied.cappedAt } : null,
+            );
           }
         }}
         onBlur={() => setWeightDraft(null)}
       />
     );
   };
+
+  /** review fix round 1: the capped-weight sentence, rendered directly under
+   * the affected row (full grid width). The remainder figure is exact: when
+   * the clamp fires the absorbers hold 0, so everything past the applied
+   * weight IS the private side. */
+  const weightCapNote = (sleeve: string) =>
+    weightCap?.sleeve === sleeve ? (
+      <p className="policy-cap-note" data-testid={`weight-cap-${sleeve}`}>
+        {`${sleeveLabel(sleeve)}'s weight was capped at ${fmt1(weightCap.applied)}% - the other ` +
+          `${fmt1(100 - weightCap.applied)}% of the book is private values, which only move on ` +
+          "their ladders (edit rungs or rebuild on the Historical vintages tab)."}
+      </p>
+    ) : null;
 
   /** the band inputs for one sleeve, wherever the sleeve's row lives. */
   const bandInputs = (sleeve: string) => (
@@ -961,7 +1005,8 @@ export function BookEntry({
           {[...resp.liquid_sleeves, ...privateSleeves].map((sleeve) => {
             const isPrivate = privateSleeves.includes(sleeve);
             return (
-              <div key={sleeve} className="policy-row">
+              <Fragment key={sleeve}>
+              <div className="policy-row">
                 <span className="policy-name">{sleeveLabel(sleeve)}</span>
                 {isPrivate ? (
                   <span className="policy-value" data-testid={`value-${sleeve}`}>
@@ -1002,6 +1047,8 @@ export function BookEntry({
                 </span>
                 {bandInputs(sleeve)}
               </div>
+              {!isPrivate && weightCapNote(sleeve)}
+              </Fragment>
             );
           })}
           <div className="policy-row">
@@ -1017,6 +1064,7 @@ export function BookEntry({
               cash is the residual — it carries no target and no band
             </span>
           </div>
+          {weightCapNote("cash")}
         </div>
       </section>
       </div>

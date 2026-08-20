@@ -1719,6 +1719,15 @@ button.commit {
   color: var(--dim);
 }
 
+/* review fix round 1 (app-open-03): the capped-weight sentence, one
+   full-width line directly under the affected row. */
+.policy-cap-note {
+  grid-column: 1 / -1;
+  margin: 0;
+  font-size: 11px;
+  color: var(--clay);
+}
+
 /* a private sleeve's held value in the merged table (app-open-01 delta 2) —
    read-only text, not an input: it is the ladder below summed at nav_true,
    edited there rather than here. */
