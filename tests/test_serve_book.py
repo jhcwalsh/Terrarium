@@ -1422,3 +1422,113 @@ class TestLadderRebuildEndpoint:
         rungs = r.json()["rungs"]
         total = sum(rung["value"]["nav_true"] for rung in rungs)
         assert abs(total - 8.0) < 1e-6
+
+
+class TestBookPlanEndpoint:
+    """``POST /book/plan`` (app-open-03): the plan the server derives for the
+    CURRENT edited book, so the entry screen's Cashflow-projections tab can
+    follow edits instead of showing the plan for a book the analyst no longer
+    holds (the owner's 2026-08-19 report). The derivation is
+    ``ah.play.book_commitment_plan`` — unit-pinned in
+    ``test_book_defaults.py::TestBookCommitmentPlan``; these tests pin the
+    door: validation, refusals, determinism, and that the endpoint's answer
+    IS that function's answer for the posted book."""
+
+    @staticmethod
+    def _shrunk_ladder_book(default_book: dict, sleeve: str = "pe", factor: float = 0.5) -> dict:
+        """The served default with one private ladder scaled linearly (every
+        money field — the recycling identity survives a linear scale) and the
+        freed TRUE nav parked on equity so the book still totals 100."""
+        book = json.loads(json.dumps(default_book))
+        for rung in book["private"][sleeve]:
+            for section in ("commitment", "value"):
+                for key in rung[section]:
+                    rung[section][key] *= factor
+        freed = sum(r["value"]["nav_true"] for r in default_book["private"][sleeve]) * (
+            1.0 - factor
+        )
+        book["liquid"]["equity"] += freed
+        return book
+
+    def test_the_untouched_default_reproduces_the_served_plan_to_float_dust(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        r = client.post("/book/plan", json={"run_id": rid, "book": default["book"]})
+        assert r.status_code == 200, r.text
+        derived = r.json()["plan"]["points"]
+        for sleeve, years in default["plan"]["points"].items():
+            for got, want in zip(derived[sleeve], years, strict=True):
+                assert got == pytest.approx(want, rel=1e-6)
+
+    def test_a_retargeted_book_moves_the_plan(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = _retargeted_book(
+            default["book"],
+            pe=default["book"]["targets"]["pe"] + 5.0,
+            equity=default["book"]["targets"]["equity"] - 5.0,
+        )
+        r = client.post("/book/plan", json={"run_id": rid, "book": book})
+        assert r.status_code == 200, r.text
+        assert r.json()["plan"]["points"]["pe"][0] > default["plan"]["points"]["pe"][0], (
+            "a raised pe target must raise pe's pace"
+        )
+
+    def test_a_shrunk_vintage_ladder_moves_the_plan(self, service):
+        # the vintage-edit half of the owner's report: less private NAV on
+        # reported marks means the book sits under its policy private weight,
+        # and DN-5's flex paces the programme up.
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = self._shrunk_ladder_book(default["book"])
+        r = client.post("/book/plan", json={"run_id": rid, "book": book})
+        assert r.status_code == 200, r.text
+        for sleeve, years in r.json()["plan"]["points"].items():
+            assert years[0] > default["plan"]["points"][sleeve][0]
+
+    def test_the_answer_is_book_commitment_plan_exactly(self, service):
+        from ah.core.institution import decision_months as _dm
+        from ah.play import book_commitment_plan
+        from ah.port.book import OpeningBook
+
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = self._shrunk_ladder_book(default["book"], factor=0.75)
+        r = client.post("/book/plan", json={"run_id": rid, "book": book})
+        assert r.status_code == 200, r.text
+        want = book_commitment_plan(OpeningBook.model_validate(book), windows=len(_dm(120)))
+        assert r.json()["plan"] == want.model_dump()
+        assert r.json()["plan_digest"] == want.digest()
+
+    def test_two_posts_are_byte_identical(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = self._shrunk_ladder_book(default["book"])
+        r1 = client.post("/book/plan", json={"run_id": rid, "book": book})
+        r2 = client.post("/book/plan", json={"run_id": rid, "book": book})
+        assert r1.status_code == r2.status_code == 200
+        assert r1.content == r2.content
+
+    def test_a_book_that_does_not_total_100_is_422_with_the_doors_own_message(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = json.loads(json.dumps(default["book"]))
+        book["liquid"]["equity"] += 10.0
+        r = client.post("/book/plan", json={"run_id": rid, "book": book})
+        assert r.status_code == 422
+        assert "must total 100" in r.json()["detail"]
+
+    def test_an_unknown_run_is_404(self, service):
+        client, _db, rid = service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        r = client.post("/book/plan", json={"run_id": "nope", "book": default["book"]})
+        assert r.status_code == 404
+
+    def test_a_generated_worlds_book_also_derives(self, gen_service):
+        client, _db, rid = gen_service
+        default = client.get(f"/book/default?run_id={rid}").json()
+        book = self._shrunk_ladder_book(default["book"])
+        r = client.post("/book/plan", json={"run_id": rid, "book": book})
+        assert r.status_code == 200, r.text
+        for sleeve, years in r.json()["plan"]["points"].items():
+            assert years[0] > default["plan"]["points"][sleeve][0]

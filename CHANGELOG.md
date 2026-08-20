@@ -50,6 +50,48 @@ scored under the old one retires.** Task 1 sealed `mappings/sleeve-mappings-v1.3
   a server-side refusal at session creation is the right hardening and is left as a
   named follow-up rather than rushed into this release.
 
+## app-open-03 — OPENING BOOK: VALUES DRIVE WEIGHTS; THE PLAN FOLLOWS THE BOOK (branch `app-open-03`)
+
+Two owner-reported defects (2026-08-19), both on the entry screen.
+
+- **The value/weight deadlock is gone (defect 1).** Editing a class value used to
+  leave the weight readout frozen and trip the "book does not total 100" gate,
+  with no control that could ever clear it. Values are now the source of truth
+  and free-scale; a live, editable **weight** column derives from them
+  (value/total — it can only sum to 100), and Play posts the book rescaled to
+  the contract's 100-point scale (`effectiveBook`: every money field linearly,
+  preserving the recycling identity; typed targets rescaled to fill exactly
+  what the cash weight leaves — the same identities `validate_book` enforces,
+  now satisfied by construction). An untouched book still posts VERBATIM
+  (deep-equal bypass), so Ruling D's digest property survives. Weight edits are
+  symmetric: typing a weight holds the total fixed and scales the other liquid
+  classes and cash proportionally; private classes move on their ladders only.
+  The two total gates ("book does not total 100", "targets do not total 100")
+  are retired — their tests are INVERTED in place with history; the remaining
+  blockers (blank, negative, recycling identity, non-positive total) now NAME
+  the offending field.
+- **The commitment plan follows the book (defect 2).** New `POST /book/plan`
+  (`ah/serve.py`) derives the plan for the CURRENT edited book via new
+  `ah.play.book_commitment_plan` — the default window rule (18% pace, 6%
+  escalation, 2.0x cap-clamped) with DN-5's policy flex evaluated at the book's
+  own opening reported private weight (`OpeningBook.private_weight_reported`,
+  restating `Portfolio.private_weight_reported` on the entered document). The
+  entry screen re-posts the book (debounced, as-it-would-be-posted) on every
+  edit — values, weights, targets, vintage rungs, ladder rebuilds — and
+  replaces the plan grid with the server's answer; no plan math entered the
+  client (DN-3 W5). Hand-editing a plan cell takes the plan over (stated on the
+  tab); "Reset plan" hands it back. The served DEFAULT plan is unchanged
+  (fixed rule, byte-identical), and an untouched book keeps it verbatim.
+- **Stated consequence:** the flex reads REPORTED NAV, so vintage edits move the
+  plan exactly insofar as they move the book's reported private weight —
+  commitment-field-only edits recompute but land on the same numbers. Making
+  unfunded balances bite the plan would be NEW pacing math (owner's call).
+- Server tests: `TestBookCommitmentPlan` (test_book_defaults.py),
+  `TestBookPlanEndpoint` (test_serve_book.py). App tests: the app-open-03
+  describe block in BookEntry.test.tsx (derivation rules, no-deadlock
+  property, recompute round-trips, hand-edit takeover); two inverted tests
+  carry the old gates' history.
+
 ## pe-drift-01 — THE SUSPECTED PE DOUBLE CHARGE, MEASURED (branch `pe-drift-01`)
 
 **Verdict: INERT on the generated plane, REAL on the toy plane. Worlds 711/712/713

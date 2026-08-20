@@ -50,6 +50,7 @@ from ah.play import (
     START_CASH,
     START_TARGETS,
     PlayQuarter,
+    book_commitment_plan,
     default_commitment_plan,
     default_opening_book,
     plan_commitments,
@@ -99,10 +100,12 @@ def _build_bundle_bytes(conn: sqlite3.Connection, run_id: str) -> bytes:
         return target.read_bytes()
 
 
-def _world_book(
+def _world_sleeves(
     conn: sqlite3.Connection, run_id: str
-) -> tuple[OpeningBook, CommitmentPlan, tuple[str, ...]]:
-    """The derived default for the world behind ``run_id``, and its sleeve set."""
+) -> tuple[dict[str, float], tuple[str, ...], int]:
+    """The world behind ``run_id``: its default targets, liquid sleeve set and
+    horizon in months — the inputs both the default book and a book-derived
+    plan recompute (app-open-03) resolve against."""
     rec = get_run_record(conn, run_id)
     if rec is None:
         raise HTTPException(status_code=404, detail=f"no run_record {run_id}")
@@ -116,12 +119,19 @@ def _world_book(
 
         targets = dict(GEN_START_TARGETS)
     liquid = tuple(a for a in targets if a not in PRIVATE_ASSETS)
+    return targets, liquid, ws.horizon.quarters * 3
+
+
+def _world_book(
+    conn: sqlite3.Connection, run_id: str
+) -> tuple[OpeningBook, CommitmentPlan, tuple[str, ...]]:
+    """The derived default for the world behind ``run_id``, and its sleeve set."""
+    targets, liquid, months = _world_sleeves(conn, run_id)
     # the plan carries ONE ENTRY PER DECISION WINDOW, not a fixed ten years —
     # default_commitment_plan's own docstring names this exact call for a
     # non-decade horizon. Getting it wrong here means the server's own
     # default 422s when POSTed straight back (all nine shipped presets are
     # 40 quarters, so this was previously invisible).
-    months = ws.horizon.quarters * 3
     plan = default_commitment_plan(targets, windows=len(decision_months(months)))
     return default_opening_book(targets), plan, liquid
 
@@ -341,6 +351,14 @@ class CreateSession(BaseModel):
     plan: CommitmentPlan | None = None
 
 
+class BookPlanRequest(BaseModel):
+    """app-open-03: the entry screen's current (edited) book, posted whole so
+    the SERVER derives the plan for it — the client never grows plan math."""
+
+    run_id: str
+    book: OpeningBook
+
+
 class Advance(BaseModel):
     to_month: int = Field(ge=0)
 
@@ -515,6 +533,33 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         base = _doc("closed-end-cohort.example.json")
         rungs = _seed_ladder(base, sleeve, value)
         return {"rungs": [c.to_document() for c in rungs]}
+
+    @app.post("/book/plan")
+    def plan_for_book(body: BookPlanRequest, conn: sqlite3.Connection = Depends(db)):
+        """app-open-03: the commitment plan the server derives for the CURRENT
+        (edited) book — targets, values and vintage ladders as they stand on
+        the entry screen, not as they were served.
+
+        The owner's report: "any changes to the weights and/or historical
+        commitments need to be reflected in the commitment plan". The entry
+        screen re-posts the book here after every edit and replaces its plan
+        grid with the answer; the derivation itself
+        (``ah.play.book_commitment_plan`` — the fixed default window rule
+        with DN-5's policy flex evaluated at the book's own opening reported
+        private weight) lives server-side because the server is the authority
+        for the plan the session will be validated and played against
+        (DN-3 W5). The posted book is validated with ``validate_book`` — the
+        same door ``POST /sessions`` uses — so the plan is only ever derived
+        for a book that could actually be played, and the refusal message is
+        the same one the player would meet later.
+        """
+        _targets, liquid, months = _world_sleeves(conn, body.run_id)
+        try:
+            validate_book(body.book, liquid)  # band warnings don't gate a plan
+        except BookError as exc:
+            raise HTTPException(status_code=422, detail=str(exc)) from exc
+        plan = book_commitment_plan(body.book, windows=len(decision_months(months)))
+        return {"plan": plan.model_dump(), "plan_digest": plan.digest()}
 
     @app.get("/runs/{run_id}/bundle")
     def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):
