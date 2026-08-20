@@ -4,6 +4,48 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## pe-drift-01 — THE SUSPECTED PE DOUBLE CHARGE, MEASURED (branch `pe-drift-01`)
+
+**Verdict: INERT on the generated plane, REAL on the toy plane. Worlds 711/712/713
+are numerically unaffected and need no rebuild.** Full trace, probe and rebuild
+guidance in `docs/superpowers/specs/2026-08-19-pe-drift-finding.md`.
+
+- **The suspicion.** `er14-06` created `gulf_decade` (712), `stress_1974_successor`
+  (711) and `stress_1990_successor` (713) by copying the shape of the RETIRED
+  701/703 records — carrying their hand-authored
+  `structural.private_equity.entry_multiple_drift_annual_pct = -2.0` across the
+  `D-ER14-2`/A5 zeroing line. Since `_MU_PE = 0.45` was anchored ON that -2.0, a
+  preset that keeps both would charge PE's multiple compression twice.
+- **Trace.** The field is read in exactly two places: `engine.py:489` (toy
+  `run_path`, where it lands in the same bracket as `(_LAMBDA_PE - _MU_PE) * x` —
+  a genuine double charge) and `validator.py:320` (V5, a warning that needs
+  `pe <= -3`). All three presets are `bootstrap-stratified`, so they dispatch to
+  `adapter.run_gen_path`; PE there comes from `_pm_true_monthly_path`, which does
+  not receive the WorldSpec at all.
+- **Probe** (read-only, scratch DB only). Per-path `run_gen_path` with the field
+  as-is vs. zeroed: **PE true and reported bit-identical on all three worlds at two
+  seeds each, max abs diff 0.0**. End-to-end `world build` + `run --paths 40` into
+  two scratch DBs: identical `outputs_digest`
+  `sha256:32efd1d723aabb67d0e11160d2933612383d3df38a91499092b23b1ba5ad5755`.
+  Toy-plane control (`stagflation`, drift forced back to -2.0): cumulative PE moves
+  **+31.8 pp and +72.8 pp** at two seeds — the probe can see the field where it is
+  consumed.
+- **Fix** (hygiene and consistency with the ratification, not a numeric
+  correction). The three live successor presets set the field to `0.0`, matching
+  `stagflation`/`stagflation_1974`. Each preset's `x_stress.precedent` records why
+  this one structural value does not carry over from its parent. The four RETIRED
+  records (701/703/801/802) keep their -2.0 and are untouched.
+- **Test.** `tests/test_gen_adapter.py::TestEntryMultipleDriftIsToyPlaneOnly` pins
+  the generated plane bit-identical across the schema's full declared range
+  (-6 to +4) on every asset, the toy plane moving by exactly `drift/12` per month,
+  and the three live presets at `0.0`. Break-and-revert proved: patching the
+  adapter to read the field fails the inertness test (max abs diff 0.8333 = 10/12).
+- **Store note.** `structural` is in `ENGINE_FIELDS`, so rebuilding these presets
+  over the existing 711/712/713 now raises `ImmutableWorldError` (measured). The
+  numbers are identical, so the recommendation is to leave the live store alone;
+  the stored spec text diverges from the preset by this one inert field until some
+  future rebuild.
+
 ## er14-05 — THE RELEASE (WIP, branch `er14-05-release`)
 
 **Makes ER-14 real.** Version stamps move, the campaign/spine worlds retire, every

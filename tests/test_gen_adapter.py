@@ -461,3 +461,76 @@ class TestAgainstTheRealPanel:
             rep_sum = float(p.reported[sleeve].sum())
             ratio = rep_sum / true_sum
             assert 0.80 < ratio < 1.20, f"{sleeve}: reported/true {ratio:.2f}"
+
+
+# --------------------------------------------------------------------------- #
+# pe-drift-01: structural.private_equity.entry_multiple_drift_annual_pct is a
+# TOY-PLANE-ONLY field. Read the finding note before changing anything here:
+# docs/superpowers/specs/2026-08-19-pe-drift-finding.md
+# --------------------------------------------------------------------------- #
+
+
+class TestEntryMultipleDriftIsToyPlaneOnly:
+    """The suspected ER-14 double charge (the authored -2.0 drift *plus* the
+    endogenous mu_PE compression that was anchored ON that -2.0) is REAL on the
+    toy plane and INERT on the generated plane.
+
+    The reason is structural, not incidental: ``engine.run_path`` reads the
+    field at ``_f(st.private_equity, "entry_multiple_drift_annual_pct", ...)``
+    and adds it into ``pe``; the generated plane's PE comes from
+    ``adapter._pm_true_monthly_path``, which builds pm_buyout out of the sealed
+    v1.2 artifact's alpha/loadings/passthrough/residual and never touches
+    ``world.structural`` at all. These tests pin BOTH halves, because a future
+    change that starts reading the field on the generated plane would silently
+    re-create the double charge that D-ER14-2/A5 zeroed the live presets to
+    avoid.
+    """
+
+    def test_the_field_does_not_reach_the_generated_plane(self, synthetic_registry):
+        """Bit-identical PE, true and reported, at the schema's two extremes
+        (-6 and +4). A generated world's private equity cannot see this field."""
+        doc = copy.deepcopy(json.loads(PRESET.read_text(encoding="utf-8")))
+        doc["engine_defaults"]["generator_id"] = "bootstrap-v1"
+
+        def paths(drift: float) -> EnginePaths:
+            d = copy.deepcopy(doc)
+            d["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] = drift
+            return run_gen_path(project_numeric(WorldSpec.model_validate(d)), SEED)
+
+        low, high = paths(-6.0), paths(4.0)  # the schema's declared min and max
+        np.testing.assert_array_equal(low.returns["pe"], high.returns["pe"])
+        np.testing.assert_array_equal(low.reported["pe"], high.reported["pe"])
+        # ...and nothing else on the tape moves either.
+        for a in GEN_ASSETS:
+            np.testing.assert_array_equal(low.returns[a], high.returns[a])
+
+    def test_the_field_DOES_reach_the_toy_plane(self):
+        """The control. Without this the test above proves nothing — a probe
+        that cannot detect the field on the plane that certainly consumes it is
+        measuring its own plumbing. The toy charge is exactly drift/12 per
+        month, which is the half D-ER14-2/A5 removed from the live presets."""
+        from ah.core.engine import run_path
+
+        doc = copy.deepcopy(json.loads(PRESET.read_text(encoding="utf-8")))
+
+        def pe(drift: float) -> np.ndarray:
+            d = copy.deepcopy(doc)
+            d["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] = drift
+            return run_path(project_numeric(WorldSpec.model_validate(d)), SEED).returns["pe"]
+
+        diff = pe(-2.0) - pe(0.0)
+        assert not np.array_equal(pe(-2.0), pe(0.0))
+        np.testing.assert_allclose(diff, np.full_like(diff, -2.0 / 12.0), atol=1e-12)
+
+    def test_the_live_successor_presets_do_not_hand_author_the_drift(self):
+        """er14-06 created 711/712/713 by copying the shape of the RETIRED
+        701/703 records, which carry -2.0 by design (they are frozen records of
+        a pre-mu_PE engine). That copy carried the -2.0 across the D-ER14-2/A5
+        zeroing line. Inert on this plane today — pinned so it stays a
+        deliberate choice rather than an inherited accident."""
+        for stem in ("gulf_decade", "stress_1974_successor", "stress_1990_successor"):
+            doc = json.loads((PRESETS / f"{stem}.json").read_text(encoding="utf-8"))
+            assert doc["engine_defaults"]["generator_id"] == "bootstrap-stratified", stem
+            assert doc["structural"]["private_equity"]["entry_multiple_drift_annual_pct"] == 0.0, (
+                stem
+            )
