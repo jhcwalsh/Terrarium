@@ -43,6 +43,12 @@ scored under the old one retires.** Task 1 sealed `mappings/sleeve-mappings-v1.3
   `docs/superpowers/specs/2026-08-20-pe-chosen-release-evidence.md` (+ JSON sidecar);
   721/722/723/724 built into the live store (1000-path base-seed runs appended for
   721/722/723 mirroring their parents', each replaying MATCH; 724 run-less like 604).
+- **Known limitation (final review I-1), follow-up named:** the retired-world fence is
+  picker-deep — `/worlds` marks retired worlds and the app hides them, but
+  `POST /sessions` still accepts a retired world's run if a client asks directly.
+  Scoring integrity holds regardless (the play-alpha stamp separates v5/v6 rows);
+  a server-side refusal at session creation is the right hardening and is left as a
+  named follow-up rather than rushed into this release.
 
 ## pe-drift-01 — THE SUSPECTED PE DOUBLE CHARGE, MEASURED (branch `pe-drift-01`)
 

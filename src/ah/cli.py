@@ -304,6 +304,12 @@ def _not_replayable_reason(rec: dict, world: dict) -> str | None:
             f"not replayable under current code (stamped {stamped}, current {current}) "
             "- digests are not comparable across versions"
         )
+    # The fence is the version signal for translation-layer releases, so this
+    # guard covers exactly the fenced ids: a pre-adoption generated record on a
+    # world that was never fenced would still recompute under current code and
+    # report a false MISMATCH. Verified none exist in the live store at the
+    # v1.3 adoption (pe-chosen-01 final review, M-1); if one ever surfaces,
+    # fence its world rather than teaching this guard more history.
     if rec["world_id"] in RETIRED_WORLD_IDS:
         return (
             f"not replayable under current code: world {rec['world_id']} is retired - "

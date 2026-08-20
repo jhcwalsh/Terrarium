@@ -1404,9 +1404,12 @@ right crash magnitude, stated provenance, no fabricated asymmetry.
 not this entry's) is a release event: the generated play-alpha version
 bumps, every generated RunRecord's digest is invalidated, the stress worlds
 get new `world_id` fences so no leaderboard row mixes mappings, in-flight
-sessions demote, committed bundles and generated goldens regenerate, and
-the battery re-runs (every `pm_*` tail statistic and drawdown figure moves;
-PE's serenity numbers in the finding documents become historical). A future
+sessions demote, and committed bundles and generated goldens regenerate.
+No battery re-run is REQUIRED by the seal: no sealed criterion consumes the
+pm_buyout row (the sealed 2022 replay reads HF rows only, which are
+byte-identical in v1.3) — but every `pm_*` tail statistic and drawdown
+figure quoted in analysis documents moves, and PE's serenity numbers in the
+finding documents become historical. A future
 convexity fix would amend the sealed mapping again — its own reseal, its
 own cascade — and would additionally invalidate any calibration done
 against the chosen row's constant beta. v1.2 stays sealed as the measured
