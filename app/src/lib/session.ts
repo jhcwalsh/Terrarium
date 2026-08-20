@@ -330,6 +330,21 @@ export function rebuildLadder(
   return request(`/book/ladder?${params}`);
 }
 
+/** app-open-03: the commitment plan the SERVER derives for the current
+ * (edited) book — `POST /book/plan`, the same `book_commitment_plan`
+ * derivation the session door trusts, never a client-side restatement of it.
+ * The entry screen calls this after every book edit and replaces its plan
+ * grid wholesale with the answer. */
+export function planForBook(
+  runId: string,
+  book: Book,
+): Promise<{ plan: Plan; plan_digest: string }> {
+  return request("/book/plan", {
+    method: "POST",
+    body: JSON.stringify({ run_id: runId, book }),
+  });
+}
+
 export function createSession(body: {
   run_id: string;
   basis?: "reported" | "actual";

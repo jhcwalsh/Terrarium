@@ -73,6 +73,7 @@ __all__ = [
     "PlayAttribution",
     "PlayQuarter",
     "PlayResult",
+    "book_commitment_plan",
     "default_commitment_plan",
     "default_opening_book",
     "play_alpha",
@@ -301,15 +302,68 @@ def default_commitment_plan(
     """
     t = dict(targets) if targets is not None else dict(START_TARGETS)
     base = plan_commitments(0.0, t, pacing_rule="fixed")
+    return _escalated_plan(base, t, windows)
+
+
+def _escalated_plan(
+    base: Mapping[str, float], targets: Mapping[str, float], windows: int
+) -> CommitmentPlan:
+    """``base`` escalated at :data:`EXPECTED_PLAN_GROWTH`, per-window clamped
+    to ``validate_plan``'s own cap — the one window rule both the world
+    default and a book-derived plan share, so the two cannot drift
+    (see :func:`default_commitment_plan`'s docstring for why the clamp reuses
+    the validator's exact expression)."""
 
     def _window(asset: str, k: int) -> float:
         escalated = base[asset] * (1.0 + EXPECTED_PLAN_GROWTH) ** k
-        cap = COMMIT_CAP_MULTIPLE * float(t[asset]) * _ANNUAL_COMMITMENT_RATE
+        cap = COMMIT_CAP_MULTIPLE * float(targets[asset]) * _ANNUAL_COMMITMENT_RATE
         return min(escalated, cap)
 
     return CommitmentPlan(
         points={a: [_window(a, k) for k in range(windows)] for a in PRIVATE_ASSETS}
     )
+
+
+def book_commitment_plan(book: OpeningBook, windows: int = 9) -> CommitmentPlan:
+    """The commitment plan the server derives for an ENTERED book (app-open-03).
+
+    The owner's report ("any changes to the weights and/or historical
+    commitments need to be reflected in the commitment plan") requires the
+    plan to follow the book — and the server owns that derivation (DN-3 W5:
+    the app mirrors, it never invents plan math). This is
+    :func:`default_commitment_plan`'s exact window rule with one difference,
+    stated rather than implied:
+
+    The base pace uses the POLICY rule, not the FIXED one, evaluated at the
+    book's own OPENING reported private weight
+    (``OpeningBook.private_weight_reported`` — the same quantity, by the same
+    definition, that ``simulate_play``'s pacing multiplier reads at every
+    commitment event). The default plan keeps the FIXED rule because the
+    realized mid-decade weight cannot be known at kickoff without simulating
+    the tape — but for an entered book the OPENING weight is right there in
+    the document, and DN-5 §2.1's flex toward policy is the server's own
+    declared pacing behaviour. The multiplier is held constant across
+    windows, exactly as :data:`EXPECTED_PLAN_GROWTH` is an expectation
+    constant, not a simulated path — so nothing here leaks the tape.
+
+    Consequences to state plainly: a book holding MORE private (on reported
+    marks) than its policy targets imply paces every window DOWN (band-clipped
+    at 0.5x/1.5x, never zero), and vintage-ladder edits move the plan exactly
+    insofar as they move the book's reported private weight — the pacing rule
+    reads reported NAV, not unfunded balances. Targets move both the base
+    pace and the cap, as they always did.
+
+    Every window still lands at or under ``validate_plan``'s cap
+    (``base * m <= 1.5 * target * rate < 2.0 * target * rate``, and the
+    escalation clamp reuses the validator's exact cap expression), so a plan
+    this function returns can never 422 against the targets it was derived
+    from.
+    """
+    targets = book.effective_targets()
+    base = plan_commitments(
+        book.private_weight_reported(), targets, pacing_rule="policy", cash=book.cash
+    )
+    return _escalated_plan(base, targets, windows)
 
 
 def validate_commitments(

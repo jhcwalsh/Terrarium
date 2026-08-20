@@ -207,6 +207,31 @@ class OpeningBook(BaseModel):
             float(rung["value"]["nav_true"]) for rungs in self.private.values() for rung in rungs
         )
 
+    def private_nav_reported(self) -> float:
+        """The private book on the REPORTED plane — the marks a committee sees."""
+        return sum(
+            float(rung["value"]["nav_reported"])
+            for rungs in self.private.values()
+            for rung in rungs
+        )
+
+    def private_weight_reported(self) -> float:
+        """The book's opening private weight on reported marks (app-open-03).
+
+        The SAME definition ``Portfolio.private_weight_reported`` computes
+        during play — private reported NAV over total reported NAV, with
+        liquid sleeves marked true (``ah/port/portfolio.py``) — restated on
+        the entered document so the plan the entry screen derives from a book
+        reads the identical quantity the engine's pacing rule will read at
+        its first commitment event. 0.0 on a non-positive denominator,
+        matching the portfolio's own guard.
+        """
+        private = self.private_nav_reported()
+        nav = sum(self.liquid.values()) + self.cash + private
+        if nav <= 0:
+            return 0.0
+        return private / nav
+
     def effective_targets(self) -> dict[str, float]:
         """The policy targets this book paces against: the entered `targets`
         when present, else the book's own opening values.
