@@ -55,7 +55,7 @@ import yaml
 
 from ah.core.engine import EnginePaths
 from ah.core.institution import decision_months
-from ah.port.book import CommitmentPlan, OpeningBook, default_band
+from ah.port.book import BOOK_TOLERANCE, CommitmentPlan, OpeningBook, default_band
 from ah.port.cashflow_tier1 import f_call as tier1_f_call
 from ah.port.cashflow_tier1 import f_dist as tier1_f_dist
 from ah.port.cohort import ClosedEndCohort
@@ -78,6 +78,8 @@ __all__ = [
     "default_opening_book",
     "play_alpha",
     "simulate_play",
+    "steady_state_unfunded",
+    "unfunded_plan_note",
     "window_contributions_play",
 ]
 
@@ -324,6 +326,198 @@ def _escalated_plan(
     )
 
 
+#: app-open-04 Item C: the pause trigger's tolerance. A sleeve pauses only
+#: when its outstanding unfunded exceeds the steady-state stock by MORE than
+#: this — reusing the book's own ``BOOK_TOLERANCE`` (1e-6 points, the float
+#: dust a rescaled ladder legitimately carries; ``ah/port/book.py``) rather
+#: than introducing a new constant. The derived default book matches its
+#: steady state to the exact float (same ``_seed_ladder`` call), so the
+#: tolerance only matters for client-rescaled books (``effectiveBook``'s
+#: ``100/total`` restatement), which it keeps from flickering the pause on
+#: dust.
+_UNFUNDED_PAUSE_TOLERANCE = BOOK_TOLERANCE
+
+
+def steady_state_unfunded(targets: Mapping[str, float]) -> dict[str, float]:
+    """The unfunded stock the pacing model itself holds at each sleeve's
+    target weight — "typical for this target" (app-open-04 Item C).
+
+    DERIVED, not invented: it is the unfunded summed over ``_seed_ladder`` —
+    the model's own staggered opening book at the target weight, one live
+    vintage per year of contractual life, each warmed forward on the
+    DECLARED call curve (``rc_curve``, the ~90%-called-by-year-10 shape,
+    with ER-6's expiry at lapse). ``default_opening_book`` builds its
+    ladders with the identical call, so the derived default book sits at
+    exactly this stock, to the float — which is what guarantees the pause
+    can never fire on an untouched default.
+
+    Linear in the target (the ladder is scaled to the sleeve's target NAV),
+    so a doubled target implies double the typical unfunded.
+    """
+    base = _doc("closed-end-cohort.example.json")
+    out: dict[str, float] = {}
+    for asset in PRIVATE_ASSETS:
+        target = float(targets.get(asset, 0.0))
+        if target <= 0.0:
+            out[asset] = 0.0
+            continue
+        out[asset] = sum(c.unfunded for c in _seed_ladder(base, asset, target))
+    return out
+
+
+@dataclass
+class _UnfundedRunoff:
+    """One rung's unfunded coordinate, projected on the declared call curve.
+
+    Mirrors ``ClosedEndCohort.step`` exactly for this coordinate — quarterly
+    call ``min(1, rc_curve[min(int(age), len-1)] * 0.25) * unfunded`` and
+    ER-6's expiry at lapse — with ``f_call = 1``: the kickoff plan cannot
+    see the tape (the same leak-free reasoning that keeps
+    ``default_commitment_plan`` on the FIXED rule). Unfunded is
+    return-independent in the cohort recursion (calls scale unfunded,
+    returns scale NAV), so this projection is exact, not an approximation.
+    """
+
+    unfunded: float
+    age: float
+    life: float
+    curve: tuple[float, ...]
+    extended: bool = False
+
+    def step_quarter(self) -> None:
+        if self.age >= self.life and not self.extended:
+            self.unfunded = 0.0  # ER-6: the residual commitment expires at lapse
+        elif self.curve:
+            index = min(int(self.age), len(self.curve) - 1)
+            rate = min(1.0, self.curve[index] * 0.25)
+            self.unfunded -= rate * self.unfunded
+        self.age += 0.25
+
+
+def _book_runoff(book: OpeningBook, sleeve: str) -> list[_UnfundedRunoff]:
+    """The sleeve's entered rungs as runoff states, read off the validated
+    runtime cohorts (the same door ``validate_book`` re-validates through)."""
+    return [
+        _UnfundedRunoff(
+            unfunded=float(c.unfunded),
+            age=float(c.age_years),
+            life=float(c.contract.lifecycle.contractual_life_years),
+            curve=tuple(float(x) for x in c.contract.parameters.rc_curve),
+            extended=c.extension_status == "extended",
+        )
+        for c in book.cohorts(sleeve)
+    ]
+
+
+def _sleeve_unfunded(book: OpeningBook, sleeve: str) -> float:
+    return sum(float(rung["commitment"]["unfunded"]) for rung in book.private[sleeve])
+
+
+def _runoff_of(cohorts: list[ClosedEndCohort]) -> list[_UnfundedRunoff]:
+    return [
+        _UnfundedRunoff(
+            unfunded=float(c.unfunded),
+            age=float(c.age_years),
+            life=float(c.contract.lifecycle.contractual_life_years),
+            curve=tuple(float(x) for x in c.contract.parameters.rc_curve),
+            extended=c.extension_status == "extended",
+        )
+        for c in cohorts
+    ]
+
+
+def _apply_unfunded_pause(
+    book: OpeningBook, targets: Mapping[str, float], plan: CommitmentPlan
+) -> CommitmentPlan:
+    """app-open-04 Item C: the unfunded adjustment on a book-derived plan.
+
+    THE RULE, plainly: a sleeve whose outstanding unfunded exceeds the
+    steady-state stock its target implies (:func:`steady_state_unfunded`)
+    has each window's pace reduced by the sleeve's remaining EXCESS unfunded
+    at that window — floored at zero. The excess is commitment already
+    signed ahead of plan (unfunded IS future calls), so each year's new
+    budget nets it off: while the excess still exceeds the year's pace the
+    window commits nothing (the pause — ``_commit_new_vintage`` treats a
+    zero year as "no vintage, honestly nothing"), and as the declared call
+    curve works the excess off the windows resume, partially and then back
+    to the base plan.
+
+    The remaining excess at window k is EXACT, not modelled twice: the
+    book's rungs and the model's own steady-state ladder
+    (:func:`_seed_ladder` at the same target) are projected side by side on
+    the declared call curve with no new commitments (``f_call = 1`` — the
+    kickoff plan cannot see the tape, the same leak-free reasoning that
+    keeps ``default_commitment_plan`` on the FIXED rule), and the excess is
+    the difference of the two totals. Unfunded dynamics are LINEAR in the
+    opening stock (each rung decays independently; ER-6 expires the rest at
+    lapse), so that difference is precisely the runoff of the initial
+    excess, unchanged by whatever either side would go on to commit.
+
+    A sleeve at or under its steady-state stock (every derived default
+    among them) keeps the base plan BIT-IDENTICAL — a per-sleeve trigger,
+    not a rescale. The projection matches the engine's own calendar: window
+    k's vintage is committed at quarter ``4 * (k + 1)`` (``simulate_play``:
+    ``q > 0 and q % 4 == 0``), i.e. after ``4 * (k + 1)`` quarterly runoff
+    steps.
+
+    Everything here is a declared model quantity: the rc_curve, the
+    contractual life, ER-6's expiry, the steady-state ladder. The one
+    tolerance reuses ``BOOK_TOLERANCE`` (see ``_UNFUNDED_PAUSE_TOLERANCE``).
+    """
+    steady = steady_state_unfunded(targets)
+    base = _doc("closed-end-cohort.example.json")
+
+    points: dict[str, list[float]] = {}
+    for sleeve, years in plan.points.items():
+        if _sleeve_unfunded(book, sleeve) <= steady[sleeve] + _UNFUNDED_PAUSE_TOLERANCE:
+            points[sleeve] = list(years)  # untriggered: bit-identical
+            continue
+        target = float(targets.get(sleeve, 0.0))
+        held_runoff = _book_runoff(book, sleeve)
+        steady_runoff = _runoff_of(_seed_ladder(base, sleeve, target)) if target > 0.0 else []
+        adjusted: list[float] = []
+        quarter = 0
+        for k, base_points in enumerate(years):
+            while quarter < 4 * (k + 1):
+                for state in held_runoff:
+                    state.step_quarter()
+                for state in steady_runoff:
+                    state.step_quarter()
+                quarter += 1
+            excess = max(
+                0.0,
+                sum(s.unfunded for s in held_runoff) - sum(s.unfunded for s in steady_runoff),
+            )
+            adjusted.append(max(0.0, float(base_points) - excess))
+        points[sleeve] = adjusted
+    return CommitmentPlan(points=points)
+
+
+def unfunded_plan_note(book: OpeningBook) -> dict[str, Any]:
+    """The served numbers behind the Cashflow-projections tab's one plain
+    sentence ("commitments pause while existing unfunded works off - your
+    unfunded is X vs Y typical for this target") — computed here, on the
+    server's own derivation, never in the client (DN-3 W5). ``X`` is
+    ``unfunded_total``, ``Y`` is ``steady_state_total``; the per-sleeve
+    block says which sleeve tripped the pause."""
+    targets = book.effective_targets()
+    steady = steady_state_unfunded(targets)
+    sleeves: dict[str, dict[str, Any]] = {}
+    for sleeve in PRIVATE_ASSETS:
+        held = _sleeve_unfunded(book, sleeve)
+        sleeves[sleeve] = {
+            "unfunded": round(held, 4),
+            "steady_state": round(steady[sleeve], 4),
+            "paused": held > steady[sleeve] + _UNFUNDED_PAUSE_TOLERANCE,
+        }
+    return {
+        "active": any(entry["paused"] for entry in sleeves.values()),
+        "unfunded_total": round(sum(_sleeve_unfunded(book, s) for s in PRIVATE_ASSETS), 4),
+        "steady_state_total": round(sum(steady.values()), 4),
+        "sleeves": sleeves,
+    }
+
+
 def book_commitment_plan(book: OpeningBook, windows: int = 9) -> CommitmentPlan:
     """The commitment plan the server derives for an ENTERED book (app-open-03).
 
@@ -349,9 +543,18 @@ def book_commitment_plan(book: OpeningBook, windows: int = 9) -> CommitmentPlan:
     Consequences to state plainly: a book holding MORE private (on reported
     marks) than its policy targets imply paces every window DOWN (band-clipped
     at 0.5x/1.5x, never zero), and vintage-ladder edits move the plan exactly
-    insofar as they move the book's reported private weight — the pacing rule
-    reads reported NAV, not unfunded balances. Targets move both the base
-    pace and the cap, as they always did.
+    insofar as they move the book's reported private weight. Targets move
+    both the base pace and the cap, as they always did.
+
+    app-open-04 Item C: the UNFUNDED balances now bite as well. A sleeve
+    whose outstanding unfunded exceeds the steady-state stock its target
+    implies (:func:`steady_state_unfunded` — the model's own ladder, no
+    invented constants) has each window's pace reduced by the remaining
+    excess, floored at zero — a pause while the excess works off on the
+    declared call curve, resuming to the base plan as it does
+    (:func:`_apply_unfunded_pause` states the full rule). Sleeves at or
+    under their steady-state stock — every derived default among them — keep
+    the base plan bit-identical.
 
     Every window still lands at or under ``validate_plan``'s cap
     (``base * m <= 1.5 * target * rate < 2.0 * target * rate``, and the
@@ -363,7 +566,7 @@ def book_commitment_plan(book: OpeningBook, windows: int = 9) -> CommitmentPlan:
     base = plan_commitments(
         book.private_weight_reported(), targets, pacing_rule="policy", cash=book.cash
     )
-    return _escalated_plan(base, targets, windows)
+    return _apply_unfunded_pause(book, targets, _escalated_plan(base, targets, windows))
 
 
 def validate_commitments(

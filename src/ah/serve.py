@@ -55,6 +55,7 @@ from ah.play import (
     default_opening_book,
     plan_commitments,
     simulate_play,
+    unfunded_plan_note,
     validate_commitments,
     window_contributions_play,
 )
@@ -559,7 +560,15 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         except BookError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         plan = book_commitment_plan(body.book, windows=len(decision_months(months)))
-        return {"plan": plan.model_dump(), "plan_digest": plan.digest()}
+        # app-open-04 Item C: the numbers behind the Cashflow tab's one plain
+        # sentence when the unfunded pause is active — served, never derived
+        # client-side (DN-3 W5). `active` is False for any book at or under
+        # its steady-state unfunded, the derived default included.
+        return {
+            "plan": plan.model_dump(),
+            "plan_digest": plan.digest(),
+            "unfunded": unfunded_plan_note(body.book),
+        }
 
     @app.get("/runs/{run_id}/bundle")
     def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):

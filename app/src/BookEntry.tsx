@@ -126,6 +126,7 @@ import {
   type Plan,
   type PlanCap,
   type Rung,
+  type UnfundedNote,
 } from "./lib/session";
 import { sleeveLabel } from "./lib/sleeveLabels";
 import { VintageChart } from "./components/VintageChart";
@@ -568,6 +569,14 @@ export function BookEntry({
   const [planSync, setPlanSync] = useState<{ status: "idle" | "pending" | "error"; message?: string }>(
     { status: "idle" },
   );
+  /** app-open-04 Item C: the server's unfunded-pause note for the CURRENT
+   * derived plan (`POST /book/plan`'s `unfunded` block). Null for the
+   * untouched default (its ladders sit at the steady state by construction,
+   * so the server always reports inactive there) and after a failed
+   * recompute. Rendered only while the plan still FOLLOWS the book — a
+   * hand-edited plan is the analyst's own and the sentence would describe a
+   * derivation no longer on screen. */
+  const [planUnfunded, setPlanUnfunded] = useState<UnfundedNote | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -702,6 +711,7 @@ export function BookEntry({
         JSON.stringify(p) === JSON.stringify(resp.plan) ? p : deepClone(resp.plan),
       );
       setPlanSync((s) => (s.status === "idle" ? s : { status: "idle" }));
+      setPlanUnfunded(null);
       return;
     }
     if (bookBlocked) return;
@@ -709,10 +719,13 @@ export function BookEntry({
     setPlanSync({ status: "pending" });
     const timer = setTimeout(() => {
       planForBook(runId, effectiveBook(book))
-        .then(({ plan: derived }) => {
+        .then(({ plan: derived, unfunded }) => {
           if (cancelled) return;
           setPlan(derived);
           setPlanSync({ status: "idle" });
+          // app-open-04 Item C: the note rides with the plan it describes;
+          // absent on an older server, which renders as "no pause".
+          setPlanUnfunded(unfunded ?? null);
         })
         .catch((e) => {
           if (cancelled) return;
@@ -720,6 +733,7 @@ export function BookEntry({
             status: "error",
             message: e instanceof SessionApiError ? e.message : String(e),
           });
+          setPlanUnfunded(null);
         });
     }, planRecomputeDelayMs);
     return () => {
@@ -1179,6 +1193,18 @@ export function BookEntry({
         {planSync.status === "error" && (
           <p className="book-note error" data-testid="plan-error">
             the commitment plan could not be recomputed: {planSync.message}
+          </p>
+        )}
+        {/* app-open-04 Item C: one plain sentence when the server's derived
+            plan is pausing commitments for this book — the numbers are the
+            SERVED totals, rendered verbatim (DN-3 W5), and the sentence
+            hides once the plan is hand-edited (it describes the derivation,
+            which a taken-over plan no longer follows). */}
+        {!planEdited && planUnfunded?.active && (
+          <p className="book-note" data-testid="unfunded-pause-note">
+            {`commitments pause while existing unfunded works off - your unfunded is ` +
+              `${fmt1(planUnfunded.unfunded_total)} vs ${fmt1(planUnfunded.steady_state_total)} ` +
+              "typical for this target"}
           </p>
         )}
         <div className="book-ladder-scroll">
