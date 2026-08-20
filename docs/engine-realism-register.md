@@ -893,7 +893,12 @@ This inherited past is a *consistent simulated* construction: it passes the vali
 
 ## ER-14 — Inflation does not reach private markets at all
 
-**Status:** CLOSED 2026-08-18 (`er14-05-release` branch, `toy-v0.7`), D-ER14-2.
+**Status:** CLOSED 2026-08-18 (`er14-05-release` branch, `toy-v0.7`), D-ER14-2;
+**RELEASED to `main` 2026-08-19 as `712f96d`** ("INFLATION REACHES THE WHOLE
+BOOK"), gate `3081 passed, EXIT: 0`, coverage 97.24%. `AT-1..AT-14` were all
+verified against the ratified thresholds by an independent release review before
+the merge. A follow-on merge, **`9c15b2b` (2026-08-19)**, closed the gap this
+release opened — see the retirement bullet at the end of this entry.
 See the close-out section at the end of this entry for the post-fix
 measurement, the named residuals, and the retirement/demotion this release
 also does.
@@ -1058,12 +1063,32 @@ complain about when it happens *by accident*; doing it *on purpose* here
 would be the same mistake with better intentions. Left as an open ask, not
 resolved in this WP.
 
-**CLOSED 2026-08-18 (`er14-05-release`, `toy-v0.7`), D-ER14-2.** Four
-inflation channels (real estate, private equity, private credit,
-infrastructure) now exist on both planes, plus a fourth private class
-(`infra`) with contractual inflation linkage. The channel this entry filed as
-missing now exists; the standing caveat below says what that does and does
-not buy.
+**CLOSED 2026-08-18 (`er14-05-release`, `toy-v0.7`), D-ER14-2; RELEASED
+2026-08-19 (`712f96d`).** Four inflation mechanisms now exist on both planes:
+
+- **real estate** — income escalation against cap-rate repricing;
+- **private equity** — nominal earnings growth against multiple compression,
+  with the presets' hand-authored `entry_multiple_drift_annual_pct` zeroed so
+  the charge is not levied twice (risk R-6);
+- **private credit** — a floating coupon against a coverage squeeze and a
+  convex loss term, the coupon tracking `inflation_excess` within the world
+  (the shadow-rate approximation in the working note above);
+- **infrastructure** — a fourth private class (`infra`) that did not exist as
+  an asset before, closed-end via `pm_infra`, its pass-through read LIVE from
+  `structural.infrastructure.inflation_linkage` (default 0.60) — the one
+  asset-side inflation-linkage field the contract already had, which this
+  entry filed as belonging to the one class the engine did not simulate.
+
+**All fifteen coefficients ship CHOSEN-LABELLED** — literature-anchored,
+ratified by the owner before anything was sealed, each carrying its recorded
+anchor and its measured-external upgrade path (the C1/C2 lineage) — sealed into
+`mappings/sleeve-mappings-v1.2.yaml` under `AM-2026-08-18-001`, in a single G3
+reseal that also batched F5. **C2, the measured credit-loss half, is DEFERRED**
+pending a CDLI export (ask A7): the machinery is kept whole and unit-tested,
+and private-credit convexity ships declared at 0.10 until it lands.
+
+The channel this entry filed as missing now exists; the standing caveat below
+says what that does and does not buy.
 
 **Post-fix measurement (probe basis: stagflation preset, 200 paths,
 `base_seed=12345`, `factor_conditions.inflation.average_pct` varied 1% → 12%,
@@ -1156,6 +1181,15 @@ discovered:**
   produce differently-shaped new ones under new ids. The JSONs are
   byte-unchanged and stay readable forever; `ah world build` refuses to
   rebuild them under the new engine.
+  **Follow-on, 2026-08-19 (`9c15b2b`).** Retiring `701`/`703` left the app's
+  declared-stress picker (`SHOWN_GENERATOR_IDS = ["bootstrap-stratified"]`)
+  matching nothing playable — a gap this close-out created and did not
+  anticipate. Closed by authoring a new `71x` block as NEW worlds, not edited
+  ones: `711` `stress_1974_successor` and `713` `stress_1990_successor`
+  (same declared scenario, same seeds, `provenance.source.kind = "derived"`
+  with `parent_world_id` pointing at the retired id) plus `712` **The Gulf
+  Decade**, a supply-shock demonstration world for this very release. The
+  retired records and their ids stay untouched and fenced.
 - **ER-15 session demotion.** The default opening book gains a fourth
   private sleeve, so its digest moves and every in-flight session is
   invalidated — old three-sleeve posts demote to practice. Correct
@@ -1172,6 +1206,21 @@ fills row-major, so widening 3 columns to 4 re-rolls every column's draw on
 the GENERATED plane even with `infra` appended last) — stated, not silently
 narrowed; the generated plane's digests move in this release regardless,
 since the world-fence and mapping-artifact changes move them anyway.
+
+**What reopening this entry would invalidate.** Stated so a future reader does
+not have to reconstruct it. Re-touching any private return stream bumps
+`TOY_ENGINE_VERSION` again and invalidates every RunRecord digest minted under
+`toy-v0.7`, forces another preset world_id block, rebuilds both committed
+bundles, re-runs the battery, and demotes every in-flight session. Re-touching
+any of the fifteen ratified coefficients means a further amendment against
+`AM-2026-08-18-001` and another G3 reseal — the coefficients are inside the
+seal, not beside it. The post-fix measurements quoted above
+(`artifacts/er14/response.json`) are re-derivable at any time by
+`scripts/measure_er14_response.py` and would need re-deriving, not editing.
+And the two things this close-out deliberately did NOT change would have to be
+re-argued rather than assumed: the cashflow layer's inflation-blind
+distribution *propensity* (Delta 3, declined) and the reported plane's
+governance by ER-11.
 
 ---
 
@@ -1210,6 +1259,20 @@ type in.
 whenever the entered book's or plan's digest differs from the served
 default (`POST /sessions`, `src/ah/serve.py`), so nothing that reaches the
 leaderboard is ever scored from an unfitted ladder.
+
+**Post-release note, 2026-08-19 (ER-14 released as `712f96d`).** This entry
+still reads true and **the entered-book risk is unchanged** — the gap is about
+the shape of a book, not the number of sleeves in it, and no calibration
+evidence was extended by the ER-14 release. Two things did move around it, both
+announced rather than discovered. First, the demotion **fired platform-wide**:
+the default opening book gained a fourth private sleeve (`infra`), so its digest
+moved under every world and every in-flight session demoted to practice.
+Second, the mitigation above is now **preceded by a shape check** — a book that
+cannot name the world's full private set (`set(book.private) == set(PRIVATE_SLEEVES)`)
+is **rejected with 422** rather than accepted and demoted, so a legacy
+three-sleeve book fails loudly instead of quietly scoring nothing. Demotion
+still governs every book that is well-formed but unfitted, which is the case
+this entry is about.
 
 **Consequences.** Re-fitting pacing and linkage across a family of ladder
 shapes would move the sealed pacing figures in DN-5 §2.1 — an amendment-log
