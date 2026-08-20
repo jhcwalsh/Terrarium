@@ -20,7 +20,8 @@
         "1990 Gulf War spike: Iraq's invasion of Kuwait roughly doubled crude in weeks, tipping an already-slowing US economy into recession",
         "1979 second oil shock: the Iranian Revolution landed on an economy still carrying 1973's inflation and produced the deepest stagflation of the post-war era - the precedent for dialing the grind segment to the severe rung, not just the shock quarter",
         "all_down: 2022 ran equities and bonds down together, with no flight-to-quality bid",
-        "a new demonstration world (er14-06), not a rebuild of a retired campaign: no parent_world_id, a fresh base_seed, and its own world_id in the 71x successor block alongside the stress_1974/stress_1990 successors"
+        "a new demonstration world (er14-06), not a rebuild of a retired campaign: no parent_world_id, a fresh base_seed, and its own world_id in the 71x successor block alongside the stress_1974/stress_1990 successors",
+        "entry_multiple_drift_annual_pct is 0.0, not the -2.0 this file's shape was copied from (pe-drift-01). D-ER14-2/A5 zeroed the hand-authored drift on every LIVE preset because mu_PE = 0.45 now makes multiple compression endogenous - and mu_PE was anchored ON that very -2.0 (engine.py: 'the shipped presets' own authored -2.0 drift at 4.5pp excess'), so carrying both would charge PE twice. The -2.0 survived here only because the shape was copied from the RETIRED 701/703 records, which are deliberately byte-frozen. The field still exists and still means something: NON-inflation multiple drift (secular dry powder, sector re-rating). It is zero here because this world declares no such secular story - its multiple compression is the inflation's, and the engine now supplies it."
       ]
     }
   },
@@ -108,7 +109,7 @@
   "structural": {
     "parameter_vintage": "custom",
     "private_equity": {
-      "entry_multiple_drift_annual_pct": -2.0,
+      "entry_multiple_drift_annual_pct": 0.0,
       "illiquidity_premium_annual_pct": 2.0,
       "leverage_turns": 5.5
     }
