@@ -1698,3 +1698,145 @@ describe("BookEntry — weights derive and edit; the plan follows the book (app-
     expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
   });
 });
+
+/**
+ * app-open-04 Item B: the Historical-vintages tab's sections are DERIVED
+ * from the served book's own private-sleeve set — never a hardcoded list.
+ *
+ * Root-cause note (recorded in the WP report): the owner's "infrastructure
+ * missing from the vintage charts" observation does NOT reproduce at HEAD —
+ * BookEntry has derived its sections from `Object.keys(resp.book.private)`
+ * since su-app-06, and the live service serves all four sleeves on every
+ * surface probed. The observation belongs to the stale-deployment family
+ * Item A fixes (a pre-ER-14 app/service pair, or a cached pre-ER-14 world).
+ * These tests exist so the claim can never silently BECOME true: they run
+ * against a FIVE-sleeve served book and derive every expectation from the
+ * response document, so a future hardcoded pe/pc/re(/infra) list — the
+ * exact regression er14-04c was suspected of — fails them immediately, and
+ * a fifth sleeve can never silently vanish.
+ */
+describe("BookEntry — vintage sections derive from the served sleeve set (app-open-04)", () => {
+  /** the served default with a FIFTH private sleeve ("tl", timberland) —
+   * shape-valid rungs, target, band and plan column, built from the
+   * existing fixture so only the sleeve set differs. */
+  function fiveSleeveResponse(): DefaultBookResponse {
+    const resp = deepCloneResponse();
+    const rung = JSON.parse(JSON.stringify(resp.book.private.re[0]));
+    resp.book.private = { ...resp.book.private, tl: [rung] };
+    resp.book.targets = { ...resp.book.targets, tl: 5 };
+    resp.book.ranges = { ...resp.book.ranges, tl: [4.5, 5.5] };
+    resp.plan.points = { ...resp.plan.points, tl: [0.9] };
+    return resp;
+  }
+
+  function deepCloneResponse(): DefaultBookResponse {
+    return JSON.parse(JSON.stringify(DEFAULT_RESPONSE)) as DefaultBookResponse;
+  }
+
+  it("every served private sleeve gets a full section: chart + rung table", async () => {
+    const resp = fiveSleeveResponse();
+    stubFetch(resp);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+
+    const served = Object.keys(resp.book.private); // pe, pc, re, infra, tl
+    const sections = [...host!.querySelectorAll(".book-ladder")];
+    expect(sections.length).toBe(served.length);
+    served.forEach((sleeve, i) => {
+      const section = sections[i];
+      // one chart and one rung table per sleeve, same treatment as the rest
+      expect(section.querySelector('[data-testid="vintage-chart"]')).not.toBeNull();
+      expect(section.querySelector("table")).not.toBeNull();
+      expect(
+        section.querySelectorAll(`[data-testid="rung-${sleeve}"]`).length,
+      ).toBe(resp.book.private[sleeve].length);
+    });
+  });
+
+  it("the plan grid carries one column per served private sleeve", async () => {
+    const resp = fiveSleeveResponse();
+    stubFetch(resp);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    for (const sleeve of Object.keys(resp.book.private)) {
+      expect(byLabel(`${sleeve} plan year 0`)).toBeDefined();
+    }
+  });
+});
+
+/**
+ * app-open-04 Item C, the UI half: when the SERVER's derived plan is pausing
+ * commitments for an over-committed book, the Cashflow-projections tab says
+ * so in one plain sentence, with the SERVED totals rendered verbatim —
+ * nothing recomputed client-side (DN-3 W5).
+ */
+describe("BookEntry — the unfunded pause sentence (app-open-04)", () => {
+  const PAUSED_NOTE = {
+    active: true,
+    unfunded_total: 26.2,
+    steady_state_total: 16.2,
+    sleeves: {
+      pe: { unfunded: 19.0, steady_state: 9.0, paused: true },
+      pc: { unfunded: 3.6, steady_state: 3.6, paused: false },
+      re: { unfunded: 2.2, steady_state: 2.2, paused: false },
+      infra: { unfunded: 1.4, steady_state: 1.4, paused: false },
+    },
+  };
+
+  function routedWithNote(note: unknown) {
+    return stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      {
+        match: "/book/plan",
+        ok: true,
+        body: {
+          plan: DEFAULT_RESPONSE.plan,
+          plan_digest: "c".repeat(64),
+          unfunded: note,
+        },
+      },
+    ]);
+  }
+
+  async function editAValue() {
+    // any book edit re-posts the book and brings the note back with the
+    // derived plan (planRecomputeDelayMs=0 keeps it a single flush).
+    setValue(byLabel<HTMLInputElement>("equity"), "37");
+    await flush();
+    await flush();
+  }
+
+  it("renders the sentence with the payload's own numbers when active", async () => {
+    routedWithNote(PAUSED_NOTE);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await editAValue();
+    const note = byTestId("unfunded-pause-note");
+    expect(note.textContent).toContain("commitments pause while existing unfunded works off");
+    // the numbers are the SERVED totals, 1dp — the same values the payload
+    // carries, never a client-side restatement of the book.
+    expect(note.textContent).toContain("your unfunded is 26.2 vs 16.2 typical for this target");
+  });
+
+  it("renders nothing when the served note is inactive", async () => {
+    routedWithNote({ ...PAUSED_NOTE, active: false });
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await editAValue();
+    expect(host!.querySelector('[data-testid="unfunded-pause-note"]')).toBeNull();
+  });
+
+  it("hides the sentence once the plan is taken over by hand", async () => {
+    routedWithNote(PAUSED_NOTE);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await editAValue();
+    expect(host!.querySelector('[data-testid="unfunded-pause-note"]')).not.toBeNull();
+    // hand-editing a plan cell takes the plan over — the sentence describes
+    // the DERIVED plan and must leave with it.
+    setValue(byLabel<HTMLInputElement>("pe plan year 0"), "1.5");
+    await flush();
+    expect(host!.querySelector('[data-testid="unfunded-pause-note"]')).toBeNull();
+  });
+});
