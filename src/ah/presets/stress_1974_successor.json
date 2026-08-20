@@ -21,7 +21,8 @@
         "all_down: 2022 ran equities and bonds down together, with no flight-to-quality bid",
         "stagflation entry at the worst third: 1973-82 spent most of a decade below trend",
         "successor of the retired campaign record 701 (00000000-0000-4000-9000-000000000701, 'stress_1974'), rebuilt under the ER-14 release engine (toy-v0.7 via bootstrap-stratified, play alpha port-v5-inflation) - D-ER14-2. The original stays byte-unchanged and permanently fenced (ah.cli.RETIRED_WORLD_IDS); the segments, percentiles and precedent above are unchanged from it.",
-        "entry_multiple_drift_annual_pct is 0.0 here, where the retired 701 record carries -2.0 (pe-drift-01). This is the ONE structural value that does not carry over, and deliberately: D-ER14-2/A5 zeroed the hand-authored drift on every LIVE preset because mu_PE = 0.45 makes multiple compression endogenous under the release engine - and mu_PE was anchored ON that -2.0 (engine.py: 'the shipped presets' own authored -2.0 drift at 4.5pp excess'), so carrying both would charge PE twice. 701 keeps its -2.0 because 701 ran under an engine that had no mu_PE; the successor runs under one that does. The field still means NON-inflation multiple drift (secular dry powder, sector re-rating), and this world declares none."
+        "entry_multiple_drift_annual_pct is 0.0 here, where the retired 701 record carries -2.0 (pe-drift-01). This is the ONE structural value that does not carry over, and deliberately: D-ER14-2/A5 zeroed the hand-authored drift on every LIVE preset because mu_PE = 0.45 makes multiple compression endogenous under the release engine - and mu_PE was anchored ON that -2.0 (engine.py: 'the shipped presets' own authored -2.0 drift at 4.5pp excess'), so carrying both would charge PE twice. 701 keeps its -2.0 because 701 ran under an engine that had no mu_PE; the successor runs under one that does. The field still means NON-inflation multiple drift (secular dry powder, sector re-rating), and this world declares none.",
+        "successor of 711 (00000000-0000-4000-9000-000000000711) under the chosen-PE equation (D-ER16-1): the sleeve-mappings artifact that translates this same declared scenario into private-market returns moved from v1.2 to v1.3, so the world identity moves with it - scores under port-v5-inflation-gen and port-v6-chosen-pe-gen must never share a leaderboard row."
       ]
     }
   },
@@ -73,7 +74,7 @@
     "created_at": "2026-08-19T00:00:00Z",
     "source": {
       "kind": "derived",
-      "parent_world_id": "00000000-0000-4000-9000-000000000701"
+      "parent_world_id": "00000000-0000-4000-9000-000000000711"
     }
   },
   "regimes": {
@@ -111,5 +112,5 @@
       "leverage_turns": 5.5
     }
   },
-  "world_id": "00000000-0000-4000-9000-000000000711"
+  "world_id": "00000000-0000-4000-9000-000000000721"
 }

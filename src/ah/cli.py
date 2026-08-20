@@ -43,12 +43,21 @@ DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 # not reproduce those campaigns, only produce differently-shaped new ones under
 # new ids; leaving them runnable would invite exactly the leaderboard collision
 # the fences exist to prevent. So: readable forever, never re-runnable.
+# Chosen-PE adoption (D-ER16-1/AM-2026-08-19-001, 2026-08-19): the same rule,
+# second application. 711/712/713 consumed the v1.2 sleeve-mappings equation;
+# the platform now translates the identical declared scenarios through v1.3
+# (pm_buyout chosen coefficients), so those ids retire and the 72x successors
+# replace them - scores under port-v5-inflation-gen and port-v6-chosen-pe-gen
+# must never share a leaderboard row.
 RETIRED_WORLD_IDS = frozenset(
     {
         "00000000-0000-4000-9000-000000000701",  # stress_1974
         "00000000-0000-4000-9000-000000000703",  # stress_1990
         "00000000-0000-4000-9000-000000000801",  # narration_1974
         "00000000-0000-4000-9000-000000000802",  # spine_pilot
+        "00000000-0000-4000-9000-000000000711",  # stress_1974_successor pre-chosen-PE
+        "00000000-0000-4000-9000-000000000712",  # gulf_decade pre-chosen-PE
+        "00000000-0000-4000-9000-000000000713",  # stress_1990_successor pre-chosen-PE
     }
 )
 
@@ -131,8 +140,9 @@ def world_build(
         raw = json.loads(path.read_text(encoding="utf-8"))
         if raw.get("world_id") in RETIRED_WORLD_IDS:
             typer.echo(
-                f"RETIRED: world {raw['world_id']} is a campaign record and cannot be "
-                "rebuilt under toy-v0.7 (ER-14 close-out, D-ER14-2). Read it, do not run it.",
+                f"RETIRED: world {raw['world_id']} is a record of an earlier release "
+                "(ER-14 close-out D-ER14-2, or chosen-PE D-ER16-1) and cannot be rebuilt "
+                "under the current engine/equation. Read it, do not run it.",
                 err=True,
             )
             raise typer.Exit(1)
