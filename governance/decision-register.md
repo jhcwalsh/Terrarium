@@ -531,3 +531,21 @@ committed `.pdf` mirror was not re-rendered against the doc's post-fix banner
 and §4.5 addition (a headless-Chrome build step, `scripts/build_doc_pdf.py`,
 outside this WP's scope) — the served markdown and this register are
 current; the PDF is one edit behind. Follow-up, not blocking.
+
+## D-SP-12 - RULED 2026-08-19: THE POLISH ROUND (owner: "let us do 1-3")
+
+Three improvements to the coupled engine, funded as one final round of the
+current architecture, re-measured under the FROZEN exam (no bar moves):
+1. Join selection by inflation-distance - the S1-named lever; era-safe
+   candidates chosen for smallest inflation gap at the seam, no declared
+   tolerance touched. Target: seams statistically undetectable (S1's own
+   sealed test is the judge).
+2. The conditional era-crossing rule is ADOPTED (owner ruling here; its
+   hedge-cost is accepted as part of this round's measured record; the
+   split-promise question remains open separately).
+3. The slow-climate dispersion recalibrated - across-decade state spread
+   brought toward history's (the P2 fail-from-above diagnosis; 1.6x
+   measured). Target: the curve's economic share inside the sealed
+   [0.392, 0.673] band.
+Sequence: implement -> the full sealed measurement (12 bars + S1 + A1R)
+-> verdict-integrity review -> merge. The frontier discipline stands.
