@@ -4,6 +4,70 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## app-open-04 — PICKER HYGIENE, THE UNFUNDED PAUSE, THE RETIRED-SESSION FENCE (branch `app-open-04`)
+
+Four owner-ordered items on the book/picker/serve surfaces (2026-08-20, "go on 1-3").
+
+- **Dead local entries on the front page (Item A).** The browser's IndexedDB cache
+  outlives releases: a cached bundle whose run the server no longer has (e.g. run
+  `65778be9`, the retired 1974 world) rendered exactly like a live entry, then every
+  book/play call 404'd — read as "lost the ability to progress". The "On this
+  machine" list now probes every cached run id against the `/worlds` document the
+  landing page already fetches (`runStatus`, `app/src/lib/worlds.ts` — one batch
+  GET, no per-entry request; it also carries the server's own `retired` fence).
+  Dead entries render muted with "from an earlier release - view only" and a
+  REMOVE control that clears the LOCAL cache entry only (`cacheDelete`,
+  `app/src/lib/idb.ts`) — nothing is auto-deleted, no server call is made, and an
+  unreachable `/worlds` marks nothing (unknown is not dead). Live entries are
+  untouched.
+- **Item B, root-caused: "infrastructure missing from the vintage charts" does NOT
+  reproduce at HEAD.** The suspected er14-04c regression (an old 3-sleeve list) does
+  not exist: BookEntry's Historical-vintages sections have derived from
+  `Object.keys(resp.book.private)` since su-app-06, the CIO Private-cashflows tab
+  renders the served `classes`/`series` (built from `PRIVATE_ASSETS`, four sleeves),
+  and the live service serves all four on every probed surface — verified by
+  mounting HEAD's BookEntry against the live `/book/default` payload (four sections,
+  four charts) and probing the live `/cio` (four classes, infra vintages present).
+  The observation belongs to the stale-deployment family Item A fixes: at the time
+  it was noted (todo-drive-03, 2026-08-19) the running app/service pair predated
+  the er14-04 merges (uvicorn holds loaded modules; a pre-ER-14 pair is a
+  three-sleeve platform end to end). What ships instead of a code fix is the guard
+  the brief asked for: a rendered-sections test that derives its expectations from
+  the SERVED book's sleeve set against a five-sleeve fixture
+  (`BookEntry.test.tsx`, proven to bite by a break-and-revert against a hardcoded
+  3-list) and a payload test deriving from `PRIVATE_ASSETS` itself
+  (`tests/test_cioview.py`), so the claim can never silently become true and a
+  fifth sleeve can never vanish.
+- **Unfunded commitments bite the pacing plan (Item C).** `book_commitment_plan`
+  read the book's reported NAV and ignored its UNFUNDED commitments — an
+  over-committed entered book got a kickoff plan that kept stacking. The rule, in
+  one sentence: **each window's pace is reduced by the sleeve's remaining excess
+  unfunded — the amount by which the book's projected unfunded still exceeds the
+  steady-state stock the pacing model itself implies for the target — floored at
+  zero**, so the plan pauses while the excess works off and resumes to the base
+  plan as it does. Every quantity is the model's own (`ah/play.py`):
+  `steady_state_unfunded` is the unfunded held by `_seed_ladder` — the model's own
+  staggered book at the target weight (declared `rc_curve`, ~90% called by year
+  10, ER-6 expiry at lapse); the excess is projected on that same declared curve
+  with `f_call = 1` (the kickoff plan cannot see the tape — the same leak-free
+  reasoning that keeps the default plan on the FIXED rule), and unfunded dynamics
+  are linear in the opening stock, so the projection is exact. No new constants:
+  the one tolerance reuses `BOOK_TOLERANCE`. Per-sleeve trigger — a sleeve at or
+  under its steady-state stock (every derived default among them) keeps its plan
+  BIT-IDENTICAL, regression-pinned (`tests/test_unfunded_plan.py`). Server-side
+  and deterministic (DN-3 W5): `POST /book/plan` now serves an `unfunded` note
+  beside the plan, and the Cashflow-projections tab renders one plain sentence
+  with the SERVED totals when the pause is active ("commitments pause while
+  existing unfunded works off - your unfunded is X vs Y typical for this
+  target").
+- **The server refuses new sessions on retired worlds (Item D — the pe-chosen
+  release's named I-1 follow-up, now closed).** `POST /sessions` answers 422
+  ("this world is retired - its successor appears in the world list") when the
+  run's world is in `ah.retired_worlds.RETIRED_WORLD_IDS` — the same single fence
+  `/worlds` and the CLI read. Only CREATION is fenced: existing sessions on
+  retired worlds stay fully readable (GET/advance/cio untouched — history is
+  history). Tests pin both sides (`tests/test_serve_retired.py`).
+
 ## pe-chosen-02 — THE CHOSEN-PE ADOPTION (branch `pe-chosen-01`)
 
 **The generated plane's buyout equation goes live as CHOSEN, and every world that
@@ -43,12 +107,13 @@ scored under the old one retires.** Task 1 sealed `mappings/sleeve-mappings-v1.3
   `docs/superpowers/specs/2026-08-20-pe-chosen-release-evidence.md` (+ JSON sidecar);
   721/722/723/724 built into the live store (1000-path base-seed runs appended for
   721/722/723 mirroring their parents', each replaying MATCH; 724 run-less like 604).
-- **Known limitation (final review I-1), follow-up named:** the retired-world fence is
-  picker-deep — `/worlds` marks retired worlds and the app hides them, but
-  `POST /sessions` still accepts a retired world's run if a client asks directly.
-  Scoring integrity holds regardless (the play-alpha stamp separates v5/v6 rows);
-  a server-side refusal at session creation is the right hardening and is left as a
-  named follow-up rather than rushed into this release.
+- **Known limitation (final review I-1), follow-up named — CLOSED by app-open-04
+  Item D (2026-08-20):** the retired-world fence was picker-deep — `/worlds` marked
+  retired worlds and the app hid them, but `POST /sessions` still accepted a
+  retired world's run if a client asked directly. Scoring integrity held regardless
+  (the play-alpha stamp separates v5/v6 rows); the server-side refusal at session
+  creation named here as the right hardening now exists — 422 at creation, existing
+  sessions untouched (see the app-open-04 entry above).
 
 ## app-open-03 — OPENING BOOK: VALUES DRIVE WEIGHTS; THE PLAN FOLLOWS THE BOOK (branch `app-open-03`)
 
