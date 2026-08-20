@@ -13,8 +13,8 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { fetchBundle, parseBundle, type LoadedBundle } from "./lib/bundle";
-import { cacheGet, cacheList, cachePut } from "./lib/idb";
-import { fetchWorlds, WorldPicker, type WorldsDoc } from "./lib/worlds";
+import { cacheDelete, cacheGet, cacheList, cachePut } from "./lib/idb";
+import { fetchWorlds, runStatus, WorldPicker, type WorldsDoc } from "./lib/worlds";
 import type { Book, Plan } from "./lib/session";
 import { cumulativeGrowth, FanChart } from "./components/FanChart";
 import { Feed } from "./components/Feed";
@@ -127,11 +127,41 @@ export default function App() {
           <section>
             <h2>On this machine</h2>
             <ul>
-              {cached.map((id) => (
-                <li key={id}>
-                  <button onClick={() => openCached(id)}>{id}</button>
-                </li>
-              ))}
+              {cached.map((id) => {
+                // app-open-04 Item A: probe each cached run against the
+                // server via the /worlds document this page already fetched
+                // (runStatus — one batch GET, no per-entry request). A dead
+                // entry (run gone, or its world retired) renders muted with
+                // a plain line and a REMOVE control; "unknown" (no /worlds
+                // at all) must render normally — an unreachable service
+                // never marks a good entry stale. Never auto-deleted: the
+                // remove button clears the LOCAL cache entry only.
+                const status = runStatus(worldsDoc, id);
+                const stale = status === "missing" || status === "retired";
+                return (
+                  <li key={id} className={stale ? "cached-stale" : undefined}>
+                    <button onClick={() => openCached(id)}>{id}</button>
+                    {stale && (
+                      <>
+                        <span className="cached-stale-note">
+                          from an earlier release - view only
+                        </span>
+                        <button
+                          aria-label={`remove ${id} from this machine`}
+                          onClick={() =>
+                            cacheDelete(id)
+                              .then(() => cacheList())
+                              .then(setCached)
+                              .catch(() => {})
+                          }
+                        >
+                          remove
+                        </button>
+                      </>
+                    )}
+                  </li>
+                );
+              })}
             </ul>
           </section>
         )}

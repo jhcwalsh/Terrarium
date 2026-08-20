@@ -18,6 +18,7 @@ import {
   bundleUrlFor,
   fetchWorlds,
   HIDDEN_WORLD_IDS,
+  runStatus,
   selectShownWorlds,
   SHOWN_GENERATOR_IDS,
   WorldPicker,
@@ -345,5 +346,53 @@ describe("WorldPicker", () => {
       ],
     };
     expect(renderToStaticMarkup(WorldPicker({ doc, onOpen: () => {} }))).toBe("");
+  });
+});
+
+describe("runStatus (app-open-04 Item A)", () => {
+  const doc: WorldsDoc = {
+    worlds: [
+      {
+        world_id: "w-live",
+        title: "Live",
+        generator_id: "bootstrap-stratified",
+        retired: false,
+        runs: [{ run_id: "run-live", seed: 1, created_at: "2026-01-01T00:00:00Z" }],
+      },
+      {
+        world_id: "w-retired",
+        title: "Old",
+        generator_id: "bootstrap-stratified",
+        retired: true,
+        runs: [{ run_id: "run-retired", seed: 2, created_at: "2025-01-01T00:00:00Z" }],
+      },
+      {
+        world_id: "w-unmarked",
+        title: "Unmarked",
+        generator_id: "toy-v0",
+        // no `retired` key at all: an older server's document — absent
+        // means "not marked retired", matching that server's own behavior.
+        runs: [{ run_id: "run-unmarked", seed: 3, created_at: "2025-06-01T00:00:00Z" }],
+      },
+    ],
+  };
+
+  it("a run the server lists on an unretired world is live", () => {
+    expect(runStatus(doc, "run-live")).toBe("live");
+    expect(runStatus(doc, "run-unmarked")).toBe("live");
+  });
+
+  it("a run on a server-retired world is retired", () => {
+    expect(runStatus(doc, "run-retired")).toBe("retired");
+  });
+
+  it("a run the server no longer has is missing", () => {
+    expect(runStatus(doc, "65778be9-gone")).toBe("missing");
+  });
+
+  it("no /worlds document at all is unknown, never stale", () => {
+    // service down / static hosting: the caller must render the entry
+    // normally — an unreachable server cannot condemn a good cache entry.
+    expect(runStatus(null, "run-live")).toBe("unknown");
   });
 });

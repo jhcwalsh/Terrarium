@@ -1948,3 +1948,15 @@ button.commit {
   color: var(--clay);
   font-style: italic;
 }
+
+/* app-open-04 Item A: a locally-cached entry whose run the server no longer
+   has (or whose world is retired) — muted, view-only, removable. */
+.cached-stale button:first-child {
+  opacity: 0.55;
+}
+.cached-stale-note {
+  color: var(--dim);
+  font-size: 12px;
+  font-style: italic;
+  margin: 0 8px;
+}
