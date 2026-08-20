@@ -167,3 +167,36 @@ def test_the_selection_only_fires_on_a_join_filtered_candidate_set(
             filtered, cells, spine_q, 0, 6, np.random.Generator(np.random.PCG64(11))
         )
         assert picked == 9
+
+
+# --------------------------------------------------------------------------- #
+# 2. the era rule adopted -- the polish engine configuration
+# --------------------------------------------------------------------------- #
+
+
+def test_the_polish_engine_adopts_the_conditional_era_crossing_rule(
+    polish: ModuleType, worlds: ModuleType
+) -> None:
+    """Change 2 as a check: the run entry point's default carries the rule.
+
+    Every other field of the design is pinned too, because "adopt the era rule"
+    means adopt D-SP-11's design and nothing else -- a block-length override or
+    a relaxed join sneaking in beside it would be a second change wearing the
+    first one's name.
+    """
+    assert polish.POLISH_REACH is worlds.ERA_CONDITIONAL_REACH
+    assert polish.POLISH_REACH.era_conditional_crossing is True
+    assert polish.POLISH_REACH.era_relaxed_joins is False
+    assert polish.POLISH_REACH.anticipate is True
+    assert polish.POLISH_REACH.break_on_divergence is True
+    assert polish.POLISH_REACH.match_horizon == worlds.DEFAULT_MATCH_HORIZON
+    assert polish.POLISH_REACH.block_months_override is None
+    run = _load("stage2_polish_run")
+    assert run.POLISH is polish.POLISH_REACH
+
+
+def test_an_unlicensed_crossing_is_a_stop_and_not_a_number(polish: ModuleType) -> None:
+    """The audit's verdict is raised, not reported. D-SP-11 wrote it that way."""
+    assert polish.assert_licensed_crossings({"holds": True, "crossing_seams": 3}, arm="x")["holds"]
+    with pytest.raises(RuntimeError, match="stop, not a diagnostic"):
+        polish.assert_licensed_crossings({"holds": False, "unlicensed_crossing_seams": 2}, arm="x")

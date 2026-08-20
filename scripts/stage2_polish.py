@@ -31,6 +31,12 @@ the platform's flesh. Two consequences worth stating plainly:
 * every hashed file keeps its sealed hash, and
   ``tests/test_stage2_rulers_seal.py`` keeps passing without an amendment.
 
+**Change 2, the conditional era-crossing rule ADOPTED.** A configuration
+choice rather than new code: :data:`POLISH_REACH` is
+``stage2_worlds.ERA_CONDITIONAL_REACH``, the design D-SP-11 sealed and audited,
+promoted to the default the run entry point carries. The licence audit stays
+live and stays a stop (:func:`assert_licensed_crossings`).
+
 THE RANDOM TAPE IS NOT MOVED
 ----------------------------
 The platform picks uniformly among the candidates that tie at the longest
@@ -49,6 +55,7 @@ import sys
 from collections.abc import Iterator
 from dataclasses import dataclass
 from pathlib import Path
+from typing import Any
 
 import numpy as np
 
@@ -255,3 +262,55 @@ def join_selection(rule: str = SELECTION_MIN_GAP) -> Iterator[None]:
         _CONTEXT.candidates = None
         _CONTEXT.yoy = None
         _CONTEXT.previous = -1
+
+
+# --------------------------------------------------------------------------- #
+# 2. the polish engine -- the conditional era-crossing rule, ADOPTED
+# --------------------------------------------------------------------------- #
+
+#: **D-SP-12 change 2: the conditional era-crossing rule is ADOPTED.** D-SP-11
+#: measured it as an arm beside the D-SP-10 engine and left the adoption to the
+#: owner; the ruling of 2026-08-19 takes it, with its hedge-cost accepted as part
+#: of this round's measured record. Nothing about the rule itself moves -- this
+#: is ``stage2_worlds.ERA_CONDITIONAL_REACH``, the sealed design, promoted from
+#: "an arm the run script names" to "the default the run entry point carries".
+#:
+#: The licence audit stays live and stays a STOP. ``ERA_CONDITIONAL_REACH`` is
+#: only trustworthy because every bucket-changing seam is re-derived from the
+#: compiled row tape rather than read off the engine's counters, and D-SP-11's
+#: 104-of-104 reading is a measurement that has to be retaken on every engine
+#: this round produces -- a join-selection change alters WHICH candidate is
+#: taken at a crossing month, so the audit is not inherited. See
+#: :func:`assert_licensed_crossings`.
+POLISH_REACH = worlds.ERA_CONDITIONAL_REACH
+
+
+def assert_licensed_crossings(audit: dict[str, Any], *, arm: str) -> dict[str, Any]:
+    """Every bucket-changing seam must sit at a licensed month. This is a STOP.
+
+    ``audit`` is ``stage2_rulers.era_crossing_audit``'s own output -- the sealed
+    tape-based re-derivation, imported by the caller and never re-implemented
+    here. D-SP-11 wrote this check as a raise rather than a reported number and
+    the polish round keeps it that way: an unlicensed crossing means the adopted
+    rule is not the rule the engine obeyed, and no bar read on that engine means
+    anything.
+    """
+    if not audit.get("holds"):
+        raise RuntimeError(
+            f"the {arm} arm has {audit.get('unlicensed_crossing_seams')} bucket-changing seam(s) "
+            "at months where the spine does not cross. The era-crossing rule is a rule and this "
+            "is a stop, not a diagnostic"
+        )
+    return audit
+
+
+@contextlib.contextmanager
+def polish_engine(*, selection: str = SELECTION_MIN_GAP) -> Iterator[None]:
+    """The polish engine's substitutions, installed together.
+
+    The reach design is not installed here -- it is passed to
+    ``stage2_worlds.stage2_flesh`` by the caller as :data:`POLISH_REACH` -- so
+    this block is only about the behaviour that has to be patched in.
+    """
+    with join_selection(selection):
+        yield
