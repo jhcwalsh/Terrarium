@@ -4,6 +4,39 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## pe-chosen-02 — THE CHOSEN-PE ADOPTION (branch `pe-chosen-01`)
+
+**The generated plane's buyout equation goes live as CHOSEN, and every world that
+scored under the old one retires.** Task 1 sealed `mappings/sleeve-mappings-v1.3.yaml`
+(D-ER16-1, AM-2026-08-19-001); this release makes the platform consume it.
+
+- **What changed.** `ah.port.mapping.ARTIFACT_PATH` -> `sleeve-mappings-v1.3.yaml`
+  (`map-2026.08.4`): `pm_buyout` moves to the two owner-ratified CHOSEN coefficients —
+  `equity_mkt` 0.8362 -> **1.2** (DN-5 levered-beta prior 1.1–1.3, mid-range) and
+  alpha 8.06%/yr -> **3%/yr** (`alpha_quarterly` 0.007399; cashflow/PME literature
+  2–4%/yr, mid-range). `GEN_PLAY_ALPHA_VERSION` `port-v5-inflation-gen` ->
+  `port-v6-chosen-pe-gen`. The three live declared-stress worlds retire and are
+  replaced by byte-identical-except-identity successors: `711` -> `721`
+  (stress_1974_successor), `712` -> `722` (gulf_decade), `713` -> `723`
+  (stress_1990_successor), each carrying `parent_world_id` = the id it replaces and a
+  provenance sentence; `711/712/713` join `ah.cli.RETIRED_WORLD_IDS` — scores under
+  `port-v5-inflation-gen` and `port-v6-chosen-pe-gen` can never share a leaderboard
+  row (alpha stamp + world fence, both).
+- **Why.** ER-16: the generated plane could not make buyout fall harder than its
+  average beta and paid it an 8%/yr premium while it fell, because the measured row
+  was fitted on an appraisal-smoothed index whose GFC was never recorded. The Route-C
+  measurement (the state-dependent de-smoother) came back an honest negative —
+  reconstructed GFC deepened only -26% -> -29%, the refit beta did not rise — so no
+  internal refit was supportable and the owner ruled chosen-realistic (D-ER16-1).
+- **What did NOT change.** The toy plane: `TOY_ENGINE_VERSION` stays `toy-v0.7`,
+  `PLAY_ALPHA_VERSION` stays `port-v5-inflation`, the toy presets stay in `52x`, and
+  `app/fixtures/toy.bundle.gz` is untouched. Every other sleeve of the artifact, the
+  rest of the `pm_buyout` row (`d_ig` -0.0279, `residual_sigma_annual` 0.1225, the C1
+  inflation block), the sealed v1.2/v1.1/v1.0 artifacts themselves, and the G5-sealed
+  `decision_alpha_version` are all byte-unchanged. `stagflation_1974` (`604`) keeps
+  its id: its tape moves under v1.3, but the alpha-stamp fence alone separates its
+  rows (recorded as a concern in the adoption report, not silently).
+
 ## pe-drift-01 — THE SUSPECTED PE DOUBLE CHARGE, MEASURED (branch `pe-drift-01`)
 
 **Verdict: INERT on the generated plane, REAL on the toy plane. Worlds 711/712/713
