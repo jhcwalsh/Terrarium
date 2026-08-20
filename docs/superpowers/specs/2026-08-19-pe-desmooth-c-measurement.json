@@ -1,0 +1,563 @@
+{
+  "run_date": "2026-08-19",
+  "branch": "pe-desmooth-01",
+  "campaign_vintage_id": "2026-08-10.1",
+  "measurement_only": true,
+  "labels": {
+    "measured": "fitted on train_val data by this script or the sealed estimator",
+    "derived": "arithmetic on measured values",
+    "assumed": "the 0.4508 stickiness transfer (Variant 2) and everything downstream"
+  },
+  "sealed_target_row": {
+    "alpha_quarterly": 0.019441,
+    "equity_mkt": 0.8362,
+    "d_ig": -0.0279,
+    "residual_sigma_annual": 0.1225,
+    "r2_train_val": 0.269
+  },
+  "step0_calibration": {
+    "pass": true,
+    "reproduced": {
+      "alpha_quarterly": 0.019441,
+      "equity_mkt": 0.8362,
+      "d_ig": -0.0279,
+      "residual_sigma_annual": 0.1225,
+      "r2_train_val": 0.269
+    },
+    "full_sample_theta": {
+      "method": "glm_ma",
+      "k": 1,
+      "theta": [
+        0.85,
+        0.15000000000000002
+      ],
+      "fell_back_to_geltner": false,
+      "warnings": []
+    },
+    "n_quarters": 125,
+    "window": [
+      "1989-10-01",
+      "2020-10-01"
+    ]
+  },
+  "step1_variant1_fit": {
+    "stress_indicator": "fred.USREC via DataAccess.train_val, reindex+ffill (_stress_split)",
+    "n_stress_quarters": 12,
+    "n_calm_quarters": 113,
+    "stress_quarter_list": [
+      "1990-10-01",
+      "1991-01-01",
+      "2001-04-01",
+      "2001-07-01",
+      "2001-10-01",
+      "2008-01-01",
+      "2008-04-01",
+      "2008-07-01",
+      "2008-10-01",
+      "2009-01-01",
+      "2009-04-01",
+      "2020-04-01"
+    ],
+    "episodes": [
+      {
+        "quarters": [
+          "1990-10-01",
+          "1991-01-01"
+        ]
+      },
+      {
+        "quarters": [
+          "2001-04-01",
+          "2001-07-01",
+          "2001-10-01"
+        ]
+      },
+      {
+        "quarters": [
+          "2008-01-01",
+          "2008-04-01",
+          "2008-07-01",
+          "2008-10-01",
+          "2009-01-01",
+          "2009-04-01"
+        ]
+      },
+      {
+        "quarters": [
+          "2020-04-01"
+        ]
+      }
+    ],
+    "splices_in_stress_subsample": 3,
+    "splices_in_calm_subsample": 4,
+    "splice_caveat": "the house _stress_split concatenates non-contiguous quarters; each splice fabricates one adjacent pair the ACF objective treats as real, biasing theta on both sides -- worst for the stress side, whose sample is mostly seams",
+    "calm_fit": {
+      "method": "geltner_ar1",
+      "k": 1,
+      "theta": [
+        0.9926443675830185,
+        0.007355632416981404
+      ],
+      "fell_back_to_geltner": true,
+      "warnings": [
+        "boundary solution (theta_0 ~ 1); falling back to Geltner AR(1)"
+      ]
+    },
+    "calm_fit_prefallback_grid": {
+      "k": 1,
+      "theta": [
+        1.0,
+        0.0
+      ]
+    },
+    "stress_fit": {
+      "method": "glm_ma",
+      "k": 1,
+      "theta": [
+        0.55,
+        0.45
+      ],
+      "fell_back_to_geltner": false,
+      "warnings": []
+    },
+    "stress_fit_prefallback_grid": {
+      "k": 1,
+      "theta": [
+        0.55,
+        0.45
+      ]
+    },
+    "leave_one_episode_out_stress": {
+      "1990-91": {
+        "n_stress_left": 10,
+        "method": "glm_ma",
+        "k": 2,
+        "theta": [
+          0.5,
+          0.45,
+          0.05
+        ],
+        "fell_back_to_geltner": false,
+        "warnings": []
+      },
+      "2001": {
+        "n_stress_left": 9,
+        "method": "glm_ma",
+        "k": 1,
+        "theta": [
+          0.55,
+          0.45
+        ],
+        "fell_back_to_geltner": false,
+        "warnings": []
+      },
+      "2008-09": {
+        "n_stress_left": 6,
+        "method": "glm_ma",
+        "k": 1,
+        "theta": [
+          0.8,
+          0.2
+        ],
+        "fell_back_to_geltner": false,
+        "warnings": []
+      },
+      "2020": {
+        "n_stress_left": 11,
+        "method": "glm_ma",
+        "k": 1,
+        "theta": [
+          0.6,
+          0.4
+        ],
+        "fell_back_to_geltner": false,
+        "warnings": []
+      }
+    },
+    "loo_stress_theta0_range": [
+      0.5,
+      0.8
+    ]
+  },
+  "step2_variant2_transfer": {
+    "stickiness_transferred": 0.4508,
+    "stickiness_label": "ASSUMED (pooled over pm_infra+pm_re_value_add; buyout NOT in pool)",
+    "theta_calm": [
+      0.85,
+      0.15
+    ],
+    "theta_stress": [
+      0.46682,
+      0.53318
+    ],
+    "alternative_calm_value": {
+      "calm_split_theta0": 0.9926,
+      "implied_stress_theta0": 0.54516,
+      "materially_different": true
+    }
+  },
+  "step3_reconstructions": {
+    "self_test": "recover_truth_tv == desmooth._recover_truth in the constant case (1e-12)",
+    "variant1_theta_used": {
+      "calm": [
+        1.0,
+        0.0
+      ],
+      "stress": [
+        0.55,
+        0.45
+      ],
+      "calm_note": "calm fit hit the boundary (theta_0 ~ 1, no smoothing detected) and fell back to Geltner; identity [1, 0] used for the calm state",
+      "calm_sensitivity_theta": [
+        0.9926443675830185,
+        0.007355632416981404
+      ],
+      "max_abs_diff_identity_vs_geltner_as_ma_pct": 0.2362
+    },
+    "variant2_theta_used_ASSUMED": {
+      "calm": [
+        0.85,
+        0.15
+      ],
+      "stress": [
+        0.46682,
+        0.53318
+      ]
+    },
+    "observed_raw": {
+      "quarterly_sigma_pct": 6.166,
+      "acf1": 0.1767,
+      "worst_quarter_pct": -15.01,
+      "worst_quarter_date": "2008-10-01",
+      "mean_quarterly_pct": 4.309,
+      "episode_drawdowns": {
+        "1990-91": {
+          "peak_to_trough_pct": -5.52,
+          "trough_quarter": "1992-07-01",
+          "n_quarters_in_window": 13
+        },
+        "2001": {
+          "peak_to_trough_pct": -18.91,
+          "trough_quarter": "2002-07-01",
+          "n_quarters_in_window": 16
+        },
+        "2008-09": {
+          "peak_to_trough_pct": -25.61,
+          "trough_quarter": "2009-01-01",
+          "n_quarters_in_window": 16
+        },
+        "2020": {
+          "peak_to_trough_pct": -7.27,
+          "trough_quarter": "2020-01-01",
+          "n_quarters_in_window": 5
+        }
+      }
+    },
+    "current_unconditional": {
+      "quarterly_sigma_pct": 7.164,
+      "acf1": -0.0057,
+      "worst_quarter_pct": -16.22,
+      "worst_quarter_date": "2008-10-01",
+      "mean_quarterly_pct": 4.3241,
+      "episode_drawdowns": {
+        "1990-91": {
+          "peak_to_trough_pct": -10.48,
+          "trough_quarter": "1992-07-01",
+          "n_quarters_in_window": 13
+        },
+        "2001": {
+          "peak_to_trough_pct": -19.57,
+          "trough_quarter": "2002-07-01",
+          "n_quarters_in_window": 16
+        },
+        "2008-09": {
+          "peak_to_trough_pct": -26.05,
+          "trough_quarter": "2009-01-01",
+          "n_quarters_in_window": 16
+        },
+        "2020": {
+          "peak_to_trough_pct": -9.55,
+          "trough_quarter": "2020-01-01",
+          "n_quarters_in_window": 5
+        }
+      }
+    },
+    "variant1_state_dependent_fitted": {
+      "quarterly_sigma_pct": 6.951,
+      "acf1": -0.0756,
+      "worst_quarter_pct": -18.88,
+      "worst_quarter_date": "1990-10-01",
+      "mean_quarterly_pct": 4.3997,
+      "episode_drawdowns": {
+        "1990-91": {
+          "peak_to_trough_pct": -18.88,
+          "trough_quarter": "1990-10-01",
+          "n_quarters_in_window": 13
+        },
+        "2001": {
+          "peak_to_trough_pct": -16.75,
+          "trough_quarter": "2001-07-01",
+          "n_quarters_in_window": 16
+        },
+        "2008-09": {
+          "peak_to_trough_pct": -29.3,
+          "trough_quarter": "2008-10-01",
+          "n_quarters_in_window": 16
+        },
+        "2020": {
+          "peak_to_trough_pct": -7.27,
+          "trough_quarter": "2020-01-01",
+          "n_quarters_in_window": 5
+        }
+      }
+    },
+    "variant1_calm_sensitivity": {
+      "quarterly_sigma_pct": 6.991,
+      "acf1": -0.0812,
+      "worst_quarter_pct": -19.04,
+      "worst_quarter_date": "1990-10-01",
+      "mean_quarterly_pct": 4.3992,
+      "episode_drawdowns": {
+        "1990-91": {
+          "peak_to_trough_pct": -19.04,
+          "trough_quarter": "1990-10-01",
+          "n_quarters_in_window": 13
+        },
+        "2001": {
+          "peak_to_trough_pct": -16.79,
+          "trough_quarter": "2001-07-01",
+          "n_quarters_in_window": 16
+        },
+        "2008-09": {
+          "peak_to_trough_pct": -29.3,
+          "trough_quarter": "2008-10-01",
+          "n_quarters_in_window": 16
+        },
+        "2020": {
+          "peak_to_trough_pct": -7.36,
+          "trough_quarter": "2020-01-01",
+          "n_quarters_in_window": 5
+        }
+      }
+    },
+    "variant2_transferred_stickiness_ASSUMED": {
+      "quarterly_sigma_pct": 9.025,
+      "acf1": -0.3409,
+      "worst_quarter_pct": -32.85,
+      "worst_quarter_date": "1990-10-01",
+      "mean_quarterly_pct": 4.5009,
+      "episode_drawdowns": {
+        "1990-91": {
+          "peak_to_trough_pct": -32.85,
+          "trough_quarter": "1990-10-01",
+          "n_quarters_in_window": 13
+        },
+        "2001": {
+          "peak_to_trough_pct": -20.18,
+          "trough_quarter": "2001-07-01",
+          "n_quarters_in_window": 16
+        },
+        "2008-09": {
+          "peak_to_trough_pct": -29.59,
+          "trough_quarter": "2008-10-01",
+          "n_quarters_in_window": 16
+        },
+        "2020": {
+          "peak_to_trough_pct": -9.55,
+          "trough_quarter": "2020-01-01",
+          "n_quarters_in_window": 5
+        }
+      }
+    }
+  },
+  "step4_refit_rows": {
+    "sealed_baseline_reproduced": {
+      "n_quarters": 125,
+      "dimson_lags": 4,
+      "alpha_quarterly": 0.019440777377006627,
+      "alpha_annualised_as_adapter_applies_it_pct": 8.059544829414111,
+      "alpha_annualised_from_quarterly_pct": 8.006030538674857,
+      "loadings": {
+        "equity_mkt": 0.8362020525671969,
+        "smb": 8.277541929900979e-15,
+        "hml": 1.2062521908694567e-11,
+        "mom": 0.0,
+        "d_level": 0.0,
+        "d_slope": 0.0,
+        "d_ig": -0.027866106733896907
+      },
+      "residual_sigma_annual": 0.12252399329572038,
+      "r2_train_val": 0.26877599507360983,
+      "dimson_per_lag_note": "the v1.2 fit function returns only the summed beta; per-lag decomposition is not reported by it"
+    },
+    "variant1": {
+      "n_quarters": 125,
+      "dimson_lags": 4,
+      "alpha_quarterly": 0.020804544981390418,
+      "alpha_annualised_as_adapter_applies_it_pct": 8.646679014576453,
+      "alpha_annualised_from_quarterly_pct": 8.585136106712632,
+      "loadings": {
+        "equity_mkt": 0.8143795676757404,
+        "smb": 0.018171632635727842,
+        "hml": 6.866366014762186e-24,
+        "mom": 0.0,
+        "d_level": 0.0,
+        "d_slope": 0.0,
+        "d_ig": -0.04351358548629624
+      },
+      "residual_sigma_annual": 0.11571696144030631,
+      "r2_train_val": 0.30719361542131696,
+      "dimson_per_lag_note": "the v1.2 fit function returns only the summed beta; per-lag decomposition is not reported by it"
+    },
+    "variant2_ASSUMED": {
+      "n_quarters": 125,
+      "dimson_lags": 4,
+      "alpha_quarterly": 0.020517633297260404,
+      "alpha_annualised_as_adapter_applies_it_pct": 8.522914410893833,
+      "alpha_annualised_from_quarterly_pct": 8.46310995654951,
+      "loadings": {
+        "equity_mkt": 0.8482706365103029,
+        "smb": 0.13501619532667375,
+        "hml": 1.3774661498840642e-13,
+        "mom": 0.0,
+        "d_level": 0.0,
+        "d_slope": 0.0,
+        "d_ig": -0.031157695362166542
+      },
+      "residual_sigma_annual": 0.15756712782366894,
+      "r2_train_val": 0.23789265921963976,
+      "dimson_per_lag_note": "the v1.2 fit function returns only the summed beta; per-lag decomposition is not reported by it"
+    }
+  },
+  "step5_d_preview": {
+    "current_unconditional": {
+      "n": 125,
+      "coefficients": {
+        "a_intercept": {
+          "value": 0.0517,
+          "t": 4.67
+        },
+        "b_beta_up": {
+          "value": 0.1633,
+          "t": 1.25
+        },
+        "c_downside_kink": {
+          "value": 0.0691,
+          "t": 0.32
+        },
+        "d_down_dummy": {
+          "value": -0.0432,
+          "t": -2.13
+        }
+      },
+      "implied_downside_beta": 0.2324
+    },
+    "variant1": {
+      "n": 125,
+      "coefficients": {
+        "a_intercept": {
+          "value": 0.0437,
+          "t": 4.07
+        },
+        "b_beta_up": {
+          "value": 0.2635,
+          "t": 2.09
+        },
+        "c_downside_kink": {
+          "value": 0.0517,
+          "t": 0.25
+        },
+        "d_down_dummy": {
+          "value": -0.023,
+          "t": -1.17
+        }
+      },
+      "implied_downside_beta": 0.3152
+    },
+    "variant2_ASSUMED": {
+      "n": 125,
+      "coefficients": {
+        "a_intercept": {
+          "value": 0.037,
+          "t": 2.63
+        },
+        "b_beta_up": {
+          "value": 0.437,
+          "t": 2.64
+        },
+        "c_downside_kink": {
+          "value": -0.201,
+          "t": -0.73
+        },
+        "d_down_dummy": {
+          "value": -0.0318,
+          "t": -1.23
+        }
+      },
+      "implied_downside_beta": 0.236
+    }
+  },
+  "step6_gulf_decade_what_if": {
+    "world_id": "00000000-0000-4000-9000-000000000712",
+    "base_seed": 202608,
+    "n_paths": 200,
+    "seed_stride": 7919,
+    "equity": {
+      "live_tape_decade_pct": 107.51,
+      "median_decade_pct": 149.91
+    },
+    "cases": {
+      "sealed": {
+        "live_tape_decade_pe_pct": 532.15,
+        "median_decade_pe_pct": 257.66,
+        "median_pe_max_drawdown_pct": -31.52,
+        "n_paths_pe_beats_equity": 169,
+        "live_tape_crash_year_pe_pct": -30.09,
+        "median_crash_year_pe_pct": 16.55,
+        "alpha_annual_rate_pct": 8.06
+      },
+      "variant1": {
+        "live_tape_decade_pe_pct": 563.55,
+        "median_decade_pe_pct": 271.59,
+        "median_pe_max_drawdown_pct": -29.82,
+        "n_paths_pe_beats_equity": 175,
+        "live_tape_crash_year_pe_pct": -29.45,
+        "median_crash_year_pe_pct": 17.72,
+        "alpha_annual_rate_pct": 8.65
+      },
+      "variant2_ASSUMED": {
+        "live_tape_decade_pe_pct": 695.85,
+        "median_decade_pe_pct": 257.81,
+        "median_pe_max_drawdown_pct": -36.76,
+        "n_paths_pe_beats_equity": 158,
+        "live_tape_crash_year_pe_pct": -30.01,
+        "median_crash_year_pe_pct": 15.86,
+        "alpha_annual_rate_pct": 8.52
+      }
+    }
+  },
+  "derived_headlines": {
+    "implied_buyout_own_stickiness": 0.45,
+    "geltner_pool_stickiness_for_comparison_ASSUMED_elsewhere": 0.4508,
+    "implied_stickiness_without_gfc_episode": 0.2,
+    "gfc_peak_to_trough_pct": {
+      "raw_reported_index": -25.61,
+      "current_unconditional_truth": -26.05,
+      "variant1": -29.3,
+      "variant2_ASSUMED": -29.59,
+      "v1_minus_current_pp": -3.25
+    },
+    "secondaries_2009H1_implied_true_peak_to_trough_pct": -55.4,
+    "secondaries_anchor_label": "DERIVED from the 0.60-of-NAV 2009-H1 clearing price in docs/data/secondaries.md, itself flagged 'illustrative'; includes whatever liquidity discount the seller ate, so it bounds the market-implied crash from above",
+    "alpha_annual_pct": {
+      "sealed": 8.06,
+      "variant1": 8.65,
+      "variant2_ASSUMED": 8.52
+    },
+    "beta_eq": {
+      "sealed": 0.8362,
+      "variant1": 0.8144,
+      "variant2_ASSUMED": 0.8483
+    }
+  }
+}
