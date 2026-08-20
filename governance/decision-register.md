@@ -549,3 +549,54 @@ current architecture, re-measured under the FROZEN exam (no bar moves):
    [0.392, 0.673] band.
 Sequence: implement -> the full sealed measurement (12 bars + S1 + A1R)
 -> verdict-integrity review -> merge. The frontier discipline stands.
+
+## D-ER16-1 - RATIFIED 2026-08-19: CHOSEN-REALISTIC COEFFICIENTS FOR THE GENERATED PLANE'S BUYOUT ROW
+
+Owner ruling ("chosen-realistic") after the Route-C measurement came back
+honest-negative: the generated plane's `pm_buyout` row moves to CHOSEN
+coefficients, replacing values that are measured but known wrong - fitted
+on an appraisal-smoothed index whose GFC was never recorded (worst GFC
+quarter -15.01%; the index's only |z| >= 6 observations are two POSITIVE
+1990-91 quarters). The two values, each with its external anchor:
+- `equity_mkt` 0.8362 -> **1.2**. Anchor: DN-5's own buyout prior 1.1-1.3
+  ("levered beta", `Instructions/DN5-factor-sleeve-mapping.md`) - a
+  design-note prior that predates every fit; 1.2 chosen mid-range.
+- alpha 8.06%/yr -> **3%/yr** (`alpha_quarterly` 0.019441 -> 0.007399
+  under the sealed alpha/3-per-month convention). Anchor: the cashflow/PME
+  literature places net buyout outperformance at roughly 2-4%/yr -
+  marks-free evidence, outside any appraisal index; 3%/yr chosen
+  mid-range.
+
+Scope: `pm_buyout` only, generated plane only. Every other coefficient of
+the row (d_ig -0.0279, residual_sigma_annual 0.1225, the C1 inflation
+block), every other sleeve, and the toy plane's own `pe = 1.4*eq + const`
+are untouched. `route: sum-beta(4)` is retained with its application
+semantics unchanged - 1.2 is the SUM the adapter applies contemporaneously
+at monthly frequency.
+
+Considered and rejected, with reasons:
+- **Route C (state-dependent de-smoother) and Route D (asymmetric-beta
+  refit), measured before deciding** rather than assumed
+  (`docs/superpowers/specs/2026-08-19-pe-desmooth-c-measurement.md`): the
+  smoothing mechanism is real (calm marks honest; stress marks ~2x sticky,
+  buyout-native 0.45 against the pool's 0.4508) but the reconstruction
+  deepens the GFC only -26.05% -> -29.30%, the refit beta does not rise
+  (0.8144 fitted / 0.8483 transferred), the alpha rises (8.06 ->
+  8.65/8.52%/yr), and the D-preview finds no downside kink on any
+  reconstruction (|t| < 0.8). The index never recorded the crash; no
+  operator fitted on it can restore what was never written down. No
+  internal refit is supportable.
+- **Burgiss/Cambridge composites as a replacement fitting anchor**:
+  rejected by the owner as same-material appraisal data - a second
+  smoothed index would reproduce the defect, not correct it.
+
+Status: **ADOPTED 2026-08-19, owner-ratified.** Executed as
+`mappings/sleeve-mappings-v1.3.yaml` + `scripts/make_sleeve_mappings_v1_3.py`
+under `AM-2026-08-19-001` (one G3 reseal; the main and G5 lock digests are
+unchanged). v1.2 remains sealed and unedited as the measured record.
+ER-16 (`docs/engine-realism-register.md`) records what this ruling fixes -
+the level and the crash magnitude - and what it does not: the missing
+convexity (the row is still affine; crisis beta still equals calm beta,
+now at 1.2). Adoption - `src/ah/port/mapping.py` repointing to v1.3, with
+its play-alpha bump, digest moves, world fences and rebuilds - is the next
+task's release event, not this record.
