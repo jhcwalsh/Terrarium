@@ -594,6 +594,19 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         rec = get_run_record(conn, body.run_id)
         if rec is None:
             raise HTTPException(status_code=404, detail=f"no run_record {body.run_id}")
+        # app-open-04 Item D (the pe-chosen release's named I-1 follow-up):
+        # the retired-world fence reaches session CREATION. Before this, the
+        # fence was picker-deep — /worlds marked retired worlds and the app
+        # hid them, but a client that already held a retired run_id (a stale
+        # browser cache does exactly that) could still open a fresh session
+        # on it. Only creation is fenced: existing sessions on retired
+        # worlds stay fully readable (GET/advance/cio below never consult
+        # the fence) — history is history.
+        if rec["world_id"] in RETIRED_WORLD_IDS:
+            raise HTTPException(
+                status_code=422,
+                detail="this world is retired - its successor appears in the world list",
+            )
         world = get_world(conn, rec["world_id"])
         if world is None:
             raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
