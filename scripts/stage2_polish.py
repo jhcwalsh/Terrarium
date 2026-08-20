@@ -31,6 +31,14 @@ the platform's flesh. Two consequences worth stating plainly:
 * every hashed file keeps its sealed hash, and
   ``tests/test_stage2_rulers_seal.py`` keeps passing without an amendment.
 
+**Change 3, the L1 across-decade dispersion recalibration.** The slow climate's
+two level-carrying innovation volatilities, ``sigma_pi`` and ``sigma_r``, are
+scaled by factors derived in ``scripts/stage2_polish_calibrate.py`` against a
+measured historical quantity -- the panel's own decade-scale spread of the same
+two states. The derivation, its estimator and its target are recorded in
+``docs/superpowers/specs/stage2-fitted-params-2.json``; the frozen week-A
+artifact is an INPUT here and is never written.
+
 **Change 2, the conditional era-crossing rule ADOPTED.** A configuration
 choice rather than new code: :data:`POLISH_REACH` is
 ``stage2_worlds.ERA_CONDITIONAL_REACH``, the design D-SP-11 sealed and audited,
@@ -63,7 +71,21 @@ _SCRIPTS_DIR = Path(__file__).resolve().parent
 if str(_SCRIPTS_DIR) not in sys.path:  # running as a script puts it there already
     sys.path.insert(0, str(_SCRIPTS_DIR))
 
+import stage2_fit as weeka  # noqa: E402
 import stage2_worlds as worlds  # noqa: E402
+
+import ah.gen.climate.simulate as csim  # noqa: E402
+from ah.gen.climate.model import N_STATES, PARAM_NAMES  # noqa: E402
+from ah.gen.climate.simulate import SimulatedClimate  # noqa: E402
+
+_REPO_ROOT = _SCRIPTS_DIR.parent
+SPECS_DIR = _REPO_ROOT / "docs" / "superpowers" / "specs"
+
+#: The NEW versioned parameters artifact. The frozen week-A artifact
+#: (``stage2-fitted-params.json``) is an input to this round and is never
+#: written by it: D-SP-12's charter says a recalibrated parameter goes into a new
+#: versioned file with its derivation recorded, and this is that file.
+POLISH_PARAMS_PATH = SPECS_DIR / "stage2-fitted-params-2.json"
 
 # --------------------------------------------------------------------------- #
 # 1. join selection by inflation distance
@@ -304,13 +326,138 @@ def assert_licensed_crossings(audit: dict[str, Any], *, arm: str) -> dict[str, A
     return audit
 
 
+# --------------------------------------------------------------------------- #
+# 3. the L1 across-decade dispersion recalibration
+# --------------------------------------------------------------------------- #
+
+#: The two L1 innovation volatilities the recalibration touches, and no others.
+#: They are the diffusion scales of the two states the rule-implied policy rate
+#: is made of (``i_rule = r* + pi* + phi_pi x + phi_c c``), which is the series
+#: whose over-dispersion ``P2`` reads. Half-lives, every other volatility, both
+#: Taylor loadings, ``beta_g`` and ``delta_L`` are untouched: they are not what
+#: the target measures.
+CALIBRATED_PARAMS = ("sigma_pi", "sigma_r")
+
+
+@dataclass(frozen=True)
+class L1Calibration:
+    """Multiplicative factors on L1's two level-carrying innovation volatilities."""
+
+    sigma_pi: float = 1.0
+    sigma_r: float = 1.0
+
+    @property
+    def factors(self) -> dict[str, float]:
+        return {"sigma_pi": float(self.sigma_pi), "sigma_r": float(self.sigma_r)}
+
+    @property
+    def is_unit(self) -> bool:
+        return self.sigma_pi == 1.0 and self.sigma_r == 1.0
+
+
+#: The identity. Used by the pin test and by every arm that is meant to be the
+#: unrecalibrated engine.
+L1_UNIT = L1Calibration()
+
+
+def scaled_simulate_decades(calibration: L1Calibration) -> Any:
+    """``ah.gen.climate.simulate.simulate_decades`` with the two sigmas scaled.
+
+    A line-for-line replay of the platform's own per-decade loop -- same seed
+    stride, same posterior index draw, same joint ``(theta, s0)``, same
+    ``_simulate_path`` -- with the two calibrated volatilities multiplied
+    **after** the draw and before the path. At unit scale the multiplication is
+    skipped entirely rather than performed with a factor of one, so the arm is
+    bit-identical to the platform's and every later difference is the
+    calibration rather than the copy. ``tests/test_stage2_polish.py`` is where
+    that is checked instead of claimed.
+    """
+    factors = calibration.factors
+
+    def simulate(
+        artifact: Any,
+        n_decades: int,
+        *,
+        seed: int,
+        months: int = 120,
+        s0_date: Any | None = None,
+        cycle: np.ndarray | None = None,
+        theta_index: int | None = None,
+    ) -> SimulatedClimate:
+        ts = artifact.dates[-1] if s0_date is None else s0_date
+        locs = artifact.dates.get_indexer([ts])
+        if locs[0] < 0:
+            raise ValueError(f"s0_date {ts} is not on the artifact's monthly grid")
+        t0 = int(locs[0])
+        cyc = csim._validate_cycle(cycle, n_decades, months)
+        out = np.empty((n_decades, months, N_STATES), dtype=np.float64)
+        idx = np.empty(n_decades, dtype=np.int64)
+        for k in range(n_decades):
+            rng = np.random.Generator(np.random.PCG64(seed + csim.SEED_STRIDE * k))
+            draw = int(rng.integers(artifact.n_draws)) if theta_index is None else int(theta_index)
+            idx[k] = draw
+            theta = {name: float(artifact.params[name][draw]) for name in PARAM_NAMES}
+            for name, factor in factors.items():
+                if factor != 1.0:
+                    theta[name] = theta[name] * factor
+            out[k] = csim._simulate_path(theta, artifact.states[draw, t0, :], months, cyc[k], rng)
+        params: dict[str, np.ndarray] = {}
+        for name in PARAM_NAMES:
+            drawn = artifact.params[name][idx]
+            factor = factors.get(name, 1.0)
+            params[name] = drawn if factor == 1.0 else drawn * factor
+        return SimulatedClimate(states=out, theta_index=idx, params=params, s0_date=ts, seed=seed)
+
+    return simulate
+
+
 @contextlib.contextmanager
-def polish_engine(*, selection: str = SELECTION_MIN_GAP) -> Iterator[None]:
+def l1_calibration(calibration: L1Calibration | None) -> Iterator[None]:
+    """Install the recalibrated slow climate, then remove it.
+
+    ``None`` (or the unit calibration) installs nothing at all, so an arm that
+    asks for the unrecalibrated engine gets the platform's own function object
+    and not a wrapper that happens to agree with it.
+    """
+    if calibration is None or calibration.is_unit:
+        yield
+        return
+    previous = weeka.simulate_decades
+    weeka.simulate_decades = scaled_simulate_decades(calibration)
+    try:
+        yield
+    finally:
+        weeka.simulate_decades = previous
+
+
+@contextlib.contextmanager
+def polish_engine(
+    *, selection: str = SELECTION_MIN_GAP, calibration: L1Calibration | None = None
+) -> Iterator[None]:
     """The polish engine's substitutions, installed together.
 
     The reach design is not installed here -- it is passed to
     ``stage2_worlds.stage2_flesh`` by the caller as :data:`POLISH_REACH` -- so
     this block is only about the behaviour that has to be patched in.
     """
-    with join_selection(selection):
+    with join_selection(selection), l1_calibration(calibration):
         yield
+
+
+def across_decade_spread(paths: np.ndarray) -> dict[str, float]:
+    """One series' dispersion, split into across-decade and within-decade.
+
+    ``paths`` is ``(n_decades, months)``. The same three numbers are computed on
+    history by ``stage2_polish_calibrate.panel_decade_spread`` over the panel's
+    own non-overlapping decades, because a calibration whose two sides are
+    computed by different functions is not a calibration.
+    """
+    arr = np.asarray(paths, dtype=np.float64)
+    means = arr.mean(axis=1)
+    return {
+        "total_sd": float(arr.reshape(-1).std(ddof=1)),
+        "across_decade_sd": float(means.std(ddof=1)),
+        "within_decade_sd": float(np.sqrt(np.mean(arr.var(axis=1, ddof=1)))),
+        "n_decades": float(arr.shape[0]),
+        "months_per_decade": float(arr.shape[1]),
+    }

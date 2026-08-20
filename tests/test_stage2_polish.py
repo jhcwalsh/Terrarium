@@ -200,3 +200,103 @@ def test_an_unlicensed_crossing_is_a_stop_and_not_a_number(polish: ModuleType) -
     assert polish.assert_licensed_crossings({"holds": True, "crossing_seams": 3}, arm="x")["holds"]
     with pytest.raises(RuntimeError, match="stop, not a diagnostic"):
         polish.assert_licensed_crossings({"holds": False, "unlicensed_crossing_seams": 2}, arm="x")
+
+
+# --------------------------------------------------------------------------- #
+# 3. the L1 across-decade dispersion recalibration
+# --------------------------------------------------------------------------- #
+
+
+def test_the_l1_substitution_is_bit_identical_at_unit_scale(polish: ModuleType) -> None:
+    """Scale 1.0 must reproduce ``ah.gen.climate.simulate.simulate_decades`` exactly.
+
+    The pin that makes the recalibrated arm attributable: at unit scale the
+    substitution is the platform's own function, bit for bit, so every
+    difference measured later is the calibration and not the copy.
+    """
+    from ah.gen.climate.simulate import simulate_decades
+    from ah.gen.systems import _pinned_layers
+
+    climate, _regimes = _pinned_layers()
+    want = simulate_decades(climate, 6, seed=20260819, months=120)
+    got = polish.scaled_simulate_decades(polish.L1_UNIT)(climate, 6, seed=20260819, months=120)
+    assert np.array_equal(got.states, want.states)
+    assert np.array_equal(got.theta_index, want.theta_index)
+
+
+def test_a_smaller_scale_shrinks_the_across_decade_spread(polish: ModuleType) -> None:
+    """The lever moves the quantity it is calibrated on, and in one direction."""
+    from ah.gen.systems import _pinned_layers
+
+    climate, _regimes = _pinned_layers()
+    spreads = []
+    for factor in (1.0, 0.6, 0.3):
+        cal = polish.L1Calibration(sigma_pi=factor, sigma_r=factor)
+        sim = polish.scaled_simulate_decades(cal)(climate, 40, seed=20260819, months=120)
+        spreads.append(float(sim.states[:, :, 0].mean(axis=1).std(ddof=1)))
+    assert spreads[0] > spreads[1] > spreads[2]
+
+
+def test_only_the_two_declared_volatilities_move(polish: ModuleType) -> None:
+    """Every other L1 parameter is the posterior's own, at every scale."""
+    from ah.gen.climate.model import PARAM_NAMES
+    from ah.gen.systems import _pinned_layers
+
+    climate, _regimes = _pinned_layers()
+    cal = polish.L1Calibration(sigma_pi=0.5, sigma_r=0.25)
+    base = polish.scaled_simulate_decades(polish.L1_UNIT)(climate, 8, seed=20260819, months=24)
+    got = polish.scaled_simulate_decades(cal)(climate, 8, seed=20260819, months=24)
+    assert polish.CALIBRATED_PARAMS == ("sigma_pi", "sigma_r")
+    for name in PARAM_NAMES:
+        if name in polish.CALIBRATED_PARAMS:
+            continue
+        assert np.array_equal(got.params[name], base.params[name]), name
+    assert np.allclose(got.params["sigma_pi"], base.params["sigma_pi"] * 0.5)
+    assert np.allclose(got.params["sigma_r"], base.params["sigma_r"] * 0.25)
+
+
+def test_the_l1_calibration_is_off_by_default_and_restored_after(polish: ModuleType) -> None:
+    weeka = _load("stage2_fit")
+    before = weeka.simulate_decades
+    with polish.l1_calibration(polish.L1Calibration(sigma_pi=0.5, sigma_r=0.5)):
+        assert weeka.simulate_decades is not before
+    assert weeka.simulate_decades is before
+    # the unit calibration installs nothing at all
+    with polish.l1_calibration(polish.L1_UNIT):
+        assert weeka.simulate_decades is before
+
+
+def test_the_estimator_inverts_its_own_relation(polish: ModuleType) -> None:
+    """``k`` solves ``S(k)^2 = F^2 + k^2 (S(1)^2 - F^2)`` at the target, exactly."""
+    calibrate = _load("stage2_polish_calibrate")
+    target, floor, at_unit = 2.0, 0.5, 4.0
+    k = calibrate._solve(target, floor, at_unit)
+    assert np.isclose(np.sqrt(floor**2 + k**2 * (at_unit**2 - floor**2)), target)
+
+
+def test_the_recalibrated_parameters_go_to_a_new_versioned_artifact(
+    polish: ModuleType,
+) -> None:
+    """The frozen week-A artifact is an INPUT to this round and is never written.
+
+    D-SP-12's charter: "If the parameters are inside frozen fitted-params
+    artifacts, produce a NEW versioned params artifact ... never edit the frozen
+    one." So no module in this round may open the frozen path for writing.
+    """
+    import json
+
+    assert polish.POLISH_PARAMS_PATH.name == "stage2-fitted-params-2.json"
+    for name in ("stage2_polish", "stage2_polish_calibrate", "stage2_polish_run"):
+        path = _SCRIPTS / f"{name}.py"
+        if not path.exists():
+            continue
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if "write_text" in line:
+                assert "POLISH_PARAMS_PATH" in line or "RESULTS" in line, line
+    doc = json.loads(polish.POLISH_PARAMS_PATH.read_text(encoding="utf-8"))
+    frozen = json.loads(
+        (_REPO_ROOT / "docs/superpowers/specs/stage2-fitted-params.json").read_text(
+            encoding="utf-8"
+        )
+    )
+    assert doc["carried_from"]["fit"] == frozen["fit"], "the 42 week-A coefficients must be carried"
