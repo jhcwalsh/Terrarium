@@ -1,0 +1,627 @@
+{
+ "carried_from": {
+  "artifact": "docs/superpowers/specs/stage2-fitted-params.json",
+  "fit": {
+   "axis_calibrated_cycle": {
+    "contracting": 0.008771929825,
+    "expanding": 1.0,
+    "note": "the panel mean of 1 - 2*USREC inside each of the classifier's growth axes. Averaged over the panel's own axis shares this reproduces the panel mean exactly, which is what keeps the generated inflation LEVEL where the fitted equation put it",
+    "panel_mean_of_the_wp26_contract": 0.722017220172
+   },
+   "curve": {
+    "centers": [
+     4.870325522229,
+     0.094394815478,
+     0.281829419036,
+     2.094318696445,
+     0.557653866183
+    ],
+    "coefficients": {
+     "C": -0.079260146498,
+     "E": -0.038446024211,
+     "K": 0.026812281313,
+     "c_i_policy_rule": -0.240319668577,
+     "c_x_inflation_gap": 0.492034580114,
+     "intercept": 0.602573166833
+    },
+    "form": "M4's equation: slope_t = c0 + c_i (i_rule_t - ibar) + c_x (x_t - xbar) + c_C (C - Cbar) + c_E (E - Ebar) + c_K (K - Kbar) + e_t, e AR(1), exact Gaussian maximum likelihood",
+    "history_strict_economic_share": 0.558666923174,
+    "innovation_sd_pp": 0.14530767769,
+    "loglik": 410.921798885662,
+    "n_months": 809,
+    "r_squared_realised": 0.246374417074,
+    "residual_stationary_sd_pp": 0.747992998622,
+    "restrictions": {
+     "full_loglik": 410.921798885662,
+     "no_economics_at_all": {
+      "columns_zeroed": [
+       "c_i_policy_rule",
+       "c_x_inflation_gap",
+       "C",
+       "E",
+       "K"
+      ],
+      "degrees_of_freedom": 5,
+      "lr_statistic": 396.298103647295,
+      "p_value": null,
+      "restricted_loglik": 212.772747062015
+     },
+     "no_inflation_gap": {
+      "columns_zeroed": [
+       "c_x_inflation_gap"
+      ],
+      "degrees_of_freedom": 1,
+      "lr_statistic": 3.531404211057,
+      "p_value": 0.060216769428,
+      "restricted_loglik": 409.156096780134
+     },
+     "no_policy_rule": {
+      "columns_zeroed": [
+       "c_i_policy_rule"
+      ],
+      "degrees_of_freedom": 1,
+      "lr_statistic": 377.413439377425,
+      "p_value": 0.0,
+      "restricted_loglik": 222.21507919695
+     },
+     "no_season_block": {
+      "columns_zeroed": [
+       "C",
+       "E",
+       "K"
+      ],
+      "degrees_of_freedom": 3,
+      "lr_statistic": 6.106008041068,
+      "p_value": 0.106565077387,
+      "restricted_loglik": 407.868794865129
+     }
+    },
+    "rho": 0.980949399223,
+    "rho_standard_error": 0.006819853727,
+    "standard_errors": {
+     "C": 0.04322209667,
+     "E": 0.015546742106,
+     "K": 0.019857183068,
+     "c_i_policy_rule": 0.01100672518,
+     "c_x_inflation_gap": 0.261498545916,
+     "intercept": 0.25511804162
+    },
+    "t_ratios": {
+     "C": -1.833787636522,
+     "E": -2.472931238458,
+     "K": 1.350256036872,
+     "c_i_policy_rule": -21.833893791454,
+     "c_x_inflation_gap": 1.881595855114,
+     "intercept": 2.361938665747
+    }
+   },
+   "hazard": {
+    "coefficients": {
+     "cov_contracting[credit_gap]": 0.668914559519,
+     "cov_contracting[curve_slope]": 1.190431613451,
+     "cov_contracting[drawdown_state]": -1.793130811305,
+     "cov_contracting[pi_gap]": 0.63070539888,
+     "cov_expanding[credit_gap]": 0.202595936354,
+     "cov_expanding[curve_slope]": -1.488804908804,
+     "cov_expanding[drawdown_state]": 1.994911202669,
+     "cov_expanding[pi_gap]": 0.338781196262,
+     "intercept[expansion]": -3.451516574169,
+     "intercept[recession]": -0.818048799628,
+     "intercept[recovery]": -4.502257266668,
+     "intercept[stagflation]": -2.158180788557,
+     "log_dwell[expansion]": -0.182106942447,
+     "log_dwell[recession]": -0.43033569509,
+     "log_dwell[recovery]": 0.100843792034,
+     "log_dwell[stagflation]": -0.049412937902
+    },
+    "curve_lag_months": 9,
+    "form": "unchanged from week 2 and week 3",
+    "loglik": -118.84012073861,
+    "n_events": 35.0,
+    "n_obs": 792.0,
+    "standard_errors": {
+     "cov_contracting[credit_gap]": 0.333603233228,
+     "cov_contracting[curve_slope]": 0.391842530204,
+     "cov_contracting[drawdown_state]": 0.839209890144,
+     "cov_contracting[pi_gap]": 0.339728826164,
+     "cov_expanding[credit_gap]": 0.324899234788,
+     "cov_expanding[curve_slope]": 0.504121046203,
+     "cov_expanding[drawdown_state]": 1.298564362572,
+     "cov_expanding[pi_gap]": 0.363573512676,
+     "intercept[expansion]": 0.678966051027,
+     "intercept[recession]": 0.690805353765,
+     "intercept[recovery]": 1.023223483385,
+     "intercept[stagflation]": 0.965792845596,
+     "log_dwell[expansion]": 0.289922786141,
+     "log_dwell[recession]": 0.35226454621,
+     "log_dwell[recovery]": 0.303350769437,
+     "log_dwell[stagflation]": 0.434798943205
+    }
+   },
+   "inflation": {
+    "cbar": 0.743654822335,
+    "cycle_input": "usrec",
+    "half_life_months": 133.312315106399,
+    "innovation_sd_pp": 0.019789989939,
+    "intercept": 0.000511093975,
+    "lag_profile": {
+     "0": {
+      "lam_x": 0.003661834069,
+      "loglik": 1960.722142678882,
+      "persistence_a": 0.997101756176,
+      "standard_error": 0.00112792507,
+      "t_ratio": 3.246522454842
+     },
+     "1": {
+      "lam_x": 0.005437670733,
+      "loglik": 1967.290175560084,
+      "persistence_a": 0.99920400813,
+      "standard_error": 0.001111981375,
+      "t_ratio": 4.890073570038
+     },
+     "10": {
+      "lam_x": 0.006326376583,
+      "loglik": 1972.868709699528,
+      "persistence_a": 0.994814070132,
+      "standard_error": 0.001062582187,
+      "t_ratio": 5.953776244487
+     },
+     "11": {
+      "lam_x": 0.004987524393,
+      "loglik": 1966.343809505848,
+      "persistence_a": 0.993614499284,
+      "standard_error": 0.001064016552,
+      "t_ratio": 4.687450006369
+     },
+     "12": {
+      "lam_x": 0.004325749669,
+      "loglik": 1963.715539001701,
+      "persistence_a": 0.992974766447,
+      "standard_error": 0.001061489624,
+      "t_ratio": 4.075169056444
+     },
+     "13": {
+      "lam_x": 0.002729417926,
+      "loglik": 1958.76338898077,
+      "persistence_a": 0.992377362546,
+      "standard_error": 0.001062848818,
+      "t_ratio": 2.568020851617
+     },
+     "14": {
+      "lam_x": 0.002441705519,
+      "loglik": 1958.1263633716,
+      "persistence_a": 0.992194299693,
+      "standard_error": 0.001059021565,
+      "t_ratio": 2.30562398295
+     },
+     "15": {
+      "lam_x": 0.001854749531,
+      "loglik": 1957.012240579975,
+      "persistence_a": 0.992048169106,
+      "standard_error": 0.001056110773,
+      "t_ratio": 1.756207377277
+     },
+     "16": {
+      "lam_x": 0.00215023713,
+      "loglik": 1957.561759863632,
+      "persistence_a": 0.991964104265,
+      "standard_error": 0.001051188977,
+      "t_ratio": 2.0455286133
+     },
+     "17": {
+      "lam_x": 0.002667308465,
+      "loglik": 1958.719652912444,
+      "persistence_a": 0.991827581785,
+      "standard_error": 0.001045652431,
+      "t_ratio": 2.550855699675
+     },
+     "18": {
+      "lam_x": 0.002939574317,
+      "loglik": 1959.449624042763,
+      "persistence_a": 0.991641182028,
+      "standard_error": 0.001040946139,
+      "t_ratio": 2.823944685021
+     },
+     "19": {
+      "lam_x": 0.003809550465,
+      "loglik": 1962.223878847735,
+      "persistence_a": 0.991297699225,
+      "standard_error": 0.001033849568,
+      "t_ratio": 3.684820870866
+     },
+     "2": {
+      "lam_x": 0.005379266941,
+      "loglik": 1967.216689656755,
+      "persistence_a": 0.998605710597,
+      "standard_error": 0.001103524436,
+      "t_ratio": 4.87462421952
+     },
+     "20": {
+      "lam_x": 0.002904846678,
+      "loglik": 1959.404215157597,
+      "persistence_a": 0.991236311029,
+      "standard_error": 0.001034593631,
+      "t_ratio": 2.807717533005
+     },
+     "21": {
+      "lam_x": 0.001814549005,
+      "loglik": 1956.996320649055,
+      "persistence_a": 0.991427811873,
+      "standard_error": 0.001038595493,
+      "t_ratio": 1.747118120994
+     },
+     "22": {
+      "lam_x": 0.000816726778,
+      "loglik": 1955.776200387256,
+      "persistence_a": 0.99171616728,
+      "standard_error": 0.001040780624,
+      "t_ratio": 0.784725194989
+     },
+     "23": {
+      "lam_x": 0.0009616843,
+      "loglik": 1955.895466899385,
+      "persistence_a": 0.991654128455,
+      "standard_error": 0.001040866207,
+      "t_ratio": 0.923926911297
+     },
+     "24": {
+      "lam_x": 0.000186219091,
+      "loglik": 1955.483286673205,
+      "persistence_a": 0.991929148759,
+      "standard_error": 0.001041716735,
+      "t_ratio": 0.178761734875
+     },
+     "3": {
+      "lam_x": 0.005038891398,
+      "loglik": 1965.905104079014,
+      "persistence_a": 0.997701572852,
+      "standard_error": 0.001097640051,
+      "t_ratio": 4.590659199935
+     },
+     "4": {
+      "lam_x": 0.005280398547,
+      "loglik": 1967.086062738608,
+      "persistence_a": 0.997492531075,
+      "standard_error": 0.001089405181,
+      "t_ratio": 4.847047396149
+     },
+     "5": {
+      "lam_x": 0.00537474768,
+      "loglik": 1967.651762286192,
+      "persistence_a": 0.997076774892,
+      "standard_error": 0.0010824328,
+      "t_ratio": 4.965433123519
+     },
+     "6": {
+      "lam_x": 0.005658217347,
+      "loglik": 1969.137387629842,
+      "persistence_a": 0.996793297853,
+      "standard_error": 0.001074802073,
+      "t_ratio": 5.264427274464
+     },
+     "7": {
+      "lam_x": 0.005766817194,
+      "loglik": 1969.816346300376,
+      "persistence_a": 0.996294875232,
+      "standard_error": 0.001068737421,
+      "t_ratio": 5.395915852875
+     },
+     "8": {
+      "lam_x": 0.005598714614,
+      "loglik": 1968.968015288744,
+      "persistence_a": 0.995632823284,
+      "standard_error": 0.001070265168,
+      "t_ratio": 5.231147179554
+     },
+     "9": {
+      "lam_x": 0.006314773426,
+      "loglik": 1972.687598048642,
+      "persistence_a": 0.995515539056,
+      "standard_error": 0.001066319656,
+      "t_ratio": 5.922026652857
+     }
+    },
+    "lam_x": 0.006326376583,
+    "lam_x_standard_error": 0.001062582187,
+    "lam_x_t_ratio": 5.953776244487,
+    "long_run_gap_per_unit_cycle_pp": 1.219911711793,
+    "lr_statistic_against_no_coupling": 34.802923281521,
+    "n_rows": 788,
+    "persistence_a": 0.994814070132,
+    "selected_lag_months": 10,
+    "stationary_sd_pp": 0.194572313319,
+    "unconditional_mean_pp": 0.098553969748
+   },
+   "joint_loglik": 2225.515987676062,
+   "policy": {
+    "innovation_sd": 0.254011941072,
+    "intercept": -0.035727746553,
+    "lam_c": 0.034691062752,
+    "lam_u": 0.092150287916,
+    "lr_statistic_against_no_loadings": 7.09897080452,
+    "n_rows": 812,
+    "persistence_phi_u": 0.961414959736,
+    "standard_errors": {
+     "intercept": 0.015601284148,
+     "lam_c": 0.013593032497,
+     "lam_u": 0.060516792151,
+     "persistence": 0.00916783703
+    },
+    "stationary_sd": 0.92333630625,
+    "units_note": "u is build_panel's STANDARDISED policy deviation (mean 0, sd 1 on the panel), so lam_u and lam_c are in standard deviations of u per percentage point of inflation gap and per unit of cycle input"
+   }
+  },
+  "status": "FROZEN INPUT, never written by this round"
+ },
+ "charter": "governance/decision-register.md D-SP-12 (owner ruling 2026-08-19)",
+ "l1_dispersion_calibration": {
+  "achieved_on_the_calibration_batch": {
+   "i_rule": {
+    "across_decade_sd": 2.77695524194,
+    "months_per_decade": 120.0,
+    "n_decades": 200.0,
+    "total_sd": 3.601571372466,
+    "within_decade_sd": 2.311357315038
+   },
+   "p2_components_sd_pp": {
+    "inflation_gap": 0.094052573652,
+    "policy_rule": 0.865510406558,
+    "season_term": 0.058343002402
+   },
+   "p2_economic_share": 0.576414539341,
+   "pi_star": {
+    "across_decade_sd": 2.472682228911,
+    "months_per_decade": 120.0,
+    "n_decades": 200.0,
+    "total_sd": 3.162250482765,
+    "within_decade_sd": 1.987141396372
+   },
+   "r_star": {
+    "across_decade_sd": 1.335280416264,
+    "months_per_decade": 120.0,
+    "n_decades": 200.0,
+    "total_sd": 1.725416983436,
+    "within_decade_sd": 1.101357818024
+   },
+   "x_gap": {
+    "across_decade_sd": 0.165178290263,
+    "months_per_decade": 120.0,
+    "n_decades": 200.0,
+    "total_sd": 0.191154315049,
+    "within_decade_sd": 0.09731350063
+   }
+  },
+  "adopted_converged_within_tolerance": true,
+  "adopted_factors": {
+   "sigma_pi": 0.653297774331,
+   "sigma_r": 0.412113342499
+  },
+  "diagnosis": {
+   "attribution_arms": {
+    "sigma_pi and sigma_r at zero": {
+     "i_rule_total_sd": 1.033638310207,
+     "p2_economic_share": 0.11563367883,
+     "pi_star_across_decade_sd": 0.545990115812,
+     "r_star_across_decade_sd": 0.553806715751
+    },
+    "sigma_pi at zero only": {
+     "i_rule_total_sd": 3.768857622957,
+     "p2_economic_share": 0.598070858204,
+     "pi_star_across_decade_sd": 0.545990115812,
+     "r_star_across_decade_sd": 2.917866029449
+    },
+    "sigma_r at zero only": {
+     "i_rule_total_sd": 4.881652763515,
+     "p2_economic_share": 0.712863705962,
+     "pi_star_across_decade_sd": 3.741653196999,
+     "r_star_across_decade_sd": 0.553806715751
+    },
+    "unit (the unrecalibrated engine)": {
+     "i_rule_total_sd": 6.053559281287,
+     "p2_economic_share": 0.791916608595,
+     "pi_star_across_decade_sd": 3.741653196999,
+     "r_star_across_decade_sd": 2.917866029449
+    }
+   },
+   "question": "which L1 parameters produce the 1.6-1.7x dispersion",
+   "the_prior_attribution_that_does_not_hold": "2026-08-18-stage2-results.md 2.2 attributed it to the per-decade posterior redraw of the initial state. Pinning s0 to the posterior mean moves the generated i_rule sd from 5.6839 to 5.6903 -- the smoother is sharp at the last month of the fit span, so there is almost no posterior spread there to remove. Pinning mu_pi and mu_r as well reaches only 5.5814",
+   "what_it_is_instead": "the diffusion. pi* has a fitted half-life of 10.7 years at an innovation volatility of 2.68 pp and r* 7.8 years at 2.16 pp, so over a 120-month decade both states wander far further than the panel's own two states did, and different decades wander to different places"
+  },
+  "estimator": {
+   "at_unit_scale": {
+    "pi_star": {
+     "across_decade_sd": 3.741653196999,
+     "months_per_decade": 120.0,
+     "n_decades": 200.0,
+     "total_sd": 4.793878309488,
+     "within_decade_sd": 3.020992583823
+    },
+    "r_star": {
+     "across_decade_sd": 2.917866029449,
+     "months_per_decade": 120.0,
+     "n_decades": 200.0,
+     "total_sd": 3.776165896321,
+     "within_decade_sd": 2.415801402325
+    }
+   },
+   "calibration_batch": {
+    "n_decades": 200,
+    "seed": 20260819,
+    "why_not_the_exam_seed": "reading the target on the batch the bars are read on would make the calibration in-sample against its own verification"
+   },
+   "floor_F": "the across-decade spread that survives k = 0",
+   "floors_at_zero_scale": {
+    "pi_star": {
+     "across_decade_sd": 0.545990115812,
+     "months_per_decade": 120.0,
+     "n_decades": 200.0,
+     "total_sd": 0.634129636669,
+     "within_decade_sd": 0.326152452708
+    },
+    "r_star": {
+     "across_decade_sd": 0.553806715751,
+     "months_per_decade": 120.0,
+     "n_decades": 200.0,
+     "total_sd": 0.747545283213,
+     "within_decade_sd": 0.505730818663
+    }
+   },
+   "relation": "S(k)^2 = F^2 + k^2 (S(1)^2 - F^2)",
+   "solution": "k = sqrt(max(T^2 - F^2, 0)) / sqrt(S(1)^2 - F^2)",
+   "steps": [
+    {
+     "achieved_across_decade_sd": {
+      "pi_star": 2.466161236839,
+      "r_star": 1.364624150658
+     },
+     "factors": {
+      "sigma_pi": 0.651500662384,
+      "sigma_r": 0.423571136811
+     },
+     "inside_tolerance": false,
+     "relative_error": {
+      "pi_star": -0.002616528727,
+      "r_star": 0.023063731869
+     },
+     "step": 1
+    },
+    {
+     "achieved_across_decade_sd": {
+      "pi_star": 2.472682228911,
+      "r_star": 1.335280416264
+     },
+     "factors": {
+      "sigma_pi": 0.653297774331,
+      "sigma_r": 0.412113342499
+     },
+     "inside_tolerance": true,
+     "relative_error": {
+      "pi_star": 2.0739921e-05,
+      "r_star": 0.001064626546
+     },
+     "step": 2
+    }
+   ],
+   "verification_rule": "apply, re-measure, at most 2 closed-form steps at a 2% relative tolerance; every step recorded"
+  },
+  "limitations": [
+   "history's pi* and r* are POSTERIOR-MEAN SMOOTHED paths and a generated decade is a forward simulation, so part of what this factor absorbs is the difference between a smoothed estimate and a simulated path rather than a difference in the world. It is nonetheless the comparison the exam itself makes: M4 decomposes history on exactly this series and p2_components scores the engine by the same function on its own",
+   "the target rests on six non-overlapping decades of one 68-year panel and NO usable sampling band for it exists: a 24-month moving-block bootstrap returns [0.43, 1.83] for pi* against the panel's own 2.47, because reassembling the path out of two-year blocks destroys exactly the long persistence the target is made of. That resampling is published as a null, not as a band. The target's uncertainty is therefore UNQUANTIFIED, and a reader should treat the two factors as point estimates with no interval",
+   "the recalibration is a scaling of an L1 posterior parameter, not a refit of L1. It does not re-derive the climate layer and it does not claim to",
+   "sigma_pi drives pi*, which sets the era dial, so this change moves the spine and therefore every pre-flesh bar. That is measured in the polish results document, not assumed away"
+  ],
+  "p2_note": "P2's band appears nowhere in the estimator. The response curve is published so a reader can see that the adopted point is where the historical target puts it and not where the band is widest",
+  "p2_response_to_a_uniform_scale": [
+   {
+    "i_rule_total_sd": 6.053559281287,
+    "p2_economic_share": 0.791916608595,
+    "pi_star_across_decade_sd": 3.741653196999,
+    "r_star_across_decade_sd": 2.917866029449,
+    "uniform_scale": 1.0
+   },
+   {
+    "i_rule_total_sd": 5.467781654542,
+    "p2_economic_share": 0.756617816452,
+    "pi_star_across_decade_sd": 3.374010793271,
+    "r_star_across_decade_sd": 2.642946676871,
+    "uniform_scale": 0.9
+   },
+   {
+    "i_rule_total_sd": 4.883834355441,
+    "p2_economic_share": 0.713032031834,
+    "pi_star_across_decade_sd": 3.007454222715,
+    "r_star_across_decade_sd": 2.369332558862,
+    "uniform_scale": 0.8
+   },
+   {
+    "i_rule_total_sd": 4.305135816281,
+    "p2_economic_share": 0.659330554071,
+    "pi_star_across_decade_sd": 2.642435401754,
+    "r_star_across_decade_sd": 2.097534523891,
+    "uniform_scale": 0.7
+   },
+   {
+    "i_rule_total_sd": 3.729514436215,
+    "p2_economic_share": 0.593128604625,
+    "pi_star_across_decade_sd": 2.279693112082,
+    "r_star_across_decade_sd": 1.828362669188,
+    "uniform_scale": 0.6
+   },
+   {
+    "i_rule_total_sd": 3.164183644474,
+    "p2_economic_share": 0.513400749609,
+    "pi_star_across_decade_sd": 1.92051774275,
+    "r_star_across_decade_sd": 1.563174234682,
+    "uniform_scale": 0.5
+   },
+   {
+    "i_rule_total_sd": 2.611131587438,
+    "p2_economic_share": 0.420349397822,
+    "pi_star_across_decade_sd": 1.567363390304,
+    "r_star_across_decade_sd": 1.304401009122,
+    "uniform_scale": 0.4
+   },
+   {
+    "i_rule_total_sd": 1.826606930993,
+    "p2_economic_share": 0.267510778562,
+    "pi_star_across_decade_sd": 1.062113304595,
+    "r_star_across_decade_sd": 0.939896643071,
+    "uniform_scale": 0.25
+   }
+  ],
+  "target": {
+   "measured_before_any_bar_was_read": true,
+   "mentions_no_bar": true,
+   "per_state": {
+    "i_rule": {
+     "across_decade_sd": 2.897566705317,
+     "months_per_decade": 120.0,
+     "n_decades": 6.0,
+     "note": "reported, never targeted -- it is a consequence of the two states",
+     "total_sd": 3.4006000922,
+     "within_decade_sd": 2.142356141178
+    },
+    "pi_star": {
+     "across_decade_sd": 2.472630946742,
+     "months_per_decade": 120.0,
+     "moving_block_null_not_a_sampling_band": {
+      "hi": 1.829897069032,
+      "lo": 0.43100563634,
+      "median": 1.016934994327,
+      "what_it_is": "how far apart decade means would be if nothing persisted past 24 months. The panel's own reading sits ABOVE this null because the across-decade spread of these states IS long persistence -- the 1970s-to-1990s level shift. It is published as a null and is not a band on the target"
+     },
+     "n_decades": 6.0,
+     "overlapping_window_across_decade_sd": 1.985554325561,
+     "total_sd": 2.718214701456,
+     "within_decade_sd": 1.517464468538
+    },
+    "r_star": {
+     "across_decade_sd": 1.333860353124,
+     "months_per_decade": 120.0,
+     "moving_block_null_not_a_sampling_band": {
+      "hi": 1.367750594546,
+      "lo": 0.349061270644,
+      "median": 0.805264021795,
+      "what_it_is": "how far apart decade means would be if nothing persisted past 24 months. The panel's own reading sits ABOVE this null because the across-decade spread of these states IS long persistence -- the 1970s-to-1990s level shift. It is published as a null and is not a band on the target"
+     },
+     "n_decades": 6.0,
+     "overlapping_window_across_decade_sd": 1.421869193592,
+     "total_sd": 2.19996921552,
+     "within_decade_sd": 1.838109088791
+    }
+   },
+   "quantity": "the panel's own across-decade standard deviation of pi* and of r*: the sd of the six non-overlapping 120-month decade means, on the same posterior-mean smoothed path M4 decomposes history's curve on"
+  },
+  "what_moves": {
+   "layer": "L1, the slow climate posterior (ah.gen.climate)",
+   "parameters": [
+    "sigma_pi",
+    "sigma_r"
+   ],
+   "untouched": "every half-life, the other three state volatilities, beta_g, delta_L, both Taylor loadings, and every one of the 42 stage-2 coefficients"
+  }
+ },
+ "produced_by": "scripts/stage2_polish_calibrate.py",
+ "purpose": "D-SP-12 change 3: the slow climate's two level-carrying innovation volatilities, recalibrated against the panel's own decade-scale spread of the same two states. The week-A stage-2 fit is CARRIED UNCHANGED -- all 42 coefficients are the frozen artifact's and this round refits none of them",
+ "schema": "stage2-fitted-params-2"
+}
