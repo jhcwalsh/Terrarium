@@ -633,7 +633,13 @@ def gen_probe(infl_pct: float) -> EnsembleResult:
 
 
 def _declared_b_infl(sleeve: str) -> float:
-    art = yaml.safe_load(Path("mappings/sleeve-mappings-v1.2.yaml").read_text())
+    # The floor must come from the artifact the generated plane actually
+    # consumes, so read it through the runtime accessor rather than a pinned
+    # filename (chosen-PE adoption, D-ER16-1: ARTIFACT_PATH moved to v1.3,
+    # whose inflation_passthrough blocks are v1.2 byte-identical).
+    from ah.port.mapping import ARTIFACT_PATH
+
+    art = yaml.safe_load(ARTIFACT_PATH.read_text(encoding="utf-8"))
     return float(art["pm_sleeves"][sleeve]["inflation_passthrough"]["b_infl"])
 
 

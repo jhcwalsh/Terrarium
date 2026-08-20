@@ -1,15 +1,18 @@
 """Apply the estimated factor -> sleeve mappings to an ensemble (WP3.2 runtime).
 
-Loads the versioned artifact (``mappings/sleeve-mappings-v1.2.yaml`` — ER-14
-close-out, D-ER14-2, 2026-08-18; the file WorldSpec's ``mapping_version``
-names) and turns a generated ensemble into TRUE sleeve returns: linear
-loadings + correlated residuals for six HF sleeves, and the CTA RULE (DN-5
-§3.4 — a time-series-momentum overlay computed on the generated paths
-themselves, vol-targeted, with a cost drag) for the seventh. No estimation
-happens here; the artifact is the frozen output of
-``scripts/estimate_sleeve_mappings_v1_2.py`` and carries its own provenance.
-v1.2's HF rows, residual_correlation and sleeve loadings are v1.1 verbatim
-(F5b: no coefficient moves); only ``cta_rule`` gains the F5a EWMA fix below.
+Loads the versioned artifact (``mappings/sleeve-mappings-v1.3.yaml`` —
+chosen-PE adoption, D-ER16-1 / AM-2026-08-19-001, 2026-08-19; the file
+WorldSpec's ``mapping_version`` names) and turns a generated ensemble into
+TRUE sleeve returns: linear loadings + correlated residuals for six HF
+sleeves, and the CTA RULE (DN-5 §3.4 — a time-series-momentum overlay
+computed on the generated paths themselves, vol-targeted, with a cost drag)
+for the seventh. No estimation happens here; the artifact is the frozen
+output of ``scripts/make_sleeve_mappings_v1_3.py`` and carries its own
+provenance. v1.3 is byte-identical to v1.2 except the ``pm_buyout`` row's
+two CHOSEN coefficients (equity_mkt 1.2, alpha_quarterly 0.007399) and its
+self-declared identity; v1.2 (ER-14 close-out, D-ER14-2, 2026-08-18) had
+HF rows, residual_correlation and sleeve loadings v1.1 verbatim (F5b: no
+coefficient moves), with ``cta_rule`` gaining the F5a EWMA fix below.
 
 Determinism: path ``k`` draws its residuals from ``PCG64(seed + 7919 * k)`` —
 the platform seed rule — so a sleeve panel is bit-reproducible from
@@ -28,7 +31,7 @@ import yaml
 from ah.gen.base import Ensemble
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
-ARTIFACT_PATH = _REPO_ROOT / "mappings" / "sleeve-mappings-v1.2.yaml"
+ARTIFACT_PATH = _REPO_ROOT / "mappings" / "sleeve-mappings-v1.3.yaml"
 
 SEED_STRIDE = 7919
 BOND_DURATION_YEARS = 8.5  # matches the sealed govt_tr_10y derived-series convention

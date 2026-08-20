@@ -10,8 +10,11 @@ reproduces byte-identical numbers.
 
 WHAT IT MEASURES
 ----------------
-A. The sealed ``pm_buyout`` row, echoed from ``mappings/sleeve-mappings-v1.2.yaml``
-   through the same ``ah.port.mapping.load_artifact`` the adapter uses.
+A. The sealed ``pm_buyout`` row, echoed through the same
+   ``ah.port.mapping.load_artifact`` the adapter uses (the accessor, not a
+   pinned version: the ER-16 finding was measured while ARTIFACT_PATH named
+   v1.2; re-running after the chosen-PE adoption, D-ER16-1, reads v1.3 and
+   therefore measures the ADOPTED plane, which is the probe's job).
 B. An EXACT term decomposition of one path's PE tape. ``_pm_true_monthly_path``
    builds PE as an additive sum in monthly return space:
 

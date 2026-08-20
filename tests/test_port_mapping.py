@@ -51,9 +51,13 @@ class TestArtifact:
         """re-pinned under map-2026.08.2 (AM-2026-08-12-001).
         Re-pinned again under map-2026.08.3 (ER-14 close-out, D-ER14-2,
         2026-08-18): ARTIFACT_PATH moved to sleeve-mappings-v1.2.yaml (C1
-        extended to pm_buyout, F5a/F5b/F5c); HF rows verbatim."""
+        extended to pm_buyout, F5a/F5b/F5c); HF rows verbatim.
+        Re-pinned again under map-2026.08.4 (chosen-PE adoption, D-ER16-1 /
+        AM-2026-08-19-001, 2026-08-19): ARTIFACT_PATH moved to
+        sleeve-mappings-v1.3.yaml (pm_buyout chosen coefficients); HF rows
+        and everything else v1.2 verbatim."""
         doc = mp.load_artifact()
-        assert doc["mapping_version"] == "map-2026.08.3"
+        assert doc["mapping_version"] == "map-2026.08.4"
         assert doc["desmoothing_method"].startswith("glm_ma")  # SM-10 pairing
         assert set(doc["sleeves"]) == {
             "hf_credit",
@@ -129,20 +133,46 @@ class TestApplier:
     def test_artifact_and_report_agree_on_version(self):
         """Re-pinned under map-2026.08.3 (ER-14 close-out, D-ER14-2,
         2026-08-18): the runtime's report moved with ARTIFACT_PATH, from
-        MAPPINGS.md (v1.1) to MAPPINGS-v1.2.md."""
-        text = (mp._REPO_ROOT / "MAPPINGS-v1.2.md").read_text(encoding="utf-8")
-        assert yaml.safe_load(mp.ARTIFACT_PATH.read_text("utf-8"))["mapping_version"] in text
+        MAPPINGS.md (v1.1) to MAPPINGS-v1.2.md.
+        Re-pinned under map-2026.08.4 (chosen-PE adoption, D-ER16-1 /
+        AM-2026-08-19-001, 2026-08-19): v1.3 is a chosen-coefficient delta,
+        not an estimation release, so it has no MAPPINGS-vX.md fit report.
+        The agreement this test exists for — the runtime artifact and its
+        companion human-readable record naming the same release — now runs
+        against the governance record that sealed it: the amendment-log entry
+        whose payload names this artifact must carry the amendment id the
+        artifact self-declares."""
+        doc = yaml.safe_load(mp.ARTIFACT_PATH.read_text("utf-8"))
+        log = yaml.safe_load(
+            (mp._REPO_ROOT / "governance" / "amendment-log.yaml").read_text(encoding="utf-8")
+        )
+        rel = mp.ARTIFACT_PATH.relative_to(mp._REPO_ROOT).as_posix()
+        sealing = [
+            e
+            for e in log["amendments"]
+            if isinstance(e.get("payload"), dict) and e["payload"].get("artifact") == rel
+        ]
+        assert sealing, f"no amendment-log entry names {rel}"
+        assert doc["amendment"] == sealing[-1]["amendment_id"]
 
 
-def test_runtime_consumes_the_v12_artifact():
+def test_runtime_consumes_the_v13_artifact():
     """AM-2026-08-12-001: the runtime's default artifact is v1.1. Written
     FAILING against v1.0 before ARTIFACT_PATH moved.
     Re-pinned under map-2026.08.3 (ER-14 close-out, D-ER14-2, 2026-08-18):
     ARTIFACT_PATH moved to sleeve-mappings-v1.2.yaml (C1 extended to
     pm_buyout, F5a/F5b/F5c); pm_direct_lending's route is v1.1 verbatim
-    (F5b: no coefficient moves)."""
+    (F5b: no coefficient moves).
+    Re-pinned under map-2026.08.4 (chosen-PE adoption, D-ER16-1 /
+    AM-2026-08-19-001, 2026-08-19): ARTIFACT_PATH moved to
+    sleeve-mappings-v1.3.yaml. The runtime must now serve the CHOSEN
+    pm_buyout row (equity_mkt 1.2, alpha_quarterly 0.007399 = 3%/yr);
+    pm_direct_lending's route stays v1.2 verbatim."""
     from ah.port.mapping import load_artifact
 
     doc = load_artifact()
-    assert doc["mapping_version"] == "map-2026.08.3"
+    assert doc["mapping_version"] == "map-2026.08.4"
     assert doc["pm_sleeves"]["pm_direct_lending"]["route"] == "bdc-anchor*0.5"
+    # the two ratified values, asserted where the runtime reads them (D-ER16-1)
+    assert doc["pm_sleeves"]["pm_buyout"]["loadings"]["equity_mkt"] == 1.2
+    assert doc["pm_sleeves"]["pm_buyout"]["alpha_quarterly"] == 0.007399
