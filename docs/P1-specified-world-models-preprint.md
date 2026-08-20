@@ -12,6 +12,13 @@
 > — no post-turn academic write-up exists — and that gap is recorded as
 > outstanding work in `docs/current/README.md`. Kept, served and citable.
 >
+> **ADDENDUM — 2026-08-19.** A successor now exists **in draft**:
+> `docs/papers/2026-08-19-economic-realism-engineering-quantity-DRAFT.md`, which
+> re-makes the argument after the turn and carries the spine and stage-2 campaign
+> record. It is **pending owner edits and governs nothing**, so this paper is
+> still the only released academic account and the paragraph above stands
+> unamended.
+>
 > Index: `docs/current/README.md`.
 
 ---
