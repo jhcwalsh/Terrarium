@@ -505,13 +505,53 @@ describe("BookEntry", () => {
     expect(byTestId("book-total").textContent).toContain("100");
   });
 
-  it("blocks the commit when the total is not 100", async () => {
+  it("a value edit no longer blocks Play - weights derive and the posted book rescales (app-open-03)", async () => {
+    // INVERTED 2026-08-19 (app-open-03, owner-reported): this test used to
+    // pin `expect(findButton(/play/i).disabled).toBe(true)` at total 112 —
+    // the exact deadlock the owner hit ("if it is increased the book doesn't
+    // add to 100 so wont go forward, but there is no way to adjust the
+    // weights"). Values are now free-scale and the WEIGHTS derive
+    // (value/total, live, summing to 100 by construction); Play posts the
+    // book rescaled to the contract's 100-point scale. The running total
+    // still reads 112 — it is the typed number, not a gate.
     stubFetch();
-    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const onReady = vi.fn();
+    await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     const equity = byLabel<HTMLInputElement>("equity");
     setValue(equity, "50");
     expect(byTestId("book-total").textContent).toContain("112");
-    expect(findButton(/play/i).disabled).toBe(true);
+    expect(findButton(/play/i).disabled).toBe(false);
+    // the weight column moved with the edit: 50/112 = 44.6%, and the
+    // private cells re-derived against the same new denominator
+    expect(byLabel<HTMLInputElement>("equity weight").value).toBe("44.6");
+    expect(byTestId("weight-pe").textContent).toContain("17.9"); // 20/112
+    act(() => findButton(/play/i).click());
+    const posted = onReady.mock.calls[0][0];
+    const postedTotal =
+      Object.values(posted.liquid as Record<string, number>).reduce((a, b) => a + b, 0) +
+      (Object.values(posted.private as Record<string, { value: { nav_true: number } }[]>)
+        .flat()
+        .reduce((a, r) => a + r.value.nav_true, 0) as number) +
+      (posted.cash as number);
+    expect(postedTotal).toBeCloseTo(100, 6);
+    // the posted book preserves the typed weights exactly: equity holds
+    // 50/112 of the rescaled book
+    expect(posted.liquid.equity).toBeCloseTo((50 / 112) * 100, 6);
+    // and the rescale kept the rung identity: paid_in + unfunded still
+    // equals committed + recycled on every rung
+    for (const rungs of Object.values(
+      posted.private as Record<
+        string,
+        { commitment: Record<string, number> }[]
+      >,
+    )) {
+      for (const r of rungs) {
+        expect(r.commitment.paid_in + r.commitment.unfunded).toBeCloseTo(
+          r.commitment.committed + r.commitment.cumulative_recycled,
+          9,
+        );
+      }
+    }
   });
 
   it("renders only the sleeves the world carries", async () => {
@@ -858,25 +898,30 @@ describe("BookEntry — policy targets and reporting bands", () => {
   });
 
   it("shows the policy weight the target implies, not the number typed", async () => {
-    // the drift readout. 51 out of (111 targets + 2 cash) is 45.1% — so a
-    // readout that merely echoed the typed number would print "51.0" and
-    // fail here. That is the point: while the targets are mid-edit and do
-    // not yet total 100, the implied weight is NOT the number in the box.
+    // the drift readout. Typed targets are RELATIVE since app-open-03: 51
+    // out of 111 typed target points, filling the 98% cash leaves, is
+    // 45.0% — so a readout that merely echoed the typed number would print
+    // "51.0" and fail here. That is the point: the implied weight is NOT
+    // the number in the box, it is the target as it will be POSTED.
+    // (History: this asserted 45.1 — target/(sum targets + cash) — until
+    // app-open-03 made the readout the posted-target rule, whose sum with
+    // cash is exactly 100 by construction; the old denominator's wasn't.)
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     expect(byTestId("target-weight-equity").textContent).toContain("38.0");
     setValue(byLabel<HTMLInputElement>("equity target"), "51");
-    expect(byTestId("target-weight-equity").textContent).toContain("45.1");
+    expect(byTestId("target-weight-equity").textContent).toContain("45.0");
     expect(byTestId("target-weight-equity").textContent).not.toContain("51");
   });
 
   it("shows the drift between the weight held and the weight targeted", async () => {
-    // held 38.0 against a policy weight of 45.1 is -7.1 points of drift.
+    // held 38.0 against a policy weight of 45.0 is -7.0 points of drift
+    // (was -7.1 under the pre-app-open-03 denominator; see the test above).
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
     expect(byTestId("target-drift-equity").textContent).toContain("+0.0");
     setValue(byLabel<HTMLInputElement>("equity target"), "51");
-    expect(byTestId("target-drift-equity").textContent).toContain("-7.1");
+    expect(byTestId("target-drift-equity").textContent).toContain("-7.0");
   });
 
   it("renders one target row per tradeable sleeve this world carries — eight, not nine", async () => {
@@ -1012,15 +1057,33 @@ describe("BookEntry — policy targets and reporting bands", () => {
     expect(byTestId("ranked-note").textContent).toMatch(/has been edited from the served default/i);
   });
 
-  it("blocks the commit when the targets do not total 100 with cash", async () => {
-    // the VALUES still total 100 — only the targets are off — so the fault
-    // named must be the targets' own, not the book total's.
+  it("targets that do not total 100 with cash rescale on Play instead of blocking (app-open-03)", async () => {
+    // INVERTED 2026-08-19 (app-open-03): this pinned the "targets do not
+    // total 100" gate. That gate became a deadlock generator once values
+    // went free-scale — a VALUE edit moves the cash weight, which moves the
+    // required target total out from under correctly-entered targets, and
+    // the analyst was left chasing decimals. Typed targets are RELATIVE
+    // now: the posted document rescales them to fill exactly what the cash
+    // weight leaves (the same identity `validate_book` enforces), so this
+    // book plays, and its posted targets satisfy the identity by
+    // construction.
     stubFetch();
-    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const onReady = vi.fn();
+    await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     setValue(byLabel<HTMLInputElement>("equity target"), "45");
     expect(byTestId("book-total").textContent).toContain("100");
-    expect(findButton(/play/i).disabled).toBe(true);
-    expect(byTestId("shape-faults").textContent).toMatch(/targets do not total 100/i);
+    expect(findButton(/play/i).disabled).toBe(false);
+    expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
+    act(() => findButton(/play/i).click());
+    const posted = onReady.mock.calls[0][0];
+    const targetTotal = Object.values(posted.targets as Record<string, number>).reduce(
+      (a, b) => a + b,
+      0,
+    );
+    expect(targetTotal + posted.cash).toBeCloseTo(100, 6);
+    // and the typed ratios survived the rescale: equity was typed at 45 of
+    // 105 target points, filling the 98 points cash leaves
+    expect(posted.targets.equity).toBeCloseTo((45 / 105) * 98, 6);
   });
 
   it("blocks the commit on a negative target even when the targets still total 100", async () => {
@@ -1345,5 +1408,261 @@ describe("BookEntry — the vintage chart tracks live rung edits (task 10)", () 
     expect(
       pcSection.querySelector('[data-testid="vintage-nav-0"]')!.getAttribute("cy"),
     ).toBe(pcBefore);
+  });
+});
+
+/**
+ * app-open-03 (owner-reported defects, 2026-08-19): values are the source of
+ * truth and weights derive from them live; weights are editable symmetrically
+ * (total held fixed, other liquid classes and cash absorb proportionally);
+ * no positive-total book can deadlock; and the commitment plan FOLLOWS the
+ * book — every book edit re-posts the current (as-posted) book to
+ * `POST /book/plan` and replaces the plan grid with the server's answer.
+ * The derivation itself lives server-side (`book_commitment_plan`,
+ * ah/play.py) — these tests stub the endpoint and assert the round-trip,
+ * never plan arithmetic.
+ */
+describe("BookEntry — weights derive and edit; the plan follows the book (app-open-03)", () => {
+  const NEW_PLAN = {
+    state_version: "commitment-plan-0.1",
+    points: { pe: [2.5], pc: [1.0], re: [0.6], infra: [0.6] },
+  };
+
+  function routedWithPlan(
+    extra: { match: string; ok: boolean; status?: number; body: unknown }[] = [],
+  ) {
+    return stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      ...extra,
+      { match: "/book/plan", ok: true, body: { plan: NEW_PLAN, plan_digest: "c".repeat(64) } },
+    ]);
+  }
+
+  function planCallBodies(fn: ReturnType<typeof stubFetchRouted>) {
+    // the route stub's vi.fn is typed on `url` alone, but fetch passes
+    // (url, init) — read the recorded init via the untyped call tuple.
+    return (fn.mock.calls as unknown as [string, RequestInit][])
+      .filter(([url]) => String(url).includes("/book/plan"))
+      .map(([, init]) => JSON.parse(init.body as string));
+  }
+
+  it("editing a value re-derives every weight, live, summing to 100", async () => {
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    // untouched: equity holds 38 of 100
+    expect(byLabel<HTMLInputElement>("equity weight").value).toBe("38");
+    setValue(byLabel<HTMLInputElement>("equity"), "88");
+    // total is now 150; every weight re-derived against it
+    expect(byLabel<HTMLInputElement>("equity weight").value).toBe("58.7"); // 88/150
+    expect(byLabel<HTMLInputElement>("bonds weight").value).toBe("8"); // 12/150
+    expect(byTestId("weight-pe").textContent).toContain("13.3"); // 20/150
+    // and the displayed weights sum to 100 (to display rounding)
+    const inputs = ["equity", "bonds", "hy", "commodities", "cash"].map((s) =>
+      Number(byLabel<HTMLInputElement>(s + " weight").value),
+    );
+    const spans = ["pe", "pc", "re", "infra"].map((s) =>
+      parseFloat(byTestId("weight-" + s).textContent ?? ""),
+    );
+    const sum = [...inputs, ...spans].reduce((a, b) => a + b, 0);
+    expect(Math.abs(sum - 100)).toBeLessThan(0.5);
+  });
+
+  it("editing a weight holds the total fixed and scales the other liquid classes and cash proportionally", async () => {
+    // THE rule (stated in the screen's copy): equity to 50% of the unchanged
+    // 100-point total -> equity value 50; the absorbers (bonds 12, hy 5,
+    // commodities 5, cash 2 = 24) must now hold 12, so each halves; the
+    // private ladders are NOT touched from this row.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("equity weight"), "50");
+    expect(byTestId("book-total").textContent).toContain("100");
+    expect(byLabel<HTMLInputElement>("equity").value).toBe("50");
+    expect(byLabel<HTMLInputElement>("bonds").value).toBe("6");
+    expect(byLabel<HTMLInputElement>("hy").value).toBe("2.5");
+    expect(byLabel<HTMLInputElement>("cash").value).toBe("1");
+    expect(byTestId("value-pe").textContent).toBe("20.0");
+    expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("20");
+    // whichever field was last edited wins, with no mode toggle: the value
+    // input now takes the same class back
+    setValue(byLabel<HTMLInputElement>("equity"), "38");
+    expect(byLabel<HTMLInputElement>("equity weight").value).toBe("43.2"); // 38/88
+  });
+
+  it("no positive-total book can deadlock Play", async () => {
+    // the app-open-03 property, straight from the owner's report: whatever
+    // the values say, a finite non-negative book with a positive total can
+    // proceed. Sweep a few shapes that used to jam the old total gate.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    for (const [sleeve, value] of [
+      ["equity", "200"],
+      ["cash", "50"],
+      ["bonds", "0"],
+    ] as const) {
+      setValue(byLabel<HTMLInputElement>(sleeve), value);
+      expect(findButton(/play/i).disabled).toBe(false);
+    }
+    for (const s of ["equity", "cash", "hy", "commodities"] as const) {
+      setValue(byLabel<HTMLInputElement>(s), "0");
+    }
+    // privates still hold NAV, so the total is positive and Play stays live
+    expect(findButton(/play/i).disabled).toBe(false);
+  });
+
+  it("a vintage edit re-posts the book and the plan grid follows the server's answer", async () => {
+    // symptom 2's core walk: edit a HISTORICAL VINTAGE field -> the plan tab
+    // changes. The edit here is a reported mark, which is what the server's
+    // pacing flex actually reads (`book_commitment_plan`'s docstring).
+    const fn = routedWithPlan();
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("3.6");
+    setValue(byLabel<HTMLInputElement>("pe rung 0 nav_reported"), "15");
+    await flush();
+    await flush();
+    const bodies = planCallBodies(fn);
+    expect(bodies.length).toBeGreaterThan(0);
+    // nav_true was untouched, so the book still totals 100 and is posted
+    // VERBATIM — the endpoint sees exactly the typed document
+    expect(bodies.at(-1).run_id).toBe("r1");
+    expect(bodies.at(-1).book.private.pe[0].value.nav_reported).toBe(15);
+    // and the grid is now the SERVER's answer, not a local recompute
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("2.5");
+    expect(byLabel<HTMLInputElement>("infra plan year 0").value).toBe("0.6");
+  });
+
+  it("a value edit re-posts the book AS IT WOULD BE POSTED - rescaled to 100", async () => {
+    const fn = routedWithPlan();
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    setValue(byLabel<HTMLInputElement>("equity"), "88"); // total 150
+    await flush();
+    await flush();
+    const body = planCallBodies(fn).at(-1);
+    expect(body).toBeDefined();
+    const liquidSum = (Object.values(body.book.liquid) as number[]).reduce((a, b) => a + b, 0);
+    const rungs = (Object.values(body.book.private) as { value: { nav_true: number } }[][]).flat();
+    const privateSum = rungs.reduce((a, r) => a + r.value.nav_true, 0);
+    expect(liquidSum + privateSum + body.book.cash).toBeCloseTo(100, 6);
+    expect(body.book.liquid.equity).toBeCloseTo((88 / 150) * 100, 6);
+  });
+
+  it("a target edit re-posts the book and carries the posted targets", async () => {
+    const fn = routedWithPlan();
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    setValue(byLabel<HTMLInputElement>("pe target"), "10");
+    setValue(byLabel<HTMLInputElement>("equity target"), "48");
+    await flush();
+    await flush();
+    const body = planCallBodies(fn).at(-1);
+    expect(body).toBeDefined();
+    // 48 + 12 + 5 + 5 + 10 + 8 + 5 + 5 = 98 with cash 2: consistent, so the
+    // typed targets go through verbatim
+    expect(body.book.targets.pe).toBe(10);
+    expect(body.book.targets.equity).toBe(48);
+  });
+
+  it("a rebuilt ladder re-posts the book and the plan follows", async () => {
+    const fn = routedWithPlan([
+      {
+        match: "/book/ladder",
+        ok: true,
+        body: {
+          rungs: [
+            {
+              commitment: {
+                committed: 3,
+                paid_in: 1.5,
+                unfunded: 1.5,
+                recallable_balance: 0,
+                cumulative_recycled: 0,
+              },
+              value: { nav_true: 12, nav_reported: 12, cumulative_distributions: 0 },
+              identity: { vintage_year: 2022 },
+            },
+          ],
+        },
+      },
+    ]);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "12");
+    act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
+    await flush();
+    await flush();
+    expect(byTestId("value-pe").textContent).toBe("12.0");
+    expect(planCallBodies(fn).length).toBeGreaterThan(0);
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("2.5");
+  });
+
+  it("a hand-edited plan is the analyst's: it stops following book edits until Reset plan", async () => {
+    const fn = routedWithPlan();
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    expect(byTestId("plan-note").textContent).toMatch(/derived by the server/i);
+    setValue(byLabel<HTMLInputElement>("pe plan year 0"), "5");
+    expect(byTestId("plan-note").textContent).toMatch(/taken this plan over by hand/i);
+    setValue(byLabel<HTMLInputElement>("equity"), "88");
+    await flush();
+    await flush();
+    // the typed cell survives; the endpoint was never asked
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("5");
+    expect(planCallBodies(fn).length).toBe(0);
+    // Reset plan hands it back to the server's derivation for the CURRENT book
+    act(() => findButton(/^reset plan$/i).click());
+    await flush();
+    await flush();
+    expect(planCallBodies(fn).length).toBeGreaterThan(0);
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("2.5");
+    expect(byTestId("plan-note").textContent).toMatch(/derived by the server/i);
+  });
+
+  it("a refused recompute shows the server's own message on the tab and does not gate Play", async () => {
+    const fn = stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      {
+        match: "/book/plan",
+        ok: false,
+        status: 422,
+        body: { detail: "book totals 150, must total 100" },
+      },
+    ]);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    setValue(byLabel<HTMLInputElement>("equity"), "88");
+    await flush();
+    await flush();
+    expect(fn.mock.calls.some(([url]) => String(url).includes("/book/plan"))).toBe(true);
+    expect(byTestId("plan-error").textContent).toMatch(/must total 100/);
+    // the cap pre-flight and POST /sessions still guard the contract; a
+    // display-refresh failure is not a deadlock
+    expect(findButton(/play/i).disabled).toBe(false);
+  });
+
+  it("an untouched book never asks for a recompute and keeps the served plan verbatim", async () => {
+    const fn = routedWithPlan();
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await flush();
+    await flush();
+    expect(planCallBodies(fn).length).toBe(0);
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("3.6");
+    // and reverting an edit restores the served plan without a round-trip
+    setValue(byLabel<HTMLInputElement>("bonds"), "13");
+    await flush();
+    await flush();
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("2.5"); // followed the edit
+    setValue(byLabel<HTMLInputElement>("bonds"), "12");
+    await flush();
+    expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("3.6"); // served again
+    expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
   });
 });

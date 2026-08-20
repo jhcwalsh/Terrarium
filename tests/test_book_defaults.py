@@ -171,3 +171,105 @@ class TestDefaultPlan:
             assert pace[11] < cap  # 1.06**11 ~= 1.898: still below the cap
             for k in range(12, windows):  # 1.06**12 ~= 2.012: clamps from here
                 assert pace[k] == cap
+
+
+class TestBookCommitmentPlan:
+    """``book_commitment_plan`` (app-open-03): the plan the server derives for
+    an ENTERED book — the default window rule with DN-5's policy flex
+    evaluated at the book's own opening reported private weight, so weight
+    edits AND vintage-ladder edits are reflected in the plan (the owner's
+    2026-08-19 report). See the function's docstring for what does and does
+    not move it: the flex reads reported NAV, not unfunded balances."""
+
+    @staticmethod
+    def _scaled_private(book, sleeve: str, factor: float):
+        """The book with one private sleeve's rungs scaled linearly (every
+        money field, preserving the recycling identity) and the freed NAV
+        parked on equity so the book still totals 100."""
+        import json as _json
+
+        doc = _json.loads(book.model_dump_json())
+        for rung in doc["private"][sleeve]:
+            for section in ("commitment", "value"):
+                for key, value in rung[section].items():
+                    rung[section][key] = value * factor
+        # the freed TRUE nav is what the liquid side must absorb
+        freed = sum(r["value"]["nav_true"] for r in book.private[sleeve]) * (1.0 - factor)
+        doc["liquid"]["equity"] += freed
+        from ah.port.book import OpeningBook
+
+        return OpeningBook.model_validate(doc)
+
+    def test_the_default_book_reproduces_the_default_plan_to_float_dust(self):
+        # The seeded default holds exactly its policy private weight (up to
+        # _seed_ladder's scaling dust), so the policy flex is a multiplier of
+        # 1 + O(1e-8) and the book-derived plan is the served default plan to
+        # well inside display precision — the entry screen only calls this
+        # for an EDITED book, but the two derivations must agree at the
+        # untouched point or the first keystroke would visibly jump the grid.
+        from ah.play import book_commitment_plan
+
+        book = default_opening_book(START_TARGETS)
+        derived = book_commitment_plan(book)
+        served = default_commitment_plan(START_TARGETS)
+        for sleeve in PRIVATE_ASSETS:
+            for got, want in zip(derived.points[sleeve], served.points[sleeve], strict=True):
+                assert got == pytest.approx(want, rel=1e-6)
+
+    def test_raising_a_private_target_raises_that_sleeves_pace(self):
+        from ah.play import book_commitment_plan
+
+        book = default_opening_book(START_TARGETS)
+        assert book.targets is not None  # the derived default always carries them
+        retargeted = book.model_copy(
+            update={
+                "targets": {
+                    **book.targets,
+                    "pe": book.targets["pe"] + 5.0,
+                    "equity": book.targets["equity"] - 5.0,
+                }
+            }
+        )
+        base = book_commitment_plan(book)
+        moved = book_commitment_plan(retargeted)
+        assert moved.points["pe"][0] > base.points["pe"][0]
+
+    def test_shrinking_a_private_ladder_paces_every_sleeve_up(self):
+        # Halving pe's ladder (NAV parked on equity) drops the book's
+        # reported private weight below policy, so DN-5's flex paces the
+        # whole programme UP — this is the vintage-edit reactivity the owner
+        # asked for, and it must move the OTHER sleeves too (one multiplier,
+        # not per-sleeve gaps).
+        from ah.play import book_commitment_plan
+
+        book = default_opening_book(START_TARGETS)
+        shrunk = self._scaled_private(book, "pe", 0.5)
+        base = book_commitment_plan(book)
+        moved = book_commitment_plan(shrunk)
+        for sleeve in PRIVATE_ASSETS:
+            assert moved.points[sleeve][0] > base.points[sleeve][0]
+
+    def test_the_derived_plan_always_validates_against_its_own_targets(self):
+        # band-clipped at 1.5x < the 2.0x cap, and the escalation clamp
+        # reuses validate_plan's exact cap expression — so no book can be
+        # handed a plan the door then refuses.
+        from ah.play import book_commitment_plan
+
+        book = default_opening_book(START_TARGETS)
+        for candidate in (book, self._scaled_private(book, "pe", 0.25)):
+            plan = book_commitment_plan(candidate, windows=15)
+            validate_plan(plan, candidate.effective_targets())  # must not raise
+
+    def test_the_opening_reported_weight_matches_the_portfolio_definition(self):
+        # OpeningBook.private_weight_reported restates
+        # Portfolio.private_weight_reported on the entered document; the two
+        # must agree on the built portfolio or the plan is derived from a
+        # different quantity than the engine paces on.
+        from ah.play import Policy, _build_portfolio
+
+        book = default_opening_book(START_TARGETS)
+        liquid = _liquid_of(START_TARGETS)
+        portfolio, _cohorts = _build_portfolio(Policy(), dict(START_TARGETS), liquid, book)
+        assert book.private_weight_reported() == pytest.approx(
+            portfolio.private_weight_reported(), abs=1e-12
+        )

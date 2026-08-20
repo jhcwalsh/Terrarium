@@ -1641,10 +1641,12 @@ button.commit {
 }
 
 /* -- su-app-07: values, policy targets and reporting bands side by side ---- */
+/* app-open-03: a WEIGHT column joins between value and target — each class's
+   derived share of the typed total, editable for the liquid classes. */
 .policy-grid {
   display: grid;
   grid-template-columns:
-    minmax(110px, 1fr) 88px 88px minmax(64px, 78px) minmax(52px, 66px)
+    minmax(110px, 1fr) 88px 78px 88px minmax(64px, 78px) minmax(52px, 66px)
     76px 76px;
   gap: 6px 10px;
   align-items: center;
@@ -1711,7 +1713,8 @@ button.commit {
 }
 
 .policy-residual {
-  grid-column: 3 / -1;
+  /* app-open-03: starts after the cash row's value AND weight cells */
+  grid-column: 4 / -1;
   font-size: 11px;
   color: var(--dim);
 }
