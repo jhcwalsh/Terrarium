@@ -189,6 +189,17 @@ seal_scope:
     # on the Cliffwater CDLI export and does not appear in this artifact.
     - scripts/estimate_sleeve_mappings_v1_2.py
     - mappings/sleeve-mappings-v1.2.yaml
+    # AM-2026-08-19-001 (post_hoc, disclosed; ER-16 chosen-PE ruling,
+    # D-ER16-1, 2026-08-19): pm_buyout moves to CHOSEN coefficients with
+    # external anchors (DN-5 levered-beta prior 1.1-1.3 mid-range; the
+    # marks-free cashflow/PME 2-4%/yr mid-range) after the Route-C
+    # measurement found no internal refit supportable - the generator and
+    # artifact join in the commit that creates them, the same
+    # planned-arrival pattern as the pairs above. v1.2 stays sealed above
+    # as the measured record; v1.3 is forward-only and chosen, not fitted
+    # (r2_train_val null; provenance in the row's own chosen block).
+    - scripts/make_sleeve_mappings_v1_3.py
+    - mappings/sleeve-mappings-v1.3.yaml
     # AM-2026-08-01-003 (pre-hoc, same rule): WP3.3's smoothing-kernel estimate
     # joins — the sealed mark_lag criterion could be gamed through θ, so the
     # ESTIMATE seals; the kernel engine (src/ah/port/smoothing.py) stays
