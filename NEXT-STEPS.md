@@ -52,7 +52,7 @@ engine underneath it changed twice this week.
 
 # OWNER DECISIONS OPEN
 
-## 1. The stage-2 rulers — measured, awaiting adoption (D-SP-11)
+## 1. The stage-2 rulers — measured under D-SP-11; their ADOPTION is the open ruling
 
 `docs/superpowers/specs/2026-08-18-stage2-rulers-results.md` §6 states seven
 stop-questions. **Four are adoptions that change what the platform is**; three
