@@ -6,7 +6,7 @@
 # null (a chosen row has no fit R2). Trigger: ER-16 + the Route-C
 # measurement (2026-08-19-pe-desmooth-c-measurement.md). Everything
 # else is byte-identical to sleeve-mappings-v1.2.yaml (read-only).
-mapping_version: map-2026.08.3
+mapping_version: map-2026.08.4
 campaign_vintage_id: 2026-08-07.5
 desmoothing_method: glm_ma
 regressors:
@@ -371,7 +371,7 @@ cta_rule:
   halflife_months: 6
   position_cap: 1.0
 pm_vintage_id: 2026-08-10.1
-amendment: AM-2026-08-18-001 (extends AM-2026-08-15-001)
+amendment: AM-2026-08-19-001
 c2_status: 'deferred: awaiting Cliffwater CDLI export (AM-... / D-ER14-2)'
 pm_residuals:
   df: 5

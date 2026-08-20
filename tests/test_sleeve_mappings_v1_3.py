@@ -88,12 +88,22 @@ class TestDeclaredDiff:
         v12, v13 = self._docs()
         diffs = _walk_diff(v12, v13)
         assert set(diffs) == {
+            "mapping_version",
+            "amendment",
             "pm_sleeves.pm_buyout.alpha_quarterly",
             "pm_sleeves.pm_buyout.loadings.equity_mkt",
             "pm_sleeves.pm_buyout.r2_train_val",
             "pm_sleeves.pm_buyout.r2_note",
             "pm_sleeves.pm_buyout.chosen",
         }
+        # Self-identity (fix round on concern 1): two sealed artifacts must
+        # not share a self-declared identity, so v1.3 carries its own version
+        # and its own creating amendment, never v1.2's.
+        assert diffs["mapping_version"] == ("map-2026.08.3", "map-2026.08.4")
+        assert diffs["amendment"] == (
+            "AM-2026-08-18-001 (extends AM-2026-08-15-001)",
+            "AM-2026-08-19-001",
+        )
         assert diffs["pm_sleeves.pm_buyout.alpha_quarterly"] == (0.019441, 0.007399)
         assert diffs["pm_sleeves.pm_buyout.loadings.equity_mkt"] == (0.8362, 1.2)
         assert diffs["pm_sleeves.pm_buyout.r2_train_val"] == (0.269, None)
@@ -102,6 +112,10 @@ class TestDeclaredDiff:
 
     def test_every_other_sleeve_and_block_is_identical_to_v12(self):
         v12, v13 = self._docs()
+        assert v13.pop("mapping_version") == "map-2026.08.4"
+        assert v13.pop("amendment") == "AM-2026-08-19-001"
+        v12.pop("mapping_version")
+        v12.pop("amendment")
         v12.get("pm_sleeves", {}).pop("pm_buyout", None)
         v13.get("pm_sleeves", {}).pop("pm_buyout", None)
         assert v12 == v13

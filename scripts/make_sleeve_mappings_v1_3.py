@@ -57,6 +57,12 @@ AMENDMENT_ID = "AM-2026-08-19-001"
 RATIFICATION = "D-ER16-1"
 RULING_DATE = "2026-08-19"
 
+# The artifact's own identity. Two sealed artifacts must not share a
+# self-declared identity: v1.2 carries map-2026.08.3 / AM-2026-08-18-001,
+# so v1.3 declares its own version and its own creating amendment rather
+# than inheriting v1.2's (which would misattribute this file's provenance).
+MAPPING_VERSION = "map-2026.08.4"
+
 # The chosen values (D-ER16-1, owner-ratified 2026-08-19).
 CHOSEN_EQUITY_MKT = 1.2
 ALPHA_ANNUAL = 0.03
@@ -187,9 +193,15 @@ def build() -> str:
     alpha_q = chosen_alpha_quarterly()
     new_doc = copy.deepcopy(doc)
     new_doc["pm_sleeves"]["pm_buyout"] = _rebuilt_row(new_doc["pm_sleeves"]["pm_buyout"], alpha_q)
+    # The artifact's own identity (self-identity fix round): its version and
+    # its creating amendment, never v1.2's.
+    new_doc["mapping_version"] = MAPPING_VERSION
+    new_doc["amendment"] = AMENDMENT_ID
 
     # Assertion (b): the deep-diff is EXACTLY the declared change set.
     expected_diff: dict[str, tuple[object, object]] = {
+        "mapping_version": ("map-2026.08.3", MAPPING_VERSION),
+        "amendment": ("AM-2026-08-18-001 (extends AM-2026-08-15-001)", AMENDMENT_ID),
         "pm_sleeves.pm_buyout.alpha_quarterly": (REPLACED["alpha_quarterly"], alpha_q),
         "pm_sleeves.pm_buyout.loadings.equity_mkt": (
             REPLACED["equity_mkt"],
