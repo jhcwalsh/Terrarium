@@ -2093,3 +2093,43 @@ amendments:
     the Cliffwater export is not in hand, so this amendment ships C1 (extended) and
     F5 only, and names the CDLI dependency as the adoption trigger for the remainder.'
   type: protocol_change
+- amendment_id: AM-2026-08-19-001
+  date: '2026-08-19'
+  payload:
+    anchors:
+      alpha: cashflow/PME literature places net buyout outperformance at roughly
+        2-4%/yr (marks-free evidence); 3%/yr chosen mid-range
+      beta: DN-5 buyout prior 1.1-1.3 ('levered beta', Instructions/DN5-factor-sleeve-mapping.md);
+        1.2 chosen mid-range
+    artifact: mappings/sleeve-mappings-v1.3.yaml
+    generator: scripts/make_sleeve_mappings_v1_3.py
+    ratification: D-ER16-1
+    ratified_coefficients:
+      alpha_quarterly: 0.007399
+      equity_mkt: 1.2
+    seal_impact: G3 only. pre-registration.lock and pre-registration-g5.lock digests
+      are unchanged by this amendment.
+    superseded_lock_digest: sha256:9d00930c4ee16a4880713333e39ee6d79fb03e06c8312679acf3cbca91d91705
+    supersedes: nothing; sleeve-mappings-v1.2.yaml remains sealed and unedited
+    trigger: 'ER-16 + the Route-C measurement (2026-08-19-pe-desmooth-c-measurement.md):
+      the measured row is fitted on an appraisal index whose GFC was never recorded;
+      no internal refit is supportable.'
+  post_hoc: true
+  rationale: 'ER-16 chosen-PE ruling (D-ER16-1, 2026-08-19): the serenity finding
+    measured the generated plane unable to make buyout fall harder than its average
+    beta while paying it 8.06%/yr through a collapse, and the Route-C measurement
+    came back honest-negative -- the state-dependent de-smoother deepens the
+    reconstructed GFC only -26% -> -29%, the refit beta does not rise, the alpha
+    rises, and the D-preview finds no asymmetry, because the appraisal index never
+    recorded the crash. No internal refit is supportable, so the pm_buyout row moves
+    to CHOSEN coefficients on the generated plane (alpha_quarterly derived and
+    asserted in the generator from 3 * (1.03**(1/12) - 1), rounded 0.007399).
+    post_hoc TRUE, the honest flag exactly as ER-14 recorded: the values were
+    declared (the owner ruling, this entry, the D-register) BEFORE the artifact was
+    generated, and both anchors are EXTERNAL to the repo tapes -- a design-note
+    prior (DN-5 levered beta 1.1-1.3) that predates every fit, and the marks-free
+    cashflow/PME literature -- but the decision was made after seeing the measured
+    plane, so post-hoc it is. Adoption (src/ah/port/mapping.py repointing to v1.3,
+    with its play-alpha bump and world fences) is a separate release event; this
+    amendment only creates and seals the artifact.'
+  type: protocol_change

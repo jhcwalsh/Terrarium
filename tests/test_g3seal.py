@@ -165,3 +165,37 @@ class TestER14Amendment:
         assert declared["lambda_RE"] == 0.30 and declared["lambda_INFRA_default"] == 0.60
         assert len(declared) == 15
         assert entry.payload["extends"] == "AM-2026-08-15-001"
+
+
+class TestER16Amendment:
+    def test_the_er16_amendment_declares_the_chosen_coefficients(self):
+        """The chosen-PE values (D-ER16-1) are declared in the entry itself,
+        with the ratification, the superseded G3 digest, and the honest
+        post_hoc flag -- same discipline as AM-2026-08-18-001: values that
+        were not declared first are indistinguishable from tuned ones."""
+        from ah.eval.prereg import load_amendments
+
+        log = ROOT / "governance" / "amendment-log.yaml"
+        entry = {a.amendment_id: a for a in load_amendments(log)}["AM-2026-08-19-001"]
+        assert entry.payload["ratified_coefficients"] == {
+            "alpha_quarterly": 0.007399,
+            "equity_mkt": 1.2,
+        }
+        assert entry.payload["ratification"] == "D-ER16-1"
+        assert entry.payload["artifact"] == "mappings/sleeve-mappings-v1.3.yaml"
+        assert entry.payload["generator"] == "scripts/make_sleeve_mappings_v1_3.py"
+        assert entry.payload["superseded_lock_digest"] == (
+            "sha256:9d00930c4ee16a4880713333e39ee6d79fb03e06c8312679acf3cbca91d91705"
+        )
+        assert entry.post_hoc is True  # the measured plane was seen first
+
+    def test_the_v13_pair_is_inside_the_g3_seal_scope(self):
+        """The chosen artifact and its generator are hashed -- a chosen row
+        that could move without an amendment would defeat the point of
+        choosing it in the open."""
+        doc = yaml.safe_load(g3seal.G3_PREREG_PATH.read_text("utf-8"))
+        listed = doc["seal_scope"]["hashed_files"]
+        assert "mappings/sleeve-mappings-v1.3.yaml" in listed
+        assert "scripts/make_sleeve_mappings_v1_3.py" in listed
+        # v1.2 stays sealed beside it as the measured record.
+        assert "mappings/sleeve-mappings-v1.2.yaml" in listed

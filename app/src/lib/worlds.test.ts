@@ -90,6 +90,26 @@ describe("fetchWorlds", () => {
     await expect(fetchWorlds()).rejects.toBeInstanceOf(WorldsFormatError);
   });
 
+  it("parses a doc whose entries carry the retired flag", async () => {
+    mockFetch(200, RETIRED_FENCE_DOC);
+    await expect(fetchWorlds()).resolves.toEqual(RETIRED_FENCE_DOC);
+  });
+
+  it("rejects a document whose retired flag is not a boolean", async () => {
+    mockFetch(200, {
+      worlds: [
+        {
+          world_id: "w1",
+          title: "x",
+          generator_id: "bootstrap-stratified",
+          retired: "yes",
+          runs: [],
+        },
+      ],
+    });
+    await expect(fetchWorlds()).rejects.toBeInstanceOf(WorldsFormatError);
+  });
+
   it("rejects a non-object body", async () => {
     mockFetch(200, "not a doc");
     await expect(fetchWorlds()).rejects.toBeInstanceOf(WorldsFormatError);
@@ -167,6 +187,32 @@ const REVIEW_ROUND_DOC: WorldsDoc = {
   ],
 };
 
+/**
+ * Chosen-PE fix round (2026-08-20): `/worlds` now carries the server's own
+ * retirement fence as `"retired"`. 712 (The Gulf Decade under the v1.2
+ * equation) is retired; 722 is its successor under the same display title —
+ * exactly the duplicate-title, retired-world-still-openable symptom the
+ * pre-merge console walk caught.
+ */
+const RETIRED_FENCE_DOC: WorldsDoc = {
+  worlds: [
+    {
+      world_id: "00000000-0000-4000-9000-000000000712",
+      title: "The Gulf Decade",
+      generator_id: "bootstrap-stratified",
+      retired: true,
+      runs: [{ run_id: "gulf-712-r1", seed: 202608, created_at: "2026-08-19T00:00:00Z" }],
+    },
+    {
+      world_id: "00000000-0000-4000-9000-000000000722",
+      title: "The Gulf Decade",
+      generator_id: "bootstrap-stratified",
+      retired: false,
+      runs: [{ run_id: "gulf-722-r1", seed: 202608, created_at: "2026-08-20T00:00:00Z" }],
+    },
+  ],
+};
+
 describe("selectShownWorlds", () => {
   it("keeps only SHOWN_GENERATOR_IDS worlds", () => {
     const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
@@ -186,6 +232,18 @@ describe("selectShownWorlds", () => {
       "00000000-0000-4000-9000-000000000703",
     ]);
     expect(shown.some((w) => w.world_id === "00000000-0000-4000-9000-000000000702")).toBe(false);
+  });
+
+  it("drops a server-flagged retired world and keeps its successor", () => {
+    const shown = selectShownWorlds(RETIRED_FENCE_DOC.worlds);
+    expect(shown.map((w) => w.world_id)).toEqual(["00000000-0000-4000-9000-000000000722"]);
+  });
+
+  it("treats an entry WITHOUT the retired flag as not retired — an older server's doc still works", () => {
+    // MULTI_GEN_DOC predates the flag entirely: 701 (bootstrap-stratified,
+    // has runs) must still be shown.
+    const shown = selectShownWorlds(MULTI_GEN_DOC.worlds);
+    expect(shown.some((w) => w.world_id === "00000000-0000-4000-9000-000000000701")).toBe(true);
   });
 });
 
@@ -252,6 +310,27 @@ describe("WorldPicker", () => {
 
   it("renders nothing when the store has no worlds", () => {
     expect(renderToStaticMarkup(WorldPicker({ doc: { worlds: [] }, onOpen: () => {} }))).toBe("");
+  });
+
+  it("renders exactly one Gulf Decade button — the successor's, never the retired 712's", () => {
+    let opened: string | null = null;
+    let root: Root | null = null;
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    try {
+      root = createRoot(host);
+      act(() => {
+        root!.render(WorldPicker({ doc: RETIRED_FENCE_DOC, onOpen: (url) => (opened = url) }));
+      });
+      const buttons = [...host.querySelectorAll("button")];
+      expect(buttons.length).toBe(1);
+      act(() => buttons[0].click());
+      expect(opened).toBe(bundleUrlFor("gulf-722-r1"));
+      expect(opened).not.toBe(bundleUrlFor("gulf-712-r1"));
+    } finally {
+      act(() => root?.unmount());
+      host.remove();
+    }
   });
 
   it("renders nothing when no world matches SHOWN_GENERATOR_IDS", () => {

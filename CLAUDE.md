@@ -296,16 +296,19 @@ list and must gain each new one); `ah/feed.py` generates the in-timeline wire;
   alpha *definition* and lives inside the seal — do not bump it for an engine change.
   **Where the blocks stand now** (`toy-v0.7`, `src/ah/core/engine.py`): toy presets in the
   `52x` sub-block (`521` stagflation, `522` goldilocks, `523` deflation_bust, `524`
-  reflation_boom, `525` prehistory), the played generated preset `stagflation_1974` at `604`,
-  and the declared-stress family in the `71x` block (`711` stress_1974_successor, `712` The
-  Gulf Decade, `713` stress_1990_successor). Play alphas are `port-v5-inflation` /
-  `port-v5-inflation-gen` (`src/ah/play.py`).
+  reflation_boom, `525` prehistory), and every generated-plane world in the `72x` chosen-PE
+  block (D-ER16-1): `721` stress_1974_successor, `722` The Gulf Decade, `723`
+  stress_1990_successor, `724` stagflation_1974 (formerly `604`). Play alphas
+  are `port-v5-inflation` (toy, `src/ah/play.py`) / `port-v6-chosen-pe-gen` (generated,
+  `src/ah/port/adapter.py`) — the generated stamp alone moved at the chosen-PE adoption.
 - **Retired research worlds refuse rebuild by design.** `ah.cli.RETIRED_WORLD_IDS` fences the
   `7xx`/`8xx` campaign and spine worlds (`701` stress_1974, `703` stress_1990, `801`
   narration_1974, `802` spine_pilot) at `ah world build` — their JSONs stay byte-unchanged and
   readable forever, and a rebuild under a later engine would produce a differently-shaped world
-  under the same id, not reproduce the campaign. Do not "fix" the refusal; use the `71x`
-  successors. Editing a retired preset's `world_id` in place would not free the old id (the
+  under the same id, not reproduce the campaign. The fence also holds `711`/`712`/`713`/`604`, the
+  pre-chosen-PE generated worlds retired at the v1.3 adoption (D-ER16-1) — those specs live on
+  byte-identically (except identity and lineage) as the `72x` files. Do not "fix" the refusal;
+  use the `72x` successors. Editing a retired preset's `world_id` in place would not free the old id (the
   fence is a frozenset in `src/ah/cli.py`, independent of file content) and *would* rewrite a
   campaign record.
 - **`data/` is a junction to ONE shared live store in every worktree.** Each worktree's `data/`

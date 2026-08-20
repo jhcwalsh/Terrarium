@@ -20,7 +20,8 @@
         "persistence: P1 re-entry + P2 declared coverage (40 of 40 quarters restricted) - D-SC-1 owner ruling 2026-08-15; percentiles unchanged from stress_1974 so the only new severity is the declared SHAPE",
         "block length 6 months: the sealed benchmark bootstrap-v1 own mean (MEAN_BLOCK_MONTHS=6), adopted for stress segments per the owner ruling of 2026-08-15 after the generator-only coherence study (docs/superpowers/specs/2026-08-15-block-length-coherence-study.md) - depth was not consulted in the study or the choice",
         "successor of the retired campaign record 703 (00000000-0000-4000-9000-000000000703, 'stress_1990'), rebuilt under the ER-14 release engine (toy-v0.7 via bootstrap-stratified, play alpha port-v5-inflation) - D-ER14-2. The original stays byte-unchanged and permanently fenced (ah.cli.RETIRED_WORLD_IDS); the segments, percentiles and precedent above are unchanged from it.",
-        "entry_multiple_drift_annual_pct is 0.0 here, where the retired 703 record carries -2.0 (pe-drift-01). This is the ONE structural value that does not carry over, and deliberately: D-ER14-2/A5 zeroed the hand-authored drift on every LIVE preset because mu_PE = 0.45 makes multiple compression endogenous under the release engine - and mu_PE was anchored ON that -2.0 (engine.py: 'the shipped presets' own authored -2.0 drift at 4.5pp excess'), so carrying both would charge PE twice. 703 keeps its -2.0 because 703 ran under an engine that had no mu_PE; the successor runs under one that does. The field still means NON-inflation multiple drift (secular dry powder, sector re-rating), and this world declares none."
+        "entry_multiple_drift_annual_pct is 0.0 here, where the retired 703 record carries -2.0 (pe-drift-01). This is the ONE structural value that does not carry over, and deliberately: D-ER14-2/A5 zeroed the hand-authored drift on every LIVE preset because mu_PE = 0.45 makes multiple compression endogenous under the release engine - and mu_PE was anchored ON that -2.0 (engine.py: 'the shipped presets' own authored -2.0 drift at 4.5pp excess'), so carrying both would charge PE twice. 703 keeps its -2.0 because 703 ran under an engine that had no mu_PE; the successor runs under one that does. The field still means NON-inflation multiple drift (secular dry powder, sector re-rating), and this world declares none.",
+        "successor of 713 (00000000-0000-4000-9000-000000000713) under the chosen-PE equation (D-ER16-1): the sleeve-mappings artifact that translates this same declared scenario into private-market returns moved from v1.2 to v1.3, so the world identity moves with it - scores under port-v5-inflation-gen and port-v6-chosen-pe-gen must never share a leaderboard row."
       ],
       "segments": [
         {
@@ -92,7 +93,7 @@
     "created_at": "2026-08-19T00:00:00Z",
     "source": {
       "kind": "derived",
-      "parent_world_id": "00000000-0000-4000-9000-000000000703"
+      "parent_world_id": "00000000-0000-4000-9000-000000000713"
     }
   },
   "regimes": {
@@ -125,5 +126,5 @@
       "leverage_turns": 5.5
     }
   },
-  "world_id": "00000000-0000-4000-9000-000000000713"
+  "world_id": "00000000-0000-4000-9000-000000000723"
 }

@@ -168,6 +168,114 @@ def test_replay_detects_tampered_digest(tmp_path: Path) -> None:
     assert "MISMATCH" in replay.stdout
 
 
+def test_replay_refuses_a_version_mismatched_record(tmp_path: Path) -> None:
+    """Chosen-PE fix round (2026-08-20): a RunRecord whose stamped engine
+    version is not the current one used to be recomputed under CURRENT code
+    and printed MISMATCH — a false corruption alarm (the stored inputs are
+    intact; the code that turns them into numbers moved). The verdict is now
+    split: MATCH/MISMATCH is reserved for same-version records; otherwise a
+    plain not-replayable statement, claiming neither, exit code 3
+    (``ah.cli.NOT_REPLAYABLE_EXIT``). Same-version verification is proven
+    unweakened here (the real record still MATCHes) and by
+    ``test_replay_detects_tampered_digest`` above (a same-version tamper
+    still MISMATCHes)."""
+    from ah.cli import NOT_REPLAYABLE_EXIT
+    from ah.core.engine import TOY_ENGINE_VERSION
+    from ah.store.db import connect
+    from ah.store.runrecords import get_run_record, save_run_record
+
+    db = tmp_path / "ah.db"
+    _invoke(db, "world", "build", "--preset", "stagflation")
+    rid = _invoke(db, "run", "--paths", "8").stdout.strip()
+
+    # a synthetic record stamped by an EARLIER toy engine: same world, same
+    # digest bytes, only the version stamp differs (append-only: a NEW row)
+    synthetic_rid = "00000000-dead-4bee-8f00-000000000001"
+    conn = connect(db)
+    rec = get_run_record(conn, rid)
+    assert rec is not None
+    stamped_old = dict(rec["resolved_engine"])
+    stamped_old["generator_version"] = "toy-v0.0-synthetic"
+    save_run_record(
+        conn,
+        run_id=synthetic_rid,
+        world_id=rec["world_id"],
+        resolved_engine=stamped_old,
+        seed=rec["seed"],
+        n_paths=rec["n_paths"],
+        overrides={},
+        outputs_digest=rec["outputs_digest"],
+        summary_stats={},
+        created_at="2026-08-20T00:00:00+00:00",
+    )
+    conn.close()
+
+    for cmd in ("replay", "verify"):
+        r = _invoke(db, cmd, synthetic_rid)
+        assert r.exit_code == NOT_REPLAYABLE_EXIT
+        assert "not replayable under current code" in r.stdout
+        assert "toy-v0.0-synthetic" in r.stdout
+        assert TOY_ENGINE_VERSION in r.stdout
+        assert "MATCH" not in r.stdout  # covers MISMATCH too (substring)
+        assert "True" not in r.stdout and "False" not in r.stdout
+        assert r.stdout.isascii()  # Windows console is cp1252
+
+    # the untouched same-version record still gets the full verdict
+    ok = _invoke(db, "replay", rid)
+    assert ok.exit_code == 0
+    assert "MATCH" in ok.stdout
+
+
+def test_replay_refuses_a_retired_worlds_record(tmp_path: Path) -> None:
+    """The other half of the not-replayable verdict. The generated plane's
+    play-alpha version is NOT stamped on RunRecords (``gen_lineage`` pins the
+    generator family + campaign vintage, neither of which moves when the
+    sleeve-mappings equation moves; the play-alpha stamp lives on session
+    outcomes), so for translation-layer releases the retired-world fence IS
+    the version signal a record can be checked against. Measured live before
+    this fix: retired 712's stored run recomputed to its 722 successor's
+    digest under v1.3 and printed MISMATCH — a false corruption alarm."""
+    from ah.cli import NOT_REPLAYABLE_EXIT, RETIRED_WORLD_IDS
+    from ah.store import worlds as worlds_store
+    from ah.store.db import connect
+    from ah.store.runrecords import get_run_record, save_run_record
+
+    db = tmp_path / "ah.db"
+    _invoke(db, "world", "build", "--preset", "stagflation")
+    rid = _invoke(db, "run", "--paths", "8").stdout.strip()
+
+    retired_id = "00000000-0000-4000-9000-000000000712"
+    assert retired_id in RETIRED_WORLD_IDS
+    retired_rid = "00000000-dead-4bee-8f00-000000000002"
+    conn = connect(db)
+    rec = get_run_record(conn, rid)
+    assert rec is not None
+    world = json.loads(conn.execute("SELECT json FROM worlds").fetchone()[0])
+    world["world_id"] = retired_id  # plant a world under a retired id
+    worlds_store.save_world(conn, world, created_at="2026-08-19T00:00:00+00:00")
+    save_run_record(
+        conn,
+        run_id=retired_rid,
+        world_id=retired_id,
+        resolved_engine=dict(rec["resolved_engine"]),  # current version stamp
+        seed=rec["seed"],
+        n_paths=rec["n_paths"],
+        overrides={},
+        outputs_digest=rec["outputs_digest"],
+        summary_stats={},
+        created_at="2026-08-19T00:00:00+00:00",
+    )
+    conn.close()
+
+    for cmd in ("replay", "verify"):
+        r = _invoke(db, cmd, retired_rid)
+        assert r.exit_code == NOT_REPLAYABLE_EXIT
+        assert "not replayable under current code" in r.stdout
+        assert "retired" in r.stdout
+        assert "MATCH" not in r.stdout
+        assert r.stdout.isascii()
+
+
 def test_run_two_runs_same_digest(tmp_path: Path) -> None:
     """Determinism: the same world+seed+paths yields the same digest each run."""
     db = tmp_path / "ah.db"

@@ -32,6 +32,15 @@ export interface WorldEntry {
   world_id: string;
   title: string | null;
   generator_id: string | null;
+  /**
+   * Chosen-PE fix round (2026-08-20): the SERVER-authoritative retirement
+   * fence (`ah.retired_worlds.RETIRED_WORLD_IDS`, surfaced by `/worlds`).
+   * A retired world is a readable record of an earlier engine/equation
+   * release and must never be selectable for new play. Optional so a doc
+   * from an older server (or a static host) still parses — absent means
+   * "not marked retired", which matches that server's own behavior.
+   */
+  retired?: boolean;
   runs: WorldRun[];
 }
 
@@ -58,6 +67,7 @@ function isWorldEntry(x: unknown): x is WorldEntry {
     typeof e.world_id === "string" &&
     (e.title === null || typeof e.title === "string") &&
     (e.generator_id === null || typeof e.generator_id === "string") &&
+    (e.retired === undefined || typeof e.retired === "boolean") &&
     Array.isArray(e.runs) &&
     e.runs.every(isWorldRun)
   );
@@ -107,8 +117,15 @@ function newestRun(world: WorldEntry): WorldRun | null {
 
 /**
  * The worlds this picker renders: `SHOWN_GENERATOR_IDS` only, with
- * `HIDDEN_WORLD_IDS` fenced out. Worlds with no runs are dropped, since
- * there is nothing for their button to open.
+ * server-flagged retired worlds and `HIDDEN_WORLD_IDS` fenced out. Worlds
+ * with no runs are dropped, since there is nothing for their button to open.
+ *
+ * Chosen-PE fix round (2026-08-20): `world.retired` is the server's own
+ * fence (see `WorldEntry.retired`) — without it the picker showed retired
+ * generated worlds beside their successors under duplicate titles, and a
+ * player could open a world whose stored run the current equation no longer
+ * reproduces. `HIDDEN_WORLD_IDS` stays what it always was: the one
+ * client-side hide (702) that predates the server fence.
  *
  * app-open-01 review round fix 2: the real duplicate is TWO DIFFERENT
  * world_ids — 702 and 703 — sharing the display title "The Lost Decade",
@@ -124,6 +141,7 @@ export function selectShownWorlds(worlds: WorldEntry[]): WorldEntry[] {
     (world) =>
       !!world.generator_id &&
       SHOWN_GENERATOR_IDS.includes(world.generator_id) &&
+      world.retired !== true &&
       !HIDDEN_WORLD_IDS.includes(world.world_id) &&
       world.runs.length > 0,
   );

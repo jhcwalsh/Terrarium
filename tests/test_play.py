@@ -288,11 +288,17 @@ class TestScoringIdentity:
 
     def test_both_play_alpha_stamps_moved_and_they_are_distinct(self):
         """Survey S3: a shared bump is never right - the two planes score
-        different tapes."""
+        different tapes.
+        Re-pinned under the chosen-PE adoption (D-ER16-1/AM-2026-08-19-001,
+        2026-08-19): the GENERATED stamp alone moves to v6 (the v1.3 mapping
+        artifact changes only the generated plane's pm_buyout translation);
+        the toy engine did not change, so the toy stamp stays at its v5 -
+        which is now also the living proof the two stamps never share a
+        bump."""
         from ah.port.adapter import GEN_PLAY_ALPHA_VERSION
 
         assert PLAY_ALPHA_VERSION == "port-v5-inflation"
-        assert GEN_PLAY_ALPHA_VERSION == "port-v5-inflation-gen"
+        assert GEN_PLAY_ALPHA_VERSION == "port-v6-chosen-pe-gen"
         assert PLAY_ALPHA_VERSION != GEN_PLAY_ALPHA_VERSION
 
     def test_the_research_alpha_definition_is_untouched(self):

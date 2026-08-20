@@ -26,8 +26,9 @@ Stated conventions (each is a modelling choice recorded here, not a fact):
   BETA*equity`` in percent, with ``LOSS = 0.45`` mirroring the toy's
   ``_HY_LOSS_SHARE``, ``DUR_HY = 4.0`` and ``BETA = 0.4`` (without the beta
   the 1974 preview printed HY at a decade Sharpe of 2.18).
-* **pe / pc / re** (true): the sealed PM sleeve loadings
-  (``mappings/sleeve-mappings-v1.0.yaml``) applied at MONTHLY frequency with
+* **pe / pc / re** (true): the sealed PM sleeve loadings (the artifact
+  ``ah.port.mapping.ARTIFACT_PATH`` names — the accessor, not a pinned
+  version, so this note survives adoptions) applied at MONTHLY frequency with
   ``alpha_quarterly/3`` plus the artifact's own ``residual_sigma_annual``
   drawn at ``PCG64(seed + RESIDUAL_SEED_OFFSET)`` — a distinct, stated
   stream so residuals never replay the sampler's draws. Independent across
@@ -143,7 +144,11 @@ GEN_START_TARGETS: dict[str, float] = {
 # change the generated plane's returns; distinct from PLAY_ALPHA_VERSION's
 # own v5 bump (survey S3: never a shared bump, the two planes score
 # different tapes).
-GEN_PLAY_ALPHA_VERSION = "port-v5-inflation-gen"
+# v6: pm_buyout chosen coefficients (D-ER16-1/AM-2026-08-19-001) — the v1.3
+# mapping artifact moves the buyout row to equity_mkt 1.2 / alpha 3%/yr;
+# generated-plane only, the toy engine did not change, so PLAY_ALPHA_VERSION
+# stays at its own v5.
+GEN_PLAY_ALPHA_VERSION = "port-v6-chosen-pe-gen"
 
 # ER-14 close-out (D-ER14-2, Task S4, A15): infra 0.05, carved 0.02 from re
 # and 0.03 from equity -- equity's resulting 0.32 matches
