@@ -155,6 +155,49 @@ class TestWorldsAndBundles:
         assert any(w["generator_id"] == "toy-v0" for w in doc["worlds"])
         assert any(rid == r["run_id"] for w in doc["worlds"] for r in w["runs"])
 
+    def test_worlds_flags_exactly_the_retired_fence_ids(self, tmp_path):
+        """Chosen-PE fix round (2026-08-20), caught on the pre-merge console
+        walk: with no server-side flag, the app's picker showed retired
+        711/712/713 beside their 72x successors under duplicate titles, and
+        a retired world's stored run — whose tape the current equation no
+        longer reproduces (replay MISMATCH, measured live) — was one click
+        from a new session. The SERVER is the authority for retirement:
+        every /worlds entry carries a boolean ``retired``, true iff the
+        world_id is in ``ah.retired_worlds.RETIRED_WORLD_IDS``. Retired
+        worlds stay listed — the store is the truth and they are readable
+        records — they are just marked."""
+        import json
+
+        from ah.retired_worlds import RETIRED_WORLD_IDS
+        from ah.store import worlds as worlds_store
+
+        db = tmp_path / "fence.db"
+        assert (
+            RUNNER.invoke(
+                cli_app, ["--db", str(db), "world", "build", "--preset", "stagflation"]
+            ).exit_code
+            == 0
+        )
+        # Plant a world under a RETIRED id directly at the store layer: the
+        # store keeps retired worlds (only the CLI refuses to BUILD them),
+        # which is exactly the live-store state this flag exists for.
+        conn = connect(db)
+        doc = json.loads(conn.execute("SELECT json FROM worlds").fetchone()[0])
+        retired_id = "00000000-0000-4000-9000-000000000712"
+        assert retired_id in RETIRED_WORLD_IDS
+        doc["world_id"] = retired_id
+        worlds_store.save_world(conn, doc, created_at="2026-08-19T00:00:00+00:00")
+        conn.close()
+
+        client = TestClient(create_app(db))
+        entries = client.get("/worlds").json()["worlds"]
+        assert len(entries) == 2
+        flags = {w["world_id"]: w["retired"] for w in entries}  # KeyError = defect
+        assert all(isinstance(v, bool) for v in flags.values())
+        expected = set(flags) & RETIRED_WORLD_IDS
+        assert expected == {retired_id}
+        assert {wid for wid, v in flags.items() if v} == expected
+
     def test_worlds_with_no_runs_returns_empty_runs_list(self, tmp_path):
         db = tmp_path / "empty.db"
         assert (

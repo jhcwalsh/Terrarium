@@ -58,6 +58,7 @@ from ah.play import (
     window_contributions_play,
 )
 from ah.port.book import BookError, CommitmentPlan, OpeningBook, validate_book, validate_plan
+from ah.retired_worlds import RETIRED_WORLD_IDS
 from ah.store import sessions as session_store
 from ah.store.db import connect
 from ah.store.runrecords import get_run_record
@@ -423,7 +424,15 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     def list_worlds(conn: sqlite3.Connection = Depends(db)):
         """sib-01: the decade picker's data — distinct worlds from the store,
         each with its runs newest-first. No filtering by engine: toy and
-        generated worlds are both listed exactly as the store holds them."""
+        generated worlds are both listed exactly as the store holds them.
+
+        Chosen-PE fix round (2026-08-20): each entry carries ``"retired"``,
+        true iff the world_id is in the platform fence
+        (``ah.retired_worlds.RETIRED_WORLD_IDS``). The SERVER is the
+        authority for retirement — the app's picker filters on this flag
+        rather than keeping its own list of retired generated worlds.
+        Retired worlds stay listed (the store is the truth; they are
+        readable records), they are just marked."""
         world_rows = conn.execute("SELECT world_id, json FROM worlds").fetchall()
         run_rows = conn.execute(
             "SELECT run_id, world_id, seed, created_at FROM run_records "
@@ -444,6 +453,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                     "world_id": row["world_id"],
                     "title": narrative.get("title"),
                     "generator_id": engine_defaults.get("generator_id"),
+                    "retired": row["world_id"] in RETIRED_WORLD_IDS,
                     "runs": runs_by_world.get(row["world_id"], []),
                 }
             )

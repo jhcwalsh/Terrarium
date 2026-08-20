@@ -37,31 +37,12 @@ PRESETS_DIR = Path(__file__).resolve().parent / "presets"
 FIXTURES_DIR = _REPO_ROOT / "fixtures" / "compiler"
 DEFAULT_DB = _REPO_ROOT / "data" / "ah.db"
 
-# ER-14 close-out (D-ER14-2, 2026-08-18). These worlds' numbers - and, with the
-# infrastructure sleeve, the SHAPE of their tapes - changed under toy-v0.7, but
-# their ids are records of what a campaign actually executed. Renumbering would
-# not reproduce those campaigns, only produce differently-shaped new ones under
-# new ids; leaving them runnable would invite exactly the leaderboard collision
-# the fences exist to prevent. So: readable forever, never re-runnable.
-# Chosen-PE adoption (D-ER16-1/AM-2026-08-19-001, 2026-08-19): the same rule,
-# second application. 711/712/713 AND 604 consumed the v1.2 sleeve-mappings
-# equation; the platform now translates the identical declared scenarios
-# through v1.3 (pm_buyout chosen coefficients), so every generated-plane
-# world id retires and the 72x successors replace them - scores under
-# port-v5-inflation-gen and port-v6-chosen-pe-gen must never share a
-# leaderboard row.
-RETIRED_WORLD_IDS = frozenset(
-    {
-        "00000000-0000-4000-9000-000000000701",  # stress_1974
-        "00000000-0000-4000-9000-000000000703",  # stress_1990
-        "00000000-0000-4000-9000-000000000801",  # narration_1974
-        "00000000-0000-4000-9000-000000000802",  # spine_pilot
-        "00000000-0000-4000-9000-000000000711",  # stress_1974_successor pre-chosen-PE
-        "00000000-0000-4000-9000-000000000712",  # gulf_decade pre-chosen-PE
-        "00000000-0000-4000-9000-000000000713",  # stress_1990_successor pre-chosen-PE
-        "00000000-0000-4000-9000-000000000604",  # stagflation_1974 pre-chosen-PE
-    }
-)
+# The retired-world fence moved to its own module (chosen-PE fix round,
+# 2026-08-20) so ah.serve can flag retired worlds on /worlds without importing
+# the whole CLI; re-exported here because this is where every existing
+# consumer (and the build refusal below) has always read it. The full
+# rationale (ER-14 close-out + chosen-PE adoption) lives with the frozenset.
+from ah.retired_worlds import RETIRED_WORLD_IDS  # noqa: E402
 
 app = typer.Typer(
     help="Alternate Histories platform CLI.", no_args_is_help=True, add_completion=False
@@ -281,9 +262,68 @@ def run_cmd(
     typer.echo(run_id)
 
 
+NOT_REPLAYABLE_EXIT = 3  # distinct from 1 (MISMATCH) and 2 (usage errors)
+
+
+def _not_replayable_reason(rec: dict, world: dict) -> str | None:
+    """Why a RunRecord's digest is NOT comparable under current code, or None.
+
+    Chosen-PE fix round (2026-08-20). Recomputing a version-mismatched record
+    and printing MISMATCH is a FALSE corruption alarm: the stored inputs are
+    intact — the code that turns them into numbers has moved. MATCH/MISMATCH
+    is reserved for same-version records; everything else gets a plain
+    statement and exit code ``NOT_REPLAYABLE_EXIT``.
+
+    Two checks, both read from what the record/platform already carry — no
+    new fields:
+
+    1. The stamped ``resolved_engine.generator_version`` against the current
+       version for this world's engine (toy: ``TOY_ENGINE_VERSION``;
+       generated: ``gen_lineage``'s own stamp). This catches toy-engine
+       bumps (toy-v0.6 records under toy-v0.7, ...).
+    2. The retired-world fence. The generated plane's play-alpha version
+       (``port-v5-inflation-gen`` -> ``port-v6-chosen-pe-gen``) is stamped on
+       session outcomes, NOT on RunRecords, and ``gen_lineage`` stamps the
+       generator family + campaign vintage, neither of which moves when the
+       sleeve-mappings equation moves — so for translation-layer releases
+       the retirement of the world IS the version fence a record can be
+       checked against. Measured live: retired 712's stored run recomputes
+       to its 722 successor's digest, not its own.
+    """
+    resolved = rec.get("resolved_engine") or {}
+    stamped = resolved.get("generator_version")
+    ws = WorldSpec.model_validate(world)
+    if ws.engine_defaults.generator_id == "toy-v0":
+        current = TOY_ENGINE_VERSION
+    else:
+        from ah.port.adapter import gen_lineage
+
+        current = gen_lineage(project_numeric(ws))["generator_version"]
+    if stamped != current:
+        return (
+            f"not replayable under current code (stamped {stamped}, current {current}) "
+            "- digests are not comparable across versions"
+        )
+    if rec["world_id"] in RETIRED_WORLD_IDS:
+        return (
+            f"not replayable under current code: world {rec['world_id']} is retired - "
+            "its numbers were produced by an earlier release of the engine/equation, "
+            "and the retirement is the version fence (generated RunRecords carry no "
+            "play-alpha stamp) - digests are not comparable across versions"
+        )
+    return None
+
+
 @app.command("replay")
 def replay_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) -> None:
-    """Recompute a run's output digest and compare it to the stored digest."""
+    """Recompute a run's output digest and compare it to the stored digest.
+
+    Exit codes: 0 the digests MATCH; 1 MISMATCH (same-version records only —
+    a real reproduction failure); 3 not replayable under current code (the
+    record's stamped engine version differs from the current one, or its
+    world is retired) — digests are not comparable across versions, so
+    neither MATCH nor MISMATCH is claimed.
+    """
     conn = _db(ctx)
     rid = run_id or _latest_run(conn)
     rec = run_store.get_run_record(conn, rid)
@@ -291,6 +331,10 @@ def replay_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) ->
         raise typer.BadParameter(f"no run with id {rid}")
     world = worlds_store.get_world(conn, rec["world_id"])
     assert world is not None
+    reason = _not_replayable_reason(rec, world)
+    if reason is not None:
+        typer.echo(reason)
+        raise typer.Exit(NOT_REPLAYABLE_EXIT)
     recomputed = run_store.compute_outputs_digest(world, rec["seed"], rec["n_paths"])
     match = recomputed == rec["outputs_digest"]
     typer.echo(f"stored : {rec['outputs_digest']}")
@@ -399,9 +443,24 @@ def credibility_cmd(
 
 @app.command("verify")
 def verify_cmd(ctx: typer.Context, run_id: str | None = typer.Argument(None)) -> None:
-    """Verify a run reproduces its stored digest (prints True/False)."""
+    """Verify a run reproduces its stored digest (prints True/False).
+
+    Exit codes: 0 True; 1 False (same-version records only); 3 not replayable
+    under current code (stamped engine version differs from current, or the
+    world is retired) — neither True nor False is claimed, same rule as
+    ``ah replay``.
+    """
     conn = _db(ctx)
     rid = run_id or _latest_run(conn)
+    rec = run_store.get_run_record(conn, rid)
+    if rec is None:
+        raise typer.BadParameter(f"no run with id {rid}")
+    world = worlds_store.get_world(conn, rec["world_id"])
+    assert world is not None
+    reason = _not_replayable_reason(rec, world)
+    if reason is not None:
+        typer.echo(reason)
+        raise typer.Exit(NOT_REPLAYABLE_EXIT)
     ok = run_store.verify_run(conn, rid)
     typer.echo(str(ok))
     if not ok:
