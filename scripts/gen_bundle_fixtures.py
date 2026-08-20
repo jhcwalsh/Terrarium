@@ -12,6 +12,16 @@ Two fixtures, both deterministic (same presets, seeds, and path counts):
 Run whenever the engine, the adapter, or the bundle contract changes:
 
     uv run python scripts/gen_bundle_fixtures.py
+
+NEITHER fixture is byte-reproducible (chosen-PE release review, 2026-08-20):
+every run mints a fresh ``meta.run_id``/``created_at`` and the chronicle
+carries wall-clock timestamps, so two builds of the same code differ in those
+fields while every tape byte is identical. "Regenerate and diff the .gz" is
+therefore NOT a stability test -- it fails on identical code. To check
+stability, decompress both and compare the tape content (paths, factors,
+credibility sections), ignoring run identity and timestamps; and do not
+rewrite the OTHER fixture as a side effect of rebuilding one (this script
+always rebuilds both -- restore the untouched plane's committed bytes).
 """
 
 from __future__ import annotations

@@ -39,6 +39,10 @@ scored under the old one retires.** Task 1 sealed `mappings/sleeve-mappings-v1.3
   rest of the `pm_buyout` row (`d_ig` -0.0279, `residual_sigma_annual` 0.1225, the C1
   inflation block), the sealed v1.2/v1.1/v1.0 artifacts themselves, and the G5-sealed
   `decision_alpha_version` are all byte-unchanged.
+- **Task 3 (2026-08-20).** Release evidence measured and recorded in
+  `docs/superpowers/specs/2026-08-20-pe-chosen-release-evidence.md` (+ JSON sidecar);
+  721/722/723/724 built into the live store (1000-path base-seed runs appended for
+  721/722/723 mirroring their parents', each replaying MATCH; 724 run-less like 604).
 
 ## pe-drift-01 — THE SUSPECTED PE DOUBLE CHARGE, MEASURED (branch `pe-drift-01`)
 
