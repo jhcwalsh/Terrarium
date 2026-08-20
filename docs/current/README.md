@@ -17,6 +17,7 @@ method, as it stands today.
 | **SUPERSEDED** | Its framing has been replaced. Kept, still served, still citable — a record of how things were understood, not current guidance. |
 | **RECORD** | A frozen account of something that happened: gate evidence, a campaign verdict, a completed task. Never edited. |
 | **GENERATED** | Written by a script from committed artifacts. **Do not edit by hand** — a test asserts reproducibility. |
+| **DRAFT** | A write-up in progress, committed so it is versioned and reviewable. **Governs nothing, and is not citable outside this repository** until the owner has edited and released it. |
 
 Every document that has moved or changed status carries a banner at the top of
 the file. The banner, not this table, is what a reader arriving from a link or
@@ -34,6 +35,20 @@ read at once.
 | `alternate-histories-audited.md` | GOVERNING | The narrative account — where the work stands and what it has taught us. Last updated 2026-08-14. |
 | `DROP-MANIFEST.md` | GOVERNING | The DN-9 narration drop: what goes where, and what is knowingly carried. Describes work not yet started. |
 | `narration-dn9.zip` | — | The DN-9 drop itself. **Untracked** (see "Untracked files" below). |
+
+## `docs/papers/` — drafts, not governing
+
+Added 2026-08-19. Write-ups of the work, committed as **DRAFT** so they are
+versioned and reviewable. **None of them governs anything**: where a paper and a
+register disagree, the register wins, and nothing here should be quoted outside
+the repository until the owner has edited and released it. Each file carries its
+own DRAFT banner and points at its companions.
+
+| Document | Status | What it is |
+|---|---|---|
+| `2026-08-19-economic-realism-engineering-quantity-DRAFT.md` | DRAFT | The academic write-up: economic realism as a sealed, falsifiable exam over generated decades, and the four campaigns judged against it. The successor in framing to `docs/P1-specified-world-models-preprint.md`, and the first answer to the "no current academic write-up" gap under **Outstanding** below. |
+| `2026-08-19-twenty-decades-plain-DRAFT.md` | DRAFT | The plain-English companion: what was built, how it was tested, and what it got wrong. |
+| `2026-08-19-decade-you-live-through-users-guide-DRAFT.md` | DRAFT | The player-facing guide: what a generated decade is, what the player controls, and what the engine refuses to do. |
 
 ## `docs/historic/` — sectioned off
 
@@ -56,7 +71,7 @@ would not.
 |---|---|---|
 | `docs/METHODOLOGY.md` | SUPERSEDED | Describes the platform as a *predictive* system on the hierarchical generator, before the prescribe-not-predict turn. |
 | `docs/D-05-methodology-note.md` | SUPERSEDED | The practitioner-facing account. **No current replacement exists** — see "Outstanding" below. |
-| `docs/P1-specified-world-models-preprint.md` | SUPERSEDED | The working paper. Its §8 empirical results remain the sealed ones and are not withdrawn; the framing around them is what has moved. **No current replacement exists.** |
+| `docs/P1-specified-world-models-preprint.md` | SUPERSEDED | The working paper. Its §8 empirical results remain the sealed ones and are not withdrawn; the framing around them is what has moved. Its successor in framing is now **a draft**, `docs/papers/2026-08-19-economic-realism-engineering-quantity-DRAFT.md` — pending owner edits, so P1 remains the only *released* academic account. |
 | `docs/BUILD-SUMMARY.md` | CURRENT IN KIND (2026-08-05) | Still the most detailed code inventory. Banner lists seven specific drifts. |
 | `docs/USER-MANUAL.md` | CURRENT IN KIND (2026-08-05) | Commands and workflow shape still hold; recorded outputs are from an older repository state. |
 | `docs/PLAIN-ENGLISH-USER-MANUAL.md` | CURRENT IN KIND (2026-08-07) | One statement in it is actively misleading and the banner corrects it: the generator that ships *is* playable — what stayed out of the product is the neural one. |
@@ -159,9 +174,11 @@ Recorded here so the gaps are visible rather than discovered later.
 1. **No current practitioner-facing account.** `D-05` is SUPERSEDED in framing
    and has no replacement at its depth. A rewrite is real work and is not
    scheduled.
-2. **No current academic write-up.** The `P1` preprint predates both the third
-   campaign's reversal and the prescribe-not-predict turn. Its sealed results
-   stand; its argument needs re-making.
+2. **No *released* academic write-up.** The `P1` preprint predates both the
+   third campaign's reversal and the prescribe-not-predict turn. Its sealed
+   results stand; its argument needed re-making, and a re-making now exists as
+   a DRAFT (`docs/papers/2026-08-19-economic-realism-engineering-quantity-DRAFT.md`,
+   2026-08-19). The gap stays open until the owner edits and releases it.
 3. **`docs/tier1-synthesis-and-decisions.md` is still missing** — named by Step
    2's vendoring list, allowlisted in `tests/test_citations.py`. The citation is
    the record of the gap.

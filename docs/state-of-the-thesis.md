@@ -136,3 +136,115 @@ Under any path, one thing is non-negotiable: **the disclosure moves from the evi
 files into the player's face.** That is the trust repair, and it is owed to every
 future player exactly as much as it was owed to the first one — who found the seams
 by asking a good question.
+
+---
+
+# What happened next (2026-08-19)
+
+*Appended four days after the memo above. The text above is unchanged — this
+section says what the decisions actually were and how the forward bars read now.
+Where the two disagree, this section is the later record, not a correction: the
+memo was written to be checked, and this is the check.*
+
+## Path A shipped
+
+The recommendation was adopt A, gate B, make C explicit. **A was adopted and
+built.** The app is finished and playable, and the engine underneath it was
+released twice this week: ER-14 closed (`712f96d`) — inflation finally reaches
+private markets through four mechanisms and a new infrastructure sleeve, and the
+founding defect is literally inverted — and the successor worlds landed
+(`9c15b2b`), giving the picker three playable declared-stress decades again,
+including The Gulf Decade. Both went in on green gates. The detail is in
+`docs/engine-realism-register.md`'s ER-14 close-out and in `NEXT-STEPS.md`.
+
+## Path B was funded, and walked
+
+B was not left on the shelf. It was funded four times in five days — the spine
+pilot, the v2 campaign, stage 2 (the coupled monthly system), the reach fix, and
+the three rulers — and every one of them ran under a seal taken before the
+engine was fitted. **What it bought is real and it is not enough.**
+
+**What passed for the first time.** The coupled engine cleared **nine of twelve**
+sealed bars (`docs/superpowers/specs/2026-08-18-stage2-results.md`). All four
+persistence bars pass — the flaw that sank `hier-flow-v1` at G2 and the pilot
+after it. **`T1` and `O1` both pass**, and `O1` had failed in the v2 campaign:
+that is the reaction-function question, and it is the first time this platform
+has had a generated world whose seasons turn the right way round. `P1` passes
+with margin. And the reach fix took the agreement between a world's story and its
+markets from **1.4 points over chance to 17.3**
+(`docs/superpowers/specs/2026-08-18-stage2-reach-results.md`).
+
+**What failed, with the mechanism named each time.** `P2` sits **above** its band
+on dispersion stage 2 inherited rather than introduced. `A2` fails all three
+conditions — and the reason is measured, not argued: the spine's conditioning
+reached only **8.2%** of a decade, so the world's story and the world's markets
+were very nearly independent. `R2` fails its join half at **4.13 pp against a
+2.5 pp bound**. The new seam bar `S1` fails on **every engine in the lineage**: a
+jump detector separates seams from ordinary historical months with 45–49 points
+of advantage. And the arrow stage 2 was funded to build — growth driving
+inflation — turned out to be **inert**: switching it off flips no verdict.
+
+## The memo's forward bars, one by one
+
+**Path A.** (1) *In-surface honesty* — **NOT MET.** Nothing in `app/` renders a
+precedent line or a "how this world was made" panel; the disclosure still lives
+in the evidence files, which is exactly what the memo called non-negotiable.
+Proposed as WP-A. (2) *Severity binds, visibly* — **HALF MET.** Severity binds
+and is measured, but the bands that shipped in `app-open-02` are allocation
+bands; no measured severity band appears where the player picks the world.
+(3) *The machinery can hurt you* — **MET.** ER-6 unblocked the commitment lever,
+it is a playable control on every private sleeve, and coverage is the teaching
+surface. (4) *The lesson is measured, not asserted* — **SUPERSEDED.** It is
+defined over ranked sessions, and ranked play was parked by D-SP-7 on 2026-08-16;
+it revives when ranked does. (5) *Nothing unscorable scores* — **MET, but
+vacuously**, for the same reason: nothing scores at all while ranked is parked.
+
+**Path B.** (1) *Calibrated pain* — **NOT MEASURED.** No bar in the stage-2 exam
+tests drawdown understatement. (2) *Persistence* — **MET on this engine**, by
+`D1`–`D4`, and that is the memo's hardest-won result. (3) *Judgeable — decade
+tier ≥ 90%* — **NOT ADDRESSED.** (4) *It can hurt a book without being told to* —
+**NOT MET.** `R1` passes, but on the **declared-premise** arm: severity that is
+declared, not severity that emerges, which is precisely the distinction the bar
+was written to draw. (5) *Internal causality* — **PARTIALLY MET, and this is the
+new thing.** `T1` and `O1` both pass on a generated engine. The memo said the
+stitched worlds can never pass this and nothing we had could; that is no longer
+true. (6) *Still beats the benchmark* — **NOT TESTED.** No campaign since has run
+a benchmark contest. **The conjunction the memo demanded has not been achieved,
+and the spending rule it set still governs.**
+
+## The honest residue
+
+Three things a reader should carry, none of them comfortable.
+
+**The hedge does not pay in these worlds.** Re-founded on 25,700 decades at a
+batch size computed for 90% power, the inflation-hedge margin is **−1.54 pp**,
+and **−3.14 pp** under the era rule
+(`docs/superpowers/specs/2026-08-18-stage2-rulers-results.md`). The cause is
+selection, not economics: the compiler draws from the worst third of the panel,
+where bonds win. It is a precise verdict about this engine on this panel and it
+is not a fact about commodities — but it also means every prior `A1` verdict, in
+either direction, read a statistic whose sampling error was two to four times the
+effect it measured. Nothing is re-graded. It is simply now known.
+
+**The seams are still findable.** `S1` says so on all three engines, and the era
+rule — which buys reach honestly, crossing only where the spine's own inflation
+path crosses — makes every flesh bar slightly worse. Nobody has yet pulled the
+one lever that would help without touching a declared tolerance: preferring
+small-Δ joins.
+
+**The engine is unpromoted.** The reach fix and the era rule are composed in
+`scripts/` and have never touched `src/ah/gen/spine.py`. Nothing generated is
+player-facing, no owner ruling has been taken on any of the stage-2 rulers, and
+promotion is a separate release event that this campaign deliberately did not
+request.
+
+## The write-ups
+
+Three drafts, all dated 2026-08-19 and all pending the owner's edits:
+`docs/papers/2026-08-19-economic-realism-engineering-quantity-DRAFT.md` (the
+academic account, and the successor in framing to
+`docs/P1-specified-world-models-preprint.md`),
+`docs/papers/2026-08-19-twenty-decades-plain-DRAFT.md` (the plain-English
+companion), and
+`docs/papers/2026-08-19-decade-you-live-through-users-guide-DRAFT.md` (the
+player-facing guide). They govern nothing until released.

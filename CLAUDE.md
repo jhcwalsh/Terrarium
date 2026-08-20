@@ -17,7 +17,7 @@ and a gate that must be evidenced before the next step starts.
 | 3 | Translation layer: sleeve/vehicle state, factor→sleeve mappings, cashflow tiers, the institutional twin | ⚠️ **WP3.1–3.11 shipped; G1-completion is an honest FAIL** (`G1-EVIDENCE.md`), tagged `v0.3.0-g1`. WP3.12 correctly deferred (ALB-C never arrived). **G3 itself was never taken.** |
 | 4 | Artifacts, actors, live mode, GenAI governance | ✅ **G4 CLOSED**, tagged `v0.4.0-g4` · `governance/evidence/G4-EVIDENCE.md` |
 | 5 | Decision evaluation: scorecard, re-coning, tournament, density pilot, walk-forward | ✅ complete. **The one-shot holdout was SPENT at WP5.6** · `RESEARCH-EVIDENCE.md` |
-| SU | Product surface: world bundle, session service, the playable app | 🔄 **the live track.** `su-eng-01/02` + `su-app-01…05` merged; `Instructions/KICKOFF-PRODUCT-SU.md` |
+| SU | Product surface: world bundle, session service, the playable app | 🔄 **the live track.** `su-eng-01/02` + `su-app-01…07`, `cio-01…04` (the CIO dashboard), `app-open-01/02` (the opening experience) all merged; `Instructions/KICKOFF-PRODUCT-SU.md` |
 
 **Read the state column before planning.** Two facts are easy to get wrong and both matter:
 Step 3 reached its G1-completion gate with a **FAIL** (named limitations, tier 1 beating
@@ -149,7 +149,8 @@ tier-2 authoring (`author.py`, `prompts.py`, `gate.py`, `validation.py`), the wo
 calendars, committee, live mode. No LLM output ever enters the numeric path.
 
 **The product surface (SU track)** — `ah/bundle.py` builds the world bundle (contract
-`world-bundle-0.3`, <1MB gz, mtime=0); `ah/feed.py` generates the in-timeline wire;
+`world-bundle-0.6`, <1MB gz, mtime=0; `app/src/lib/bundle.ts` carries the accepted-version
+list and must gain each new one); `ah/feed.py` generates the in-timeline wire;
 `ah/serve.py` is the FastAPI session service and the **authority for anything that scores**;
 `ah/credibility.py` is the admin console; `app/` is the React/TS player.
 
@@ -236,25 +237,49 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   age-5.25 cohort, so all three sleeves lapsed in the SAME quarter — 17% of the
   decade's calls expiring at once; now a staggered ladder, one rung per year of
   contractual life, which brought `peak_unfunded_ratio` into band untuned. Play
-  alphas are now `port-v4-ladder`/`-gen`. A follow-up redefined `linkage_bite`
+  alphas went to `port-v4-ladder`/`-gen` and have since moved again — see ER-14.
+  A follow-up redefined `linkage_bite`
   to net terminal lumps by amount, deliberately as its own change so the
   attribution stayed clean). ER-5/ER-8/ER-9 remain one family for the toy
   engine. Each entry says what a fix invalidates.
-  **ER-14 CLOSED 2026-08-18** (`toy-v0.7`, D-ER14-2): private markets were
-  structurally inflation-blind — PE bit-identical from 1% to 12% inflation,
-  RE moving the wrong sign, filed 2026-08-16. Four inflation channels now
-  exist on both the toy and generated planes, plus a fourth private class
-  (`infra`, contractual inflation linkage) that did not exist before. Named
-  residuals that closing this does NOT buy: the cashflow layer's distribution
-  *propensity* is still inflation-blind by signature (Delta 3 declined); the
-  escalator is symmetric and real ones usually are not (AT-13 measured the
-  deflation-side overstatement); it is a response, not a hedge, in real terms;
-  ER-11 still governs the reported plane. `TOY_ENGINE_VERSION` `toy-v0.6` ->
-  `toy-v0.7`; both play-alpha stamps moved to `port-v5-inflation`/`-gen`; the
-  `7xx`/`8xx` campaign and spine worlds RETIRED (readable, never rebuildable);
-  the ER-15 session demotion fires (a fourth private sleeve moves the default
-  book's digest). Detail in `docs/engine-realism-register.md`'s ER-14
-  close-out and `docs/current/private-markets-and-inflation.md`.
+  **ER-14 CLOSED 2026-08-18, released 2026-08-19** (`712f96d`, `toy-v0.7`,
+  D-ER14-1/2): private markets were structurally inflation-blind — PE
+  bit-identical from 1% to 12% declared inflation, RE moving the wrong sign,
+  filed 2026-08-16. **The fix was four inflation mechanisms, on both the toy
+  and the generated plane:** real estate (income escalation vs cap-rate
+  repricing), private equity (nominal earnings growth vs multiple compression,
+  with the presets' hand-authored `entry_multiple_drift` zeroed so the charge
+  is not double-counted), private credit (floating coupon vs coverage squeeze
+  vs a convex loss term) — **plus `infra`, a fourth private class that did not
+  exist before**, closed-end via `pm_infra`, whose pass-through is read LIVE
+  from `structural.infrastructure.inflation_linkage` (default 0.60) and which
+  measures the strongest hedge in the book (+7.005 pp/yr over the 1%→12% probe,
+  against RE +3.353, PE −1.123, PC −0.899; `artifacts/er14/response.json`,
+  regenerable by `scripts/measure_er14_response.py`). **All fifteen
+  coefficients ship CHOSEN-LABELLED** — literature-anchored, owner-ratified
+  before sealing, each carrying its recorded anchor and its measured-external
+  upgrade path (C1/C2 lineage), sealed into
+  `mappings/sleeve-mappings-v1.2.yaml` under `AM-2026-08-18-001` in one G3
+  reseal that also batched F5. **C2 (the measured credit-loss half) is
+  DEFERRED** pending a CDLI export; the machinery is kept whole and unit-tested.
+  Named residuals that closing this does NOT buy: the cashflow layer's
+  distribution *propensity* is still inflation-blind by signature (Delta 3
+  declined, `mappings/cashflow-tier1-v1.0.yaml` untouched); the escalator is
+  symmetric and real ones usually are not (AT-13 measured the deflation-side
+  overstatement at +0.601 pp/yr on infra); it is a **response, not a hedge** —
+  less bad than nominal, still a large real loss; ER-11 still governs the
+  reported plane. Release mechanics: `TOY_ENGINE_VERSION` `toy-v0.6` ->
+  `toy-v0.7`; both play-alpha stamps moved to `port-v5-inflation`/`-gen`;
+  presets to the `52x`/`604` blocks; `world-bundle-0.6`; the `7xx`/`8xx`
+  campaign and spine worlds RETIRED (readable, never rebuildable —
+  `ah.cli.RETIRED_WORLD_IDS`), with playable successors added 2026-08-19 in a
+  new `71x` block (`9c15b2b`); the ER-15 session demotion fires (a fourth
+  private sleeve moves the default book's digest, so a legacy three-sleeve book
+  now 422s rather than being silently demoted). Detail in
+  `docs/engine-realism-register.md`'s ER-14 close-out,
+  `docs/superpowers/specs/2026-08-18-er14-close-out-design.md`, and
+  `docs/current/private-markets-and-inflation.md` (which is the PRE-fix record,
+  banner-marked, with a §4.5 post-fix summary).
   **These are release events and the owner's call, not incidental cleanups.** ER-6 is a
   prerequisite for the commitment lever (E1), not a parallel cleanup.
 
@@ -269,6 +294,35 @@ calendars, committee, live mode. No LLM output ever enters the numeric path.
   `resolved_engine.generator_version`) and move the presets to a new `world_id` block, so
   scores from two engines cannot share a leaderboard row. `decision_alpha_version` names the
   alpha *definition* and lives inside the seal — do not bump it for an engine change.
+  **Where the blocks stand now** (`toy-v0.7`, `src/ah/core/engine.py`): toy presets in the
+  `52x` sub-block (`521` stagflation, `522` goldilocks, `523` deflation_bust, `524`
+  reflation_boom, `525` prehistory), the played generated preset `stagflation_1974` at `604`,
+  and the declared-stress family in the `71x` block (`711` stress_1974_successor, `712` The
+  Gulf Decade, `713` stress_1990_successor). Play alphas are `port-v5-inflation` /
+  `port-v5-inflation-gen` (`src/ah/play.py`).
+- **Retired research worlds refuse rebuild by design.** `ah.cli.RETIRED_WORLD_IDS` fences the
+  `7xx`/`8xx` campaign and spine worlds (`701` stress_1974, `703` stress_1990, `801`
+  narration_1974, `802` spine_pilot) at `ah world build` — their JSONs stay byte-unchanged and
+  readable forever, and a rebuild under a later engine would produce a differently-shaped world
+  under the same id, not reproduce the campaign. Do not "fix" the refusal; use the `71x`
+  successors. Editing a retired preset's `world_id` in place would not free the old id (the
+  fence is a frozenset in `src/ah/cli.py`, independent of file content) and *would* rewrite a
+  campaign record.
+- **`data/` is a junction to ONE shared live store in every worktree.** Each worktree's `data/`
+  points at the main repo's `data/`, so `ah.db` (RunRecords, chronicle, sessions, leaderboard)
+  is shared and gitignored — there is no backup. On 2026-08-19 an `rm -f data/ah.db` inside a
+  worktree deleted the shared database and permanently lost its session history (recorded in
+  `CHANGELOG.md`'s er14-05 entry). **Never delete anything under `data/`**, and in any agent or
+  automation context pass an explicit `--db` into your own worktree or scratch space rather
+  than letting the `ah` CLI fall back to the shared default.
+- **Sealed hashes are minted over canonical LF bytes.** `.gitattributes` pins `* text=auto
+  eol=lf`, so the blob git stores is LF — but a Windows working copy can render CRLF, and a
+  seal script run against that copy records hashes over bytes that no clean checkout will ever
+  reproduce. The symptom is a seal-guard test failing on a file whose `git diff HEAD` is empty.
+  Fix the eol attributes, re-materialize the file (`git checkout` it), then re-hash — and if a
+  seal has already been minted wrong, correct it through the amendment log rather than editing
+  the frozen `hashes` map (precedent: `AM-DSP11-2026-08-19-001`, two paths re-recorded,
+  zero content change).
 - `src/ah/cli.py` and `src/ah/data/cli.py` **must not** use `from __future__ import annotations`
   — Typer resolves parameter hints at runtime and it breaks them.
 - CLI-echoed strings stay **ASCII** (Windows console is cp1252; `→` crashes it). Markdown files
