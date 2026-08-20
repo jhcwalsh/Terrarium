@@ -5,7 +5,8 @@
     "n_paths": 1000
   },
   "extensions": {
-    "x_campaign_vintage_id": "2026-08-10.1"
+    "x_campaign_vintage_id": "2026-08-10.1",
+    "x_provenance_note": "successor of 604 (00000000-0000-4000-9000-000000000604) under the chosen-PE equation (D-ER16-1): the sleeve-mappings artifact that translates this same declared scenario into private-market returns moved from v1.2 to v1.3, so the world identity moves with it - scores under port-v5-inflation-gen and port-v6-chosen-pe-gen must never share a leaderboard row. This world is not a stress preset and has no x_stress.precedent list, so the sentence lives here; everything else in the spec is byte-unchanged from 604."
   },
   "factor_conditions": {
     "correlation": {
@@ -54,7 +55,8 @@
     "author": "sso:preset",
     "created_at": "2026-08-11T00:00:00Z",
     "source": {
-      "kind": "preset"
+      "kind": "derived",
+      "parent_world_id": "00000000-0000-4000-9000-000000000604"
     }
   },
   "regimes": {
@@ -92,5 +94,5 @@
       "leverage_turns": 5.5
     }
   },
-  "world_id": "00000000-0000-4000-9000-000000000604"
+  "world_id": "00000000-0000-4000-9000-000000000724"
 }
