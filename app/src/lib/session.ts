@@ -301,6 +301,12 @@ export interface PlanCap {
   annual_rate: number;
 }
 
+/** app-open-04 Item H: per-sleeve projected NAV for the next ten years —
+ * `ah.play.plan_projection`, the pacing model's own cohort recursion at
+ * tier-0's frozen constant G, computed SERVER-side only. The Cashflow
+ * panels render these numbers verbatim; the client never projects. */
+export type PlanProjection = Record<string, { nav_years: number[] }>;
+
 export interface DefaultBookResponse {
   book: Book;
   plan: Plan;
@@ -308,6 +314,10 @@ export interface DefaultBookResponse {
   book_digest: string;
   plan_digest: string;
   plan_cap: PlanCap;
+  /** app-open-04 Item H: the default book+plan's own projection, so the
+   * Cashflow panels have data before any edit posts to /book/plan.
+   * Optional so an older server's document still parses. */
+  projection?: PlanProjection;
 }
 
 /** su-app-06: the entry screen's pre-fill — today's derived book and the
@@ -350,15 +360,25 @@ export interface UnfundedNote {
  * (edited) book — `POST /book/plan`, the same `book_commitment_plan`
  * derivation the session door trusts, never a client-side restatement of it.
  * The entry screen calls this after every book edit and replaces its plan
- * grid wholesale with the answer. `unfunded` (app-open-04) is optional so a
- * response from an older server still parses. */
+ * grid wholesale with the answer. `unfunded`/`projection` (app-open-04) are
+ * optional so a response from an older server still parses.
+ *
+ * app-open-04 Item H: a HAND-EDITED plan may ride along as `plan`; the
+ * response's `projection` then describes THAT plan (the grid the analyst is
+ * looking at) while `plan`/`plan_digest` stay the server's own derivation. */
 export function planForBook(
   runId: string,
   book: Book,
-): Promise<{ plan: Plan; plan_digest: string; unfunded?: UnfundedNote }> {
+  plan?: Plan,
+): Promise<{
+  plan: Plan;
+  plan_digest: string;
+  unfunded?: UnfundedNote;
+  projection?: PlanProjection;
+}> {
   return request("/book/plan", {
     method: "POST",
-    body: JSON.stringify({ run_id: runId, book }),
+    body: JSON.stringify({ run_id: runId, book, ...(plan ? { plan } : {}) }),
   });
 }
 

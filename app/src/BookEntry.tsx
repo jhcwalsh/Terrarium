@@ -125,10 +125,12 @@ import {
   type DefaultBookResponse,
   type Plan,
   type PlanCap,
+  type PlanProjection,
   type Rung,
   type UnfundedNote,
 } from "./lib/session";
 import { sleeveLabel } from "./lib/sleeveLabels";
+import { ProjectionChart } from "./components/ProjectionChart";
 import { VintageChart } from "./components/VintageChart";
 
 const RUNG_FIELDS = [
@@ -577,6 +579,12 @@ export function BookEntry({
    * hand-edited plan is the analyst's own and the sentence would describe a
    * derivation no longer on screen. */
   const [planUnfunded, setPlanUnfunded] = useState<UnfundedNote | null>(null);
+  /** app-open-04 Item H: the SERVER's per-sleeve ten-year NAV projection for
+   * the plan currently on screen — the served default's on load, refreshed
+   * with every recompute round-trip (and, for a taken-over plan, with every
+   * hand-edited cell). Null when no server has provided one, in which case
+   * the panels render their tables without a chart. */
+  const [projection, setProjection] = useState<PlanProjection | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -587,6 +595,9 @@ export function BookEntry({
         setResp(r);
         setBook(seeded);
         setPlan(deepClone(initialPlan ?? r.plan));
+        // app-open-04 Item H: the served default's own projection opens the
+        // Cashflow panels; the recompute effect replaces it for any edit.
+        setProjection(r.projection ?? null);
         setPlanEdited(
           initialPlan !== undefined && JSON.stringify(initialPlan) !== JSON.stringify(r.plan),
         );
@@ -653,8 +664,28 @@ export function BookEntry({
       // app-open-03: the old "the book does not total 100" gate is GONE —
       // the posted book is the typed one rescaled to 100 (`effectiveBook`),
       // so the only total that can still block is one nothing could scale.
+      //
+      // app-open-04 Item G (owner ruling 2026-08-20, drive item 5): the
+      // gate is BACK, with a plain notice instead of a dead end. app-open-03
+      // silently rescaled an off-100 book on Play; the owner has now ruled
+      // that a total the screen shows as anything but 100 must notify and
+      // require the change, never proceed silently. The gate reads
+      // `totalRounded` — the exact number the rail's "Total" readout
+      // displays (2dp) — so it fires precisely when the screen cannot read
+      // 100, and float dust below display precision never blocks. The
+      // weight column and the policy-wt column are NOT gated (they sum to
+      // 100 by construction), and the typed targets stay relative (no total
+      // of them is displayed anywhere). The deadlock app-open-03 fixed
+      // stays fixed: the message names the number and the tab where values
+      // and cash put it right, and the weight column remains the editing
+      // surface that cannot break the total.
       if (!(total > 0)) {
         shapeFaults.push("the book needs a positive total - raise a value on some class or cash");
+      } else if (totalRounded !== 100) {
+        shapeFaults.push(
+          `the book totals ${totalRounded}, not 100 - adjust values or cash on the ` +
+            "Targets and bands tab until the total reads 100",
+        );
       } else if (book.targets) {
         // negative targets keep their own, separately-worded fault; the old
         // "targets do not total 100" gate is gone the same way (typed
@@ -703,29 +734,42 @@ export function BookEntry({
     Object.values(targets).some((t) => t < 0) ||
     (!(targetSum > 0) && cashWeight < 100 - SCALE_TOLERANCE) ||
     recyclingBreaks(book).length > 0;
+  // app-open-04 Item H: the plan's identity for this effect — a hand-edited
+  // cell must refresh the PROJECTION (the panels must chart the grid the
+  // analyst is looking at), even though the plan grid itself never follows
+  // book edits while taken over. Deliberately null while the plan is NOT
+  // taken over: in that state the plan is the effect's own OUTPUT
+  // (`setPlan(derived)`), and depending on it would re-fire one redundant
+  // POST after every book edit.
+  const editedPlanJson = planEdited && plan ? JSON.stringify(plan) : null;
   useEffect(() => {
     if (!resp || !book || !bookJson) return;
-    if (planEdited) return;
-    if (bookJson === defaultBookJson) {
+    if (!planEdited && bookJson === defaultBookJson) {
       setPlan((p) =>
         JSON.stringify(p) === JSON.stringify(resp.plan) ? p : deepClone(resp.plan),
       );
       setPlanSync((s) => (s.status === "idle" ? s : { status: "idle" }));
       setPlanUnfunded(null);
+      setProjection(resp.projection ?? null);
       return;
     }
     if (bookBlocked) return;
     let cancelled = false;
     setPlanSync({ status: "pending" });
     const timer = setTimeout(() => {
-      planForBook(runId, effectiveBook(book))
-        .then(({ plan: derived, unfunded }) => {
+      // app-open-04 Item H: while the plan is taken over by hand it rides
+      // along, and the response's PROJECTION describes it — the grid stays
+      // the analyst's (derived plan not applied below). An un-edited plan
+      // posts nothing extra and follows the derivation exactly as before.
+      planForBook(runId, effectiveBook(book), planEdited && plan ? plan : undefined)
+        .then(({ plan: derived, unfunded, projection: served }) => {
           if (cancelled) return;
-          setPlan(derived);
+          if (!planEdited) setPlan(derived);
           setPlanSync({ status: "idle" });
           // app-open-04 Item C: the note rides with the plan it describes;
           // absent on an older server, which renders as "no pause".
           setPlanUnfunded(unfunded ?? null);
+          setProjection(served ?? null);
         })
         .catch((e) => {
           if (cancelled) return;
@@ -740,9 +784,19 @@ export function BookEntry({
       cancelled = true;
       clearTimeout(timer);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- bookJson is the
-    // book's identity for this effect; book itself is read from the closure.
-  }, [bookJson, defaultBookJson, planEdited, resp, runId, bookBlocked, planRecomputeDelayMs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bookJson and
+    // editedPlanJson are the book's and taken-over plan's identities for
+    // this effect; both objects are read fresh from the closure.
+  }, [
+    bookJson,
+    editedPlanJson,
+    defaultBookJson,
+    planEdited,
+    resp,
+    runId,
+    bookBlocked,
+    planRecomputeDelayMs,
+  ]);
 
   if (error) {
     return (
@@ -881,17 +935,46 @@ export function BookEntry({
         : b,
     );
 
-  /** app-open-02: the parsed, positive rebuild value for `sleeve`, or `null`
-   * while the box is blank/unparseable — a SHAPE check only, same tier as
-   * `allFieldsFinite`. Whether a POSITIVE-but-server-refused value (the
-   * server also enforces `value > 0`) goes through is left to the server:
-   * this screen does not duplicate that rule, only gates on "is this a
-   * number at all" so the button is not clickable while empty. */
+  /** app-open-04 Item F (owner drive item 4): the ladder header's input is
+   * titled "Current weight" and PREFILLS with the same current weight the
+   * Targets tab shows for the sleeve — `heldWeight`, the one derivation,
+   * never a copied number. What the input MEANS moved with the title: the
+   * typed number is a WEIGHT percent, and the rebuild request converts it
+   * to the ladder value that yields exactly that share of the resulting
+   * total (`v = rest * w / (100 - w)`, `rest` = the book total minus this
+   * sleeve's own value — the denominator effect handled, not ignored).
+   * Restating a typed weight as the value that achieves it is the same
+   * bookkeeping tier as `applyWeightEdit`'s algebra; no plan or value math
+   * is invented here, and `/book/ladder` still receives a VALUE and still
+   * builds the rungs server-side. On a 100-point book the untouched prefill
+   * converts to the sleeve's own current value exactly, so "rebuild at the
+   * shown weight" is a no-op in the only state Item G lets Play accept.
+   *
+   * The shown text: the typed draft while one exists, else the LIVE current
+   * weight (1dp) — after a rebuild the draft is cleared, so the box
+   * re-derives to the sleeve's new weight rather than echoing what was
+   * typed (the same "derive, don't duplicate" the Targets tab obeys). */
+  const shownRebuildWeight = (sleeve: string): string => {
+    const typed = rebuildText[sleeve];
+    if (typed !== undefined) return typed;
+    const w = heldWeight(sleeve);
+    return Number.isFinite(w) ? fmt1(w) : "";
+  };
+
+  /** the /book/ladder VALUE the typed weight converts to, or `null` while
+   * the box holds something that is not a weight this book can reach
+   * (blank, not a number, w <= 0, w >= 100, or nothing else to cede from).
+   * Rounded to 6dp — display-level dust off a many-term total, same
+   * precision `applyWeightEdit` settles computed entries at. */
   const rebuildTargetValue = (sleeve: string): number | null => {
-    const typed = rebuildText[sleeve]?.trim();
+    const typed = shownRebuildWeight(sleeve).trim();
     if (!typed) return null;
-    const n = Number(typed);
-    return Number.isFinite(n) ? n : null;
+    const w = Number(typed);
+    if (!Number.isFinite(w) || w <= 0 || w >= 100) return null;
+    const rest = total - (values[sleeve] ?? 0);
+    if (!(rest > 0)) return null;
+    const v = (rest * w) / (100 - w);
+    return Math.round(v * 1e6) / 1e6;
   };
 
   const doRebuildLadder = (sleeve: string) => {
@@ -904,6 +987,9 @@ export function BookEntry({
         // never partially applied: the sleeve's rungs are replaced WHOLESALE,
         // in one state update, or not at all.
         setBook((b) => (b ? { ...b, private: { ...b.private, [sleeve]: rungs } } : b));
+        // Item F: clear the draft so the box re-derives to the sleeve's NEW
+        // current weight — proof on screen that the number is derived live.
+        setRebuildText(({ [sleeve]: _cleared, ...rest }) => rest);
       })
       .catch((e) => {
         setLadderError((prev) => ({
@@ -934,8 +1020,6 @@ export function BookEntry({
     setPlanEdited(false);
     setPlan(deepClone(resp.plan));
   };
-
-  const planYears = plan.points[privateSleeves[0]] ?? [];
 
   return (
     <main className="shell book-entry">
@@ -993,17 +1077,21 @@ export function BookEntry({
       <section className="setup book-liquid">
         <h2>Targets and bands</h2>
         <p className="book-note">
-          <strong>Value</strong> is what you hold today, in any units — its{" "}
-          <strong>weight</strong> beside it is that class's share of the total,
-          kept in step live, and the book is entered as those weights (totalling
-          100) when you press Play. Type either one: typing a weight keeps the
-          total fixed and scales the other liquid classes and cash to absorb the
-          difference. <strong>Target</strong> is your policy allocation — relative
+          {/* app-open-04 Item G (owner ruling 2026-08-20): the copy states
+              the total-100 requirement the Play gate now enforces — the
+              old "in any units" free-scale promise is withdrawn with it. */}
+          <strong>Value</strong> is what you hold today, in points — the book
+          must total 100 (with cash) before Play, and the notice next to Play
+          says so whenever it does not. Its <strong>weight</strong> beside it
+          is that class's share of the total, kept in step live. Type either
+          one: typing a weight keeps the total fixed and scales the other
+          liquid classes and cash to absorb the difference.{" "}
+          <strong>Target</strong> is your policy allocation — relative
           numbers that fill whatever share cash leaves — and it is what the
           commitment programme paces against. The <strong>band</strong> is
           optional and <strong>reports only</strong> — nothing rebalances to it.
           Private asset classes' value is the ladder below it, summed — edit it
-          there (or rebuild it to a new value), not here.
+          there (or rebuild it to a new weight), not here.
         </p>
         <div className="policy-grid">
           <div className="policy-head">
@@ -1094,16 +1182,24 @@ export function BookEntry({
           <div className="book-ladder-head">
             <h2>{sleeveLabel(sleeve)}</h2>
             <div className="book-ladder-actions">
-              <input
-                type="number"
-                className="ladder-rebuild-value"
-                aria-label={`${sleeve} rebuild value`}
-                placeholder="new value"
-                value={rebuildText[sleeve] ?? ""}
-                onChange={(e) =>
-                  setRebuildText((t) => ({ ...t, [sleeve]: e.target.value }))
-                }
-              />
+              {/* app-open-04 Item F: titled "Current weight", prefilled with
+                  the SAME weight the Targets tab shows (heldWeight — one
+                  derivation), typed as a weight percent and converted to the
+                  ladder value on rebuild. The aria-label keeps the stable
+                  test/a11y hook name (app-open-01 delta 3's rule: codes in
+                  hooks, plain words on screen). */}
+              <label className="ladder-rebuild-label">
+                Current weight
+                <input
+                  type="number"
+                  className="ladder-rebuild-value"
+                  aria-label={`${sleeve} rebuild value`}
+                  value={shownRebuildWeight(sleeve)}
+                  onChange={(e) =>
+                    setRebuildText((t) => ({ ...t, [sleeve]: e.target.value }))
+                  }
+                />
+              </label>
               <button
                 type="button"
                 aria-label={`${sleeve} rebuild ladder`}
@@ -1195,51 +1291,75 @@ export function BookEntry({
             the commitment plan could not be recomputed: {planSync.message}
           </p>
         )}
-        {/* app-open-04 Item C: one plain sentence when the server's derived
-            plan is pausing commitments for this book — the numbers are the
-            SERVED totals, rendered verbatim (DN-3 W5), and the sentence
-            hides once the plan is hand-edited (it describes the derivation,
-            which a taken-over plan no longer follows). */}
-        {!planEdited && planUnfunded?.active && (
-          <p className="book-note" data-testid="unfunded-pause-note">
-            {`commitments pause while existing unfunded works off - your unfunded is ` +
-              `${fmt1(planUnfunded.unfunded_total)} vs ${fmt1(planUnfunded.steady_state_total)} ` +
-              "typical for this target"}
-          </p>
-        )}
-        <div className="book-ladder-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>year</th>
-                {privateSleeves.map((s) => (
-                  <th key={s}>{sleeveLabel(s)}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {planYears.map((_, i) => (
-                <tr key={i}>
-                  <td>{i + 1}</td>
-                  {privateSleeves.map((s) => {
-                    const v = plan.points[s]?.[i];
+      </section>
+      {/* app-open-04 Item H (owner drive item 6): one panel per private
+          asset class, the Historical-vintages pattern — a chart (planned
+          commitment bars + the server's projected ten-year NAV line) above
+          that class's own plan table. The projection is SERVED
+          (`plan_projection`, tier-0's constant G through the engine's own
+          cohort recursion) and follows the plan on screen: the derived one,
+          or the analyst's own once taken over by hand. Item C's pause
+          sentence renders per class, in the panel it applies to, with that
+          class's own served numbers. */}
+      {privateSleeves.map((sleeve) => {
+        const points = plan.points[sleeve] ?? [];
+        const navYears = projection?.[sleeve]?.nav_years ?? [];
+        const rows = Math.max(points.length, navYears.length);
+        const pause = planUnfunded?.sleeves?.[sleeve];
+        return (
+          <section key={sleeve} className="book-plan-panel">
+            <div className="book-ladder-head">
+              <h2>{sleeveLabel(sleeve)}</h2>
+            </div>
+            {!planEdited && pause?.paused && (
+              <p className="book-note" data-testid={`unfunded-pause-note-${sleeve}`}>
+                {`commitments pause while existing unfunded works off - your unfunded is ` +
+                  `${fmt1(pause.unfunded)} vs ${fmt1(pause.steady_state)} typical for this target`}
+              </p>
+            )}
+            <ProjectionChart sleeve={sleeve} commitments={points} navYears={navYears} />
+            <div className="book-ladder-scroll">
+              <table>
+                <thead>
+                  <tr>
+                    <th>year</th>
+                    <th>commitment</th>
+                    <th>projected NAV</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {Array.from({ length: rows }, (_, i) => {
+                    const v = points[i];
                     return (
-                      <td key={s}>
-                        <input
-                          type="number"
-                          aria-label={`${s} plan year ${i}`}
-                          value={v !== undefined && Number.isFinite(v) ? v : ""}
-                          onChange={(e) => setPlanPoint(s, i, Number(e.target.value))}
-                        />
-                      </td>
+                      <tr key={i}>
+                        <td>{i + 1}</td>
+                        <td>
+                          {i < points.length ? (
+                            <input
+                              type="number"
+                              aria-label={`${sleeve} plan year ${i}`}
+                              value={v !== undefined && Number.isFinite(v) ? v : ""}
+                              onChange={(e) => setPlanPoint(sleeve, i, Number(e.target.value))}
+                            />
+                          ) : (
+                            // a projection year past the plan's windows (a
+                            // decade has nine windows and ten years): no
+                            // commitment is planned or plannable there.
+                            <span className="book-carry">no window</span>
+                          )}
+                        </td>
+                        <td className="book-carry" data-testid={`projected-nav-${sleeve}-${i}`}>
+                          {i < navYears.length ? fmt1(navYears[i]) : "—"}
+                        </td>
+                      </tr>
                     );
                   })}
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </section>
+                </tbody>
+              </table>
+            </div>
+          </section>
+        );
+      })}
       </div>
 
       {/* app-open-01 item 1 (owner ruling 2026-08-16): every field on this

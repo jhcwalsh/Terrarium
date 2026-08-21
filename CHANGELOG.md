@@ -8,6 +8,63 @@ All notable changes to this project are documented here. The project follows
 
 Four owner-ordered items on the book/picker/serve surfaces (2026-08-20, "go on 1-3").
 
+Second batch (owner-dictated while playing, same day — items E-H):
+
+- **The commit button is never half hidden or dead again (Item E).** Owner: "I
+  can't move things forward - the button is half hidden and not live." Root
+  cause: the decision panel's pinned-commit design (`overflow: hidden`, cards
+  scroll between pinned header/footer) was outgrown by two releases of content —
+  the eight-row policy-band strip (app-open-02; the default book carries default
+  bands since delta 1) and the four-row commitment lever (sp-02 + ER-14's infra)
+  are unscrollable flex children. Measured live at a 1271px-tall viewport: the
+  window's content ran 769px against a 565px track, the commit button sat past
+  the clip (elementFromPoint at its centre: nothing — half hidden AND dead), and
+  the top transport is locked at an open window by design, so the player was
+  stuck at every decision window, at essentially every real viewport. Fix: the
+  panel scrolls and the commit footer STICKS to the scrollport bottom — always
+  visible, always clickable, content scrolls under it. Verified live by CSS
+  injection at the reproducing viewport before the edit (both scroll extremes:
+  visible, clickable); no layout engine in the test runner, so the manual matrix
+  (2560x1271 full-width and a 1280px frame emulation, fixed at both) is recorded
+  in the WP report rather than pinned by a DOM test.
+- **The vintages tab's box is "Current weight" (Item F).** Owner: it "should
+  have a title of 'Current weight' and be prepopulated with the current weight
+  from the Targets page." Done, with the input's MEANING moved to match its new
+  title: it prefills live from the same `heldWeight` derivation the Targets tab
+  renders (one source, never a copy — after a rebuild it re-derives to the NEW
+  weight rather than echoing the typed number), and the typed number is a
+  weight percent, converted to the ladder value that yields exactly that share
+  of the resulting total (`v = rest * w / (100 - w)` — the same bookkeeping
+  tier as the weight column's own algebra; `/book/ladder` still receives a
+  value and still builds rungs server-side). Weights outside (0, 100) disable
+  Rebuild instead of round-tripping to a server refusal.
+- **An off-100 total blocks Play with a plain notice (Item G — owner ruling
+  2026-08-20, drive item 5, REVERSING app-open-03's silent rescale).** The one
+  user-visible total that can leave 100 is the rail's "Total" (typed values +
+  ladder NAV + cash — the weight and policy-wt columns sum to 100 by
+  construction, and no targets total is displayed). Play now blocks on
+  `totalRounded !== 100` — exactly when the rail cannot read 100, so display
+  dust never blocks — with a named fault ("the book totals X, not 100 - adjust
+  values or cash on the Targets and bands tab until the total reads 100"). The
+  app-open-03 deadlock stays dead: the weight column still edits without moving
+  the total, and the two app-open-03 tests that pinned the silent rescale are
+  re-inverted in place with their full two-way history. The screen's "in any
+  units" copy is withdrawn with the rescale.
+- **One projection panel per asset class (Item H).** The Cashflow-projections
+  tab is per-class panels in the Historical-vintages pattern: each private
+  class shows its own commitment plan (bars + editable table) and the SERVER's
+  projected NAV for the next ten years — `ah.play.plan_projection`, the entered
+  ladders and the plan's own vintages stepped through the engine's own cohort
+  recursion (`ClosedEndCohort.step`, `f_call = f_dist = 1` — tier 0) at
+  tier-0's frozen constant G (`mappings/cashflow-tier0-v1.0.yaml`), the model's
+  own declared growth, never the tape and never client-side math (DN-3 W5).
+  `GET /book/default` and `POST /book/plan` both serve the projection;
+  `POST /book/plan` also accepts a hand-edited plan riding along and projects
+  THAT (validated against the same caps/window count as the session door),
+  while `plan`/`plan_digest` stay the server's derivation. Item C's pause
+  sentence now renders per class, in the panel it applies to, with that class's
+  own served numbers.
+
 - **Dead local entries on the front page (Item A).** The browser's IndexedDB cache
   outlives releases: a cached bundle whose run the server no longer has (e.g. run
   `65778be9`, the retired 1974 world) rendered exactly like a live entry, then every

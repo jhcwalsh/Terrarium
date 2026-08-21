@@ -142,6 +142,7 @@ ignore = [
 # app-open-04: the same fixture-injection idiom, same reason.
 "tests/test_serve_retired.py" = ["F811"]
 "tests/test_unfunded_plan.py" = ["F811"]
+"tests/test_plan_projection.py" = ["F811"]
 
 [tool.ruff.lint.flake8-bugbear]
 # Typer's (and FastAPI's) function-call-in-default is the intended idiom,

@@ -76,6 +76,7 @@ __all__ = [
     "book_commitment_plan",
     "default_commitment_plan",
     "default_opening_book",
+    "plan_projection",
     "play_alpha",
     "simulate_play",
     "steady_state_unfunded",
@@ -731,6 +732,18 @@ def _drawdown_depth(quarterly: np.ndarray) -> np.ndarray:
     return 1.0 - growth / peak
 
 
+def _fresh_vintage_doc(base: dict[str, Any], asset: str) -> dict[str, Any]:
+    """A fresh fund's document for a new vintage: none of the example's
+    history — no performance to date, no accrued carry. Extracted from
+    :func:`_commit_new_vintage` (app-open-04 Item H) so the projection mints
+    the IDENTICAL cohort the engine would, never a near-copy."""
+    fresh = json.loads(json.dumps(base))
+    fresh["identity"] = {**base["identity"], "sleeve_id": asset}
+    fresh["performance"] = {"tvpi": 1.0, "dpi": 0.0, "rvpi": 1.0, "irr_to_date": 0.0, "pme": 1.0}
+    fresh["fees"] = {**base["fees"], "accrued_carry": 0.0}
+    return fresh
+
+
 def _commit_new_vintage(
     portfolio: Portfolio,
     ladders: dict[str, list[ClosedEndCohort]],
@@ -742,20 +755,71 @@ def _commit_new_vintage(
     """Commit one year's new vintage of ``amount`` into the ladder."""
     if amount <= 0.0:
         return  # a cut-to-zero year: no vintage, honestly nothing
-    # a fresh fund carries none of the example's history: no performance to
-    # date, no accrued carry, and a real vintage year rather than an offset
-    fresh = json.loads(json.dumps(base))
-    fresh["identity"] = {**base["identity"], "sleeve_id": asset}
-    fresh["performance"] = {"tvpi": 1.0, "dpi": 0.0, "rvpi": 1.0, "irr_to_date": 0.0, "pme": 1.0}
-    fresh["fees"] = {**base["fees"], "accrued_carry": 0.0}
+    # a fresh fund carries none of the example's history (real vintage year
+    # rather than an offset): see _fresh_vintage_doc.
     cohort = ClosedEndCohort.new_commitment(
-        fresh,
+        _fresh_vintage_doc(base, asset),
         committed=amount,
         vintage_year=int(base["identity"]["vintage_year"]) + year,
         cohort_id=f"{asset}-v{year}",
     )
     portfolio.add(f"{asset}-v{year}", cohort)
     ladders[asset].append(cohort)
+
+
+def plan_projection(book: OpeningBook, plan: CommitmentPlan, years: int = 10) -> dict[str, Any]:
+    """Per-sleeve projected NAV over the next ``years`` years, from the
+    pacing model's own declared quantities (app-open-04 Item H — the
+    Cashflow-projections tab's per-class panels).
+
+    Everything here is the model's own, and nothing reads the tape:
+
+    - the entered book's rungs run through the SAME cohort recursion the
+      engine plays (``ClosedEndCohort.step``) with ``f_call = f_dist = 1`` —
+      tier 0, the sealed transparent benchmark ("one model, linkage on or
+      off"; the linkage multipliers are functions of the tape, which a
+      kickoff projection must not see);
+    - NAV grows at tier-0's frozen constant G
+      (``mappings/cashflow-tier0-v1.0.yaml``'s ``g_annual`` — the declared
+      benchmark growth, not an invented rate and not the world's returns);
+    - the plan's own vintages join at the engine's own calendar (a
+      commitment at quarter ``4 * (k + 1)`` for window k, stepped from that
+      quarter on) as the IDENTICAL fresh cohort ``_commit_new_vintage``
+      would mint (:func:`_fresh_vintage_doc`).
+
+    Returns ``{sleeve: {"nav_years": [year-1 .. year-N true NAV, 4dp]}}``.
+    Deterministic: the same book and plan always project the same path.
+    Display-surface math (DN-3 W5: computed server-side, mirrored by the
+    app) — nothing here scores, and no alpha stamp moves.
+    """
+    from ah.port.cashflow_tier0 import load_spec
+
+    g_quarterly = (1.0 + float(load_spec()["g_annual"])) ** 0.25 - 1.0
+    base = _doc("closed-end-cohort.example.json")
+    vintage0 = int(base["identity"]["vintage_year"])
+    out: dict[str, Any] = {}
+    for sleeve in PRIVATE_ASSETS:
+        cohorts = book.cohorts(sleeve)
+        points = plan.points.get(sleeve, [])
+        nav_years: list[float] = []
+        for quarter in range(years * 4):
+            if quarter > 0 and quarter % _COMMITMENT_QUARTERS == 0:
+                window = quarter // 4 - 1
+                if window < len(points) and float(points[window]) > 0.0:
+                    cohorts.append(
+                        ClosedEndCohort.new_commitment(
+                            _fresh_vintage_doc(base, sleeve),
+                            committed=float(points[window]),
+                            vintage_year=vintage0 + quarter // 4,
+                            cohort_id=f"{sleeve}-proj{quarter // 4}",
+                        )
+                    )
+            for cohort in cohorts:
+                cohort.step(g_quarterly)
+            if quarter % 4 == 3:
+                nav_years.append(round(sum(c.nav_true for c in cohorts), 4))
+        out[sleeve] = {"nav_years": nav_years}
+    return out
 
 
 #: The quarter-phase the committed fixture itself sits on (age 5.25), kept so

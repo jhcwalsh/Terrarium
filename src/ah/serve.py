@@ -54,6 +54,7 @@ from ah.play import (
     default_commitment_plan,
     default_opening_book,
     plan_commitments,
+    plan_projection,
     simulate_play,
     unfunded_plan_note,
     validate_commitments,
@@ -358,6 +359,11 @@ class BookPlanRequest(BaseModel):
 
     run_id: str
     book: OpeningBook
+    # app-open-04 Item H: a HAND-EDITED plan may ride along; the response's
+    # projection then describes THAT plan (the grid the analyst is looking
+    # at) instead of the derived one. `plan`/`plan_digest` in the response
+    # stay the server's own derivation either way.
+    plan: CommitmentPlan | None = None
 
 
 class Advance(BaseModel):
@@ -502,6 +508,11 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "book_digest": book.digest(),
             "plan_digest": plan.digest(),
             "plan_cap": {"multiple": COMMIT_CAP_MULTIPLE, "annual_rate": _ANNUAL_COMMITMENT_RATE},
+            # app-open-04 Item H: the Cashflow-projections panels need a
+            # projection before any edit ever posts to /book/plan, so the
+            # default's own rides here (the same plan_projection, on the
+            # served default book and plan).
+            "projection": plan_projection(book, plan),
         }
 
     @app.get("/book/ladder")
@@ -560,14 +571,38 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         except BookError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         plan = book_commitment_plan(body.book, windows=len(decision_months(months)))
-        # app-open-04 Item C: the numbers behind the Cashflow tab's one plain
-        # sentence when the unfunded pause is active — served, never derived
-        # client-side (DN-3 W5). `active` is False for any book at or under
-        # its steady-state unfunded, the derived default included.
+        # app-open-04 Item H: the projection follows the plan the analyst is
+        # LOOKING AT — a posted hand-edited plan when one rides along
+        # (validated against the same caps and window count the session door
+        # enforces, so a plan this endpoint projects is one that could be
+        # played), else the plan derived above. `plan`/`plan_digest` stay
+        # the server's own derivation either way.
+        shown = plan
+        if body.plan is not None:
+            expected = len(decision_months(months))
+            for sleeve, years in body.plan.points.items():
+                if len(years) != expected:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"plan {sleeve} has {len(years)} entries, expected {expected} "
+                            "(one per decision window)"
+                        ),
+                    )
+            try:
+                validate_plan(body.plan, body.book.effective_targets())
+            except BookError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            shown = body.plan
+        # app-open-04 Item C: the numbers behind the Cashflow tab's plain
+        # pause sentences — served, never derived client-side (DN-3 W5).
+        # `active` is False for any book at or under its steady-state
+        # unfunded, the derived default included.
         return {
             "plan": plan.model_dump(),
             "plan_digest": plan.digest(),
             "unfunded": unfunded_plan_note(body.book),
+            "projection": plan_projection(body.book, shown),
         }
 
     @app.get("/runs/{run_id}/bundle")
