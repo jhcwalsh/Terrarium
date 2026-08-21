@@ -4,6 +4,74 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## qc-04-evidence — QUARTERLY CLOCK, ANNUAL VINTAGES: EVIDENCE + DOCS (branch `qc-01-clock`)
+
+D-QC-1's third and final WP: the registers, `CLAUDE.md`, and the current-docs
+session description go quarterly (Task E1); the release evidence document,
+a full live walk, and this entry (Task E2).
+
+**Task E1.** `docs/engine-realism-register.md`'s ER-2 ("the policy rate is a
+continuous drift, not committee decisions") is amended, not closed: the
+PLAYER's meeting calendar now exists (the 39-window quarterly clock), which
+discharges the allocator-facing half of the finding; the ENGINE's
+`_rate_path` is still a continuous monthly drift with no 25bp quantisation,
+unchanged and out of this release's scope by the spec's own §4.2.
+`CLAUDE.md` gets two surgical edits: the ER-2 digest line gains the
+partial-discharge note, and the play-alpha version line updates
+`port-v5-inflation`/`port-v6-chosen-pe-gen` -> `port-v7-quarterly`/
+`port-v7-quarterly-gen` (both stamps moved together this time, unlike the
+chosen-PE adoption where only the generated one moved), plus a new
+Environment Gotchas bullet on the `decision_windows`/`play_alpha_version`
+stamp and the frozen `_LEGACY_PLAY_ALPHA` fallback that must never be
+"simplified" to the live constants. `docs/current/METHOD.md` and
+`alternate-histories-audited.md` each get their one "once a year a decision
+window opens" sentence corrected to quarterly, with a one-line touch-up
+note added to `docs/current/README.md`'s register per its own conventions
+(this is a one-sentence cadence fix, not a re-pass of either document).
+
+**Task E2 — the evidence document**
+(`docs/superpowers/specs/2026-08-20-quarterly-clock-evidence.md`): all seven
+of the spec's acceptance criteria (§7) mapped to their proof and graded
+PASS. Re-ran `test_qc_windows.py`/`test_qc_regression.py`/`test_qc_versions.py`
+fresh (35/35) and re-verified the `test_serve.py -k "TestQuarterlyService or
+TestGeneratedSessions"` subset at **11/11** — correcting the S5/S6 report's
+own count error (it had claimed 11/11 while the branch was still mid-S7-
+migration and actually red 8/3; now genuinely green after S7's fix, and this
+document says so honestly rather than repeating the old claim).
+
+A live walk against this branch's own server (protocol: stop the released
+service, run this branch's instance, hand the port back — outage window
+about ten minutes, coordinated with `main`) drove all 39 windows of a
+practice session end to end over the HTTP API: all four stances in
+rotation, a mid-year commitment edit left untouched to its year-close lock
+(month 14 -> locked unchanged at 23), a second edit revised again before
+its lock with one sleeve touched and one left alone (months 26 then 32 ->
+locked per-sleeve at 35 as `{pe: 2.75, pc: 1.1}`), the dead-lever 422 fired
+live at a stance-only window (a second, deliberately incomplete probe
+session, since decisions are final on the main walk), completion, outcome
+(`decision_alpha_version port-v7-quarterly`, `final_value 93.27` vs
+`twin_final_value 106.98`), `ah replay` printing **MATCH**, and
+`ah credibility --preset stagflation --preset goldilocks` generating clean
+(2 worlds, 17 flags, no exception). R-4 (outcome latency) measured live at
+15.1-15.4 seconds, recorded as an owner-facing observation, no batching
+added. R-6 (feed density) carried forward from QC-2's walk: not empty
+between quarterly stops for the shipped presets, not re-authored per spec
+§4.4.
+
+All three seal locks (main/G3/G5) re-verified unchanged from the S0/S1
+report's original values, at the head of this WP.
+
+**Deviation, carried honestly into the evidence doc's own "open items"
+section:** the plan's three-branch structure (`qc-02-server`/`qc-03-app`/
+`qc-04-evidence`, each merged into `main` behind its own full gate) was
+collapsed to commits on the single branch `qc-01-clock` throughout this
+release, per this session's task framing at every phase. **The full
+`run_gate.py`/`check_gate.py`/`--no-ff` merge into `main` has not run on
+this branch** — each phase ran its own narrower, explicitly stated
+verification instead. That gate-and-merge sequence remains outstanding and
+is the next step, not implied by anything in this entry or the evidence
+document.
+
 ## qc-03-app — QUARTERLY CLOCK, ANNUAL VINTAGES: APP (WIP, branch `qc-01-clock`)
 
 D-QC-1 continued: the app plays the quarterly game. `session.decision_windows`
