@@ -17,7 +17,8 @@ than estimating it.*
 A flight simulator for long-horizon investors. It builds counterfactual economic
 decades and puts the reader in the seat of an institution living through one:
 markets move month by month, capital calls arrive and must be paid, news lands
-as a wire feed, and once a year a decision window opens. At the end the player
+as a wire feed, and once a quarter a decision window opens; commitments form
+annually and lock at year-close (D-QC-1, 2026-08-20). At the end the player
 is scored against a **twin** — an identical institution in the identical world
 that followed written policy and never flinched. The gap between player and twin
 is the value the decisions added or destroyed.

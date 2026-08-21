@@ -206,7 +206,9 @@ list and must gain each new one); `ah/feed.py` generates the in-timeline wire;
 - **`docs/engine-realism-register.md`** records places where the engine and the cashflow model
   are faithful to their plans but not to an allocator's expectations. ER-1, ER-3, ER-4 and
   ER-7 (fat tails + the -99% limited-liability floor, closed in `toy-v0.5`) are closed;
-  ER-2 (no meeting calendar / 25bp quantisation), ER-5 (crisis is a rectangular block;
+  ER-2 (no meeting calendar / 25bp quantisation — partially discharged by
+  D-QC-1: the player's meeting calendar exists via the 39-window quarterly
+  clock, the rate-path quantisation still open), ER-5 (crisis is a rectangular block;
   pooled equity ACF well outside its drafted band), ER-8 (typical months milder —
   AMENDED: the ER-6 close-out revived forced secondaries on deflation_bust 6/20
   seeds; other worlds still 0/20) and ER-9 (t(6) tails print single months larger
@@ -285,6 +287,16 @@ list and must gain each new one); `ah/feed.py` generates the in-timeline wire;
 
 ## Environment gotchas (learned the hard way)
 
+- **Sessions stamp `decision_windows` (the window months, JSON) and
+  `play_alpha_version` at creation** (D-QC-1, `src/ah/store/db.py`'s
+  `_SESSION_STAMPS`). NULL on either column means the row predates the
+  quarterly clock — it resolves to the annual `decision_months` grid and to
+  the FROZEN legacy alpha literals in `ah.serve._LEGACY_PLAY_ALPHA`
+  (`port-v5-inflation`/`port-v6-chosen-pe-gen`), never to the live
+  `PLAY_ALPHA_VERSION`/`GEN_PLAY_ALPHA_VERSION` constants. Do not "simplify"
+  that fallback to the live constants — after any future stamp bump they
+  would name a different game, and an in-flight legacy session must complete,
+  replay and rank as legacy.
 - **The session service listens on 8787**, not 8000 — `app/vite.config.ts` proxies `/sessions`
   there. Checking 8000 will tell you it is down when it is not. After changing `ah/serve.py`,
   kill the listener and restart, or live checks silently exercise stale code (`pkill` does not
@@ -299,8 +311,14 @@ list and must gain each new one); `ah/feed.py` generates the in-timeline wire;
   reflation_boom, `525` prehistory), and every generated-plane world in the `72x` chosen-PE
   block (D-ER16-1): `721` stress_1974_successor, `722` The Gulf Decade, `723`
   stress_1990_successor, `724` stagflation_1974 (formerly `604`). Play alphas
-  are `port-v5-inflation` (toy, `src/ah/play.py`) / `port-v6-chosen-pe-gen` (generated,
-  `src/ah/port/adapter.py`) — the generated stamp alone moved at the chosen-PE adoption.
+  are `port-v7-quarterly` (toy, `src/ah/play.py`) / `port-v7-quarterly-gen`
+  (generated, `src/ah/port/adapter.py`) — both stamps moved together at the
+  quarterly-clock release (D-QC-1, 2026-08-20/21), unlike the chosen-PE
+  adoption where the generated stamp alone moved. A session created before the
+  bump carries no `play_alpha_version` (NULL); it resolves to the FROZEN
+  legacy literals `port-v5-inflation`/`port-v6-chosen-pe-gen`
+  (`ah.serve._LEGACY_PLAY_ALPHA`), never to these live constants, so it keeps
+  replaying and scoring under the annual game it was created with.
 - **Retired research worlds refuse rebuild by design.** `ah.cli.RETIRED_WORLD_IDS` fences the
   `7xx`/`8xx` campaign and spine worlds (`701` stress_1974, `703` stress_1990, `801`
   narration_1974, `802` spine_pilot) at `ah world build` — their JSONs stay byte-unchanged and
