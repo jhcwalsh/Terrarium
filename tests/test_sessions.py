@@ -321,3 +321,66 @@ class TestOpeningBookColumns:
         conn = connect(path)  # migrate() must put them back
         columns = {row["name"] for row in conn.execute("PRAGMA table_info(sessions)")}
         assert {"opening_book", "commitment_plan"} <= columns
+
+
+class TestQuarterlyStamping:
+    """D-QC-1: windows and version are stamped at creation; NULL is legacy.
+
+    stored_run/connect follow this file's own fixture pattern (TestOpeningBookColumns
+    above) -- there is no conn/run_id fixture in this module to reuse.
+    """
+
+    def test_stamped_windows_govern_the_session(self, stored_run):
+        from ah.core.institution import quarterly_decision_months
+
+        db, rid = stored_run
+        conn = connect(db)
+        windows = quarterly_decision_months(120)
+        doc = ss.create_session(
+            conn,
+            run_id=rid,
+            months=120,
+            decision_windows=windows,
+            play_alpha_version="port-v7-quarterly",
+        )
+        assert doc["decision_windows"] == windows
+        assert doc["play_alpha_version"] == "port-v7-quarterly"
+        sid = doc["session_id"]
+        # the first stop is month 2: the ceiling holds there
+        with pytest.raises(ss.SessionError, match="undecided"):
+            ss.advance_reveal(conn, sid, 4)
+        ss.advance_reveal(conn, sid, 3)
+        # decisions go in window order, quarterly
+        with pytest.raises(ss.SessionError, match="in order"):
+            ss.record_decision(conn, sid, month=5, action="hold")
+        ss.record_decision(conn, sid, month=2, action="hold")
+
+    def test_legacy_null_row_resolves_to_the_annual_grid(self, stored_run):
+        db, rid = stored_run
+        conn = connect(db)
+        doc = ss.create_session(conn, run_id=rid, months=120)
+        assert doc["decision_windows"] == decision_months(120)
+        assert doc["play_alpha_version"] is None
+        # the legacy game is untouched: month 11 is still the first stop
+        ss.advance_reveal(conn, doc["session_id"], 12)
+        ss.record_decision(conn, doc["session_id"], month=11, action="derisk")
+
+    def test_complete_requires_every_stamped_window(self, stored_run):
+        from ah.core.institution import quarterly_decision_months
+
+        db, rid = stored_run
+        conn = connect(db)
+        windows = quarterly_decision_months(120)
+        doc = ss.create_session(
+            conn,
+            run_id=rid,
+            months=120,
+            decision_windows=windows,
+            play_alpha_version="port-v7-quarterly",
+        )
+        sid = doc["session_id"]
+        for m in windows:
+            ss.advance_reveal(conn, sid, m + 1)
+            ss.record_decision(conn, sid, month=m, action="hold")
+        ss.advance_reveal(conn, sid, 120)
+        assert ss.complete_session(conn, sid)["status"] == "completed"

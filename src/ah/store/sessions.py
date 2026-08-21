@@ -67,6 +67,11 @@ def _row_to_doc(row: sqlite3.Row) -> dict[str, Any]:
     doc["decisions"] = json.loads(doc["decisions"])
     doc["window_log"] = json.loads(doc["window_log"])
     doc["ranked"] = bool(doc["ranked"])
+    # D-QC-1: the session's own window grid. Stored (quarterly era) or
+    # derived from the annual definition (legacy NULL) -- ONE field,
+    # every consumer reads it, no consumer re-derives the grid.
+    stored = doc.get("decision_windows")
+    doc["decision_windows"] = json.loads(stored) if stored else decision_months(doc["months"])
     return doc
 
 
@@ -80,8 +85,17 @@ def create_session(
     participant: str | None = None,
     opening_book: str | None = None,
     commitment_plan: str | None = None,
+    decision_windows: list[int] | None = None,
+    play_alpha_version: str | None = None,
 ) -> dict[str, Any]:
-    """Open a session over a RunRecord. ``months`` comes from the verified run."""
+    """Open a session over a RunRecord. ``months`` comes from the verified run.
+
+    D-QC-1: ``decision_windows`` and ``play_alpha_version`` are stamped
+    verbatim at creation; ``None`` for either means the legacy annual era
+    (the caller passed nothing, or predates the quarterly clock). Both are
+    stored raw here -- the store does not know a world's engine, so the
+    legacy alpha fallback is the SERVICE's job (ah.serve).
+    """
     if basis not in ("reported", "actual"):
         raise SessionError(f"basis must be 'reported' or 'actual', got {basis!r}")
     rec = conn.execute("SELECT world_id FROM run_records WHERE run_id = ?", (run_id,)).fetchone()
@@ -94,8 +108,9 @@ def create_session(
         """INSERT INTO sessions
            (session_id, run_id, world_id, months, revealed_months, basis, ranked,
             participant, decisions, window_log, status, created_at, updated_at,
-            rationale_schema_version, opening_book, commitment_plan)
-           VALUES (?, ?, ?, ?, 0, ?, ?, ?, '{}', '[]', 'active', ?, ?, ?, ?, ?)""",
+            rationale_schema_version, opening_book, commitment_plan,
+            decision_windows, play_alpha_version)
+           VALUES (?, ?, ?, ?, 0, ?, ?, ?, '{}', '[]', 'active', ?, ?, ?, ?, ?, ?, ?)""",
         (
             session_id,
             run_id,
@@ -109,6 +124,8 @@ def create_session(
             RATIONALE_SCHEMA_VERSION,
             opening_book,
             commitment_plan,
+            json.dumps(decision_windows) if decision_windows is not None else None,
+            play_alpha_version,
         ),
     )
     conn.commit()
@@ -130,7 +147,7 @@ def _reveal_ceiling(doc: dict[str, Any]) -> int:
     commit BEFORE seeing what happens next — E1's commitment mechanic).
     """
     decided = {int(k) for k in doc["decisions"]}
-    for m in decision_months(doc["months"]):
+    for m in doc["decision_windows"]:
         if m not in decided:
             return m + 1  # month m itself is visible; the future is not
     return doc["months"]
@@ -198,7 +215,7 @@ def record_decision(
         raise SessionError(f"session {session_id} is {doc['status']}, not active")
     if action not in ACTIONS:
         raise SessionError(f"unknown action {action!r} (allowed: {sorted(ACTIONS)})")
-    windows = decision_months(doc["months"])
+    windows = doc["decision_windows"]
     if month not in windows:
         raise SessionError(f"month {month} is not a decision window (windows: {windows})")
     if str(month) in doc["decisions"]:
@@ -246,7 +263,7 @@ def complete_session(conn: sqlite3.Connection, session_id: str) -> dict[str, Any
     doc = get_session(conn, session_id)
     if doc["status"] != "active":
         raise SessionError(f"session {session_id} is {doc['status']}, not active")
-    windows = decision_months(doc["months"])
+    windows = doc["decision_windows"]
     undecided = [m for m in windows if str(m) not in doc["decisions"]]
     if undecided:
         raise SessionError(f"cannot complete: windows undecided at months {undecided}")
