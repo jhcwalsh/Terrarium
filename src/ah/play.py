@@ -1192,8 +1192,19 @@ def simulate_play(
             # commitments only at q*3-1, so this merge reduces to exactly the
             # old single-month read -- pinned bit-identical by
             # tests/test_qc_regression.py's committed baseline.
+            #
+            # S4 review MINOR-1: the four months are DERIVED from
+            # _COMMITMENT_QUARTERS rather than a third independent literal
+            # tuple encoding "four windows per vintage year" (the pre-
+            # existing `q * 3 - 1` stance-month formula and `q // 4` above
+            # already encode this coupling once each) -- if
+            # _COMMITMENT_QUARTERS ever moved, a hardcoded tuple would go
+            # silently wrong instead of moving with it.
             override_pts: dict[str, float] = {}
-            for m in (q * 3 - 10, q * 3 - 7, q * 3 - 4, q * 3 - 1):
+            commitment_months = sorted(
+                q * 3 - 1 - 3 * k for k in range(_COMMITMENT_QUARTERS)
+            )
+            for m in commitment_months:
                 d = decisions.get(m)
                 pts = d.get("commitments") if isinstance(d, Mapping) else None
                 if pts is not None:

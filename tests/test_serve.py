@@ -72,6 +72,25 @@ def _play_through(
     return sid
 
 
+def _hold_through(client, sid: str, month: int) -> None:
+    """Hold every window strictly before ``month``, then advance to
+    month + 1 -- the state where ``month``'s window is open (D-QC-1)."""
+    doc = client.get(f"/sessions/{sid}").json()
+    for m in doc["decision_windows"]:
+        if m >= month:
+            break
+        if str(m) in doc["decisions"]:
+            continue  # decided before this call; decisions are final
+        assert (
+            client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1}).status_code == 200
+        )
+        assert (
+            client.post(f"/sessions/{sid}/decisions", json={"month": m, "action": "hold"}).status_code
+            == 200
+        )
+    assert client.post(f"/sessions/{sid}/advance", json={"to_month": month + 1}).status_code == 200
+
+
 @pytest.fixture(scope="module")
 def gen_service(tmp_path_factory):
     """A session service over the GENERATED 1974 world (su-gen-03), against
@@ -292,6 +311,180 @@ class TestGeneratedSessions:
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["value"] is not None and doc["value"] > 0
         assert doc["twin_value"] is not None
+
+    def test_gen_session_stamps_the_gen_quarterly_version(self, gen_service):
+        """D-QC-1: the generated-plane lineage moves in the same release, a
+        DISTINCT string from the toy plane's (never a shared bump)."""
+        client, _db, rid = gen_service
+        r = client.post("/sessions", json={"run_id": rid})
+        assert r.status_code == 201, r.text
+        assert r.json()["play_alpha_version"] == "port-v7-quarterly-gen"
+
+
+class TestQuarterlyService:
+    """D-QC-1 at the HTTP layer (Task S5): stamping, the pending figure, the
+    lock, and the dead lever past the last vintage year."""
+
+    def _open(self, client, rid: str, **kwargs) -> dict:
+        r = client.post("/sessions", json={"run_id": rid, **kwargs})
+        assert r.status_code == 201, r.text
+        return r.json()
+
+    def _open_with_default_plan(self, client, rid: str) -> tuple[dict, dict]:
+        """A session carrying the served default book+plan verbatim -- the
+        plan-carrying shape, still digest-equal to the default."""
+        default = client.get(f"/book/default?run_id={rid}").json()
+        doc = self._open(client, rid, book=default["book"], plan=default["plan"])
+        return doc, default
+
+    def test_created_session_carries_the_39_windows_and_the_v7_stamp(self, service):
+        client, _db, rid = service
+        doc = self._open(client, rid)
+        assert doc["decision_windows"] == list(range(2, 117, 3))
+        assert doc["play_alpha_version"] == "port-v7-quarterly"
+
+    def test_advance_stops_at_every_quarter(self, service):
+        client, _db, rid = service
+        sid = self._open(client, rid)["session_id"]
+        # month 3 is one past window 2: allowed; month 4 is past an
+        # undecided window: refused (the stop is the mechanic)
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 3}).status_code == 200
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 4}).status_code == 409
+
+    def test_midyear_edit_is_stored_sparse_and_the_lock_fills(self, service):
+        client, _db, rid = service
+        doc, default = self._open_with_default_plan(client, rid)
+        sid = doc["session_id"]
+        # window 0 (month 2): revise pe only
+        _hold_through(client, sid, 2)
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": 2, "action": "hold", "commitments": {"pe": 1.5}},
+        )
+        assert r.status_code == 200, r.text
+        # stored SPARSE: a revision records exactly what was edited
+        assert r.json()["decisions"]["2"]["commitments"] == {"pe": 1.5}
+        # months 5, 8: hold, untouched; then the month-11 lock, nothing sent
+        _hold_through(client, sid, 11)
+        r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
+        assert r.status_code == 200, r.text
+        locked = r.json()["decisions"]["11"]["commitments"]
+        # the year's last edit survives to the lock; untouched sleeves lock
+        # at the plan's window-0 entries
+        assert locked["pe"] == pytest.approx(1.5)
+        assert locked["pc"] == pytest.approx(default["plan"]["points"]["pc"][0])
+        assert locked["infra"] == pytest.approx(default["plan"]["points"]["infra"][0])
+
+    def test_pre_fill_shows_the_pending_figure(self, service):
+        client, _db, rid = service
+        doc, default = self._open_with_default_plan(client, rid)
+        sid = doc["session_id"]
+        _hold_through(client, sid, 2)
+        assert (
+            client.post(
+                f"/sessions/{sid}/decisions",
+                json={"month": 2, "action": "hold", "commitments": {"pe": 1.5}},
+            ).status_code
+            == 200
+        )
+        got = client.get(f"/sessions/{sid}").json()
+        # the window at month 5 pre-fills the PENDING figure: the edit for
+        # pe, the plan's window-0 entry for the untouched sleeves; nothing
+        # is approximated on a plan session
+        assert got["next_plan_commitments"]["pe"] == pytest.approx(1.5)
+        assert got["next_plan_commitments"]["pc"] == pytest.approx(
+            round(default["plan"]["points"]["pc"][0], 4)
+        )
+        assert got["next_plan_basis"] is None
+
+    def test_commitments_past_the_last_year_close_are_refused(self, service):
+        client, _db, rid = service
+        sid = self._open(client, rid)["session_id"]
+        _hold_through(client, sid, 110)  # the first stance-only window
+        r = client.post(
+            f"/sessions/{sid}/decisions",
+            json={"month": 110, "action": "hold", "commitments": {"pe": 1.0}},
+        )
+        assert r.status_code == 422
+        assert "stance-only" in r.json()["detail"]
+
+    def test_dead_lever_never_reaches_the_simulator(self, service):
+        """The load-bearing guarantee behind the 422 (S4 review, folded into
+        S5's scope): a commitment posted at a stance-only window must never
+        reach ANY vintage -- the 422 at the door is the ONLY thing standing
+        between a scripted client and a silently inert store. Proven by
+        completing a session where the door is bypassed at the STORE layer
+        (past the endpoint's own 422) and checking the outcome's series is
+        bit-identical to a plain hold-through with no commitments at all."""
+        client, db, rid = service
+        sid = self._open(client, rid)["session_id"]
+        _hold_through(client, sid, 110)
+        # store-layer bypass: record a commitment at a stance-only window
+        # directly, sidestepping the HTTP door's 422 entirely, to prove the
+        # SIMULATOR (not just the door) gives it no effect. The value stays
+        # inside simulate_play's own declared bound (0..2x the sleeve's plan
+        # pace) -- validate_commitments is the door's job (bypassed here on
+        # purpose); simulate_play's OWN bound-check on any stored decision
+        # is a different, unconditional guard that fires regardless of
+        # whether the month feeds a live commitment event, so an
+        # out-of-bound probe value would raise before proving anything.
+        conn = connect(db)
+        try:
+            session_store.record_decision(
+                conn, sid, month=110, action="hold", commitments={"pe": 5.0}
+            )
+        finally:
+            conn.close()
+        for m in (113, 116):
+            assert (
+                client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1}).status_code
+                == 200
+            )
+            assert (
+                client.post(
+                    f"/sessions/{sid}/decisions", json={"month": m, "action": "hold"}
+                ).status_code
+                == 200
+            )
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 120}).status_code == 200
+        assert client.post(f"/sessions/{sid}/complete").status_code == 200
+        with_bypass = client.get(f"/sessions/{sid}/outcome").json()
+
+        plain_sid = self._open(client, rid)["session_id"]
+        for m in range(2, 117, 3):
+            assert (
+                client.post(f"/sessions/{plain_sid}/advance", json={"to_month": m + 1}).status_code
+                == 200
+            )
+            assert (
+                client.post(
+                    f"/sessions/{plain_sid}/decisions", json={"month": m, "action": "hold"}
+                ).status_code
+                == 200
+            )
+        assert (
+            client.post(f"/sessions/{plain_sid}/advance", json={"to_month": 120}).status_code
+            == 200
+        )
+        assert client.post(f"/sessions/{plain_sid}/complete").status_code == 200
+        plain = client.get(f"/sessions/{plain_sid}/outcome").json()
+        assert with_bypass["series"]["active"] == plain["series"]["active"]
+        assert with_bypass["final_value"] == pytest.approx(plain["final_value"])
+
+    def test_lever_is_hidden_past_the_last_lock(self, service):
+        client, _db, rid = service
+        sid = self._open(client, rid)["session_id"]
+        _hold_through(client, sid, 110)
+        got = client.get(f"/sessions/{sid}").json()
+        assert got["next_plan_commitments"] is None
+        assert got["next_plan_basis"] is None
+        # the stance itself is still accepted there
+        assert (
+            client.post(
+                f"/sessions/{sid}/decisions", json={"month": 110, "action": "derisk"}
+            ).status_code
+            == 200
+        )
 
 
 class TestCommitmentLeverAPI:

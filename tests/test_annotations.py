@@ -135,6 +135,87 @@ class TestFlinchIsMeasuredAgainstTheEnteredPlan:
         )
 
 
+class TestQuarterlyFlinchCounterfactualStripsTheWholeYear:
+    """D-QC-1, S4 review IMPORTANT-1 (a plan gap, not an implementer
+    deviation): the no-plan flinch counterfactual stripped commitments only
+    at the year-close month. Once ``simulate_play`` merges per-sleeve
+    last-edit-wins across a vintage year's four windows (Task S4), an
+    earlier SAME-YEAR edit survived the "restore to plan" replay and the
+    counterfactual still carried the cut -- the review's probe scenario
+    (a full cut entered at month 14 AND again at the month-23 lock) priced
+    the flinch at ~0.0 instead of the value a lock-only cut of the same size
+    prices. Fixed in ``annotations.py`` by stripping every window of the
+    forming vintage year, not just the lock month's own entry.
+    """
+
+    def _full_cut(self) -> dict[str, float]:
+        return {a: 0.0 for a in PRIVATE_ASSETS}
+
+    def test_a_same_year_earlier_edit_no_longer_survives_the_restore(self):
+        p = _paths()
+        # the review's exact probe shape: the cut entered mid-year AND
+        # (redundantly) again at the lock -- the shape S5's lock-fill
+        # produces for a mid-year cut left untouched afterward.
+        mid_and_lock = {
+            14: {"action": "hold", "commitments": self._full_cut()},
+            23: {"action": "hold", "commitments": self._full_cut()},
+        }
+        notes = post_game_annotations(p, mid_and_lock)
+        flinch = [n for n in notes if n["type"] == "flinch"]
+        assert len(flinch) == 1
+        # the same economic cut, entered ONLY at the lock: before the fix
+        # these two scenarios priced differently (the mid-year survivor
+        # silently absorbed part of the cut, printing ~0.0 for the pair
+        # above); after the fix the counterfactual strips the whole year
+        # either way, so the two are priced identically.
+        lock_only = post_game_annotations(p, _cut(23))
+        lock_only_flinch = [n for n in lock_only if n["type"] == "flinch"]
+        assert len(lock_only_flinch) == 1
+        assert flinch[0]["distribution_shortfall"] == pytest.approx(
+            lock_only_flinch[0]["distribution_shortfall"]
+        )
+        # and it must be a REAL shortfall, not the ~0.0 the defect produced
+        assert flinch[0]["distribution_shortfall"] > 0.1
+
+    def test_a_prior_year_edit_reaches_the_restore_untouched(self, monkeypatch):
+        """Only the LOCKED year's own windows are stripped for the restore --
+        an earlier vintage year's edit must reach ``simulate_play``
+        UNCHANGED. Verified directly against the decisions map
+        ``simulate_play`` is called with, not against downstream
+        distribution totals: this is a full institutional simulation with
+        waterfalls and forced sales, so changing YEAR 0's committed amount
+        can shift year 1's own shortfall nonlinearly even when the fix is
+        correct -- that would not be a fact about the fix, so it is not what
+        this test checks.
+        """
+        import ah.annotations as annotations_mod
+
+        p = _paths()
+        decisions = {
+            2: {"action": "hold", "commitments": {"pe": 3.0}},  # year 0, untouched
+            23: {"action": "hold", "commitments": self._full_cut()},  # year 1's lock, cut
+        }
+        calls: list[dict] = []
+        real_simulate_play = annotations_mod.simulate_play
+
+        def _spy(paths_arg, decisions_arg, **kwargs):
+            calls.append(dict(decisions_arg))
+            return real_simulate_play(paths_arg, decisions_arg, **kwargs)
+
+        monkeypatch.setattr(annotations_mod, "simulate_play", _spy)
+        notes = post_game_annotations(p, decisions)
+        assert [n for n in notes if n["type"] == "flinch"]
+        # calls[0] is `active` (the original decisions, unmodified by
+        # definition); calls[-1] is `restored`, the counterfactual this fix
+        # touches. window_contributions_play's internal replays call
+        # ah.play's OWN simulate_play reference, not this module's, so they
+        # do not appear here.
+        assert calls[0] == {2: {"action": "hold", "commitments": {"pe": 3.0}}, 23: decisions[23]}
+        restored_call = calls[-1]
+        assert restored_call[2] == {"action": "hold", "commitments": {"pe": 3.0}}
+        assert restored_call[23] == "hold"
+
+
 class TestArithmeticWarning:
     def test_denominator_driven_reaction_is_flagged_when_it_cost(self):
         """deflation_bust: reported NAV falls hard in the first years. A

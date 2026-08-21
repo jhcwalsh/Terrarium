@@ -3,9 +3,12 @@
 Two annotations, both computable from the session's own record with no new
 state, per the experience-deltas register:
 
-* **The flinch cost.** A commitment cut at a window is priced by re-running
-  the SAME decision sequence with only that window's commitments restored to
-  the plan: the difference in cumulative distributions received is what the
+* **The flinch cost.** A commitment cut at a LOCK (year-close) window is
+  priced by re-running the SAME decision sequence with that vintage year's
+  commitments restored to the plan (D-QC-1: every window of the forming
+  year, not just the lock month's own entry -- a same-year earlier edit
+  would otherwise survive the "restore" under the per-sleeve last-edit-wins
+  merge): the difference in cumulative distributions received is what the
   cut cost by the decade's end. Fewer vintages can only pay fewer
   distributions — the number states itself.
 * **The arithmetic warning.** A defensive action (de-risk, secondary) taken
@@ -136,11 +139,28 @@ def post_game_annotations(
                 # Dropping the commitments map instead would restore the
                 # model's pacing rule, which on a plan-carrying session is a
                 # third number neither the player nor the note ever names.
-                counter[month] = (
-                    {"action": name, "commitments": dict(plan)}
-                    if commitment_plan is not None
-                    else (name if name != "commit" else "hold")
-                )
+                if commitment_plan is not None:
+                    counter[month] = {"action": name, "commitments": dict(plan)}
+                else:
+                    # D-QC-1 fix (S4 review IMPORTANT-1): a same-year EARLIER
+                    # window's commitments must also be stripped, not just
+                    # the lock month's own entry. simulate_play's per-sleeve
+                    # last-edit-wins merge (Task S4) reads every window of
+                    # the forming vintage year, so restoring only `month`
+                    # left an earlier mid-year cut in place -- the "restored"
+                    # counterfactual still carried the cut and the flinch
+                    # cost silently understated to ~0 (probed:
+                    # {14: full-cut, 23: full-cut} priced 0.0 instead of the
+                    # correct value a lock-only cut of the same size prices).
+                    # Every window of THIS vintage year is stripped to a bare
+                    # stance so the lock is priced against a genuinely
+                    # commitment-free year.
+                    year = month // 12
+                    for m, act in list(counter.items()):
+                        if m // 12 != year:
+                            continue
+                        m_name = act if isinstance(act, str) else str(act.get("action"))
+                        counter[m] = m_name if m_name != "commit" else "hold"
                 restored = simulate_play(
                     paths,
                     counter,
