@@ -72,7 +72,7 @@ verification instead. That gate-and-merge sequence remains outstanding and
 is the next step, not implied by anything in this entry or the evidence
 document.
 
-## qc-03-app — QUARTERLY CLOCK, ANNUAL VINTAGES: APP (WIP, branch `qc-01-clock`)
+## qc-03-app — QUARTERLY CLOCK, ANNUAL VINTAGES: APP (branch `qc-01-clock`)
 
 D-QC-1 continued: the app plays the quarterly game. `session.decision_windows`
 (server-stamped, S3/S5) replaces `bundle.summary.decision_months` (the
@@ -128,7 +128,7 @@ suite, because no Python file was touched this phase (verified: `git diff
 prerequisite the plan names for merging `qc-01-clock` into `main`; that
 merge did not happen in this phase.
 
-## qc-02-server — QUARTERLY CLOCK, ANNUAL VINTAGES: SERVER (WIP, branch `qc-01-clock`)
+## qc-02-server — QUARTERLY CLOCK, ANNUAL VINTAGES: SERVER (branch `qc-01-clock`)
 
 D-QC-1 / AM-2026-08-20-001: the play surface stops at every quarter-close from
 month 2 through month 116 (39 windows for a decade) instead of 9 annual ones.

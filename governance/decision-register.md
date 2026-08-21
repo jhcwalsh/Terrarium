@@ -630,8 +630,10 @@ commit annually); keeping the annual clock (crash years stay
 unplayable, ER-2 stays fully open); a monthly clock (fatigue, and
 stances would out-run the quarterly information the game reveals).
 
-Status: ADOPTED 2026-08-20, owner-ratified. Executed as the
-qc-02/03/04 release branches under AM-2026-08-20-001 (seal impact:
+Status: ADOPTED 2026-08-20, owner-ratified. Executed as the single
+release branch qc-01-clock (13 tasks; the qc-02/03/04 branch names
+this entry anticipated were never created - corrected at final
+review, M-1) under AM-2026-08-20-001 (seal impact:
 none - all three lock digests unchanged). Partially discharges ER-2
 (the PLAYER's meeting calendar now exists; the engine's rate-path
 meeting calendar and 25bp quantisation remain open).
