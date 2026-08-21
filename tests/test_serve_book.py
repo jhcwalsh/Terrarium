@@ -17,13 +17,13 @@ from typing import ClassVar
 import pytest
 
 from ah.cioview import WATCH_FRACTION
-from ah.core.institution import decision_months
 from ah.serve import _alert_level
 
 # reuse this module's established app/client fixtures — see tests/test_serve.py.
-# Import ONLY the fixture names (plus the plain `_play_through` helper), never
-# the Test* classes (that would collect their tests a second time).
-from test_serve import _play_through, gen_service, service  # noqa: F401  (pytest fixtures)
+# Import ONLY the fixture names (plus the plain `_play_through`/`_hold_through`
+# helpers), never the Test* classes (that would collect their tests a second
+# time).
+from test_serve import _hold_through, _play_through, gen_service, service  # noqa: F401
 
 pytestmark = pytest.mark.enable_socket
 
@@ -128,11 +128,24 @@ def _entry(doc: dict, sleeve: str) -> dict:
 
 
 def _reveal_mid_decade(client, sid: str, months: int, to_month: int) -> None:
-    """Decide every window strictly before `to_month` (holding), then reveal
-    up to it — `advance_reveal` blocks revealing past an undecided window."""
-    for m in decision_months(months):
+    """Decide every UNDECIDED window strictly before `to_month` (holding),
+    then reveal up to it — `advance_reveal` blocks revealing past an
+    undecided window.
+
+    D-QC-1 (QC-1 Task S7, 2026-08-20): drives the SESSION'S OWN
+    `decision_windows` (the quarterly grid for every session this module
+    creates) rather than the annual `decision_months` grid, and skips a
+    window a caller already decided — so it is safe to call more than once
+    against the same session (as some migrated tests now do, to reach two
+    different reveal states in sequence). `months` is kept as a parameter
+    for call-site compatibility; the grid itself now comes from the session.
+    """
+    doc = client.get(f"/sessions/{sid}").json()
+    for m in doc["decision_windows"]:
         if m >= to_month:
             break
+        if str(m) in doc["decisions"]:
+            continue
         assert client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1}).status_code == 200
         r = client.post(f"/sessions/{sid}/decisions", json={"month": m, "action": "hold"})
         assert r.status_code == 200, r.text
@@ -313,15 +326,19 @@ class TestCreateSessionWithABook:
         book = default["book"]
         book["liquid"]["equity"] -= 5.0
         book["liquid"]["bonds"] += 5.0
-        sid = client.post(
+        created = client.post(
             "/sessions",
             json={"run_id": rid, "book": book, "plan": default["plan"]},
-        ).json()["session_id"]
-        client.post(f"/sessions/{sid}/advance", json={"to_month": 6})
+        ).json()
+        sid = created["session_id"]
+        # D-QC-1 (QC-1 Task S7): reaching month 6 now requires holding the
+        # quarterly windows ahead of it (2, 5) first.
+        _reveal_mid_decade(client, sid, created["months"], 6)
         custom = client.get(f"/sessions/{sid}").json()
 
-        plain = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        client.post(f"/sessions/{plain}/advance", json={"to_month": 6})
+        plain_created = client.post("/sessions", json={"run_id": rid}).json()
+        plain = plain_created["session_id"]
+        _reveal_mid_decade(client, plain, plain_created["months"], 6)
         derived = client.get(f"/sessions/{plain}").json()
 
         assert custom["value"] != derived["value"]
@@ -626,7 +643,10 @@ class TestPlanDrivenLever:
     def test_a_session_without_a_plan_keeps_todays_behaviour(self, service):
         client, _db, rid = service
         sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): reach the same reveal state (12, one past
+        # month 11) the annual-era test drove directly, by holding the
+        # quarterly windows ahead of it (2, 5, 8).
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["next_plan_commitments"]  # recomputed from the reported weight
         assert doc["next_plan_basis"] is not None  # the F4 caveat still declared
@@ -642,7 +662,8 @@ class TestPlanDrivenLever:
             "/sessions",
             json={"run_id": rid, "book": default["book"], "plan": plan},
         ).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["next_plan_commitments"]["pe"] == pytest.approx(5.0)
         assert doc["next_plan_basis"] is None  # nothing is being approximated
@@ -656,7 +677,8 @@ class TestPlanDrivenLever:
             "/sessions",
             json={"run_id": rid, "book": default["book"], "plan": plan},
         ).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["plan_pace"] is not None
         assert doc["plan_pace"]["pe"] != pytest.approx(5.0), (
@@ -678,12 +700,16 @@ class TestPlanDrivenLever:
         # is in turn below the 2x cap.
         step = default["plan"]["points"]["pe"][0] / n
         plan["points"]["pe"] = [round(step * i, 4) for i in range(n)]  # 0.0, step, 2*step, ...
-        sid = client.post(
+        created = client.post(
             "/sessions", json={"run_id": rid, "book": default["book"], "plan": plan}
-        ).json()["session_id"]
+        ).json()
+        sid = created["session_id"]
 
-        # first window: months 0..11 revealed, last closed quarter is 2 -> window 0
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 11}).status_code == 200
+        # first window: months 0..11 revealed, last closed quarter is 2 ->
+        # window 0. D-QC-1 (QC-1 Task S7): reach reveal=11 exactly (window
+        # 11 still unrevealed-for-decision) by holding the quarterly
+        # windows ahead of it (2, 5, 8) first.
+        _reveal_mid_decade(client, sid, created["months"], 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["next_plan_commitments"]["pe"] == pytest.approx(0.0)
 
@@ -692,7 +718,9 @@ class TestPlanDrivenLever:
         # decide window 0, then reveal into window 1: quarter 6 -> window 1
         r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
         assert r.status_code == 200, r.text
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 23}).status_code == 200
+        # D-QC-1: hold the quarterly windows ahead of 23 (14, 17, 20) --
+        # `_reveal_mid_decade` skips the windows already decided above.
+        _reveal_mid_decade(client, sid, created["months"], 23)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["next_plan_commitments"]["pe"] == pytest.approx(step)
 
@@ -719,15 +747,18 @@ class TestPlanDrivenLever:
             "/sessions", json={"run_id": rid, "book": default["book"], "plan": plan}
         ).json()["session_id"]
 
-        # window 0 is open: the pointer sits one month past month 11
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # window 0 is open: the pointer sits one month past month 11.
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of it
+        # (2, 5, 8) first.
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["next_plan_commitments"]["pe"] == pytest.approx(0.0)
 
         # decide it, walk to window 1, and stand where the lever opens again
         r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
         assert r.status_code == 200, r.text
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 24}).status_code == 200
+        # D-QC-1: hold the quarterly windows ahead of the year-2 lock (14, 17, 20).
+        _hold_through(client, sid, 23)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["next_plan_commitments"]["pe"] == pytest.approx(step)
 
@@ -791,7 +822,8 @@ class TestTheStoredPlanReachesTheEngine:
         sid = client.post(
             "/sessions", json={"run_id": rid, "book": default["book"], "plan": plan}
         ).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         r = client.post(
             f"/sessions/{sid}/decisions",
             json={"month": 11, "action": "hold", "commitments": {"pe": 2.0}},
@@ -808,7 +840,8 @@ class TestTheStoredPlanReachesTheEngine:
         string it has always been — not a structured commit."""
         client, _db, rid = service
         sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         doc = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"}).json()
         assert doc["decisions"]["11"] == "hold"
         assert doc["window_log"][-1]["commitments"] is None
@@ -847,7 +880,8 @@ class TestTheTwoCapsAgree:
         assert created.status_code == 201, created.text
         sid = created.json()["session_id"]
 
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
         assert r.status_code == 200, r.text
         assert r.json()["decisions"]["11"]["commitments"]["pe"] == pytest.approx(9.0)
@@ -873,13 +907,15 @@ class TestTheTwoCapsAgree:
         assert created.status_code == 201, created.text
         sid = created.json()["session_id"]
 
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         r = client.post(f"/sessions/{sid}/decisions", json={"month": 11, "action": "hold"})
         assert r.status_code == 200, r.text
         assert r.json()["decisions"]["11"]["commitments"]["pe"] == pytest.approx(9.0)
 
         # and the commitment quarter actually closes rather than 500ing.
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 23}).status_code == 200
+        # D-QC-1: hold the quarterly windows ahead of 23 (14, 17, 20).
+        _reveal_mid_decade(client, sid, created.json()["months"], 23)
         doc = client.get(f"/sessions/{sid}")
         assert doc.status_code == 200, doc.text
         assert doc.json()["value"] is not None
@@ -904,7 +940,8 @@ class TestTheTwoCapsAgree:
         sid = client.post(
             "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
         ).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         r = client.post(
             f"/sessions/{sid}/decisions",
             json={"month": 11, "action": "hold", "commitments": {"pe": 11.0}},
@@ -919,7 +956,8 @@ class TestTheTwoCapsAgree:
         sid = client.post(
             "/sessions", json={"run_id": rid, "book": default["book"], "plan": default["plan"]}
         ).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         r = client.post(
             f"/sessions/{sid}/decisions",
             json={"month": 11, "action": "hold", "commitments": {"pe": 999.0}},
@@ -945,7 +983,8 @@ class TestBandReport:
     def test_the_key_is_present_and_null_for_a_session_with_no_book(self, service):
         client, _db, rid = service
         sid = client.post("/sessions", json={"run_id": rid}).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert "band_report" in doc, "the key is always on the document, never conditional"
         assert doc["band_report"] is None
@@ -961,7 +1000,8 @@ class TestBandReport:
         sid = client.post(
             "/sessions", json={"run_id": rid, "book": book, "plan": default["plan"]}
         ).json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         assert doc["band_report"] is None
 
@@ -984,7 +1024,8 @@ class TestBandReport:
         assert r.status_code == 201
         assert r.json()["ranked"] is True, "the untouched default must stay ranked-eligible"
         sid = r.json()["session_id"]
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 12}).status_code == 200
+        # D-QC-1 (QC-1 Task S7): hold the quarterly windows ahead of 11.
+        _hold_through(client, sid, 11)
         doc = client.get(f"/sessions/{sid}").json()
         report = doc["band_report"]
         assert report is not None

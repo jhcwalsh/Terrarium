@@ -27,8 +27,9 @@ from ah.store.db import connect
 from ah.store.runrecords import get_run_record
 
 # reuse the established app/client fixture — see tests/test_serve.py. Import
-# ONLY the fixture name, never the Test* classes.
-from test_serve import service  # noqa: F401  (pytest fixture)
+# ONLY the fixture name (plus the plain `_hold_through` helper), never the
+# Test* classes.
+from test_serve import _hold_through, service  # noqa: F401
 
 pytestmark = pytest.mark.enable_socket
 
@@ -87,7 +88,10 @@ class TestRetiredWorldSessionFence:
         monkeypatch.setattr("ah.serve.RETIRED_WORLD_IDS", frozenset({_world_of(db, rid)}))
 
         assert client.get(f"/sessions/{sid}").status_code == 200
-        assert client.post(f"/sessions/{sid}/advance", json={"to_month": 6}).status_code == 200
+        # D-QC-1 (found by the S7 full-suite run, outside the plan's named
+        # S7 file list): reach month 6 by holding the quarterly windows
+        # ahead of it (2, 5) first.
+        _hold_through(client, sid, 6)
         assert client.get(f"/sessions/{sid}/cio").status_code == 200
 
     def test_the_fence_is_the_platform_list_not_a_local_copy(self):

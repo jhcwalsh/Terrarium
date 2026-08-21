@@ -1201,9 +1201,7 @@ def simulate_play(
             # _COMMITMENT_QUARTERS ever moved, a hardcoded tuple would go
             # silently wrong instead of moving with it.
             override_pts: dict[str, float] = {}
-            commitment_months = sorted(
-                q * 3 - 1 - 3 * k for k in range(_COMMITMENT_QUARTERS)
-            )
+            commitment_months = sorted(q * 3 - 1 - 3 * k for k in range(_COMMITMENT_QUARTERS))
             for m in commitment_months:
                 d = decisions.get(m)
                 pts = d.get("commitments") if isinstance(d, Mapping) else None

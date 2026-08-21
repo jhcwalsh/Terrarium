@@ -881,9 +881,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             stored_plan_ = doc.get("commitment_plan")
             plan_doc = CommitmentPlan.model_validate_json(stored_plan_) if stored_plan_ else None
             pending = (
-                _pending_commitments(doc, plan_doc, next_month)
-                if next_month is not None
-                else None
+                _pending_commitments(doc, plan_doc, next_month) if next_month is not None else None
             )
             if next_month is None or _vintage_ordinal(doc, next_month) is None:
                 doc["plan_pace"] = None

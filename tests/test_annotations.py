@@ -247,7 +247,6 @@ class TestServeCarriesAnnotations:
         from typer.testing import CliRunner
 
         from ah.cli import app as cli_app
-        from ah.core.institution import decision_months
         from ah.serve import create_app
 
         runner = CliRunner()
@@ -264,7 +263,10 @@ class TestServeCarriesAnnotations:
         r = client.post("/sessions", json={"run_id": rid})
         sid = r.json()["session_id"]
         months = r.json()["months"]
-        for i, m in enumerate(decision_months(months)):
+        # D-QC-1 (QC-1 Task S7, flagged by the S5/S6 report as an R-1-shaped
+        # red outside the plan's named S7 file list): drive the session's
+        # OWN quarterly window grid, not the annual decision_months one.
+        for i, m in enumerate(r.json()["decision_windows"]):
             client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1})
             body: dict = {"month": m, "action": "hold"}
             if i == 0:

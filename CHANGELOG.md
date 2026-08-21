@@ -4,6 +4,39 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## qc-02-server — QUARTERLY CLOCK, ANNUAL VINTAGES: SERVER (WIP, branch `qc-01-clock`)
+
+D-QC-1 / AM-2026-08-20-001: the play surface stops at every quarter-close from
+month 2 through month 116 (39 windows for a decade) instead of 9 annual ones.
+Vintages, the engine, the pacing model and the ladder are unchanged; a new
+`decision_windows` + `play_alpha_version` stamp on the session row separates
+quarterly-era sessions from legacy annual ones (NULL-stamped, resolving to
+`decision_months` and the frozen legacy alpha literals forever).
+`PLAY_ALPHA_VERSION` -> `port-v7-quarterly`, `GEN_PLAY_ALPHA_VERSION` ->
+`port-v7-quarterly-gen`. The vintage-year commitment figure is now a
+per-sleeve last-edit-wins merge across the forming year's windows, locking at
+the year-close (months 12k+11, unchanged); a commitment posted at one of the
+three windows past the final lock (110/113/116, where no vintage is forming)
+is a 422 at the door, proven to never reach the simulator either.
+
+**Task S7 (this entry): the mechanical test migration.** ~60 tests across
+`tests/test_serve.py` and `tests/test_serve_book.py` drove sessions through
+the old 9-window annual grid; S3-S6 landed the quarterly stamping ahead of
+this task and left them red on purpose (recorded in the S5/S6 report). Every
+one migrated under a single mechanical rule (never per-test improvisation):
+game-flow tests now drive the session's OWN `decision_windows` (via
+`_play_through`, `_hold_through`, or the newly idempotent
+`_reveal_mid_decade`); tests asserting legacy behavior stay store-constructed
+with the stamp columns omitted (first-class forever, untouched). One
+additional red outside the plan's named S7 file list surfaced only on the
+full-suite run:
+`test_serve_retired.py::TestRetiredWorldSessionFence::test_existing_sessions_on_a_retired_world_stay_fully_readable`,
+same shape, same fix. `test_qc_regression.py`'s bit-identical-to-the-annual-era
+baseline class stays green throughout — the quarterly clock does not move a
+single bit of a stored annual session. Full suite green, ruff and pyright
+clean, all three seal digests (main/G3/G5) unchanged from the S4/S5/S6
+report's values.
+
 ## app-open-04 — PICKER HYGIENE, THE UNFUNDED PAUSE, THE RETIRED-SESSION FENCE (branch `app-open-04`)
 
 Four owner-ordered items on the book/picker/serve surfaces (2026-08-20, "go on 1-3").

@@ -46,9 +46,7 @@ def _finish(client, sid: str) -> dict:
     complete, return the outcome."""
     doc = client.get(f"/sessions/{sid}").json()
     for m in doc["decision_windows"]:
-        assert (
-            client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1}).status_code == 200
-        )
+        assert client.post(f"/sessions/{sid}/advance", json={"to_month": m + 1}).status_code == 200
         assert (
             client.post(
                 f"/sessions/{sid}/decisions", json={"month": m, "action": "hold"}
@@ -56,8 +54,7 @@ def _finish(client, sid: str) -> dict:
             == 200
         )
     assert (
-        client.post(f"/sessions/{sid}/advance", json={"to_month": doc["months"]}).status_code
-        == 200
+        client.post(f"/sessions/{sid}/advance", json={"to_month": doc["months"]}).status_code == 200
     )
     assert client.post(f"/sessions/{sid}/complete").status_code == 200
     r = client.get(f"/sessions/{sid}/outcome")
@@ -119,9 +116,7 @@ class TestVersionSeparation:
         _finish(client, r.json()["session_id"])
 
         def board(version: str) -> list[str]:
-            r = client.get(
-                f"/leaderboard/{wid}", params={"seed": seed, "alpha_version": version}
-            )
+            r = client.get(f"/leaderboard/{wid}", params={"seed": seed, "alpha_version": version})
             assert r.status_code == 200
             return [row["participant"] for row in r.json()["rows"]]
 
