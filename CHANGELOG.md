@@ -4,6 +4,62 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## qc-03-app — QUARTERLY CLOCK, ANNUAL VINTAGES: APP (WIP, branch `qc-01-clock`)
+
+D-QC-1 continued: the app plays the quarterly game. `session.decision_windows`
+(server-stamped, S3/S5) replaces `bundle.summary.decision_months` (the
+bundle's static annual display grid) as the app's ONE source of window
+months — Play.tsx, DecisionWindow.tsx and Reckoning.tsx all read it, never a
+client-side constant, so a legacy NULL-stamped session (9 annual windows) and
+a new quarterly one (39) are driven by the same code with no branch on era.
+`lib/session.ts` gains `windowLabel`/`isYearClose`/`lockMonth` — the one
+place a window month becomes display copy ("Y2 Q1", "locks now"). The
+commit-lever gains the exact D-QC-1 lock sentence: "This year's commitment
+locks at Q4 (month N); until then you can revise it." mid-year, "This year's
+commitment locks now." at the year-close. No client-side game logic was
+added (DN-3 W5 held throughout): the app renders the server's own
+`next_plan_commitments`/`plan_pace`/`decision_windows`/`band_report` and
+posts decisions: it never computes a pending figure, a lock, or a band alert
+itself.
+
+**Cadence-agnostic verification (Task A3).** `CioDashboard.tsx`,
+`VintageChart.tsx` and `BandRow.tsx` were grepped and confirmed to read
+`decision_windows`/`decision_months` NOWHERE — every number on the CIO
+dashboard, the policy-band panels (both the rail's `BandPanel` and
+DecisionWindow's compact strip) and the private-cashflow vintage ladder
+comes from the server's own `CioView`/`Session` payload, keyed by quarter or
+vintage-year, not by the decision-window grid. Confirmed live (not just by
+grep): a quarterly practice session (`08f53ab8...` / session
+`8d800dd8-5a02-4e7e-94c9-3a883d36d007`, world "The Gulf Decade") was walked
+quarter-by-quarter across the Y1->Y2 boundary (windows 2, 5, 8, 11, 14, 17)
+against a live server on this branch — the dashboard, bands and vintage
+ladder rendered exactly as they do on an annual session throughout, with no
+code path change. The walk also exercised a genuine mid-year revision
+(month 14: `commitments: {"pe": 6.005}`) and confirmed the very next window
+(17) served back that value as the carried-forward pending figure rather
+than the untouched pacing schedule — the per-sleeve last-edit-wins merge
+(play.py, S4) is correct end to end, not only under unit test.
+
+**R-6 (feed density) verdict, recorded rather than acted on per spec §4.4:**
+the wire is NOT empty between quarterly stops. Board packs are bundle-side
+and already month-indexed independent of any decision grid, so a single
+quarter-to-quarter step surfaces roughly 4-6 wire entries (three monthly
+`DATA` releases, one quarterly `CENTRAL BANK` statement, one quarterly
+`BENCHMARK BOOK` statement, and occasionally a `PRESS` item) — observed
+directly in the live walk above. The content does not vary by quarter within
+a year (the same annually-authored pack repeats structurally), so a future
+WP that wants quarter-*specific* wire content is still open, but the
+"empty between year marks" risk named in the plan does not hold for the
+shipped toy/generator presets.
+
+**Deviation from the plan's literal WP gate:** this phase's task framing
+directed `uv run pytest tests/test_qc_regression.py -q` (green, 15 passed)
+as the Python-side check rather than the full `run_gate.py` ~38-minute
+suite, because no Python file was touched this phase (verified: `git diff
+--stat` for A1/A2 touches only `app/src/**`). The full gate remains a
+prerequisite the plan names for merging `qc-01-clock` into `main`; that
+merge did not happen in this phase.
+
 ## qc-02-server — QUARTERLY CLOCK, ANNUAL VINTAGES: SERVER (WIP, branch `qc-01-clock`)
 
 D-QC-1 / AM-2026-08-20-001: the play surface stops at every quarter-close from
