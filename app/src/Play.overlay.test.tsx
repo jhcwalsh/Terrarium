@@ -95,6 +95,32 @@ function jsonResponse(body: unknown) {
   return { ok: true, status: 200, statusText: "200", json: () => Promise.resolve(body) };
 }
 
+/** D-QC-1: routes /sessions (POST, opens the fixed `session`) and
+ * /sessions/:id/advance (POST, echoes revealed_months = the posted
+ * to_month and appends the call so the test can inspect exactly what
+ * Play.tsx asked the server for) — enough to drive the transport buttons
+ * without a live server. */
+function stubFetchWithAdvance(session: Session, advanceCalls: { to_month: number }[]) {
+  vi.stubGlobal(
+    "fetch",
+    vi.fn((input: RequestInfo | URL, init?: RequestInit) => {
+      const url = typeof input === "string" ? input : input.toString();
+      const method = init?.method ?? "GET";
+      if (url === "/sessions" && method === "POST") {
+        return Promise.resolve(jsonResponse(session));
+      }
+      if (/^\/sessions\/[^/]+\/advance$/.test(url) && method === "POST") {
+        const body = JSON.parse(String(init?.body)) as { to_month: number };
+        advanceCalls.push(body);
+        return Promise.resolve(jsonResponse({ ...session, revealed_months: body.to_month }));
+      }
+      return Promise.reject(
+        new Error(`Play.overlay.test: unstubbed fetch ${method} ${url}`),
+      );
+    }),
+  );
+}
+
 function stubFetch(session: Session, cioView?: CioView) {
   vi.stubGlobal(
     "fetch",
@@ -332,5 +358,66 @@ describe("the CIO is the front door (app-open-01 item 1)", () => {
     expect(
       host!.querySelector<HTMLButtonElement>("button.modeswitch")!.textContent,
     ).toMatch(/cio view/i);
+  });
+});
+
+/**
+ * D-QC-1 Task A1/A2: the window list is the SESSION's own
+ * (`session.decision_windows`, server-stamped), not the bundle's static
+ * annual summary (`bundle.summary.decision_months`, still [11, 23, ...,
+ * 107] for this fixture). Both tests below deliberately give the session a
+ * grid the bundle's annual summary does NOT have a window at — the only way
+ * to prove Play.tsx is reading the session document rather than falling
+ * back to (or agreeing by coincidence with) the bundle.
+ */
+describe("windows come from the session document, and quarterly stepping (D-QC-1)", () => {
+  const QUARTERLY_WINDOWS = [2, 5, 8, 11, 14];
+
+  it("the decision panel opens at the SESSION's own window — month 2, which the bundle's annual grid never stops at", async () => {
+    const bundle = await loadBundle();
+    const session = makeSession(bundle, {
+      decision_windows: QUARTERLY_WINDOWS,
+      revealed_months: 3, // one past window 2
+      decisions: {},
+    });
+    stubFetch(session);
+    await render(<Play bundle={bundle} onExit={() => {}} />);
+
+    const panel = host!.querySelector(".decision-panel")!;
+    const dw = panel.querySelector(".decision-window")!;
+    expect(dw.className).not.toContain("closed");
+    // D-QC-1 acceptance criterion 6: the window's own label, not a bare year
+    expect(dw.textContent).toMatch(/Y1 Q1 — the window is open/);
+    // and the rail's "Windows decided" count is out of the SESSION's 5
+    // windows, not the bundle's 9 (proof the count also reads the session)
+    const windowsStat = [...host!.querySelectorAll(".stat")].find((el) =>
+      /windows decided/i.test(el.querySelector(".k")?.textContent ?? ""),
+    )!;
+    expect(windowsStat.querySelector(".v")!.textContent).toBe("0/5");
+  });
+
+  it("the quarter-step transport is clamped to the session's next window, not a bare +3", async () => {
+    const bundle = await loadBundle();
+    const session = makeSession(bundle, {
+      decision_windows: QUARTERLY_WINDOWS,
+      revealed_months: 1, // before window 2; a naive +3 would land on month 4
+      decisions: {},
+    });
+    const advanceCalls: { to_month: number }[] = [];
+    stubFetchWithAdvance(session, advanceCalls);
+    await render(<Play bundle={bundle} onExit={() => {}} />);
+
+    const stepButton = host!.querySelector<HTMLButtonElement>(
+      'button.t[title="Advance one quarter"]',
+    )!;
+    expect(stepButton.disabled).toBe(false);
+    await act(async () => {
+      stepButton.click();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    // window 2's stop is month 3 (window + 1) -- NOT month 4 (revealed + 3),
+    // which is what a step ignorant of the session's own grid would have
+    // asked for
+    expect(advanceCalls).toEqual([{ to_month: 3 }]);
   });
 });

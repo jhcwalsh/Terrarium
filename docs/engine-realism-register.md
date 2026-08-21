@@ -187,7 +187,18 @@ stylized fact, which is the point.
 
 ## ER-2 — The policy rate is a continuous drift, not committee decisions
 
-**Status:** open
+**Status:** OPEN, AMENDED 2026-08-20 (D-QC-1, partial discharge) — the
+PLAYER's meeting calendar now exists: the play surface stops at all 39
+quarter-closes of a decade (`quarterly_decision_months`, D-QC-1: quarterly
+clock, annual vintages), which is the "actual policy moves in steps" half
+of this register entry as it applies to the allocator. **What remains
+open, unchanged:** the ENGINE's `_rate_path` is still a continuous
+monthly drift with no meeting calendar and no 25bp quantisation — the
+world's central bank still glides, and any narration still reports a
+"decision" no committee could have taken. A fix there is an engine change
+(`TOY_ENGINE_VERSION` bump, preset world-id block move) and was explicitly
+out of D-QC-1's scope (spec §4.2: engine, pacing model, ladder, cap
+arithmetic and vintage charts all untouched).
 **Found:** 2026-08-02, first live play session ("Central banks to change
 rates by 0.07%, the smallest increments are 0.25% in the US").
 

@@ -25,10 +25,11 @@ https://claude.ai/code/artifact/c51a265d-95dd-4407-b1e2-b5b2ea40ee44
 The platform is a flight simulator for long-horizon investors. It invents
 plausible decades — economic histories that never happened — and puts you in the
 seat of an institution living through one. Markets move month by month, capital
-calls arrive and must be paid, the news lands as a wire feed, and once a year a
-decision window opens: hold course, de-risk, lean in, or sell something at a
-discount to raise cash. At the end you are scored not on whether you got lucky,
-but against a *twin* — an identical institution in the identical world that
+calls arrive and must be paid, the news lands as a wire feed, and once a
+quarter a decision window opens: hold course, de-risk, lean in, or sell
+something at a discount to raise cash. Commitments form annually and lock
+at year-close (D-QC-1, 2026-08-20). At the end you are scored not on whether
+you got lucky, but against a *twin* — an identical institution in the identical world that
 followed the written policy and never flinched. The gap between you and the twin
 is the value your decisions added or destroyed. As the Step 5 companion puts it:
 it is the difference between judging a poker player by one hand's winnings and

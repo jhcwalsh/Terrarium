@@ -25,15 +25,29 @@ afterEach(() => {
 });
 
 describe("annotationLine (E8)", () => {
-  it("renders the register's exact shape: Year 4, de-risked: -2.1 points", () => {
+  it("renders the register's shape with the D-QC-1 quarter label: Y4 Q4, de-risked: -2.1 points", () => {
     // app-open-01 item 2 (owner ruling 2026-08-16): the dollar equivalent
     // (money.ts usd()) now rides alongside the points figure, never
     // replacing it — the points half of this assertion is unchanged.
+    // D-QC-1: "Year N" became "Y{n} Q{q}" (windowLabel) — every one of
+    // these two months is a year-close (12k+11), which windowLabel always
+    // renders as Q4, so the year number is unchanged from the old copy.
     expect(annotationLine({ month: 47, action: "derisk", contribution: -2.1 })).toBe(
-      "Year 4, de-risked: -2.1 points / -$210m",
+      "Y4 Q4, de-risked: -2.1 points / -$210m",
     );
     expect(annotationLine({ month: 11, action: "hold", contribution: 0 })).toBe(
-      "Year 1, held course: +0.0 points / $0",
+      "Y1 Q4, held course: +0.0 points / $0",
+    );
+  });
+
+  it("labels a quarterly mid-year window (D-QC-1 acceptance criterion 6)", () => {
+    // month 2 is Y1 Q1 -- a window no legacy annual session ever had.
+    expect(annotationLine({ month: 2, action: "hold", contribution: 0.4 })).toBe(
+      "Y1 Q1, held course: +0.4 points / $40m",
+    );
+    // month 14 is Y2 Q1 -- a mid-year quarterly window inside vintage year 2.
+    expect(annotationLine({ month: 14, action: "leanin", contribution: 1.1 })).toBe(
+      "Y2 Q1, leaned in: +1.1 points / $110m",
     );
   });
 });

@@ -31,7 +31,7 @@ afterEach(() => {
 describe("DecisionWindow (E1)", () => {
   it("commit is disabled until an action is explicitly chosen — hold included", () => {
     const onCommit = vi.fn();
-    render(<DecisionWindow open month={11} year={1} onCommit={onCommit} />);
+    render(<DecisionWindow open month={11} onCommit={onCommit} />);
     const commit = host!.querySelector<HTMLButtonElement>("button.commit")!;
     expect(commit.disabled).toBe(true);
     act(() => commit.click());
@@ -49,7 +49,7 @@ describe("DecisionWindow (E1)", () => {
   });
 
   it("all four actions are on the card", () => {
-    render(<DecisionWindow open month={11} year={1} onCommit={() => {}} />);
+    render(<DecisionWindow open month={11} onCommit={() => {}} />);
     const labels = [...host!.querySelectorAll(".action-card strong")].map(
       (el) => el.textContent,
     );
@@ -59,7 +59,7 @@ describe("DecisionWindow (E1)", () => {
   it("shows each lever's dollar impact next to its points (app-open-01 item 2)", () => {
     // No new data — the fixed 10pt rebalance size the copy already states,
     // rendered through the same usd() as everywhere else in the app.
-    render(<DecisionWindow open month={11} year={1} onCommit={() => {}} />);
+    render(<DecisionWindow open month={11} onCommit={() => {}} />);
     const badges = [...host!.querySelectorAll(".action-card .k")].map((el) => el.textContent);
     expect(badges[0]).toBe("NO TRADE"); // hold: no rebalance, no dollar figure
     // two-decimal bn precision is app-open-01 review round fix 3
@@ -87,7 +87,6 @@ describe("DecisionWindow (E1)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={onCommit}
         planCommitments={plan}
         planBasis={{ as_of_quarter: 3, as_of_month: 11, private_weight_reported: 0.31 }}
@@ -123,7 +122,6 @@ describe("DecisionWindow (E1)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9, infra: 0.4 }}
       />,
@@ -142,7 +140,6 @@ describe("DecisionWindow (E1)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9 }}
         planBasis={{ as_of_quarter: 3, as_of_month: 11, private_weight_reported: 0.31 }}
@@ -167,7 +164,6 @@ describe("DecisionWindow (E1)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         planCommitments={{ pe: 5, pc: 1.2, re: 0.9 }}
         planPace={{ pe: 3.18, pc: 1.44, re: 1.26 }}
@@ -193,7 +189,6 @@ describe("DecisionWindow (E1)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         planCommitments={{ pe: 5, pc: 1.2, re: 0.9 }}
         planBasis={null}
@@ -212,7 +207,6 @@ describe("DecisionWindow (E1)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9 }}
         planBasis={{ as_of_quarter: 3, as_of_month: 11, private_weight_reported: 0.31 }}
@@ -226,7 +220,7 @@ describe("DecisionWindow (E1)", () => {
   it("the four levers stay on the main page between windows, inert", () => {
     const onCommit = vi.fn();
     render(
-      <DecisionWindow open={false} month={23} year={2} nextYear={2} onCommit={onCommit} />,
+      <DecisionWindow open={false} month={23} nextStop="Y2 Q4" onCommit={onCommit} />,
     );
     const labels = [...host!.querySelectorAll(".action-card strong")].map(
       (el) => el.textContent,
@@ -237,6 +231,70 @@ describe("DecisionWindow (E1)", () => {
     expect(host!.querySelectorAll('input[type="radio"]').length).toBe(0);
     expect(host!.querySelectorAll(".action-card.inert").length).toBe(4);
     expect(onCommit).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * D-QC-1 Task A2: the lock sentence. A mid-year quarterly window can still
+ * revise the forming vintage's commitment figure; the year-close window
+ * locks it. Both sentences are pinned here because the copy is the ONLY
+ * thing on screen that tells a player whether typing a number now is
+ * provisional or final (spec §4.4's exact wording).
+ */
+describe("the lock sentence (D-QC-1 Task A2)", () => {
+  it("a mid-year window says it locks at the year's Q4, and names the month", () => {
+    render(
+      <DecisionWindow
+        open
+        month={14}
+        onCommit={() => {}}
+        planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9 }}
+      />,
+    );
+    const lock = host!.querySelector(".lever-lock")!.textContent!;
+    expect(lock).toBe("This year's commitment locks at Q4 (month 23); until then you can revise it.");
+  });
+
+  it("the year-close window itself says it locks now, not 'at Q4'", () => {
+    render(
+      <DecisionWindow
+        open
+        month={23}
+        onCommit={() => {}}
+        planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9 }}
+      />,
+    );
+    const lock = host!.querySelector(".lever-lock")!.textContent!;
+    expect(lock).toBe("This year's commitment locks now.");
+  });
+
+  it("the heading reads 'This year's commitments', not 'Next year's'", () => {
+    render(
+      <DecisionWindow
+        open
+        month={14}
+        onCommit={() => {}}
+        planCommitments={{ pe: 1.5, pc: 1.2, re: 0.9 }}
+      />,
+    );
+    expect(host!.querySelector(".commit-lever h3")!.textContent).toBe("This year's commitments");
+  });
+
+  it("no lock sentence, no crash, when the lever is hidden (stance-only window)", () => {
+    // D-QC-1 R-5: months 110/113/116 carry no forming vintage; the server
+    // serves next_plan_commitments: null there, and the existing
+    // `open && planCommitments` guard hides the whole lever, sentence
+    // included.
+    render(<DecisionWindow open month={110} onCommit={() => {}} planCommitments={null} />);
+    expect(host!.querySelector(".commit-lever")).toBeNull();
+    expect(host!.querySelector(".lever-lock")).toBeNull();
+  });
+
+  it("the header names the window's own label, not a bare year (D-QC-1 acceptance criterion 6)", () => {
+    render(<DecisionWindow open month={5} onCommit={() => {}} />);
+    expect(host!.querySelector(".decision-window header h2")!.textContent).toBe(
+      "Y1 Q2 — the window is open",
+    );
   });
 });
 
@@ -274,7 +332,6 @@ describe("DecisionWindow band strip (app-open-02)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         basis="reported"
         bandReport={{
@@ -313,8 +370,7 @@ describe("DecisionWindow band strip (app-open-02)", () => {
       <DecisionWindow
         open={false}
         month={23}
-        year={2}
-        nextYear={2}
+        nextStop="Y2 Q4"
         onCommit={() => {}}
         basis="reported"
         bandReport={{
@@ -331,7 +387,6 @@ describe("DecisionWindow band strip (app-open-02)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         basis="reported"
         bandReport={null}
@@ -348,7 +403,6 @@ describe("DecisionWindow band strip (app-open-02)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         basis="reported"
         bandReport={{ watch_fraction: 0, sleeves: [] }}
@@ -362,7 +416,6 @@ describe("DecisionWindow band strip (app-open-02)", () => {
       <DecisionWindow
         open
         month={11}
-        year={1}
         onCommit={() => {}}
         basis="actual"
         bandReport={{
@@ -387,7 +440,7 @@ describe("DecisionWindow band strip (app-open-02)", () => {
   });
 
   it("without a bandReport prop at all, no crash and no strip (default undefined, as every pre-existing test above passes it)", () => {
-    render(<DecisionWindow open month={11} year={1} onCommit={() => {}} />);
+    render(<DecisionWindow open month={11} onCommit={() => {}} />);
     expect(host!.querySelector(".band-strip")).toBeNull();
   });
 });

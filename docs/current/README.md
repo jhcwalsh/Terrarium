@@ -28,11 +28,11 @@ read at once.
 
 | Document | Status | What it is |
 |---|---|---|
-| `METHOD.md` | GOVERNING | What has been built and by what method, 2026-08-15. The entry point. |
+| `METHOD.md` | GOVERNING | What has been built and by what method, 2026-08-15. The entry point. The play-surface's decision-window sentence touched up 2026-08-21 for D-QC-1 (quarterly clock, annual vintages) — one-sentence cadence fix only, not a full pass. |
 | `stress-scenario-methodology.md` | GOVERNING | The stress method in full: the rules, the three measured scenarios, and the limits. Matches spec v0.2. |
 | `tail-register.md` | GOVERNING | Every severity-producing mechanism with its falsifier (TR-1…TR-7). Admission rule: a mechanism that cannot name its own falsifier does not enter the engine. |
 | `private-markets-and-inflation.md` | CURRENT IN KIND (AS OF 2026-08-18) | Written against the PRE-ER-14 engine; §2/§4 describe return equations `er14-02`/`er14-03`/`er14-05` have since changed. **ER-14 is now CLOSED** (`docs/engine-realism-register.md`'s close-out governs the post-fix account); this document is the supporting detail for the pre-fix finding, kept as the record, with a §4.5 post-fix summary added and a banner naming the drift. **Served by the hub** (`private-markets-inflation`), with a committed `.pdf` mirror rebuilt by `scripts/build_doc_pdf.py` — **not yet re-rendered against this edit** (a headless-Chrome step, not run in this WP; the served markdown and the register are current, the PDF mirror is one edit behind). |
-| `alternate-histories-audited.md` | GOVERNING | The narrative account — where the work stands and what it has taught us. Last updated 2026-08-14. |
+| `alternate-histories-audited.md` | GOVERNING | The narrative account — where the work stands and what it has taught us. Last updated 2026-08-14; the play-surface's decision-window sentence touched up 2026-08-21 for D-QC-1 (quarterly clock, annual vintages) — one-sentence cadence fix only, not a full pass. |
 | `DROP-MANIFEST.md` | GOVERNING | The DN-9 narration drop: what goes where, and what is knowingly carried. Describes work not yet started. |
 | `narration-dn9.zip` | — | The DN-9 drop itself. **Untracked** (see "Untracked files" below). |
 

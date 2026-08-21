@@ -112,10 +112,18 @@ _RUN_RECORD_STAMPS = (
 # su-app-06: the entered opening book and kickoff commitment plan, stored as
 # canonical JSON. NULL means the derived default, which is every session
 # written before this change - so old rows replay exactly as they did.
+# D-QC-1 (qc-02-server): the session's own decision-window months (JSON
+# int list) and the play-alpha version it scores under, both stamped at
+# creation. NULL on rows written before this change means the ANNUAL era:
+# such sessions resolve to decision_months(months) and to the frozen
+# legacy alpha stamps (ah.serve._LEGACY_PLAY_ALPHA) -- they replay and
+# rank exactly as they always did.
 _SESSION_STAMPS = (
     ("rationale_schema_version", "TEXT"),
     ("opening_book", "TEXT"),
     ("commitment_plan", "TEXT"),
+    ("decision_windows", "TEXT"),
+    ("play_alpha_version", "TEXT"),
 )
 
 

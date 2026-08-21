@@ -9,16 +9,18 @@
  *   the slots).
  * - Analysis (E7): the three-series chart — player, policy twin, drift twin
  *   (slot reserved, data pending).
- * - Review (E4/E8): step through the decade window by window; each window
- *   carries its one-line annotation from the chain-link decomposition
- *   (`Year 4, de-risked: -2.1 points`) — the tone rule is the style
- *   guide's: state the number, never gloat.
+ * - Review (E4/E8): step through the decade window by window (D-QC-1: every
+ *   quarter-close on a quarterly session, every year-close on a legacy
+ *   annual one — whatever `outcome.windows` carries); each window carries
+ *   its one-line annotation from the chain-link decomposition
+ *   (`Y4 Q4, de-risked: -2.1 points`) — the tone rule is the style guide's:
+ *   state the number, never gloat.
  */
 
 import { useState } from "react";
 import { AnalysisChart, threeSeries } from "./components/AnalysisChart";
 import { usd } from "./lib/money";
-import type { Outcome } from "./lib/session";
+import { windowLabel, type Outcome } from "./lib/session";
 
 const ACTION_PHRASE: Record<string, string> = {
   hold: "held course",
@@ -27,14 +29,19 @@ const ACTION_PHRASE: Record<string, string> = {
   secondary: "sold a secondary",
 };
 
+/**
+ * D-QC-1: the review line names the window's own label (windowLabel), not a
+ * bare year — a quarterly outcome carries 39 of these, a legacy annual one
+ * 9 (every legacy window is a year-close, which windowLabel renders as
+ * "Y{k} Q4", the same year number the old "Year {k}" phrasing gave).
+ */
 export function annotationLine(w: { month: number; action: string; contribution: number }) {
-  const year = Math.floor((w.month + 1) / 12);
   const phrase = ACTION_PHRASE[w.action] ?? w.action;
   const pts = `${w.contribution >= 0 ? "+" : ""}${w.contribution.toFixed(1)} points`;
   // app-open-01 item 2 (owner ruling 2026-08-16): the per-window
   // chain-link contribution is the scored truth in points; the dollar
   // figure (money.ts usd()) rides alongside, never in place of it.
-  return `Year ${year}, ${phrase}: ${pts} / ${usd(w.contribution)}`;
+  return `${windowLabel(w.month)}, ${phrase}: ${pts} / ${usd(w.contribution)}`;
 }
 
 export function Reckoning({

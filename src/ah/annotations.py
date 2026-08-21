@@ -3,9 +3,12 @@
 Two annotations, both computable from the session's own record with no new
 state, per the experience-deltas register:
 
-* **The flinch cost.** A commitment cut at a window is priced by re-running
-  the SAME decision sequence with only that window's commitments restored to
-  the plan: the difference in cumulative distributions received is what the
+* **The flinch cost.** A commitment cut at a LOCK (year-close) window is
+  priced by re-running the SAME decision sequence with that vintage year's
+  commitments restored to the plan (D-QC-1: every window of the forming
+  year, not just the lock month's own entry -- a same-year earlier edit
+  would otherwise survive the "restore" under the per-sleeve last-edit-wins
+  merge): the difference in cumulative distributions received is what the
   cut cost by the decade's end. Fewer vintages can only pay fewer
   distributions — the number states itself.
 * **The arithmetic warning.** A defensive action (de-risk, secondary) taken
@@ -19,11 +22,10 @@ gloat. No judgement words, no exclamation marks.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ah.core.engine import EnginePaths
-from ah.core.institution import decision_months
 from ah.play import (
     PRIVATE_ASSETS,
     START_CASH,
@@ -48,6 +50,7 @@ def post_game_annotations(
     start_targets: Mapping[str, float] | None = None,
     opening_book: OpeningBook | None = None,
     commitment_plan: CommitmentPlan | None = None,
+    windows: Sequence[int] | None = None,
 ) -> list[dict[str, Any]]:
     """The E4 annotations for one played decade, deterministic.
 
@@ -61,9 +64,16 @@ def post_game_annotations(
     plan's entry for that window and restores the counterfactual to that same
     entry. ``None`` keeps the model's pacing rule as the baseline, which is
     what every session without a stored plan has always been measured against.
+
+    ``windows`` (D-QC-1) is the session's own window grid, forwarded to the
+    chain-link attribution; ``None`` keeps the annual definition for callers
+    that predate the quarterly clock. The flinch cost prices the LOCKED
+    vintage-year figure, so it fires only at year-close windows — a
+    quarterly mid-year revision is not a lock and produces no flinch note of
+    its own; its effect appears in the locked figure and the window
+    attribution.
     """
     decisions = dict(decisions or {})
-    windows = decision_months(paths.months)
     active = simulate_play(
         paths,
         decisions,
@@ -77,6 +87,7 @@ def post_game_annotations(
         use_reported=use_reported,
         start_targets=start_targets,
         opening_book=opening_book,
+        windows=windows,
     )
     contrib_by_month = dict(zip(attribution.months, attribution.contributions, strict=True))
     quarters = active.quarters
@@ -98,17 +109,22 @@ def post_game_annotations(
             continue
 
         # -- the flinch cost -------------------------------------------------
-        if commit_pts is not None:
+        # D-QC-1: the flinch cost prices the LOCKED vintage-year figure, so
+        # it fires only at year-close windows (months 12k+11 -- every
+        # annual-era window was one, so the legacy behaviour is unchanged; a
+        # quarterly mid-year revision is not a lock and produces no flinch
+        # note). The plan index is the vintage ordinal month // 12 --
+        # identical to the old windows.index(month) on the annual grid.
+        if commit_pts is not None and month % 12 == 11:
             # su-app-06: the baseline a cut is measured against is the
             # player's OWN plan entry for this window when the session
-            # carries one — indexed by the window's ordinal in
-            # `decision_months`, the same definition `ah.serve` fills the
-            # lever from. Without a plan it stays the model's pacing rule.
-            window = windows.index(month) if month in windows else None
+            # carries one — indexed by the vintage ordinal, the same
+            # definition `ah.serve` fills the lever from. Without a plan it
+            # stays the model's pacing rule.
+            window = month // 12
             plan = (
                 {a: float(commitment_plan.points[a][window]) for a in PRIVATE_ASSETS}
                 if commitment_plan is not None
-                and window is not None
                 and all(window < len(commitment_plan.points[a]) for a in PRIVATE_ASSETS)
                 else plan_commitments(
                     quarters[qw].private_weight_reported, plan_targets, cash=plan_cash
@@ -123,11 +139,28 @@ def post_game_annotations(
                 # Dropping the commitments map instead would restore the
                 # model's pacing rule, which on a plan-carrying session is a
                 # third number neither the player nor the note ever names.
-                counter[month] = (
-                    {"action": name, "commitments": dict(plan)}
-                    if commitment_plan is not None
-                    else (name if name != "commit" else "hold")
-                )
+                if commitment_plan is not None:
+                    counter[month] = {"action": name, "commitments": dict(plan)}
+                else:
+                    # D-QC-1 fix (S4 review IMPORTANT-1): a same-year EARLIER
+                    # window's commitments must also be stripped, not just
+                    # the lock month's own entry. simulate_play's per-sleeve
+                    # last-edit-wins merge (Task S4) reads every window of
+                    # the forming vintage year, so restoring only `month`
+                    # left an earlier mid-year cut in place -- the "restored"
+                    # counterfactual still carried the cut and the flinch
+                    # cost silently understated to ~0 (probed:
+                    # {14: full-cut, 23: full-cut} priced 0.0 instead of the
+                    # correct value a lock-only cut of the same size prices).
+                    # Every window of THIS vintage year is stripped to a bare
+                    # stance so the lock is priced against a genuinely
+                    # commitment-free year.
+                    year = month // 12
+                    for m, act in list(counter.items()):
+                        if m // 12 != year:
+                            continue
+                        m_name = act if isinstance(act, str) else str(act.get("action"))
+                        counter[m] = m_name if m_name != "commit" else "hold"
                 restored = simulate_play(
                     paths,
                     counter,

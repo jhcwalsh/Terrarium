@@ -12,9 +12,12 @@ import {
   createSession,
   decide,
   getCioView,
+  isYearClose,
+  lockMonth,
   planeForBasis,
   renderDetail,
   SessionApiError,
+  windowLabel,
 } from "./session";
 import type { BandReport, Session } from "./session";
 
@@ -96,6 +99,52 @@ describe("planeForBasis (su-app-07)", () => {
     expect(row[planeForBasis(basis)].alert).toBe("breach");
     // and the naive read finds nothing at all
     expect((row as unknown as Record<string, unknown>)[basis]).toBeUndefined();
+  });
+});
+
+describe("windowLabel / isYearClose / lockMonth (D-QC-1)", () => {
+  /**
+   * The single place a window month becomes display copy. Pinned against
+   * BOTH grids on purpose: the quarterly stops (month 2, 5, 8 — mid-year)
+   * and the year-close months the annual grid is made entirely of
+   * (11, 23, ... 107), so a legacy NULL-stamped session's copy is proven
+   * correct with no special-casing anywhere that calls this.
+   */
+  it("labels a quarterly mid-year window", () => {
+    expect(windowLabel(2)).toBe("Y1 Q1");
+    expect(windowLabel(5)).toBe("Y1 Q2");
+    expect(windowLabel(8)).toBe("Y1 Q3");
+  });
+
+  it("labels a year-close window as Q4 — the annual grid is entirely these", () => {
+    expect(windowLabel(11)).toBe("Y1 Q4");
+    expect(windowLabel(23)).toBe("Y2 Q4");
+    expect(windowLabel(107)).toBe("Y9 Q4");
+  });
+
+  it("labels the stance-only windows past the last vintage lock", () => {
+    expect(windowLabel(110)).toBe("Y10 Q1");
+    expect(windowLabel(113)).toBe("Y10 Q2");
+    expect(windowLabel(116)).toBe("Y10 Q3");
+  });
+
+  it("isYearClose is true only at months 12k+11", () => {
+    expect(isYearClose(11)).toBe(true);
+    expect(isYearClose(23)).toBe(true);
+    expect(isYearClose(2)).toBe(false);
+    expect(isYearClose(14)).toBe(false);
+    expect(isYearClose(110)).toBe(false);
+  });
+
+  it("lockMonth names the year-close a mid-year window's vintage locks at", () => {
+    expect(lockMonth(2)).toBe(11);
+    expect(lockMonth(5)).toBe(11);
+    expect(lockMonth(8)).toBe(11);
+    expect(lockMonth(14)).toBe(23);
+    expect(lockMonth(20)).toBe(23);
+    // a year-close window locks AT ITSELF
+    expect(lockMonth(11)).toBe(11);
+    expect(lockMonth(23)).toBe(23);
   });
 });
 

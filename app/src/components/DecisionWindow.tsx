@@ -1,12 +1,21 @@
 /**
  * The decision surface (su-app-02; register row E1).
  *
- * At each annual window the decade STOPS: the player sees the briefing
- * (where they stand, what the four actions do) and must commit before time
- * resumes. E1's core requirement is that HOLD is an explicit commitment
- * with the same weight as acting — the commit button is disabled until an
- * action is chosen, and "hold course" is a choice, never a default that
- * happens by clicking through.
+ * At each window the decade STOPS: the player sees the briefing (where they
+ * stand, what the four actions do) and must commit before time resumes.
+ * E1's core requirement is that HOLD is an explicit commitment with the same
+ * weight as acting — the commit button is disabled until an action is
+ * chosen, and "hold course" is a choice, never a default that happens by
+ * clicking through.
+ *
+ * D-QC-1 (2026-08-20): the clock is quarterly — a window at EVERY
+ * quarter-close, not just the year-close nine. The stance chosen here
+ * governs the coming quarter; the commitment figure is per VINTAGE YEAR,
+ * editable at each of the year's windows (per-sleeve last-edit-wins) and
+ * locking at the year-close. `month`/`nextStop` come from the session's
+ * own `decision_windows` (Play.tsx), so this component never assumes an
+ * annual grid — a legacy session's window is a year-close by construction
+ * and reads correctly with no special-casing here.
  *
  * The four actions are on the main screen at ALL times (owner: "need to make
  * sure the actions are visible on the main page"). Between windows they are
@@ -24,7 +33,10 @@ import { useEffect, useRef, useState } from "react";
 import { usd } from "../lib/money";
 import {
   ACTIONS,
+  isYearClose,
+  lockMonth,
   planeForBasis,
+  windowLabel,
   type Action,
   type BandReport,
   type Session,
@@ -72,9 +84,11 @@ interface DecisionWindowProps {
   /** true when the pointer is stopped at a window and a commit is required */
   open: boolean;
   month: number;
-  year: number;
-  /** the year the next window opens, when this one is closed */
-  nextYear?: number | null;
+  /** D-QC-1: the label (windowLabel) of the next stop, when this one is
+   * closed — e.g. "Y2 Q1" on a quarterly session, "Y2 Q4" on a legacy
+   * annual one. The `year` prop this replaced is gone: every header/aria
+   * label below computes its own label from `month` via `windowLabel`. */
+  nextStop?: string | null;
   onCommit: (
     action: Action,
     timeOnWindowMs: number,
@@ -118,8 +132,7 @@ interface DecisionWindowProps {
 export function DecisionWindow({
   open,
   month,
-  year,
-  nextYear,
+  nextStop,
   onCommit,
   busy,
   planCommitments,
@@ -147,20 +160,22 @@ export function DecisionWindow({
   return (
     <section
       className={`decision-window${open ? "" : " closed"}`}
-      aria-label={open ? `decision window year ${year}` : "actions available at the next window"}
+      aria-label={
+        open ? `decision window ${windowLabel(month)}` : "actions available at the next window"
+      }
     >
       <header>
         {open ? (
           <>
-            <h2>Year {year} — the window is open</h2>
+            <h2>{windowLabel(month)} — the window is open</h2>
             <p>Time is stopped at month {month}. Nothing moves until you commit.</p>
           </>
         ) : (
           <>
             <h2>Your four levers</h2>
             <p>
-              {nextYear
-                ? `Advance the tape (» a quarter, ▶ to the stop). The decade halts at year ${nextYear}, and one of these is committed there.`
+              {nextStop
+                ? `Advance the tape (» a quarter, ▶ to the stop). The decade halts at ${nextStop}, and one of these is committed there.`
                 : "All windows are decided. Play out the decade to face the reckoning."}
             </p>
           </>
@@ -209,7 +224,12 @@ export function DecisionWindow({
       </div>
       {open && planCommitments && (
         <div className="commit-lever" aria-label="commitment lever">
-          <h3>Next year&apos;s commitments</h3>
+          <h3>This year&apos;s commitments</h3>
+          <p className="lever-lock">
+            {isYearClose(month)
+              ? "This year's commitment locks now."
+              : `This year's commitment locks at Q4 (month ${lockMonth(month)}); until then you can revise it.`}
+          </p>
           <p className="lever-note">
             The plan paces these automatically. Change them and the change is
             yours — cuts starve distributions years out, raises call capital

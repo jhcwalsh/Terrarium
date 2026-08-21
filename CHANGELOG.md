@@ -4,6 +4,163 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## qc-04-evidence — QUARTERLY CLOCK, ANNUAL VINTAGES: EVIDENCE + DOCS (branch `qc-01-clock`)
+
+D-QC-1's third and final WP: the registers, `CLAUDE.md`, and the current-docs
+session description go quarterly (Task E1); the release evidence document,
+a full live walk, and this entry (Task E2).
+
+**Task E1.** `docs/engine-realism-register.md`'s ER-2 ("the policy rate is a
+continuous drift, not committee decisions") is amended, not closed: the
+PLAYER's meeting calendar now exists (the 39-window quarterly clock), which
+discharges the allocator-facing half of the finding; the ENGINE's
+`_rate_path` is still a continuous monthly drift with no 25bp quantisation,
+unchanged and out of this release's scope by the spec's own §4.2.
+`CLAUDE.md` gets two surgical edits: the ER-2 digest line gains the
+partial-discharge note, and the play-alpha version line updates
+`port-v5-inflation`/`port-v6-chosen-pe-gen` -> `port-v7-quarterly`/
+`port-v7-quarterly-gen` (both stamps moved together this time, unlike the
+chosen-PE adoption where only the generated one moved), plus a new
+Environment Gotchas bullet on the `decision_windows`/`play_alpha_version`
+stamp and the frozen `_LEGACY_PLAY_ALPHA` fallback that must never be
+"simplified" to the live constants. `docs/current/METHOD.md` and
+`alternate-histories-audited.md` each get their one "once a year a decision
+window opens" sentence corrected to quarterly, with a one-line touch-up
+note added to `docs/current/README.md`'s register per its own conventions
+(this is a one-sentence cadence fix, not a re-pass of either document).
+
+**Task E2 — the evidence document**
+(`docs/superpowers/specs/2026-08-20-quarterly-clock-evidence.md`): all seven
+of the spec's acceptance criteria (§7) mapped to their proof and graded
+PASS. Re-ran `test_qc_windows.py`/`test_qc_regression.py`/`test_qc_versions.py`
+fresh (35/35) and re-verified the `test_serve.py -k "TestQuarterlyService or
+TestGeneratedSessions"` subset at **11/11** — correcting the S5/S6 report's
+own count error (it had claimed 11/11 while the branch was still mid-S7-
+migration and actually red 8/3; now genuinely green after S7's fix, and this
+document says so honestly rather than repeating the old claim).
+
+A live walk against this branch's own server (protocol: stop the released
+service, run this branch's instance, hand the port back — outage window
+about ten minutes, coordinated with `main`) drove all 39 windows of a
+practice session end to end over the HTTP API: all four stances in
+rotation, a mid-year commitment edit left untouched to its year-close lock
+(month 14 -> locked unchanged at 23), a second edit revised again before
+its lock with one sleeve touched and one left alone (months 26 then 32 ->
+locked per-sleeve at 35 as `{pe: 2.75, pc: 1.1}`), the dead-lever 422 fired
+live at a stance-only window (a second, deliberately incomplete probe
+session, since decisions are final on the main walk), completion, outcome
+(`decision_alpha_version port-v7-quarterly`, `final_value 93.27` vs
+`twin_final_value 106.98`), `ah replay` printing **MATCH**, and
+`ah credibility --preset stagflation --preset goldilocks` generating clean
+(2 worlds, 17 flags, no exception). R-4 (outcome latency) measured live at
+15.1-15.4 seconds, recorded as an owner-facing observation, no batching
+added. R-6 (feed density) carried forward from QC-2's walk: not empty
+between quarterly stops for the shipped presets, not re-authored per spec
+§4.4.
+
+All three seal locks (main/G3/G5) re-verified unchanged from the S0/S1
+report's original values, at the head of this WP.
+
+**Deviation, carried honestly into the evidence doc's own "open items"
+section:** the plan's three-branch structure (`qc-02-server`/`qc-03-app`/
+`qc-04-evidence`, each merged into `main` behind its own full gate) was
+collapsed to commits on the single branch `qc-01-clock` throughout this
+release, per this session's task framing at every phase. **The full
+`run_gate.py`/`check_gate.py`/`--no-ff` merge into `main` has not run on
+this branch** — each phase ran its own narrower, explicitly stated
+verification instead. That gate-and-merge sequence remains outstanding and
+is the next step, not implied by anything in this entry or the evidence
+document.
+
+## qc-03-app — QUARTERLY CLOCK, ANNUAL VINTAGES: APP (branch `qc-01-clock`)
+
+D-QC-1 continued: the app plays the quarterly game. `session.decision_windows`
+(server-stamped, S3/S5) replaces `bundle.summary.decision_months` (the
+bundle's static annual display grid) as the app's ONE source of window
+months — Play.tsx, DecisionWindow.tsx and Reckoning.tsx all read it, never a
+client-side constant, so a legacy NULL-stamped session (9 annual windows) and
+a new quarterly one (39) are driven by the same code with no branch on era.
+`lib/session.ts` gains `windowLabel`/`isYearClose`/`lockMonth` — the one
+place a window month becomes display copy ("Y2 Q1", "locks now"). The
+commit-lever gains the exact D-QC-1 lock sentence: "This year's commitment
+locks at Q4 (month N); until then you can revise it." mid-year, "This year's
+commitment locks now." at the year-close. No client-side game logic was
+added (DN-3 W5 held throughout): the app renders the server's own
+`next_plan_commitments`/`plan_pace`/`decision_windows`/`band_report` and
+posts decisions: it never computes a pending figure, a lock, or a band alert
+itself.
+
+**Cadence-agnostic verification (Task A3).** `CioDashboard.tsx`,
+`VintageChart.tsx` and `BandRow.tsx` were grepped and confirmed to read
+`decision_windows`/`decision_months` NOWHERE — every number on the CIO
+dashboard, the policy-band panels (both the rail's `BandPanel` and
+DecisionWindow's compact strip) and the private-cashflow vintage ladder
+comes from the server's own `CioView`/`Session` payload, keyed by quarter or
+vintage-year, not by the decision-window grid. Confirmed live (not just by
+grep): a quarterly practice session (`08f53ab8...` / session
+`8d800dd8-5a02-4e7e-94c9-3a883d36d007`, world "The Gulf Decade") was walked
+quarter-by-quarter across the Y1->Y2 boundary (windows 2, 5, 8, 11, 14, 17)
+against a live server on this branch — the dashboard, bands and vintage
+ladder rendered exactly as they do on an annual session throughout, with no
+code path change. The walk also exercised a genuine mid-year revision
+(month 14: `commitments: {"pe": 6.005}`) and confirmed the very next window
+(17) served back that value as the carried-forward pending figure rather
+than the untouched pacing schedule — the per-sleeve last-edit-wins merge
+(play.py, S4) is correct end to end, not only under unit test.
+
+**R-6 (feed density) verdict, recorded rather than acted on per spec §4.4:**
+the wire is NOT empty between quarterly stops. Board packs are bundle-side
+and already month-indexed independent of any decision grid, so a single
+quarter-to-quarter step surfaces roughly 4-6 wire entries (three monthly
+`DATA` releases, one quarterly `CENTRAL BANK` statement, one quarterly
+`BENCHMARK BOOK` statement, and occasionally a `PRESS` item) — observed
+directly in the live walk above. The content does not vary by quarter within
+a year (the same annually-authored pack repeats structurally), so a future
+WP that wants quarter-*specific* wire content is still open, but the
+"empty between year marks" risk named in the plan does not hold for the
+shipped toy/generator presets.
+
+**Deviation from the plan's literal WP gate:** this phase's task framing
+directed `uv run pytest tests/test_qc_regression.py -q` (green, 15 passed)
+as the Python-side check rather than the full `run_gate.py` ~38-minute
+suite, because no Python file was touched this phase (verified: `git diff
+--stat` for A1/A2 touches only `app/src/**`). The full gate remains a
+prerequisite the plan names for merging `qc-01-clock` into `main`; that
+merge did not happen in this phase.
+
+## qc-02-server — QUARTERLY CLOCK, ANNUAL VINTAGES: SERVER (branch `qc-01-clock`)
+
+D-QC-1 / AM-2026-08-20-001: the play surface stops at every quarter-close from
+month 2 through month 116 (39 windows for a decade) instead of 9 annual ones.
+Vintages, the engine, the pacing model and the ladder are unchanged; a new
+`decision_windows` + `play_alpha_version` stamp on the session row separates
+quarterly-era sessions from legacy annual ones (NULL-stamped, resolving to
+`decision_months` and the frozen legacy alpha literals forever).
+`PLAY_ALPHA_VERSION` -> `port-v7-quarterly`, `GEN_PLAY_ALPHA_VERSION` ->
+`port-v7-quarterly-gen`. The vintage-year commitment figure is now a
+per-sleeve last-edit-wins merge across the forming year's windows, locking at
+the year-close (months 12k+11, unchanged); a commitment posted at one of the
+three windows past the final lock (110/113/116, where no vintage is forming)
+is a 422 at the door, proven to never reach the simulator either.
+
+**Task S7 (this entry): the mechanical test migration.** ~60 tests across
+`tests/test_serve.py` and `tests/test_serve_book.py` drove sessions through
+the old 9-window annual grid; S3-S6 landed the quarterly stamping ahead of
+this task and left them red on purpose (recorded in the S5/S6 report). Every
+one migrated under a single mechanical rule (never per-test improvisation):
+game-flow tests now drive the session's OWN `decision_windows` (via
+`_play_through`, `_hold_through`, or the newly idempotent
+`_reveal_mid_decade`); tests asserting legacy behavior stay store-constructed
+with the stamp columns omitted (first-class forever, untouched). One
+additional red outside the plan's named S7 file list surfaced only on the
+full-suite run:
+`test_serve_retired.py::TestRetiredWorldSessionFence::test_existing_sessions_on_a_retired_world_stay_fully_readable`,
+same shape, same fix. `test_qc_regression.py`'s bit-identical-to-the-annual-era
+baseline class stays green throughout — the quarterly clock does not move a
+single bit of a stored annual session. Full suite green, ruff and pyright
+clean, all three seal digests (main/G3/G5) unchanged from the S4/S5/S6
+report's values.
+
 ## app-open-04 — PICKER HYGIENE, THE UNFUNDED PAUSE, THE RETIRED-SESSION FENCE (branch `app-open-04`)
 
 Four owner-ordered items on the book/picker/serve surfaces (2026-08-20, "go on 1-3").

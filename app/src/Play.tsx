@@ -39,6 +39,7 @@ import {
   getOutcome,
   planeForBasis,
   SessionApiError,
+  windowLabel,
   type Action,
   type Book,
   type Outcome,
@@ -243,7 +244,13 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   const [cioError, setCioError] = useState<string | null>(null);
 
   const months = bundle.meta.months;
-  const windows = bundle.summary.decision_months;
+  // D-QC-1: the window list is the SESSION's own (server-stamped at
+  // creation — quarterly for a new session, the annual grid for a legacy
+  // NULL-stamped one). bundle.summary.decision_months remains the toy
+  // twin's static display grid and is no longer this component's source of
+  // truth for where the game stops (DN-3 W5: the app mirrors the session
+  // document, it does not derive windows itself).
+  const windows = session?.decision_windows ?? [];
 
   useEffect(() => {
     createSession({
@@ -354,12 +361,19 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   /**
    * A quarter at a time — the play rhythm (owner: "let's change the play to
    * quarterly, not annual"). Clamped to the next undecided window because the
-   * server refuses to reveal past one (409) and windows sit at month 11, 23,
-   * ... — a naive +3 from month 9 would jump the stop.
+   * server refuses to reveal past one (409) and windows sit wherever the
+   * session's own `decision_windows` says they do — a naive +3 from the
+   * previous stop would jump past one.
    *
-   * DECISIONS stay annual. Moving them to quarterly would redefine
-   * decision_alpha, the DN-5 chain-link decomposition and leaderboard
-   * comparability; that needs a decision_alpha_version bump and its own WP.
+   * DECISIONS went quarterly at D-QC-1 (AM-2026-08-20-001, 2026-08-20): this
+   * comment used to defer the change until a new decision_alpha_version
+   * existed to carry it, distinct from decision_alpha, the DN-5 chain-link
+   * decomposition and leaderboard comparability — that version now exists
+   * (`port-v7-quarterly` / `port-v7-quarterly-gen`), stamped on the session
+   * at creation, so the deferral is discharged rather than deleted (CLAUDE.md:
+   * invert, keep the history). `windows` above is read from the session
+   * document, never a client-side constant, so this function is identical
+   * whether the session is quarterly or a legacy annual one.
    */
   const stepQuarter = useCallback(() => {
     if (!session) return;
@@ -467,7 +481,12 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
   const dateNow = revealed === 0 ? "T0" : `Y${yearNow} Q${quarterNow}`;
   const monthNow =
     revealed === 0 ? "before the tape opens" : `month ${((revealed - 1) % 12) + 1} of the year`;
-  const nextYear = nextWindow !== null ? Math.floor((nextWindow + 1) / 12) : null;
+  // D-QC-1: the label for the next stop, computed from the SESSION's own
+  // window month (windowLabel) rather than an annual year number — reads
+  // "Y2 Q1" on a quarterly session and "Y2 Q4" on a legacy annual one
+  // (every legacy window is a year-close, which windowLabel always renders
+  // as Q4).
+  const nextStop = nextWindow !== null ? windowLabel(nextWindow) : null;
   // The server marks the book to market at the pointer and sends the twin's
   // value beside it; the difference is decision alpha SO FAR, which is the
   // only number that tells a player whether their choices are working.
@@ -515,7 +534,7 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
               className="t"
               onClick={playAhead}
               disabled={transportLocked}
-              title={nextYear !== null ? `Play to year ${nextYear}` : "Play out the decade"}
+              title={nextStop !== null ? `Play to ${nextStop}` : "Play out the decade"}
               aria-label="Play to the next stop"
             >
               ▶
@@ -599,8 +618,8 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
             {decided}/{windows.length}
           </div>
           <div className="s">
-            {nextYear !== null
-              ? `annual windows — next stops at year ${nextYear}`
+            {nextStop !== null
+              ? `quarterly windows — next stop ${nextStop}`
               : "all decided — play it out"}
           </div>
         </div>
@@ -689,13 +708,12 @@ export function Play({ bundle, config, book, plan, onExit }: PlayProps) {
           <section className="decision-panel">
             <div className="eyebrow">
               <span>{atWindow !== null ? "Committee in session" : "Actions"}</span>
-              <span>{atWindow !== null ? "commit to continue" : `next window · year ${nextYear ?? "—"}`}</span>
+              <span>{atWindow !== null ? "commit to continue" : `next window · ${nextStop ?? "—"}`}</span>
             </div>
             <DecisionWindow
               open={atWindow !== null}
               month={atWindow ?? (nextWindow ?? 0)}
-              year={Math.floor(((atWindow ?? nextWindow ?? 0) + 1) / 12)}
-              nextYear={nextYear}
+              nextStop={nextStop}
               onCommit={commit}
               busy={busy}
               planCommitments={session?.next_plan_commitments ?? null}

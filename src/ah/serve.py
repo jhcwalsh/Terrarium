@@ -39,7 +39,7 @@ from pydantic import BaseModel, Field
 
 from ah.cioview import PLANES, WATCH_FRACTION, build_cio_view
 from ah.core.engine import run_path
-from ah.core.institution import decision_months
+from ah.core.institution import decision_months, quarterly_decision_months
 from ah.core.numericworld import project_numeric
 from ah.core.worldspec import WorldSpec
 from ah.play import (
@@ -75,12 +75,49 @@ def _resolve_engine(ws: WorldSpec, nw, seed: int):
     opening book, and their sessions score under a DISTINCT alpha version so
     no leaderboard row can mix engines. Toy worlds are byte-identical to
     before this dispatch existed.
+
+    D-QC-1: the ``alpha_version`` this returns is the LIVE stamp for the
+    world's engine at CALL time -- correct for a session being CREATED (see
+    ``_alpha_version_for``, which is this same rule by name) but NOT what a
+    stored session was scored under once a bump has happened. Callers that
+    resolve an EXISTING session's alpha version use ``_session_alpha_version``
+    instead and ignore this third element.
     """
     if ws.engine_defaults.generator_id == "toy-v0":
         return run_path(nw, seed), None, PLAY_ALPHA_VERSION
     from ah.port.adapter import GEN_PLAY_ALPHA_VERSION, GEN_START_TARGETS, run_gen_path
 
     return run_gen_path(nw, seed), GEN_START_TARGETS, GEN_PLAY_ALPHA_VERSION
+
+
+#: D-QC-1: the stamp a session row WITHOUT a play_alpha_version was created
+#: under -- every session that predates the quarterly clock. FROZEN
+#: LITERALS, never the live constants: after the v7 bump the live constants
+#: name a different game, and an in-flight annual session must complete,
+#: replay and rank as annual (spec section 4.3).
+_LEGACY_PLAY_ALPHA = {
+    "toy": "port-v5-inflation",
+    "gen": "port-v6-chosen-pe-gen",
+}
+
+
+def _alpha_version_for(ws: WorldSpec) -> str:
+    """The LIVE play-alpha stamp for this world's engine (create-time)."""
+    if ws.engine_defaults.generator_id == "toy-v0":
+        return PLAY_ALPHA_VERSION
+    from ah.port.adapter import GEN_PLAY_ALPHA_VERSION
+
+    return GEN_PLAY_ALPHA_VERSION
+
+
+def _session_alpha_version(doc: dict[str, Any], ws: WorldSpec) -> str:
+    """The stamp that GOVERNS a session: its own, else the frozen legacy
+    literal for its engine. Never the live constant for a stampless row."""
+    stamped = doc.get("play_alpha_version")
+    if stamped:
+        return str(stamped)
+    key = "toy" if ws.engine_defaults.generator_id == "toy-v0" else "gen"
+    return _LEGACY_PLAY_ALPHA[key]
 
 
 def _build_bundle_bytes(conn: sqlite3.Connection, run_id: str) -> bytes:
@@ -134,6 +171,9 @@ def _world_book(
     # non-decade horizon. Getting it wrong here means the server's own
     # default 422s when POSTed straight back (all nine shipped presets are
     # 40 quarters, so this was previously invisible).
+    # D-QC-1: one entry per VINTAGE YEAR -- the annual grid (`decision_months`)
+    # remains the plan's definition; the quarterly grid (`decision_windows`,
+    # `quarterly_decision_months`) is the STOP grid, not the vintage grid.
     plan = default_commitment_plan(targets, windows=len(decision_months(months)))
     return default_opening_book(targets), plan, liquid
 
@@ -304,38 +344,59 @@ def _band_report(
     return {"watch_fraction": WATCH_FRACTION, "sleeves": sleeves}
 
 
-def _window_ordinal(months: int, month: int) -> int | None:
-    """The plan index a DECISION MONTH names, or None if it names no window.
+def _vintage_ordinal(doc: dict[str, Any], month: int) -> int | None:
+    """The CommitmentPlan index the window at ``month`` edits: the vintage
+    year currently forming (``month // 12``), or None.
 
-    ``CommitmentPlan`` carries one entry per decision window (spec section 3):
-    index ``k`` is the k-th window and drives the engine's vintage year
-    ``k + 1``. ``decision_months`` is the one definition of that ordering, so
-    the index is read off it rather than re-derived from arithmetic.
+    None when ``month`` names no window of THIS session, or when no vintage
+    is forming there -- the windows after the horizon's last year-close
+    (months 110/113/116 on a decade) carry a stance only: the engine's final
+    commitment event fired at the last year-close and there is no
+    ``q = n_quarters`` commitment (``play.py``'s ``q % 4 == 0`` loop ends at
+    ``n_quarters - 1``). On the annual grid this is exactly the old
+    ``windows.index(month)``: every annual window is a year-close ``12k+11``,
+    and ``12k+11 // 12 == k``.
     """
-    windows = decision_months(months)
-    return windows.index(month) if month in windows else None
+    windows = doc["decision_windows"]
+    if month not in windows:
+        return None
+    k = month // 12
+    n_vintages = sum(1 for m in windows if m % 12 == 11)
+    return k if k < n_vintages else None
 
 
-def _plan_window(doc: dict[str, Any], entries: int) -> int:
-    """The plan index the lever is PRE-FILLING for: the next undecided window.
+def _pending_commitments(
+    doc: dict[str, Any], plan: CommitmentPlan | None, month: int
+) -> dict[str, float] | None:
+    """The vintage-year figure pending at ``month``'s window (D-QC-1).
 
-    Deliberately not derived from the reveal pointer's quarter. The old
-    ``(quarter + 1) // 4`` was only correct when the pointer sat exactly on
-    the window's own month; ``record_decision`` refuses a window until
-    ``revealed_months >= month + 1`` and ``Play.tsx`` opens the lever on
-    exactly that state, so at window 0 the real pointer is month 12, the last
-    closed quarter is 3, and the formula returned 1 — next year's number,
-    beside a commit of this year's. The window ordinal is a property of the
-    window, so it is taken from the window (same source as ``decide()``'s fill
-    below, which uses the decision's own month).
-
-    Clamped to the stored plan's length for a non-decade horizon, and for the
-    fully-decided session that has no next window.
+    Starts from the stored plan's entry for the forming vintage (or empty
+    for a session with no stored plan -- the pacing rule remains that
+    session's baseline, applied by the engine at the lock), overlaid by the
+    commitments the player recorded at EARLIER windows of the same vintage
+    year -- per sleeve, last edit wins, the exact merge ``simulate_play``
+    applies at the commitment event. None when no vintage is forming at
+    ``month``.
     """
-    windows = decision_months(doc["months"])
-    undecided = [m for m in windows if str(m) not in doc["decisions"]]
-    index = windows.index(undecided[0]) if undecided else len(windows) - 1
-    return max(0, min(index, entries - 1))
+    window = _vintage_ordinal(doc, month)
+    if window is None:
+        return None
+    pending: dict[str, float] = (
+        {}
+        if plan is None
+        else {
+            sleeve: float(points[window])
+            for sleeve, points in plan.points.items()
+            if window < len(points)
+        }
+    )
+    for m in sorted(int(k) for k in doc["decisions"]):
+        if m // 12 == month // 12 and m < month:
+            d = doc["decisions"][str(m)]
+            pts = d.get("commitments") if isinstance(d, dict) else None
+            for sleeve, value in (pts or {}).items():
+                pending[sleeve] = float(value)
+    return pending
 
 
 _REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -570,6 +631,9 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             validate_book(body.book, liquid)  # band warnings don't gate a plan
         except BookError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
+        # D-QC-1: one entry per VINTAGE YEAR -- the annual grid remains the
+        # plan's definition; the quarterly grid is the STOP grid, not the
+        # vintage grid (see _world_book's matching comment).
         plan = book_commitment_plan(body.book, windows=len(decision_months(months)))
         # app-open-04 Item H: the projection follows the plan the analyst is
         # LOOKING AT — a posted hand-edited plan when one rides along
@@ -654,7 +718,8 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         world = get_world(conn, rec["world_id"])
         if world is None:
             raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
-        months = WorldSpec.model_validate(world).horizon.quarters * 3
+        ws = WorldSpec.model_validate(world)
+        months = ws.horizon.quarters * 3
 
         default_book_, default_plan_, liquid = _world_book(conn, body.run_id)
         ranked = body.ranked
@@ -713,6 +778,13 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 participant=body.participant,
                 opening_book=book_json,
                 commitment_plan=plan_json,
+                # D-QC-1: every NEW session is created on the quarterly grid
+                # and stamped with the live play-alpha version for this
+                # world's engine. NULL (never written by this endpoint) is
+                # reserved for legacy rows constructed at the store layer
+                # directly -- the shape every pre-release session has.
+                decision_windows=quarterly_decision_months(months),
+                play_alpha_version=_alpha_version_for(ws),
             )
         except session_store.SessionError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
@@ -791,7 +863,48 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
                 0.0, policy_targets, pacing_rule="fixed", cash=policy_cash
             ).items()
         }
+
+        def _apply_pending_fill() -> None:
+            """D-QC-1: the lever pre-fills with the PENDING vintage-year
+            figure at the next undecided window -- the stored plan's entry
+            overlaid by this year's earlier edits (plan sessions), or the
+            pacing pre-fill overlaid by this year's edits (no-plan
+            sessions). None past the last year-close: no vintage is
+            forming, the lever hides. Called at BOTH return points of
+            ``_mark_to_market`` (before and after the first quarter closes)
+            so the served pre-fill is D-QC-1-correct at every point in the
+            session's life, not only once a quarter has closed.
+            """
+            windows_ = doc["decision_windows"]
+            undecided = [m for m in windows_ if str(m) not in doc["decisions"]]
+            next_month = undecided[0] if undecided else None
+            stored_plan_ = doc.get("commitment_plan")
+            plan_doc = CommitmentPlan.model_validate_json(stored_plan_) if stored_plan_ else None
+            pending = (
+                _pending_commitments(doc, plan_doc, next_month) if next_month is not None else None
+            )
+            if next_month is None or _vintage_ordinal(doc, next_month) is None:
+                doc["plan_pace"] = None
+                doc["next_plan_commitments"] = None
+                doc["next_plan_basis"] = None
+            elif plan_doc is not None:
+                doc["plan_pace"] = doc["next_plan_commitments"]
+                doc["next_plan_commitments"] = {
+                    sleeve: round(v, 4) for sleeve, v in (pending or {}).items()
+                }
+                doc["next_plan_basis"] = None  # nothing is being approximated
+            elif pending:
+                # no-plan session with a mid-year revision on record: the
+                # pacing pre-fill (already in doc["next_plan_commitments"],
+                # with its F4 basis) shows the player's own pending edits on
+                # top -- what an untouched lock would actually commit.
+                doc["next_plan_commitments"] = {
+                    **doc["next_plan_commitments"],
+                    **{sleeve: round(v, 4) for sleeve, v in pending.items()},
+                }
+
         if revealed < 3:  # nothing closes before the first quarter ends
+            _apply_pending_fill()
             return doc
         nw = project_numeric(ws)
         paths, targets, _alpha = _resolve_engine(ws, nw, rec["seed"])
@@ -857,20 +970,14 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "as_of_month": here.month,
             "private_weight_reported": here.private_weight_reported,
         }
-        # su-app-06 section 4.3: with a stored plan the pre-fill is the
-        # player's OWN number for this year - exact, so the audit-F4
-        # staleness caveat does not apply - and the pacing rule's view rides
-        # alongside as a comparison rather than acting as a silent default.
-        # A session with no plan keeps today's behaviour verbatim.
-        stored_plan = doc.get("commitment_plan")
-        if stored_plan:
-            plan = CommitmentPlan.model_validate_json(stored_plan)
-            window = _plan_window(doc, len(next(iter(plan.points.values()))))
-            doc["plan_pace"] = doc["next_plan_commitments"]
-            doc["next_plan_commitments"] = {
-                sleeve: round(points[window], 4) for sleeve, points in plan.points.items()
-            }
-            doc["next_plan_basis"] = None  # nothing is being approximated
+        # su-app-06 section 4.3, D-QC-1: with a stored plan the pre-fill is
+        # the player's OWN number for the forming vintage year - exact, so
+        # the audit-F4 staleness caveat does not apply - overlaid by any
+        # earlier edit the player has already made this year, and the
+        # pacing rule's view rides alongside as a comparison rather than
+        # acting as a silent default. A session with no plan keeps today's
+        # behaviour verbatim except for the same-year overlay. See
+        # ``_apply_pending_fill`` below, which runs at both return points.
         # sp-05 (E1's last gaps): the ladder by age and the trailing
         # distribution series, visible at the moment of decision.
         doc["vintage_nav"] = {k: round(float(v), 4) for k, v in here.vintage_nav.items()}
@@ -878,12 +985,12 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             round(float(active.quarters[i].distributions_received), 4)
             for i in range(max(0, q - 3), q + 1)
         ]
+        _apply_pending_fill()
         return doc
 
     @app.get("/sessions/{sid}")
     def get_session(sid: str, conn: sqlite3.Connection = Depends(db)):
         doc = _get(conn, sid)
-        doc["decision_windows"] = decision_months(doc["months"])
         return _mark_to_market(conn, doc)
 
     @app.get("/sessions/{sid}/cio")
@@ -915,7 +1022,10 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         assert world is not None
         ws = WorldSpec.model_validate(world)
         nw = project_numeric(ws)
-        paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
+        paths, targets, _live_alpha = _resolve_engine(ws, nw, rec["seed"])
+        # D-QC-1: the session's OWN stamp, not the live constant -- a session
+        # created before a version bump must keep showing its own alpha name.
+        alpha_version = _session_alpha_version(doc, ws)
         decisions = {int(m): a for m, a in doc["decisions"].items()}
         resolved = rec.get("resolved_engine") or {}
         # su-app-06: this is a LIVE surface, not just an endgame one — a
@@ -954,6 +1064,23 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
     def decide(sid: str, body: Decide, conn: sqlite3.Connection = Depends(db)):
         doc = _get(conn, sid)
         commitments = body.commitments
+        # D-QC-1: a commitment posted where no vintage year is forming (the
+        # windows after the last year-close -- months 110/113/116 on a
+        # decade) is a 422 at the door -- the simulator has no vintage event
+        # left to route it into (play.py's commitment loop stops at the last
+        # year-close), so accepting it here would be a silently inert store.
+        # This is the ONLY guard against that: nothing downstream re-checks
+        # it, and the simulator applies whatever it is handed without
+        # complaint.
+        if commitments and _vintage_ordinal(doc, body.month) is None:
+            raise HTTPException(
+                status_code=422,
+                detail=(
+                    f"month {body.month}: no vintage year is forming at this "
+                    "window (the last vintage locked at the final year-close); "
+                    "the commitment lever is stance-only here"
+                ),
+            )
         # su-app-06 section 4.3, and the fix for it: on a PLAN-CARRYING
         # session an untouched lever commits the plan's number for this
         # window, exactly. The client sends only the sleeves the player
@@ -963,20 +1090,20 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         # the display and stopped: `simulate_play` fell through to the policy
         # pacing rule and committed a number the window never showed.
         #
-        # The window is identified by the DECISION'S OWN MONTH, not by a
-        # quarter pointer: `body.month` names the window exactly and the
-        # pointer does not (see `_plan_window`). A month that names no window
-        # is left alone — `record_decision` is the one place that refuses it.
-        stored_plan = doc.get("commitment_plan")
-        if stored_plan:
-            plan = CommitmentPlan.model_validate_json(stored_plan)
-            window = _window_ordinal(doc["months"], body.month)
-            if window is not None:
-                filled = dict(commitments or {})
-                for sleeve, points in plan.points.items():
-                    if sleeve not in filled and window < len(points):
-                        filled[sleeve] = float(points[window])
-                commitments = filled
+        # D-QC-1: the fill happens ONLY at the LOCK (a year-close window,
+        # ``month % 12 == 11``) -- every annual-era window WAS a year-close,
+        # so a legacy session keeps this fill to the byte. A mid-year window
+        # stores exactly what the player sent (sparse): a revision, not a
+        # lock -- ``simulate_play``'s per-sleeve last-edit-wins merge (Task
+        # S4) resolves the final figure at the lock from the sparse history.
+        if body.month % 12 == 11:
+            stored_plan = doc.get("commitment_plan")
+            plan = CommitmentPlan.model_validate_json(stored_plan) if stored_plan else None
+            pending = _pending_commitments(doc, plan, body.month)
+            # a no-plan session with no edits all year keeps commitments=None,
+            # so the engine paces at the lock exactly as it does today.
+            if pending is not None and (pending or commitments):
+                commitments = {**pending, **(commitments or {})}
         if commitments is not None:
             # sp-02: the lever's bounds are checked HERE, against the world's
             # own targets — a bad commit is a 422 at the door, never a 500
@@ -1074,7 +1201,12 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         assert world is not None
         ws = WorldSpec.model_validate(world)
         nw = project_numeric(ws)
-        paths, targets, alpha_version = _resolve_engine(ws, nw, rec["seed"])
+        paths, targets, _live_alpha = _resolve_engine(ws, nw, rec["seed"])
+        # D-QC-1: the session's OWN stamp -- what it was CREATED under, not
+        # whatever the live constant names today. This is the load-bearing
+        # read for criteria 4/5: a legacy session's outcome and leaderboard
+        # row both use this, never the live PLAY_ALPHA_VERSION.
+        alpha_version = _session_alpha_version(doc, ws)
         use_reported = doc["basis"] == "reported"
         decisions = {int(m): a for m, a in doc["decisions"].items()}
         # su-app-06: the SAME stored book (or None for the derived default)
@@ -1099,8 +1231,17 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             pacing_rule="fixed",
             opening_book=book,
         )
+        # D-QC-1: the session's OWN window grid -- the chain-link
+        # decomposition and the annotations both run over exactly the
+        # windows this session was created with (39 stops for a quarterly
+        # session, 9 for a legacy annual one), never the live definition.
         attribution = window_contributions_play(
-            paths, decisions, use_reported=use_reported, start_targets=targets, opening_book=book
+            paths,
+            decisions,
+            use_reported=use_reported,
+            start_targets=targets,
+            opening_book=book,
+            windows=doc["decision_windows"],
         )
 
         # sp-03 (E4): the flinch cost and the arithmetic warning ride the
@@ -1121,6 +1262,7 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             commitment_plan=(
                 CommitmentPlan.model_validate_json(stored_plan) if stored_plan else None
             ),
+            windows=doc["decision_windows"],
         )
 
         alpha = active.final_value - twin.final_value
