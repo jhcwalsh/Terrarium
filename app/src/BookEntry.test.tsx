@@ -505,26 +505,37 @@ describe("BookEntry", () => {
     expect(byTestId("book-total").textContent).toContain("100");
   });
 
-  it("a value edit no longer blocks Play - weights derive and the posted book rescales (app-open-03)", async () => {
-    // INVERTED 2026-08-19 (app-open-03, owner-reported): this test used to
-    // pin `expect(findButton(/play/i).disabled).toBe(true)` at total 112 —
-    // the exact deadlock the owner hit ("if it is increased the book doesn't
-    // add to 100 so wont go forward, but there is no way to adjust the
-    // weights"). Values are now free-scale and the WEIGHTS derive
-    // (value/total, live, summing to 100 by construction); Play posts the
-    // book rescaled to the contract's 100-point scale. The running total
-    // still reads 112 — it is the typed number, not a gate.
+  it("an off-100 total blocks Play with a plain notice, and fixing it un-blocks (app-open-04)", async () => {
+    // RE-INVERTED 2026-08-20 (app-open-04 Item G, owner ruling, drive item
+    // 5: "If I try to play when the total <>100 it should notify user and
+    // require a change"). History, both ways: before app-open-03 this test
+    // pinned a silent `disabled` gate at total 112 — a deadlock, because no
+    // control could fix the total once values went off it. app-open-03
+    // INVERTED it (2026-08-19) to free-scale values that silently rescaled
+    // to 100 on Play. The owner has now ruled the silent rescale out: an
+    // off-100 total must notify plainly and require the change. The
+    // deadlock stays dead — the fault names the number and the tab, the
+    // weight column still edits without moving the total, and fixing the
+    // total re-enables Play which then posts the exact 100-point book.
     stubFetch();
     const onReady = vi.fn();
     await render(<BookEntry runId="r1" onReady={onReady} onCancel={vi.fn()} />);
     const equity = byLabel<HTMLInputElement>("equity");
     setValue(equity, "50");
     expect(byTestId("book-total").textContent).toContain("112");
-    expect(findButton(/play/i).disabled).toBe(false);
-    // the weight column moved with the edit: 50/112 = 44.6%, and the
-    // private cells re-derived against the same new denominator
+    // the weight column still derives live — the fix surface never froze
     expect(byLabel<HTMLInputElement>("equity weight").value).toBe("44.6");
     expect(byTestId("weight-pe").textContent).toContain("17.9"); // 20/112
+    // Play is blocked, and the notice names the total and where to fix it
+    expect(findButton(/play/i).disabled).toBe(true);
+    const faults = byTestId("shape-faults").textContent ?? "";
+    expect(faults).toMatch(/the book totals 112, not 100/);
+    expect(faults).toMatch(/targets and bands tab/i);
+    // required change made: back to the served 38, the total reads 100
+    setValue(equity, "38");
+    expect(byTestId("book-total").textContent).toContain("100");
+    expect(host!.querySelector('[data-testid="shape-faults"]')).toBeNull();
+    expect(findButton(/play/i).disabled).toBe(false);
     act(() => findButton(/play/i).click());
     const posted = onReady.mock.calls[0][0];
     const postedTotal =
@@ -534,24 +545,6 @@ describe("BookEntry", () => {
         .reduce((a, r) => a + r.value.nav_true, 0) as number) +
       (posted.cash as number);
     expect(postedTotal).toBeCloseTo(100, 6);
-    // the posted book preserves the typed weights exactly: equity holds
-    // 50/112 of the rescaled book
-    expect(posted.liquid.equity).toBeCloseTo((50 / 112) * 100, 6);
-    // and the rescale kept the rung identity: paid_in + unfunded still
-    // equals committed + recycled on every rung
-    for (const rungs of Object.values(
-      posted.private as Record<
-        string,
-        { commitment: Record<string, number> }[]
-      >,
-    )) {
-      for (const r of rungs) {
-        expect(r.commitment.paid_in + r.commitment.unfunded).toBeCloseTo(
-          r.commitment.committed + r.commitment.cumulative_recycled,
-          9,
-        );
-      }
-    }
   });
 
   it("renders only the sleeves the world carries", async () => {
@@ -1151,7 +1144,13 @@ describe("BookEntry — rebuild a private ladder to a new value", () => {
     expect(byLabel<HTMLInputElement>("pc rung 0 nav_true").value).toBe("8");
   });
 
-  it("sends the typed value, sleeve and run_id in the query string", async () => {
+  it("sends the CONVERTED weight->value, sleeve and run_id in the query string", async () => {
+    // UPDATED 2026-08-20 (app-open-04 Item F, owner drive item 4): the box
+    // is titled "Current weight" and the typed number is a WEIGHT percent
+    // now, converted client-side to the ladder value that yields exactly
+    // that share of the resulting total (v = rest * w / (100 - w)). The
+    // old version asserted `value=9.5` verbatim; for a typed 9.5% on this
+    // book, rest = 100 - 8 = 92 and v = 92 * 9.5 / 90.5 = 9.657459 (6dp).
     const fn = stubFetchRouted([
       { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
       { match: "/book/ladder", ok: true, body: { rungs: [] } },
@@ -1165,7 +1164,27 @@ describe("BookEntry — rebuild a private ladder to a new value", () => {
     const url = String(call![0]);
     expect(url).toContain("run_id=r1");
     expect(url).toContain("sleeve=pc");
-    expect(url).toContain("value=9.5");
+    expect(url).toContain("value=9.657459");
+  });
+
+  it("a weight outside (0, 100) disables Rebuild instead of reaching the server", async () => {
+    // UPDATED 2026-08-20 (app-open-04 Item F): the old version typed -5 as
+    // a raw VALUE and asserted the SERVER's 422 detail rendered. A weight
+    // percent outside (0, 100) is not a weight this book can reach, so the
+    // button is not clickable at all now — the server's own refusal path is
+    // pinned by the next test with an in-range weight.
+    const fn = stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      { match: "/book/ladder", ok: true, body: { rungs: [] } },
+    ]);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    for (const bad of ["-5", "0", "100", "140"]) {
+      setValue(byLabel<HTMLInputElement>("pe rebuild value"), bad);
+      expect(byLabel<HTMLButtonElement>("pe rebuild ladder").disabled).toBe(true);
+    }
+    expect(fn.mock.calls.some(([url]) => String(url).includes("/book/ladder"))).toBe(false);
+    // and the book is untouched throughout
+    expect(byTestId("value-pe").textContent).toBe("20.0");
   });
 
   it("a refused rebuild shows the endpoint's detail and leaves the book unchanged", async () => {
@@ -1175,14 +1194,14 @@ describe("BookEntry — rebuild a private ladder to a new value", () => {
         match: "/book/ladder",
         ok: false,
         status: 422,
-        body: { detail: "value must be > 0, got -5.0" },
+        body: { detail: "no run_record r1" },
       },
     ]);
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "-5");
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "12");
     act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
     await flush();
-    expect(byTestId("ladder-error-pe").textContent).toMatch(/value must be > 0/);
+    expect(byTestId("ladder-error-pe").textContent).toMatch(/no run_record/);
     // never partially applied: pe's ladder still reads exactly as served
     expect(byTestId("value-pe").textContent).toBe("20.0");
     expect(byLabel<HTMLInputElement>("pe rung 0 nav_true").value).toBe("20");
@@ -1202,11 +1221,15 @@ describe("BookEntry — rebuild a private ladder to a new value", () => {
       }
       ladderCalls += 1;
       if (ladderCalls === 1) {
+        // UPDATED 2026-08-20 (app-open-04 Item F): the first attempt used
+        // to be a typed -5 the server refused; a weight outside (0, 100)
+        // no longer reaches the server (button disabled), so the refusal
+        // is now a server-side one on an in-range weight.
         return Promise.resolve({
           ok: false,
           status: 422,
           statusText: "422",
-          json: () => Promise.resolve({ detail: "value must be > 0, got -5.0" }),
+          json: () => Promise.resolve({ detail: "no run_record r1" }),
         });
       }
       return Promise.resolve({
@@ -1218,15 +1241,51 @@ describe("BookEntry — rebuild a private ladder to a new value", () => {
     });
     vi.stubGlobal("fetch", fn);
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "-5");
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "11");
     act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
     await flush();
-    expect(byTestId("ladder-error-pe").textContent).toMatch(/value must be > 0/);
+    expect(byTestId("ladder-error-pe").textContent).toMatch(/no run_record/);
     setValue(byLabel<HTMLInputElement>("pe rebuild value"), "12");
     act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
     await flush();
     expect(host!.querySelector('[data-testid="ladder-error-pe"]')).toBeNull();
     expect(byTestId("value-pe").textContent).toBe("12.0");
+  });
+
+  it("the box is titled Current weight and prefills with the Targets tab's own weight (app-open-04)", async () => {
+    // Item F (owner drive item 4): "the input cell to change the weight
+    // should have a title of 'Current weight' and be prepopulated with the
+    // current weight from the Targets page". One derivation, not a copy:
+    // the prefill below must equal the weight readout the Targets tab
+    // renders for the same sleeve, for the served default AND after a value
+    // edit moves every weight.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const label = byLabel<HTMLInputElement>("pe rebuild value").closest("label");
+    expect(label?.textContent).toContain("Current weight");
+    // served default: pe holds 20 of 100
+    expect(byLabel<HTMLInputElement>("pe rebuild value").value).toBe("20.0");
+    expect(byTestId("weight-pe").textContent).toBe("20.0%");
+    // a value edit moves the denominator: both readouts move TOGETHER
+    setValue(byLabel<HTMLInputElement>("equity"), "50");
+    expect(byTestId("weight-pe").textContent).toBe("17.9%"); // 20/112
+    expect(byLabel<HTMLInputElement>("pe rebuild value").value).toBe("17.9");
+  });
+
+  it("after a rebuild the box re-derives to the sleeve's NEW weight, not the typed echo", async () => {
+    stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      { match: "/book/ladder", ok: true, body: { rungs: NEW_PE_RUNGS } },
+    ]);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    setValue(byLabel<HTMLInputElement>("pe rebuild value"), "12");
+    act(() => byLabel<HTMLButtonElement>("pe rebuild ladder").click());
+    await flush();
+    // the stubbed rungs sum to 12 against the book's remaining 80, so the
+    // sleeve's NEW current weight is 12/92 = 13.0% — a number the analyst
+    // never typed, reachable only by re-deriving from the live book.
+    expect(byTestId("value-pe").textContent).toBe("12.0");
+    expect(byLabel<HTMLInputElement>("pe rebuild value").value).toBe("13.0");
   });
 });
 
@@ -1488,24 +1547,32 @@ describe("BookEntry — weights derive and edit; the plan follows the book (app-
     expect(byLabel<HTMLInputElement>("equity weight").value).toBe("43.2"); // 38/88
   });
 
-  it("no positive-total book can deadlock Play", async () => {
-    // the app-open-03 property, straight from the owner's report: whatever
-    // the values say, a finite non-negative book with a positive total can
-    // proceed. Sweep a few shapes that used to jam the old total gate.
+  it("an off-100 book is a named notice, never a dead end: the weight column still fixes it (app-open-04)", async () => {
+    // RE-INVERTED 2026-08-20 (app-open-04 Item G, owner ruling, drive item
+    // 5). The app-open-03 version pinned "no positive-total book can
+    // deadlock Play" — any positive total proceeded, silently rescaled.
+    // The owner's new ruling requires the off-100 state to block WITH a
+    // plain notice. What this test now protects is the half of the old
+    // property still worth keeping: blocking must never be a dead end.
+    // Every off-100 shape names its total, and the weight column (which
+    // cannot move the total) plus the value column (which can) remain live
+    // fix surfaces — the pre-app-open-03 deadlock does not come back.
     stubFetch();
     await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
-    for (const [sleeve, value] of [
-      ["equity", "200"],
-      ["cash", "50"],
-      ["bonds", "0"],
+    for (const [sleeve, value, total] of [
+      ["equity", "200", "262"],
+      ["cash", "50", "310"],
+      ["bonds", "0", "298"],
     ] as const) {
       setValue(byLabel<HTMLInputElement>(sleeve), value);
-      expect(findButton(/play/i).disabled).toBe(false);
+      expect(findButton(/play/i).disabled).toBe(true);
+      expect(byTestId("shape-faults").textContent).toContain(`the book totals ${total}, not 100`);
     }
-    for (const s of ["equity", "cash", "hy", "commodities"] as const) {
-      setValue(byLabel<HTMLInputElement>(s), "0");
-    }
-    // privates still hold NAV, so the total is positive and Play stays live
+    // the fix path stays live: restore the served values, Play re-enables
+    setValue(byLabel<HTMLInputElement>("equity"), "38");
+    setValue(byLabel<HTMLInputElement>("cash"), "2");
+    setValue(byLabel<HTMLInputElement>("bonds"), "12");
+    expect(byTestId("book-total").textContent).toContain("100");
     expect(findButton(/play/i).disabled).toBe(false);
   });
 
@@ -1643,9 +1710,15 @@ describe("BookEntry — weights derive and edit; the plan follows the book (app-
     setValue(byLabel<HTMLInputElement>("equity"), "88");
     await flush();
     await flush();
-    // the typed cell survives; the endpoint was never asked
+    // the typed cell survives. UPDATED 2026-08-20 (app-open-04 Item H): the
+    // endpoint IS asked now — the projection panels must chart the plan on
+    // screen, so the taken-over plan rides along on the POST — but the
+    // GRID never follows the response while taken over: the derived plan
+    // in the answer is not applied, only the projection/pause note are.
     expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("5");
-    expect(planCallBodies(fn).length).toBe(0);
+    const asked = planCallBodies(fn);
+    expect(asked.length).toBeGreaterThan(0);
+    expect(asked[asked.length - 1].plan.points.pe[0]).toBe(5);
     // Reset plan hands it back to the server's derivation for the CURRENT book
     act(() => findButton(/^reset plan$/i).click());
     await flush();
@@ -1668,7 +1741,12 @@ describe("BookEntry — weights derive and edit; the plan follows the book (app-
     await render(
       <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
     );
-    setValue(byLabel<HTMLInputElement>("equity"), "88");
+    // UPDATED 2026-08-20 (app-open-04 Item G): the edit is now a WEIGHT
+    // edit, which moves the book without moving the total — the old value
+    // edit to 88 left total 150, which Item G's own gate now blocks for its
+    // own (correct, named) reason and would mask what this test pins: that
+    // a refused RECOMPUTE alone never gates Play.
+    setValue(byLabel<HTMLInputElement>("equity weight"), "39");
     await flush();
     await flush();
     expect(fn.mock.calls.some(([url]) => String(url).includes("/book/plan"))).toBe(true);
@@ -1696,5 +1774,231 @@ describe("BookEntry — weights derive and edit; the plan follows the book (app-
     await flush();
     expect(byLabel<HTMLInputElement>("pe plan year 0").value).toBe("3.6"); // served again
     expect(byTestId("ranked-note").textContent).toMatch(/is the served default book/i);
+  });
+});
+
+/**
+ * app-open-04 Item B: the Historical-vintages tab's sections are DERIVED
+ * from the served book's own private-sleeve set — never a hardcoded list.
+ *
+ * Root-cause note (recorded in the WP report): the owner's "infrastructure
+ * missing from the vintage charts" observation does NOT reproduce at HEAD —
+ * BookEntry has derived its sections from `Object.keys(resp.book.private)`
+ * since su-app-06, and the live service serves all four sleeves on every
+ * surface probed. The observation belongs to the stale-deployment family
+ * Item A fixes (a pre-ER-14 app/service pair, or a cached pre-ER-14 world).
+ * These tests exist so the claim can never silently BECOME true: they run
+ * against a FIVE-sleeve served book and derive every expectation from the
+ * response document, so a future hardcoded pe/pc/re(/infra) list — the
+ * exact regression er14-04c was suspected of — fails them immediately, and
+ * a fifth sleeve can never silently vanish.
+ */
+describe("BookEntry — vintage sections derive from the served sleeve set (app-open-04)", () => {
+  /** the served default with a FIFTH private sleeve ("tl", timberland) —
+   * shape-valid rungs, target, band and plan column, built from the
+   * existing fixture so only the sleeve set differs. */
+  function fiveSleeveResponse(): DefaultBookResponse {
+    const resp = deepCloneResponse();
+    const rung = JSON.parse(JSON.stringify(resp.book.private.re[0]));
+    resp.book.private = { ...resp.book.private, tl: [rung] };
+    resp.book.targets = { ...resp.book.targets, tl: 5 };
+    resp.book.ranges = { ...resp.book.ranges, tl: [4.5, 5.5] };
+    resp.plan.points = { ...resp.plan.points, tl: [0.9] };
+    return resp;
+  }
+
+  function deepCloneResponse(): DefaultBookResponse {
+    return JSON.parse(JSON.stringify(DEFAULT_RESPONSE)) as DefaultBookResponse;
+  }
+
+  it("every served private sleeve gets a full section: chart + rung table", async () => {
+    const resp = fiveSleeveResponse();
+    stubFetch(resp);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+
+    const served = Object.keys(resp.book.private); // pe, pc, re, infra, tl
+    const sections = [...host!.querySelectorAll(".book-ladder")];
+    expect(sections.length).toBe(served.length);
+    served.forEach((sleeve, i) => {
+      const section = sections[i];
+      // one chart and one rung table per sleeve, same treatment as the rest
+      expect(section.querySelector('[data-testid="vintage-chart"]')).not.toBeNull();
+      expect(section.querySelector("table")).not.toBeNull();
+      expect(
+        section.querySelectorAll(`[data-testid="rung-${sleeve}"]`).length,
+      ).toBe(resp.book.private[sleeve].length);
+    });
+  });
+
+  it("the plan grid carries one column per served private sleeve", async () => {
+    const resp = fiveSleeveResponse();
+    stubFetch(resp);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    for (const sleeve of Object.keys(resp.book.private)) {
+      expect(byLabel(`${sleeve} plan year 0`)).toBeDefined();
+    }
+  });
+});
+
+/**
+ * app-open-04 Item C, the UI half: when the SERVER's derived plan is pausing
+ * commitments for an over-committed book, the Cashflow-projections tab says
+ * so in one plain sentence, with the SERVED totals rendered verbatim —
+ * nothing recomputed client-side (DN-3 W5).
+ */
+describe("BookEntry — the unfunded pause sentence (app-open-04)", () => {
+  const PAUSED_NOTE = {
+    active: true,
+    unfunded_total: 26.2,
+    steady_state_total: 16.2,
+    sleeves: {
+      pe: { unfunded: 19.0, steady_state: 9.0, paused: true },
+      pc: { unfunded: 3.6, steady_state: 3.6, paused: false },
+      re: { unfunded: 2.2, steady_state: 2.2, paused: false },
+      infra: { unfunded: 1.4, steady_state: 1.4, paused: false },
+    },
+  };
+
+  function routedWithNote(note: unknown) {
+    return stubFetchRouted([
+      { match: "/book/default", ok: true, body: DEFAULT_RESPONSE },
+      {
+        match: "/book/plan",
+        ok: true,
+        body: {
+          plan: DEFAULT_RESPONSE.plan,
+          plan_digest: "c".repeat(64),
+          unfunded: note,
+        },
+      },
+    ]);
+  }
+
+  async function editAValue() {
+    // any book edit re-posts the book and brings the note back with the
+    // derived plan (planRecomputeDelayMs=0 keeps it a single flush).
+    setValue(byLabel<HTMLInputElement>("equity"), "37");
+    await flush();
+    await flush();
+  }
+
+  it("renders the sentence in the paused class's own panel with the payload's numbers", async () => {
+    // UPDATED for app-open-04 Item H: the Cashflow tab is per-class panels
+    // now, so the sentence renders IN the paused class's panel with that
+    // class's own served numbers (pe here), and only there.
+    routedWithNote(PAUSED_NOTE);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await editAValue();
+    const note = byTestId("unfunded-pause-note-pe");
+    expect(note.textContent).toContain("commitments pause while existing unfunded works off");
+    // the numbers are the SERVED per-class figures, 1dp — never a
+    // client-side restatement of the book.
+    expect(note.textContent).toContain("your unfunded is 19.0 vs 9.0 typical for this target");
+    // the un-paused classes carry no sentence
+    for (const calm of ["pc", "re", "infra"]) {
+      expect(host!.querySelector(`[data-testid="unfunded-pause-note-${calm}"]`)).toBeNull();
+    }
+  });
+
+  it("renders nothing when no sleeve is paused", async () => {
+    const calm = {
+      ...PAUSED_NOTE,
+      active: false,
+      sleeves: {
+        ...PAUSED_NOTE.sleeves,
+        pe: { ...PAUSED_NOTE.sleeves.pe, paused: false },
+      },
+    };
+    routedWithNote(calm);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await editAValue();
+    expect(host!.querySelector('[data-testid^="unfunded-pause-note"]')).toBeNull();
+  });
+
+  it("hides the sentence once the plan is taken over by hand", async () => {
+    routedWithNote(PAUSED_NOTE);
+    await render(
+      <BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} planRecomputeDelayMs={0} />,
+    );
+    await editAValue();
+    expect(host!.querySelector('[data-testid="unfunded-pause-note-pe"]')).not.toBeNull();
+    // hand-editing a plan cell takes the plan over — the sentence describes
+    // the DERIVED plan and must leave with it.
+    setValue(byLabel<HTMLInputElement>("pe plan year 0"), "1.5");
+    await flush();
+    expect(host!.querySelector('[data-testid="unfunded-pause-note-pe"]')).toBeNull();
+  });
+});
+
+/**
+ * app-open-04 Item H (owner drive item 6): the Cashflow-projections tab is
+ * one panel per private asset class — the Historical-vintages pattern — each
+ * showing that class's commitment plan and the SERVER's projected NAV for
+ * the next ten years (`plan_projection`, tier-0's constant G through the
+ * engine's own cohort recursion). The panels derive from the served sleeve
+ * set and the projection numbers render verbatim from the payload.
+ */
+describe("BookEntry — per-class cashflow projection panels (app-open-04)", () => {
+  const PROJECTION = {
+    pe: { nav_years: [19.9, 20.1, 20.7, 21.5, 22.7, 24.2, 26.0, 28.1, 30.4, 32.9] },
+    pc: { nav_years: [8.0, 8.0, 8.3, 8.6, 9.1, 9.7, 10.4, 11.2, 12.2, 13.2] },
+    re: { nav_years: [5.0, 5.0, 5.2, 5.4, 5.7, 6.1, 6.5, 7.0, 7.6, 8.2] },
+    infra: { nav_years: [5.0, 5.2, 5.5, 6.0, 6.6, 7.3, 8.0, 8.7, 9.4, 9.9] },
+  };
+
+  function withProjection(): DefaultBookResponse {
+    return {
+      ...JSON.parse(JSON.stringify(DEFAULT_RESPONSE)),
+      projection: JSON.parse(JSON.stringify(PROJECTION)),
+    } as DefaultBookResponse;
+  }
+
+  it("renders one panel per SERVED private sleeve, chart and table from the payload", async () => {
+    const resp = withProjection();
+    stubFetch(resp);
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    const served = Object.keys(resp.book.private);
+    const panels = [...host!.querySelectorAll(".book-plan-panel")];
+    expect(panels.length).toBe(served.length);
+    served.forEach((sleeve, i) => {
+      const panel = panels[i];
+      // the chart, drawn from the served projection
+      expect(
+        panel.querySelector(`[data-testid="projection-chart-${sleeve}"]`),
+      ).not.toBeNull();
+      // one NAV marker per served year
+      expect(
+        panel.querySelectorAll(`[data-testid^="projection-nav-${sleeve}-"]`).length,
+      ).toBe(10);
+      // the class's own plan input is in its own panel
+      expect(panel.querySelector(`[aria-label="${sleeve} plan year 0"]`)).not.toBeNull();
+    });
+  });
+
+  it("the projected-NAV column renders the payload's numbers verbatim", async () => {
+    stubFetch(withProjection());
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    expect(byTestId("projected-nav-pe-0").textContent).toBe("19.9");
+    expect(byTestId("projected-nav-pe-9").textContent).toBe("32.9");
+    expect(byTestId("projected-nav-infra-9").textContent).toBe("9.9");
+    // year 10 exists in the projection but has no plan window on a decade:
+    // the commitment cell says so rather than offering a dead input
+    const pePanel = host!.querySelector(".book-plan-panel")!;
+    expect(pePanel.textContent).toContain("no window");
+  });
+
+  it("without a served projection the panels still carry the plan table, chartless", async () => {
+    // an older server (or a test fixture) serves no projection: the panels
+    // render their tables from the plan alone and no chart frame lies about
+    // data that was never served.
+    stubFetch();
+    await render(<BookEntry runId="r1" onReady={vi.fn()} onCancel={vi.fn()} />);
+    expect([...host!.querySelectorAll(".book-plan-panel")].length).toBe(4);
+    expect(host!.querySelector('[data-testid^="projection-chart-"]')).toBeNull();
+    expect(byLabel<HTMLInputElement>("pe plan year 0")).toBeDefined();
   });
 });

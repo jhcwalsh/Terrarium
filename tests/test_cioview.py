@@ -861,3 +861,28 @@ def test_decided_fixture_actually_diverges_from_the_twin():
     ]
     assert diffs, "no comparable periods in the decided fixture"
     assert max(diffs) > 0.05, f"decided fixture does not diverge from the twin: {diffs}"
+
+
+# --------------------------------------------------------------------------- #
+# app-open-04 Item B: the private-cashflows payload covers the WHOLE private
+# set, derived from PRIVATE_ASSETS itself — never a hardcoded three or four
+# --------------------------------------------------------------------------- #
+
+
+def test_private_cashflows_cover_every_private_sleeve():
+    """The CIO Private-cashflows tab renders whatever `classes`/`series` the
+    server puts in the payload, so a stale sleeve list here silently drops a
+    class from every chart and table on that tab (the er14-04c suspicion the
+    app-open-04 root-cause pass checked). The expected set is PRIVATE_ASSETS
+    the import — a fifth private sleeve joining the platform fails this test
+    until the payload carries it, and a payload that loses one fails it
+    immediately."""
+    pcf = _view(revealed=24)["privateCashflows"]
+    assert [c["id"] for c in pcf["classes"]] == list(PRIVATE_ASSETS)
+    assert set(pcf["series"]) == {"aggregate", *PRIVATE_ASSETS}
+    for sleeve in PRIVATE_ASSETS:
+        assert len(pcf["series"][sleeve]) == len(pcf["series"]["aggregate"])
+    # the vintage ladder carries at least one rung per private sleeve — the
+    # opening staggered book seeds one per year of life for every sleeve.
+    sleeves_in_ladder = {v["id"].split("-")[0] for v in pcf["vintages"]}
+    assert sleeves_in_ladder == set(PRIVATE_ASSETS)

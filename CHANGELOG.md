@@ -4,6 +4,127 @@ All notable changes to this project are documented here. The project follows
 [Conventional Commits](https://www.conventionalcommits.org/) and
 [Keep a Changelog](https://keepachangelog.com/) conventions.
 
+## app-open-04 — PICKER HYGIENE, THE UNFUNDED PAUSE, THE RETIRED-SESSION FENCE (branch `app-open-04`)
+
+Four owner-ordered items on the book/picker/serve surfaces (2026-08-20, "go on 1-3").
+
+Second batch (owner-dictated while playing, same day — items E-H):
+
+- **The commit button is never half hidden or dead again (Item E).** Owner: "I
+  can't move things forward - the button is half hidden and not live." Root
+  cause: the decision panel's pinned-commit design (`overflow: hidden`, cards
+  scroll between pinned header/footer) was outgrown by two releases of content —
+  the eight-row policy-band strip (app-open-02; the default book carries default
+  bands since delta 1) and the four-row commitment lever (sp-02 + ER-14's infra)
+  are unscrollable flex children. Measured live at a 1271px-tall viewport: the
+  window's content ran 769px against a 565px track, the commit button sat past
+  the clip (elementFromPoint at its centre: nothing — half hidden AND dead), and
+  the top transport is locked at an open window by design, so the player was
+  stuck at every decision window, at essentially every real viewport. Fix: the
+  panel scrolls and the commit footer STICKS to the scrollport bottom — always
+  visible, always clickable, content scrolls under it. Verified live by CSS
+  injection at the reproducing viewport before the edit (both scroll extremes:
+  visible, clickable); no layout engine in the test runner, so the manual matrix
+  (2560x1271 full-width and a 1280px frame emulation, fixed at both) is recorded
+  in the WP report rather than pinned by a DOM test.
+- **The vintages tab's box is "Current weight" (Item F).** Owner: it "should
+  have a title of 'Current weight' and be prepopulated with the current weight
+  from the Targets page." Done, with the input's MEANING moved to match its new
+  title: it prefills live from the same `heldWeight` derivation the Targets tab
+  renders (one source, never a copy — after a rebuild it re-derives to the NEW
+  weight rather than echoing the typed number), and the typed number is a
+  weight percent, converted to the ladder value that yields exactly that share
+  of the resulting total (`v = rest * w / (100 - w)` — the same bookkeeping
+  tier as the weight column's own algebra; `/book/ladder` still receives a
+  value and still builds rungs server-side). Weights outside (0, 100) disable
+  Rebuild instead of round-tripping to a server refusal.
+- **An off-100 total blocks Play with a plain notice (Item G — owner ruling
+  2026-08-20, drive item 5, REVERSING app-open-03's silent rescale).** The one
+  user-visible total that can leave 100 is the rail's "Total" (typed values +
+  ladder NAV + cash — the weight and policy-wt columns sum to 100 by
+  construction, and no targets total is displayed). Play now blocks on
+  `totalRounded !== 100` — exactly when the rail cannot read 100, so display
+  dust never blocks — with a named fault ("the book totals X, not 100 - adjust
+  values or cash on the Targets and bands tab until the total reads 100"). The
+  app-open-03 deadlock stays dead: the weight column still edits without moving
+  the total, and the two app-open-03 tests that pinned the silent rescale are
+  re-inverted in place with their full two-way history. The screen's "in any
+  units" copy is withdrawn with the rescale.
+- **One projection panel per asset class (Item H).** The Cashflow-projections
+  tab is per-class panels in the Historical-vintages pattern: each private
+  class shows its own commitment plan (bars + editable table) and the SERVER's
+  projected NAV for the next ten years — `ah.play.plan_projection`, the entered
+  ladders and the plan's own vintages stepped through the engine's own cohort
+  recursion (`ClosedEndCohort.step`, `f_call = f_dist = 1` — tier 0) at
+  tier-0's frozen constant G (`mappings/cashflow-tier0-v1.0.yaml`), the model's
+  own declared growth, never the tape and never client-side math (DN-3 W5).
+  `GET /book/default` and `POST /book/plan` both serve the projection;
+  `POST /book/plan` also accepts a hand-edited plan riding along and projects
+  THAT (validated against the same caps/window count as the session door),
+  while `plan`/`plan_digest` stay the server's derivation. Item C's pause
+  sentence now renders per class, in the panel it applies to, with that class's
+  own served numbers.
+
+- **Dead local entries on the front page (Item A).** The browser's IndexedDB cache
+  outlives releases: a cached bundle whose run the server no longer has (e.g. run
+  `65778be9`, the retired 1974 world) rendered exactly like a live entry, then every
+  book/play call 404'd — read as "lost the ability to progress". The "On this
+  machine" list now probes every cached run id against the `/worlds` document the
+  landing page already fetches (`runStatus`, `app/src/lib/worlds.ts` — one batch
+  GET, no per-entry request; it also carries the server's own `retired` fence).
+  Dead entries render muted with "from an earlier release - view only" and a
+  REMOVE control that clears the LOCAL cache entry only (`cacheDelete`,
+  `app/src/lib/idb.ts`) — nothing is auto-deleted, no server call is made, and an
+  unreachable `/worlds` marks nothing (unknown is not dead). Live entries are
+  untouched.
+- **Item B, root-caused: "infrastructure missing from the vintage charts" does NOT
+  reproduce at HEAD.** The suspected er14-04c regression (an old 3-sleeve list) does
+  not exist: BookEntry's Historical-vintages sections have derived from
+  `Object.keys(resp.book.private)` since su-app-06, the CIO Private-cashflows tab
+  renders the served `classes`/`series` (built from `PRIVATE_ASSETS`, four sleeves),
+  and the live service serves all four on every probed surface — verified by
+  mounting HEAD's BookEntry against the live `/book/default` payload (four sections,
+  four charts) and probing the live `/cio` (four classes, infra vintages present).
+  The observation belongs to the stale-deployment family Item A fixes: at the time
+  it was noted (todo-drive-03, 2026-08-19) the running app/service pair predated
+  the er14-04 merges (uvicorn holds loaded modules; a pre-ER-14 pair is a
+  three-sleeve platform end to end). What ships instead of a code fix is the guard
+  the brief asked for: a rendered-sections test that derives its expectations from
+  the SERVED book's sleeve set against a five-sleeve fixture
+  (`BookEntry.test.tsx`, proven to bite by a break-and-revert against a hardcoded
+  3-list) and a payload test deriving from `PRIVATE_ASSETS` itself
+  (`tests/test_cioview.py`), so the claim can never silently become true and a
+  fifth sleeve can never vanish.
+- **Unfunded commitments bite the pacing plan (Item C).** `book_commitment_plan`
+  read the book's reported NAV and ignored its UNFUNDED commitments — an
+  over-committed entered book got a kickoff plan that kept stacking. The rule, in
+  one sentence: **each window's pace is reduced by the sleeve's remaining excess
+  unfunded — the amount by which the book's projected unfunded still exceeds the
+  steady-state stock the pacing model itself implies for the target — floored at
+  zero**, so the plan pauses while the excess works off and resumes to the base
+  plan as it does. Every quantity is the model's own (`ah/play.py`):
+  `steady_state_unfunded` is the unfunded held by `_seed_ladder` — the model's own
+  staggered book at the target weight (declared `rc_curve`, ~90% called by year
+  10, ER-6 expiry at lapse); the excess is projected on that same declared curve
+  with `f_call = 1` (the kickoff plan cannot see the tape — the same leak-free
+  reasoning that keeps the default plan on the FIXED rule), and unfunded dynamics
+  are linear in the opening stock, so the projection is exact. No new constants:
+  the one tolerance reuses `BOOK_TOLERANCE`. Per-sleeve trigger — a sleeve at or
+  under its steady-state stock (every derived default among them) keeps its plan
+  BIT-IDENTICAL, regression-pinned (`tests/test_unfunded_plan.py`). Server-side
+  and deterministic (DN-3 W5): `POST /book/plan` now serves an `unfunded` note
+  beside the plan, and the Cashflow-projections tab renders one plain sentence
+  with the SERVED totals when the pause is active ("commitments pause while
+  existing unfunded works off - your unfunded is X vs Y typical for this
+  target").
+- **The server refuses new sessions on retired worlds (Item D — the pe-chosen
+  release's named I-1 follow-up, now closed).** `POST /sessions` answers 422
+  ("this world is retired - its successor appears in the world list") when the
+  run's world is in `ah.retired_worlds.RETIRED_WORLD_IDS` — the same single fence
+  `/worlds` and the CLI read. Only CREATION is fenced: existing sessions on
+  retired worlds stay fully readable (GET/advance/cio untouched — history is
+  history). Tests pin both sides (`tests/test_serve_retired.py`).
+
 ## pe-chosen-02 — THE CHOSEN-PE ADOPTION (branch `pe-chosen-01`)
 
 **The generated plane's buyout equation goes live as CHOSEN, and every world that
@@ -43,12 +164,13 @@ scored under the old one retires.** Task 1 sealed `mappings/sleeve-mappings-v1.3
   `docs/superpowers/specs/2026-08-20-pe-chosen-release-evidence.md` (+ JSON sidecar);
   721/722/723/724 built into the live store (1000-path base-seed runs appended for
   721/722/723 mirroring their parents', each replaying MATCH; 724 run-less like 604).
-- **Known limitation (final review I-1), follow-up named:** the retired-world fence is
-  picker-deep — `/worlds` marks retired worlds and the app hides them, but
-  `POST /sessions` still accepts a retired world's run if a client asks directly.
-  Scoring integrity holds regardless (the play-alpha stamp separates v5/v6 rows);
-  a server-side refusal at session creation is the right hardening and is left as a
-  named follow-up rather than rushed into this release.
+- **Known limitation (final review I-1), follow-up named — CLOSED by app-open-04
+  Item D (2026-08-20):** the retired-world fence was picker-deep — `/worlds` marked
+  retired worlds and the app hid them, but `POST /sessions` still accepted a
+  retired world's run if a client asked directly. Scoring integrity held regardless
+  (the play-alpha stamp separates v5/v6 rows); the server-side refusal at session
+  creation named here as the right hardening now exists — 422 at creation, existing
+  sessions untouched (see the app-open-04 entry above).
 
 ## app-open-03 — OPENING BOOK: VALUES DRIVE WEIGHTS; THE PLAN FOLLOWS THE BOOK (branch `app-open-03`)
 

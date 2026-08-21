@@ -147,6 +147,38 @@ export function selectShownWorlds(worlds: WorldEntry[]): WorldEntry[] {
   );
 }
 
+/**
+ * app-open-04 Item A: one locally-cached run's standing against the server.
+ *
+ * The front page's "On this machine" list is IndexedDB state and can outlive
+ * the release that produced it (the owner's report: a cached bundle from an
+ * earlier release renders its world view fine, then every book/play call
+ * 404s and the screen dead-ends). The probe is the `/worlds` document the
+ * landing page ALREADY fetches — one cheap GET that answers for every
+ * cached entry at once (it lists every world's runs and carries the
+ * server's own `retired` fence), so there is no per-entry request to batch.
+ *
+ * - `"live"`: the run exists on a world the server has not retired — the
+ *   entry renders exactly as today.
+ * - `"retired"`: the run exists but its world is server-marked retired —
+ *   view-only (a new session would now be refused at POST /sessions).
+ * - `"missing"`: the server no longer has the run — view-only.
+ * - `"unknown"`: no `/worlds` document (service down, static hosting). The
+ *   honest answer is "cannot say", so callers must render the entry
+ *   normally — an unreachable service must never mark a good entry stale.
+ */
+export type CachedRunStatus = "live" | "retired" | "missing" | "unknown";
+
+export function runStatus(doc: WorldsDoc | null, runId: string): CachedRunStatus {
+  if (!doc) return "unknown";
+  for (const world of doc.worlds) {
+    if (world.runs.some((run) => run.run_id === runId)) {
+      return world.retired === true ? "retired" : "live";
+    }
+  }
+  return "missing";
+}
+
 /** Fetches and shape-checks the decade picker's data. Throws
  * `WorldsFormatError` on a non-ok response or a malformed document —
  * callers treat both as "no list", never as a fatal error. */

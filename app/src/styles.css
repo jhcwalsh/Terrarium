@@ -1247,14 +1247,53 @@ button.commit {
   min-height: 84px;
 }
 
-/* Commit is never below the fold. The panel itself does not scroll: the
-   briefing and the commit button are pinned, and the CARDS scroll between
-   them if a viewport is too short. (A sticky footer cannot work here — as
-   the last child it already sits at its parent's bottom, so sticky has
-   nothing to stick past.) Targeted by class, not nth-child(3) — see note
-   above the wire's floor rule. */
+/* Commit is never below the fold — app-open-04 Item E rewrite (owner: "I
+   can't move things forward - the button is half hidden and not live").
+
+   The original design pinned the briefing and commit with a flex column and
+   scrolled only the CARDS ("a sticky footer cannot work here", it said, and
+   at the time — a non-scrolling overflow:hidden panel — that was true). Two
+   releases outgrew it: the panel gained the policy-band strip (app-open-02,
+   eight rows on the default book since delta 1's default bands) and the
+   four-row commitment lever (sp-02 + ER-14's infra), both flex:none
+   children the cards' scrollbox cannot absorb — measured live at a 1271px
+   viewport, the window content ran 769px against a 565px track, the commit
+   button sat ~130px past the overflow:hidden clip (elementFromPoint at its
+   centre: nothing — half hidden AND dead to clicks), and the top transport
+   is locked at an open window by design, so the player was genuinely stuck.
+   Reviving the flex chain does not fix it: with the strip and the lever
+   pinned, .actions collapses to zero height at the same viewport.
+
+   So the panel now SCROLLS and the footer STICKS to the scrollport bottom:
+   the one control that moves the decade forward is always fully visible and
+   clickable at any viewport height, and everything else scrolls under it.
+   (Sticky works precisely because the panel is now the scroll container and
+   the content overflows it — the old comment's premise is gone.) Verified
+   live by CSS injection at the reproducing viewport before this edit:
+   commit fully visible, elementFromPoint returns the button itself.
+   Targeted by class, not nth-child(3) — see note above the wire's floor
+   rule. */
 .vgrid .right .decision-panel {
-  overflow: hidden;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.decision-window > footer {
+  position: sticky;
+  bottom: -12px; /* cancel the section's own bottom padding */
+  margin: 0 -16px -12px;
+  padding: 2px 16px 12px;
+  background: #122c2a; /* the panel gradient's end colour, made solid */
+  border-top: 1px solid #2f7f6b;
+  z-index: 2;
+}
+
+@media (max-height: 900px) {
+  .decision-window > footer {
+    bottom: -8px;
+    margin: 0 -12px -8px;
+    padding: 2px 12px 8px;
+  }
 }
 
 .decision-window {
@@ -1947,4 +1986,26 @@ button.commit {
 .ranked-locked {
   color: var(--clay);
   font-style: italic;
+}
+
+/* app-open-04 Item A: a locally-cached entry whose run the server no longer
+   has (or whose world is retired) — muted, view-only, removable. */
+.cached-stale button:first-child {
+  opacity: 0.55;
+}
+.cached-stale-note {
+  color: var(--dim);
+  font-size: 12px;
+  font-style: italic;
+  margin: 0 8px;
+}
+
+/* app-open-04 Item F: the ladder header's "Current weight" titled input. */
+.ladder-rebuild-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  color: var(--dim);
+  white-space: nowrap;
 }

@@ -45,6 +45,22 @@ export async function cacheGet(runId: string): Promise<ArrayBuffer | null> {
   return result;
 }
 
+/** app-open-04 Item A: remove ONE cached bundle from this machine. A purely
+ * LOCAL operation — it touches the IndexedDB store and nothing else; no
+ * server call is made or implied (the server never held this entry's
+ * staleness in the first place). Never called automatically: the front page
+ * offers it as a control on dead entries and the player decides. */
+export async function cacheDelete(runId: string): Promise<void> {
+  const db = await open();
+  await new Promise<void>((resolve, reject) => {
+    const tx = db.transaction(STORE, "readwrite");
+    tx.objectStore(STORE).delete(runId);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
+  db.close();
+}
+
 export async function cacheList(): Promise<string[]> {
   const db = await open();
   const keys = await new Promise<string[]>((resolve, reject) => {
