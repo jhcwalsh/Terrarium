@@ -600,3 +600,38 @@ convexity (the row is still affine; crisis beta still equals calm beta,
 now at 1.2). Adoption - `src/ah/port/mapping.py` repointing to v1.3, with
 its play-alpha bump, digest moves, world fences and rebuilds - is the next
 task's release event, not this record.
+
+## D-QC-1 - RATIFIED 2026-08-20: QUARTERLY CLOCK, ANNUAL VINTAGES
+
+Owner ruling ("Yes, quarterly clock and annual vintages", 2026-08-19,
+ratified on the approved spec 2026-08-20,
+docs/superpowers/specs/2026-08-19-quarterly-clock-design.md). The play
+surface stops at every quarter-close from month 2 through month 116 -
+39 windows for a 120-month decade, all quarter-closes except the final
+tick (a decision there can affect nothing; the same reasoning that
+gives the annual grid 9 windows, not 10). Each window carries a stance
+for the coming quarter plus an editable commitment figure for the
+vintage year currently forming, locking at the year-close windows
+(months 11, 23, ... 107 - unchanged; the engine still fires one
+vintage per year). CommitmentPlan keeps one entry per vintage year.
+
+Scope: play surface and scoring only. The engine (run_quarter), the
+pacing model, the ladder (ER-12's one rung per year), the cap
+arithmetic and the vintage charts are untouched; anything requiring an
+engine edit is out of scope by definition. A new play-alpha version
+per plane (AM-2026-08-20-001) separates quarterly scores from annual
+ones; stored sessions replay and rank under the version stamped at
+their creation, in-flight annual sessions complete as annual. No world
+retires (worlds are cadence-agnostic; version keys separate boards).
+
+Considered and rejected (spec section 6): full quarterly vintages
+(fragments pacing/ladder/charts for no realism gain - real programs
+commit annually); keeping the annual clock (crash years stay
+unplayable, ER-2 stays fully open); a monthly clock (fatigue, and
+stances would out-run the quarterly information the game reveals).
+
+Status: ADOPTED 2026-08-20, owner-ratified. Executed as the
+qc-02/03/04 release branches under AM-2026-08-20-001 (seal impact:
+none - all three lock digests unchanged). Partially discharges ER-2
+(the PLAYER's meeting calendar now exists; the engine's rate-path
+meeting calendar and 25bp quantisation remain open).

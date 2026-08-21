@@ -2133,3 +2133,54 @@ amendments:
     with its play-alpha bump and world fences) is a separate release event; this
     amendment only creates and seals the artifact.'
   type: protocol_change
+- amendment_id: AM-2026-08-20-001
+  date: '2026-08-20'
+  payload:
+    artifact: none -- no sealed file is created or edited; this entry declares
+      a scoring-definition change on the play surface (the product's
+      PLAY_ALPHA_VERSION / GEN_PLAY_ALPHA_VERSION stamps, not the G5-sealed
+      decision_alpha_version, which does not move)
+    new_versions:
+      PLAY_ALPHA_VERSION: port-v5-inflation -> port-v7-quarterly (src/ah/play.py)
+      GEN_PLAY_ALPHA_VERSION: port-v6-chosen-pe-gen -> port-v7-quarterly-gen (src/ah/port/adapter.py)
+    window_definition: 'quarterly_decision_months(nm): every quarter-close
+      month (3q+2) strictly inside the horizon EXCEPT the last one -- for the
+      120-month decade, months 2, 5, ..., 116: 39 windows. The final
+      quarter-close (month 119) is the decade''s last tick and is not a
+      window, the same reasoning that gives the annual grid 9 windows, not
+      10. Stances are effective for the FOLLOWING quarter (window m governs
+      months m+1..m+3). The commitment figure is per VINTAGE YEAR: editable
+      at each of the year''s windows (per-sleeve last edit wins), locking at
+      the year-close windows (months 12k+11, k=0..8 -- unchanged); untouched
+      all year it locks at the stored plan''s entry (plan-carrying sessions)
+      or the pacing rule''s figure (default sessions), exactly today''s
+      behaviour. CommitmentPlan keeps 9 entries per decade, one per vintage
+      year. Windows after the last year-close (months 110, 113, 116) carry a
+      stance only; no vintage is forming there.'
+    session_versioning: sessions gain decision_windows (the stamped window
+      months) and play_alpha_version columns at creation; NULL means the
+      annual era -- such sessions replay under the annual grid and score
+      under the frozen legacy stamps (port-v5-inflation /
+      port-v6-chosen-pe-gen). Leaderboards remain keyed by
+      (world_id, seed, decision_alpha_version); annual-era and
+      quarterly-era rows never share a board. No world retires.
+    ratification: D-QC-1 (governance/decision-register.md), ratified 2026-08-20
+    seal_impact: none. pre-registration.lock, pre-registration-g3.lock and
+      pre-registration-g5.lock digests are all unchanged; no hashed file is
+      touched. decision_alpha_version (G5) is not bumped.
+    trigger: 'owner ruling 2026-08-19 (quarterly clock, annual vintages);
+      spec docs/superpowers/specs/2026-08-19-quarterly-clock-design.md;
+      partially discharges ER-2 (docs/engine-realism-register.md)'
+  post_hoc: false
+  rationale: '39 quarterly-effective stances is a DIFFERENT definition of
+    decision skill than 9 annual ones, so the play-alpha stamp moves BEFORE
+    any implementation lands -- this entry is committed ahead of every code
+    change on the release branch and the ordering is provable from git
+    history (spec acceptance criterion 7). The counterfactual baselines do
+    not change construction: the hold-course twin takes no action at any
+    window and re-derives under the new window set by definition; the
+    chain-link attribution runs over the session''s own stored windows. The
+    sealed research definitions (decision_alpha_version, the re-cone grid,
+    the tournament) are untouched and stay on the annual grid they were
+    sealed with.'
+  type: protocol_change
