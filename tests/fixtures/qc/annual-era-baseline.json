@@ -1,0 +1,22 @@
+{
+  "deflation_bust": {
+    "annual_decisions": "sha256:43173fffa32bf7e21836ee2bc357575c8a0f952084c8150063b60da138b5b546",
+    "flat_play": "sha256:6c22cfc090370d01c9b207a2a5c13b37760dd0ea029b321f02913099be7abf08",
+    "flat_play_true_basis": "sha256:2528bc5e69b52d0cc2c99ee99f6b05e2b5016ba3ba76cd09ef69af8a70cf5fde"
+  },
+  "goldilocks": {
+    "annual_decisions": "sha256:e06521d68ea63585f2de4ff6315a7e952b37531b71949ea875eb2856af5a0dfd",
+    "flat_play": "sha256:c980491e438097b1596eba890cff61fe30012c6375262e0a2a43ab4b9b875600",
+    "flat_play_true_basis": "sha256:833c258f9d98f31b44ba7c0e0827cc301556bdd8fcd28f4f94d65e9ce04d30a3"
+  },
+  "reflation_boom": {
+    "annual_decisions": "sha256:f1b5a46dc05bfea2ec1e2a3f1260a1c0d3081b14baa5252c6c583030223b9e13",
+    "flat_play": "sha256:ada890165a04dd4a2f24b5ddc333960f0c541e2b45b9ba75d1ec47e867dab31e",
+    "flat_play_true_basis": "sha256:24832c0a10c9c2dbeede682887e2efc998b95998f24f088d97d8af96178ce132"
+  },
+  "stagflation": {
+    "annual_decisions": "sha256:65e79fa25d408411bbcdb713ca34045515fe567f51f0d527e5858e20b8196fa2",
+    "flat_play": "sha256:b0e4aa801e167de98301c5e6f7607d2b527402f72ebfb165acacb7f8563c9480",
+    "flat_play_true_basis": "sha256:9dddc5d12c660fe47e422edc84875704946717cd596b02e8dc9a0d0413cf2819"
+  }
+}
