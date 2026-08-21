@@ -54,7 +54,9 @@ from ah.play import (
     default_commitment_plan,
     default_opening_book,
     plan_commitments,
+    plan_projection,
     simulate_play,
+    unfunded_plan_note,
     validate_commitments,
     window_contributions_play,
 )
@@ -357,6 +359,11 @@ class BookPlanRequest(BaseModel):
 
     run_id: str
     book: OpeningBook
+    # app-open-04 Item H: a HAND-EDITED plan may ride along; the response's
+    # projection then describes THAT plan (the grid the analyst is looking
+    # at) instead of the derived one. `plan`/`plan_digest` in the response
+    # stay the server's own derivation either way.
+    plan: CommitmentPlan | None = None
 
 
 class Advance(BaseModel):
@@ -501,6 +508,11 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
             "book_digest": book.digest(),
             "plan_digest": plan.digest(),
             "plan_cap": {"multiple": COMMIT_CAP_MULTIPLE, "annual_rate": _ANNUAL_COMMITMENT_RATE},
+            # app-open-04 Item H: the Cashflow-projections panels need a
+            # projection before any edit ever posts to /book/plan, so the
+            # default's own rides here (the same plan_projection, on the
+            # served default book and plan).
+            "projection": plan_projection(book, plan),
         }
 
     @app.get("/book/ladder")
@@ -559,7 +571,39 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         except BookError as exc:
             raise HTTPException(status_code=422, detail=str(exc)) from exc
         plan = book_commitment_plan(body.book, windows=len(decision_months(months)))
-        return {"plan": plan.model_dump(), "plan_digest": plan.digest()}
+        # app-open-04 Item H: the projection follows the plan the analyst is
+        # LOOKING AT — a posted hand-edited plan when one rides along
+        # (validated against the same caps and window count the session door
+        # enforces, so a plan this endpoint projects is one that could be
+        # played), else the plan derived above. `plan`/`plan_digest` stay
+        # the server's own derivation either way.
+        shown = plan
+        if body.plan is not None:
+            expected = len(decision_months(months))
+            for sleeve, years in body.plan.points.items():
+                if len(years) != expected:
+                    raise HTTPException(
+                        status_code=422,
+                        detail=(
+                            f"plan {sleeve} has {len(years)} entries, expected {expected} "
+                            "(one per decision window)"
+                        ),
+                    )
+            try:
+                validate_plan(body.plan, body.book.effective_targets())
+            except BookError as exc:
+                raise HTTPException(status_code=422, detail=str(exc)) from exc
+            shown = body.plan
+        # app-open-04 Item C: the numbers behind the Cashflow tab's plain
+        # pause sentences — served, never derived client-side (DN-3 W5).
+        # `active` is False for any book at or under its steady-state
+        # unfunded, the derived default included.
+        return {
+            "plan": plan.model_dump(),
+            "plan_digest": plan.digest(),
+            "unfunded": unfunded_plan_note(body.book),
+            "projection": plan_projection(body.book, shown),
+        }
 
     @app.get("/runs/{run_id}/bundle")
     def get_bundle(run_id: str, conn: sqlite3.Connection = Depends(db)):
@@ -594,6 +638,19 @@ def create_app(db_path: str | Path = DEFAULT_DB) -> FastAPI:
         rec = get_run_record(conn, body.run_id)
         if rec is None:
             raise HTTPException(status_code=404, detail=f"no run_record {body.run_id}")
+        # app-open-04 Item D (the pe-chosen release's named I-1 follow-up):
+        # the retired-world fence reaches session CREATION. Before this, the
+        # fence was picker-deep — /worlds marked retired worlds and the app
+        # hid them, but a client that already held a retired run_id (a stale
+        # browser cache does exactly that) could still open a fresh session
+        # on it. Only creation is fenced: existing sessions on retired
+        # worlds stay fully readable (GET/advance/cio below never consult
+        # the fence) — history is history.
+        if rec["world_id"] in RETIRED_WORLD_IDS:
+            raise HTTPException(
+                status_code=422,
+                detail="this world is retired - its successor appears in the world list",
+            )
         world = get_world(conn, rec["world_id"])
         if world is None:
             raise HTTPException(status_code=404, detail=f"missing world {rec['world_id']}")
