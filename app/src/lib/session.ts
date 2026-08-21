@@ -21,7 +21,13 @@ export interface Session {
   decisions: Record<string, string>;
   window_log: unknown[];
   status: "active" | "completed";
-  decision_windows?: number[];
+  /** D-QC-1: the session's OWN window grid (quarterly, or the annual grid
+   * for a legacy NULL-stamped session) — server-materialized on every
+   * response (store/sessions.py::_row_to_doc). The app reads windows from
+   * HERE, never from the bundle's static annual summary
+   * (bundle.summary.decision_months, which remains the toy twin's display
+   * grid and is not a session's own stop list). */
+  decision_windows: number[];
   /** the book's value at the reveal pointer; null before the tape opens */
   value?: number | null;
   /** the hold-course twin's value at the same point — the bar to clear */
@@ -281,6 +287,28 @@ export interface BandReport {
  */
 export function planeForBasis(basis: Session["basis"]): Plane {
   return basis === "actual" ? "true" : "reported";
+}
+
+/**
+ * D-QC-1: one place turns a window month into its display label.
+ *
+ * Month m sits in year `floor(m/12)+1`, quarter `floor((m%12)/3)+1`. Works
+ * unchanged on the annual grid too: every legacy window is a year-close
+ * (`12k+11`), which this always labels `Y{k+1} Q4` — so a NULL-stamped
+ * session's copy reads correctly with no branch on era.
+ */
+export function windowLabel(month: number): string {
+  return `Y${Math.floor(month / 12) + 1} Q${Math.floor((month % 12) / 3) + 1}`;
+}
+
+/** A year-close window locks the forming vintage (months `12k+11`). */
+export function isYearClose(month: number): boolean {
+  return month % 12 === 11;
+}
+
+/** The month the forming vintage locks at, for the window at `month`. */
+export function lockMonth(month: number): number {
+  return Math.floor(month / 12) * 12 + 11;
 }
 
 /** su-app-06: the commitment plan contract (`commitment-plan-0.1`). Each

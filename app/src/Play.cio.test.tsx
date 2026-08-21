@@ -133,6 +133,10 @@ function sessionWith(
     decisions: {},
     window_log: [],
     status: "active",
+    // D-QC-1: decision_windows is now REQUIRED on Session; BandPanel/peer-tab
+    // tests here don't exercise the window grid at all, so an empty array
+    // satisfies the type without claiming any particular cadence.
+    decision_windows: [],
     band_report: bandReport,
   };
 }
