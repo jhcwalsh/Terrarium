@@ -92,6 +92,27 @@ def decision_months(nm: int) -> list[int]:
     return [12 * y - 1 for y in range(1, 10) if 12 * y - 1 < nm]
 
 
+def quarterly_decision_months(nm: int) -> list[int]:
+    """Quarterly decision points (D-QC-1): every quarter-close month except
+    the horizon's final one.
+
+    Quarter q (0-based) closes on month ``3*q + 2``. The LAST quarter-close
+    is the horizon's final tick -- a decision taken there can affect
+    nothing, so it is not a window (the same reasoning that gives
+    :func:`decision_months` 9 windows, not 10). For the 120-month decade:
+    months 2, 5, ..., 116 -- 39 windows.
+
+    :func:`decision_months` above is NOT superseded. It remains (a) the toy
+    institution's own annual grid (``simulate_institution``, the bundle's
+    twin, the feed's board packs, density/tournament/re-cone -- Step-5
+    research sealed on the annual definition) and (b) the platform's
+    VINTAGE-YEAR grid: ``CommitmentPlan`` carries one entry per year-close
+    window and the engine fires one vintage per year, unchanged.
+    """
+    closes = list(range(2, nm, 3))
+    return closes[:-1]
+
+
 def _shift(
     targets: dict[str, float], frm: tuple[str, ...], to: tuple[str, ...], amount: float
 ) -> None:
