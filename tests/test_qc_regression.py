@@ -105,6 +105,14 @@ def tape_digest(result) -> str:
     return "sha256:" + hashlib.sha256(blob.encode("ascii")).hexdigest()
 
 
+def tape_digest_one(q) -> str:
+    """``tape_digest``'s per-quarter form (Task S4): canonical JSON of one
+    ``quarter_doc``, same hashing -- for asserting a SINGLE quarter moved or
+    held still, bit-level."""
+    blob = json.dumps(quarter_doc(q), sort_keys=True, separators=(",", ":"))
+    return "sha256:" + hashlib.sha256(blob.encode("ascii")).hexdigest()
+
+
 FIXTURE = Path(__file__).parent / "fixtures" / "qc" / "annual-era-baseline.json"
 
 
@@ -128,3 +136,64 @@ class TestAnnualEraIsBitIdentical:
         paths = _paths(preset)
         got = tape_digest(simulate_play(paths, ANNUAL_DECISIONS))
         assert got == baseline[preset]["annual_decisions"]
+
+
+class TestQuarterlySemantics:
+    """D-QC-1 acceptance criteria 2 and 3, at the simulator layer."""
+
+    def test_stance_at_a_window_governs_exactly_the_following_quarter(self):
+        paths = _paths("stagflation")
+        base = simulate_play(paths, None)
+        early = simulate_play(paths, {2: "derisk"})
+        # quarter 0 (months 0-2) closed before the decision: untouched
+        assert tape_digest_one(early.quarters[0]) == tape_digest_one(base.quarters[0])
+        # quarter 1 (months 3-5) is the governed quarter: the 10pt shift
+        # moved the liquid book
+        assert early.quarters[1].liquid_values != base.quarters[1].liquid_values
+        # the same stance one window later starts one quarter later
+        late = simulate_play(paths, {5: "derisk"})
+        assert tape_digest_one(late.quarters[1]) == tape_digest_one(base.quarters[1])
+        assert late.quarters[2].liquid_values != base.quarters[2].liquid_values
+
+    def test_untouched_year_locks_at_plan(self):
+        # all-hold quarterly decisions == flat play, bit-identical:
+        # hold trades nothing and an untouched figure is the plan figure
+        paths = _paths("stagflation")
+        from ah.core.institution import quarterly_decision_months
+
+        holds = {m: "hold" for m in quarterly_decision_months(paths.months)}
+        assert tape_digest(simulate_play(paths, holds)) == tape_digest(simulate_play(paths, None))
+
+    def test_last_edit_wins_at_the_year_close(self):
+        paths = _paths("stagflation")
+        # an edit at the year's FIRST window, untouched afterwards, locks
+        # at that figure...
+        q1_edit = simulate_play(paths, {14: {"action": "hold", "commitments": {"pe": 5.0}}})
+        at_close = simulate_play(paths, {23: {"action": "hold", "commitments": {"pe": 5.0}}})
+        # ...and is indistinguishable from the same figure entered at the
+        # close itself: the lock is the figure, not the keystroke's month
+        assert tape_digest(q1_edit) == tape_digest(at_close)
+        # a LATER revision inside the same year supersedes the earlier one
+        revised = simulate_play(
+            paths,
+            {
+                14: {"action": "hold", "commitments": {"pe": 5.0}},
+                20: {"action": "hold", "commitments": {"pe": 2.0}},
+            },
+        )
+        final_only = simulate_play(paths, {20: {"action": "hold", "commitments": {"pe": 2.0}}})
+        assert tape_digest(revised) == tape_digest(final_only)
+        # sleeves are independent: a pe edit at Q1 and a pc edit at Q3
+        # both survive to the lock
+        two_sleeves = simulate_play(
+            paths,
+            {
+                14: {"action": "hold", "commitments": {"pe": 5.0}},
+                20: {"action": "hold", "commitments": {"pc": 1.0}},
+            },
+        )
+        both_at_close = simulate_play(
+            paths,
+            {23: {"action": "hold", "commitments": {"pe": 5.0, "pc": 1.0}}},
+        )
+        assert tape_digest(two_sleeves) == tape_digest(both_at_close)

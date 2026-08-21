@@ -44,7 +44,7 @@ player is shown and the two must agree.
 from __future__ import annotations
 
 import json
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from functools import lru_cache
 from pathlib import Path
@@ -99,7 +99,15 @@ _STATE = _REPO_ROOT / "fixtures" / "state"
 # port-v5: ER-14 close-out (D-ER14-2, 2026-08-18) — the fourth private sleeve
 # (infra) and the inflation channels change the played book's shape and its
 # returns; the toy stamp moves in lockstep (TOY_ENGINE_VERSION toy-v0.7).
-PLAY_ALPHA_VERSION = "port-v5-inflation"
+# port-v7: the quarterly clock (D-QC-1, AM-2026-08-20-001, 2026-08-20) —
+# 39 quarterly-effective stances and a revisable vintage-year commitment
+# are a different definition of decision skill than 9 annual stances, so
+# the stamp moves and old rows keep their own boards. The engine did NOT
+# change (TOY_ENGINE_VERSION stays): a stored annual decision map replays
+# bit-identically (tests/test_qc_regression.py); only what a NEW session
+# can do moved. (v6 was skipped on the toy lineage so both planes align
+# at v7; the gen stamp moves in the same release.)
+PLAY_ALPHA_VERSION = "port-v7-quarterly"
 
 LIQUID_ASSETS: tuple[str, ...] = ("equity", "bonds", "hy", "commodities", "reits")
 # ER-14 close-out (D-ER14-2, Task S2): the fourth private class. Keep in step
@@ -1177,15 +1185,23 @@ def simulate_play(
                 )
             else:
                 multiplier = 1.0
-            override = decisions.get(q * 3 - 1)
-            override_pts = override.get("commitments") if isinstance(override, Mapping) else None
+            # D-QC-1: the vintage-year figure is the PER-SLEEVE last edit
+            # across the forming year's windows (the four quarter-closes
+            # feeding this commitment event: months q*3-10, q*3-7, q*3-4,
+            # q*3-1), else the plan pace. An annual-era decision map carries
+            # commitments only at q*3-1, so this merge reduces to exactly the
+            # old single-month read -- pinned bit-identical by
+            # tests/test_qc_regression.py's committed baseline.
+            override_pts: dict[str, float] = {}
+            for m in (q * 3 - 10, q * 3 - 7, q * 3 - 4, q * 3 - 1):
+                d = decisions.get(m)
+                pts = d.get("commitments") if isinstance(d, Mapping) else None
+                if pts is not None:
+                    for asset_key, value in pts.items():
+                        override_pts[asset_key] = float(value)
             for asset in PRIVATE_ASSETS:
                 plan_amount = targets[asset] * _ANNUAL_COMMITMENT_RATE * multiplier
-                amount = (
-                    float(override_pts[asset])
-                    if override_pts is not None and asset in override_pts
-                    else plan_amount
-                )
+                amount = override_pts.get(asset, plan_amount)
                 _commit_new_vintage(portfolio, ladders, base_doc, asset, q // 4, amount)
                 committed_this_quarter += amount
 
@@ -1367,6 +1383,7 @@ def window_contributions_play(
     policy: Policy | None = None,
     start_targets: Mapping[str, float] | None = None,
     opening_book: OpeningBook | None = None,
+    windows: Sequence[int] | None = None,
 ) -> PlayAttribution:
     """K+1 runs for K windows — exact, no sampling.
 
@@ -1377,8 +1394,15 @@ def window_contributions_play(
     ``opening_book`` (su-app-06) rides along on the twin AND every prefix
     replay — the same entered book throughout, so the chain-link
     decomposition still isolates decisions rather than mixing institutions.
+
+    ``windows`` (D-QC-1) is the session's OWN window grid — the service
+    passes ``session.decision_windows`` so a quarterly session decomposes
+    over its 39 stops. ``None`` keeps the annual definition for every caller
+    that predates the quarterly clock, byte-identical.
     """
-    months_list = decision_months(paths.months)
+    # D-QC-1: the session's OWN window grid; None keeps the annual
+    # definition for every caller that predates the quarterly clock.
+    months_list = list(windows) if windows is not None else decision_months(paths.months)
     twin = simulate_play(
         paths,
         None,

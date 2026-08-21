@@ -290,15 +290,20 @@ class TestScoringIdentity:
         """Survey S3: a shared bump is never right - the two planes score
         different tapes.
         Re-pinned under the chosen-PE adoption (D-ER16-1/AM-2026-08-19-001,
-        2026-08-19): the GENERATED stamp alone moves to v6 (the v1.3 mapping
-        artifact changes only the generated plane's pm_buyout translation);
-        the toy engine did not change, so the toy stamp stays at its v5 -
-        which is now also the living proof the two stamps never share a
-        bump."""
+        2026-08-19): the GENERATED stamp alone moved to v6 (the v1.3 mapping
+        artifact changed only the generated plane's pm_buyout translation);
+        the toy stamp stayed at its v5.
+        Re-pinned under the quarterly clock (D-QC-1/AM-2026-08-20-001,
+        2026-08-20): BOTH stamps move to v7 in one release because the
+        decision-skill definition changed on both planes (39 stances, the
+        revisable vintage-year figure) - still two distinct STRINGS, never a
+        shared value; the lineages merely align at the same number. The
+        frozen legacy fallbacks for pre-release rows live in ah.serve
+        (Task S5), not here."""
         from ah.port.adapter import GEN_PLAY_ALPHA_VERSION
 
-        assert PLAY_ALPHA_VERSION == "port-v5-inflation"
-        assert GEN_PLAY_ALPHA_VERSION == "port-v6-chosen-pe-gen"
+        assert PLAY_ALPHA_VERSION == "port-v7-quarterly"
+        assert GEN_PLAY_ALPHA_VERSION == "port-v7-quarterly-gen"
         assert PLAY_ALPHA_VERSION != GEN_PLAY_ALPHA_VERSION
 
     def test_the_research_alpha_definition_is_untouched(self):

@@ -148,7 +148,14 @@ GEN_START_TARGETS: dict[str, float] = {
 # mapping artifact moves the buyout row to equity_mkt 1.2 / alpha 3%/yr;
 # generated-plane only, the toy engine did not change, so PLAY_ALPHA_VERSION
 # stays at its own v5.
-GEN_PLAY_ALPHA_VERSION = "port-v6-chosen-pe-gen"
+# v7: the quarterly clock (D-QC-1, AM-2026-08-20-001, 2026-08-20) — 39
+# quarterly-effective stances and a revisable vintage-year commitment are a
+# different definition of decision skill than 9 annual ones, on this plane
+# exactly as on the toy plane, so this stamp moves in the same release. A
+# DISTINCT value from PLAY_ALPHA_VERSION's "port-v7-quarterly", never a
+# shared bump (survey S3: the two planes score different tapes); the two
+# lineages merely align at v7. The generated engine itself did not change.
+GEN_PLAY_ALPHA_VERSION = "port-v7-quarterly-gen"
 
 # ER-14 close-out (D-ER14-2, Task S4, A15): infra 0.05, carved 0.02 from re
 # and 0.03 from equity -- equity's resulting 0.32 matches
